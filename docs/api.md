@@ -612,8 +612,8 @@ await claw.telegram.setChatPermissions(123, { can_send_messages: false });
 await claw.telegram.banOrRestrictMember({ action: "ban", chatId: 123, userId: 456 });
 await claw.telegram.createInviteLink(123, { name: "Support" });
 await claw.telegram.revokeInviteLink(123, "https://t.me/+...");
-await claw.telegram.sendMessage({ chatId: 123, text: "hello", approvalId: "approval-from-human-review" });
-await claw.telegram.sendMedia({ type: "photo", chatId: 123, media: "https://...", approvalId: "approval-from-human-review" });
+await claw.telegram.sendMessage({ chatId: 123, text: "hello", approvalId: "approval-from-human-review", legalLabel: "Telegram send - human reviewed" });
+await claw.telegram.sendMedia({ type: "photo", chatId: 123, media: "https://...", approvalId: "approval-from-human-review", legalLabel: "Telegram media send - human reviewed" });
 await claw.telegram.syncUpdates();
 await claw.telegram.ingestUpdate(updatePayload);
 

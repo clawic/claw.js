@@ -1,10 +1,35 @@
 // @ts-nocheck
-function requireExternalSendApproval(input: Record<string, unknown>, operation: string): string {
+import { evaluateRegulatedAction } from "@clawjs/core";
+
+function requireExternalSendApproval(input: Record<string, unknown>, operation: string): { approvalId: string; legalLabel: string; policy: ReturnType<typeof evaluateRegulatedAction> } {
   const approvalId = typeof input?.approvalId === "string" ? input.approvalId.trim() : "";
-  if (!approvalId) {
+  const legalLabel = typeof input?.legalLabel === "string" && input.legalLabel.trim()
+    ? input.legalLabel.trim()
+    : approvalId ? "External channel send - human reviewed" : "";
+  const policy = evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    sensitiveExport: operation.includes("Media") || Boolean(input?.media),
+    policyConfig: {
+      confirmed: Boolean(approvalId),
+      approvalId,
+      legalLabel,
+      materialConsent: Boolean(approvalId),
+      destinationAuthorized: Boolean(approvalId),
+    },
+  });
+  if (policy.policyDecision === "block") {
+    throw new Error(`${operation} is blocked by regulated safety policy: ${policy.reasonCodes.join(", ") || "blocked"}.`);
+  }
+  if (!policy.allowed && !approvalId) {
     throw new Error(`${operation} requires explicit approvalId before external send.`);
   }
-  return approvalId;
+  if (!policy.allowed) {
+    throw new Error(`${operation} requires policy confirmation before external send: ${policy.requirements.join(", ")}.`);
+  }
+  return { approvalId, legalLabel, policy };
 }
 
 export function createClawChannelFacades(locals: Record<string, any>): any {
@@ -109,7 +134,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
       },
       messages: {
         send: async (input) => {
-          const approvalId = requireExternalSendApproval(input, "channels.messages.send");
+          const review = requireExternalSendApproval(input, "channels.messages.send");
           const provider = input.provider ?? "telegram";
           const accountId = input.accountId ?? "default";
           if (provider !== "telegram") {
@@ -137,7 +162,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
               mediaType: input.mediaType,
               text: input.text,
               agentId: input.agentId,
-              approvalId,
+              approvalId: review.approvalId,
               response: message.raw as Record<string, unknown> | undefined,
               command: "channels messages send",
             });
@@ -310,7 +335,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
       },
       getCommands: () => telegram.getCommands(),
       sendMessage: async (input) => {
-        const approvalId = requireExternalSendApproval(input, "telegram.sendMessage");
+        const review = requireExternalSendApproval(input, "telegram.sendMessage");
         const response = await telegram.sendMessage(input);
         channelsRegistry.messages.recordTelegramOutbound({
           provider: "telegram",
@@ -318,12 +343,17 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
           targetId: String(input.chatId),
           text: input.text,
           threadId: input.messageThreadId,
-          metadata: { approvalId },
+          metadata: {
+            approvalId: review.approvalId,
+            legalLabel: review.legalLabel,
+            policyDecision: review.policy.policyDecision,
+            policyReasonCodes: review.policy.reasonCodes,
+          },
         }, response);
         return response;
       },
       sendMedia: async (input) => {
-        const approvalId = requireExternalSendApproval(input, "telegram.sendMedia");
+        const review = requireExternalSendApproval(input, "telegram.sendMedia");
         const response = await telegram.sendMedia(input);
         channelsRegistry.messages.recordTelegramOutbound({
           provider: "telegram",
@@ -332,7 +362,12 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
           text: input.caption,
           media: input.media,
           threadId: input.messageThreadId,
-          metadata: { approvalId },
+          metadata: {
+            approvalId: review.approvalId,
+            legalLabel: review.legalLabel,
+            policyDecision: review.policy.policyDecision,
+            policyReasonCodes: review.policy.reasonCodes,
+          },
         }, response);
         registerOutboundChannelMedia({
           provider: "telegram",
@@ -342,7 +377,7 @@ export function createClawChannelFacades(locals: Record<string, any>): any {
           media: input.media,
           mediaType: input.type,
           text: input.caption,
-          approvalId,
+          approvalId: review.approvalId,
           response,
           command: "telegram send",
         });

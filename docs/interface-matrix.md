@@ -356,9 +356,9 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | --- | --- | --- | --- |
 | Telegram connect / status | `claw.telegram.connectBot()`, `status()` | `claw telegram connect`, `status` | `-` |
 | Telegram webhook / polling / commands | `claw.telegram.configureWebhook()`, `disableWebhook()`, `startPolling()`, `stopPolling()`, `setCommands()`, `getCommands()` | `claw telegram webhook ...`, `polling ...`, `commands ...` | `-` |
-| Telegram chats / inspect / send | `claw.telegram.listChats()`, `getChat()`, `sendMessage({ approvalId })`, `sendMedia({ approvalId })` | `claw telegram chats list`, `inspect`, `send` | `-` |
-| Slack connect / status / send / list | `claw.slack.connectBot()`, `status()`, `sendMessage({ approvalId })`, `listChannels()`, `getChannel()` | `-` | `-` |
-| WhatsApp connect / status / send / disconnect | `claw.whatsapp.connect()`, `status()`, `sendMessage({ approvalId })`, `disconnect()` | `-` | `-` |
+| Telegram chats / inspect / send | `claw.telegram.listChats()`, `getChat()`, `sendMessage({ approvalId, legalLabel })`, `sendMedia({ approvalId, legalLabel })` | `claw telegram chats list`, `inspect`, `send` | `-`; channel sends evaluate central regulated policy before external delivery |
+| Slack connect / status / send / list | `claw.slack.connectBot()`, `status()`, `sendMessage({ approvalId, legalLabel })`, `listChannels()`, `getChannel()` | `-` | `-`; channel sends evaluate central regulated policy before external delivery |
+| WhatsApp connect / status / send / disconnect | `claw.whatsapp.connect()`, `status()`, `sendMessage({ approvalId, legalLabel })`, `disconnect()` | `-` | `-`; channel sends evaluate central regulated policy before external delivery |
 
 ### Relay Control Plane Only
 
