@@ -1434,6 +1434,10 @@ function scheduleSearchChangedSourceEvent(input: {
       return scheduleProvidersRoutingChangedSourceEvent(input, { dataDir, observedAt });
     case "agents.catalog":
       return scheduleAgentsCatalogChangedSourceEvent(input, { dataDir, observedAt });
+    case "mcp.servers":
+      return scheduleMcpServersChangedSourceEvent(input, { dataDir, observedAt });
+    case "runtime.events":
+      return scheduleRuntimeEventsChangedSourceEvent(input, { dataDir, observedAt });
     default:
       return scheduleSimpleChangedSourceEvent(input, { dataDir, observedAt, root });
   }
@@ -1672,6 +1676,56 @@ function scheduleAgentsCatalogChangedSourceEvent(input: {
   });
 }
 
+function scheduleMcpServersChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  cwd: string;
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const serverId = input.flags["server-id"] ?? input.flags.server ?? input.flags["resource-id"] ?? input.positionals[5];
+  const configPath = input.flags["config-path"] ?? input.flags.config ?? input.flags.path;
+  if (!serverId || !configPath) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source mcp.servers --server-id <id> --config-path <path>" };
+  }
+  return scheduleMcpServersSearchEvent({
+    operation: input.operation,
+    serverId,
+    configPath: path.resolve(input.cwd, expandSearchPath(configPath)),
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
+function scheduleRuntimeEventsChangedSourceEvent(input: {
+  operation: "upsert" | "delete";
+  flags: Record<string, string>;
+  positionals: string[];
+}, options: { dataDir: string; observedAt?: string }): SearchEventScheduleResult {
+  const rawKind = input.flags.kind ?? input.flags.type ?? input.flags["runtime-kind"];
+  const kind = rawKind === "operational-event" ? "operational" : rawKind;
+  if (kind !== "job" && kind !== "event" && kind !== "operational") {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source runtime.events --kind job|event|operational --id <id> [--domain <domain>]" };
+  }
+  const id = input.flags.id
+    ?? input.flags["resource-id"]
+    ?? (kind === "job" ? input.flags["job-id"] : kind === "event" ? input.flags["event-id"] : input.flags["operational-id"])
+    ?? input.positionals[5];
+  if (!id) {
+    return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source runtime.events --kind job|event|operational --id <id> [--domain <domain>]" };
+  }
+  const domain = input.flags.domain ?? input.flags["operational-domain"];
+  return scheduleRuntimeEventsSearchEvent({
+    operation: input.operation,
+    kind,
+    id,
+    domain,
+    dataDir: options.dataDir,
+    flags: input.flags,
+    observedAt: options.observedAt,
+  });
+}
+
 function scheduleSimpleChangedSourceEvent(input: {
   source: string;
   operation: "upsert" | "delete";
@@ -1725,6 +1779,8 @@ function typedChangedSourceList(): string {
     "eln.records",
     "providers.routing",
     "agents.catalog",
+    "mcp.servers",
+    "runtime.events",
     ...SIMPLE_CHANGED_SOURCE_SCHEDULES.keys(),
   ].join(", ");
 }
