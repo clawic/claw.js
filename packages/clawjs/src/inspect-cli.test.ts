@@ -363,7 +363,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; writes: boolean; requirementIds: string[]; validationDomains: string[]; validationTopologyTargets: string[]; validationRouteIds: string[]; prohibitedActions: string[] };
     externalValidationReport: { status: string; writes: boolean; requirementCount: number; evidenceCount: number; clearableRequirementIds: string[]; blockedRequirementIds: string[]; items: Array<{ requirementId: string; clearable: boolean; status: string; writes: boolean }> };
     sourceQaReviewTemplate: { status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> };
-    closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    closureGate: { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string };
     providerDeviceE2EPlan: { status: string; writes: boolean; requiredDomains: string[]; requiredTopologyTargets: string[]; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; validationSteps: Array<{ domain: string; requiredRouteIds: string[]; requiredExternalPendingIds: string[]; requiredArtifacts: string[]; acceptanceCriteria: string[]; writes: boolean }>; plaintextMaterialIncluded: boolean };
     routeContracts: Array<{ routeId: string; parallelApiAllowed: boolean; writes: boolean }>;
     tests: string[];
@@ -499,19 +499,21 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.deepEqual(remoteInspectPayload.closureGate.externalPendingRequiredSourceQaIds, remoteInspectPayload.sourceQaReviewTemplate.externalPendingRequiredSourceQaIds);
   assert.equal(remoteInspectPayload.closureGate.sourceQaReviewStatus, "incomplete");
   assert.equal(remoteInspectPayload.closureGate.sourceQaReviewItems.length, 0);
-	  assert.deepEqual(remoteInspectPayload.closureGate.blockedExternalRequirementIds, remoteInspectPendingRequirementIds);
-	  assert.equal(remoteInspectPayload.closureGate.clearableExternalRequirementIds.length, 0);
-	  assert.equal(remoteInspectPayload.closureGate.blockers.includes("source_qa_review"), true);
-	  assert.equal(remoteInspectPayload.closureGate.blockers.includes("external_validation"), true);
-	  const remoteInspectText = await runCliCapture(["inspect", "remote"], process.cwd());
-	  assert.equal(remoteInspectText.code, CLI_EXIT_OK);
-	  assert.equal(remoteInspectText.stdout.includes("decisionReview\tincomplete 0/23 implemented=0 external=0 blockers=source_qa_review,external_validation"), true);
-	  assert.equal(remoteInspectText.stdout.includes("validationReadiness\tnot_ready sourceQa=incomplete evidence=external_pending blockers=source_qa_review,external_validation"), true);
-	  assert.equal(remoteInspectText.stdout.includes("approvalRequest\tapproval_required readiness=not_ready approved=false"), true);
-	  assert.equal(remoteInspectText.stdout.includes("closureGate\tblocked sourceQa=incomplete blockers=source_qa_review,external_validation finalReread=required"), true);
-	  const remoteInspectWithArtifacts = await runCliCapture([
-	    "inspect",
-	    "remote",
+  assert.deepEqual(remoteInspectPayload.closureGate.blockedExternalRequirementIds, remoteInspectPendingRequirementIds);
+  assert.equal(remoteInspectPayload.closureGate.clearableExternalRequirementIds.length, 0);
+  assert.equal(remoteInspectPayload.closureGate.blockers.includes("source_qa_review"), true);
+  assert.equal(remoteInspectPayload.closureGate.blockers.includes("external_validation"), true);
+  assert.equal(remoteInspectPayload.closureGate.finalSourceSessionRereadRequired, true);
+  assert.equal(remoteInspectPayload.closureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+  const remoteInspectText = await runCliCapture(["inspect", "remote"], process.cwd());
+  assert.equal(remoteInspectText.code, CLI_EXIT_OK);
+  assert.equal(remoteInspectText.stdout.includes("decisionReview\tincomplete 0/23 implemented=0 external=0 blockers=source_qa_review,external_validation"), true);
+  assert.equal(remoteInspectText.stdout.includes("validationReadiness\tnot_ready sourceQa=incomplete evidence=external_pending blockers=source_qa_review,external_validation"), true);
+  assert.equal(remoteInspectText.stdout.includes("approvalRequest\tapproval_required readiness=not_ready approved=false"), true);
+  assert.equal(remoteInspectText.stdout.includes("closureGate\tblocked sourceQa=incomplete blockers=source_qa_review,external_validation finalReread=required"), true);
+  const remoteInspectWithArtifacts = await runCliCapture([
+    "inspect",
+    "remote",
     "--source-qa-review-file",
     "docs/remote-gateway-sync-source-qa-review.json",
     "--external-validation-file",
@@ -534,7 +536,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     externalValidationReadiness: { status: string; sourceQaReady: boolean; externalEvidenceReady: boolean; closureGateBlockers: string[]; blockedExternalRequirementIds: string[] };
     externalValidationApprovalRequest: { status: string; approvalRequired: boolean; approved: boolean; readinessStatus: string; requirementIds: string[]; validationRouteIds: string[]; writes: boolean };
     externalValidationReport: { status: string; clearableRequirementIds: string[]; blockedRequirementIds: string[]; writes: boolean };
-	    closureGate: { sourceQaReviewStatus: string; missingSourceQaIds: string[]; blockers: string[]; blockedExternalRequirementIds: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string; writes: boolean };
+    closureGate: { sourceQaReviewStatus: string; missingSourceQaIds: string[]; blockers: string[]; blockedExternalRequirementIds: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string; writes: boolean };
   }>(remoteInspectWithArtifacts.stdout).data;
   assert.equal(remoteInspectWithArtifactsPayload.decisionReview.status, "complete");
   assert.equal(remoteInspectWithArtifactsPayload.decisionReview.reviewedCount, 23);
@@ -564,26 +566,26 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.deepEqual(remoteInspectWithArtifactsPayload.externalValidationReport.blockedRequirementIds, remoteInspectPendingRequirementIds);
   assert.equal(remoteInspectWithArtifactsPayload.externalValidationReport.writes, false);
   assert.equal(remoteInspectWithArtifactsPayload.closureGate.sourceQaReviewStatus, "complete");
-	  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.missingSourceQaIds, []);
-	  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.blockers, ["external_validation"]);
-	  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.blockedExternalRequirementIds, remoteInspectPendingRequirementIds);
-	  assert.equal(remoteInspectWithArtifactsPayload.closureGate.finalSourceSessionRereadRequired, true);
-	  assert.equal(remoteInspectWithArtifactsPayload.closureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
-	  assert.equal(remoteInspectWithArtifactsPayload.closureGate.writes, false);
-	  const remoteInspectWithArtifactsText = await runCliCapture([
-	    "inspect",
-	    "remote",
-	    "--source-qa-review-file",
-	    "docs/remote-gateway-sync-source-qa-review.json",
-	    "--external-validation-file",
-	    "docs/remote-gateway-sync-external-validation-evidence.json",
-	  ], process.cwd());
-	  assert.equal(remoteInspectWithArtifactsText.code, CLI_EXIT_OK);
-	  assert.equal(remoteInspectWithArtifactsText.stdout.includes("decisionReview\tcomplete 23/23 implemented=11 external=12 blockers=external_validation"), true);
-	  assert.equal(remoteInspectWithArtifactsText.stdout.includes("validationReadiness\tready_for_approved_run sourceQa=complete evidence=external_pending blockers=external_validation"), true);
-	  assert.equal(remoteInspectWithArtifactsText.stdout.includes("approvalRequest\tapproval_required readiness=ready_for_approved_run approved=false"), true);
-	  assert.equal(remoteInspectWithArtifactsText.stdout.includes("closureGate\tblocked sourceQa=complete blockers=external_validation finalReread=required"), true);
-	  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.status, "external_pending");
+  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.missingSourceQaIds, []);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.blockers, ["external_validation"]);
+  assert.deepEqual(remoteInspectWithArtifactsPayload.closureGate.blockedExternalRequirementIds, remoteInspectPendingRequirementIds);
+  assert.equal(remoteInspectWithArtifactsPayload.closureGate.finalSourceSessionRereadRequired, true);
+  assert.equal(remoteInspectWithArtifactsPayload.closureGate.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+  assert.equal(remoteInspectWithArtifactsPayload.closureGate.writes, false);
+  const remoteInspectWithArtifactsText = await runCliCapture([
+    "inspect",
+    "remote",
+    "--source-qa-review-file",
+    "docs/remote-gateway-sync-source-qa-review.json",
+    "--external-validation-file",
+    "docs/remote-gateway-sync-external-validation-evidence.json",
+  ], process.cwd());
+  assert.equal(remoteInspectWithArtifactsText.code, CLI_EXIT_OK);
+  assert.equal(remoteInspectWithArtifactsText.stdout.includes("decisionReview\tcomplete 23/23 implemented=11 external=12 blockers=external_validation"), true);
+  assert.equal(remoteInspectWithArtifactsText.stdout.includes("validationReadiness\tready_for_approved_run sourceQa=complete evidence=external_pending blockers=external_validation"), true);
+  assert.equal(remoteInspectWithArtifactsText.stdout.includes("approvalRequest\tapproval_required readiness=ready_for_approved_run approved=false"), true);
+  assert.equal(remoteInspectWithArtifactsText.stdout.includes("closureGate\tblocked sourceQa=complete blockers=external_validation finalReread=required"), true);
+  assert.equal(remoteInspectPayload.providerDeviceE2EPlan.status, "external_pending");
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.writes, false);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredDomains.includes("hosted_agents"), true);
   assert.equal(remoteInspectPayload.providerDeviceE2EPlan.requiredTopologyTargets.includes("windows_host"), true);
@@ -838,7 +840,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 
   const remoteClosureGate = await runCliCapture(["remote", "closure-gate", "--now", "2026-05-17T10:13:26.000Z", "--json"], process.cwd());
   assert.equal(remoteClosureGate.code, CLI_EXIT_OK);
-  const remoteClosureGatePayload = parseCliJson<{ status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] }>(remoteClosureGate.stdout).data;
+  const remoteClosureGatePayload = parseCliJson<{ status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string }>(remoteClosureGate.stdout).data;
   assert.equal(remoteClosureGatePayload.status, "blocked");
   assert.equal(remoteClosureGatePayload.writes, false);
   assert.equal(remoteClosureGatePayload.requiredSourceQaIds.length, 23);
@@ -847,13 +849,15 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.deepEqual(remoteClosureGatePayload.externalPendingRequiredSourceQaIds, remoteSourceQaTemplatePayload.externalPendingRequiredSourceQaIds);
   assert.equal(remoteClosureGatePayload.sourceQaReviewStatus, "incomplete");
   assert.equal(remoteClosureGatePayload.sourceQaReviewItems.length, 0);
-	  assert.deepEqual(remoteClosureGatePayload.blockedExternalRequirementIds, remotePendingRequirementIds);
-	  assert.equal(remoteClosureGatePayload.clearableExternalRequirementIds.length, 0);
-	  assert.equal(remoteClosureGatePayload.blockers.includes("source_qa_review"), true);
-	  assert.equal(remoteClosureGatePayload.blockers.includes("external_validation"), true);
-	  const remoteClosureGateText = await runCliCapture(["remote", "closure-gate"], process.cwd());
-	  assert.equal(remoteClosureGateText.code, CLI_EXIT_OK);
-	  assert.equal(remoteClosureGateText.stdout.trim(), "blocked sourceQa=incomplete blockers=source_qa_review,external_validation externalBlocked=13 finalReread=required");
+  assert.deepEqual(remoteClosureGatePayload.blockedExternalRequirementIds, remotePendingRequirementIds);
+  assert.equal(remoteClosureGatePayload.clearableExternalRequirementIds.length, 0);
+  assert.equal(remoteClosureGatePayload.blockers.includes("source_qa_review"), true);
+  assert.equal(remoteClosureGatePayload.blockers.includes("external_validation"), true);
+  assert.equal(remoteClosureGatePayload.finalSourceSessionRereadRequired, true);
+  assert.equal(remoteClosureGatePayload.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+  const remoteClosureGateText = await runCliCapture(["remote", "closure-gate"], process.cwd());
+  assert.equal(remoteClosureGateText.code, CLI_EXIT_OK);
+  assert.equal(remoteClosureGateText.stdout.trim(), "blocked sourceQa=incomplete blockers=source_qa_review,external_validation externalBlocked=13 finalReread=required");
 
   const reviewedRemoteClosureGate = await runCliCapture([
     "remote",
@@ -867,7 +871,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--json",
   ], process.cwd());
   assert.equal(reviewedRemoteClosureGate.code, CLI_EXIT_OK);
-  const reviewedRemoteClosureGatePayload = parseCliJson<{ status: string; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: Array<{ qaId: string; decisionKey: string }>; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] }>(reviewedRemoteClosureGate.stdout).data;
+  const reviewedRemoteClosureGatePayload = parseCliJson<{ status: string; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: Array<{ qaId: string; decisionKey: string }>; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string }>(reviewedRemoteClosureGate.stdout).data;
   assert.equal(reviewedRemoteClosureGatePayload.status, "blocked");
   assert.equal(reviewedRemoteClosureGatePayload.reviewedSourceQaIds.length, 23);
   assert.equal(reviewedRemoteClosureGatePayload.missingSourceQaIds.length, 0);
@@ -876,21 +880,23 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(reviewedRemoteClosureGatePayload.invalidExternalPendingDispositionQaIds.length, 0);
   assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewStatus, "complete");
   assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewItems.length, 23);
-	  assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewItems.some((entry) => entry.qaId === "QA-006" && entry.decisionKey === "remote_secrets_model"), true);
-	  assert.deepEqual(reviewedRemoteClosureGatePayload.blockedExternalRequirementIds, remotePendingRequirementIds);
-	  assert.equal(reviewedRemoteClosureGatePayload.clearableExternalRequirementIds.length, 0);
-	  assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("source_qa_review"), false);
-	  assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("external_validation"), true);
-	  const reviewedRemoteClosureGateText = await runCliCapture([
-	    "remote",
-	    "closure-gate",
-	    "--source-qa-review-file",
-	    "docs/remote-gateway-sync-source-qa-review.json",
-	    "--external-validation-file",
-	    "docs/remote-gateway-sync-external-validation-evidence.json",
-	  ], process.cwd());
-	  assert.equal(reviewedRemoteClosureGateText.code, CLI_EXIT_OK);
-	  assert.equal(reviewedRemoteClosureGateText.stdout.trim(), "blocked sourceQa=complete blockers=external_validation externalBlocked=13 finalReread=required");
+  assert.equal(reviewedRemoteClosureGatePayload.sourceQaReviewItems.some((entry) => entry.qaId === "QA-006" && entry.decisionKey === "remote_secrets_model"), true);
+  assert.deepEqual(reviewedRemoteClosureGatePayload.blockedExternalRequirementIds, remotePendingRequirementIds);
+  assert.equal(reviewedRemoteClosureGatePayload.clearableExternalRequirementIds.length, 0);
+  assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("source_qa_review"), false);
+  assert.equal(reviewedRemoteClosureGatePayload.blockers.includes("external_validation"), true);
+  assert.equal(reviewedRemoteClosureGatePayload.finalSourceSessionRereadRequired, true);
+  assert.equal(reviewedRemoteClosureGatePayload.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+  const reviewedRemoteClosureGateText = await runCliCapture([
+    "remote",
+    "closure-gate",
+    "--source-qa-review-file",
+    "docs/remote-gateway-sync-source-qa-review.json",
+    "--external-validation-file",
+    "docs/remote-gateway-sync-external-validation-evidence.json",
+  ], process.cwd());
+  assert.equal(reviewedRemoteClosureGateText.code, CLI_EXIT_OK);
+  assert.equal(reviewedRemoteClosureGateText.stdout.trim(), "blocked sourceQa=complete blockers=external_validation externalBlocked=13 finalReread=required");
 
   const remoteE2EPlan = await runCliCapture(["remote", "e2e-plan", "--now", "2026-05-17T10:13:30.000Z", "--json"], process.cwd());
   assert.equal(remoteE2EPlan.code, CLI_EXIT_OK);

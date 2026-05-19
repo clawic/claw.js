@@ -426,7 +426,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
 
     const closureGate = await built.app.inject({ method: "GET", url: "/v1/remote/closure-gate" });
     assert.equal(closureGate.statusCode, 200);
-	    const closureGatePayload = closureGate.json() as { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string };
+    const closureGatePayload = closureGate.json() as { status: string; writes: boolean; requiredSourceQaIds: string[]; reviewedSourceQaIds: string[]; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; sourceQaReviewItems: unknown[]; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string };
     const expectedClosureGate = buildRemoteGoalClosureGate();
     assert.equal(closureGatePayload.status, "blocked");
     assert.equal(closureGatePayload.writes, false);
@@ -440,11 +440,11 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(closureGatePayload.sourceQaReviewStatus, "incomplete");
     assert.equal(closureGatePayload.sourceQaReviewItems.length, 0);
     assert.deepEqual(closureGatePayload.blockedExternalRequirementIds, expectedExternalPendingRequirementIds);
-	    assert.deepEqual(closureGatePayload.clearableExternalRequirementIds, []);
-	    assert.equal(closureGatePayload.blockers.includes("source_qa_review"), true);
-	    assert.equal(closureGatePayload.blockers.includes("external_validation"), true);
-	    assert.equal(closureGatePayload.finalSourceSessionRereadRequired, true);
-	    assert.equal(closureGatePayload.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
+    assert.deepEqual(closureGatePayload.clearableExternalRequirementIds, []);
+    assert.equal(closureGatePayload.blockers.includes("source_qa_review"), true);
+    assert.equal(closureGatePayload.blockers.includes("external_validation"), true);
+    assert.equal(closureGatePayload.finalSourceSessionRereadRequired, true);
+    assert.equal(closureGatePayload.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
 
     const reviewedPendingClosureGate = await built.app.inject({
       method: "POST",
@@ -456,7 +456,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
       },
     });
     assert.equal(reviewedPendingClosureGate.statusCode, 200);
-    const reviewedPendingClosureGatePayload = reviewedPendingClosureGate.json() as { status: string; writes: boolean; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[] };
+    const reviewedPendingClosureGatePayload = reviewedPendingClosureGate.json() as { status: string; writes: boolean; missingSourceQaIds: string[]; invalidSourceQaIds: string[]; duplicateSourceQaIds: string[]; invalidExternalPendingDispositionQaIds: string[]; sourceQaReviewStatus: string; blockedExternalRequirementIds: string[]; clearableExternalRequirementIds: string[]; blockers: string[]; finalSourceSessionRereadRequired: boolean; sourceSessionRereadCommand: string };
     assert.equal(reviewedPendingClosureGatePayload.status, "blocked");
     assert.equal(reviewedPendingClosureGatePayload.writes, false);
     assert.deepEqual(reviewedPendingClosureGatePayload.missingSourceQaIds, []);
@@ -467,6 +467,8 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.deepEqual(reviewedPendingClosureGatePayload.blockedExternalRequirementIds, expectedExternalPendingRequirementIds);
     assert.deepEqual(reviewedPendingClosureGatePayload.clearableExternalRequirementIds, []);
     assert.deepEqual(reviewedPendingClosureGatePayload.blockers, ["external_validation"]);
+    assert.equal(reviewedPendingClosureGatePayload.finalSourceSessionRereadRequired, true);
+    assert.equal(reviewedPendingClosureGatePayload.sourceSessionRereadCommand, "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session");
 
     const wrongSourceClosureGate = await built.app.inject({
       method: "POST",
