@@ -156,6 +156,7 @@ claw search jobs claim --sources documents.blocks --shards cold --limit 10 --jso
 claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search jobs schedule upsert --source documents.blocks --resource-id doc_123 --json
+claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
 claw search changes scan --source code.symbols --root ./repo --json
 claw search saved create recent --query "text" --json
@@ -222,10 +223,11 @@ resource compact into one queued job so noisy local events do not create
 unbounded duplicate backfill work.
 
 `claw search changes schedule` is the typed producer-facing wrapper for changed
-file or route events. It uses the source schedulers for `code.symbols`,
-`local.files`, `web.ingested`, `external.cache`, and `surfaces.routes`, so
-producer paths are checked against their selected root and the queued job
-contains the payload the embedded worker needs for resource-scoped refresh.
+resource, file, or route events. It uses the source schedulers for
+`sessions.chats`, `code.symbols`, `local.files`, `web.ingested`,
+`external.cache`, and `surfaces.routes`, so producer ids/paths are checked
+against the selected source contract and the queued job contains the payload
+the embedded worker needs for resource-scoped refresh.
 `claw search changes scan` is a bounded local fallback producer for file-backed
 sources. It walks a selected root, stores a compact snapshot in the source
 cursor shard `changes`, and schedules hot upsert/delete jobs only for files
@@ -472,17 +474,19 @@ speech-to-text providers from this adapter.
 surface. It indexes the deck title, theme, author metadata, output formats,
 redacted deck metadata fragments, and each slide as a Search fragment using
 headings, subtitles, body text, bullets, steps, metrics, tables, image captions,
-and notes already stored in the manifest. It does not parse rendered PPTX/PDF
+and notes already stored in the manifest. Secret-like keys inside nested slide
+structures are redacted before indexing. It does not parse rendered PPTX/PDF
 output; generated files remain media or generated-artifact records when those
 surfaces register them. Local `slides create`, `slides add`, `slides render`,
 and `slides share` writes schedule best-effort hot upsert jobs for changed deck
-manifests.
+manifests; `slides delete` emits the matching hot delete job for the deck id.
 
 `sheets.workbooks` projects local workbook manifests from
 `.claw/sheets/workbooks` or an explicit sheets root. It indexes workbook title,
 author/output metadata, redacted workbook metadata fragments, sheet names,
 columns, rows, cells, tables, charts, and notes as workbook items with per-sheet
-fragments. It does not parse binary XLSX files directly; imported or generated
+fragments. Secret-like keys inside nested sheet structures are redacted before
+indexing. It does not parse binary XLSX files directly; imported or generated
 files remain media/file records until a workbook manifest or extractor-owned
 projection exists. Producers that write workbook manifests can schedule
 best-effort hot upsert jobs for changed workbooks through the Search event
@@ -491,8 +495,10 @@ and emits hot `sheets.workbooks` refresh/delete jobs for the changed workbook id
 
 `generations.artifacts` projects generated artifact records. It indexes prompts,
 titles, kind, status, backend/model metadata, command provenance, output
-references, and redacted generation metadata fragments so generated outputs
-remain searchable even when they are not also registered as media.
+references, redacted generation metadata fragments, and non-sensitive command
+arguments so generated outputs remain searchable even when they are not also
+registered as media. Secret-like command flags and values are redacted before
+they enter the Search body.
 
 `signals.observations` projects signal verticals, variables, and observations
 from `core.sqlite`. It indexes vertical descriptions, variable definitions,
@@ -691,8 +697,11 @@ signed host shortcut broker validates it.
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
   `code.symbols` adapter with per-file event refresh. `sessions.chats` supports
-  resource-scoped refresh jobs keyed by session id, and `claw sessions index`
-  enqueues hot Search refresh jobs for indexed local session artifacts. `docs.pages` indexes
+  resource-scoped refresh jobs keyed by session id, `claw search changes
+  schedule upsert|delete --source sessions.chats --session-id <id>` exposes
+  that producer contract, and `claw sessions index` enqueues hot Search
+  refresh/delete jobs for indexed local session artifacts and archived session
+  artifacts. `docs.pages` indexes
   public root docs, docs, and ADR sections with resource-scoped refresh jobs and
   best-effort event scheduling for changed docs files. `surfaces.routes` indexes
   route graph contracts with resource-scoped refresh jobs keyed by route id.

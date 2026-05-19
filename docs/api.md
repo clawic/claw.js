@@ -112,6 +112,11 @@ Drive-facing search and share layer. Storage permissions are an SDK/API
 ownership boundary, not a filesystem sandbox against code that can read the
 workspace database and blob directory directly.
 
+Reviewed storage exports and shares require explicit human review metadata.
+`storage.exportToFile({ approvalId, legalLabel })` writes the object plus a
+`.claw-legal.json` sidecar so the exported output keeps its approval and
+review label.
+
 The public surface is intentionally tiered:
 
 - `SDK core`: product primitives such as workspace setup, sessions, documents, providers, files, and inference.
@@ -301,6 +306,7 @@ const claw = await createClaw({
 });
 
 const sent = await claw.notify.send({
+  approvalId: "approval-from-human-review",
   context: { tenantId: "demo", eventType: "deploy.finished" },
   delivery: { mode: "alert", title: "Deploy finished" },
 });
@@ -479,6 +485,7 @@ await claw.channels.messages.send({
   targetId: "-1001234567890",
   text: "hello",
   agentId: "support-router",
+  approvalId: "approval-from-human-review",
 });
 ```
 Always check `status.capabilityMap` before assuming these subsystems are
@@ -569,6 +576,8 @@ const file = claw.media.download(hits[0].mediaId);
 
 const share = await claw.media.share.create({
   label: "Requirements PDFs",
+  legalLabel: "Exported media - human reviewed",
+  approvalId: "approval-from-human-review",
   filters: { kind: "document", query: "requirements" },
 });
 
@@ -603,8 +612,8 @@ await claw.telegram.setChatPermissions(123, { can_send_messages: false });
 await claw.telegram.banOrRestrictMember({ action: "ban", chatId: 123, userId: 456 });
 await claw.telegram.createInviteLink(123, { name: "Support" });
 await claw.telegram.revokeInviteLink(123, "https://t.me/+...");
-await claw.telegram.sendMessage({ chatId: 123, text: "hello" });
-await claw.telegram.sendMedia({ type: "photo", chatId: 123, media: "https://..." });
+await claw.telegram.sendMessage({ chatId: 123, text: "hello", approvalId: "approval-from-human-review" });
+await claw.telegram.sendMedia({ type: "photo", chatId: 123, media: "https://...", approvalId: "approval-from-human-review" });
 await claw.telegram.syncUpdates();
 await claw.telegram.ingestUpdate(updatePayload);
 

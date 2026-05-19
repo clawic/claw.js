@@ -566,6 +566,137 @@ for (const [relativePath, snippets] of [
     "health:patient:123",
     "Regulated remote shares require explicit review",
   ]],
+  ["packages/clawjs-search/src/index.test.ts", [
+    "Search action execution requires review and labels for regulated results",
+    "regulated_result_review_required",
+    "regulated_domain:finance",
+  ]],
+  ["packages/clawjs-search-mcp/src/index.test.ts", [
+    "finance.records:1",
+    "copy-reference",
+    "regulated_result_review_required",
+    "legalOutputLabels",
+  ]],
+  ["content/src/server/publish.ts", [
+    "Pre-public legal closure: publishPolicy describes operator intent, not permission.",
+    "if (destination.publishPolicy === \"autopublish\") return true;",
+    "return true;",
+  ]],
+  ["content/tests/e2e/backend.e2e.test.ts", [
+    "Autopublish still requires explicit approval before publication.",
+    "approval_required",
+    "blockedAutoRun.response.status, 409",
+  ]],
+  ["content/tests/e2e/cli.e2e.test.ts", [
+    "autopublish plan run should require approval before publication",
+    "approved approval request",
+    "Autopublish still requires explicit approval before publication.",
+  ]],
+  ["content/tests/e2e/sdk.e2e.test.ts", [
+    "approved approval request",
+    "Autopublish still requires explicit approval before publication.",
+  ]],
+  ["relay/tests/e2e/relay.e2e-utils.ts", [
+    "content.publish.createPlan",
+    "approval_required",
+    "Plan requires an approved approval request before publication.",
+  ]],
+  ["relay/tests/e2e/relay.e2e.test.ts", [
+    "Relay content autopublish still requires explicit approval.",
+    "planPayload.approval?.status, \"pending\"",
+  ]],
+  ["packages/clawjs-node/src/create-claw-channel-facades.ts", [
+    "requires explicit approvalId before external send",
+    "telegram.sendMessage",
+    "slack.sendMessage",
+    "whatsapp.sendMessage",
+    "channels.messages.send",
+  ]],
+  ["packages/clawjs-node/src/create-claw-telegram.test.ts", [
+    "blocked external send",
+    "approval_telegram_send_message",
+    "approval_channels_message_send",
+    "requires explicit approvalId before external send",
+  ]],
+  ["docs/api.md", [
+    "approval-from-human-review",
+  ]],
+  ["docs/interface-matrix.md", [
+    "sendMessage({ approvalId })",
+    "sendMedia({ approvalId })",
+  ]],
+  ["packages/clawjs-node/src/notify/index.ts", [
+    "approvalId: string",
+    "notify.send requires explicit approvalId before external notification delivery.",
+  ]],
+  ["notify/src/server/app.ts", [
+    "Notification delivery requires explicit approvalId.",
+    "approval_required",
+  ]],
+  ["packages/clawjs-node/src/notify/index.test.ts", [
+    "approval_notify_send",
+    "requires explicit approvalId before external notification delivery",
+    "approval_required",
+  ]],
+  ["packages/clawjs/src/notify.test.ts", [
+    "approval_notify_cli_send",
+    "--approval-id",
+  ]],
+  ["packages/clawjs-node/src/storage/store.ts", [
+    "Storage share creation requires explicit approvalId before export/share.",
+    "Storage share creation requires a persistent legalLabel before export/share.",
+    "claw.storage.export.legal",
+    "approval_id",
+    "legal_label",
+  ]],
+  ["packages/clawjs-node/src/media/store.ts", [
+    "Media share creation requires explicit approvalId before export/share.",
+    "Media share creation requires a persistent legalLabel before export/share.",
+  ]],
+  ["packages/clawjs-node/src/storage/store.test.ts", [
+    "approval_storage_share",
+    "approval_storage_export",
+    "Exported content - human reviewed",
+  ]],
+  ["packages/clawjs/src/cli-export-review.ts", [
+    "requires --confirm before exporting or sharing data",
+    "requires --approval-id or --host-approval-id",
+    "requires --legal-label",
+  ]],
+  ["packages/clawjs/src/cli-productivity-primary-command.test.ts", [
+    "approval_work_export",
+    "approval_work_backup",
+    "Work snapshot - human reviewed",
+    "Work backup - human reviewed",
+  ]],
+  ["packages/clawjs/src/cli-project-command.test.ts", [
+    "approval_project_export",
+    "Project handoff - human reviewed",
+  ]],
+  ["packages/clawjs/src/cli-connector-context.test.ts", [
+    "approval_accounts_redacted",
+    "approval_accounts_private",
+    "Redacted connector export - human reviewed",
+  ]],
+  ["packages/clawjs-node/src/media/store.test.ts", [
+    "approval_media_object",
+    "approval_media_gallery",
+    "Exported media - human reviewed",
+  ]],
+  ["packages/clawjs/src/cli-media-generation-command.ts", [
+    "legalLabel: flags[\"legal-label\"]",
+    "approvalId: flags[\"approval-id\"] ?? flags[\"host-approval-id\"]",
+  ]],
+  ["docs/api.md", [
+    "Exported media - human reviewed",
+    "storage.exportToFile",
+  ]],
+  ["docs/cli.md", [
+    "work export snapshot.json --confirm --approval-id",
+    "work backup backups/ --confirm --approval-id",
+    "project export . --output project-handoff.clawexport --confirm --approval-id",
+    "accounts export --provider apple --mode redacted --confirm --approval-id",
+  ]],
   ["docs/adr/0026-regulated-domain-safety-liability-boundary.md", [
     "Status",
     "Accepted",
@@ -582,6 +713,9 @@ for (const [relativePath, snippets] of [
   ["packages/clawjs/src/cli-safety.test.ts", [
     "safety human domain surfaces preserve guard metadata",
     "\"outputLabelPolicy\": \"required\"",
+    "safety explain returns policy evidence for regulated domains",
+    "legal_strategy_as_final_advice",
+    "legal_service_decision",
     "safety check human output preserves disclaimer and labels",
     "regulated_domain:legal",
   ]],

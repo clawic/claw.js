@@ -227,6 +227,7 @@ claw remote validation-runbook --json
 claw remote validation-readiness --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
 claw remote validation-report --json
 claw remote source-qa-template --json
+claw remote decision-review --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
 claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
 claw remote contracts --json
 claw remote e2e-plan --json
@@ -355,6 +356,13 @@ consume either `--source-qa-review-json` or a versioned artifact with
 the file is an object with an `items` array, those items are submitted as the
 review rows. Versioned source Q/A artifacts are source-bound too and are
 rejected when their conversation or plan IDs do not match this goal.
+`remote decision-review` is the no-write per-decision review payload for the
+same source Q/A artifact. It accepts the same `--source-qa-review-file`,
+`--source-qa-review-json`, `--evidence-file`, and `--external-validation-file`
+inputs as the closure gate, then reports reviewed/missing/invalid Q/A rows,
+implemented vs external-pending dispositions, conformance status per decision,
+and remaining blockers. This gives agents a focused command for proving the
+one-by-one decision audit without parsing the larger `inspect remote` payload.
 `remote closure-gate` combines the external validation report with the required
 source Q/A review report. It remains `blocked` until all 23 source Q/A rows
 have a disposition, evidence refs, and every external validation row is
@@ -386,7 +394,11 @@ gaps, and conformance in one JSON payload. By default it reports the fail-closed
 no-artifact closure state; with `--source-qa-review-file` and
 `--external-validation-file`, it overlays the same artifact-bound readiness,
 approval request, validation report, and closure gate used by `claw remote
-validation-readiness` and `claw remote closure-gate`.
+validation-readiness` and `claw remote closure-gate`. The same payload also
+includes `decisionReview`, a per-Q/A decision coverage table derived from the
+source review artifact; it shows reviewed/missing/invalid Q/A rows,
+implemented vs external-pending dispositions, and the remaining closure
+blockers without mutating state.
 `remote offline-command` returns the no-write `RemoteOfflineCommandResult` for
 interactive remote calls when a Connector, node, or transport is unavailable.
 It always reports `failed_fast`, `enqueued: false`, `retryable: true`, and
@@ -859,14 +871,14 @@ for planning writes.
 ```bash
 claw work agenda --json
 claw work review daily --json
-claw work export snapshot.json
+claw work export snapshot.json --confirm --approval-id approval-from-human-review --legal-label "Work snapshot - human reviewed"
 claw work import snapshot.json --replace
-claw work backup backups/
+claw work backup backups/ --confirm --approval-id approval-from-human-review --legal-label "Work backup - human reviewed"
 
 claw project inspect --project .
 claw project attach . --workspace-id ops-main --accept
 claw project detach . --reason copied-to-new-workspace
-claw project export . --output project-handoff.clawexport
+claw project export . --output project-handoff.clawexport --confirm --approval-id approval-from-human-review --legal-label "Project handoff - human reviewed"
 claw project import project-handoff.clawexport . --workspace-id ops-main --accept
 claw project sync-handoff .
 
@@ -948,6 +960,7 @@ claw image create "product shot"
 claw audio generate --text "hello"
 claw video generate --prompt "demo"
 claw slides create --title "Roadmap"
+claw slides delete roadmap-deck --json
 claw sheets workbook upsert forecast-q2 --title "Q2 Forecast" --sheet Summary --json
 claw sheets workbook delete forecast-q2 --json
 claw generations list
@@ -962,6 +975,8 @@ claw apps --help
 `sheets workbook upsert|delete` maintains local workbook manifests in the
 workspace and schedules `sheets.workbooks` Search refresh/delete jobs for the
 changed workbook id. Binary spreadsheet parsing remains extractor-owned.
+`slides create|add|render|share|delete` maintains local slide deck manifests
+and schedules `slides.decks` Search refresh/delete jobs for changed deck ids.
 `docs page upsert|delete` maintains public Markdown pages under `docs/` and
 schedules `docs.pages` Search refresh/delete jobs for the changed page.
 
@@ -1161,8 +1176,8 @@ claw accounts defaults set --context revenuecat_api_v2 --provider revenuecat --s
 claw accounts schema apple --json
 claw accounts doctor --json
 claw accounts explain apple --operation apple.upload --env production --json
-claw accounts export --provider apple --mode redacted --json
-claw accounts export --mode private-envelope --json
+claw accounts export --provider apple --mode redacted --confirm --approval-id approval-from-human-review --legal-label "Redacted connector export - human reviewed" --json
+claw accounts export --mode private-envelope --confirm --approval-id approval-from-human-review --legal-label "Private connector export - human reviewed" --json
 claw connectors operation upsert openai.images.edit --provider openai --runtime-kind api --support supported --json
 claw connectors operation delete openai.images.edit --json
 claw connectors context explain revenuecat --operation revenuecat.project_configuration.read --json
@@ -1174,10 +1189,11 @@ defaults, and fallbacks without exposing plaintext secrets. `connectors context`
 is the same surface under the connector control-plane umbrella. Local
 configuration commands persist non-secret records, state, defaults, policy,
 guidance, and `secret_ref` links in `core.sqlite`; real provider import or
-mutation remains explicit-approval work. `accounts export` is redacted by
-default. `--mode private-envelope` includes private non-secret fields for a
-protected handoff, but still omits plaintext secrets and exports only binding
-metadata for secret fields.
+mutation remains explicit-approval work. `accounts export` also requires
+`--confirm`, `--approval-id` or `--host-approval-id`, and `--legal-label`.
+It is redacted by default. `--mode private-envelope` includes private
+non-secret fields for a protected handoff, but still omits plaintext secrets
+and exports only binding metadata for secret fields.
 
 `connectors operation upsert|delete` maintains local control-plane operation
 records and schedules `connectors.catalog` Search refresh/delete jobs for the
@@ -1203,8 +1219,9 @@ claw auth status
 ```
 
 `claw sessions index` projects local session artifacts into the conversations
-sidecar and schedules `sessions.chats` Search refresh jobs for each indexed
-session id. It does not send prompts or mutate the source conversation files.
+sidecar and schedules `sessions.chats` Search refresh/delete jobs for each
+indexed session id, using archived session artifacts as tombstone signals. It
+does not send prompts or mutate the source conversation files.
 
 `runtime` is limited to adapters and setup.
 
@@ -1230,6 +1247,7 @@ claw search sources enable web.ingested --profile full --json
 claw search query "release notes" --domains web --profile full --web-root ./web-cache --json
 claw search sources enable external.cache --profile full --json
 claw search query "provider thread" --domains external --profile full --external-root ./provider-cache --json
+claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
 claw search changes scan --source code.symbols --root ./repo --json
 claw search status --json

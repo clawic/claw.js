@@ -108,7 +108,7 @@ the full parity format.
 
 | Contract family | CLI | Service API | Relay contract | Persistence |
 | --- | --- | --- | --- | --- |
-| Classification, conformance, and external validation | `claw remote classify|check|conformance|pending|validation-*|source-qa-template|closure-gate` | `/v1/remote/classifications`, `/v1/remote/external-pending`, `/v1/remote/external-validation-*`, `/v1/remote/source-qa-template`, `/v1/remote/closure-gate` | No-write Gateway/Coordinator evidence surface; external rows stay `EXTERNAL PENDING` until approved physical/provider proof. | source Q/A artifact, external evidence artifact, signed receipts |
+| Classification, conformance, and external validation | `claw remote classify|check|conformance|pending|validation-*|source-qa-template|decision-review|closure-gate` | `/v1/remote/classifications`, `/v1/remote/external-pending`, `/v1/remote/external-validation-*`, `/v1/remote/source-qa-template`, `/v1/remote/decision-review`, `/v1/remote/closure-gate` | No-write Gateway/Coordinator evidence surface; external rows stay `EXTERNAL PENDING` until approved physical/provider proof. | source Q/A artifact, decision-review payload, external evidence artifact, signed receipts |
 | Route contracts, E2E, and compatibility | `claw remote contracts|e2e-plan|compat`, `claw inspect remote` | `/v1/remote/route-contracts`, `/v1/remote/provider-device-e2e-plan`, `/v1/remote/compatibility/adapters` | Registered local contracts projected remotely; compatibility adapters map legacy Relay/mobile names to canonical routes without parallel APIs. | route catalog, compatibility receipts |
 | Gateway and agent service | `claw gateway conformance|agent-service` | `/v1/gateway/conformance`, `/v1/gateway/agent-service/evaluate`, `/v1/gateway/agent-service/executions`, `/v1/gateway/audit/receipts` | Hosted/self-hosted parity, governed multi-tenant assignments, budgets/billing, isolation, and audit. | signed agent-service and gateway-audit receipts |
 | Sync drivers and authority | `claw sync drivers|manifest|plan|apply|handoff` | `/v1/sync/drivers`, `/v1/sync/manifests`, `/v1/sync/changes`, `/v1/sync/plan`, `/v1/sync/conflicts`, `/v1/sync/applications`, `/v1/sync/authority-handoffs` | Manifest/changelog substrate across skills, memory/user-model, sessions, drive/files, blobs, SQLite, sidecars, search indexes, agent config, and workspace state. | manifests, changelogs, cursors, conflict queues |
@@ -224,7 +224,8 @@ surfaces.
 | Content entries / variants / assets | `claw.content.entries.*`, `claw.content.variants.*` | `claw content entry ...`, `variant ...` | `GET/POST WS/content/entries`, `PUT WS/content/entries/:entryId`, `POST WS/content/entries/:entryId/assets`, `POST WS/content/entries/:entryId/variants:generate`, `GET/POST WS/content/variants` |
 | Content approvals / plans / publications | `claw.content.approvals.*`, `claw.content.publish.*` | `claw content approval ...`, `publish ...` | `GET/POST WS/content/approvals`, `POST WS/content/approvals/:approvalId/approve|reject|cancel`, `GET/POST WS/content/plans`, `POST WS/content/plans/:planId/run`, `GET WS/content/publications` |
 | Content frontend contracts and read models | `claw.content.app.*`, `claw.content.calendar.view()` | `-` | `GET WS/content/app/*`, `GET WS/content/calendar` |
-| Notify send / cancel | `claw.notify.send()`, `cancel()` | `claw notify send`, `cancel` | standalone Notify service routes |
+| Notify send / cancel | `claw.notify.send({ approvalId })`, `cancel()` | `claw notify send --approval-id ...`, `cancel` | standalone Notify service routes |
+| Reviewed exports | `storage.exportToFile({ approvalId, legalLabel })`, `storage.shares.create({ approvalId, legalLabel })` | `claw work export ... --confirm --approval-id ... --legal-label ...`, `claw project export ... --confirm --approval-id ... --legal-label ...`, `claw accounts export ... --confirm --approval-id ... --legal-label ...` | local storage export writes `.claw-legal.json`; CLI exports embed legal metadata |
 | Notify feed / subscriptions | `claw.notify.feed()`, `subscriptions.*` | `claw notify subscriptions ...` | standalone Notify service routes |
 | Time items list / get | `claw.time.list()`, `get()` | `claw time list`, `get` | `GET WS/time`, `GET WS/time/:id` |
 | Time item create / update / delete | `claw.time.create()`, `update()`, `delete()` | `claw time create`, `update`, `delete` | `POST WS/time`, `PUT WS/time`, `DELETE WS/time` |
@@ -355,9 +356,9 @@ These methods come from the `@clawjs/workspace` extension, not from the base
 | --- | --- | --- | --- |
 | Telegram connect / status | `claw.telegram.connectBot()`, `status()` | `claw telegram connect`, `status` | `-` |
 | Telegram webhook / polling / commands | `claw.telegram.configureWebhook()`, `disableWebhook()`, `startPolling()`, `stopPolling()`, `setCommands()`, `getCommands()` | `claw telegram webhook ...`, `polling ...`, `commands ...` | `-` |
-| Telegram chats / inspect / send | `claw.telegram.listChats()`, `getChat()`, `sendMessage()`, `sendMedia()` | `claw telegram chats list`, `inspect`, `send` | `-` |
-| Slack connect / status / send / list | `claw.slack.connectBot()`, `status()`, `sendMessage()`, `listChannels()`, `getChannel()` | `-` | `-` |
-| WhatsApp connect / status / send / disconnect | `claw.whatsapp.connect()`, `status()`, `sendMessage()`, `disconnect()` | `-` | `-` |
+| Telegram chats / inspect / send | `claw.telegram.listChats()`, `getChat()`, `sendMessage({ approvalId })`, `sendMedia({ approvalId })` | `claw telegram chats list`, `inspect`, `send` | `-` |
+| Slack connect / status / send / list | `claw.slack.connectBot()`, `status()`, `sendMessage({ approvalId })`, `listChannels()`, `getChannel()` | `-` | `-` |
+| WhatsApp connect / status / send / disconnect | `claw.whatsapp.connect()`, `status()`, `sendMessage({ approvalId })`, `disconnect()` | `-` | `-` |
 
 ### Relay Control Plane Only
 
