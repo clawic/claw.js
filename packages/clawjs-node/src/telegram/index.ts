@@ -38,6 +38,7 @@ export interface TelegramSendMessageInput {
   replyToMessageId?: number;
   messageThreadId?: number;
   approvalId?: string;
+  legalLabel?: string;
 }
 
 export interface TelegramSendMediaInput {
@@ -49,6 +50,7 @@ export interface TelegramSendMediaInput {
   replyToMessageId?: number;
   messageThreadId?: number;
   approvalId?: string;
+  legalLabel?: string;
 }
 
 export interface TelegramBanOrRestrictInput {

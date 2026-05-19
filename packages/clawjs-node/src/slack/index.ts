@@ -23,6 +23,7 @@ export interface SlackSendMessageInput {
   threadTs?: string;
   mrkdwn?: boolean;
   approvalId?: string;
+  legalLabel?: string;
 }
 
 export interface SlackStatusResult extends SlackStateSnapshot {

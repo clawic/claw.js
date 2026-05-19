@@ -104,12 +104,14 @@ test("createClaw telegram API supports commands, chat inspection, sending, and u
     chatId: "1001",
     text: "hello",
     approvalId: "approval_telegram_send_message",
+    legalLabel: "Telegram send - human reviewed",
   });
   const sentMedia = await claw.telegram.sendMedia({
     type: "photo",
     chatId: "1001",
     media: "file_123",
     approvalId: "approval_telegram_send_media",
+    legalLabel: "Telegram media send - human reviewed",
   });
   const chat = await claw.telegram.getChat("1001");
   const admins = await claw.telegram.getChatAdministrators("1001");
@@ -187,6 +189,7 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
     threadId: 42,
     agentId: "support-agent",
     approvalId: "approval_channels_message_send",
+    legalLabel: "Channel message send - human reviewed",
   });
   const deniedMessages = claw.channels.messages.read({
     agentId: "blocked-agent",
@@ -217,6 +220,10 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
   assert.equal(targets.some((target) => target.targetId === "1001"), true);
   assert.equal(messages.some((message) => message.direction === "inbound"), true);
   assert.equal(messages.some((message) => message.direction === "outbound"), true);
+  const outbound = messages.find((message) => message.direction === "outbound") as { metadata?: { policyDecision?: string; policyReasonCodes?: string[]; legalLabel?: string } } | undefined;
+  assert.equal(outbound?.metadata?.policyDecision, "allow");
+  assert.equal(outbound?.metadata?.legalLabel, "Channel message send - human reviewed");
+  assert.equal(outbound?.metadata?.policyReasonCodes?.includes("external_review_required"), true);
   assert.equal(channels.some((channel) => channel.id === "telegram:support" && channel.status === "connected"), true);
   assert.equal(channels.some((channel) => channel.id === "telegram:ops" && channel.status === "connected"), true);
 });

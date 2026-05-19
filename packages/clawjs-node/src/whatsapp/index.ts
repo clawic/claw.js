@@ -23,6 +23,7 @@ export interface WhatsAppSendMessageInput {
   text: string;
   quotedMessageId?: string;
   approvalId?: string;
+  legalLabel?: string;
 }
 
 export interface WhatsAppStatusResult extends WhatsAppStateSnapshot {
