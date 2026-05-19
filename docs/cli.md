@@ -61,6 +61,7 @@ niche domains by surprise.
 
 ```bash
 claw setup
+claw setup --interactive
 claw setup normal
 claw setup normal --details --enable crm --disable light-search
 claw setup advanced --apply
@@ -75,7 +76,8 @@ claw collections list --available
 ```
 
 `claw setup` previews by default and writes configuration only with `--apply`
-or `--yes`. Use `--details` to inspect capacidades and areas separately before
+or `--yes`. Use `--interactive` for a terminal configurator that asks for mode,
+module adjustments, and confirmation before writing. Use `--details` to inspect capacidades and areas separately before
 confirmation, and use `--enable id1,id2` or `--disable id1,id2` to adjust the
 preview before applying. `minimal` is the non-interactive fallback, `normal`
 enables basic mainstream productivity plus light local capabilities, and

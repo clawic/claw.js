@@ -62,6 +62,8 @@ permission prompts unless they ask for those capabilities.
   capabilities are activated only by explicit user action.
 - `claw setup` and `claw modules` are the canonical surfaces for mode and
   module configuration.
+- `claw setup --interactive` provides the terminal configurator: it asks for a
+  preset, module adjustments, and explicit confirmation before writing.
 - `claw setup --details` exposes a reviewable detail menu split by capacidades
   and areas; `--enable` and `--disable` adjust the preview before confirmation.
 - Deep niche domain commands are loaded on demand and are not part of the base
