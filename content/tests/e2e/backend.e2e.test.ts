@@ -146,9 +146,12 @@ test("content backend covers brands, destinations, approvals, scheduling, runs, 
   const runManual = await requestJson(server.baseUrl, token, clawApiPath(`plans/${manualPlanPayload.plan.id}/run`), {
     method: "POST",
   });
-  const manualRunPayload = runManual.payload as { run: { status: string; externalId: string } };
+  const manualRunPayload = runManual.payload as { run: { status: string; externalId: string }; policy: { decision: string; reasonCodes: string[]; requirements: string[] } };
   assert.equal(manualRunPayload.run.status, "succeeded");
   assert.ok(manualRunPayload.run.externalId.startsWith("linkedin_post_"));
+  assert.equal(manualRunPayload.policy.decision, "allow");
+  assert.equal(manualRunPayload.policy.reasonCodes.includes("external_review_required"), true);
+  assert.equal(manualRunPayload.policy.requirements.includes("human_review"), true);
 
   const rerunManual = await requestJson(server.baseUrl, token, clawApiPath(`plans/${manualPlanPayload.plan.id}/run`), {
     method: "POST",

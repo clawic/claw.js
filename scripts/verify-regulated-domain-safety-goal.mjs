@@ -527,6 +527,11 @@ for (const [relativePath, snippets] of [
   ["docs/regulated-domain-safety.md", [
     "The default safe envelope",
     "Every new sensitive collection, connector, agent, CLI route",
+    "Route inventory",
+    "Routes already passing through `evaluateRegulatedAction`",
+    "Routes still carrying local legal or approval-shaped logic",
+    "`authorized_automation`",
+    "`automationAuthorized`",
   ]],
   ["packages/clawjs-core/src/agents-v1.ts", [
     "evaluateRegulatedAction",
@@ -610,6 +615,14 @@ for (const [relativePath, snippets] of [
     "Search action execution requires review and labels for regulated results",
     "regulated_result_review_required",
     "regulated_domain:finance",
+    "authorized_automation",
+    "automated.policy?.policyDecision",
+  ]],
+  ["packages/clawjs-search/src/index.ts", [
+    "evaluateRegulatedAction",
+    "regulatedDomainFromSearchResult",
+    "policyConfig?: RegulatedActionPolicyConfig",
+    "regulated_policy:${policy.policyDecision}",
   ]],
   ["packages/clawjs-search-mcp/src/index.test.ts", [
     "finance.records:1",
@@ -622,10 +635,19 @@ for (const [relativePath, snippets] of [
     "if (destination.publishPolicy === \"autopublish\") return true;",
     "return true;",
   ]],
+  ["content/src/server/app.ts", [
+    "evaluateRegulatedAction",
+    "evaluateContentPublicationPolicy",
+    "reviewSatisfied: approved",
+    "outputLabelsSatisfied: true",
+    "policy.allowed",
+  ]],
   ["content/tests/e2e/backend.e2e.test.ts", [
     "Autopublish still requires explicit approval before publication.",
     "approval_required",
     "blockedAutoRun.response.status, 409",
+    "manualRunPayload.policy.decision",
+    "external_review_required",
   ]],
   ["content/tests/e2e/cli.e2e.test.ts", [
     "autopublish plan run should require approval before publication",
@@ -649,7 +671,8 @@ for (const [relativePath, snippets] of [
     "evaluateRegulatedAction",
     "policyDecision",
     "requires explicit approvalId before external send",
-    "External channel send - human reviewed",
+    "reviewSatisfied: Boolean(approvalId)",
+    "outputLabelsSatisfied: true",
     "telegram.sendMessage",
     "slack.sendMessage",
     "whatsapp.sendMessage",
@@ -770,6 +793,14 @@ for (const [relativePath, snippets] of [
   ["packages/clawjs/src/cli-project-command.test.ts", [
     "approval_project_export",
     "Project handoff - human reviewed",
+    "exported.handoff.legal.policy.decision",
+    "regulated_domain:identity",
+  ]],
+  ["packages/clawjs/src/project.ts", [
+    "evaluateRegulatedAction",
+    "policyDecision",
+    "Project export requires explicit approvalId before export/share.",
+    "Project export requires a persistent legalLabel before export/share.",
   ]],
   ["packages/clawjs/src/cli-connector-context.test.ts", [
     "approval_accounts_redacted",
@@ -862,6 +893,14 @@ for (const snippet of [
 ]) {
   requireNoSnippet("docs/regulated-domain-safety.md", snippet);
   requireNoSnippet("docs/adr/0026-regulated-domain-safety-liability-boundary.md", snippet);
+}
+for (const [relativePath, snippet] of [
+  ["packages/clawjs-node/src/create-claw-channel-facades.ts", "External channel send - human reviewed"],
+  ["packages/clawjs-node/src/notify/index.ts", "Notification delivery - human reviewed"],
+  ["notify/src/server/app.ts", "Notification delivery - human reviewed"],
+  ["content/src/server/app.ts", "Content publication - approved review"],
+]) {
+  requireNoSnippet(relativePath, snippet);
 }
 assertNoBannedPublicClaims();
 assertPackageReadmeDisclaimers();

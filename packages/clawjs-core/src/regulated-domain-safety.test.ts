@@ -101,6 +101,7 @@ test("regulated domain safety allows confirmable actions when policy config sati
       materialConsent: true,
       destinationAuthorized: true,
       automationAuthorized: true,
+      outputLabelsSatisfied: true,
     },
   });
 
@@ -114,6 +115,28 @@ test("regulated domain safety allows confirmable actions when policy config sati
   assert.equal(decision.policyApplied.mode, "authorized_automation");
   assert.equal(decision.policyApplied.materialConsent, true);
   assert.equal(decision.policyApplied.destinationAuthorized, true);
+  assert.equal(decision.policyApplied.outputLabelsSatisfied, true);
+});
+
+test("regulated domain safety does not require per-surface legal labels for authorized automation", () => {
+  const decision = evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "human_or_professional_review_preparation",
+    externalAction: true,
+    policyConfig: {
+      mode: "authorized_automation",
+      automationAuthorized: true,
+      outputLabelsSatisfied: true,
+      destinationAuthorized: true,
+      materialConsent: true,
+    },
+  });
+
+  assert.equal(decision.allowed, true);
+  assert.equal(decision.policyDecision, "allow");
+  assert.equal(decision.policyApplied.automationAuthorized, true);
+  assert.equal(decision.policyApplied.outputLabelsSatisfied, true);
 });
 
 test("regulated domain safety supports log-only decisions for configured audit-only safe actions", () => {

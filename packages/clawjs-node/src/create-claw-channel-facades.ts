@@ -3,9 +3,7 @@ import { evaluateRegulatedAction } from "@clawjs/core";
 
 function requireExternalSendApproval(input: Record<string, unknown>, operation: string): { approvalId: string; legalLabel: string; policy: ReturnType<typeof evaluateRegulatedAction> } {
   const approvalId = typeof input?.approvalId === "string" ? input.approvalId.trim() : "";
-  const legalLabel = typeof input?.legalLabel === "string" && input.legalLabel.trim()
-    ? input.legalLabel.trim()
-    : approvalId ? "External channel send - human reviewed" : "";
+  const legalLabel = typeof input?.legalLabel === "string" && input.legalLabel.trim() ? input.legalLabel.trim() : "";
   const policy = evaluateRegulatedAction({
     regulatedDomain: "identity",
     decisionEffect: "external_action",
@@ -18,6 +16,8 @@ function requireExternalSendApproval(input: Record<string, unknown>, operation: 
       legalLabel,
       materialConsent: Boolean(approvalId),
       destinationAuthorized: Boolean(approvalId),
+      reviewSatisfied: Boolean(approvalId),
+      outputLabelsSatisfied: true,
     },
   });
   if (policy.policyDecision === "block") {

@@ -2145,12 +2145,15 @@ function runSearchActionExecuteCli(input: {
   const resultId = input.positionals[3] ?? input.flags["result-id"];
   const actionId = input.positionals[4] ?? input.flags["action-id"];
   if (!resultId || !actionId) {
-    input.context.stderr.write(`Usage: ${input.binName} search actions execute <result-id> <action-id> [--dry-run] [--host-approval-id <id>] [--json]\n`);
+    input.context.stderr.write(`Usage: ${input.binName} search actions execute <result-id> <action-id> [--dry-run] [--host-approval-id <id>] [--policy-mode normal|strict|authorized_automation] [--automation-authorized true] [--json]\n`);
     return CLI_EXIT_USAGE;
   }
 
   const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
   const hostApprovalId = input.flags["host-approval-id"] || input.flags["approval-id"];
+  const automationAuthorized = readBooleanFlag(input.argv, input.flags, "automation-authorized", false);
+  const auditOnly = readBooleanFlag(input.argv, input.flags, "audit-only", false);
+  const confirmed = readBooleanFlag(input.argv, input.flags, "confirm", false);
   const store = openCliSearchStore(input.flags);
   let plan: SearchActionExecutionPlan | undefined;
   try {
@@ -2179,6 +2182,12 @@ function runSearchActionExecuteCli(input: {
       action,
       dryRun,
       hostApprovalId,
+      policyConfig: {
+        mode: parseSearchPolicyMode(input.flags["policy-mode"]),
+        confirmed,
+        automationAuthorized,
+        auditOnly,
+      },
       actor: input.flags.actor,
       surface: input.flags.surface,
     });
@@ -2194,10 +2203,21 @@ function runSearchActionExecuteCli(input: {
       risk: plan.risk,
       grant: plan.grant,
       reason: plan.reasons.join(","),
-      metadata: { dryRun, requiresApproval: plan.requiresApproval, hostApprovalId: hostApprovalId ?? null },
+      metadata: {
+        dryRun,
+        requiresApproval: plan.requiresApproval,
+        hostApprovalId: hostApprovalId ?? null,
+        policyDecision: plan.policy?.policyDecision,
+        policyReasonCodes: plan.policy?.reasonCodes ?? [],
+      },
     });
-    if (!dryRun && plan.requiresApproval && !hostApprovalId) {
-      const error = new CliHandledError("host_approval_required", "Search action execution requires --host-approval-id from the signed host approval flow, or --dry-run for a brokered preview.", CLI_EXIT_FAILURE);
+    if (!dryRun && plan.status === "blocked") {
+      const policyDecision = plan.policy?.policyDecision;
+      const errorCode = policyDecision === "block" ? "regulated_policy_blocked" : "host_approval_required";
+      const message = policyDecision === "block"
+        ? `Search action execution is blocked by regulated safety policy: ${plan.policy?.reasonCodes.join(", ") || "blocked"}.`
+        : "Search action execution requires --host-approval-id from the signed host approval flow, --policy-mode authorized_automation with --automation-authorized true, or --dry-run for a brokered preview.";
+      const error = new CliHandledError(errorCode, message, CLI_EXIT_FAILURE);
       if (input.wantsJson) {
         writeCommandJsonError(input.context.stdout, "search", error, {
           subcommand: "actions.execute",
@@ -2230,6 +2250,12 @@ function runSearchActionExecuteCli(input: {
   if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { plan }, { subcommand: "actions.execute" });
   else input.context.stdout.write(`${plan.status}\t${plan.resultId}\t${plan.actionId}\t${plan.grant}\n`);
   return CLI_EXIT_OK;
+}
+
+function parseSearchPolicyMode(value: string | undefined): "strict" | "normal" | "authorized_automation" | undefined {
+  if (!value) return undefined;
+  if (value === "strict" || value === "normal" || value === "authorized_automation") return value;
+  throw new CliHandledError("invalid_policy_mode", "Use --policy-mode strict, normal, or authorized_automation.", CLI_EXIT_USAGE);
 }
 
 function openCliSearchStore(flags: Record<string, string>): SearchStore {

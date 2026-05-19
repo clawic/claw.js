@@ -121,18 +121,20 @@ test("claw project detach and export keep folder data while producing safe hando
     stderr: captureStream().stream,
     cwd,
   }), CLI_EXIT_OK);
-  const exported = parseCliJsonPayload<{ output: string; handoff: { safety: { includesSecrets: boolean; includesSensitiveMemory: boolean; folderLocationGrantsAuthority: boolean } } }>(exportStdout.getOutput());
+  const exported = parseCliJsonPayload<{ output: string; handoff: { safety: { includesSecrets: boolean; includesSensitiveMemory: boolean; folderLocationGrantsAuthority: boolean }; legal: { approvalId: string; legalLabel: string; exportKind: string; policy: { decision: string; reasonCodes: string[]; requirements: string[]; outputLabels: string[] } } } }>(exportStdout.getOutput());
   assert.equal(exported.output, output);
   assert.deepEqual(exported.handoff.safety, {
     includesSecrets: false,
     includesSensitiveMemory: false,
     folderLocationGrantsAuthority: false,
   });
-  assert.deepEqual(exported.handoff.legal, {
-    approvalId: "approval_project_export",
-    legalLabel: "Project handoff - human reviewed",
-    exportKind: "project.handoff",
-  });
+  assert.equal(exported.handoff.legal.approvalId, "approval_project_export");
+  assert.equal(exported.handoff.legal.legalLabel, "Project handoff - human reviewed");
+  assert.equal(exported.handoff.legal.exportKind, "project.handoff");
+  assert.equal(exported.handoff.legal.policy.decision, "allow");
+  assert.equal(exported.handoff.legal.policy.reasonCodes.includes("sensitive_export_review_required"), true);
+  assert.equal(exported.handoff.legal.policy.requirements.includes("human_review"), true);
+  assert.equal(exported.handoff.legal.policy.outputLabels.includes("regulated_domain:identity"), true);
   assert.match(fs.readFileSync(output, "utf8"), /claw.project.handoff/);
   assert.doesNotMatch(fs.readFileSync(output, "utf8"), /token|password|credential/i);
 });

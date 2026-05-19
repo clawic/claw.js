@@ -284,7 +284,7 @@ export class NotifyClient {
 
 function evaluateNotificationDeliveryPolicy(input: Pick<SendNotificationInput, "approvalId" | "legalLabel">): RegulatedActionDecision {
   const approvalId = input.approvalId?.trim() ?? "";
-  const legalLabel = input.legalLabel?.trim() || (approvalId ? "Notification delivery - human reviewed" : "");
+  const legalLabel = input.legalLabel?.trim() ?? "";
   return evaluateRegulatedAction({
     regulatedDomain: "identity",
     decisionEffect: "external_action",
@@ -296,6 +296,8 @@ function evaluateNotificationDeliveryPolicy(input: Pick<SendNotificationInput, "
       legalLabel,
       materialConsent: Boolean(approvalId),
       destinationAuthorized: Boolean(approvalId),
+      reviewSatisfied: Boolean(approvalId),
+      outputLabelsSatisfied: true,
     },
   });
 }

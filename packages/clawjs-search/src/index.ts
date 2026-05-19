@@ -1,3 +1,11 @@
+import {
+  evaluateRegulatedAction,
+  isRegulatedDomain,
+  type RegulatedActionDecision,
+  type RegulatedActionPolicyConfig,
+  type RegulatedDomain,
+} from "@clawjs/core";
+
 export type SearchProfileId = "framework" | "full";
 
 export type SearchAclLevel = "domain" | "source" | "agent";
@@ -192,6 +200,7 @@ export interface SearchActionExecutionPlan {
   requiresApproval: boolean;
   hostApprovalId?: string;
   legalOutputLabels?: string[];
+  policy?: RegulatedActionDecision;
   dryRun: boolean;
   status: "planned" | "blocked" | "brokered";
   reasons: string[];
@@ -574,21 +583,46 @@ export function createSearchActionExecutionPlan(input: {
   action: SearchAction;
   dryRun: boolean;
   hostApprovalId?: string;
+  policyConfig?: RegulatedActionPolicyConfig;
   actor?: string;
   surface?: string;
 }): SearchActionExecutionPlan {
   const grant = input.action.grant ?? `search.${input.result.domain}.${input.action.kind}`;
   const risk = input.action.risk ?? (input.action.kind === "open" || input.action.kind === "copy" ? "read" : "system");
   const legalOutputLabels = legalOutputLabelsFromSearchResult(input.result);
-  const requiresApproval = (input.action.requiresApproval ?? input.action.kind !== "copy") || legalOutputLabels.length > 0;
+  const regulatedDomain = regulatedDomainFromSearchResult(input.result, legalOutputLabels);
+  const policy = regulatedDomain
+    ? evaluateRegulatedAction({
+      regulatedDomain,
+      decisionEffect: "external_action",
+      requestedUse: "human_or_professional_review_preparation",
+      externalAction: true,
+      sensitiveExport: legalOutputLabels.length > 0 || input.action.kind === "copy",
+      policyConfig: {
+        ...input.policyConfig,
+        confirmed: input.policyConfig?.confirmed === true || Boolean(input.hostApprovalId),
+        approvalId: input.policyConfig?.approvalId ?? input.hostApprovalId ?? "",
+        materialConsent: input.policyConfig?.materialConsent === true || Boolean(input.hostApprovalId),
+        destinationAuthorized: input.policyConfig?.destinationAuthorized === true || Boolean(input.hostApprovalId),
+        reviewSatisfied: input.policyConfig?.reviewSatisfied === true || Boolean(input.hostApprovalId),
+        outputLabelsSatisfied: input.policyConfig?.outputLabelsSatisfied ?? true,
+      },
+    })
+    : undefined;
+  const hostApprovalRequired = input.action.requiresApproval ?? input.action.kind !== "copy";
+  const requiresApproval = hostApprovalRequired || Boolean(policy);
+  const policyAllowsExecution = policy?.allowed === true;
   const status = input.dryRun
     ? "planned"
-    : requiresApproval && !input.hostApprovalId
+    : policy?.policyDecision === "block"
+      ? "blocked"
+    : requiresApproval && !input.hostApprovalId && !policyAllowsExecution
       ? "blocked"
       : "brokered";
   const reasons = [
-    ...(requiresApproval ? ["host_approval_required"] : []),
+    ...(hostApprovalRequired && !input.hostApprovalId && !policyAllowsExecution ? ["host_approval_required"] : []),
     ...(legalOutputLabels.length > 0 ? ["regulated_result_review_required"] : []),
+    ...(policy ? [`regulated_policy:${policy.policyDecision}`, ...policy.reasonCodes] : []),
     ...(status === "brokered" ? ["host_broker_receipt_only"] : []),
   ];
   return {
@@ -606,6 +640,7 @@ export function createSearchActionExecutionPlan(input: {
     requiresApproval,
     ...(input.hostApprovalId ? { hostApprovalId: input.hostApprovalId } : {}),
     ...(legalOutputLabels.length > 0 ? { legalOutputLabels } : {}),
+    ...(policy ? { policy } : {}),
     dryRun: input.dryRun,
     status,
     reasons,
@@ -621,6 +656,13 @@ function legalOutputLabelsFromSearchResult(result: SearchResult): string[] {
   const labels = result.metadata?.legalOutputLabels;
   if (!Array.isArray(labels)) return [];
   return labels.filter((label): label is string => typeof label === "string" && label.trim().length > 0);
+}
+
+function regulatedDomainFromSearchResult(result: SearchResult, legalOutputLabels: string[]): RegulatedDomain | undefined {
+  const domainLabel = legalOutputLabels.find((label) => label.startsWith("regulated_domain:"));
+  const labelledDomain = domainLabel?.slice("regulated_domain:".length).trim();
+  if (labelledDomain && isRegulatedDomain(labelledDomain)) return labelledDomain;
+  return isRegulatedDomain(result.domain) ? result.domain : undefined;
 }
 
 export function createFrameworkSearchSourceManifest(input: {

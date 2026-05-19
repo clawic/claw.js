@@ -111,6 +111,22 @@ test("Search action execution requires review and labels for regulated results",
   const brokered = createSearchActionExecutionPlan({ result, action, dryRun: false, hostApprovalId: "approval_finance_copy" });
   assert.equal(brokered.status, "brokered");
   assert.equal(brokered.legalOutputLabels?.includes("not_professional_advice"), true);
+  assert.equal(brokered.policy?.policyDecision, "allow");
+
+  const automated = createSearchActionExecutionPlan({
+    result,
+    action,
+    dryRun: false,
+    policyConfig: {
+      mode: "authorized_automation",
+      automationAuthorized: true,
+      destinationAuthorized: true,
+      materialConsent: true,
+    },
+  });
+  assert.equal(automated.status, "brokered");
+  assert.equal(automated.hostApprovalId, undefined);
+  assert.equal(automated.policy?.policyDecision, "allow");
 });
 
 test("SearchStore reports the default Search engine descriptor", () => {

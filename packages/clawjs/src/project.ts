@@ -5,6 +5,7 @@ import path from "path";
 import {
   assertSafeClawProjectHandoff,
   createClawProjectId,
+  evaluateRegulatedAction,
   findClawProjectManifestPortabilityViolations,
   normalizeClawProjectManifest,
   resolveClawPersistentSurfacePath,
@@ -782,8 +783,26 @@ export async function syncProjectHandoff(projectRoot: string): Promise<{ project
 }
 
 export async function exportProjectHandoff(projectRoot: string, outputPath?: string, review?: { approvalId: string; legalLabel: string }): Promise<Record<string, unknown>> {
-  if (!review?.approvalId?.trim()) throw new Error("Project export requires explicit approvalId before export/share.");
-  if (!review.legalLabel?.trim()) throw new Error("Project export requires a persistent legalLabel before export/share.");
+  const approvalId = review?.approvalId?.trim() ?? "";
+  const legalLabel = review?.legalLabel?.trim() ?? "";
+  const policy = evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    sensitiveExport: true,
+    policyConfig: {
+      confirmed: Boolean(approvalId && legalLabel),
+      approvalId,
+      legalLabel,
+      materialConsent: Boolean(approvalId && legalLabel),
+      destinationAuthorized: Boolean(approvalId && legalLabel),
+    },
+  });
+  if (policy.policyDecision === "block") throw new Error(`Project export is blocked by regulated safety policy: ${policy.reasonCodes.join(", ") || "blocked"}.`);
+  if (!policy.allowed && !approvalId) throw new Error("Project export requires explicit approvalId before export/share.");
+  if (!policy.allowed && !legalLabel) throw new Error("Project export requires a persistent legalLabel before export/share.");
+  if (!policy.allowed) throw new Error(`Project export requires policy confirmation before export/share: ${policy.requirements.join(", ")}.`);
   const resolved = path.resolve(projectRoot);
   const inspection = inspectProjectFolder(resolved);
   if (!inspection.manifest) throw new Error(`Missing or invalid ${PROJECT_CONFIG_FILE} at ${resolved}.`);
@@ -811,9 +830,18 @@ export async function exportProjectHandoff(projectRoot: string, outputPath?: str
       folderLocationGrantsAuthority: false,
     },
     legal: {
-      approvalId: review.approvalId.trim(),
-      legalLabel: review.legalLabel.trim(),
+      approvalId,
+      legalLabel,
       exportKind: "project.handoff",
+      policy: {
+        decision: policy.policyDecision,
+        reasonCodes: policy.reasonCodes,
+        requirements: policy.requirements,
+        outputLabels: policy.outputLabels,
+        disclaimerPolicy: policy.disclaimerPolicy,
+        auditPolicy: policy.auditPolicy,
+        policyApplied: policy.policyApplied,
+      },
     },
   };
   const safety = assertSafeClawProjectHandoff(handoff);

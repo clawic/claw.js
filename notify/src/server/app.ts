@@ -60,7 +60,7 @@ function asInteger(value: unknown): number | undefined {
 
 function evaluateNotificationDeliveryPolicy(input: { approvalId?: string; legalLabel?: string }): RegulatedActionDecision {
   const approvalId = input.approvalId?.trim() ?? "";
-  const legalLabel = input.legalLabel?.trim() || (approvalId ? "Notification delivery - human reviewed" : "");
+  const legalLabel = input.legalLabel?.trim() ?? "";
   return evaluateRegulatedAction({
     regulatedDomain: "identity",
     decisionEffect: "external_action",
@@ -72,6 +72,8 @@ function evaluateNotificationDeliveryPolicy(input: { approvalId?: string; legalL
       legalLabel,
       materialConsent: Boolean(approvalId),
       destinationAuthorized: Boolean(approvalId),
+      reviewSatisfied: Boolean(approvalId),
+      outputLabelsSatisfied: true,
     },
   });
 }

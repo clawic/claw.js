@@ -131,6 +131,8 @@ export interface RegulatedActionPolicyConfig {
   materialConsent?: boolean;
   destinationAuthorized?: boolean;
   automationAuthorized?: boolean;
+  reviewSatisfied?: boolean;
+  outputLabelsSatisfied?: boolean;
   auditOnly?: boolean;
 }
 
@@ -188,6 +190,9 @@ export interface RegulatedActionDecision {
     materialConsent: boolean;
     destinationAuthorized: boolean;
     automationAuthorized: boolean;
+    reviewSatisfied: boolean;
+    outputLabelsSatisfied: boolean;
+    auditOnly: boolean;
   };
 }
 
@@ -322,6 +327,8 @@ function normalizeRegulatedPolicyConfig(config: RegulatedActionPolicyConfig | un
     materialConsent: config?.materialConsent === true,
     destinationAuthorized: config?.destinationAuthorized === true,
     automationAuthorized: config?.automationAuthorized === true,
+    reviewSatisfied: config?.reviewSatisfied === true,
+    outputLabelsSatisfied: config?.outputLabelsSatisfied === true,
     auditOnly: config?.auditOnly === true,
   };
 }
@@ -334,6 +341,9 @@ function createPolicyApplied(config: ReturnType<typeof normalizeRegulatedPolicyC
     materialConsent: config.materialConsent,
     destinationAuthorized: config.destinationAuthorized,
     automationAuthorized: config.automationAuthorized,
+    reviewSatisfied: config.reviewSatisfied,
+    outputLabelsSatisfied: config.outputLabelsSatisfied,
+    auditOnly: config.auditOnly,
   };
 }
 
@@ -378,7 +388,14 @@ function decideRegulatedPolicy(input: {
   if (input.denialCodes.some((code) => hardBlockCodes.includes(code))) return "block";
   if (input.denialCodes.length === 0) return input.policyConfig.auditOnly ? "log-only" : "allow";
 
-  const reviewSatisfied = input.policyConfig.confirmed && input.policyConfig.approvalId.length > 0 && input.policyConfig.legalLabel.length > 0;
+  const outputLabelsSatisfied = !input.requirements.includes("output_label")
+    || input.policyConfig.outputLabelsSatisfied
+    || input.policyConfig.legalLabel.length > 0;
+  const approvalReviewSatisfied = input.policyConfig.reviewSatisfied
+    || (input.policyConfig.confirmed && input.policyConfig.approvalId.length > 0);
+  const automationReviewSatisfied = input.policyConfig.mode === "authorized_automation"
+    && input.policyConfig.automationAuthorized;
+  const reviewSatisfied = outputLabelsSatisfied && (approvalReviewSatisfied || automationReviewSatisfied);
   const remoteSatisfied = !input.requirements.includes("remote_or_provider_opt_in")
     || input.policyConfig.globalConsent
     || input.policyConfig.materialConsent

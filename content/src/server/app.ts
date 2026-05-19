@@ -18,7 +18,7 @@ const STABLE_EVENT_TYPES = {
   planExecuted: "plan.executed",
   planCancelled: "plan.cancelled",
 } as const;
-import { clawApiPath } from "@clawjs/core";
+import { clawApiPath, evaluateRegulatedAction, type RegulatedActionDecision } from "@clawjs/core";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -331,7 +331,37 @@ function buildPublicationsReadModel(store: ContentStore) {
   };
 }
 
-async function executePlan(store: ContentStore, planId: string): Promise<{ plan: Record<string, unknown>; run: ContentPublicationRun }> {
+function serializePolicyDecision(policy: RegulatedActionDecision): Record<string, unknown> {
+  return {
+    decision: policy.policyDecision,
+    reasonCodes: policy.reasonCodes,
+    requirements: policy.requirements,
+    outputLabels: policy.outputLabels,
+    disclaimerPolicy: policy.disclaimerPolicy,
+    auditPolicy: policy.auditPolicy,
+    policyApplied: policy.policyApplied,
+  };
+}
+
+function evaluateContentPublicationPolicy(approval: { id: string; status: string } | null | undefined): RegulatedActionDecision {
+  const approved = approval?.status === "approved";
+  return evaluateRegulatedAction({
+    regulatedDomain: "identity",
+    decisionEffect: "external_action",
+    requestedUse: "non_final_draft",
+    externalAction: true,
+    policyConfig: {
+      confirmed: approved,
+      approvalId: approved ? approval.id : "",
+      materialConsent: approved,
+      destinationAuthorized: approved,
+      reviewSatisfied: approved,
+      outputLabelsSatisfied: true,
+    },
+  });
+}
+
+async function executePlan(store: ContentStore, planId: string): Promise<{ plan: Record<string, unknown>; run: ContentPublicationRun; policy?: Record<string, unknown> }> {
   const plan = store.getPlan(planId);
   if (!plan) throw new ContentError("Plan not found.", 404, "plan_not_found");
   const latestRun = store.latestRunForPlan(plan.id);
@@ -349,7 +379,8 @@ async function executePlan(store: ContentStore, planId: string): Promise<{ plan:
   }
   const latestApproval = store.findLatestApprovalForVariant(variant.id);
   const assets = store.listAssets({ entryId: entry.id });
-  if (approvalRequired({ destination, assets, scheduledAt: plan.scheduledAt }) && latestApproval?.status !== "approved") {
+  const policy = evaluateContentPublicationPolicy(latestApproval);
+  if (approvalRequired({ destination, assets, scheduledAt: plan.scheduledAt }) && !policy.allowed) {
     throw new ContentError("Plan requires an approved approval request before publication.", 409, "approval_required");
   }
   const run = store.createRun({
@@ -380,7 +411,7 @@ async function executePlan(store: ContentStore, planId: string): Promise<{ plan:
     store.updatePlan(plan.id, { status: "succeeded" });
     store.updateVariant(variant.id, { status: "published" });
     store.updateEntry(entry.id, { status: "published" });
-    return { plan: store.getPlan(plan.id) ?? plan, run: completed };
+    return { plan: store.getPlan(plan.id) ?? plan, run: completed, policy: serializePolicyDecision(policy) };
   } catch (error) {
     const completed = store.completeRun(run.id, {
       status: "failed",
