@@ -40,7 +40,6 @@ const SCHEMA_DDL = `
     updated_at         INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_projects_hidden_archived ON projects(hidden, archived, sort_rank, updated_at DESC);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL;
 
   CREATE TABLE IF NOT EXISTS sessions (
     id                 TEXT PRIMARY KEY,
@@ -66,9 +65,7 @@ const SCHEMA_DDL = `
   );
   CREATE INDEX IF NOT EXISTS idx_sessions_agent          ON sessions(agent);
   CREATE INDEX IF NOT EXISTS idx_sessions_runtime        ON sessions(runtime);
-  CREATE INDEX IF NOT EXISTS idx_sessions_runtime_adapter ON sessions(runtime_adapter);
   CREATE INDEX IF NOT EXISTS idx_sessions_machine        ON sessions(machine);
-  CREATE INDEX IF NOT EXISTS idx_sessions_project_id     ON sessions(project_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_project        ON sessions(project_path);
   CREATE INDEX IF NOT EXISTS idx_sessions_workspace      ON sessions(workspace_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_created_at     ON sessions(created_at DESC);
@@ -299,6 +296,8 @@ export class SessionsServiceStore {
     this.ensureColumn("sessions", "runtime_session_id", "TEXT");
     this.ensureColumn("sessions", "project_id", "TEXT REFERENCES projects(id) ON DELETE SET NULL");
     this.ensureColumn("projects", "resource_id", "TEXT");
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_runtime_adapter ON sessions(runtime_adapter)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id)").run();
     this.db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL").run();
     this.ensureColumn("session_messages", "timeline", "TEXT");
     this.ensureColumn("session_messages", "streaming_state", "TEXT");
