@@ -16,6 +16,11 @@ lanes. Do not duplicate long ADR rationale here.
 - Decision tension rubric:
   [Decision Tension Rubric](../governance/decision-tension-rubric.md) for
   accepted durable ADRs and governance changes.
+- Performance governance:
+  [Performance Governance](../governance/performance-governance.md) and
+  [ADR 0036](../adr/0036-performance-governance.md) for whole-computer
+  resource impact across CPU, RAM, GPU/Neural Engine, disk, network, battery,
+  thermals, idle behavior, and growth.
 - Framework/host boundary: [Host Ownership](../host-ownership.md) and
   [ADR 0001](../adr/0001-claw-framework-host-boundary.md).
 - Storage and data placement: [Data Storage Boundary](../data-storage-boundary.md).
@@ -96,6 +101,9 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
 - Stable capabilities are complete only when their human and programmatic
   surfaces are registered or their gaps are explicitly classified.
 - Runtime-critical work starts from `claw inspect show|neighbors|routes`.
+- Performance-sensitive work classifies whole-computer resource impact before
+  durable acceptance: speed, CPU, RAM, GPU/Neural Engine, disk, network,
+  battery, thermals, idle behavior, and growth.
 - Installing the base `claw` CLI must be zero-surprise: no implicit host
   startup, OS permission prompt, app launch, model/browser download, provider
   network call, or niche domain activation.
@@ -111,7 +119,7 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
 - Mark missing physical/provider prerequisites as `EXTERNAL PENDING` and keep
   them separate from defects.
 - Performance work starts with reproduction and instrumentation before
-  optimization.
+  optimization, and validated fixes compare resource behavior before and after.
 
 ## Public Hygiene And Commits
 

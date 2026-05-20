@@ -656,6 +656,19 @@ already granted to it, but it cannot inherit vague ambient power from the
 parent run. Every link in a delegation chain remains inspectable,
 attributable, and bounded by the policy grant that allowed it.
 
+**VII.17 The computer's resources are product correctness.** The user's
+computer is not an unlimited substrate hidden beneath the product. CPU, RAM, GPU/Neural Engine, disk, network, battery, thermals, timers, logs, indexes,
+caches, processes, background work, and local inference are budgets the system
+spends on the user's behalf. A feature that works by making the machine feel
+heavy, hot, noisy, full, blocked, or unable to rest is incomplete even when its
+functional behavior is correct.
+
+The default design pressure is toward lazy startup, bounded growth, explicit
+retention, cancellation, backpressure, incremental work, idle quiescence, and
+equivalent behavior with lower resource cost when evidence proves it. Powerful
+optional capabilities are welcome, but the base experience must keep feeling
+like the lightest possible local app and framework.
+
 ### VIII. Sub-apps and modularity
 
 **VIII.1 Sub-apps are the same species, regardless of origin.** Whether

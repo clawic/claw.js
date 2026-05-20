@@ -17,6 +17,7 @@ plans, and companion validation manifests here.
 - [Governance Workspace Project](governance-workspace-project/completion.md)
 - [Legal](legal/source-audit.md)
 - [Mac Control Plane](mac-control-plane/index.md)
+- [Performance Governance](performance-governance.md)
 - [Pre-V1 Version Governance](pre-v1-version-governance/completion.md)
 - [Remote Gateway Sync](remote-gateway-sync/index.md)
 - [SDK-First Custom Surfaces](sdk-first-custom-surfaces/plan.md)

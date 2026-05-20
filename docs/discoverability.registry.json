@@ -1342,6 +1342,34 @@
       "canonicalName": "adr:decision-tension-rubric"
     },
     {
+      "id": "adr-docs-adr-0036-performance-governance",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0036-performance-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0036: Performance governance for user computer resources",
+        "0036-performance-governance",
+        "ADR 0036"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0036: Performance governance for user computer resources",
+          "expectPath": "docs/adr/0036-performance-governance.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:performance-governance"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",
@@ -2609,6 +2637,31 @@
         }
       ],
       "guard": "scripts/package-surface-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-performance-governance-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/performance-governance-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "performance-governance-check",
+        "Performance Governance Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "performance-governance-check",
+          "expectPath": "scripts/performance-governance-check.mjs"
+        }
+      ],
+      "guard": "scripts/performance-governance-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
