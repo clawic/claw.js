@@ -75,7 +75,7 @@ function assertCompletionAudit() {
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
-    "no `pending` status, no future-facade SDK refs, no unknown dispatch modes, no conditional placeholder refs",
+    "no `pending` status, no future-facade SDK refs, no unknown dispatch modes, no source-level unknown dispatch fallback, no conditional placeholder refs",
     "local-only/custom-app Relay coverage as `relay.remote.custom_app_sdk` metadata-only projection",
     "disabled-by-default rule suggestions",
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
@@ -290,6 +290,13 @@ function assertFrameworkArtifacts() {
   }
   forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", "claw runtime jobs --json");
   forbidSnippet("packages/clawjs-core/src/capability-fiches.ts", "claw runtime jobs --json");
+  forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", 'mode: capability.customAppAccess === "blocked" ? "blocked" : "unknown"');
+  forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", 'reason: "No custom-app dispatcher is registered for this capability."');
+  requireSnippet("packages/clawjs-core/src/capability-catalog.ts", '"unclassifiedBlocked"');
+  requireSnippet(
+    "packages/clawjs-core/src/capability-catalog.ts",
+    "has not been classified for custom-app dispatch",
+  );
   assertNoPendingCapabilitySurfaceBindings();
   for (const snippet of [
     "future search facade",
@@ -472,6 +479,7 @@ function assertSiblingClawixArtifacts() {
       "static var executionBoundaryBridgeValue",
       "\"metadata_only_contract_catalog\"",
       "\"hostBridgeImplementation\": \"window.clawix\"",
+      "\"mode\": \"unclassifiedBlocked\"",
       "systemTelemetrySnapshotSchemaRef",
       "system.telemetry.snapshot",
       "system.telemetry.history",
@@ -667,6 +675,13 @@ function assertSiblingClawixArtifacts() {
   })) {
     for (const snippet of snippets) requireSiblingSnippet(siblingRoot, relativePath, snippet);
   }
+
+  const siblingCatalog = readFrom(siblingRoot, "macos/Sources/Clawix/Apps/AppCapabilityCatalog.swift");
+  assert(!siblingCatalog.includes('"mode": "unknown"'), 'clawix:macos/Sources/Clawix/Apps/AppCapabilityCatalog.swift must not contain "\"mode\": \"unknown\""');
+  assert(
+    !siblingCatalog.includes('"reason": "No custom-app dispatcher is registered for this capability."'),
+    "clawix:macos/Sources/Clawix/Apps/AppCapabilityCatalog.swift must not contain stale unclassified dispatch reason",
+  );
 }
 
 assertCompletionAudit();

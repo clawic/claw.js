@@ -14,7 +14,7 @@ export type ClawCapabilityDispatchMode =
   | "approvalRequiredNoRunner"
   | "approvalRequiredNoPlaintextBroker"
   | "blocked"
-  | "unknown";
+  | "unclassifiedBlocked";
 
 export interface ClawCapabilitySurfaceBinding {
   surface: ClawCapabilitySurface;
@@ -160,11 +160,14 @@ export function customAppDispatchForCapability(
       };
     default:
       return {
-        status: capability.customAppAccess === "blocked" ? "unavailable" : "unavailable",
-        mode: capability.customAppAccess === "blocked" ? "blocked" : "unknown",
+        status: "unavailable",
+        mode: capability.customAppAccess === "blocked" ? "blocked" : "unclassifiedBlocked",
         approvalRequired: capability.risk.interruptiveApproval,
         runner: "pending",
-        reason: "No custom-app dispatcher is registered for this capability.",
+        reason:
+          capability.customAppAccess === "blocked"
+            ? "This custom-app capability is an explicit blocked gap until a safe backend contract and host adapter exist."
+            : "This custom-app capability has not been classified for custom-app dispatch and is blocked until it has an explicit contract, policy, runner, and tests.",
       };
   }
 }
