@@ -28,6 +28,11 @@ function requireSnippet(relativePath, snippet) {
   assert(text.includes(snippet), `${relativePath}: missing ${JSON.stringify(snippet)}`);
 }
 
+function forbidSnippet(relativePath, snippet) {
+  const text = read(relativePath);
+  assert(!text.includes(snippet), `${relativePath}: must not contain ${JSON.stringify(snippet)}`);
+}
+
 function requireSiblingSnippet(siblingRoot, relativePath, snippet) {
   const text = readFrom(siblingRoot, relativePath);
   assert(text.includes(snippet), `clawix:${relativePath}: missing ${JSON.stringify(snippet)}`);
@@ -51,6 +56,7 @@ function assertCompletionAudit() {
     "`SystemTelemetryBridge.localStatusBridge`",
     "resources.list` as a separate local-wide registered-resource catalog read",
     "ClawJS and sibling Clawix now expose `jobs.list`, `jobs.get`, and `jobs.events`",
+    "ClawJS now blocks public CLI jobs read surfaces",
     "ClawJS now marks `jobs.stream`, `jobs.start`, and `jobs.cancel` only as blocked explicit gaps",
     "`window.clawix.mac.planAction()`",
     "dry-run-only Mac Control plan projection",
@@ -114,6 +120,7 @@ function assertPublicRouting() {
       "Sibling Clawix mirrors `system.telemetry.snapshot` and",
       "ClawJS and sibling Clawix expose `resources.list` and",
       "ClawJS and sibling Clawix expose `jobs.list`, `jobs.get`, and `jobs.events`",
+      "ClawJS blocks public CLI jobs read surfaces",
       "ClawJS and sibling Clawix expose `jobs.stream` only as a blocked explicit",
       "ClawJS and sibling Clawix expose `jobs.start` and `jobs.cancel` only as",
       "Sibling Clawix exposes `mac.action.plan` through",
@@ -156,6 +163,7 @@ function assertFrameworkArtifacts() {
       "id: \"jobs.stream\"",
       "id: \"jobs.start\"",
       "id: \"jobs.cancel\"",
+      "cli: \"blocked\"",
       "approvalRequired",
       "blocked",
     ],
@@ -192,6 +200,8 @@ function assertFrameworkArtifacts() {
   })) {
     for (const snippet of snippets) requireSnippet(relativePath, snippet);
   }
+  forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", "claw runtime jobs --json");
+  forbidSnippet("packages/clawjs-core/src/capability-fiches.ts", "claw runtime jobs --json");
 }
 
 function assertTests() {
@@ -208,6 +218,7 @@ function assertTests() {
       "jobs.stream",
       "jobs.start",
       "jobs.cancel",
+      "jobs read capabilities do not advertise removed runtime CLI sidecars",
       "approvalRequiredNoPlaintextBroker",
     ],
     "packages/clawjs/src/inspect-cli.test.ts": [

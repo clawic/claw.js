@@ -130,6 +130,16 @@ test("blocked custom-app capabilities expose explicit gaps without SDK execution
   }
 });
 
+test("jobs read capabilities do not advertise removed runtime CLI sidecars", () => {
+  for (const id of ["jobs.list", "jobs.get", "jobs.events"]) {
+    const capability = getClawCapability(id);
+    const cliSurface = capability?.surfaces.find((surface) => surface.surface === "cli");
+
+    assert.equal(cliSurface?.status, "blocked", id);
+    assert.equal(cliSurface?.ref, undefined, id);
+  }
+});
+
 test("ordinary custom-app read capabilities declare the shared redaction policy", () => {
   for (const capability of listClawCapabilities()) {
     if (capability.customAppAccess !== "localWide") continue;

@@ -345,7 +345,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     risk: lowReadRisk,
     surfaces: surfaces({
       sdk: "@clawjs/claw:jobs.list",
-      cli: "claw runtime jobs --json",
+      cli: "blocked",
       serviceApi: "claw.api.runtime.jobs",
       mcp: "pending",
       relay: "local-only",
@@ -374,7 +374,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     risk: lowReadRisk,
     surfaces: surfaces({
       sdk: "@clawjs/claw:jobs.get",
-      cli: "pending",
+      cli: "blocked",
       serviceApi: "claw.api.runtime.jobs",
       mcp: "pending",
       relay: "local-only",
@@ -403,7 +403,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     risk: lowReadRisk,
     surfaces: surfaces({
       sdk: "@clawjs/claw:jobs.events",
-      cli: "pending",
+      cli: "blocked",
       serviceApi: "claw.api.runtime.jobs",
       mcp: "pending",
       relay: "local-only",
