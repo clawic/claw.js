@@ -110,6 +110,7 @@ function assertCompletionAudit() {
     "| CLJ-SDK-007 | Clawix consumes the shared framework contract",
     "exact protected route target sets",
     "| CLJ-SDK-008 | Shells and hosts remain modular and nonblocking",
+    "exact reviewed core survival route and heavy dependency sets",
     "redacted installed-app Time Profiler smoke",
     "launched `/Applications/Clawix.app` under Instruments",
     "rescue reachability, and a deliberately delayed-heavy-surface Web fixture reaching route-local timeout",
@@ -609,6 +610,13 @@ function assertSiblingClawixArtifacts() {
     "macos/Tests/ClawixMeshTests/SurfaceShellPerformanceTests.swift": [
       "testCriticalShellStartFastPathStaysBoundedWithAllHeavyDependenciesUnavailable",
       "testExtensionSurfaceStartMeasurementRemainsRouteLocalUnderUnavailableDependencies",
+    ],
+    "macos/Tests/ClawixMeshTests/SurfaceRouteDescriptorTests.swift": [
+      "testCoreSurvivalRouteSetIsExactAndDependencyFree",
+      "reviewedCoreSurvivalRouteIds",
+      "chat:00000000-0000-0000-0000-000000000001",
+      "reviewedHeavySurfaceDependencies",
+      "SurfaceShellIsolationPolicy.criticalShellDependencies(for: descriptor)",
     ],
     "docs/sdk-first-custom-surfaces-installed-app-smoke.md": [
       "`/Applications/Clawix.app/Contents/Helpers/ClawixSwiftSurfaceRunner`",
