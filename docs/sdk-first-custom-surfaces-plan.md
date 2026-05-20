@@ -35,6 +35,9 @@ for user-authored custom UIs that do not block the main app shell.
    `pending`, `blocked`, `notApplicable`, or `EXTERNAL PENDING`.
 6. Keep high-risk actions brokered through policy, approvals, receipts, audit,
    and host-specific execution.
+7. Expose `executionBoundary` in the shared custom-app SDK inspection payload
+   so CLI inspect, service API, MCP, and Relay remain metadata-only contract
+   projections while executable rich UI flows use SDK host bridges.
 
 ## Clawix Work
 
@@ -58,6 +61,8 @@ for user-authored custom UIs that do not block the main app shell.
 - ADR and decision maps exist in both ClawJS and Clawix.
 - `@clawjs/core` exports the capability catalog.
 - `@clawjs/claw` exposes `claw.capabilities.list|get|riskMap|source`.
+- Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/
+  Relay and declares those routes metadata-only.
 - Tests cover the baseline catalog and SDK facade.
 - Clawix app manifests can declare capabilities and produce a risk map.
 - Clawix bridge exposes capability inspection to hosted apps.

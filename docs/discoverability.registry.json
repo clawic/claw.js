@@ -1017,11 +1017,18 @@
       "discoveryTerms": [
         "ADR 0032: SDK-first custom surfaces and nonblocking shell",
         "0032-sdk-first-custom-surfaces-and-nonblocking-shell",
-        "ADR 0032"
+        "ADR 0032",
+        "custom app SDK executionBoundary",
+        "custom app SDK metadata-only projections",
+        "clawjs.custom_app_sdk contracts custom-app-sdk"
       ],
       "searchQueries": [
         {
           "query": "ADR 0032: SDK-first custom surfaces and nonblocking shell",
+          "expectPath": "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md"
+        },
+        {
+          "query": "custom app SDK executionBoundary service API MCP Relay metadata-only",
           "expectPath": "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md"
         }
       ],
