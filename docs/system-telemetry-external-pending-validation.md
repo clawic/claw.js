@@ -39,6 +39,8 @@ Synthetic closure bundles at
 `docs/system-telemetry-external-closure.fixtures.json` prove the same-lane approval and evidence bundle
 behavior only and are not real closure evidence.
 They are the same-lane approval and evidence bundle gate for closure attempts.
+The bundle also binds evidence `runAuthorization.approvalId` to the exact
+approval packet.
 Closure bundles must pass
 `node scripts/validate-system-telemetry-external-closure.mjs <bundle.json>`
 before any external row is replaced.
