@@ -8234,7 +8234,7 @@ function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchRe
     } catch {
       continue;
     }
-    const match = scoreFileContent(query, content);
+    const match = scoreFileContent(query, `${meta.canonicalName}\n${relativePath}\n${content}`);
     if (!match) continue;
     results.push({
       type: meta.type,
@@ -8255,6 +8255,7 @@ function discoverabilitySearchFiles(cwd: string): Array<{ path: string; type: Cl
       artifacts?: Array<{
         id?: string;
         kind?: string;
+        canonicalName?: string;
         canonicalSource?: string;
         searchQueries?: Array<{ expectPath?: string }>;
       }>;
@@ -8264,7 +8265,7 @@ function discoverabilitySearchFiles(cwd: string): Array<{ path: string; type: Cl
       const type: ClawCliSearchResult["type"] = artifact.kind === "adr" || artifact.canonicalSource?.includes("/adr/") ? "adr"
         : artifact.kind === "skill" || artifact.canonicalSource?.includes("/skills/") ? "doc"
           : "doc";
-      const canonicalName = artifact.id ?? "discoverability";
+      const canonicalName = artifact.canonicalName ?? artifact.id ?? "discoverability";
       if (artifact.canonicalSource) entries.push({ path: artifact.canonicalSource, type, canonicalName });
       for (const query of artifact.searchQueries ?? []) {
         if (query.expectPath) entries.push({ path: query.expectPath, type, canonicalName });

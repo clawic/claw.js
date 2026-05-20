@@ -39,7 +39,7 @@ function requireSiblingSnippet(siblingRoot, relativePath, snippet) {
 }
 
 function assertCompletionAudit() {
-  const text = read("docs/sdk-first-custom-surfaces-completion-audit.md");
+  const text = read("docs/governance/sdk-first-custom-surfaces/completion.md");
   for (const snippet of [
     "Source conversation: `019e403c-3837-7f02-9b78-532c43cdd997`",
     "Status: `active_goal_not_complete`",
@@ -86,11 +86,11 @@ function assertCompletionAudit() {
     "VALIDATED PRIVATE",
     "Do not call `update_goal`",
   ]) {
-    assert(text.includes(snippet), `docs/sdk-first-custom-surfaces-completion-audit.md: missing ${JSON.stringify(snippet)}`);
+    assert(text.includes(snippet), `docs/governance/sdk-first-custom-surfaces/completion.md: missing ${JSON.stringify(snippet)}`);
   }
   const rowIds = text.match(/\| CLJ-SDK-\d{3} \|/g) ?? [];
-  assert(rowIds.length === 10, "docs/sdk-first-custom-surfaces-completion-audit.md: must contain exactly CLJ-SDK-001 through CLJ-SDK-010");
-  assert(!text.includes("/Users/"), "docs/sdk-first-custom-surfaces-completion-audit.md: must not publish private filesystem paths");
+  assert(rowIds.length === 10, "docs/governance/sdk-first-custom-surfaces/completion.md: must contain exactly CLJ-SDK-001 through CLJ-SDK-010");
+  assert(!text.includes("/Users/"), "docs/governance/sdk-first-custom-surfaces/completion.md: must not publish private filesystem paths");
   for (const [rowId, status] of [
     ["CLJ-SDK-002", "PARTIAL LOCAL"],
     ["CLJ-SDK-005", "EXTERNAL PENDING"],
@@ -99,7 +99,7 @@ function assertCompletionAudit() {
     ["CLJ-SDK-010", "VALIDATED PRIVATE"],
   ]) {
     const pattern = new RegExp(`\\|\\s*${rowId}\\s*\\|[^\\n]*\\|\\s*${status}\\s*\\|`);
-    assert(pattern.test(text), `docs/sdk-first-custom-surfaces-completion-audit.md: ${rowId} must remain ${status}`);
+    assert(pattern.test(text), `docs/governance/sdk-first-custom-surfaces/completion.md: ${rowId} must remain ${status}`);
   }
 }
 
@@ -110,7 +110,7 @@ function assertPublicRouting() {
       "MCP `clawjs.custom_app_sdk`",
       "Relay `/v1/remote/custom-app-sdk` are metadata-only contract projections",
     ],
-    "docs/sdk-first-custom-surfaces-plan.md": [
+    "docs/governance/sdk-first-custom-surfaces/plan.md": [
       "Expose `executionBoundary` in the shared custom-app SDK inspection payload",
       "Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/",
       "Sibling Clawix mirrors the ClawJS capability facade shape",
@@ -129,12 +129,12 @@ function assertPublicRouting() {
       "Sibling Clawix validates imported/marketplace packages through host-local",
     ],
     "docs/decision-map.md": [
-      "sdk-first-custom-surfaces-completion-audit.md",
+      "governance/sdk-first-custom-surfaces/completion.md",
       "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "metadata-only projection boundaries",
     ],
     "docs/discoverability.registry.json": [
-      "docs/sdk-first-custom-surfaces-completion-audit.md",
+      "docs/governance/sdk-first-custom-surfaces/completion.md",
       "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "sdk-first custom surfaces completion audit",
     ],
@@ -270,7 +270,7 @@ function assertSiblingClawixArtifacts() {
       "`clawix.capabilities.contracts()` is a metadata-only contract catalog",
       "`window.clawix`",
     ],
-    "docs/sdk-first-custom-surfaces-plan.md": [
+    "docs/governance/sdk-first-custom-surfaces/plan.md": [
       "metadata-only `executionBoundary`",
       "`clawix.capabilities.contracts()` exposes `executionBoundary`",
       "`window.clawix.capabilities` mirrors the shared SDK facade shape",
@@ -282,7 +282,7 @@ function assertSiblingClawixArtifacts() {
       "`iot.device.action.invoke` is exposed to Web custom apps through",
       "`actions.invoke` and `secrets.broker` are exposed to Web custom apps through",
     ],
-    "docs/sdk-first-custom-surfaces-completion-audit.md": [
+    "docs/governance/sdk-first-custom-surfaces/completion.md": [
       "Status: `active_goal_not_complete`",
       "The Clawix verifier inspects sibling ClawJS evidence when that checkout is present.",
       "| CLX-SDK-005 | Imported/marketplace apps require origin/capability/risk ficha",

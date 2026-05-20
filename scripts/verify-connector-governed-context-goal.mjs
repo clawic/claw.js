@@ -89,8 +89,8 @@ const requiredDocs = [
   "CONSTITUTION.md",
   "docs/adr/0029-connector-governed-context-v1.md",
   "docs/connector-governed-context.md",
-  "docs/connector-governed-context-completion-audit.md",
-  "docs/connector-governed-context-source-decision-audit.md",
+  "docs/governance/connector-governed-context/completion.md",
+  "docs/governance/connector-governed-context/source-audit.md",
   "docs/connector-control-plane.md",
   "docs/secrets.md",
   "docs/secrets-security.md",
@@ -187,14 +187,14 @@ function extractTableIds(text, prefix) {
 for (const file of requiredDocs) read(file);
 
 for (const file of [
-  "docs/connector-governed-context-completion-audit.md",
-  "docs/connector-governed-context-source-decision-audit.md",
+  "docs/governance/connector-governed-context/completion.md",
+  "docs/governance/connector-governed-context/source-audit.md",
   "docs/adr/0029-connector-governed-context-v1.md",
 ]) {
   requireNoPattern(file, /\/Users\/|rollout-\d{4}-\d{2}-\d{2}T/u, "private local session path");
 }
 
-const sourceAudit = read("docs/connector-governed-context-source-decision-audit.md");
+const sourceAudit = read("docs/governance/connector-governed-context/source-audit.md");
 for (const snippet of [sourceConversationId, sourcePlanId, "Final Closure Gate"]) {
   if (!sourceAudit.includes(snippet)) fail(`source decision audit must include ${snippet}`);
 }
@@ -218,7 +218,7 @@ for (const snippet of ["blocked external", "EXTERNAL PENDING", "This audit does 
   if (!sourceAudit.includes(snippet)) fail(`source decision audit must include ${snippet}`);
 }
 
-const completionAudit = read("docs/connector-governed-context-completion-audit.md");
+const completionAudit = read("docs/governance/connector-governed-context/completion.md");
 const cgaIds = extractTableIds(completionAudit, "CGA");
 if (cgaIds.size !== 14) fail(`completion audit must have 14 CGA rows, found ${cgaIds.size}`);
 for (let index = 1; index <= 14; index += 1) {
@@ -343,7 +343,7 @@ for (const snippet of [
   "resource projection",
   "source decision audit",
   "Completion Audit",
-  "connector-governed-context-completion-audit.md",
+  "governance/connector-governed-context/completion.md",
 ]) {
   const corpus = `${read("docs/adr/0029-connector-governed-context-v1.md")}\n${read("docs/connector-governed-context.md")}\n${read("docs/decision-map.md")}\n${read("docs/cli.md")}`;
   if (!corpus.includes(snippet)) fail(`connector docs corpus missing ${snippet}`);

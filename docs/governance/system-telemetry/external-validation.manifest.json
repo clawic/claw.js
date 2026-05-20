@@ -1,0 +1,236 @@
+{
+  "$schema": "docs/governance/system-telemetry/external-validation.manifest.schema.json",
+  "schemaVersion": 1,
+  "id": "system-telemetry-external-validation-manifest",
+  "description": "System telemetry external validation manifest for structured external lane completion blockers.",
+  "conversationId": "019e359b-c0ab-7dc1-ba94-11a49d11dc76",
+  "planId": "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan",
+  "status": "active_goal_not_complete",
+  "completionPolicy": {
+    "externalPendingBlocksCompletion": true,
+    "requiresFinalSourceAudit": true,
+    "requiresSourceQaReview": true,
+    "requiresCompletionAudit": true,
+    "requiresExternalValidationRunbook": true,
+    "requiresExternalEvidenceSchema": true,
+    "requiresForbiddenNameScan": true,
+    "requiresExactRunApprovalForExternalLanes": true
+  },
+  "sourceQaReview": {
+    "required": true,
+    "artifactId": "system-telemetry-source-qa-review",
+    "path": "docs/governance/system-telemetry/source-review.json",
+    "privateAuditAlias": "private-goal-audit:claw-system-telemetry-context-menubar-source-audit-2026-05-20",
+    "closureRole": "binds private source decisions to public-safe validation rows before goal completion"
+  },
+  "completionAudit": {
+    "required": true,
+    "artifactId": "system-telemetry-completion-audit",
+    "path": "docs/governance/system-telemetry/completion.md",
+    "requiredRowPrefix": "STA",
+    "requiredRowCount": 18,
+    "statusSummary": {
+      "validatedLocalRows": 14,
+      "activeClosureGateRows": 1,
+      "externalPendingRows": 3,
+      "externalPendingRowIds": [
+        "STA-016",
+        "STA-017",
+        "STA-018"
+      ]
+    },
+    "closureRole": "tracks the full system telemetry goal requirement by requirement before goal completion"
+  },
+  "externalValidationRunbook": {
+    "required": true,
+    "artifactId": "system-telemetry-external-validation-runbook",
+    "path": "docs/governance/system-telemetry/external-validation-runbook.md",
+    "laneCount": 3,
+    "externalPendingRowIds": [
+      "SYS-TEL-EXT-001",
+      "SYS-TEL-EXT-002",
+      "SYS-TEL-EXT-003"
+    ],
+    "closureRole": "defines safe preflight, exact approval, accepted evidence, update targets, and fail rules for every remaining external lane"
+  },
+  "externalApprovalPacketSchema": {
+    "required": true,
+    "artifactId": "system-telemetry-external-approval-schema",
+    "path": "docs/governance/system-telemetry/external-approval.schema.json",
+    "laneCount": 3,
+    "externalPendingRowIds": [
+      "SYS-TEL-EXT-001",
+      "SYS-TEL-EXT-002",
+      "SYS-TEL-EXT-003"
+    ],
+    "closureRole": "defines the exact-run approval packet required before any live provider, physical sensor, or dangerous-control lane may execute"
+  },
+  "externalApprovalFixtures": {
+    "required": true,
+    "artifactId": "system-telemetry-external-approval-fixtures",
+    "path": "docs/governance/system-telemetry/external-approval.fixtures.json",
+    "status": "synthetic_templates_not_approval",
+    "validTemplateCount": 3,
+    "invalidTemplateCount": 4,
+    "closureRole": "proves the approval schema accepts complete exact-run approvals and rejects ambiguous, expired, or incomplete approvals without representing real approval"
+  },
+  "externalApprovalPacketValidator": {
+    "required": true,
+    "artifactId": "system-telemetry-external-approval-validator",
+    "path": "scripts/validate-system-telemetry-external-approval.mjs",
+    "fixtureCommand": "node scripts/validate-system-telemetry-external-approval.mjs --fixtures",
+    "packetCommand": "node scripts/validate-system-telemetry-external-approval.mjs <packet.json>",
+    "closureRole": "validates any future exact-run approval packet before a live provider, physical sensor, or dangerous-control lane may execute"
+  },
+  "externalEvidencePacketSchema": {
+    "required": true,
+    "artifactId": "system-telemetry-external-evidence-schema",
+    "path": "docs/governance/system-telemetry/external-evidence.schema.json",
+    "laneCount": 3,
+    "externalPendingRowIds": [
+      "SYS-TEL-EXT-001",
+      "SYS-TEL-EXT-002",
+      "SYS-TEL-EXT-003"
+    ],
+    "closureRole": "defines the redacted receipt, audit, sample, downstream, physical, rollback, and reviewer fields required before any external lane can replace EXTERNAL PENDING"
+  },
+  "externalEvidenceFixtures": {
+    "required": true,
+    "artifactId": "system-telemetry-external-evidence-fixtures",
+    "path": "docs/governance/system-telemetry/external-evidence.fixtures.json",
+    "status": "synthetic_templates_not_evidence",
+    "validTemplateCount": 3,
+    "invalidTemplateCount": 7,
+    "closureRole": "proves the evidence schema accepts complete synthetic lane packets and rejects incomplete, temporally invalid, or failed approved-run packets without representing real external evidence"
+  },
+  "externalEvidencePacketValidator": {
+    "required": true,
+    "artifactId": "system-telemetry-external-evidence-validator",
+    "path": "scripts/validate-system-telemetry-external-evidence.mjs",
+    "fixtureCommand": "node scripts/validate-system-telemetry-external-evidence.mjs --fixtures",
+    "packetCommand": "node scripts/validate-system-telemetry-external-evidence.mjs <packet.json>",
+    "closureRole": "validates any future redacted evidence packet before a lane can replace EXTERNAL PENDING"
+  },
+  "externalClosureFixtures": {
+    "required": true,
+    "artifactId": "system-telemetry-external-closure-fixtures",
+    "path": "docs/governance/system-telemetry/external-closure.fixtures.json",
+    "status": "synthetic_templates_not_closure",
+    "validTemplateCount": 3,
+    "invalidMutationCount": 15,
+    "closureRole": "proves exact-run approval and accepted evidence must belong to the same lane, approval id, exact run scope, approving actor, credential/native grants, approval window, evidence timeline, and exact closure rows before any row can replace EXTERNAL PENDING"
+  },
+  "externalClosureBundleValidator": {
+    "required": true,
+    "artifactId": "system-telemetry-external-closure-validator",
+    "path": "scripts/validate-system-telemetry-external-closure.mjs",
+    "fixtureCommand": "node scripts/validate-system-telemetry-external-closure.mjs --fixtures",
+    "bundleCommand": "node scripts/validate-system-telemetry-external-closure.mjs <bundle.json>",
+    "closureRole": "validates any future approval-plus-evidence closure bundle before a lane can replace EXTERNAL PENDING"
+  },
+  "externalValidationManifestFixtures": {
+    "required": true,
+    "artifactId": "system-telemetry-external-validation-manifest-fixtures",
+    "path": "docs/governance/system-telemetry/external-validation.manifest.fixtures.json",
+    "status": "synthetic_templates_not_evidence",
+    "validTemplateCount": 1,
+    "invalidMutationCount": 7,
+    "closureRole": "proves the manifest schema accepts the current active manifest and rejects accidental completion, lane-clear, or closure-guard downgrade mutations"
+  },
+  "rows": [
+    {
+      "id": "SYS-TEL-EXT-001",
+      "requirement": "Live weather/context provider connection",
+      "status": "EXTERNAL PENDING",
+      "blockingPrerequisites": [
+        "explicit_approval",
+        "approved_credential_or_account_lease",
+        "location_grant",
+        "network_access_for_exact_run",
+        "provider_execution_receipt"
+      ],
+      "acceptedEvidence": [
+        "provider_execution_receipt",
+        "redacted_audit_event",
+        "monitor_sample_ids_for_context_weather_temperature",
+        "downstream_app_or_menu_evidence_without_precise_location"
+      ],
+      "reentryCommand": "claw system providers plan context.weather.live --json"
+    },
+    {
+      "id": "SYS-TEL-EXT-002",
+      "requirement": "Physical hardware sensor and fan telemetry",
+      "status": "EXTERNAL PENDING",
+      "blockingPrerequisites": [
+        "compatible_host_or_provider_path",
+        "native_system_sensor_read_grant",
+        "signed_host_bridge",
+        "same_machine_evidence"
+      ],
+      "acceptedEvidence": [
+        "provider_execution_receipt_or_external_pending_false_plan",
+        "monitor_sample_ids_for_sensor_temperature_or_fan_speed",
+        "redacted_audit_event",
+        "same_machine_evidence"
+      ],
+      "reentryCommand": "claw system providers plan system.sensors.signed --json"
+    },
+    {
+      "id": "SYS-TEL-EXT-003",
+      "requirement": "Dangerous hardware or system controls",
+      "status": "EXTERNAL PENDING",
+      "blockingPrerequisites": [
+        "exact_action_approval",
+        "signed_host_broker",
+        "native_confirmation",
+        "required_grants",
+        "rollback_or_continuity_policy",
+        "physical_validation"
+      ],
+      "acceptedEvidence": [
+        "pre_execution_plan_with_will_execute_true_after_approval",
+        "signed_host_execution_receipt",
+        "redacted_audit_event",
+        "physical_validation",
+        "rollback_or_continuity_evidence"
+      ],
+      "reentryCommand": "claw system controls plan <control-id> --json"
+    },
+    {
+      "id": "SYS-TEL-EXT-004",
+      "requirement": "Signed-host live recording loop",
+      "status": "VALIDATED LOCAL",
+      "blockingPrerequisites": [],
+      "acceptedEvidence": [
+        "preflight",
+        "live_recorder_smoke",
+        "monitor_rows_advanced"
+      ]
+    },
+    {
+      "id": "SYS-TEL-EXT-005",
+      "requirement": "Strict native menu-bar visual and interaction validation",
+      "status": "VALIDATED LOCAL",
+      "blockingPrerequisites": [],
+      "acceptedEvidence": [
+        "preflight",
+        "accessibility_smoke",
+        "combined_dropdown",
+        "independent_indicators",
+        "provider_rows",
+        "history_graph_menu_content"
+      ]
+    },
+    {
+      "id": "SYS-TEL-EXT-006",
+      "requirement": "Native time-series graph UI over retained telemetry",
+      "status": "VALIDATED LOCAL",
+      "blockingPrerequisites": [],
+      "acceptedEvidence": [
+        "seeded_history_graph_menu_content",
+        "native_bitmap_pixel_check",
+        "retained_monitor_history"
+      ]
+    }
+  ]
+}

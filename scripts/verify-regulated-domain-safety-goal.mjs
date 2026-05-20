@@ -436,7 +436,7 @@ for (const [relativePath, snippets] of [
     "CLAW_RELEASE_APPROVED_FOR=direct-package-publish",
     "@clawjs/signals-core",
     "@clawjs/marketplace-agent-policy",
-    "docs/legal-external-pending-validation.md",
+    "docs/governance/legal/external-pending.md",
   ]],
   ["package.json", [
     "npm publish --dry-run --access public --workspace @clawjs/search",
@@ -498,7 +498,7 @@ for (const [relativePath, snippets] of [
     "scripts/verify-regulated-domain-safety-goal.mjs",
     "packages/clawjs-core/src/regulated-domain-safety.test.ts",
   ]],
-  ["docs/legal-closure-decision-audit.md", [
+  ["docs/governance/legal/source-audit.md", [
     "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
     "Closure state: `active_goal_not_complete`",
     "33 structured decisions",
@@ -507,9 +507,9 @@ for (const [relativePath, snippets] of [
     "EXTERNAL PENDING",
     "Required Evidence Spine",
     "legal certification is made here",
-    "docs/legal-external-pending-validation.md",
+    "docs/governance/legal/external-pending.md",
   ]],
-  ["docs/legal-external-pending-validation.md", [
+  ["docs/governance/legal/external-pending.md", [
     "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
     "Status: `active_goal_not_complete`",
     "LEGAL-EXT-001",
@@ -874,16 +874,16 @@ for (const [relativePath, snippets] of [
   for (const snippet of snippets) requireSnippet(relativePath, snippet);
 }
 
-const legalClosureAudit = read("docs/legal-closure-decision-audit.md");
+const legalClosureAudit = read("docs/governance/legal/source-audit.md");
 const legalClosureIds = extractTableIds(legalClosureAudit, "LC");
 if (legalClosureIds.size !== 33) {
-  errors.push(`docs/legal-closure-decision-audit.md: expected 33 LC rows, found ${legalClosureIds.size}`);
+  errors.push(`docs/governance/legal/source-audit.md: expected 33 LC rows, found ${legalClosureIds.size}`);
 }
 for (let index = 1; index <= 33; index += 1) {
   const id = `LC-${String(index).padStart(3, "0")}`;
-  if (!legalClosureIds.has(id)) errors.push(`docs/legal-closure-decision-audit.md: missing ${id}`);
+  if (!legalClosureIds.has(id)) errors.push(`docs/governance/legal/source-audit.md: missing ${id}`);
 }
-assertExternalPendingLedger("docs/legal-external-pending-validation.md", 6);
+assertExternalPendingLedger("docs/governance/legal/external-pending.md", 6);
 
 for (const snippet of [
   "compliance-ready defaults for regulated environments",

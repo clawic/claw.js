@@ -206,7 +206,7 @@ Raw evidence arrays are report-only and remain non-clearable. Relay
 `/v1/remote/external-validation-artifact` and
 `claw remote validation-artifact` generate the versioned pending artifact shape
 with source conversation, plan, and approval request metadata. The checked-in
-artifact `docs/remote-gateway-sync-external-validation-evidence.json` records
+artifact `docs/governance/remote-gateway-sync/external-validation-evidence.json` records
 the current unapproved no-write rows for submission with `--evidence-file` or
 `--external-validation-file`; it is valid input, but cannot clear any row until
 approved physical/provider evidence is added.
@@ -286,7 +286,7 @@ The remote closure gate is exposed by Relay `/v1/remote/closure-gate` and
 `claw remote closure-gate`. It combines that evidence report with the source
 Q/A review report. The result stays `blocked` until all 23 source Q/A rows have
 a disposition, evidence refs, and every external validation row is `clearable`.
-With `docs/remote-gateway-sync-source-qa-review.json` plus the current external
+With `docs/governance/remote-gateway-sync/source-review.json` plus the current external
 validation evidence artifact, the gate clears only the source Q/A blocker and
 keeps `external_validation` blocked. Relay POST accepts `sourceQaReviews` or the
 artifact-native `items` array for the source Q/A rows, plus the external

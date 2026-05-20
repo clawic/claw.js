@@ -44,7 +44,8 @@ function parseArgs(argv) {
     else if (arg === "--no-cli") args.cli = false;
     else if (arg === "--cli") args.cli = true;
     else if (arg === "--self-test") args.command = "self-test";
-    else if (["check", "audit", "generate"].includes(arg)) args.command = arg;
+    else if (arg === "--golden-queries") args.command = "golden-queries";
+    else if (["check", "audit", "generate", "golden-queries"].includes(arg)) args.command = arg;
   }
   args.profile ??= fs.existsSync(path.join(args.root, "macos")) ? "clawix" : "claw";
   return args;
@@ -55,6 +56,7 @@ const rootDir = options.root;
 const registryPath = path.join(rootDir, "docs/discoverability.registry.json");
 const baselinePath = path.join(rootDir, "docs/discoverability-baseline.json");
 const routerPath = path.join(rootDir, "docs/discoverability.md");
+const goldenQueriesPath = path.join(rootDir, "docs/discoverability-golden-queries.json");
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -340,12 +342,13 @@ function renderRouter(registry, profile) {
   const title = profile === "clawix" ? "Clawix Discoverability Router" : "ClawJS Discoverability Router";
   const rows = registry.artifacts.map((artifact) => {
     const source = artifact.canonicalSource;
+    const canonicalName = artifact.canonicalName ?? "";
     const terms = (artifact.discoveryTerms ?? []).join(", ");
     const guard = artifact.guard ?? "";
     const sourceCell = source.startsWith("docs/")
       ? `[${source}](/${source.slice("docs/".length).replace(/\.md$/, "")})`
       : `\`${source}\``;
-    return `| \`${artifact.id}\` | ${artifact.kind} | ${sourceCell} | ${terms} | \`${guard}\` |`;
+    return `| \`${artifact.id}\` | ${artifact.kind} | ${canonicalName ? `\`${canonicalName}\`` : ""} | ${sourceCell} | ${terms} | \`${guard}\` |`;
   }).join("\n");
   return `# ${title}
 
@@ -353,8 +356,8 @@ This generated router lists the durable meta-code routes enforced by
 \`docs/discoverability.registry.json\`. Edit the registry, then regenerate this
 file; do not hand-maintain this table.
 
-| Artifact | Kind | Canonical source | Discovery terms | Guard |
-| --- | --- | --- | --- | --- |
+| Artifact | Kind | Canonical name | Canonical source | Discovery terms | Guard |
+| --- | --- | --- | --- | --- | --- |
 ${rows}
 `;
 }
@@ -411,6 +414,10 @@ function validateRegistry(registry, errors) {
     if (!["claw", "clawix", "external"].includes(artifact.owner)) errors.push(`${label} has invalid owner ${artifact.owner}`);
     if (!artifact.canonicalSource || !exists(artifact.canonicalSource)) errors.push(`${label} canonicalSource is missing or does not exist: ${artifact.canonicalSource}`);
     if (artifact.canonicalSource) sources.add(artifact.canonicalSource);
+    if (artifact.canonicalName !== undefined && typeof artifact.canonicalName !== "string") errors.push(`${label} canonicalName must be a string when present`);
+    if (artifact.canonicalSource?.startsWith("docs/adr/") && !/^adr:[a-z0-9][a-z0-9-]*$/u.test(artifact.canonicalName ?? "")) {
+      errors.push(`${label} ADR canonicalName must use adr:<semantic-id>`);
+    }
     if (!allowedStatuses.has(artifact.status)) errors.push(`${label} has invalid status ${artifact.status}`);
     if (!isDate(artifact.reviewDate)) errors.push(`${label} reviewDate must be YYYY-MM-DD`);
     if (!artifact.guard || !exists(artifact.guard)) errors.push(`${label} guard is missing or does not exist: ${artifact.guard}`);
@@ -429,7 +436,14 @@ function validateRegistry(registry, errors) {
       if (!query.query || !query.expectPath) errors.push(`${label} searchQueries must include query and expectPath`);
       if (query.expectPath && !exists(query.expectPath)) errors.push(`${label} search expectPath does not exist: ${query.expectPath}`);
       if (query.query && query.expectPath && exists(query.expectPath)) {
-        const searchable = `${query.expectPath}\n${read(query.expectPath)}`.toLowerCase();
+        const searchable = [
+          artifact.id,
+          artifact.canonicalName,
+          artifact.canonicalSource,
+          ...(artifact.discoveryTerms ?? []),
+          query.expectPath,
+          read(query.expectPath),
+        ].filter(Boolean).join("\n").toLowerCase();
         for (const term of query.query.toLowerCase().split(/\s+/).filter(Boolean)) {
           if (!searchable.includes(term)) errors.push(`${label} search query ${JSON.stringify(query.query)} is not represented in ${query.expectPath}`);
         }
@@ -609,6 +623,64 @@ function validateCli(registry, errors) {
   }
 }
 
+function validateGoldenQueries(errors) {
+  if (!fs.existsSync(goldenQueriesPath)) return;
+  const fixture = readJson(goldenQueriesPath);
+  if (fixture.version !== 1) errors.push("docs/discoverability-golden-queries.json version must be 1");
+  if (!Array.isArray(fixture.queries) || fixture.queries.length === 0) {
+    errors.push("docs/discoverability-golden-queries.json must declare queries");
+    return;
+  }
+  const ids = new Set();
+  for (const query of fixture.queries) {
+    const label = query.id || "<missing golden query id>";
+    if (!query.id) errors.push("golden query is missing id");
+    if (query.id && ids.has(query.id)) errors.push(`duplicate golden query id ${query.id}`);
+    if (query.id) ids.add(query.id);
+    if (!query.query || typeof query.query !== "string") errors.push(`${label} must declare query`);
+    if (!Array.isArray(query.domains) || query.domains.length === 0) errors.push(`${label} must declare domains`);
+    if (!query.expectSource || typeof query.expectSource !== "string") errors.push(`${label} must declare expectSource`);
+    if (!query.expectType || typeof query.expectType !== "string") errors.push(`${label} must declare expectType`);
+    if (!query.expectResourceId || typeof query.expectResourceId !== "string") errors.push(`${label} must declare expectResourceId`);
+    if (!Number.isInteger(query.maxRank) || query.maxRank < 1) errors.push(`${label} maxRank must be a positive integer`);
+  }
+  if (!options.cli) return;
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-golden-discoverability-"));
+  const env = { ...process.env, CLAW_DATA_DIR: dataDir, CLAW_HOME: dataDir };
+  for (const query of fixture.queries) {
+    if (!query.query || !query.expectSource || !query.expectType || !query.expectResourceId || !Number.isInteger(query.maxRank)) continue;
+    const domains = query.domains.join(",");
+    const limit = String(Math.max(5, query.maxRank));
+    const result = runClaw(["search", "query", query.query, "--domains", domains, "--data-dir", dataDir, "--json", "--limit", limit], rootDir, env);
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (result.status !== 0) {
+      errors.push(`${query.id} golden query failed for ${JSON.stringify(query.query)}: ${output.trim()}`);
+      continue;
+    }
+    const payload = JSON.parse(result.stdout);
+    const results = Array.isArray(payload.data?.results) ? payload.data.results : [];
+    const rank = results.findIndex((entry) => (
+      entry.source === query.expectSource &&
+      entry.type === query.expectType &&
+      entry.resourceId === query.expectResourceId
+    ));
+    if (rank < 0) {
+      errors.push(`${query.id} golden query ${JSON.stringify(query.query)} did not return ${query.expectSource}/${query.expectType}/${query.expectResourceId} in top ${limit}`);
+    } else if (rank + 1 > query.maxRank) {
+      errors.push(`${query.id} golden query ${JSON.stringify(query.query)} returned ${query.expectResourceId} at rank ${rank + 1}, expected <= ${query.maxRank}`);
+    }
+  }
+}
+
+function runGoldenQueries() {
+  const errors = [];
+  const previousCli = options.cli;
+  options.cli = true;
+  validateGoldenQueries(errors);
+  options.cli = previousCli;
+  return errors;
+}
+
 function runCheck() {
   const errors = [];
   if (!fs.existsSync(registryPath)) errors.push("missing docs/discoverability.registry.json");
@@ -623,6 +695,7 @@ function runCheck() {
   validateRouter(registry, errors);
   validateDecisionLikeComments(errors);
   validateCli(registry, errors);
+  validateGoldenQueries(errors);
   return errors;
 }
 
@@ -685,6 +758,17 @@ if (options.command === "audit") {
     process.exit(1);
   }
   console.log("discoverability audit passed");
+  process.exit(0);
+}
+
+if (options.command === "golden-queries") {
+  const errors = runGoldenQueries();
+  if (errors.length > 0) {
+    console.error("discoverability golden query check failed:");
+    for (const error of errors) console.error(`- ${error}`);
+    process.exit(1);
+  }
+  console.log("discoverability golden query check passed");
   process.exit(0);
 }
 

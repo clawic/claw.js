@@ -23,7 +23,7 @@ the platform quickly.
 | `content/` | Content authoring and publishing control plane. |
 | `database/` | Namespace database service with schema, records, files, auth, and realtime. |
 | `delegation/` | Durable async agent delegation control plane. |
-| `docs/` | Canonical Markdown documentation, VitePress source, the [Decision Map](./decision-map.md), and the [Domain Surface Decision Matrix](./domain-surface-decision-matrix.md). |
+| `docs/` | Canonical Markdown documentation, VitePress source, the [Decision Map](./decision-map.md), the [Constitution Operational Map](./constitution-map.md), and the [Domain Surface Decision Matrix](./governance/domain-surface/decision-matrix.md). |
 | `drive/` | Local-first drive and file collaboration service. |
 | `examples/` | Demos, mocks, fixtures, and starter showcases. |
 | `execution/` | Agent-authored code execution, workers, runs, artifacts, and deployment flow. |
@@ -98,4 +98,4 @@ protecting check.
 
 For the DB-to-CLI domain route, use
 [ADR 0012](./adr/0012-domain-surface-registry-db-to-cli.md) and the
-[Domain Surface Decision Matrix](./domain-surface-decision-matrix.md).
+[Domain Surface Decision Matrix](./governance/domain-surface/decision-matrix.md).

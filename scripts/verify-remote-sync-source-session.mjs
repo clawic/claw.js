@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
 const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
-const sourceQaReviewPath = path.join(rootDir, "docs/remote-gateway-sync-source-qa-review.json");
+const sourceQaReviewPath = path.join(rootDir, "docs/governance/remote-gateway-sync/source-review.json");
 
 const requiredEvidence = [
   { qaId: "QA-001", decisionKey: "relay_boundary", allOf: ["Separar capas (Recommended)"] },
@@ -135,7 +135,7 @@ for (const check of requiredEvidence) {
   }
 }
 
-const qaReview = loadJson("docs/remote-gateway-sync-source-qa-review.json", sourceQaReviewPath);
+const qaReview = loadJson("docs/governance/remote-gateway-sync/source-review.json", sourceQaReviewPath);
 if (qaReview.sourceConversationId !== sourceConversationId) {
   fail("source Q/A review must bind the source conversation id");
 }

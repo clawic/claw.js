@@ -109,5 +109,5 @@ The protected surface is:
 - `node ./scripts/code-hygiene-check.mjs`
 
 See [ADR 0029](./adr/0029-connector-governed-context-v1.md),
-[Connector Governed Context Source Decision Audit](./connector-governed-context-source-decision-audit.md),
-and [Connector Governed Context Completion Audit](./connector-governed-context-completion-audit.md).
+[Connector Governed Context Source Decision Audit](./governance/connector-governed-context/source-audit.md),
+and [Connector Governed Context Completion Audit](./governance/connector-governed-context/completion.md).

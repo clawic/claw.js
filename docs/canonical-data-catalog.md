@@ -140,7 +140,7 @@ same pattern appears in more than one family.
   sports/booking, health, home/property, work/legal/ops, CRM/support/growth,
   and personal memory/documents.
 - Dense-domain surfaces that could otherwise become parallel systems are
-  guarded by [Dense Data Existing Catalog Audit](./dense-data-existing-catalog-audit.md)
+  guarded by [Dense Data Existing Catalog Audit](./governance/dense-data/existing-catalog-audit.md)
   and `clawDenseDataOsRegistry.existingSurfaceIntegrations`, which require a
   disposition, canonical owner, shared primitive set, dense-system references,
   and follow-up gate before a pack can close.

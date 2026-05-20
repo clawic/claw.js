@@ -11,6 +11,7 @@ lanes. Do not duplicate long ADR rationale here.
 
 ## Canonical Routes
 
+- Constitution routing: [Constitution Operational Map](../constitution-map.md).
 - Decision routing: [Decision Map](../decision-map.md).
 - Framework/host boundary: [Host Ownership](../host-ownership.md) and
   [ADR 0001](../adr/0001-claw-framework-host-boundary.md).

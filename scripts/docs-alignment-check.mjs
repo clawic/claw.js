@@ -31,10 +31,10 @@ const agentDocs = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/decision-map.md",
-  "docs/v1-surface-closure-decisions.json",
-  "docs/v1-surface-closure-acceptance.json",
-  "docs/v1-surface-closure-validation.json",
-  "docs/v1-surface-closure-completion-audit.md",
+  "docs/governance/v1-surface-closure/decisions.json",
+  "docs/governance/v1-surface-closure/acceptance.json",
+  "docs/governance/v1-surface-closure/validation.json",
+  "docs/governance/v1-surface-closure/completion.md",
   "docs/host-ownership.md",
   "docs/data-storage-boundary.md",
   "docs/canonical-data-catalog.md",
@@ -119,7 +119,9 @@ requireSnippet("CLAUDE.md", "AGENTS.md");
 requireSnippet("CLAUDE.md", "docs/agent-rules/index.md");
 requireSnippet("CLAUDE.md", "docs/decision-map.md");
 requireSnippet("AGENTS.md", "docs/decision-map.md");
+requireSnippet("AGENTS.md", "docs/constitution-map.md");
 requireSnippet("AGENTS.md", "docs/agent-rules/index.md");
+requireSnippet("docs/agent-rules/index.md", "../constitution-map.md");
 requireSnippet("docs/agent-rules/index.md", "../host-ownership.md");
 requireSnippet("docs/agent-rules/index.md", "../data-storage-boundary.md");
 requireSnippet("docs/agent-rules/index.md", "../canonical-data-catalog.md");
@@ -129,17 +131,23 @@ requireSnippet("docs/agent-rules/index.md", "../agentic-naming-guide.md");
 requireSnippet("docs/agent-rules/index.md", "../vocabulary.md");
 requireSnippet("CONTRIBUTING.md", "docs/decision-map.md");
 requireSnippet("RELEASING.md", "docs/decision-map.md");
+requireSnippet("docs/AGENTS.md", "constitution-map.md");
 requireSnippet("docs/AGENTS.md", "decision-map.md");
+requireSnippet("docs/index.md", "Constitution Operational Map");
 requireSnippet("docs/index.md", "Decision Map");
 requireSnippet("docs/index.md", "Canonical Data Catalog");
+requireSnippet("docs/repository-map.md", "Constitution Operational Map");
 requireSnippet("docs/repository-map.md", "Decision Map");
 requireSnippet("CONSTITUTION.md", "Capabilities are complete only when dual-surfaced");
+requireSnippet("docs/constitution-map.md", "not a second source of truth");
+requireSnippet("docs/constitution-map.md", "Affected surfaces");
 requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");
 requireSnippet("docs/adr/0009-dual-human-programmatic-surfaces.md", "MCP is the model-native surface");
 requireSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "surface parity metadata");
 
 for (const snippet of [
   "decision -> document",
+  "Constitution Operational Map",
   "ClawJS/Claw owns framework contracts",
   "New workspace-local framework writes use `.claw/`",
   "Sensitive native permissions",

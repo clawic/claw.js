@@ -17,8 +17,8 @@ host execution, Mac audit receipts, or Commander migration.
    - `docs/mac-control-plane.md`
    - `docs/adr/0023-mac-control-plane-v1.md`
    - `docs/adr/0024-mac-permission-broker-v1.md`
-   - `docs/mac-control-plane-source-decision-audit.md`
-   - `docs/mac-control-plane-decision-matrix.md`
+   - `docs/governance/mac-control-plane/source-audit.md`
+   - `docs/governance/mac-control-plane/decision-matrix.md`
 2. Inspect the registered routes before editing:
    - `claw inspect route mac.directCliAction --json`
    - `claw inspect route mac.permissionLifecycle --json`

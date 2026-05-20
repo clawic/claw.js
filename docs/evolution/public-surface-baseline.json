@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 917,
-    "cliCommands": 159
+    "surfaces": 918,
+    "cliCommands": 161
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:3efdd826",
-    "cliCommands": "fnv1a32:32e714a3",
-    "combined": "fnv1a32:83d151e5"
+    "surfaces": "fnv1a32:ce57b723",
+    "cliCommands": "fnv1a32:4ef8dcd6",
+    "combined": "fnv1a32:955df73d"
   },
   "surfaces": [
     {
@@ -1415,6 +1415,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.debt",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "debt",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.decisions",
       "owner": "claw",
       "kind": "cliCommand",
@@ -1627,6 +1636,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "goals",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.governance",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "governance",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -6662,15 +6680,6 @@
       "owner": "claw",
       "kind": "privateApiRoute",
       "parentId": "claw.contracts.api",
-      "value": "GET /api/notes/",
-      "surfaceClass": "api",
-      "stability": "v1"
-    },
-    {
-      "id": "claw.privateApi.notes",
-      "owner": "claw",
-      "kind": "privateApiRoute",
-      "parentId": "claw.contracts.api",
       "value": "GET /api/notes",
       "surfaceClass": "api",
       "stability": "v1"
@@ -7163,6 +7172,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "agentId",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7171,6 +7181,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "createdAt",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7179,6 +7190,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "modelId",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7187,6 +7199,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "protocolVersion",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7195,6 +7208,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "providerId",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7203,6 +7217,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "requestId",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7211,6 +7226,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "runtimeId",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7219,6 +7235,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "schemaVersion",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7227,6 +7244,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "sessionId",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -7235,6 +7253,7 @@
       "owner": "claw",
       "kind": "jsonField",
       "parentId": "claw.contracts.schemas",
+      "value": "updatedAt",
       "surfaceClass": "schema",
       "stability": "v1"
     },
@@ -8024,6 +8043,14 @@
       "jsonSchemaId": "claw.cli.deadlines.v1"
     },
     {
+      "name": "debt",
+      "kind": "canonical",
+      "usage": "debt list|show|audit|sources",
+      "family": "diagnostics",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.debt.v1"
+    },
+    {
       "name": "decisions",
       "kind": "canonical",
       "family": "work",
@@ -8208,6 +8235,14 @@
       "jsonSchemaId": "claw.cli.goals.v1"
     },
     {
+      "name": "governance",
+      "kind": "canonical",
+      "usage": "governance doctor --json [--root PATH]",
+      "family": "diagnostics",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.governance.v1"
+    },
+    {
       "name": "guidance",
       "kind": "canonical",
       "usage": "guidance list|show|create|archive|match",
@@ -8270,7 +8305,7 @@
     {
       "name": "inspect",
       "kind": "canonical",
-      "usage": "inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|governance|codebase|connectors|aliases|database|storage|prefs|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|external|render",
+      "usage": "inspect tree|list|show|neighbors|routes|route|capabilities|capability|agent|edges|why|commands|debt-ledger|governance|codebase|connectors|aliases|database|storage|prefs|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|external|render",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.inspect.v1"
     },
@@ -8448,8 +8483,8 @@
     {
       "name": "network",
       "kind": "canonical",
-      "usage": "network status|list|plan|coverage [--dry-run]",
-      "family": "mac-control",
+      "usage": "network status|events|rules|profiles|lists|manifests|routes|adapters|suggestions|explain|doctor",
+      "family": "network",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.network.v1"
     },

@@ -341,7 +341,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationReportPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.missingArtifacts.includes("RemoteTransportHandshakeReceipt")), true);
     assert.equal(externalValidationReportPayload.items.every((entry) => !entry.clearable && entry.status === "external_pending" && !entry.approvedRunRefPresent && !entry.writes), true);
 
-    const externalValidationArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/remote-gateway-sync-external-validation-evidence.json"), "utf8")) as { evidence: unknown[] };
+    const externalValidationArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/governance/remote-gateway-sync/external-validation-evidence.json"), "utf8")) as { evidence: unknown[] };
     const artifactExternalValidationReport = await built.app.inject({
       method: "POST",
       url: "/v1/remote/external-validation-report",
@@ -454,7 +454,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(decisionReviewPayload.blockers.includes("external_validation"), true);
     assert.equal(decisionReviewPayload.items.every((entry) => entry.reviewStatus === "missing" && entry.disposition === null && !entry.writes), true);
 
-    const sourceQaReviewArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/remote-gateway-sync-source-qa-review.json"), "utf8")) as { items: unknown[] };
+    const sourceQaReviewArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/governance/remote-gateway-sync/source-review.json"), "utf8")) as { items: unknown[] };
     const reviewedDecisionReview = await built.app.inject({
       method: "POST",
       url: "/v1/remote/decision-review",

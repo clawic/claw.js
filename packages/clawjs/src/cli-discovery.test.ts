@@ -3505,14 +3505,19 @@ test("runCli searches registered local docs and ADR contents", async () => {
 test("runCli searches discoverability and route governance artifacts", async () => {
   for (const [query, expectedPath] of [
     ["surface route graph", "docs/adr/0012-surface-route-graph.md"],
+    ["adr:surface-route-graph", "docs/adr/0012-surface-route-graph.md"],
+    ["adr:naming-stability", "docs/adr/0001-naming-and-stability-surfaces.md"],
     ["docs alignment", "skills/docs-alignment-update/SKILL.md"],
     ["discoverability", "docs/adr/0017-discoverability-and-meta-code-routing.md"],
     ["meta-code routing", "docs/adr/0017-discoverability-and-meta-code-routing.md"],
   ]) {
     const result = await runCliCapture(["search", query, "--json"], process.cwd());
     assert.equal(result.code, CLI_EXIT_OK, query);
-    const payload = JSON.parse(result.stdout) as { data: { results: Array<{ path?: string }> } };
+    const payload = JSON.parse(result.stdout) as { data: { results: Array<{ path?: string; canonicalName?: string }> } };
     assert.equal(payload.data.results.some((entry) => entry.path === expectedPath), true, query);
+    if (query.startsWith("adr:")) {
+      assert.equal(payload.data.results.some((entry) => entry.path === expectedPath && entry.canonicalName === query), true, query);
+    }
   }
 });
 

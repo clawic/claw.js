@@ -46,6 +46,7 @@ const requiredSources = [
   "design.resources",
   "runtime.events",
   "surfaces.routes",
+  "surfaces.registry",
   "local.files",
   "native.system",
   "web.ingested",

@@ -82,6 +82,8 @@ import { runKnowledgeTailCli } from "./cli-knowledge-tail-command.ts";
 import { isSearchAdminCommand, runCliDiscoverySearch, runSearchAdminCli, runSearchQueryCli, runSearchRebuildCli } from "./cli-search-command.ts"; import { runGuidanceResourcesCli } from "./cli-guidance-resources-command.ts";
 import { runNeedsCli } from "./cli-needs-command.ts";
 import { runCommandsCli } from "./cli-commands-command.ts";
+import { runDebtCli } from "./cli-debt-command.ts";
+import { runGovernanceCli } from "./cli-governance-command.ts";
 import { runEvolutionCli } from "./cli-evolution-command.ts";
 import { runSafetyCli } from "./cli-safety-command.ts";
 import { enabledModuleIdsForConfig, hasModuleConfigForCli, readEffectiveModuleConfigForCli, requiredModuleForCliGroup, runModulesCli, runSetupCli } from "./cli-modules-command.ts";
@@ -727,6 +729,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+  if (group === "debt") return await runDebtCli({ positionals, flags, context, wantsJson, binName });
+  if (group === "governance") return await runGovernanceCli({ positionals, flags, context, wantsJson, binName });
   if (group === "evolution") return await runEvolutionCli({ positionals, flags, context, wantsJson, binName });
   if (group === "safety") return await runSafetyCli({ positionals, flags, context, wantsJson, binName });
   const connectorContextExit = await runConnectorContextCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, binName });

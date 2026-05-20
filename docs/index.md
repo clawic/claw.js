@@ -58,6 +58,8 @@ ClawJS gives you one place to solve the hard parts that show up across runtimes:
 ## Core Concepts
 
 See [Terminology](/terminology) for the canonical naming used across ClawJS docs, code, and starter PRDs.
+Use the [Constitution Operational Map](/constitution-map) when a constitutional
+principle needs a fast route to the right operational docs and guardrails.
 
 ### Runtime adapters
 

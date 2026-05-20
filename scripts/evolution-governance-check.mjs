@@ -31,7 +31,7 @@ for (const file of [
   "docs/evolution/public-versions.json",
   "docs/evolution/public-surface-baseline.json",
   "docs/evolution/fixtures/v1-foundation.json",
-  "docs/evolution/backbone-source-decision-audit.md",
+  "docs/governance/evolution/source-audit.md",
   "packages/clawjs-core/src/evolution.ts",
   "packages/clawjs/src/cli-evolution-command.ts",
   "skills/compatibility-evolution-work/SKILL.md",
@@ -97,15 +97,15 @@ for (const snippet of [
 ]) requireSnippet("scripts/test-lane.mjs", snippet);
 
 for (const snippet of [
-  "backbone-source-decision-audit.md",
+  "source-audit.md",
   "Source conversation: `019e3b2e-3f4a-7753-a2ce-c92fce7c4436`",
   "Binding plan item: `019e3b8a-fab7-75e0-8a23-a49524afe727-plan`",
   "Status: `verified`",
   "## Superseded Prompts",
   "The active goal must not be closed while any row is `partial` or `blocked`.",
-]) requireSnippet("docs/evolution/backbone-source-decision-audit.md", snippet);
-if (/\|\s*(?:partial|blocked)\s*\|/u.test(read("docs/evolution/backbone-source-decision-audit.md"))) {
-  errors.push("backbone source decision audit still has partial or blocked rows");
+]) requireSnippet("docs/governance/evolution/source-audit.md", snippet);
+if (/\|\s*(?:partial|blocked)\s*\|/u.test(read("docs/governance/evolution/source-audit.md"))) {
+  errors.push("evolution source audit still has partial or blocked rows");
 }
 
 for (const decisionId of [
@@ -183,13 +183,13 @@ for (const decisionId of [
   "clawix_visual_scope",
   "implementation_phasing",
   "core_api_shape",
-]) requireSnippet("docs/evolution/backbone-source-decision-audit.md", `\`${decisionId}\``);
+]) requireSnippet("docs/governance/evolution/source-audit.md", `\`${decisionId}\``);
 
 for (const supersededPromptId of [
   "startup_migration_policy",
   "blocked_state_policy",
   "migration_user_surface",
-]) requireSnippet("docs/evolution/backbone-source-decision-audit.md", `\`${supersededPromptId}\``);
+]) requireSnippet("docs/governance/evolution/source-audit.md", `\`${supersededPromptId}\``);
 
 const ledger = readJson("docs/evolution/baseline.json");
 const publicVersions = readJson("docs/evolution/public-versions.json");

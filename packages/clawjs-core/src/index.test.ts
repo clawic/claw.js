@@ -1413,7 +1413,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
       ][index],
       requirementId: qaId === "QA-023" ? "Completion audit" : `RQ-${String(index + 1).padStart(3, "0")}`,
       disposition: externalPendingSourceQaIds.has(qaId) ? "external_pending" : "validated",
-      evidenceRefs: ["docs/remote-gateway-sync-source-decision-audit.md", "docs/remote-gateway-sync-completion-audit.md"],
+      evidenceRefs: ["docs/governance/remote-gateway-sync/source-audit.md", "docs/governance/remote-gateway-sync/completion.md"],
       reviewedAt: "2026-05-17T10:13:26.500Z",
       writes: false,
     })),
@@ -1524,7 +1524,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     decisionKey: "transport_contract",
     requirementId: "RQ-007",
     disposition: "validated" as const,
-    evidenceRefs: ["docs/remote-gateway-sync-completion-audit.md"],
+    evidenceRefs: ["docs/governance/remote-gateway-sync/completion.md"],
     reviewedAt: "2026-05-17T10:13:26.600Z",
     writes: false as const,
   }];

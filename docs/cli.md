@@ -92,6 +92,23 @@ Default collection/catalog lists show active safe areas only. Use explicit
 available discovery, such as `claw collections list --available`, to inspect
 the full catalog without making niche domains part of the active experience.
 
+## Governance Doctor
+
+`claw governance doctor --json` is the read-only agent router for governance
+work. It does not run checks or mutate state. It reports what to read, which
+skills apply, which checks close the work, known `EXTERNAL PENDING` lanes, and
+stale-doc risks across ClawJS and a sibling Clawix checkout when present.
+
+```bash
+claw governance doctor --json
+claw governance doctor --root /path/to/clawjs --json
+```
+
+The response uses the standard JSON envelope. The data payload contains
+`reads`, `skills`, `checks`, `externalPending`, and `staleDocs`; each check is
+reported with its working directory and whether it is local-only, host-required,
+or externally pending.
+
 ## Evolution
 
 `claw evolution` is the agent-facing operator surface for public surface
@@ -266,16 +283,16 @@ claw remote validation-checklist --json
 claw remote validation-template --json
 claw remote validation-artifact --json
 claw remote validation-runbook --json
-claw remote validation-readiness --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
+claw remote validation-readiness --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json
 claw remote validation-report --json
 claw remote source-qa-template --json
-claw remote decision-review --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
-claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
+claw remote decision-review --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json
+claw remote closure-gate --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json
 claw remote contracts --json
 claw remote e2e-plan --json
 claw remote compat --legacy-surface relay.mobile.chat --canonical-route remote.chatGateway --client-kind ios --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw inspect remote --json
-claw inspect remote --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json
+claw inspect remote --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json
 
 claw sync drivers --json
 claw sync manifest --resource-id skills:default --kind skills --driver skills --json
@@ -341,9 +358,9 @@ Raw evidence arrays are report-only and remain non-clearable. The
 `remote validation-artifact` command returns the matching versioned pending
 artifact shape with source conversation/plan metadata and approval request
 binding. The checked-in pending artifact is
-`docs/remote-gateway-sync-external-validation-evidence.json`; it intentionally
+`docs/governance/remote-gateway-sync/external-validation-evidence.json`; it intentionally
 contains unapproved no-write rows and can be submitted with
-`--evidence-file docs/remote-gateway-sync-external-validation-evidence.json`
+`--evidence-file docs/governance/remote-gateway-sync/external-validation-evidence.json`
 or the alias `--external-validation-file`.
 `remote validation-runbook` returns the no-write operator bundle for the final
 external validation: the provider/device E2E plan, checklist, evidence artifact,
@@ -399,7 +416,7 @@ disposition until those requirements are cleared;
 the report exposes duplicate rows as `duplicateSourceQaIds` and disposition
 mismatches as `invalidExternalPendingDispositionQaIds`. The closure command can
 consume either `--source-qa-review-json` or a versioned artifact with
-`--source-qa-review-file docs/remote-gateway-sync-source-qa-review.json`; if
+`--source-qa-review-file docs/governance/remote-gateway-sync/source-review.json`; if
 the file is an object with an `items` array, those items are submitted as the
 review rows. Versioned source Q/A artifacts are source-bound too and are
 rejected when their conversation or plan IDs do not match this goal.

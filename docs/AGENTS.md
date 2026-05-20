@@ -23,8 +23,8 @@ Instructions for humans and coding agents working on ClawJS documentation.
 - Keep public surface and interface docs aligned with `surface-contract.registry.json` and generated package declarations.
 - When adding a public docs page, make it discoverable from `index.md` or the VitePress sidebar unless it is intentionally private or supporting material.
 - For architecture, storage, host, validation, naming, privacy, release, or
-  changeset decisions, start from `decision-map.md` and update the canonical
-  source it points to before editing the map.
+  changeset decisions, start from `constitution-map.md` and `decision-map.md`,
+  then update the canonical source they point to before editing the maps.
 
 ## Writing Rules
 

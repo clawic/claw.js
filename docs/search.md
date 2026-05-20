@@ -92,6 +92,7 @@ backfill jobs.
 | `design.resources` | `design` | design resources from `core.sqlite` plus workspace style, template, and reference manifests projected into `search.sqlite` | implemented initial adapter |
 | `runtime.events` | `runtime` | runtime jobs/events and monitor/infra/ops operational sidecars projected into `search.sqlite` | implemented initial adapter |
 | `surfaces.routes` | `surfaces` | surface route graph contracts, steps, tests, docs, and ADR links projected from the framework registry | implemented initial adapter |
+| `surfaces.registry` | `surfaces` | registered surface, schema, contract, and persistent node metadata projected from the framework registry | implemented initial adapter |
 | `local.files` | `files` | bounded local file metadata, text-content, and Markdown/MDX section projection with per-file refresh jobs | implemented opt-in adapter, `full`, off by default |
 | `native.system` | `native` | signed-host native app/system snapshots with brokered actions | implemented opt-in snapshot adapter, `full`, off by default; no direct native access from framework |
 | `web.ingested` | `web` | bounded explicit web cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
@@ -229,7 +230,8 @@ unbounded duplicate backfill work.
 `claw search changes schedule` is the typed producer-facing wrapper for changed
 resource, file, or route events. It uses the source schedulers for
 `sessions.chats`, `docs.pages`, `sheets.workbooks`, `code.symbols`,
-`local.files`, `web.ingested`, `external.cache`, and `surfaces.routes`, so
+`local.files`, `web.ingested`, `external.cache`, `surfaces.routes`, and
+`surfaces.registry`, so
 producer ids/paths are checked against the selected source contract and the
 queued job contains the payload the embedded worker needs for resource-scoped
 refresh.
@@ -644,13 +646,16 @@ same hot refresh path; files outside root public docs or `docs/` are rejected
 before a job is written.
 
 `surfaces.routes` projects the framework surface route graph from
-`packages/clawjs-core/src/surface-registry.ts`. It indexes each route's source
-and destination nodes, owner, visibility, transport, validation text, route
-steps, tests, docs, ADRs, and explicit gaps as technical Search documents. It
-supports resource-scoped refresh jobs keyed by route id, so route graph producers
-can refresh `surfaces.routes` without rebuilding the full source. This keeps
-route/debug queries source-scoped while giving Search and Search Index a fast
-path over the same registry used by `claw inspect routes`.
+`packages/clawjs-core/src/surface-registry.ts`. `surfaces.registry` projects the
+registered surface, schema, contract, and persistent node metadata from the same
+source. Route documents index source and destination nodes, owner, visibility,
+transport, validation text, route steps, tests, docs, ADRs, and explicit gaps.
+Registry documents index node ids, names, owners, classes, stability,
+canonicality, related routes, source paths, and inspect evidence. Both sources
+support resource-scoped refresh jobs, so graph producers can refresh
+`surfaces.routes` or `surfaces.registry` without rebuilding the full source.
+This keeps route/debug queries source-scoped while giving Search and Search
+Index a fast path over the same registry used by `claw inspect routes`.
 
 Search result actions are brokered. `search actions execute` produces a
 host-grants execution plan in `--dry-run` mode, fails closed when an approval is
@@ -728,7 +733,9 @@ signed host shortcut broker validates it.
   artifacts. `docs.pages` indexes
   public root docs, docs, and ADR sections with resource-scoped refresh jobs and
   best-effort event scheduling for changed docs files. `surfaces.routes` indexes
-  route graph contracts with resource-scoped refresh jobs keyed by route id.
+  route graph contracts with resource-scoped refresh jobs keyed by route id, and
+  `surfaces.registry` indexes persistent surface nodes with refresh jobs keyed
+  by surface id.
   `slides.decks` also
   supports changed-deck event refresh from local slide writes,
   `sheets.workbooks` supports changed-workbook event refresh for manifest

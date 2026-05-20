@@ -24,10 +24,10 @@ const sourceConversationId = "019e35a1-06bb-77f2-a712-92ed2646bd15";
 const sourcePlanId = "019e3659-0335-7811-9cda-c9d176e91515-plan";
 
 const requiredDocs = [
-  "docs/dense-data-completion-audit.md",
-  "docs/dense-data-decision-matrix.md",
-  "docs/dense-data-source-decision-audit.md",
-  "docs/dense-data-existing-catalog-audit.md",
+  "docs/governance/dense-data/completion.md",
+  "docs/governance/dense-data/decision-matrix.md",
+  "docs/governance/dense-data/source-audit.md",
+  "docs/governance/dense-data/existing-catalog-audit.md",
   "docs/adr/0021-dense-data-operating-system.md",
   "docs/cli.md",
   "docs/decision-map.md",
@@ -394,10 +394,10 @@ for (const [relativePath, text] of docTexts) {
   }
 }
 
-const sourceAudit = docTexts.get("docs/dense-data-source-decision-audit.md") ?? "";
-const decisionMatrix = docTexts.get("docs/dense-data-decision-matrix.md") ?? "";
-const completionAudit = docTexts.get("docs/dense-data-completion-audit.md") ?? "";
-const existingCatalogAudit = docTexts.get("docs/dense-data-existing-catalog-audit.md") ?? "";
+const sourceAudit = docTexts.get("docs/governance/dense-data/source-audit.md") ?? "";
+const decisionMatrix = docTexts.get("docs/governance/dense-data/decision-matrix.md") ?? "";
+const completionAudit = docTexts.get("docs/governance/dense-data/completion.md") ?? "";
+const existingCatalogAudit = docTexts.get("docs/governance/dense-data/existing-catalog-audit.md") ?? "";
 const cliDiscoveryTest = readRequired("packages/clawjs/src/cli-discovery.test.ts");
 
 requireText("completion audit", completionAudit, sourceConversationId);

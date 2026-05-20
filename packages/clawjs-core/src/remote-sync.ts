@@ -891,7 +891,7 @@ export function buildRemoteExternalPendingRegister(input: {
       decisionId: "first_vertical_slice",
       category: "e2e_validation" as const,
       sourceReceipt: "RemoteProviderDeviceE2EValidationPlan",
-      evidenceRefs: ["RemoteProviderDeviceE2EValidationPlan", "npm run test:remote-sync-goal", "docs/remote-gateway-sync-decision-matrix.md"],
+      evidenceRefs: ["RemoteProviderDeviceE2EValidationPlan", "npm run test:remote-sync-goal", "docs/governance/remote-gateway-sync/decision-matrix.md"],
       unblockCriteria: "Run approved provider/device end-to-end validation across chat, search, sync, secret refs, and hosted agents.",
       status: "external_pending" as const,
       writes: false as const,

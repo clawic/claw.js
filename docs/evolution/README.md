@@ -58,7 +58,7 @@ The gate requires both an active evolution record and a refreshed
   also fails `adapter_retirement_policy` if any public data migrator is marked
   `retired_runtime_adapter`; that status is reserved for runtime/protocol
   compatibility adapters.
-- `backbone-source-decision-audit.md`: public, redacted register of the source
+- `../governance/evolution/source-audit.md`: public, redacted register of the source
   conversation decisions that must be reviewed before the active backbone goal
   can be closed. It is not a completion claim; `partial` or `blocked` rows keep
   the goal open until verified or explicitly accepted as external scope.

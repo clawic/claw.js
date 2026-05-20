@@ -211,7 +211,7 @@ test("Mac V1 executable slice is fully declared", () => {
 });
 
 test("Mac atlas verbs have an explicit full-family review", () => {
-  const verbAudit = fs.readFileSync(new URL("../../../docs/mac-control-plane-verb-audit.md", import.meta.url), "utf8");
+  const verbAudit = fs.readFileSync(new URL("../../../docs/governance/mac-control-plane/verb-audit.md", import.meta.url), "utf8");
   for (const capability of MAC_CAPABILITY_ATLAS) {
     assert.ok(verbAudit.includes(`| \`${capability.id}\``), `missing verb audit row for ${capability.id}`);
     assert.ok(
@@ -224,7 +224,7 @@ test("Mac atlas verbs have an explicit full-family review", () => {
 });
 
 test("Mac atlas backends have explicit macOS version drift review", () => {
-  const versionDriftAudit = fs.readFileSync(new URL("../../../docs/mac-control-plane-version-drift-audit.md", import.meta.url), "utf8");
+  const versionDriftAudit = fs.readFileSync(new URL("../../../docs/governance/mac-control-plane/version-drift-audit.md", import.meta.url), "utf8");
   for (const snippet of ["MCQ-002", "MCQ-004", "macOS 14", "macOS 15", "macOS 26"]) {
     assert.ok(versionDriftAudit.includes(snippet), `missing version drift marker ${snippet}`);
   }

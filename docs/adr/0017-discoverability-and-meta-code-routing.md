@@ -25,8 +25,10 @@ surface-route entries, UI governance artifacts, and durable instruction changes
 must be registered in `docs/discoverability.registry.json`.
 
 The registry records the artifact id, kind, owner, canonical source, required
-entrypoints, discovery terms, required `claw search` queries, optional
+entrypoints, optional semantic canonical name, discovery terms, required `claw search` queries, optional
 `claw inspect` route, validating guard, status, and review date.
+ADR numbers are repo-local; `adr:*` canonical names are cross-repository
+semantic identifiers for shared decisions.
 
 The maximum route distance is two hops. A registered artifact must be reachable
 from its required entrypoints by direct mention/link or by one intermediate

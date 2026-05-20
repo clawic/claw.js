@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "description": "Golden Search V1 queries for realistic English agent discoverability questions. These validate top-ranked surface, route, and schema node discovery rather than checking that search returns any result.",
+  "queries": [
+    {
+      "id": "sessions-contract",
+      "query": "Where is the sessions contract?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.registry",
+      "expectType": "surface",
+      "expectResourceId": "claw.sessions",
+      "maxRank": 3
+    },
+    {
+      "id": "relay-remote-chat-route",
+      "query": "What route does Relay use for remote chat?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.routes",
+      "expectType": "route",
+      "expectResourceId": "chat.remoteRelay",
+      "maxRank": 3
+    },
+    {
+      "id": "session-state-fields",
+      "query": "What fields does session state expose?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.registry",
+      "expectType": "surface",
+      "expectResourceId": "claw.schema.common.field.sessionId",
+      "maxRank": 3
+    },
+    {
+      "id": "native-permissions-owner",
+      "query": "Who owns native permissions?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.registry",
+      "expectType": "surface",
+      "expectResourceId": "claw.mac.permissionBroker",
+      "maxRank": 3
+    },
+    {
+      "id": "sessions-sync-route",
+      "query": "Which route syncs sessions?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.routes",
+      "expectType": "route",
+      "expectResourceId": "sync.sessions",
+      "maxRank": 3
+    }
+  ]
+}

@@ -54,7 +54,7 @@ These checklists do not approve release actions. Every npm publish, GitHub tag,
 GitHub release, website deployment, app upload, or binary distribution requires
 fresh maintainer approval for that exact action.
 Unavailable provider, signed-host, store, registry, website, app, or binary
-validation must be recorded in `docs/legal-external-pending-validation.md` as
+validation must be recorded in `docs/governance/legal/external-pending.md` as
 `EXTERNAL PENDING`; do not treat it as passed.
 
 ### npm Package Channel Checklist

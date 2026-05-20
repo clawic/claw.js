@@ -220,7 +220,7 @@ function checkLegalReleaseGate() {
 }
 
 function checkCompletionAudit() {
-  const audit = read("docs/pre-v1-version-governance-completion-audit.md");
+  const audit = read("docs/governance/pre-v1-version-governance/completion.md");
   for (const snippet of [
     "Source conversation: `019e2b82-6118-7d52-9237-71a3e9ba4e41`",
     "private session, not published",
@@ -255,7 +255,7 @@ function checkOwnedVersionDrift() {
     "packages/clawjs/src/inspect-cli.ts",
     "packages/clawjs/src/inspect-cli.test.ts",
     "docs/adr/0025-pre-v1-version-governance.md",
-    "docs/pre-v1-version-governance-completion-audit.md",
+    "docs/governance/pre-v1-version-governance/completion.md",
     "docs/decision-map.md",
     "docs/git-workflow.md",
     "RELEASING.md",

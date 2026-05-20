@@ -8,9 +8,26 @@ import { SearchStore } from "@clawjs/search";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
+type DiscoverabilityGoldenQuery = {
+  id: string;
+  query: string;
+  domains: string[];
+  expectSource: string;
+  expectType: string;
+  expectResourceId: string;
+  maxRank: number;
+};
+
+function readDiscoverabilityGoldenQueries(rootDir: string): DiscoverabilityGoldenQuery[] {
+  const fixturePath = path.join(rootDir, "docs/discoverability-golden-queries.json");
+  const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as { queries: DiscoverabilityGoldenQuery[] };
+  return fixture.queries;
+}
+
 export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<void> {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-surfaces-"));
   const dataRoot = path.join(workspaceRoot, "data");
+  const rootDir = process.cwd();
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -58,6 +75,32 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.equal(nodeResult?.type, "surface");
     assert.equal(nodeResult?.metadata?.hasSource, true);
     assert.ok((nodeResult?.metadata?.routeCount ?? 0) > 0);
+
+    for (const golden of readDiscoverabilityGoldenQueries(rootDir)) {
+      const goldenQuery = await runCliCapture([
+        "search",
+        "query",
+        golden.query,
+        "--domains",
+        golden.domains.join(","),
+        "--data-dir",
+        dataRoot,
+        "--json",
+        "--limit",
+        String(Math.max(5, golden.maxRank)),
+      ], workspaceRoot);
+      assert.equal(goldenQuery.code, CLI_EXIT_OK, goldenQuery.stderr || goldenQuery.stdout);
+      const goldenPayload = JSON.parse(goldenQuery.stdout) as {
+        data: { results: Array<{ source: string; type: string; resourceId?: string }> };
+      };
+      const rank = goldenPayload.data.results.findIndex((candidate) => (
+        candidate.source === golden.expectSource &&
+        candidate.type === golden.expectType &&
+        candidate.resourceId === golden.expectResourceId
+      ));
+      assert.ok(rank >= 0, `${golden.id} should return ${golden.expectResourceId}`);
+      assert.ok(rank + 1 <= golden.maxRank, `${golden.id} returned ${golden.expectResourceId} at rank ${rank + 1}, expected <= ${golden.maxRank}`);
+    }
 
     const event = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "surfaces.routes", "--route-id", "sync.searchIndex", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(event.code, CLI_EXIT_OK, event.stderr || event.stdout);

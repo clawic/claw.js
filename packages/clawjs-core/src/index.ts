@@ -33,6 +33,7 @@ export * from "./custom-app-redaction-policy.ts";
 export * from "./custom-app-sdk-contracts.ts";
 export * from "./custom-app-sdk-inspection.ts";
 export * from "./need-route-lab.ts";
+export * from "./debt-ledger.ts";
 export * from "./cli-guidance.ts";
 export * from "./cli-command-registry.ts";
 export * from "./cli-command-intents.ts";

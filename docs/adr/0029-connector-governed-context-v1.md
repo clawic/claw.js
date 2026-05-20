@@ -98,6 +98,6 @@ field values or plaintext credentials.
 - `node ./scripts/verify-cli-registry-router-parity.mjs`
 
 The one-by-one source decision audit lives in
-[Connector Governed Context Source Decision Audit](../connector-governed-context-source-decision-audit.md).
+[Connector Governed Context Source Decision Audit](../governance/connector-governed-context/source-audit.md).
 The public close gate lives in
-[Connector Governed Context Completion Audit](../connector-governed-context-completion-audit.md).
+[Connector Governed Context Completion Audit](../governance/connector-governed-context/completion.md).

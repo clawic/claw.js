@@ -160,7 +160,7 @@ through the shared database. The existing `entity_relations` collection has
 been generalized into the universal relation graph so work/task relations and
 dense-domain cross-links do not split into competing relation systems.
 
-The companion [Dense Data Existing Catalog Audit](../dense-data-existing-catalog-audit.md)
+The companion [Dense Data Existing Catalog Audit](../governance/dense-data/existing-catalog-audit.md)
 records how notes/pages, knowledge entities/facts, knowledge graph relations,
 custom fields, signals, attachments, CRM, billing, ERP, infra/ops, and identity
 fit into this model. Future dense packs must update that audit when they reuse,
@@ -168,7 +168,7 @@ extend, retire, or replace an existing surface.
 Those decisions are also mirrored in
 `clawDenseDataOsRegistry.existingSurfaceIntegrations`, so the no-parallel-system
 requirement is checked as registry data instead of relying only on prose.
-The [Dense Data Source Decision Audit](../dense-data-source-decision-audit.md)
+The [Dense Data Source Decision Audit](../governance/dense-data/source-audit.md)
 enumerates the unique decision-bearing user turns that must be satisfied before
 the private goal can close.
 

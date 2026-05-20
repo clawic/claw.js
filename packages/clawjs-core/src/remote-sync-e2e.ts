@@ -910,7 +910,7 @@ export function buildRemoteExternalValidationEvidenceTemplate(input: {
     generatedAt,
     status: "external_pending",
     requirementCount: checklistItems.length,
-    submissionCommand: "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+    submissionCommand: "claw remote validation-report --evidence-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
     checklistItems,
     evidence,
     instructions: [
@@ -964,16 +964,16 @@ export function buildRemoteExternalValidationRunbook(input: {
     evidenceArtifact,
     validationStepCount: e2ePlan.validationSteps.length,
     externalRequirementCount: checklist.requirementIds.length,
-    reportCommand: "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
-    closureGateCommand: "claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+    reportCommand: "claw remote validation-report --evidence-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
+    closureGateCommand: "claw remote closure-gate --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
     requiredCommands: [
       "claw remote e2e-plan --json",
       "claw remote validation-checklist --json",
 	      "claw remote validation-artifact --json",
-	      "claw remote validation-report --evidence-file docs/remote-gateway-sync-external-validation-evidence.json --json",
-	      "claw remote decision-review --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+	      "claw remote validation-report --evidence-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
+	      "claw remote decision-review --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
 	      remoteSourceSessionRereadCommand,
-	      "claw remote closure-gate --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+	      "claw remote closure-gate --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
 	    ],
     instructions: [
       "Run the approved physical/provider validation for every validationSteps domain before changing evidence rows.",
@@ -1149,7 +1149,7 @@ export function buildRemoteExternalValidationApprovalRequest(input: {
     validationTopologyTargets: runbook.e2ePlan.requiredTopologyTargets,
     validationRouteIds: runbook.e2ePlan.requiredRouteIds,
     requiredCommands: [
-      "claw remote validation-readiness --source-qa-review-file docs/remote-gateway-sync-source-qa-review.json --external-validation-file docs/remote-gateway-sync-external-validation-evidence.json --json",
+      "claw remote validation-readiness --source-qa-review-file docs/governance/remote-gateway-sync/source-review.json --external-validation-file docs/governance/remote-gateway-sync/external-validation-evidence.json --json",
       ...runbook.requiredCommands,
     ],
     approvalScope: [

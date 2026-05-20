@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const matrixPath = path.join(rootDir, "docs", "domain-surface-decision-matrix.md");
+const matrixPath = path.join(rootDir, "docs", "governance", "domain-surface", "decision-matrix.md");
 const text = fs.readFileSync(matrixPath, "utf8");
 
 const requiredDecisionIds = Array.from({ length: 20 }, (_, index) => `DEC-${String(index + 1).padStart(3, "0")}`);

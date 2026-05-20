@@ -77,6 +77,7 @@ function surfaceNodeSearchDocument(node: ClawPersistentSurfaceNode): SearchDocum
   const relatedRoutes = listClawSurfaceRoutes(node.id).map((route) => route.id);
   const sourcePath = node.source?.file ?? "packages/clawjs-core/src/surface-registry.ts";
   const locator = node.path ?? node.route ?? node.key ?? node.value ?? node.name;
+  const agentQuestionAliases = agentQuestionAliasesForSurface(node.id);
   return {
     id: `surfaces.registry:${node.id}`,
     source: "surfaces.registry",
@@ -96,6 +97,7 @@ function surfaceNodeSearchDocument(node: ClawPersistentSurfaceNode): SearchDocum
       node.stability,
       locator,
       node.notes,
+      ...agentQuestionAliases,
       sourcePath,
       ...relatedRoutes,
       "claw inspect show",
@@ -126,6 +128,7 @@ function surfaceNodeSearchDocument(node: ClawPersistentSurfaceNode): SearchDocum
         `declaration ${sourcePath}${node.source?.line ? `:${node.source.line}` : ""}`,
         `inspect claw inspect show ${node.id} --json`,
         `search claw search query "${node.id}" --domains surfaces --json`,
+        ...agentQuestionAliases.map((query) => `agent question ${query}`),
         ...relatedRoutes.map((routeId) => `route ${routeId}`),
       ].join("\n"),
       snippet: `Inspect with claw inspect show ${node.id} --json`,
@@ -151,6 +154,7 @@ function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInpu
   const adrs = route.adrs ?? [];
   const gaps = route.gaps ?? [];
   const sourcePath = route.source?.file ?? "packages/clawjs-core/src/surface-registry.ts";
+  const agentQuestionAliases = agentQuestionAliasesForRoute(route.id);
   return {
     id: `surfaces.routes:${route.id}`,
     source: "surfaces.routes",
@@ -167,6 +171,7 @@ function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInpu
       route.validation,
       route.owner,
       route.visibility,
+      ...agentQuestionAliases,
       ...stepLines,
       ...docs,
       ...tests,
@@ -204,6 +209,7 @@ function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInpu
           step.visibility,
           step.transport,
           step.validation,
+          ...agentQuestionAliases,
           ...(step.gaps ?? []),
         ].filter(Boolean).join("\n"),
         snippet: step.validation ?? step.transport,
@@ -230,4 +236,49 @@ function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInpu
       { id: "copy-reference", kind: "copy", label: "Copy route reference", requiresApproval: false },
     ],
   };
+}
+
+function agentQuestionAliasesForSurface(surfaceId: string): string[] {
+  const aliases: Record<string, string[]> = {
+    "claw.sessions": [
+      "Where is the sessions contract?",
+      "Where is the session contract?",
+      "sessions contract",
+      "session persistence contract",
+      "conversation sessions contract",
+    ],
+    "claw.schema.common.field.sessionId": [
+      "What fields does session state expose?",
+      "What field identifies a session?",
+      "session state fields",
+      "sessionId field",
+      "framework conversation identity field",
+    ],
+    "claw.mac.permissionBroker": [
+      "Who owns native permissions?",
+      "Who owns macOS permissions?",
+      "native permissions owner",
+      "Mac Permission Broker owns permission lifecycle",
+      "central native permission broker",
+    ],
+  };
+  return aliases[surfaceId] ?? [];
+}
+
+function agentQuestionAliasesForRoute(routeId: string): string[] {
+  const aliases: Record<string, string[]> = {
+    "chat.remoteRelay": [
+      "What route does Relay use for remote chat?",
+      "Which route does Relay use for remote chat?",
+      "Relay remote chat route",
+      "remote chat through Relay",
+    ],
+    "sync.sessions": [
+      "Which route syncs sessions?",
+      "What route syncs sessions?",
+      "sessions sync route",
+      "sync sessions route",
+    ],
+  };
+  return aliases[routeId] ?? [];
 }

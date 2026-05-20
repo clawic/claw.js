@@ -7,12 +7,12 @@ same atlas, policy, permission, audit, and signed-host broker contracts.
 
 The architecture decision is [ADR 0023: Mac Control Plane V1](./adr/0023-mac-control-plane-v1.md).
 The permission decision is [ADR 0024: Mac Permission Broker V1](./adr/0024-mac-permission-broker-v1.md).
-Source decisions are tracked in [Mac Control Plane Source Decision Audit](./mac-control-plane-source-decision-audit.md)
-and [Mac Control Plane Decision Matrix](./mac-control-plane-decision-matrix.md).
+Source decisions are tracked in [Mac Control Plane Source Decision Audit](./governance/mac-control-plane/source-audit.md)
+and [Mac Control Plane Decision Matrix](./governance/mac-control-plane/decision-matrix.md).
 Verb choices for executable and atlas-only capabilities are reviewed in
-[Mac Control Plane Verb Audit](./mac-control-plane-verb-audit.md).
+[Mac Control Plane Verb Audit](./governance/mac-control-plane/verb-audit.md).
 Version drift for macOS 14+ is tracked in
-[Mac Control Plane Version Drift Audit](./mac-control-plane-version-drift-audit.md).
+[Mac Control Plane Version Drift Audit](./governance/mac-control-plane/version-drift-audit.md).
 Agents working on this surface should use
 `skills/mac-control-plane-work/SKILL.md`.
 Native legacy debt is tracked in

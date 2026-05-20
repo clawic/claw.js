@@ -18,17 +18,23 @@
       "discoveryTerms": [
         "ADR 0001: Claw framework and host boundary",
         "0001-claw-framework-host-boundary",
-        "ADR 0001"
+        "ADR 0001",
+        "adr:claw-framework-host-boundary"
       ],
       "searchQueries": [
         {
           "query": "ADR 0001: Claw framework and host boundary",
           "expectPath": "docs/adr/0001-claw-framework-host-boundary.md"
+        },
+        {
+          "query": "adr:claw-framework-host-boundary",
+          "expectPath": "docs/adr/0001-claw-framework-host-boundary.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:claw-framework-host-boundary"
     },
     {
       "id": "adr-docs-adr-0001-naming-and-stability-surfaces",
@@ -45,17 +51,23 @@
       "discoveryTerms": [
         "ADR 0001: Naming and stability surfaces",
         "0001-naming-and-stability-surfaces",
-        "ADR 0001"
+        "ADR 0001",
+        "adr:naming-stability"
       ],
       "searchQueries": [
         {
           "query": "ADR 0001: Naming and stability surfaces",
           "expectPath": "docs/adr/0001-naming-and-stability-surfaces.md"
+        },
+        {
+          "query": "adr:naming-stability",
+          "expectPath": "docs/adr/0001-naming-and-stability-surfaces.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:naming-stability"
     },
     {
       "id": "adr-docs-adr-0002-testing-architecture",
@@ -72,17 +84,23 @@
       "discoveryTerms": [
         "ADR 0002: Testing architecture",
         "0002-testing-architecture",
-        "ADR 0002"
+        "ADR 0002",
+        "adr:testing-architecture"
       ],
       "searchQueries": [
         {
           "query": "ADR 0002: Testing architecture",
           "expectPath": "docs/adr/0002-testing-architecture.md"
+        },
+        {
+          "query": "adr:testing-architecture",
+          "expectPath": "docs/adr/0002-testing-architecture.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:testing-architecture"
     },
     {
       "id": "adr-docs-adr-0003-source-file-boundaries",
@@ -99,17 +117,23 @@
       "discoveryTerms": [
         "ADR 0003: Source file boundaries",
         "0003-source-file-boundaries",
-        "ADR 0003"
+        "ADR 0003",
+        "adr:source-file-boundaries"
       ],
       "searchQueries": [
         {
           "query": "ADR 0003: Source file boundaries",
           "expectPath": "docs/adr/0003-source-file-boundaries.md"
+        },
+        {
+          "query": "adr:source-file-boundaries",
+          "expectPath": "docs/adr/0003-source-file-boundaries.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:source-file-boundaries"
     },
     {
       "id": "adr-docs-adr-0004-persistent-surface-registry-and-inspection",
@@ -126,17 +150,23 @@
       "discoveryTerms": [
         "ADR 0004: Stable surface registry and inspection",
         "0004-persistent-surface-registry-and-inspection",
-        "ADR 0004"
+        "ADR 0004",
+        "adr:persistent-surface-registry"
       ],
       "searchQueries": [
         {
           "query": "ADR 0004: Stable surface registry and inspection",
           "expectPath": "docs/adr/0004-persistent-surface-registry-and-inspection.md"
+        },
+        {
+          "query": "adr:persistent-surface-registry",
+          "expectPath": "docs/adr/0004-persistent-surface-registry-and-inspection.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:persistent-surface-registry"
     },
     {
       "id": "adr-docs-adr-0005-canonical-data-catalog",
@@ -153,17 +183,23 @@
       "discoveryTerms": [
         "ADR 0005: Canonical data catalog",
         "0005-canonical-data-catalog",
-        "ADR 0005"
+        "ADR 0005",
+        "adr:canonical-data-catalog"
       ],
       "searchQueries": [
         {
           "query": "ADR 0005: Canonical data catalog",
           "expectPath": "docs/adr/0005-canonical-data-catalog.md"
+        },
+        {
+          "query": "adr:canonical-data-catalog",
+          "expectPath": "docs/adr/0005-canonical-data-catalog.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:canonical-data-catalog"
     },
     {
       "id": "adr-docs-adr-0006-integration-qa-lab",
@@ -180,17 +216,23 @@
       "discoveryTerms": [
         "ADR 0006: Integration QA Lab",
         "0006-integration-qa-lab",
-        "ADR 0006"
+        "ADR 0006",
+        "adr:integration-qa-lab"
       ],
       "searchQueries": [
         {
           "query": "ADR 0006: Integration QA Lab",
           "expectPath": "docs/adr/0006-integration-qa-lab.md"
+        },
+        {
+          "query": "adr:integration-qa-lab",
+          "expectPath": "docs/adr/0006-integration-qa-lab.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:integration-qa-lab"
     },
     {
       "id": "adr-docs-adr-0007-cli-agent-interface",
@@ -207,17 +249,23 @@
       "discoveryTerms": [
         "ADR 0007: CLI agent interface",
         "0007-cli-agent-interface",
-        "ADR 0007"
+        "ADR 0007",
+        "adr:cli-agent-interface"
       ],
       "searchQueries": [
         {
           "query": "ADR 0007: CLI agent interface",
           "expectPath": "docs/adr/0007-cli-agent-interface.md"
+        },
+        {
+          "query": "adr:cli-agent-interface",
+          "expectPath": "docs/adr/0007-cli-agent-interface.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:cli-agent-interface"
     },
     {
       "id": "adr-docs-adr-0008-secrets-security-v1",
@@ -234,17 +282,23 @@
       "discoveryTerms": [
         "ADR 0008: Secrets Security V1",
         "0008-secrets-security-v1",
-        "ADR 0008"
+        "ADR 0008",
+        "adr:secrets-security-v1"
       ],
       "searchQueries": [
         {
           "query": "ADR 0008: Secrets Security V1",
           "expectPath": "docs/adr/0008-secrets-security-v1.md"
+        },
+        {
+          "query": "adr:secrets-security-v1",
+          "expectPath": "docs/adr/0008-secrets-security-v1.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:secrets-security-v1"
     },
     {
       "id": "adr-docs-adr-0009-dual-human-programmatic-surfaces",
@@ -261,17 +315,23 @@
       "discoveryTerms": [
         "ADR 0009: Dual human and programmatic surfaces",
         "0009-dual-human-programmatic-surfaces",
-        "ADR 0009"
+        "ADR 0009",
+        "adr:dual-human-programmatic-surfaces"
       ],
       "searchQueries": [
         {
           "query": "ADR 0009: Dual human and programmatic surfaces",
           "expectPath": "docs/adr/0009-dual-human-programmatic-surfaces.md"
+        },
+        {
+          "query": "adr:dual-human-programmatic-surfaces",
+          "expectPath": "docs/adr/0009-dual-human-programmatic-surfaces.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:dual-human-programmatic-surfaces"
     },
     {
       "id": "adr-docs-adr-0010-cli-jit-guidance-actor-assertions-resource-registry",
@@ -288,17 +348,23 @@
       "discoveryTerms": [
         "ADR 0010: CLI just-in-time guidance, actor assertions, and resource registry",
         "0010-cli-jit-guidance-actor-assertions-resource-registry",
-        "ADR 0010"
+        "ADR 0010",
+        "adr:cli-jit-guidance-resource-registry"
       ],
       "searchQueries": [
         {
           "query": "ADR 0010: CLI just-in-time guidance, actor assertions, and resource registry",
           "expectPath": "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md"
+        },
+        {
+          "query": "adr:cli-jit-guidance-resource-registry",
+          "expectPath": "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:cli-jit-guidance-resource-registry"
     },
     {
       "id": "adr-docs-adr-0011-report-governance-v1",
@@ -315,17 +381,23 @@
       "discoveryTerms": [
         "ADR 0011: Report Governance V1",
         "0011-report-governance-v1",
-        "ADR 0011"
+        "ADR 0011",
+        "adr:report-governance-v1"
       ],
       "searchQueries": [
         {
           "query": "ADR 0011: Report Governance V1",
           "expectPath": "docs/adr/0011-report-governance-v1.md"
+        },
+        {
+          "query": "adr:report-governance-v1",
+          "expectPath": "docs/adr/0011-report-governance-v1.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:report-governance-v1"
     },
     {
       "id": "adr-docs-adr-0012-domain-surface-registry-db-to-cli",
@@ -342,17 +414,23 @@
       "discoveryTerms": [
         "ADR 0012: Domain surface registry from database to CLI",
         "0012-domain-surface-registry-db-to-cli",
-        "ADR 0012"
+        "ADR 0012",
+        "adr:domain-surface-registry"
       ],
       "searchQueries": [
         {
           "query": "ADR 0012: Domain surface registry from database to CLI",
           "expectPath": "docs/adr/0012-domain-surface-registry-db-to-cli.md"
+        },
+        {
+          "query": "adr:domain-surface-registry",
+          "expectPath": "docs/adr/0012-domain-surface-registry-db-to-cli.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:domain-surface-registry"
     },
     {
       "id": "adr-docs-adr-0013-agentic-naming-and-code-structure",
@@ -369,17 +447,23 @@
       "discoveryTerms": [
         "ADR 0013: Agentic naming and code structure",
         "0013-agentic-naming-and-code-structure",
-        "ADR 0013"
+        "ADR 0013",
+        "adr:agentic-naming-code-structure"
       ],
       "searchQueries": [
         {
           "query": "ADR 0013: Agentic naming and code structure",
           "expectPath": "docs/adr/0013-agentic-naming-and-code-structure.md"
+        },
+        {
+          "query": "adr:agentic-naming-code-structure",
+          "expectPath": "docs/adr/0013-agentic-naming-and-code-structure.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:agentic-naming-code-structure"
     },
     {
       "id": "adr-docs-adr-0014-need-route-lab-v1",
@@ -396,17 +480,23 @@
       "discoveryTerms": [
         "ADR 0014: Need Route Lab V1",
         "0014-need-route-lab-v1",
-        "ADR 0014"
+        "ADR 0014",
+        "adr:need-route-lab-v1"
       ],
       "searchQueries": [
         {
           "query": "ADR 0014: Need Route Lab V1",
           "expectPath": "docs/adr/0014-need-route-lab-v1.md"
+        },
+        {
+          "query": "adr:need-route-lab-v1",
+          "expectPath": "docs/adr/0014-need-route-lab-v1.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:need-route-lab-v1"
     },
     {
       "id": "adr-docs-adr-0015-connector-control-plane-v1",
@@ -423,17 +513,23 @@
       "discoveryTerms": [
         "ADR 0015: Connector Control Plane V1",
         "0015-connector-control-plane-v1",
-        "ADR 0015"
+        "ADR 0015",
+        "adr:connector-control-plane-v1"
       ],
       "searchQueries": [
         {
           "query": "ADR 0015: Connector Control Plane V1",
           "expectPath": "docs/adr/0015-connector-control-plane-v1.md"
+        },
+        {
+          "query": "adr:connector-control-plane-v1",
+          "expectPath": "docs/adr/0015-connector-control-plane-v1.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:connector-control-plane-v1"
     },
     {
       "id": "adr-docs-adr-0016-code-hygiene-program",
@@ -450,17 +546,23 @@
       "discoveryTerms": [
         "ADR 0016: Code hygiene program",
         "0016-code-hygiene-program",
-        "ADR 0016"
+        "ADR 0016",
+        "adr:code-hygiene-program"
       ],
       "searchQueries": [
         {
           "query": "ADR 0016: Code hygiene program",
           "expectPath": "docs/adr/0016-code-hygiene-program.md"
+        },
+        {
+          "query": "adr:code-hygiene-program",
+          "expectPath": "docs/adr/0016-code-hygiene-program.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:code-hygiene-program"
     },
     {
       "id": "discoverability-contract",
@@ -483,7 +585,8 @@
         "ADR 0017",
         "discoverability",
         "meta-code routing",
-        "discovery route"
+        "discovery route",
+        "adr:discoverability-meta-code-routing"
       ],
       "searchQueries": [
         {
@@ -492,6 +595,10 @@
         },
         {
           "query": "meta-code routing",
+          "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
+        },
+        {
+          "query": "adr:discoverability-meta-code-routing",
           "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
         }
       ],
@@ -503,7 +610,8 @@
           "command": "claw inspect why search --json",
           "expectPath": "docs/adr/0017-discoverability-and-meta-code-routing.md"
         }
-      ]
+      ],
+      "canonicalName": "adr:discoverability-meta-code-routing"
     },
     {
       "id": "cli-action-intent-registry",
@@ -525,7 +633,8 @@
         "ADR 0018",
         "command intent",
         "CLI action vocabulary",
-        "claw commands"
+        "claw commands",
+        "adr:cli-action-intent-registry"
       ],
       "searchQueries": [
         {
@@ -534,6 +643,10 @@
         },
         {
           "query": "CLI action vocabulary",
+          "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
+        },
+        {
+          "query": "adr:cli-action-intent-registry",
           "expectPath": "docs/adr/0018-cli-action-intent-registry.md"
         }
       ],
@@ -545,7 +658,8 @@
           "command": "claw inspect command-intents --json",
           "expectRoute": "cli.commandIntentResolution"
         }
-      ]
+      ],
+      "canonicalName": "adr:cli-action-intent-registry"
     },
     {
       "id": "search-v1-1-architecture",
@@ -567,7 +681,8 @@
         "Search V1.1",
         "Root Search",
         "Search Source Registry",
-        "Search Index"
+        "Search Index",
+        "adr:search-v1-1-architecture"
       ],
       "searchQueries": [
         {
@@ -577,6 +692,10 @@
         {
           "query": "Root Search",
           "expectPath": "docs/search.md"
+        },
+        {
+          "query": "adr:search-v1-1-architecture",
+          "expectPath": "docs/adr/0019-search-v1-1-architecture.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
@@ -587,7 +706,8 @@
           "command": "claw search sources --json",
           "expectPath": "docs/search.md"
         }
-      ]
+      ],
+      "canonicalName": "adr:search-v1-1-architecture"
     },
     {
       "id": "agents-v1-refactor",
@@ -610,7 +730,8 @@
         "Agents V1",
         "agent assignments",
         "agent resource grants",
-        "effective agent access"
+        "effective agent access",
+        "adr:agents-v1-refactor"
       ],
       "searchQueries": [
         {
@@ -619,6 +740,10 @@
         },
         {
           "query": "agent assignments",
+          "expectPath": "docs/adr/0020-agents-v1-refactor.md"
+        },
+        {
+          "query": "adr:agents-v1-refactor",
           "expectPath": "docs/adr/0020-agents-v1-refactor.md"
         }
       ],
@@ -630,7 +755,8 @@
           "command": "claw inspect routes --json",
           "expectRoute": "agents.internalMacAssignment"
         }
-      ]
+      ],
+      "canonicalName": "adr:agents-v1-refactor"
     },
     {
       "id": "dense-data-operating-system",
@@ -651,11 +777,16 @@
         "ADR 0021",
         "dense data operating system",
         "dense data",
-        "professional domains"
+        "professional domains",
+        "adr:dense-data-operating-system"
       ],
       "searchQueries": [
         {
           "query": "dense data operating system",
+          "expectPath": "docs/adr/0021-dense-data-operating-system.md"
+        },
+        {
+          "query": "adr:dense-data-operating-system",
           "expectPath": "docs/adr/0021-dense-data-operating-system.md"
         }
       ],
@@ -667,7 +798,8 @@
           "command": "claw inspect why search --json",
           "expectPath": "docs/decision-map.md"
         }
-      ]
+      ],
+      "canonicalName": "adr:dense-data-operating-system"
     },
     {
       "id": "remote-gateway-sync-redesign",
@@ -691,7 +823,8 @@
         "Coordinator Gateway Connector Sync",
         "remote gateway sync",
         "Iroh transport adapter",
-        "remote surface classification"
+        "remote surface classification",
+        "adr:remote-gateway-sync-redesign"
       ],
       "searchQueries": [
         {
@@ -700,6 +833,10 @@
         },
         {
           "query": "Coordinator Gateway Connector Sync",
+          "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
+        },
+        {
+          "query": "adr:remote-gateway-sync-redesign",
           "expectPath": "docs/adr/0022-remote-gateway-sync-redesign.md"
         }
       ],
@@ -711,7 +848,8 @@
           "command": "claw inspect routes --json",
           "expectRoute": "remote.chatGateway"
         }
-      ]
+      ],
+      "canonicalName": "adr:remote-gateway-sync-redesign"
     },
     {
       "id": "mac-control-plane-v1",
@@ -736,7 +874,8 @@
         "Mac Action Broker",
         "macOS action atlas",
         "claw wifi",
-        "claw window"
+        "claw window",
+        "adr:mac-control-plane-v1"
       ],
       "searchQueries": [
         {
@@ -745,6 +884,10 @@
         },
         {
           "query": "Mac Action Broker",
+          "expectPath": "docs/adr/0023-mac-control-plane-v1.md"
+        },
+        {
+          "query": "adr:mac-control-plane-v1",
           "expectPath": "docs/adr/0023-mac-control-plane-v1.md"
         }
       ],
@@ -756,7 +899,8 @@
           "command": "claw inspect commands --json",
           "expectPath": "docs/mac-control-plane.md"
         }
-      ]
+      ],
+      "canonicalName": "adr:mac-control-plane-v1"
     },
     {
       "id": "mac-permission-broker-v1",
@@ -780,7 +924,8 @@
         "Mac Permission Broker",
         "claw permissions",
         "macOS TCC",
-        "permission packs"
+        "permission packs",
+        "adr:mac-permission-broker-v1"
       ],
       "searchQueries": [
         {
@@ -790,6 +935,10 @@
         {
           "query": "claw permissions",
           "expectPath": "docs/mac-control-plane.md"
+        },
+        {
+          "query": "adr:mac-permission-broker-v1",
+          "expectPath": "docs/adr/0024-mac-permission-broker-v1.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
@@ -800,7 +949,8 @@
           "command": "claw inspect commands --json",
           "expectPath": "docs/mac-control-plane.md"
         }
-      ]
+      ],
+      "canonicalName": "adr:mac-permission-broker-v1"
     },
     {
       "id": "adr-docs-adr-0025-pre-v1-version-governance",
@@ -819,17 +969,23 @@
         "0025-pre-v1-version-governance",
         "ADR 0025",
         "version governance",
-        "pre-v1 version governance"
+        "pre-v1 version governance",
+        "adr:pre-v1-version-governance"
       ],
       "searchQueries": [
         {
           "query": "pre v1 version governance",
           "expectPath": "docs/adr/0025-pre-v1-version-governance.md"
+        },
+        {
+          "query": "adr:pre-v1-version-governance",
+          "expectPath": "docs/adr/0025-pre-v1-version-governance.md"
         }
       ],
       "guard": "packages/clawjs/src/inspect-cli.test.ts",
       "status": "enforced",
-      "reviewDate": "2026-05-18"
+      "reviewDate": "2026-05-18",
+      "canonicalName": "adr:pre-v1-version-governance"
     },
     {
       "id": "adr-docs-adr-0026-regulated-domain-safety-liability-boundary",
@@ -846,17 +1002,23 @@
       "discoveryTerms": [
         "ADR 0026: Regulated domain safety and liability boundary",
         "0026-regulated-domain-safety-liability-boundary",
-        "ADR 0026"
+        "ADR 0026",
+        "adr:regulated-domain-safety"
       ],
       "searchQueries": [
         {
           "query": "ADR 0026: Regulated domain safety and liability boundary",
           "expectPath": "docs/adr/0026-regulated-domain-safety-liability-boundary.md"
+        },
+        {
+          "query": "adr:regulated-domain-safety",
+          "expectPath": "docs/adr/0026-regulated-domain-safety-liability-boundary.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:regulated-domain-safety"
     },
     {
       "id": "adr-docs-adr-0027-governance-identity-scope-model",
@@ -873,17 +1035,23 @@
       "discoveryTerms": [
         "ADR 0027: Governance Identity And Scope Model",
         "0027-governance-identity-scope-model",
-        "ADR 0027"
+        "ADR 0027",
+        "adr:governance-identity-scope-model"
       ],
       "searchQueries": [
         {
           "query": "ADR 0027: Governance Identity And Scope Model",
           "expectPath": "docs/adr/0027-governance-identity-scope-model.md"
+        },
+        {
+          "query": "adr:governance-identity-scope-model",
+          "expectPath": "docs/adr/0027-governance-identity-scope-model.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:governance-identity-scope-model"
     },
     {
       "id": "adr-docs-adr-0028-workspace-project-folder-manifest",
@@ -900,17 +1068,23 @@
       "discoveryTerms": [
         "ADR 0028: Workspace, Project, Folder, And Manifest Boundary",
         "0028-workspace-project-folder-manifest",
-        "ADR 0028"
+        "ADR 0028",
+        "adr:workspace-project-folder-manifest"
       ],
       "searchQueries": [
         {
           "query": "ADR 0028: Workspace, Project, Folder, And Manifest Boundary",
           "expectPath": "docs/adr/0028-workspace-project-folder-manifest.md"
+        },
+        {
+          "query": "adr:workspace-project-folder-manifest",
+          "expectPath": "docs/adr/0028-workspace-project-folder-manifest.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:workspace-project-folder-manifest"
     },
     {
       "id": "adr-docs-adr-0029-connector-governed-context-v1",
@@ -927,17 +1101,23 @@
       "discoveryTerms": [
         "ADR 0029: Connector Governed Context V1",
         "0029-connector-governed-context-v1",
-        "ADR 0029"
+        "ADR 0029",
+        "adr:connector-governed-context-v1"
       ],
       "searchQueries": [
         {
           "query": "ADR 0029: Connector Governed Context V1",
           "expectPath": "docs/adr/0029-connector-governed-context-v1.md"
+        },
+        {
+          "query": "adr:connector-governed-context-v1",
+          "expectPath": "docs/adr/0029-connector-governed-context-v1.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:connector-governed-context-v1"
     },
     {
       "id": "adr-docs-adr-0030-post-v1-evolution-rescue-backbone",
@@ -954,17 +1134,23 @@
       "discoveryTerms": [
         "ADR 0030: Post-V1 evolution and rescue backbone",
         "0030-post-v1-evolution-rescue-backbone",
-        "ADR 0030"
+        "ADR 0030",
+        "adr:evolution-rescue-backbone"
       ],
       "searchQueries": [
         {
           "query": "ADR 0030: Post-V1 evolution and rescue backbone",
           "expectPath": "docs/adr/0030-post-v1-evolution-rescue-backbone.md"
+        },
+        {
+          "query": "adr:evolution-rescue-backbone",
+          "expectPath": "docs/adr/0030-post-v1-evolution-rescue-backbone.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:evolution-rescue-backbone"
     },
     {
       "id": "adr-docs-adr-0031-progressive-modularity-zero-surprise-install",
@@ -986,7 +1172,8 @@
         "progressive modularity",
         "zero-surprise install",
         "claw setup",
-        "claw modules"
+        "claw modules",
+        "adr:progressive-modularity-zero-surprise-install"
       ],
       "searchQueries": [
         {
@@ -996,11 +1183,16 @@
         {
           "query": "zero-surprise install",
           "expectPath": "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md"
+        },
+        {
+          "query": "adr:progressive-modularity-zero-surprise-install",
+          "expectPath": "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md"
         }
       ],
       "guard": "scripts/progressive-modularity-guard.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:progressive-modularity-zero-surprise-install"
     },
     {
       "id": "adr-docs-adr-0032-sdk-first-custom-surfaces-and-nonblocking-shell",
@@ -1020,7 +1212,8 @@
         "ADR 0032",
         "custom app SDK executionBoundary",
         "custom app SDK metadata-only projections",
-        "clawjs.custom_app_sdk contracts custom-app-sdk"
+        "clawjs.custom_app_sdk contracts custom-app-sdk",
+        "adr:sdk-first-custom-surfaces"
       ],
       "searchQueries": [
         {
@@ -1030,11 +1223,16 @@
         {
           "query": "custom app SDK executionBoundary service API MCP Relay metadata-only",
           "expectPath": "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md"
+        },
+        {
+          "query": "adr:sdk-first-custom-surfaces",
+          "expectPath": "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:sdk-first-custom-surfaces"
     },
     {
       "id": "adr-docs-adr-0033-open-standard-official-trust",
@@ -1051,17 +1249,23 @@
       "discoveryTerms": [
         "ADR 0033: Open standard and official trust",
         "0033-open-standard-official-trust",
-        "ADR 0033"
+        "ADR 0033",
+        "adr:open-standard-official-trust"
       ],
       "searchQueries": [
         {
           "query": "ADR 0033: Open standard and official trust",
           "expectPath": "docs/adr/0033-open-standard-official-trust.md"
+        },
+        {
+          "query": "adr:open-standard-official-trust",
+          "expectPath": "docs/adr/0033-open-standard-official-trust.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:open-standard-official-trust"
     },
     {
       "id": "adr-docs-adr-0034-network-control-plane",
@@ -1080,7 +1284,8 @@
         "0034-network-control-plane",
         "ADR 0034",
         "network control plane",
-        "claw network"
+        "claw network",
+        "adr:network-control-plane"
       ],
       "searchQueries": [
         {
@@ -1090,11 +1295,16 @@
         {
           "query": "network control plane claw network",
           "expectPath": "docs/adr/0034-network-control-plane.md"
+        },
+        {
+          "query": "adr:network-control-plane",
+          "expectPath": "docs/adr/0034-network-control-plane.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:network-control-plane"
     },
     {
       "id": "surface-route-graph",
@@ -1115,11 +1325,16 @@
         "ADR 0012",
         "surface route graph",
         "route-first",
-        "surface-first"
+        "surface-first",
+        "adr:surface-route-graph"
       ],
       "searchQueries": [
         {
           "query": "surface route graph",
+          "expectPath": "docs/adr/0012-surface-route-graph.md"
+        },
+        {
+          "query": "adr:surface-route-graph",
           "expectPath": "docs/adr/0012-surface-route-graph.md"
         }
       ],
@@ -1131,7 +1346,8 @@
           "command": "claw inspect routes --json",
           "expectRoute": "chat.localDesktop"
         }
-      ]
+      ],
+      "canonicalName": "adr:surface-route-graph"
     },
     {
       "id": "skill-skills-adr-to-guardrail",
@@ -1963,6 +2179,46 @@
       "guard": "scripts/skills-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "governance-doctor-command",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "packages/clawjs/src/cli-governance-command.ts",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/cli.md",
+        "skills/cli-agent-surface-work/SKILL.md",
+        "skills/decision-map-maintenance/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "governance doctor",
+        "claw governance doctor",
+        "agent governance router",
+        "external pending stale docs checks skills"
+      ],
+      "searchQueries": [
+        {
+          "query": "governance doctor",
+          "expectPath": "packages/clawjs/src/cli-governance-command.ts"
+        },
+        {
+          "query": "claw governance doctor",
+          "expectPath": "docs/cli.md"
+        }
+      ],
+      "guard": "packages/clawjs/src/cli-governance-command.test.ts",
+      "status": "enforced",
+      "reviewDate": "2026-05-20",
+      "inspect": [
+        {
+          "command": "claw inspect commands --json",
+          "expectPath": "packages/clawjs/src/cli-governance-command.ts"
+        }
+      ]
     },
     {
       "id": "guard-scripts-agent-instructions-check",
@@ -3226,6 +3482,189 @@
       "reviewDate": "2026-05-20"
     },
     {
+      "id": "constitution-operational-map",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/constitution-map.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/agent-rules/index.md",
+        "skills/decision-map-maintenance/SKILL.md"
+      ],
+      "discoveryTerms": [
+        "constitution-map",
+        "Constitution Operational Map",
+        "constitutional principle router",
+        "principle to canon guardrail surfaces"
+      ],
+      "searchQueries": [
+        {
+          "query": "constitution-map",
+          "expectPath": "docs/constitution-map.md"
+        },
+        {
+          "query": "constitutional principle router",
+          "expectPath": "docs/constitution-map.md"
+        }
+      ],
+      "guard": "scripts/docs-alignment-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-20"
+    },
+    {
+      "id": "debt-ledger",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/debt-ledger.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/cli.md"
+      ],
+      "discoveryTerms": [
+        "debt pending ledger",
+        "external pending lateral_debt",
+        "federated report-only debt ledger"
+      ],
+      "searchQueries": [
+        {
+          "query": "debt pending ledger external pending lateral_debt",
+          "expectPath": "docs/debt-ledger.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-20"
+    },
+    {
+      "id": "sdk-first-custom-surfaces-completion-audit",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/sdk-first-custom-surfaces/completion.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/system-telemetry/external-validation.manifest.schema.json"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces completion audit",
+        "custom app SDK completion audit gate",
+        "SDK-first custom surfaces closure blockers"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces completion audit",
+          "expectPath": "docs/governance/sdk-first-custom-surfaces/completion.md"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "system-telemetry-completion-audit",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/system-telemetry/completion.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/system-telemetry/decision-matrix.md"
+      ],
+      "discoveryTerms": [
+        "system telemetry completion audit",
+        "system telemetry requirement status",
+        "system telemetry requirement-by-requirement closure gate"
+      ],
+      "searchQueries": [
+        {
+          "query": "system telemetry completion audit",
+          "expectPath": "docs/governance/system-telemetry/completion.md"
+        }
+      ],
+      "guard": "scripts/verify-system-telemetry-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "system-telemetry-decision-matrix",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/system-telemetry/decision-matrix.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "system telemetry decision matrix",
+        "system telemetry D01 D11 decisions",
+        "system telemetry completion audit gate"
+      ],
+      "searchQueries": [
+        {
+          "query": "system telemetry decision matrix",
+          "expectPath": "docs/governance/system-telemetry/decision-matrix.md"
+        }
+      ],
+      "guard": "scripts/verify-system-telemetry-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "system-telemetry-external-pending-ledger",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/system-telemetry/external-pending.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "system telemetry external pending validation",
+        "system telemetry external validation lanes",
+        "system telemetry provider sensor control blockers"
+      ],
+      "searchQueries": [
+        {
+          "query": "system telemetry external pending validation",
+          "expectPath": "docs/governance/system-telemetry/external-pending.md"
+        }
+      ],
+      "guard": "scripts/verify-system-telemetry-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "system-telemetry-external-validation-runbook",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/system-telemetry/external-validation-runbook.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
+      ],
+      "discoveryTerms": [
+        "system telemetry external validation runbook",
+        "system telemetry exact approval runbook",
+        "system telemetry external lane evidence checklist"
+      ],
+      "searchQueries": [
+        {
+          "query": "system telemetry external validation runbook",
+          "expectPath": "docs/governance/system-telemetry/external-validation-runbook.md"
+        }
+      ],
+      "guard": "scripts/verify-system-telemetry-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
       "id": "docs-official-trust-and-compatibility",
       "kind": "docs-page",
       "owner": "claw",
@@ -3253,141 +3692,40 @@
       "reviewDate": "2026-08-18"
     },
     {
-      "id": "sdk-first-custom-surfaces-completion-audit",
-      "kind": "docs-page",
+      "id": "agent-discoverability-golden-queries",
+      "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/sdk-first-custom-surfaces-completion-audit.md",
+      "canonicalSource": "docs/discoverability-golden-queries.json",
       "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/system-telemetry-external-validation.manifest.schema.json"
+        "docs/discoverability.md"
       ],
       "discoveryTerms": [
-        "sdk-first custom surfaces completion audit",
-        "custom app SDK completion audit gate",
-        "SDK-first custom surfaces closure blockers"
+        "agent discoverability golden queries",
+        "Search V1 realistic agent questions",
+        "top-ranked surface route schema node discovery"
       ],
       "searchQueries": [
         {
-          "query": "sdk-first custom surfaces completion audit",
-          "expectPath": "docs/sdk-first-custom-surfaces-completion-audit.md"
+          "query": "agent discoverability golden queries",
+          "expectPath": "docs/discoverability-golden-queries.json"
         }
       ],
-      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "system-telemetry-completion-audit",
-      "kind": "docs-page",
-      "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-completion-audit.md",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/system-telemetry-decision-matrix.md"
-      ],
-      "discoveryTerms": [
-        "system telemetry completion audit",
-        "system telemetry requirement status",
-        "system telemetry requirement-by-requirement closure gate"
-      ],
-      "searchQueries": [
-        {
-          "query": "system telemetry completion audit",
-          "expectPath": "docs/system-telemetry-completion-audit.md"
-        }
-      ],
-      "guard": "scripts/verify-system-telemetry-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "system-telemetry-decision-matrix",
-      "kind": "docs-page",
-      "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-decision-matrix.md",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "system telemetry decision matrix",
-        "system telemetry D01 D11 decisions",
-        "system telemetry completion audit gate"
-      ],
-      "searchQueries": [
-        {
-          "query": "system telemetry decision matrix",
-          "expectPath": "docs/system-telemetry-decision-matrix.md"
-        }
-      ],
-      "guard": "scripts/verify-system-telemetry-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "system-telemetry-external-pending-ledger",
-      "kind": "docs-page",
-      "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-pending-validation.md",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "system telemetry external pending validation",
-        "system telemetry external validation lanes",
-        "system telemetry provider sensor control blockers"
-      ],
-      "searchQueries": [
-        {
-          "query": "system telemetry external pending validation",
-          "expectPath": "docs/system-telemetry-external-pending-validation.md"
-        }
-      ],
-      "guard": "scripts/verify-system-telemetry-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "system-telemetry-external-validation-runbook",
-      "kind": "docs-page",
-      "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-validation-runbook.md",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation.manifest.json"
-      ],
-      "discoveryTerms": [
-        "system telemetry external validation runbook",
-        "system telemetry exact approval runbook",
-        "system telemetry external lane evidence checklist"
-      ],
-      "searchQueries": [
-        {
-          "query": "system telemetry external validation runbook",
-          "expectPath": "docs/system-telemetry-external-validation-runbook.md"
-        }
-      ],
-      "guard": "scripts/verify-system-telemetry-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-08-20"
     },
     {
       "id": "system-telemetry-external-approval-fixtures",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-approval.fixtures.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-approval.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-approval.schema.json",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-approval.schema.json",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external approval fixtures",
@@ -3397,7 +3735,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external approval fixtures",
-          "expectPath": "docs/system-telemetry-external-approval.fixtures.json"
+          "expectPath": "docs/governance/system-telemetry/external-approval.fixtures.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3408,14 +3746,14 @@
       "id": "system-telemetry-external-approval-schema",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-approval.schema.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-approval.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-approval.fixtures.json",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-approval.fixtures.json",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external approval schema",
@@ -3425,7 +3763,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external approval schema",
-          "expectPath": "docs/system-telemetry-external-approval.schema.json"
+          "expectPath": "docs/governance/system-telemetry/external-approval.schema.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3436,13 +3774,13 @@
       "id": "system-telemetry-external-closure-fixtures",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-closure.fixtures.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-closure.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external closure fixtures",
@@ -3452,7 +3790,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external closure fixtures",
-          "expectPath": "docs/system-telemetry-external-closure.fixtures.json"
+          "expectPath": "docs/governance/system-telemetry/external-closure.fixtures.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3463,13 +3801,13 @@
       "id": "system-telemetry-external-evidence-fixtures",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-evidence.fixtures.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-evidence.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-evidence.schema.json",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-evidence.schema.json",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external evidence fixtures",
@@ -3479,7 +3817,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external evidence fixtures",
-          "expectPath": "docs/system-telemetry-external-evidence.fixtures.json"
+          "expectPath": "docs/governance/system-telemetry/external-evidence.fixtures.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3490,14 +3828,14 @@
       "id": "system-telemetry-external-evidence-schema",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-evidence.schema.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-evidence.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-evidence.fixtures.json",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-evidence.fixtures.json",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external evidence schema",
@@ -3507,7 +3845,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external evidence schema",
-          "expectPath": "docs/system-telemetry-external-evidence.schema.json"
+          "expectPath": "docs/governance/system-telemetry/external-evidence.schema.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3518,14 +3856,14 @@
       "id": "system-telemetry-external-validation-manifest-fixtures",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-validation.manifest.fixtures.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-validation.manifest.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-validation.manifest.json",
-        "docs/system-telemetry-external-validation.manifest.schema.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-validation.manifest.json",
+        "docs/governance/system-telemetry/external-validation.manifest.schema.json"
       ],
       "discoveryTerms": [
         "system telemetry external validation manifest fixtures",
@@ -3535,7 +3873,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external validation manifest fixtures",
-          "expectPath": "docs/system-telemetry-external-validation.manifest.fixtures.json"
+          "expectPath": "docs/governance/system-telemetry/external-validation.manifest.fixtures.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3546,7 +3884,7 @@
       "id": "system-telemetry-external-validation-manifest",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-validation.manifest.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-validation.manifest.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md"
@@ -3559,7 +3897,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external validation manifest",
-          "expectPath": "docs/system-telemetry-external-validation.manifest.json"
+          "expectPath": "docs/governance/system-telemetry/external-validation.manifest.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3570,13 +3908,13 @@
       "id": "system-telemetry-external-validation-manifest-schema",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-external-validation.manifest.schema.json",
+      "canonicalSource": "docs/governance/system-telemetry/external-validation.manifest.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external validation manifest schema",
@@ -3586,7 +3924,7 @@
       "searchQueries": [
         {
           "query": "system telemetry external validation manifest schema",
-          "expectPath": "docs/system-telemetry-external-validation.manifest.schema.json"
+          "expectPath": "docs/governance/system-telemetry/external-validation.manifest.schema.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3597,11 +3935,11 @@
       "id": "system-telemetry-source-qa-review",
       "kind": "validation-manifest",
       "owner": "claw",
-      "canonicalSource": "docs/system-telemetry-source-qa-review.json",
+      "canonicalSource": "docs/governance/system-telemetry/source-review.json",
       "requiredEntrypoints": [
         "docs/decision-map.md",
         "docs/discoverability.md",
-        "docs/system-telemetry-decision-matrix.md"
+        "docs/governance/system-telemetry/decision-matrix.md"
       ],
       "discoveryTerms": [
         "system telemetry source Q/A review",
@@ -3611,7 +3949,7 @@
       "searchQueries": [
         {
           "query": "system telemetry source Q/A review",
-          "expectPath": "docs/system-telemetry-source-qa-review.json"
+          "expectPath": "docs/governance/system-telemetry/source-review.json"
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
@@ -3626,11 +3964,11 @@
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-approval.schema.json",
-        "docs/system-telemetry-external-approval.fixtures.json",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-approval.schema.json",
+        "docs/governance/system-telemetry/external-approval.fixtures.json",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external approval validator",
@@ -3655,10 +3993,10 @@
       "requiredEntrypoints": [
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/system-telemetry-external-pending-validation.md",
-        "docs/system-telemetry-external-validation-runbook.md",
-        "docs/system-telemetry-external-closure.fixtures.json",
-        "docs/system-telemetry-external-validation.manifest.json"
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation-runbook.md",
+        "docs/governance/system-telemetry/external-closure.fixtures.json",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
       ],
       "discoveryTerms": [
         "system telemetry external closure validator",

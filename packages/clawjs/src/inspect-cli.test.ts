@@ -617,9 +617,9 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "inspect",
     "remote",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
     "--json",
   ], process.cwd());
   assert.equal(remoteInspectWithArtifacts.code, CLI_EXIT_OK);
@@ -678,9 +678,9 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
     "inspect",
     "remote",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
   ], process.cwd());
   assert.equal(remoteInspectWithArtifactsText.code, CLI_EXIT_OK);
   assert.equal(remoteInspectWithArtifactsText.stdout.includes("decisionReview\tcomplete 23/23 implemented=11 external=12 blockers=external_validation"), true);
@@ -790,9 +790,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--now",
     "2026-05-18T11:50:00.000Z",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
     "--json",
   ], process.cwd());
   assert.equal(remoteValidationReadiness.code, CLI_EXIT_OK);
@@ -815,9 +815,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 	    "remote",
 	    "validation-readiness",
 	    "--source-qa-review-file",
-	    "docs/remote-gateway-sync-source-qa-review.json",
+	    "docs/governance/remote-gateway-sync/source-review.json",
 	    "--external-validation-file",
-	    "docs/remote-gateway-sync-external-validation-evidence.json",
+	    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
 	  ], process.cwd());
 	  assert.equal(remoteValidationReadinessText.code, CLI_EXIT_OK);
 	  assert.equal(remoteValidationReadinessText.stdout.trim(), "ready_for_approved_run sourceQa=complete evidence=13/13 blockers=external_validation externalBlocked=13");
@@ -828,9 +828,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--now",
     "2026-05-18T11:50:00.000Z",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
     "--json",
   ], process.cwd());
   assert.equal(remoteValidationApprovalRequest.code, CLI_EXIT_OK);
@@ -852,9 +852,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 	    "remote",
 	    "validation-approval-request",
 	    "--source-qa-review-file",
-	    "docs/remote-gateway-sync-source-qa-review.json",
+	    "docs/governance/remote-gateway-sync/source-review.json",
 	    "--external-validation-file",
-	    "docs/remote-gateway-sync-external-validation-evidence.json",
+	    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
 	  ], process.cwd());
 	  assert.equal(remoteValidationApprovalRequestText.code, CLI_EXIT_OK);
 	  assert.equal(remoteValidationApprovalRequestText.stdout.trim(), "approval_required readiness=ready_for_approved_run approved=false requirements=13 blockers=external_validation");
@@ -879,9 +879,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--now",
     "2026-05-18T11:55:00.000Z",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
     "--json",
   ], process.cwd());
   assert.equal(remoteDecisionReview.code, CLI_EXIT_OK);
@@ -903,9 +903,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
 	    "remote",
 	    "decision-review",
 	    "--source-qa-review-file",
-	    "docs/remote-gateway-sync-source-qa-review.json",
+	    "docs/governance/remote-gateway-sync/source-review.json",
 	    "--external-validation-file",
-	    "docs/remote-gateway-sync-external-validation-evidence.json",
+	    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
 	  ], process.cwd());
 	  assert.equal(remoteDecisionReviewText.code, CLI_EXIT_OK);
 	  assert.equal(remoteDecisionReviewText.stdout.trim(), "complete reviewed=23/23 implemented=11 external=12 blockers=external_validation");
@@ -928,7 +928,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--now",
     "2026-05-18T11:40:00.000Z",
     "--evidence-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
     "--json",
   ], process.cwd());
   assert.equal(remoteValidationReportFromFile.code, CLI_EXIT_OK);
@@ -968,9 +968,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "--now",
     "2026-05-17T10:13:26.500Z",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
     "--json",
   ], process.cwd());
   assert.equal(reviewedRemoteClosureGate.code, CLI_EXIT_OK);
@@ -994,9 +994,9 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
     "remote",
     "closure-gate",
     "--source-qa-review-file",
-    "docs/remote-gateway-sync-source-qa-review.json",
+    "docs/governance/remote-gateway-sync/source-review.json",
     "--external-validation-file",
-    "docs/remote-gateway-sync-external-validation-evidence.json",
+    "docs/governance/remote-gateway-sync/external-validation-evidence.json",
   ], process.cwd());
   assert.equal(reviewedRemoteClosureGateText.code, CLI_EXIT_OK);
   assert.equal(reviewedRemoteClosureGateText.stdout.trim(), "blocked sourceQa=complete blockers=external_validation externalBlocked=13 finalReread=required");

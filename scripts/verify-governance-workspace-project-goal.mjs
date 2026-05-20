@@ -26,8 +26,8 @@ function requireNoPrivatePaths(relativePath) {
   }
 }
 
-const sourceAuditPath = "docs/governance-workspace-project-source-decision-audit.md";
-const completionAuditPath = "docs/governance-workspace-project-completion-audit.md";
+const sourceAuditPath = "docs/governance/governance-workspace-project/source-audit.md";
+const completionAuditPath = "docs/governance/governance-workspace-project/completion.md";
 const sourceAudit = read(sourceAuditPath);
 const completionAudit = read(completionAuditPath);
 

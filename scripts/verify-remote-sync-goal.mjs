@@ -72,7 +72,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const sourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
 const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
 
-const requiredDocs = "CONSTITUTION.md docs/adr/0022-remote-gateway-sync-redesign.md docs/remote-gateway-sync-source-decision-audit.md docs/remote-gateway-sync-source-qa-review.json docs/remote-gateway-sync-external-validation-evidence.json docs/remote-gateway-sync-completion-audit.md docs/remote-gateway-sync-decision-matrix.md docs/relay.md docs/decision-map.md docs/interface-matrix.md docs/cli.md".split(" ");
+const requiredDocs = "CONSTITUTION.md docs/adr/0022-remote-gateway-sync-redesign.md docs/governance/remote-gateway-sync/source-audit.md docs/governance/remote-gateway-sync/source-review.json docs/governance/remote-gateway-sync/external-validation-evidence.json docs/governance/remote-gateway-sync/completion.md docs/governance/remote-gateway-sync/decision-matrix.md docs/relay.md docs/decision-map.md docs/interface-matrix.md docs/cli.md".split(" ");
 
 const requiredScripts = [
   "scripts/verify-remote-sync-source-session.mjs",
@@ -244,16 +244,16 @@ for (const [relativePath, text] of docTexts) {
 for (const snippet of ["Remote framework access is organized as Coordinator, Gateway, Connector, and", "Gateway projects registered local SDK/service/CLI contracts under", "Iroh is the preferred v1 transport adapter", "External physical/provider validation is explicit", "artifact-bound", "source-bound and approval-request-bound evidence artifact"]) requireText("constitution remote mesh principle", docTexts.get("CONSTITUTION.md") ?? "", snippet);
 
 for (const snippet of [sourceConversationId, sourcePlanId]) {
-  requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", snippet);
-  requireText("completion audit", docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", snippet);
-  requireText("decision matrix", docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", snippet);
+  requireText("source decision audit", docTexts.get("docs/governance/remote-gateway-sync/source-audit.md") ?? "", snippet);
+  requireText("completion audit", docTexts.get("docs/governance/remote-gateway-sync/completion.md") ?? "", snippet);
+  requireText("decision matrix", docTexts.get("docs/governance/remote-gateway-sync/decision-matrix.md") ?? "", snippet);
 }
 for (const snippet of ["Remote Gateway And Sync Interfaces", "/v1/remote/route-contracts", "/v1/remote/compatibility/adapters", "/v1/gateway/agent-service/executions", "/v1/sync/authority-handoffs", "/v1/mesh/invitations/accept"]) requireText("interface matrix remote inventory", docTexts.get("docs/interface-matrix.md") ?? "", snippet);
 
-const sourceDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "RQ");
-const sourceQaIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", "QA");
-const completionDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", "RQ");
-const matrixDecisionIds = extractTableIds(docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", "RG");
+const sourceDecisionIds = extractTableIds(docTexts.get("docs/governance/remote-gateway-sync/source-audit.md") ?? "", "RQ");
+const sourceQaIds = extractTableIds(docTexts.get("docs/governance/remote-gateway-sync/source-audit.md") ?? "", "QA");
+const completionDecisionIds = extractTableIds(docTexts.get("docs/governance/remote-gateway-sync/completion.md") ?? "", "RQ");
+const matrixDecisionIds = extractTableIds(docTexts.get("docs/governance/remote-gateway-sync/decision-matrix.md") ?? "", "RG");
 for (let index = 1; index <= remoteSyncRequiredDecisionIds.length; index += 1) {
   const sourceId = `RQ-${String(index).padStart(3, "0")}`;
   const qaId = `QA-${String(index).padStart(3, "0")}`;
@@ -266,12 +266,12 @@ for (let index = 1; index <= remoteSyncRequiredDecisionIds.length; index += 1) {
 if (!sourceQaIds.has("QA-023")) fail("source Q/A review map missing QA-023 goal closure gate");
 
 for (const decisionId of remoteSyncRequiredDecisionIds) {
-  requireText("source decision audit", docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "", `\`${decisionId}\``);
-  requireText("completion audit", docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "", `\`${decisionId}\``);
-  requireText("decision matrix", docTexts.get("docs/remote-gateway-sync-decision-matrix.md") ?? "", `\`${decisionId}\``);
+  requireText("source decision audit", docTexts.get("docs/governance/remote-gateway-sync/source-audit.md") ?? "", `\`${decisionId}\``);
+  requireText("completion audit", docTexts.get("docs/governance/remote-gateway-sync/completion.md") ?? "", `\`${decisionId}\``);
+  requireText("decision matrix", docTexts.get("docs/governance/remote-gateway-sync/decision-matrix.md") ?? "", `\`${decisionId}\``);
 }
 
-const sourceAudit = docTexts.get("docs/remote-gateway-sync-source-decision-audit.md") ?? "";
+const sourceAudit = docTexts.get("docs/governance/remote-gateway-sync/source-audit.md") ?? "";
 for (const snippet of [
   "Source Q/A Review Map",
   "Separar capas (Recommended)",
@@ -294,7 +294,7 @@ for (const snippet of [
   requireText("source Q/A review map", sourceAudit, snippet);
 }
 
-const completionAudit = docTexts.get("docs/remote-gateway-sync-completion-audit.md") ?? "";
+const completionAudit = docTexts.get("docs/governance/remote-gateway-sync/completion.md") ?? "";
 for (const snippet of [
   "Closure state: `active_goal_not_complete`",
   "SOURCE-REREAD-001",
@@ -315,7 +315,7 @@ for (const snippet of [
   "remote sync source session verification passed", "23 Q/A rows", "Public docs hygiene", "docs alignment check passed",
 	  "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session",
   "remote_canon_alignment_check.mjs",
-  "docs/remote-gateway-sync-external-validation-evidence.json",
+  "docs/governance/remote-gateway-sync/external-validation-evidence.json",
   "artifact-native `items` array",
   "same core contracts used by CLI inspection",
 ]) {
@@ -323,7 +323,7 @@ for (const snippet of [
 }
 if (/Closure state:\s*`complete`/.test(completionAudit)) fail("remote completion audit must not claim completion while external pending rows remain");
 
-const sourceQaReviewArtifact = readRequiredJson("docs/remote-gateway-sync-source-qa-review.json");
+const sourceQaReviewArtifact = readRequiredJson("docs/governance/remote-gateway-sync/source-review.json");
 if (sourceQaReviewArtifact.sourceConversationId !== sourceConversationId) fail("source Q/A review artifact must bind the source conversation ID");
 if (sourceQaReviewArtifact.sourcePlanId !== sourcePlanId) fail("source Q/A review artifact must bind the source plan ID");
 if (sourceQaReviewArtifact.status !== "complete_with_external_pending") fail("source Q/A review artifact must be complete_with_external_pending");
@@ -407,7 +407,7 @@ for (const item of sourceQaReviewReport.items) {
   if (item.disposition !== expectedDisposition) {
     fail(`source Q/A review artifact ${item.qaId} must be ${expectedDisposition}`);
   }
-  if (!item.evidenceRefs.some((ref) => ref.includes("remote-gateway-sync-completion-audit.md") || ref.includes("verify-remote-sync-goal.mjs"))) {
+  if (!item.evidenceRefs.some((ref) => ref.includes("docs/governance/remote-gateway-sync/completion.md") || ref.includes("verify-remote-sync-goal.mjs"))) {
     fail(`source Q/A review artifact ${item.qaId} must cite completion audit or verifier evidence`);
   }
 }
@@ -655,13 +655,13 @@ for (const ref of [
 }
 const goalClosureGateSourceQaReview = sourceQaReviewReport.items.find((item) => item.qaId === "QA-023");
 for (const ref of [
-  "docs/remote-gateway-sync-source-qa-review.json",
-  "docs/remote-gateway-sync-completion-audit.md#closure-rule",
+  "docs/governance/remote-gateway-sync/source-review.json",
+  "docs/governance/remote-gateway-sync/completion.md#closure-rule",
   "scripts/verify-remote-sync-goal.mjs",
   `sourceConversationId:${sourceConversationId}`,
   `sourcePlanId:${sourcePlanId}`,
   "claw remote closure-gate",
-  "docs/remote-gateway-sync-external-validation-evidence.json",
+  "docs/governance/remote-gateway-sync/external-validation-evidence.json",
   "EXTERNAL PENDING",
 ]) {
   if (!goalClosureGateSourceQaReview?.evidenceRefs.includes(ref)) fail(`source Q/A review artifact QA-023 must cite ${ref}`);
@@ -887,7 +887,7 @@ for (const target of ["personal_mesh", "mac_host", "linux_host", "windows_host",
   if (!externalValidationRunbook.e2ePlan.requiredTopologyTargets.includes(target)) fail(`remote external validation runbook must include topology target ${target}`);
 }
 
-const externalValidationEvidenceArtifact = readRequiredJson("docs/remote-gateway-sync-external-validation-evidence.json");
+const externalValidationEvidenceArtifact = readRequiredJson("docs/governance/remote-gateway-sync/external-validation-evidence.json");
 if (!remoteExternalValidationEvidenceArtifactSchema.safeParse(externalValidationEvidenceArtifact).success) {
   fail("external validation evidence artifact must satisfy the core artifact schema");
 }
@@ -1233,7 +1233,7 @@ const invalidSourceQaReviews = [{
   decisionKey: "transport_contract",
   requirementId: "RQ-007",
   disposition: "validated",
-  evidenceRefs: ["docs/remote-gateway-sync-completion-audit.md"],
+  evidenceRefs: ["docs/governance/remote-gateway-sync/completion.md"],
   reviewedAt: "2026-05-17T10:13:26.600Z",
   writes: false,
 }];
@@ -1469,7 +1469,7 @@ for (const snippet of [
   "buildRemoteExternalValidationRunbook", "/v1/remote/external-validation-runbook", "buildRemoteExternalValidationReadiness", "/v1/remote/external-validation-readiness",
   "buildRemoteExternalValidationApprovalRequest", "/v1/remote/external-validation-approval-request", "buildRemoteExternalValidationReport", "/v1/remote/external-validation-report",
   "buildRemoteSourceQaReviewTemplate", "/v1/remote/source-qa-template", "buildRemoteDecisionReview", "/v1/remote/decision-review", "buildRemoteGoalClosureGate",
-  "sourceQaReviewItems", "docs/remote-gateway-sync-external-validation-evidence.json", "artifactExternalValidationReport", "readyForApprovedRun", "sourceQaReviewArtifact", "reviewedPendingClosureGate",
+  "sourceQaReviewItems", "docs/governance/remote-gateway-sync/external-validation-evidence.json", "artifactExternalValidationReport", "readyForApprovedRun", "sourceQaReviewArtifact", "reviewedPendingClosureGate",
   "/v1/remote/closure-gate", "expectedRouteContracts.contracts.map", "buildRemoteProviderDeviceE2EValidationPlan", "/v1/remote/provider-device-e2e-plan",
 ]) {
   requireText("remote sync service route tests", remoteSyncRoutesTestSource, snippet);

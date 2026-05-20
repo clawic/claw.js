@@ -18,11 +18,11 @@ const sourceConversationId = "019e366f-8e14-7e51-8817-9820d2914dc4";
 
 const requiredDocs = [
   "docs/mac-control-plane.md",
-  "docs/mac-control-plane-verb-audit.md",
-  "docs/mac-control-plane-version-drift-audit.md",
-  "docs/mac-control-plane-source-decision-audit.md",
-  "docs/mac-control-plane-closure-audit.md",
-  "docs/mac-control-plane-decision-matrix.md",
+  "docs/governance/mac-control-plane/verb-audit.md",
+  "docs/governance/mac-control-plane/version-drift-audit.md",
+  "docs/governance/mac-control-plane/source-audit.md",
+  "docs/governance/mac-control-plane/completion.md",
+  "docs/governance/mac-control-plane/decision-matrix.md",
   "docs/mac-native-legacy-audit.md",
   "docs/mac-native-usage-allowlist.json",
   "docs/adr/0023-mac-control-plane-v1.md",
@@ -309,7 +309,7 @@ verifyClawixMacosIfProvided();
 
 for (const doc of requiredDocs) readRequired(doc);
 
-const sourceAudit = readRequired("docs/mac-control-plane-source-decision-audit.md");
+const sourceAudit = readRequired("docs/governance/mac-control-plane/source-audit.md");
 requireText("source decision audit", sourceAudit, sourceConversationId);
 for (const id of requiredDecisionRows) requireText("source decision audit", sourceAudit, id);
 for (const snippet of [
@@ -322,7 +322,7 @@ for (const snippet of [
   requireNormalizedText("source decision audit prompt review", sourceAudit, snippet);
 }
 
-const closureAudit = readRequired("docs/mac-control-plane-closure-audit.md");
+const closureAudit = readRequired("docs/governance/mac-control-plane/completion.md");
 for (const snippet of [
   sourceConversationId,
   "active_goal_not_complete",
@@ -357,7 +357,7 @@ for (const snippet of [
   requireNormalizedText("source decision audit MCQ-015", sourceAudit, snippet);
 }
 
-const decisionMatrix = readRequired("docs/mac-control-plane-decision-matrix.md");
+const decisionMatrix = readRequired("docs/governance/mac-control-plane/decision-matrix.md");
 for (const id of requiredMatrixRows) requireText("decision matrix", decisionMatrix, id);
 
 const workflowSkill = readRequired("skills/mac-control-plane-work/SKILL.md");
@@ -370,7 +370,7 @@ for (const snippet of ["Related surfaces", "mac.directCliAction", "mac.permissio
   requireNormalizedText("Mac Control Plane docs", macDocs, snippet);
 }
 
-const verbAudit = readRequired("docs/mac-control-plane-verb-audit.md");
+const verbAudit = readRequired("docs/governance/mac-control-plane/verb-audit.md");
 for (const snippet of [sourceConversationId, "MCQ-011", "Capability id", "Canonical CLI", "Verb decision"]) {
   requireNormalizedText("Mac verb audit", verbAudit, snippet);
 }
@@ -381,7 +381,7 @@ for (const capability of MAC_CAPABILITY_ATLAS) {
   }
 }
 
-const versionDriftAudit = readRequired("docs/mac-control-plane-version-drift-audit.md");
+const versionDriftAudit = readRequired("docs/governance/mac-control-plane/version-drift-audit.md");
 for (const snippet of [
   sourceConversationId,
   "MCQ-002",
