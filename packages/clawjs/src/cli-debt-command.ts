@@ -15,6 +15,7 @@ import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface DebtCliInput {
+  argv?: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: {
@@ -31,7 +32,7 @@ export async function runDebtCli(input: DebtCliInput): Promise<number> {
   const ledger = buildClawDebtLedger({ rootDir: input.flags.root || input.context.cwd, generatedAt: input.flags.now });
 
   if (action === "list") {
-    const entries = filterDebtEntries(ledger.entries, input.flags);
+    const entries = filterDebtEntries(ledger.entries, input.flags, input.argv ?? []);
     return writeDebtResult(input, action, { ...summaryPayload(ledger), entries });
   }
 
@@ -63,6 +64,7 @@ function writeDebtUsage(input: DebtCliInput): number {
     "  --classification external_pending|lateral_debt|...",
     "  --status open|blocked|external_pending|...",
     "  --source-type code_hygiene|source_size|...",
+    "  --needs-action",
     "  --json",
   ].join("\n") + "\n");
   return CLI_EXIT_USAGE;
@@ -91,6 +93,8 @@ function writeDebtResult(input: DebtCliInput, action: string, data: unknown): nu
     input.context.stdout.write([
       `entries\t${data.summary.entries}`,
       `warnings\t${data.audit.warnings.length}`,
+      `missingActionability\t${data.audit.missingActionability?.length ?? 0}`,
+      `aliasHits\t${data.audit.aliasHits?.length ?? 0}`,
       `unindexedCandidates\t${data.audit.unindexedCandidates.length}`,
       `expiredEntries\t${data.audit.expiredEntries.length}`,
       `duplicateFingerprints\t${data.audit.duplicateFingerprints.length}`,
@@ -128,6 +132,8 @@ function summaryPayload(ledger: ClawDebtLedger): {
       entries: ledger.entries.length,
       sources: ledger.sources.length,
       warnings: ledger.audit.warnings.length,
+      missingActionability: ledger.audit.missingActionability?.length ?? 0,
+      aliasHits: ledger.audit.aliasHits?.length ?? 0,
       unindexedCandidates: ledger.audit.unindexedCandidates.length,
       expiredEntries: ledger.audit.expiredEntries.length,
       duplicateFingerprints: ledger.audit.duplicateFingerprints.length,
@@ -137,17 +143,24 @@ function summaryPayload(ledger: ClawDebtLedger): {
   };
 }
 
-function filterDebtEntries(entries: ClawDebtLedgerEntry[], flags: Record<string, string>): ClawDebtLedgerEntry[] {
+function filterDebtEntries(entries: ClawDebtLedgerEntry[], flags: Record<string, string>, argv: string[]): ClawDebtLedgerEntry[] {
   const repo = flags.repo;
   const classification = parseClassification(flags.classification);
   const status = parseStatus(flags.status);
   const sourceType = parseSourceType(flags["source-type"] || flags.source);
+  const needsAction = flags["needs-action"] === "true" || flags["needs-action"] === "1" || argv.includes("--needs-action");
   return entries.filter((entry) =>
     (!repo || entry.repo === repo)
     && (!classification || entry.classification === classification)
     && (!status || entry.status === status)
     && (!sourceType || entry.sourceType === sourceType)
+    && (!needsAction || entryNeedsAction(entry))
   );
+}
+
+function entryNeedsAction(entry: ClawDebtLedgerEntry): boolean {
+  const reviewDate = entry.reviewBy ?? entry.expires;
+  return !reviewDate || !entry.reentryCommand || reviewDate < new Date().toISOString().slice(0, 10);
 }
 
 function parseClassification(value: string | undefined): ClawDebtLedgerClassification | undefined {
