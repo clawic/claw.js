@@ -109,6 +109,11 @@ for user-authored custom UIs that do not block the main app shell.
   `window.clawix.actions.invoke()` and `window.clawix.secrets.broker()` as
   approval-gated host bridge calls that fail closed with explicit no-runner and
   no-plaintext-broker dispatch reasons until safe runners exist.
+- Sibling Clawix records external closure lanes for signed-host/native
+  execution, live IoT/provider actions, approved performance baselines, and
+  live marketplace trust in
+  `docs/governance/sdk-first-custom-surfaces/external-pending.md`, gated by
+  `scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs`.
 - Sibling Clawix validates imported/marketplace packages through host-local
   `app-package-trust-roots.json`, records signature key/trust-source
   provenance, and still requires the activation ficha before running them.

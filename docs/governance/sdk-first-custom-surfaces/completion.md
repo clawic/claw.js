@@ -15,7 +15,12 @@ the host bridge, protected-route, variant, Swift surface, and shell isolation
 evidence in that checkout. A private source-session verifier has re-read the
 source conversation and confirmed the 24 decision prompt ids, including the
 three interrupted unanswered ids; the verifier and private path are not
-published in this repo.
+published in this repo. The sibling Clawix checkout owns the SDK-first
+external evidence lanes in
+`docs/governance/sdk-first-custom-surfaces/external-pending.md`; accepted
+external packets must pass
+`scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs` there
+before any external row can be replaced.
 
 ## Current Rows
 
@@ -41,6 +46,8 @@ The goal is not complete while any of these are true:
 - Signed-host native execution, live IoT/provider, or marketplace trust
   validation lacks explicit approval, receipts, audit, and same-machine
   evidence.
+- Any sibling SDK-first external evidence packet fails
+  `scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs`.
 - The private source-session verifier has not been re-run against the current
   tree before a future closure attempt.
 - The ClawJS verifier or sibling Clawix validation referenced by this audit
