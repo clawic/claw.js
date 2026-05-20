@@ -45,6 +45,8 @@ function assertCompletionAudit() {
     "three interrupted unanswered ids",
     "The Network Control Plane now provides a typed executable route-family example",
     "disabled-by-default rule suggestions",
+    "The required sibling Clawix checkout is present for this closure gate",
+    "Keep the `--require-clawix` verifier path current",
     "| CLJ-SDK-001 | ADR, plan, decision-map, and discoverability routing",
     "| CLJ-SDK-002 | Shared capability catalog and SDK facade",
     "| CLJ-SDK-003 | Custom-app SDK inspection exposes `executionBoundary`",
@@ -66,7 +68,7 @@ function assertCompletionAudit() {
   for (const [rowId, status] of [
     ["CLJ-SDK-002", "PARTIAL LOCAL"],
     ["CLJ-SDK-005", "EXTERNAL PENDING"],
-    ["CLJ-SDK-007", "PARTIAL LOCAL"],
+    ["CLJ-SDK-007", "VALIDATED LOCAL"],
     ["CLJ-SDK-008", "EXTERNAL PENDING"],
     ["CLJ-SDK-010", "VALIDATED PRIVATE"],
   ]) {
