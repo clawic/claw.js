@@ -29,6 +29,7 @@ test("SDK-first capability catalog exposes baseline custom-app contracts", () =>
   assert.ok(ids.includes("system.telemetry.history"));
   assert.ok(ids.includes("jobs.list"));
   assert.ok(ids.includes("jobs.get"));
+  assert.ok(ids.includes("jobs.events"));
   assert.ok(ids.includes("actions.invoke"));
   assert.ok(ids.includes("secrets.broker"));
   assert.ok(ids.includes("mac.action.plan"));
@@ -64,6 +65,7 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.history"));
   assert.ok(riskMap.ordinaryAccess.includes("jobs.list"));
   assert.ok(riskMap.ordinaryAccess.includes("jobs.get"));
+  assert.ok(riskMap.ordinaryAccess.includes("jobs.events"));
   assert.ok(riskMap.approvalRequired.includes("actions.invoke"));
   assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
   assert.ok(riskMap.approvalRequired.includes("mac.action.plan"));
@@ -149,6 +151,8 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsListResult));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsGet));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsDetail));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsEvents));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsEventsResult));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesList));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult));
   assert.ok(payload.schemaRefs.includes("claw.mac.actionRequest.v1"));
@@ -159,6 +163,7 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.history"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.list"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.get"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.events"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
   assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
@@ -310,6 +315,27 @@ test("custom-app SDK schemas validate current Search DB and resource bridge payl
       redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
     }],
     source: "jobs.get",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsEvents)?.safeParse({
+    id: "run-1",
+    status: "completed",
+    limit: 20,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsEventsResult)?.safeParse({
+    items: [{
+      id: "run-1:status",
+      jobId: "run-1",
+      kind: "job.status",
+      level: "info",
+      message: "Job status: completed",
+      occurredAt: "2026-05-20T00:00:00Z",
+      status: "completed",
+      metadata: { jobKind: "search.run" },
+      source: "index.runs",
+      redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+    }],
+    source: "jobs.events",
     redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
   }).success, true);
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload)?.safeParse({
