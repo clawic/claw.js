@@ -82,10 +82,10 @@ export interface ClawCustomAppCapabilityRiskMap {
 const sdkFirstSource = "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md";
 const customAppSDKMCPMetadataProjection = "clawjs.custom_app_sdk metadata-only contract projection";
 
-function surfaces(input: Partial<Record<ClawCapabilitySurface, string | ClawCapabilitySurfaceStatus>>): ClawCapabilitySurfaceBinding[] {
+function surfaces(input: Record<ClawCapabilitySurface, string | ClawCapabilitySurfaceStatus>): ClawCapabilitySurfaceBinding[] {
   return (["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"] as const).map((surface) => {
     const value = input[surface];
-    if (!value) return { surface, status: "pending" as const, reason: "surface parity pending" };
+    if (value === undefined) throw new Error(`Missing capability surface binding: ${surface}`);
     if (value === "pending" || value === "blocked" || value === "notApplicable" || value === "available") {
       return { surface, status: value };
     }
