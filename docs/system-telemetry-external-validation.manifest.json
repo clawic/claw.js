@@ -10,6 +10,7 @@
     "requiresFinalSourceAudit": true,
     "requiresSourceQaReview": true,
     "requiresCompletionAudit": true,
+    "requiresExternalValidationRunbook": true,
     "requiresForbiddenNameScan": true,
     "requiresExactRunApprovalForExternalLanes": true
   },
@@ -37,6 +38,18 @@
       ]
     },
     "closureRole": "tracks the full system telemetry goal requirement by requirement before goal completion"
+  },
+  "externalValidationRunbook": {
+    "required": true,
+    "artifactId": "system-telemetry-external-validation-runbook",
+    "path": "docs/system-telemetry-external-validation-runbook.md",
+    "laneCount": 3,
+    "externalPendingRowIds": [
+      "SYS-TEL-EXT-001",
+      "SYS-TEL-EXT-002",
+      "SYS-TEL-EXT-003"
+    ],
+    "closureRole": "defines safe preflight, exact approval, accepted evidence, update targets, and fail rules for every remaining external lane"
   },
   "rows": [
     {
