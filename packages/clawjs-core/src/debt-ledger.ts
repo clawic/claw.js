@@ -183,7 +183,7 @@ export function detectDebtLedgerRepositories(rootDir: string): ClawDebtLedgerRep
     if (fs.existsSync(path.join(siblingClawix, "docs", "decision-map.md"))) candidates.push({ repo: "clawix", rootDir: siblingClawix });
   } else if (fs.existsSync(path.join(resolved, "docs", "decision-map.md"))) {
     candidates.push({ repo: inferRepoName(resolved), rootDir: resolved });
-    const siblingClawjs = path.resolve(resolved, "../../../clawjs");
+    const siblingClawjs = path.resolve(resolved, "../../clawjs");
     if (fs.existsSync(path.join(siblingClawjs, "packages", "clawjs-core"))) candidates.unshift({ repo: "clawjs", rootDir: siblingClawjs });
   } else {
     candidates.push({ repo: inferRepoName(resolved), rootDir: resolved });
@@ -414,9 +414,10 @@ function addEntry(state: MutableDebtLedger, repository: ClawDebtLedgerRepository
     risk: compact(input.risk),
     fingerprint: fingerprintEntry(repository.repo, input),
   };
-  if (entry.privacy !== "public" && containsPrivatePath(`${entry.summary}\n${entry.risk}\n${entry.canonicalSource}`)) {
+  if (containsPrivatePath(`${entry.summary}\n${entry.risk}\n${entry.canonicalSource}`)) {
     entry.summary = redactPrivatePaths(entry.summary);
     entry.risk = redactPrivatePaths(entry.risk);
+    if (entry.privacy === "public") entry.privacy = "public_redacted";
   }
   state.entries.push(clawDebtLedgerEntrySchema.parse(entry));
 }
