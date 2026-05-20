@@ -24,6 +24,24 @@ import {
   runCliCapture,
 } from "./inspect-cli-test-support.ts";
 
+const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+
+function assertCompleteResolvedSurfaces(
+  capabilities: Array<{ id: string; surfaces: Array<{ surface: string; status: string; ref?: string }> }>,
+): void {
+  for (const capability of capabilities) {
+    assert.deepEqual(capability.surfaces.map((surface) => surface.surface), CANONICAL_CAPABILITY_SURFACES, capability.id);
+    for (const surface of capability.surfaces) {
+      assert.notEqual(surface.status, "pending", `${capability.id}:${surface.surface}`);
+      if (surface.status === "available") {
+        assert.equal(Boolean(surface.ref), true, `${capability.id}:${surface.surface}`);
+      } else {
+        assert.equal(surface.ref, undefined, `${capability.id}:${surface.surface}`);
+      }
+    }
+  }
+}
+
 test("runCli exposes the generated stable surface inspection CLI", async () => {
   const allHelp = await runCliCapture(["--help", "--all"], process.cwd());
   assert.equal(allHelp.code, CLI_EXIT_OK);
@@ -188,6 +206,7 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
   assert.equal(payload.schemaRefs.includes("claw.mac.actionRequest.v1"), true);
   assert.equal(payload.schemaRefs.includes("claw.customApp.request.partial.v1"), true);
   assert.equal(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"), true);
+  assertCompleteResolvedSurfaces(payload.capabilities);
 
   const search = payload.capabilities.find((capability) => capability.id === "search.query");
   const db = payload.capabilities.find((capability) => capability.id === "db.query");

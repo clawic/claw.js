@@ -101,6 +101,24 @@ const remoteHttpSmokePayloads: Record<string, Record<string, unknown>> = {
   },
 };
 
+const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+
+function assertCompleteResolvedSurfaces(
+  capabilities: Array<{ id: string; surfaces: Array<{ surface: string; status: string; ref?: string }> }>,
+): void {
+  for (const capability of capabilities) {
+    assert.deepEqual(capability.surfaces.map((surface) => surface.surface), CANONICAL_CAPABILITY_SURFACES, capability.id);
+    for (const surface of capability.surfaces) {
+      assert.notEqual(surface.status, "pending", `${capability.id}:${surface.surface}`);
+      if (surface.status === "available") {
+        assert.equal(Boolean(surface.ref), true, `${capability.id}:${surface.surface}`);
+      } else {
+        assert.equal(surface.ref, undefined, `${capability.id}:${surface.surface}`);
+      }
+    }
+  }
+}
+
 test("relay exposes custom app SDK dispatch metadata as remote-safe contract projection", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-custom-app-sdk-"));
   const built = await buildRelayApp({
@@ -126,7 +144,11 @@ test("relay exposes custom app SDK dispatch metadata as remote-safe contract pro
         nonExecutableSurfaces: string[];
         dbSearchExecution: string;
       };
-      capabilities: Array<{ id: string; dispatch?: { status: string; mode: string; externalValidation?: string } }>;
+      capabilities: Array<{
+        id: string;
+        dispatch?: { status: string; mode: string; externalValidation?: string };
+        surfaces: Array<{ surface: string; status: string; ref?: string }>;
+      }>;
     };
 
     assert.equal(payload.relayRole, "remote_safe_contract_projection");
@@ -140,6 +162,7 @@ test("relay exposes custom app SDK dispatch metadata as remote-safe contract pro
     assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("relay.remote.custom_app_sdk"), true);
     assert.equal(payload.executionBoundary.dbSearchExecution, "host_bridge_only");
     assert.deepEqual(payload.missingSchemaRefs, []);
+    assertCompleteResolvedSurfaces(payload.capabilities);
 
     const byId = new Map(payload.capabilities.map((capability) => [capability.id, capability]));
     assert.equal(byId.get("search.query")?.dispatch?.mode, "localWideRead");

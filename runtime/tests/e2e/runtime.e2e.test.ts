@@ -12,6 +12,23 @@ import { SessionsApiClient, buildSessionsApp } from "@clawjs/sessions";
 import { UserModelApiClient, buildUserModelApp } from "@clawjs/user-model";
 
 const SECRET = "runtime-e2e-secret";
+const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+
+function assertCompleteResolvedSurfaces(
+  capabilities: Array<{ id: string; surfaces: Array<{ surface: string; status: string; ref?: string }> }>,
+): void {
+  for (const capability of capabilities) {
+    assert.deepEqual(capability.surfaces.map((surface) => surface.surface), CANONICAL_CAPABILITY_SURFACES, capability.id);
+    for (const surface of capability.surfaces) {
+      assert.notEqual(surface.status, "pending", `${capability.id}:${surface.surface}`);
+      if (surface.status === "available") {
+        assert.equal(Boolean(surface.ref), true, `${capability.id}:${surface.surface}`);
+      } else {
+        assert.equal(surface.ref, undefined, `${capability.id}:${surface.surface}`);
+      }
+    }
+  }
+}
 
 function injectFetch(app: FastifyInstance): typeof fetch {
   return async (input, init) => {
@@ -201,7 +218,12 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
       schemaRefs: string[];
       missingSchemaRefs: string[];
       riskMap: { ordinaryAccess: string[]; approvalRequired: string[] };
-      capabilities: Array<{ id: string; inputSchemaRef?: string; dispatch?: { mode: string; status: string } }>;
+      capabilities: Array<{
+        id: string;
+        inputSchemaRef?: string;
+        dispatch?: { mode: string; status: string };
+        surfaces: Array<{ surface: string; status: string; ref?: string }>;
+      }>;
     };
     assert.equal(payload.serviceApiRole, "inspection_validation_contract_resource");
     assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_service_api_process");
@@ -214,6 +236,7 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
     assert.ok(payload.schemaRefs.includes("claw.resources.payload.v1"));
     assert.ok(payload.riskMap.ordinaryAccess.includes("search.query"));
     assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
+    assertCompleteResolvedSurfaces(payload.capabilities);
     assert.equal(
       payload.capabilities.find((capability) => capability.id === "db.query")?.inputSchemaRef,
       "claw.db.query.v1",
