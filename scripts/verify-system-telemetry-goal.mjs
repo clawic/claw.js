@@ -264,7 +264,10 @@ function assertDecisionMatrix() {
     "| D09 | Do not mention third-party monitoring product names",
     "| D10 | Pin the goal to the conversation id, plan id, source review",
     "| D11 | Do not close the goal until everything is implemented",
+    "docs/system-telemetry-external-validation.manifest.json",
+    "external validation manifest",
     "`SYS-TEL-EXT-001`, `SYS-TEL-EXT-002`, or `SYS-TEL-EXT-003` remain",
+    "structured external-validation manifest",
     "The private source session has not been re-read",
     "The forbidden-name scan has not been repeated",
   ]) {
