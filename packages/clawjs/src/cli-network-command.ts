@@ -181,7 +181,7 @@ function upsertRule(state: NetworkControlState, flags: Record<string, string>, i
       protocol: flags.protocol ?? existing?.endpoint?.protocol ?? "unknown",
       ...(flags.port ? { port: Number(flags.port) } : existing?.endpoint?.port ? { port: existing.endpoint.port } : {}),
     },
-    networkPolicyProfileId: flags["network-policy-profile"] ?? existing?.networkPolicyProfileId ?? "default",
+    networkPolicyProfileId: flags["network-policy"] ?? existing?.networkPolicyProfileId ?? "default",
     priority: flags.priority === undefined ? existing?.priority ?? 0 : Number(flags.priority),
     enabled: parseBoolean(flags.enabled, existing?.enabled ?? true),
     lifetime: flags.lifetime ?? existing?.lifetime ?? "permanent",

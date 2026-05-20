@@ -8483,7 +8483,7 @@
     {
       "name": "network",
       "kind": "canonical",
-      "usage": "network status|events|rules|profiles|lists|manifests|routes|adapters|suggestions|explain|doctor",
+      "usage": "network status|events|rules|policy-profiles|lists|manifests|routes|adapters|suggestions|explain|doctor",
       "family": "network",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.network.v1"

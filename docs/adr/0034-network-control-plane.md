@@ -13,7 +13,7 @@ policy model instead of separate firewall, VPN, provider, and Gateway decisions.
 ## Decision
 
 ClawJS owns a reusable Network Control Plane. The framework defines subjects,
-endpoints, rules, events, profiles, manifests, adapters, evaluation, redaction,
+endpoints, rules, events, policy profiles, manifests, adapters, evaluation, redaction,
 and Gateway route enforcement semantics. Clawix and other hosts project that
 model into native UI and signed-host adapters.
 
@@ -22,7 +22,7 @@ model into native UI and signed-host adapters.
 surfaces and consume or explain the shared policy model where relevant.
 
 Monitor remains the high-churn store for network events and rollups. Core
-framework state such as rules, profiles, manifests, and adapter declarations
+framework state such as rules, policy profiles, manifests, and adapter declarations
 must not create a parallel time-series database.
 
 Privacy defaults to aggregate redaction. Process and domain detail require an
