@@ -90,6 +90,10 @@ for user-authored custom UIs that do not block the main app shell.
   declared capability checks, dispatcher policy, and high-risk audit receipts;
   live provider or physical-device validation remains external pending until
   explicitly approved.
+- Sibling Clawix exposes `actions.invoke` and `secrets.broker` through
+  `window.clawix.actions.invoke()` and `window.clawix.secrets.broker()` as
+  approval-gated host bridge calls that fail closed with explicit no-runner and
+  no-plaintext-broker dispatch reasons until safe runners exist.
 - Sibling Clawix validates imported/marketplace packages through host-local
   `app-package-trust-roots.json`, records signature key/trust-source
   provenance, and still requires the activation ficha before running them.
