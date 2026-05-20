@@ -260,6 +260,13 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
   const payload = parseCliJson<{
     cliRole: string;
     richUiRuntime: string;
+    executionBoundary: {
+      kind: string;
+      executesCapabilityCalls: boolean;
+      richUiExecutionPath: string;
+      nonExecutableSurfaces: string[];
+      dbSearchExecution: string;
+    };
     riskMap: { authorityModel: string; ordinaryAccess: string[]; approvalRequired: string[] };
     schemaRefs: string[];
     referencedSchemaRefs: string[];
@@ -277,6 +284,11 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
 
   assert.equal(payload.cliRole, "inspection_validation_fallback_json");
   assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_cli_process");
+  assert.equal(payload.executionBoundary.kind, "metadata_only_contract_catalog");
+  assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
+  assert.equal(payload.executionBoundary.richUiExecutionPath, "sdk_host_bridge");
+  assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("cli.inspect"), true);
+  assert.equal(payload.executionBoundary.dbSearchExecution, "host_bridge_only");
   assert.equal(payload.riskMap.authorityModel, "localWideReadsHighRiskApproval");
   assert.deepEqual(payload.missingSchemaRefs, []);
   assert.equal(payload.schemaRefs.includes("claw.search.query.v1"), true);

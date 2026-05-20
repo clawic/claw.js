@@ -2858,6 +2858,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-sdk-first-custom-surfaces-goal",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-sdk-first-custom-surfaces-goal",
+        "Verify Sdk First Custom Surfaces Goal"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-sdk-first-custom-surfaces-goal",
+          "expectPath": "scripts/verify-sdk-first-custom-surfaces-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-search-v1-1-goal",
       "kind": "guardrail",
       "owner": "claw",
@@ -3112,6 +3137,30 @@
       "guard": "scripts/open-source-canonicity-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "sdk-first-custom-surfaces-completion-audit",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/sdk-first-custom-surfaces-completion-audit.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces completion audit",
+        "custom app SDK completion audit gate",
+        "SDK-first custom surfaces closure blockers"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces completion audit",
+          "expectPath": "docs/sdk-first-custom-surfaces-completion-audit.md"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
     },
     {
       "id": "system-telemetry-decision-matrix",

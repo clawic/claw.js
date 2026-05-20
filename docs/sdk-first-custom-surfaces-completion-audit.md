@@ -1,0 +1,49 @@
+# SDK-first custom surfaces completion audit
+
+Source conversation: `019e403c-3837-7f02-9b78-532c43cdd997`
+
+Status: `active_goal_not_complete`
+
+This public audit is the ClawJS-safe closure gate for the SDK-first custom
+surfaces and nonblocking shell goal. The private source session path is
+intentionally not published here. Before the private goal can close, every row
+must be verified against the current ClawJS and Clawix trees, and any remaining
+external or private-audit row must have either approved evidence or a later
+explicit user decision accepting the blocker. When a sibling Clawix checkout is
+available, `scripts/verify-sdk-first-custom-surfaces-goal.mjs` also inspects
+the host bridge, protected-route, variant, Swift surface, and shell isolation
+evidence in that checkout.
+
+## Current Rows
+
+| ID | Requirement | Current public evidence | Remaining closure gate | Status |
+| --- | --- | --- | --- | --- |
+| CLJ-SDK-001 | ADR, plan, decision-map, and discoverability routing for SDK-first custom surfaces. | ADR 0032, `docs/sdk-first-custom-surfaces-plan.md`, decision-map, discoverability registry, and this audit route the framework contract and `executionBoundary`. | Keep routing current with implementation changes. | VALIDATED LOCAL |
+| CLJ-SDK-002 | Shared capability catalog and SDK facade expose custom-app capability metadata and risk. | `packages/clawjs-core/src/capability-catalog.ts`, `packages/clawjs-node/src/create-claw.test.ts`, and core tests expose capability IDs, risk maps, SDK source, high-risk classifications, and explicit gaps. | Future executable capability routes still need schema validation, policy, audit, and tests before being marked complete. | PARTIAL LOCAL |
+| CLJ-SDK-003 | Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/Relay and declares those surfaces metadata-only. | `packages/clawjs-core/src/custom-app-sdk-inspection.ts`, inspect CLI tests, Runtime E2E tests, MCP tests, and Relay tests expose `metadata_only_contract_catalog`, `executesCapabilityCalls: false`, and `sdk_host_bridge`. | Keep new contract projections non-executable unless a later ADR explicitly changes the boundary. | VALIDATED LOCAL |
+| CLJ-SDK-004 | Ordinary local reads/list/search/filter/composition use SDK/resource/search/DB contracts, not direct SQLite or schema creation. | Custom-app Search/DB/resource schemas validate read paths, collection IDs reject SQLite internals and path escapes, and Runtime POST execution to `contracts/custom-app-sdk` returns 404. | Any future custom collection/schema creation needs an explicit decision or approval model. | VALIDATED LOCAL |
+| CLJ-SDK-005 | High-risk actions stay brokered: secrets, native permissions, physical/IoT, external/cost, destructive, and regulated actions do not gain plaintext or unapproved execution. | Capability catalog and custom-app contract schemas expose approval-required dispatch modes, no plaintext secret broker, Mac plan-only contracts, and IoT external-pending dispatch metadata. | Signed-host native execution and live IoT/provider actions remain externally pending until approved receipts and same-machine evidence exist. | EXTERNAL PENDING |
+| CLJ-SDK-006 | Service API, MCP, and Relay custom-app routes remain contract projections and do not execute Search/DB/action calls. | Runtime, MCP, and Relay tests cover `clawjs.custom_app_sdk`, `/v1/contracts/custom-app-sdk`, and `/v1/remote/custom-app-sdk` as read-only metadata projections. | Any future remote execution lane needs a separate contract, policy, audit, and tests. | VALIDATED LOCAL |
+| CLJ-SDK-007 | Clawix consumes the shared framework contract through a host bridge rather than forking execution semantics. | Sibling Clawix tests, when present, verify `clawix.capabilities.contracts()`, `window.clawix`, host bridge execution, protected routes, variants, and Swift surface isolation. | Keep Clawix integration evidence current; absent sibling checkout makes this row partial until checked separately. | PARTIAL LOCAL |
+| CLJ-SDK-008 | Shells and hosts remain modular and nonblocking when custom surfaces, Search, DB, connectors, providers, or Swift/Web app hosts fail or load. | Clawix has synthetic route supervisor and shell fast-path tests; the framework ADR requires isolated failure domains and bounded/cancelable work. | Real signed-app UI/Instruments captures for launch, sidebar, chat, rescue, and delayed heavy surfaces remain required. | EXTERNAL PENDING |
+| CLJ-SDK-009 | Unanswered `data_access_lock`, `custom_collections`, and `cli_escape_hatch` prompts are not treated as approvals. | Framework schemas and routes reject direct SQL, DDL/schema creation, SQLite internals, path-like collections, and contract-route POST execution. | Any future loosening requires an explicit user decision and matching policy/tests. | VALIDATED LOCAL |
+| CLJ-SDK-010 | Final decision-by-decision source-session audit before `update_goal`. | This audit, the private decision-verification ledger, and the public verifier preserve the closure gate. | Re-read the private source session one by one, refresh evidence, and verify every decision row before calling `update_goal`. | PRIVATE AUDIT PENDING |
+
+## Closure Rule
+
+The goal is not complete while any of these are true:
+
+- Any row above is `PARTIAL LOCAL`, `EXTERNAL PENDING`, or
+  `PRIVATE AUDIT PENDING`.
+- Real signed-app UI/Instruments performance evidence is missing.
+- Signed-host native execution, live IoT/provider, or marketplace trust
+  validation lacks explicit approval, receipts, audit, and same-machine
+  evidence.
+- The private source session has not been re-read one decision at a time
+  against the current tree.
+- The ClawJS verifier or sibling Clawix validation referenced by this audit
+  fails.
+
+Do not call `update_goal` for this goal until every row is either
+`VALIDATED LOCAL` with current evidence or explicitly accepted by a later user
+decision.
