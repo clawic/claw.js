@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T20:49:04.830Z",
+  "generatedAt": "CURRENT",
   "sources": {
     "surfaces": "packages/clawjs-core/src/surface-registry.ts",
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 918,
+    "surfaces": 960,
     "cliCommands": 161
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:ce57b723",
-    "cliCommands": "fnv1a32:4ef8dcd6",
-    "combined": "fnv1a32:955df73d"
+    "surfaces": "fnv1a32:a99aedb4",
+    "cliCommands": "fnv1a32:9f223665",
+    "combined": "fnv1a32:d8123721"
   },
   "surfaces": [
     {
@@ -2842,6 +2842,18 @@
       "parentId": "claw.database.core"
     },
     {
+      "id": "claw.database.core.table.search_source_config",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.core"
+    },
+    {
+      "id": "claw.database.core.table.search_source_config.index.search_source_config_state_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.core.table.search_source_config"
+    },
+    {
       "id": "claw.database.core.table.workspace_meta",
       "owner": "claw",
       "kind": "table",
@@ -2916,6 +2928,36 @@
       "path": "~/.claw/data/monitor.sqlite"
     },
     {
+      "id": "claw.database.monitor.index.idx_metric_incidents_key_time",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.monitor"
+    },
+    {
+      "id": "claw.database.monitor.index.idx_metric_rollups_key_bucket",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.monitor"
+    },
+    {
+      "id": "claw.database.monitor.index.idx_metric_samples_key_time",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.monitor"
+    },
+    {
+      "id": "claw.database.monitor.index.idx_network_events_decision",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.monitor"
+    },
+    {
+      "id": "claw.database.monitor.index.idx_network_events_observed",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.monitor"
+    },
+    {
       "id": "claw.database.monitor.table.metric_incidents",
       "owner": "claw",
       "kind": "table",
@@ -2940,6 +2982,18 @@
       "parentId": "claw.database.monitor"
     },
     {
+      "id": "claw.database.monitor.table.network_events",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.monitor"
+    },
+    {
+      "id": "claw.database.monitor.table.network_rollups",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.monitor"
+    },
+    {
       "id": "claw.database.notify",
       "owner": "claw",
       "kind": "sidecar",
@@ -2959,6 +3013,204 @@
       "kind": "sidecar",
       "parentId": "claw.global",
       "path": "~/.claw/data/search.sqlite"
+    },
+    {
+      "id": "claw.database.search.index.search_audit_events_actor_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_audit_events_type_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_cursors_source_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_documents_domain_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_documents_resource_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_documents_shard_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_documents_source_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_fragments_document_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_fts_partitions_domain_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_index_jobs_claim_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_index_jobs_source_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_interactions_context_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_interactions_document_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_monitors_saved_search_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_shards_domain_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_sources_domain_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.index.search_tombstones_source_idx",
+      "owner": "claw",
+      "kind": "index",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.saved_searches",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_actions",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_audit_events",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_cursors",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_documents",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_fragments",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_fts_partitions",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_index_jobs",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_interactions",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_monitors",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_profiles",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_ranking_cache",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_shards",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_sources",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_tombstones",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
+    },
+    {
+      "id": "claw.database.search.table.search_vectors",
+      "owner": "claw",
+      "kind": "table",
+      "parentId": "claw.database.search"
     },
     {
       "id": "claw.database.sessions",
@@ -8267,7 +8519,7 @@
     {
       "name": "host",
       "kind": "canonical",
-      "usage": "host list|register|use|status|doctor|domains",
+      "usage": "host list|register|use|status|doctor|domains|app-state",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.host.v1"
     },
@@ -8376,7 +8628,7 @@
       "name": "life",
       "kind": "alias",
       "target": "signals",
-      "usage": "life catalog|seed-catalog|observe|list|delete",
+      "usage": "life registry|catalog|seed-catalog|observe|list|delete",
       "family": "signals",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.life.v1"
@@ -8791,7 +9043,7 @@
     {
       "name": "signals",
       "kind": "canonical",
-      "usage": "signals catalog|seed-catalog|observe|list|delete",
+      "usage": "signals registry|catalog|seed-catalog|observe|list|delete",
       "family": "signals",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.signals.v1"
