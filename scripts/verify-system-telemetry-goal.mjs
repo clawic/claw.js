@@ -179,6 +179,8 @@ function assertExternalPendingLedger() {
     "Accepted external",
     "`docs/system-telemetry-external-evidence.schema.json`",
     "`docs/system-telemetry-external-validation.manifest.schema.json`",
+    "`docs/system-telemetry-external-validation.manifest.fixtures.json`",
+    "accidental completion or lane-clear mutations fail validation",
     "`node scripts/validate-system-telemetry-external-evidence.mjs <packet.json>`",
     "before any row is updated",
     "public-safe rows, the completion audit binds each goal requirement",
@@ -294,6 +296,13 @@ function assertExternalValidationManifest() {
   assert(manifest.externalEvidencePacketValidator?.fixtureCommand === "node scripts/validate-system-telemetry-external-evidence.mjs --fixtures", "external validation manifest: wrong external evidence validator fixture command");
   assert(manifest.externalEvidencePacketValidator?.packetCommand === "node scripts/validate-system-telemetry-external-evidence.mjs <packet.json>", "external validation manifest: wrong external evidence validator packet command");
   assert(manifest.externalEvidencePacketValidator?.closureRole?.includes("validates any future redacted evidence packet"), "external validation manifest: external evidence validator closure role must be explicit");
+  assert(manifest.externalValidationManifestFixtures?.required === true, "external validation manifest: manifest fixtures link must be required");
+  assert(manifest.externalValidationManifestFixtures?.artifactId === "system-telemetry-external-validation-manifest-fixtures", "external validation manifest: wrong manifest fixtures artifact");
+  assert(manifest.externalValidationManifestFixtures?.path === "docs/system-telemetry-external-validation.manifest.fixtures.json", "external validation manifest: wrong manifest fixtures path");
+  assert(manifest.externalValidationManifestFixtures?.status === "synthetic_templates_not_evidence", "external validation manifest: manifest fixtures must be synthetic");
+  assert(manifest.externalValidationManifestFixtures?.validTemplateCount === 1, "external validation manifest: wrong manifest valid fixture count");
+  assert(manifest.externalValidationManifestFixtures?.invalidMutationCount === 4, "external validation manifest: wrong manifest invalid mutation count");
+  assert(manifest.externalValidationManifestFixtures?.closureRole?.includes("rejects accidental completion"), "external validation manifest: manifest fixtures closure role must be explicit");
   assert(Array.isArray(manifest.rows), "external validation manifest: rows must be an array");
 
   const rows = new Map(manifest.rows.map((row) => [row.id, row]));
@@ -335,6 +344,7 @@ function assertExternalValidationManifestSchema() {
     "VALIDATED LOCAL",
     "EXTERNAL PENDING",
     "scripts/validate-system-telemetry-external-evidence.mjs",
+    "docs/system-telemetry-external-validation.manifest.fixtures.json",
   ]) {
     assert(serialized.includes(snippet), `external validation manifest schema: missing ${snippet}`);
   }
@@ -342,6 +352,49 @@ function assertExternalValidationManifestSchema() {
   const validate = ajv.compile(schema);
   assert(validate(manifest), `external validation manifest schema: manifest must validate: ${ajv.errorsText(validate.errors)}`);
   assert(!serialized.includes("/Users/"), "external validation manifest schema: must not publish private filesystem paths");
+}
+
+function assertExternalValidationManifestFixtures() {
+  const fixtures = readJson("docs/system-telemetry-external-validation.manifest.fixtures.json");
+  const schema = readJson("docs/system-telemetry-external-validation.manifest.schema.json");
+  const manifest = readJson("docs/system-telemetry-external-validation.manifest.json");
+  assert(fixtures.schemaVersion === 1, "external validation manifest fixtures: schemaVersion must be 1");
+  assert(fixtures.artifactId === "system-telemetry-external-validation-manifest-fixtures", "external validation manifest fixtures: wrong artifact id");
+  assert(fixtures.status === "synthetic_templates_not_evidence", "external validation manifest fixtures: must be synthetic templates only");
+  assert(fixtures.conversationId === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external validation manifest fixtures: wrong conversation id");
+  assert(fixtures.planId === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external validation manifest fixtures: wrong plan id");
+  assert(fixtures.schemaPath === "docs/system-telemetry-external-validation.manifest.schema.json", "external validation manifest fixtures: wrong schema path");
+  assert(fixtures.manifestPath === "docs/system-telemetry-external-validation.manifest.json", "external validation manifest fixtures: wrong manifest path");
+  assert(Array.isArray(fixtures.validSyntheticManifests) && fixtures.validSyntheticManifests.length === 1, "external validation manifest fixtures: must contain 1 valid manifest reference");
+  assert(Array.isArray(fixtures.invalidSyntheticMutations) && fixtures.invalidSyntheticMutations.length === 4, "external validation manifest fixtures: must contain 4 invalid mutations");
+  const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
+  const validate = ajv.compile(schema);
+  assert(validate(manifest), `external validation manifest fixtures: current manifest must validate: ${ajv.errorsText(validate.errors)}`);
+  for (const fixture of fixtures.invalidSyntheticMutations) {
+    const mutated = JSON.parse(JSON.stringify(manifest));
+    switch (fixture.mutation) {
+      case "set_manifest_status_complete":
+        mutated.status = "complete";
+        break;
+      case "set_external_pending_rows_zero":
+        mutated.completionAudit.statusSummary.externalPendingRows = 0;
+        break;
+      case "mark_first_external_lane_validated_local": {
+        const row = mutated.rows.find((candidate) => candidate.id === "SYS-TEL-EXT-001");
+        row.status = "VALIDATED LOCAL";
+        row.blockingPrerequisites = [];
+        break;
+      }
+      case "delete_external_evidence_packet_validator":
+        delete mutated.externalEvidencePacketValidator;
+        break;
+      default:
+        fail(`external validation manifest fixtures: unknown mutation ${fixture.mutation}`);
+    }
+    assert(!validate(mutated), `external validation manifest fixtures: invalid mutation ${fixture.id} must fail validation`);
+    assert(typeof fixture.reason === "string" && fixture.reason.length > 0, `external validation manifest fixtures: mutation ${fixture.id} must document reason`);
+  }
+  assert(!JSON.stringify(fixtures).includes("/Users/"), "external validation manifest fixtures: must not publish private filesystem paths");
 }
 
 function assertExternalValidationRunbook() {
@@ -359,6 +412,8 @@ function assertExternalValidationRunbook() {
     "lane-closing record",
     "`docs/system-telemetry-external-validation.manifest.schema.json`",
     "lane status update",
+    "`docs/system-telemetry-external-validation.manifest.fixtures.json`",
+    "schema validation templates only",
     "`node scripts/validate-system-telemetry-external-evidence.mjs <packet.json>`",
     "before updating any ledger, manifest, completion audit, or source Q/A review",
     "`docs/system-telemetry-external-evidence.fixtures.json`",
@@ -638,6 +693,8 @@ function assertDecisionMatrix() {
     "docs/system-telemetry-external-validation.manifest.json",
     "docs/system-telemetry-external-validation.manifest.schema.json",
     "manifest schema",
+    "docs/system-telemetry-external-validation.manifest.fixtures.json",
+    "manifest fixtures",
     "external validation manifest",
     "docs/system-telemetry-source-qa-review.json",
     "source Q/A review",
@@ -705,6 +762,7 @@ function assertDocsAndRegistry() {
       "scripts/validate-system-telemetry-external-evidence.mjs",
       "docs/system-telemetry-external-validation.manifest.json",
       "docs/system-telemetry-external-validation.manifest.schema.json",
+      "docs/system-telemetry-external-validation.manifest.fixtures.json",
       "docs/system-telemetry-source-qa-review.json",
       "npm run test:system-telemetry-goal",
     ]],
@@ -724,6 +782,9 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-external-validation-manifest-schema\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-validation.manifest.schema.json\"",
       "\"query\": \"system telemetry external validation manifest schema\"",
+      "\"id\": \"system-telemetry-external-validation-manifest-fixtures\"",
+      "\"canonicalSource\": \"docs/system-telemetry-external-validation.manifest.fixtures.json\"",
+      "\"query\": \"system telemetry external validation manifest fixtures\"",
       "\"id\": \"system-telemetry-external-validation-runbook\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-validation-runbook.md\"",
       "\"query\": \"system telemetry external validation runbook\"",
@@ -748,6 +809,8 @@ function assertDocsAndRegistry() {
       "[docs/system-telemetry-external-validation.manifest.json](/system-telemetry-external-validation.manifest.json)",
       "`system-telemetry-external-validation-manifest-schema`",
       "[docs/system-telemetry-external-validation.manifest.schema.json](/system-telemetry-external-validation.manifest.schema.json)",
+      "`system-telemetry-external-validation-manifest-fixtures`",
+      "[docs/system-telemetry-external-validation.manifest.fixtures.json](/system-telemetry-external-validation.manifest.fixtures.json)",
       "`system-telemetry-external-validation-runbook`",
       "[docs/system-telemetry-external-validation-runbook.md](/system-telemetry-external-validation-runbook)",
       "`system-telemetry-external-evidence-schema`",
@@ -1304,6 +1367,7 @@ function main() {
   assertExternalPendingLedger();
   assertExternalValidationManifest();
   assertExternalValidationManifestSchema();
+  assertExternalValidationManifestFixtures();
   assertExternalValidationRunbook();
   assertExternalEvidenceSchema();
   assertExternalEvidenceFixtures();
