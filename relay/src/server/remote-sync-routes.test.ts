@@ -709,13 +709,17 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     const classifications = await built.app.inject({ method: "GET", url: "/v1/remote/classifications" });
     assert.equal(classifications.statusCode, 200);
     const classificationPayload = classifications.json() as { classifications: Array<{ id: string; relay: string }> };
-    assert.equal(classificationPayload.classifications.length, 57);
+    const expectedClassifications = expectedRelayClassifications();
+    assert.equal(classificationPayload.classifications.length, expectedClassifications.length);
     assert.deepEqual(
       classificationPayload.classifications.map((entry) => ({ id: entry.id, relay: entry.relay })),
-      expectedRelayClassifications(),
+      expectedClassifications,
     );
     assert.equal(classificationPayload.classifications.some((entry) => entry.relay === "pending" || entry.relay === "blocked"), false);
-    assert.equal(classificationPayload.classifications.filter((entry) => entry.relay === "remote-safe").length, 19);
+    assert.equal(
+      classificationPayload.classifications.filter((entry) => entry.relay === "remote-safe").length,
+      expectedClassifications.filter((entry) => entry.relay === "remote-safe").length,
+    );
 
     const classificationReceipt = await built.app.inject({
       method: "POST",
