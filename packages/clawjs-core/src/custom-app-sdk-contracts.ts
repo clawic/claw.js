@@ -20,6 +20,14 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
   systemTelemetrySnapshot: "claw.system.telemetry.snapshot.v1",
   systemTelemetryHistoryRequest: "claw.system.telemetry.history.request.v1",
   systemTelemetryHistory: "claw.system.telemetry.history.v1",
+  systemTelemetryMetricsRequest: "claw.system.telemetry.metrics.request.v1",
+  systemTelemetryMetrics: "claw.system.telemetry.metrics.v1",
+  systemTelemetryWidgetsRequest: "claw.system.telemetry.widgets.request.v1",
+  systemTelemetryWidgets: "claw.system.telemetry.widgets.v1",
+  systemTelemetryProvidersRequest: "claw.system.telemetry.providers.request.v1",
+  systemTelemetryProviders: "claw.system.telemetry.providers.v1",
+  systemTelemetryControlPlanRequest: "claw.system.telemetry.controlPlan.request.v1",
+  systemTelemetryControlPlan: "claw.system.telemetry.controlPlan.v1",
   jobsList: "claw.jobs.list.v1",
   jobsListResult: "claw.jobs.listResult.v1",
   jobsGet: "claw.jobs.get.v1",
@@ -268,6 +276,113 @@ export const customAppSDKSystemTelemetryHistorySchema = z.object({
   redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
 }).strict();
 
+const systemTelemetryMetricDefinitionSchema = z.object({
+  key: z.string().min(1),
+  family: z.string().min(1),
+  label: z.string().min(1),
+  unit: systemTelemetryUnitSchema,
+  privacyTier: z.string().min(1),
+  sourceConfidence: systemTelemetrySourceConfidenceSchema,
+  samplingCost: z.enum(["low", "medium", "high"]),
+  support: z.array(z.enum(["snapshot", "stream", "history"])),
+  availability: systemTelemetryAvailabilitySchema,
+  requiresGrant: z.string().min(1).optional(),
+  description: z.string().min(1),
+}).strict();
+
+export const customAppSDKSystemTelemetryMetricsRequestSchema = z.object({
+  family: z.string().min(1).optional(),
+  includeUnavailable: z.boolean().default(true),
+}).strict();
+
+export const customAppSDKSystemTelemetryMetricsSchema = z.object({
+  metrics: z.array(systemTelemetryMetricDefinitionSchema),
+  source: z.literal("system.telemetry.metrics"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+const systemTelemetryWidgetDefinitionSchema = z.object({
+  id: z.string().min(1),
+  metricKey: z.string().min(1),
+  title: z.string().min(1),
+  presentation: z.enum(["text", "icon", "gauge", "sparkline", "threshold", "dropdown"]),
+  placement: z.enum(["menubar", "combined_panel", "both"]),
+  enabledByDefault: z.boolean(),
+}).strict();
+
+export const customAppSDKSystemTelemetryWidgetsRequestSchema = z.object({
+  placement: z.enum(["menubar", "combined_panel", "both"]).optional(),
+  includeDisabled: z.boolean().default(true),
+}).strict();
+
+export const customAppSDKSystemTelemetryWidgetsSchema = z.object({
+  widgets: z.array(systemTelemetryWidgetDefinitionSchema),
+  source: z.literal("system.telemetry.widgets"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+const systemTelemetryProviderSchema = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  label: z.string().min(1),
+  mode: z.enum(["mock", "offline", "live"]),
+  status: z.enum(["ready", "disabled", "external_pending"]),
+  metricKeys: z.array(z.string().min(1)),
+  widgetIds: z.array(z.string().min(1)),
+  capabilities: z.array(z.enum(["snapshot", "stream", "history"])),
+  defaultEnabled: z.boolean(),
+  privacyTier: z.string().min(1),
+  requiresGrant: z.string().min(1).optional(),
+  credentialRefRequired: z.boolean(),
+  freshnessMs: z.number().int().nonnegative(),
+  description: z.string().min(1),
+}).passthrough();
+
+export const customAppSDKSystemTelemetryProvidersRequestSchema = z.object({
+  includeExternalPending: z.boolean().default(true),
+  kind: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKSystemTelemetryProvidersSchema = z.object({
+  providers: z.array(systemTelemetryProviderSchema),
+  source: z.literal("system.telemetry.providers"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+export const customAppSDKSystemTelemetryControlPlanRequestSchema = z.object({
+  controlId: z.string().min(1),
+  target: z.string().min(1).nullable().optional(),
+  value: z.string().min(1).nullable().optional(),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKSystemTelemetryControlPlanSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().min(1),
+  status: z.literal("planned"),
+  willExecute: z.literal(false),
+  broker: z.object({
+    required: z.literal(true),
+    status: z.literal("external_pending"),
+    mode: z.literal("signed_host_plan_first"),
+    failClosed: z.literal(true),
+  }).strict(),
+  policy: z.object({
+    requiresConfirmation: z.boolean(),
+    requiredGrants: z.array(z.string().min(1)),
+    riskTier: z.string().min(1),
+    sensitiveDetailRedacted: z.literal(true),
+  }).passthrough(),
+  receipt: z.object({
+    required: z.literal(true),
+    status: z.literal("not_issued"),
+    auditEvent: z.string().min(1),
+  }).passthrough(),
+  externalPending: z.literal(true),
+  source: z.literal("system.telemetry.controlPlan").optional(),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID).optional(),
+}).passthrough();
+
 export const customAppSDKJobsListSchema = z.object({
   kind: z.string().min(1).optional(),
   status: z.string().min(1).optional(),
@@ -490,7 +605,20 @@ export const customAppSDKIoTActionResultSchema = z.object({
 }).passthrough();
 
 export const customAppSDKRequestPartialSchema = z.object({
-  source: z.enum(["search.query", "db.query", "resources.list", "resources.read", "system.telemetry.snapshot", "system.telemetry.history", "jobs.list", "jobs.get", "jobs.events"]),
+  source: z.enum([
+    "search.query",
+    "db.query",
+    "resources.list",
+    "resources.read",
+    "system.telemetry.snapshot",
+    "system.telemetry.history",
+    "system.telemetry.metrics",
+    "system.telemetry.widgets",
+    "system.telemetry.providers",
+    "jobs.list",
+    "jobs.get",
+    "jobs.events",
+  ]),
   collection: z.string().min(1).optional(),
   items: z.array(z.union([customAppSDKBridgeRecordSchema, resourceRecordSchema, customAppSDKJobRecordSchema, customAppSDKJobEntitySummarySchema, customAppSDKJobEventSchema])).optional(),
   resource: resourceRecordSchema.optional(),
@@ -515,6 +643,14 @@ export const customAppSDKSchemaRegistry = {
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot]: customAppSDKSystemTelemetrySnapshotSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistoryRequest]: customAppSDKSystemTelemetryHistoryRequestSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory]: customAppSDKSystemTelemetryHistorySchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryMetricsRequest]: customAppSDKSystemTelemetryMetricsRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryMetrics]: customAppSDKSystemTelemetryMetricsSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryWidgetsRequest]: customAppSDKSystemTelemetryWidgetsRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryWidgets]: customAppSDKSystemTelemetryWidgetsSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryProvidersRequest]: customAppSDKSystemTelemetryProvidersRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryProviders]: customAppSDKSystemTelemetryProvidersSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryControlPlanRequest]: customAppSDKSystemTelemetryControlPlanRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryControlPlan]: customAppSDKSystemTelemetryControlPlanSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.jobsList]: customAppSDKJobsListSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.jobsListResult]: customAppSDKJobsListResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.jobsGet]: customAppSDKJobsGetSchema,

@@ -34,8 +34,12 @@ const EXPECTED_CUSTOM_APP_CAPABILITY_IDS = [
   "resources.read",
   "search.query",
   "secrets.broker",
+  "system.telemetry.control.plan",
   "system.telemetry.history",
+  "system.telemetry.metrics",
+  "system.telemetry.providers",
   "system.telemetry.snapshot",
+  "system.telemetry.widgets",
 ];
 const EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS = [
   "db.query",
@@ -47,7 +51,10 @@ const EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS = [
   "resources.read",
   "search.query",
   "system.telemetry.history",
+  "system.telemetry.metrics",
+  "system.telemetry.providers",
   "system.telemetry.snapshot",
+  "system.telemetry.widgets",
 ];
 const EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS = [
   "actions.invoke",
@@ -56,6 +63,7 @@ const EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS = [
   "jobs.start",
   "mac.action.plan",
   "secrets.broker",
+  "system.telemetry.control.plan",
 ];
 const EXPECTED_CLI_BLOCKED_CAPABILITY_IDS = [
   "jobs.cancel",
@@ -89,8 +97,12 @@ const EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS = [
   "mac.action.plan",
   "resources.list",
   "resources.read",
+  "system.telemetry.control.plan",
   "system.telemetry.history",
+  "system.telemetry.metrics",
+  "system.telemetry.providers",
   "system.telemetry.snapshot",
+  "system.telemetry.widgets",
 ];
 const EXPECTED_LOCAL_WIDE_DISPATCH_CAPABILITY_IDS = EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS;
 const EXPECTED_APPROVAL_DISPATCH_CAPABILITY_IDS = [
@@ -98,7 +110,7 @@ const EXPECTED_APPROVAL_DISPATCH_CAPABILITY_IDS = [
   "jobs.cancel",
   "jobs.start",
 ];
-const EXPECTED_PLAN_ONLY_DISPATCH_CAPABILITY_IDS = ["mac.action.plan"];
+const EXPECTED_PLAN_ONLY_DISPATCH_CAPABILITY_IDS = ["mac.action.plan", "system.telemetry.control.plan"];
 const EXPECTED_NO_RUNNER_DISPATCH_CAPABILITY_IDS = ["actions.invoke"];
 const EXPECTED_NO_PLAINTEXT_BROKER_DISPATCH_CAPABILITY_IDS = ["secrets.broker"];
 const EXPECTED_EXTERNAL_PENDING_DISPATCH_CAPABILITY_IDS = ["iot.device.action.invoke"];
@@ -328,6 +340,10 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryMetrics));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryWidgets));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryProviders));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryControlPlan));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsList));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsListResult));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsGet));
@@ -348,6 +364,10 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.capabilities.some((capability) => capability.id === "resources.read"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.snapshot"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.history"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.metrics"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.widgets"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.providers"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.control.plan"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.list"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.get"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.events"));
@@ -383,6 +403,8 @@ test("custom-app SDK inspection payload exposes dispatch availability and gaps",
   assert.equal(byId.get("search.query")?.dispatch?.approvalRequired, false);
   assert.equal(byId.get("mac.action.plan")?.dispatch?.status, "available");
   assert.equal(byId.get("mac.action.plan")?.dispatch?.mode, "approvalRequiredPlanOnly");
+  assert.equal(byId.get("system.telemetry.control.plan")?.dispatch?.status, "available");
+  assert.equal(byId.get("system.telemetry.control.plan")?.dispatch?.mode, "approvalRequiredPlanOnly");
   assert.equal(byId.get("iot.device.action.invoke")?.dispatch?.mode, "approvalRequiredDispatch");
   assert.equal(byId.get("iot.device.action.invoke")?.dispatch?.externalValidation, "EXTERNAL PENDING");
   assert.equal(byId.get("actions.invoke")?.dispatch?.status, "unavailable");
@@ -734,6 +756,79 @@ test("custom-app SDK schemas validate read-only system telemetry contracts", () 
     chart: { kind: "line", source: "metric_samples", empty: false, points: [{ value: 2048 }] },
     render: { kind: "ascii_sparkline", source: "metric_samples", empty: false, line: "*" },
     source: "system.telemetry.history",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryMetrics)?.safeParse({
+    metrics: [{
+      key: "system.memory.used",
+      family: "memory",
+      label: "Memory used",
+      unit: "bytes",
+      privacyTier: "safe_aggregate",
+      sourceConfidence: "official",
+      samplingCost: "low",
+      support: ["snapshot", "history"],
+      availability: "available",
+      description: "Aggregate memory usage.",
+    }],
+    source: "system.telemetry.metrics",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryWidgets)?.safeParse({
+    widgets: [{
+      id: "memory-used",
+      metricKey: "system.memory.used",
+      title: "Memory",
+      presentation: "sparkline",
+      placement: "both",
+      enabledByDefault: true,
+    }],
+    source: "system.telemetry.widgets",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryProviders)?.safeParse({
+    providers: [{
+      id: "weather.offline",
+      kind: "weather",
+      label: "Offline weather",
+      mode: "offline",
+      status: "ready",
+      metricKeys: ["context.weather.temperature"],
+      widgetIds: ["weather-temperature"],
+      capabilities: ["snapshot", "history"],
+      defaultEnabled: true,
+      privacyTier: "precise_location",
+      credentialRefRequired: false,
+      freshnessMs: 900000,
+      description: "Offline context provider.",
+    }],
+    source: "system.telemetry.providers",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryControlPlan)?.safeParse({
+    schemaVersion: 1,
+    id: "control_plan_template",
+    status: "planned",
+    willExecute: false,
+    broker: {
+      required: true,
+      status: "external_pending",
+      mode: "signed_host_plan_first",
+      failClosed: true,
+    },
+    policy: {
+      requiresConfirmation: true,
+      requiredGrants: ["system.control.execute"],
+      riskTier: "critical",
+      sensitiveDetailRedacted: true,
+    },
+    receipt: {
+      required: true,
+      status: "not_issued",
+      auditEvent: "system.telemetry.control.plan",
+    },
+    externalPending: true,
+    source: "system.telemetry.controlPlan",
     redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
   }).success, true);
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial)?.safeParse({
