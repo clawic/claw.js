@@ -15,6 +15,7 @@ Maintain the decision map as an index, not a duplicate source of truth.
    use its `reads`, `checks`, `externalPending`, and `staleDocs` sections as
    the routing baseline.
 3. Update the canonical document first: Constitution, ADR, ownership doc, storage boundary, naming guide, catalog guide, or interface matrix.
+   Durable ADRs and governance changes must use the Decision Tension Rubric.
 4. Add or update the decision-map row with: decision, canonical document, and guardrail or validation.
 5. When the decision introduces durable meta-code, update
    `docs/discoverability.registry.json` so the canonical source is reachable

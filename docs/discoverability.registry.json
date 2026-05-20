@@ -1307,6 +1307,41 @@
       "canonicalName": "adr:network-control-plane"
     },
     {
+      "id": "adr-docs-adr-0035-decision-tension-rubric",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0035-decision-tension-rubric.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0035: Decision tension rubric",
+        "0035-decision-tension-rubric",
+        "ADR 0035",
+        "decision tension rubric",
+        "Decision Tension Rubric",
+        "adr:decision-tension-rubric"
+      ],
+      "searchQueries": [
+        {
+          "query": "decision tension rubric",
+          "expectPath": "docs/adr/0035-decision-tension-rubric.md"
+        },
+        {
+          "query": "adr:decision-tension-rubric",
+          "expectPath": "docs/adr/0035-decision-tension-rubric.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-20",
+      "canonicalName": "adr:decision-tension-rubric"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",
@@ -2179,6 +2214,38 @@
       "guard": "scripts/skills-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "repository-discovery-helper",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "packages/clawjs-core/src/repository-discovery.ts",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "repository discovery",
+        "federated cwd discovery",
+        "Clawix overlay root discovery",
+        "composite overlay discovery",
+        "detectClawPublicRepositories"
+      ],
+      "searchQueries": [
+        {
+          "query": "federated cwd discovery",
+          "expectPath": "packages/clawjs-core/src/repository-discovery.ts"
+        },
+        {
+          "query": "Clawix overlay root discovery",
+          "expectPath": "packages/clawjs-core/src/repository-discovery.ts"
+        }
+      ],
+      "guard": "packages/clawjs/src/cli-discovery.test.ts",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
     },
     {
       "id": "governance-doctor-command",
@@ -3537,6 +3604,40 @@
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-20"
+    },
+    {
+      "id": "decision-tension-rubric-doc",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/decision-tension-rubric.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/README.md",
+        "docs/adr/TEMPLATE.md"
+      ],
+      "discoveryTerms": [
+        "decision tension rubric",
+        "Decision Tension Rubric",
+        "ADR Decision Tensions",
+        "healthy tensions",
+        "durable ADR tradeoffs"
+      ],
+      "searchQueries": [
+        {
+          "query": "decision tension rubric",
+          "expectPath": "docs/governance/decision-tension-rubric.md"
+        },
+        {
+          "query": "durable ADR tradeoffs",
+          "expectPath": "docs/governance/decision-tension-rubric.md"
+        }
+      ],
+      "guard": "scripts/docs-alignment-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-20"
     },

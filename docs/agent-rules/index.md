@@ -13,6 +13,9 @@ lanes. Do not duplicate long ADR rationale here.
 
 - Constitution routing: [Constitution Operational Map](../constitution-map.md).
 - Decision routing: [Decision Map](../decision-map.md).
+- Decision tension rubric:
+  [Decision Tension Rubric](../governance/decision-tension-rubric.md) for
+  accepted durable ADRs and governance changes.
 - Framework/host boundary: [Host Ownership](../host-ownership.md) and
   [ADR 0001](../adr/0001-claw-framework-host-boundary.md).
 - Storage and data placement: [Data Storage Boundary](../data-storage-boundary.md).
@@ -39,6 +42,9 @@ lanes. Do not duplicate long ADR rationale here.
   `FORKS.md`, `TRADEMARKS.md`, and `NOTICE`.
 - Security and release: `SECURITY.md`, `RELEASING.md`, and
   [Git Workflow](../git-workflow.md).
+- Durable ADR/governance decisions:
+  [ADR Template](../adr/TEMPLATE.md) and
+  [Decision Tension Rubric](../governance/decision-tension-rubric.md).
 - OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`.
 
 ## Skill Routes

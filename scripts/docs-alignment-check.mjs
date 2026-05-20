@@ -142,12 +142,16 @@ requireSnippet("CONSTITUTION.md", "Capabilities are complete only when dual-surf
 requireSnippet("docs/constitution-map.md", "not a second source of truth");
 requireSnippet("docs/constitution-map.md", "Affected surfaces");
 requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");
+requireSnippet("docs/adr/TEMPLATE.md", "## Decision Tensions");
+requireSnippet("docs/governance/decision-tension-rubric.md", "Canon and semantic coherence");
+requireSnippet("docs/agent-rules/index.md", "Decision Tension Rubric");
 requireSnippet("docs/adr/0009-dual-human-programmatic-surfaces.md", "MCP is the model-native surface");
 requireSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "surface parity metadata");
 
 for (const snippet of [
   "decision -> document",
   "Constitution Operational Map",
+  "Decision Tension Rubric",
   "ClawJS/Claw owns framework contracts",
   "New workspace-local framework writes use `.claw/`",
   "Sensitive native permissions",

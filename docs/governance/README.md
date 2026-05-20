@@ -10,6 +10,7 @@ plans, and companion validation manifests here.
 - [Agents V1](agents-v1/decision-matrix.md)
 - [Code Hygiene](code-hygiene/completion.md)
 - [Connector Governed Context](connector-governed-context/completion.md)
+- [Decision Tension Rubric](decision-tension-rubric.md)
 - [Dense Data](dense-data/index.md)
 - [Domain Surface](domain-surface/decision-matrix.md)
 - [Evolution](evolution/source-audit.md)
