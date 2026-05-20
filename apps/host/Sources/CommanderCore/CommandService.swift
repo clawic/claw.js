@@ -731,7 +731,7 @@ public actor CommandService {
             return .object([
                 "status": .string("recorded"),
                 "audit_id": .string(auditID),
-                "audit_path": .string(auditURL.path),
+                "storage_ref": .string("claw.host.state/system-telemetry-provider-audit.jsonl"),
                 "event": .string(auditEvent),
                 "outcome": .string("blocked"),
             ])

@@ -456,7 +456,8 @@ final class MacControlTests: XCTestCase {
         XCTAssertTrue(audit.ok)
         XCTAssertEqual(audit.meta.adapter, "mac-control-audit")
         XCTAssertEqual(audit.data?.objectValue?["events"]?.arrayValue, [])
-        XCTAssertNotNil(audit.data?.objectValue?["auditPath"]?.stringValue)
+        XCTAssertEqual(audit.data?.objectValue?["storageRef"]?.stringValue, "claw.host.state/\(MacControlPolicy.auditFilename)")
+        XCTAssertNil(audit.data?.objectValue?["auditPath"]?.stringValue)
     }
 
     func testHostBridgePlansAndRecordsConfirmedPermissionRequest() async throws {

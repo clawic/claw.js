@@ -304,7 +304,7 @@ public enum SystemTelemetryControlHostBridge {
             return .object([
                 "status": .string("recorded"),
                 "audit_id": .string(auditID),
-                "audit_path": .string(auditURL.path),
+                "storage_ref": .string("claw.host.state/\(MacControlPolicy.auditFilename)"),
                 "event": .string(auditEvent),
                 "outcome": .string("blocked"),
             ])

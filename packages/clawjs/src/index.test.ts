@@ -407,7 +407,7 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
     steps: Array<{ id: string; status: string; owner: string }>;
     receipt: { status: string; auditEvent: string; auditStatus: string; auditId: string };
     auditPlan: { status: string; durable: boolean; outcome: string; receiptStatus: string; redaction: { credentialRefRedacted: boolean; preciseLocationRedacted: boolean } };
-    audit: { status: string; auditPath: string; outcome: string; durable: boolean };
+    audit: { status: string; storageRef: string; auditPath?: string; outcome: string; durable: boolean };
     externalPending: boolean;
   }>(providerPlan.stdout);
   assert.equal(providerPlanPayload.status, "planned");
@@ -440,8 +440,10 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(providerPlanPayload.audit.status, "recorded");
   assert.equal(providerPlanPayload.audit.outcome, "blocked");
   assert.equal(providerPlanPayload.audit.durable, true);
-  assert.equal(providerPlanPayload.audit.auditPath.endsWith("system-telemetry-audit.jsonl"), true);
-  const providerPlanAudit = fs.readFileSync(providerPlanPayload.audit.auditPath, "utf8");
+  assert.equal(providerPlanPayload.audit.storageRef, "claw.workspace.data/system-telemetry-audit.jsonl");
+  assert.equal(providerPlanPayload.audit.auditPath, undefined);
+  const providerPlanAuditPath = path.join(workspaceRoot, ".claw", "data", "system-telemetry-audit.jsonl");
+  const providerPlanAudit = fs.readFileSync(providerPlanAuditPath, "utf8");
   assert.equal(providerPlanAudit.includes("\"providerId\":\"context.weather.live\""), true);
   assert.equal(providerPlanAudit.includes("\"credentialRefRedacted\":false"), true);
   assert.equal(providerPlanAudit.includes("\"outcome\":\"blocked\""), true);
@@ -458,13 +460,15 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   const providerPlanWithCredentialPayload = parseCliJsonPayload<{
     request: { credentialRef: string | null; reason: string };
     steps: Array<{ id: string; status: string }>;
-    audit: { auditPath: string };
+    audit: { storageRef: string; auditPath?: string };
   }>(providerPlanWithCredential.stdout);
   assert.equal(providerPlanWithCredentialPayload.request.credentialRef, "provided_redacted");
   assert.equal(providerPlanWithCredentialPayload.request.reason, "credential-test");
   assert.equal(providerPlanWithCredentialPayload.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), true);
   assert.equal(providerPlanWithCredential.stdout.includes("secret://weather/local"), false);
-  const providerPlanWithCredentialAudit = fs.readFileSync(providerPlanWithCredentialPayload.audit.auditPath, "utf8");
+  assert.equal(providerPlanWithCredentialPayload.audit.storageRef, "claw.workspace.data/system-telemetry-audit.jsonl");
+  assert.equal(providerPlanWithCredentialPayload.audit.auditPath, undefined);
+  const providerPlanWithCredentialAudit = fs.readFileSync(providerPlanAuditPath, "utf8");
   assert.equal(providerPlanWithCredentialAudit.includes("\"credentialRefRedacted\":true"), true);
   assert.equal(providerPlanWithCredentialAudit.includes("secret://weather/local"), false);
 
@@ -477,7 +481,7 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
     steps: Array<{ id: string; status: string }>;
     receipt: { auditEvent: string; auditStatus: string };
     auditPlan: { event: string; receiptStatus: string };
-    audit: { status: string; auditPath: string };
+    audit: { status: string; storageRef: string; auditPath?: string };
   }>(sensorProviderPlan.stdout);
   assert.equal(sensorProviderPlanPayload.willConnect, false);
   assert.equal(sensorProviderPlanPayload.provider.id, "system.sensors.signed");
@@ -494,7 +498,9 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(sensorProviderPlanPayload.auditPlan.receiptStatus, "not_issued");
   assert.equal(sensorProviderPlanPayload.receipt.auditStatus, "recorded");
   assert.equal(sensorProviderPlanPayload.audit.status, "recorded");
-  const sensorProviderPlanAudit = fs.readFileSync(sensorProviderPlanPayload.audit.auditPath, "utf8");
+  assert.equal(sensorProviderPlanPayload.audit.storageRef, "claw.workspace.data/system-telemetry-audit.jsonl");
+  assert.equal(sensorProviderPlanPayload.audit.auditPath, undefined);
+  const sensorProviderPlanAudit = fs.readFileSync(providerPlanAuditPath, "utf8");
   assert.equal(sensorProviderPlanAudit.includes("\"providerId\":\"system.sensors.signed\""), true);
   assert.equal(sensorProviderPlanAudit.includes("system.sensor.read"), true);
 
@@ -534,7 +540,7 @@ test("runCli plans system controls without executing hardware mutations", async 
     steps: Array<{ id: string; status: string; owner: string }>;
     receipt: { required: boolean; status: string; auditEvent: string; auditStatus: string };
     auditPlan: { status: string; outcome: string; receiptStatus: string; redaction: { targetRedacted: boolean; valueRedacted: boolean; sensitiveDetailRedacted: boolean } };
-    audit: { status: string; auditPath: string; outcome: string; durable: boolean };
+    audit: { status: string; storageRef: string; auditPath?: string; outcome: string; durable: boolean };
     externalPending: boolean;
   }>(plan.stdout);
   assert.equal(payload.status, "planned");
@@ -562,7 +568,9 @@ test("runCli plans system controls without executing hardware mutations", async 
   assert.equal(payload.audit.status, "recorded");
   assert.equal(payload.audit.outcome, "blocked");
   assert.equal(payload.audit.durable, true);
-  const controlPlanAudit = fs.readFileSync(payload.audit.auditPath, "utf8");
+  assert.equal(payload.audit.storageRef, "claw.workspace.data/system-telemetry-audit.jsonl");
+  assert.equal(payload.audit.auditPath, undefined);
+  const controlPlanAudit = fs.readFileSync(path.join(workspaceRoot, ".claw", "data", "system-telemetry-audit.jsonl"), "utf8");
   assert.equal(controlPlanAudit.includes("\"controlId\":\"system.display.set_brightness\""), true);
   assert.equal(controlPlanAudit.includes("\"valueRedacted\":true"), true);
   assert.equal(payload.externalPending, true);

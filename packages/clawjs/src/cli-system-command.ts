@@ -318,7 +318,7 @@ function appendSystemTelemetryPlanAudit<T extends { receipt?: Record<string, unk
       audit: {
         status: "recorded",
         auditId,
-        auditPath,
+        storageRef: "claw.workspace.data/system-telemetry-audit.jsonl",
         event: auditEvent,
         outcome: cleanEvent.outcome,
         durable: true,

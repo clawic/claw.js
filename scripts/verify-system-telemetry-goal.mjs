@@ -218,6 +218,8 @@ function assertExternalPendingLedger() {
     "read-only experimental AppleSMC path",
     "missing AppleSMC service or missing compatible keys remains a valid external blocker",
     ".claw/data/system-telemetry-audit.jsonl",
+    "claw.workspace.data/system-telemetry-audit.jsonl",
+    "not a local filesystem path",
     "local redacted JSONL plan audit",
     "provided_redacted",
     "redacted JSONL audit evidence for blocked provider plans",
@@ -1413,11 +1415,15 @@ function assertProvidersAndControls() {
   assert(weatherPlan.steps?.some((step) => step.id === "connect_provider" && step.status === "blocked"), "weather provider plan: connect step must be blocked");
   assert(weatherPlan.auditPlan?.redaction?.credentialRefRedacted === true, "weather provider plan: must expose portable credential redaction audit plan");
   assert(weatherPlan.auditPlan?.receiptStatus === "not_issued", "weather provider plan: audit plan must not claim receipt");
+  assert(weatherPlan.audit?.storageRef === "claw.workspace.data/system-telemetry-audit.jsonl", "weather provider plan: audit must expose only portable storage ref");
+  assert(weatherPlan.audit?.auditPath === undefined, "weather provider plan: audit must not expose local filesystem path");
+  assert(!JSON.stringify(weatherPlan).includes("/Users/"), "weather provider plan: must not expose private filesystem paths");
 
   const weatherCredentialPlan = parseCliPayload(claw(["system", "providers", "plan", "context.weather.live", "--credential-ref", "secret://weather/local", "--reason", "goal-credential-verify", "--json"]), "weather provider credential plan");
   assert(weatherCredentialPlan.request?.credentialRef === "provided_redacted", "weather provider credential plan: credential ref must be projected as redacted");
   assert(weatherCredentialPlan.steps?.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), "weather provider credential plan: credential step must stay pending, not connect");
   assert(!JSON.stringify(weatherCredentialPlan).includes("secret://weather/local"), "weather provider credential plan: must not expose credential ref");
+  assert(weatherCredentialPlan.audit?.auditPath === undefined, "weather provider credential plan: audit must not expose local filesystem path");
 
   const sensorPlan = parseCliPayload(claw(["system", "providers", "plan", "system.sensors.signed", "--reason", "goal-verify", "--json"]), "sensor provider plan");
   assert(sensorPlan.willConnect === false, "sensor provider plan: must not connect");
@@ -1426,6 +1432,10 @@ function assertProvidersAndControls() {
   assert(sensorPlan.provider?.metrics?.includes("system.sensor.fan_speed"), "sensor provider plan: missing fan speed metric");
   assertIncludes(sensorPlan.policy?.requiredGrants, "system.sensor.read", "sensor provider plan grants");
   assert(sensorPlan.auditPlan?.event === "system.telemetry.provider.hardware_sensor.live", "sensor provider plan: must expose portable audit plan event");
+  assert(sensorPlan.receipt?.status === "not_issued", "sensor provider plan: must not issue receipt");
+  assert(sensorPlan.audit?.storageRef === "claw.workspace.data/system-telemetry-audit.jsonl", "sensor provider plan: audit must expose only portable storage ref");
+  assert(sensorPlan.audit?.auditPath === undefined, "sensor provider plan: audit must not expose local filesystem path");
+  assert(!JSON.stringify(sensorPlan).includes("/Users/"), "sensor provider plan: must not expose private filesystem paths");
 
   const controls = parseCliPayload(claw(["system", "controls", "list", "--json"]), "controls list");
   assert(controls.mutatesHardware === false, "controls list: must not mutate hardware");
@@ -1442,6 +1452,10 @@ function assertProvidersAndControls() {
   assertIncludes(fanPlan.policy?.requiredGrants, "system.sensor.read", "fan control plan grants");
   assert(fanPlan.steps?.some((step) => step.id === "execute_native_action" && step.status === "blocked"), "fan control plan: execute step must be blocked");
   assert(fanPlan.auditPlan?.redaction?.valueRedacted === true, "fan control plan: must expose portable value redaction audit plan");
+  assert(fanPlan.receipt?.status === "not_issued", "fan control plan: must not issue receipt");
+  assert(fanPlan.audit?.storageRef === "claw.workspace.data/system-telemetry-audit.jsonl", "fan control plan: audit must expose only portable storage ref");
+  assert(fanPlan.audit?.auditPath === undefined, "fan control plan: audit must not expose local filesystem path");
+  assert(!JSON.stringify(fanPlan).includes("/Users/"), "fan control plan: must not expose private filesystem paths");
 }
 
 function assertNativeSensorReadPathCoverage() {
@@ -1495,12 +1509,14 @@ function assertSignedHostBrokerCoverage() {
     "appendSystemTelemetryProviderPlanAudit(",
     "writeSystemTelemetryProviderPlanAudit(",
     "system-telemetry-provider-audit.jsonl",
+    "\"storage_ref\": .string(\"claw.host.state/system-telemetry-provider-audit.jsonl\")",
     "\"credential_ref_redacted\"",
     "\"provider_id\"",
     "\"outcome\": \"blocked\"",
   ]) {
     assert(commandService.includes(snippet), `CommandService.swift: missing provider plan audit snippet ${JSON.stringify(snippet)}`);
   }
+  assert(!commandService.includes("\"audit_path\": .string(auditURL.path)"), "CommandService.swift: provider plan audit must not expose local filesystem path");
 
   const bridge = read("apps/host/Sources/ClawHostKit/SystemTelemetryControlHostBridge.swift");
   for (const snippet of [
@@ -1515,12 +1531,24 @@ function assertSignedHostBrokerCoverage() {
     "\"mac.display.brightness\"",
     "failClosedResponse(",
     "appendFailClosedAudit(",
+    "\"storage_ref\": .string(\"claw.host.state/\\(MacControlPolicy.auditFilename)\")",
     "\"value_redacted\"",
     "\"outcome\": \"blocked\"",
     "System control is not executable by the signed host broker yet.",
   ]) {
     assert(bridge.includes(snippet), `SystemTelemetryControlHostBridge.swift: missing ${JSON.stringify(snippet)}`);
   }
+  assert(!bridge.includes("\"audit_path\": .string(auditURL.path)"), "SystemTelemetryControlHostBridge.swift: control plan audit must not expose local filesystem path");
+
+  const macBridge = read("apps/host/Sources/ClawHostKit/MacControlHostBridge.swift");
+  for (const snippet of [
+    "private static func auditResponse(",
+    "\"storageRef\": .string(\"claw.host.state/\\(MacControlPolicy.auditFilename)\")",
+    "capabilityId: \"mac.audit.read\"",
+  ]) {
+    assert(macBridge.includes(snippet), `MacControlHostBridge.swift: missing portable audit response snippet ${JSON.stringify(snippet)}`);
+  }
+  assert(!macBridge.includes("\"auditPath\": .string(auditURL.path)"), "MacControlHostBridge.swift: audit response must not expose local filesystem path");
 
   const cli = read("apps/host/Sources/ClawHostCLI/main.swift");
   assert(cli.includes("parsed.domain == .system && parsed.resource == \"controls\" && parsed.action == \"execute\""), "ClawHostCLI: missing system controls execute route");
@@ -1535,14 +1563,26 @@ function assertSignedHostBrokerCoverage() {
     "system.hardware.control",
     "system.sensor.read",
     "system-telemetry-provider-audit",
+    "storage_ref",
     "credential_ref_redacted",
     "context.weather.live",
     "execute_native_action",
     "audit_status",
     "value_redacted",
+    "storage_ref",
     "runner.nativeCalls.isEmpty",
   ]) {
     assert(tests.includes(snippet), `CommanderE2ETests.swift: missing ${JSON.stringify(snippet)}`);
+  }
+
+  const macControlTests = read("apps/host/Tests/CommanderE2ETests/MacControlTests.swift");
+  for (const snippet of [
+    "testHostBridgeExposesPermissionsAndDurableAudit",
+    "storageRef",
+    "claw.host.state/\\(MacControlPolicy.auditFilename)",
+    "auditPath",
+  ]) {
+    assert(macControlTests.includes(snippet), `MacControlTests.swift: missing ${JSON.stringify(snippet)}`);
   }
 
   const cliTests = read("packages/clawjs/src/index.test.ts");

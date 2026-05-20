@@ -339,7 +339,7 @@ public enum MacControlHostBridge {
             ok: true,
             data: .object([
                 "schemaVersion": .integer(MacControlWire.schemaVersion),
-                "auditPath": .string(auditURL.path),
+                "storageRef": .string("claw.host.state/\(MacControlPolicy.auditFilename)"),
                 "events": .array(events),
             ]),
             adapter: "mac-control-audit",
