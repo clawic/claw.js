@@ -8,8 +8,11 @@ description: Operational router from constitutional principles to canonical Claw
 This map is an operational router for `CONSTITUTION.md`. It is not a second source of truth,
 does not soften or replace any constitutional rule, and should
 be updated whenever a constitutional change changes which canon or guardrail a
-contributor should read first. For major architecture, product, data, agent,
-UX, security, or integration decisions, read `CONSTITUTION.md` fully.
+contributor should read first. The machine-readable assertion index in
+[`docs/constitution.assertions.json`](./constitution.assertions.json) turns the
+same routing into checkable coverage for principles, red lines, tensions, and
+the amendment process. For major architecture, product, data, agent, UX,
+security, or integration decisions, read `CONSTITUTION.md` fully.
 
 | Principle | Operational canon | Guardrail / validation | Affected surfaces |
 | --- | --- | --- | --- |

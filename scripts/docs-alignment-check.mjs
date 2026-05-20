@@ -142,11 +142,19 @@ requireSnippet("CONSTITUTION.md", "Capabilities are complete only when dual-surf
 requireSnippet("CONSTITUTION.md", "The computer's resources are product correctness");
 requireSnippet("docs/constitution-map.md", "not a second source of truth");
 requireSnippet("docs/constitution-map.md", "Affected surfaces");
+requireSnippet("docs/constitution-map.md", "docs/constitution.assertions.json");
+requireSnippet("docs/decision-map.md", "constitution.assertions.json");
+requireSnippet("docs/constitution.assertions.json", "\"contractDigest\"");
+requireSnippet("docs/constitution.assertions.schema.json", "Constitution Assertions");
+requireSnippet("package.json", "constitution-assertions-check.mjs");
 requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");
 requireSnippet("docs/adr/TEMPLATE.md", "## Decision Tensions");
 requireSnippet("docs/adr/TEMPLATE.md", "## Performance Impact");
+requireSnippet("docs/adr/TEMPLATE.md", "## Source Decision Audit");
+requireSnippet("docs/adr/TEMPLATE.md", "adr-operational-coverage.manifest.json");
 requireSnippet("docs/governance/decision-tension-rubric.md", "Canon and semantic coherence");
 requireSnippet("docs/governance/performance-governance.md", "whole-computer resource behavior");
+requireSnippet("docs/governance/source-decision-audits.md", "Source decision audits");
 requireSnippet("docs/agent-rules/index.md", "Decision Tension Rubric");
 requireSnippet("docs/agent-rules/index.md", "Performance governance");
 requireSnippet("docs/adr/0009-dual-human-programmatic-surfaces.md", "MCP is the model-native surface");
@@ -156,6 +164,9 @@ for (const snippet of [
   "decision -> document",
   "Constitution Operational Map",
   "Decision Tension Rubric",
+  "Source decision audits",
+  "Accepted ADRs are transactional",
+  "scripts/adr-operational-coverage-check.mjs",
   "Performance Governance",
   "ClawJS/Claw owns framework contracts",
   "New workspace-local framework writes use `.claw/`",
@@ -164,6 +175,7 @@ for (const snippet of [
   "Changesets are release metadata",
   "Built-in collections follow the canonical data catalog",
   "scripts/verify-host-permission-contract.mjs",
+  "scripts/source-decision-audit-check.mjs",
   "scripts/performance-governance-check.mjs",
   "No known pending guardrails",
 ]) {

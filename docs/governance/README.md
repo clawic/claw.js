@@ -21,5 +21,6 @@ plans, and companion validation manifests here.
 - [Pre-V1 Version Governance](pre-v1-version-governance/completion.md)
 - [Remote Gateway Sync](remote-gateway-sync/index.md)
 - [SDK-First Custom Surfaces](sdk-first-custom-surfaces/plan.md)
+- [Source Decision Audits](source-decision-audits.md)
 - [System Telemetry](system-telemetry/index.md)
 - [V1 Surface Closure](v1-surface-closure/index.md)

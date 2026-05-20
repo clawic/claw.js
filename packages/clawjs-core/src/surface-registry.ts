@@ -102,6 +102,19 @@ export interface ClawSurfaceParityGap {
   reason?: string;
 }
 
+export interface ClawSurfaceNarrative {
+  concept: string;
+  authorizingDecision: {
+    ref: string;
+    path: string;
+  };
+  completingSurface: {
+    human: string;
+    programmatic: string;
+  };
+  nonInference: string;
+}
+
 export interface ClawPersistentSurfaceSource {
   file: string;
   line?: number;
@@ -147,6 +160,7 @@ export interface ClawPersistentSurfaceNode {
   humanSurfaces?: ClawSurfaceParitySurface[];
   programmaticSurfaces?: ClawSurfaceParitySurface[];
   surfaceGaps?: ClawSurfaceParityGap[];
+  surfaceNarrative?: ClawSurfaceNarrative;
   notes?: string;
   warnings?: string[];
 }
@@ -193,6 +207,7 @@ export interface ClawSurfaceRoute {
   docs?: string[];
   adrs?: string[];
   gaps?: string[];
+  surfaceNarrative?: ClawSurfaceNarrative;
   source?: ClawPersistentSurfaceSource;
   notes?: string;
 }
@@ -2045,6 +2060,18 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     tests: ["packages/clawjs/src/inspect-cli.test.ts", "macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"],
     docs: ["docs/adr/0012-surface-route-graph.md", "docs/host-ownership.md"],
     adrs: ["docs/adr/0004-persistent-surface-registry-and-inspection.md", "docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    surfaceNarrative: {
+      concept: "Local desktop chat route from the Clawix human agent surface into the framework runtime and sessions service.",
+      authorizingDecision: {
+        ref: "ADR 0012: Surface route graph",
+        path: "docs/adr/0012-surface-route-graph.md",
+      },
+      completingSurface: {
+        human: "Clawix macOS agent chat UI",
+        programmatic: "claw inspect route chat.localDesktop plus bridge/runtime/session contracts",
+      },
+      nonInference: "This route does not authorize remote Relay chat, companion pairing behavior, or a new chat API outside its registered steps.",
+    },
     source: surfaceRouteGraphSource,
   },
   {
@@ -2459,6 +2486,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       humanSurfaces: ["humanUi"],
       programmaticSurfaces: ["cli", "persistence"],
       surfaceGaps: relayClassificationGap(["cli", "persistence"]),
+      surfaceNarrative: {
+        concept: "Stable surface registry and inspection boundary for durable names, contract values, route graph references, and compatibility-sensitive identifiers.",
+        authorizingDecision: {
+          ref: "ADR 0004: Stable surface registry and inspection",
+          path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+        },
+        completingSurface: {
+          human: "Generated stable surface docs and inspect output for review",
+          programmatic: "@clawjs/core surface registry plus claw inspect",
+        },
+        nonInference: "Registering a surface here does not by itself authorize a feature, native permission, storage owner, or route beyond its explicit node, edge, route, and decision evidence.",
+      },
       source: registrySource,
       notes: "Root for names, fields, routes, protocols, CLI commands, IDs, and external mappings that must not drift after V1 without versioning.",
     }),

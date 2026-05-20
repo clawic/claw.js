@@ -2316,6 +2316,31 @@
       ]
     },
     {
+      "id": "guard-scripts-adr-operational-coverage-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/adr-operational-coverage-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "adr-operational-coverage-check",
+        "Adr Operational Coverage Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "adr-operational-coverage-check",
+          "expectPath": "scripts/adr-operational-coverage-check.mjs"
+        }
+      ],
+      "guard": "scripts/adr-operational-coverage-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-agent-instructions-check",
       "kind": "guardrail",
       "owner": "claw",
@@ -2362,6 +2387,60 @@
         }
       ],
       "guard": "scripts/code-hygiene-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-conceptual-vocabulary-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/conceptual-vocabulary-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "conceptual-vocabulary-guard",
+        "Conceptual Vocabulary Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "conceptual-vocabulary-guard",
+          "expectPath": "scripts/conceptual-vocabulary-guard.mjs"
+        }
+      ],
+      "guard": "scripts/conceptual-vocabulary-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-constitution-assertions-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/constitution-assertions-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/constitution-map.md",
+        "docs/constitution.assertions.json"
+      ],
+      "discoveryTerms": [
+        "constitution-assertions-check",
+        "Constitution Assertions Check",
+        "constitutional assertion guard",
+        "checkable constitution guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "constitution-assertions-check",
+          "expectPath": "scripts/constitution-assertions-check.mjs"
+        }
+      ],
+      "guard": "scripts/constitution-assertions-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -2793,6 +2872,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-source-decision-audit-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/source-decision-audit-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "source-decision-audit-check",
+        "Source Decision Audit Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "source-decision-audit-check",
+          "expectPath": "scripts/source-decision-audit-check.mjs"
+        }
+      ],
+      "guard": "scripts/source-decision-audit-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-source-size-check",
       "kind": "guardrail",
       "owner": "claw",
@@ -2839,6 +2943,31 @@
         }
       ],
       "guard": "scripts/surface-evidence-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-surface-narrative-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/surface-narrative-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "surface-narrative-guard",
+        "Surface Narrative Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface-narrative-guard",
+          "expectPath": "scripts/surface-narrative-guard.mjs"
+        }
+      ],
+      "guard": "scripts/surface-narrative-guard.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -3572,6 +3701,81 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "sdk-first-custom-surfaces-external-pending",
+      "kind": "docs-page",
+      "owner": "clawix",
+      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-pending.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/sdk-first-custom-surfaces/completion.md"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces external pending validation",
+        "signed-host native IoT provider performance marketplace blockers",
+        "SDK-first external evidence lanes"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces external pending validation",
+          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-pending.md"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "sdk-first-custom-surfaces-external-validation-runbook",
+      "kind": "docs-page",
+      "owner": "clawix",
+      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-validation-runbook.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/sdk-first-custom-surfaces/completion.md"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces external validation runbook",
+        "SDK-first exact approval runbook",
+        "signed-host native IoT provider baseline marketplace evidence checklist"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces external validation runbook",
+          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-validation-runbook.md"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "sdk-first-custom-surfaces-performance-closure-summary",
+      "kind": "docs-page",
+      "owner": "clawix",
+      "canonicalSource": "../Clawix/clawix/docs/sdk-first-custom-surfaces-performance-closure-summary.md",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/sdk-first-custom-surfaces/completion.md"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces performance closure summary",
+        "CLX-SDK-008 performance baseline blocker",
+        "custom surface performance review packet"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces performance closure summary",
+          "expectPath": "../Clawix/clawix/docs/sdk-first-custom-surfaces-performance-closure-summary.md"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
       "id": "docs-agent-rules-index",
       "kind": "docs-page",
       "owner": "claw",
@@ -3634,6 +3838,41 @@
       "guard": "scripts/docs-alignment-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-20"
+    },
+    {
+      "id": "constitution-assertions-contract",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/constitution.assertions.json",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/constitution-map.md"
+      ],
+      "discoveryTerms": [
+        "constitution assertions",
+        "constitution.assertions.json",
+        "checkable constitutional assertions",
+        "principle assertion coverage",
+        "constitutional principle guardrails"
+      ],
+      "searchQueries": [
+        {
+          "query": "constitution assertions",
+          "expectPath": "docs/constitution.assertions.json"
+        },
+        {
+          "query": "principle assertion coverage",
+          "expectPath": "docs/constitution.assertions.json"
+        }
+      ],
+      "guard": "scripts/constitution-assertions-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "constitution-assertions"
     },
     {
       "id": "debt-ledger",
@@ -3720,129 +3959,38 @@
       "reviewDate": "2026-05-20"
     },
     {
-      "id": "sdk-first-custom-surfaces-external-pending",
+      "id": "source-decision-audit-governance",
       "kind": "docs-page",
-      "owner": "clawix",
-      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-pending.md",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/source-decision-audits.md",
       "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
         "docs/discoverability.md",
         "docs/decision-map.md",
-        "docs/governance/sdk-first-custom-surfaces/completion.md"
+        "docs/governance/README.md",
+        "docs/adr/TEMPLATE.md"
       ],
       "discoveryTerms": [
-        "sdk-first custom surfaces external pending validation",
-        "signed-host native IoT provider performance marketplace blockers",
-        "SDK-first external evidence lanes"
+        "source decision audits",
+        "conversation decision audit",
+        "source Q/A review governance",
+        "implemented documented blocked superseded",
+        "architecture conversation decision closure"
       ],
       "searchQueries": [
         {
-          "query": "sdk-first custom surfaces external pending validation",
-          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-pending.md"
-        }
-      ],
-      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "sdk-first-custom-surfaces-external-evidence-schema",
-      "kind": "validation-manifest",
-      "owner": "clawix",
-      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/governance/sdk-first-custom-surfaces/completion.md"
-      ],
-      "discoveryTerms": [
-        "sdk-first custom surfaces external evidence schema",
-        "SDK-first external evidence packet",
-        "custom surface external closure schema"
-      ],
-      "searchQueries": [
+          "query": "source decision audits",
+          "expectPath": "docs/governance/source-decision-audits.md"
+        },
         {
-          "query": "sdk-first custom surfaces external evidence schema",
-          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json"
+          "query": "conversation decision audit implemented documented blocked superseded",
+          "expectPath": "docs/governance/source-decision-audits.md"
         }
       ],
-      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "guard": "scripts/source-decision-audit-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "sdk-first-custom-surfaces-external-evidence-fixtures",
-      "kind": "validation-manifest",
-      "owner": "clawix",
-      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.fixtures.json",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/governance/sdk-first-custom-surfaces/completion.md"
-      ],
-      "discoveryTerms": [
-        "sdk-first custom surfaces external evidence fixtures",
-        "SDK-first synthetic evidence packets",
-        "custom surface external validator negative fixtures"
-      ],
-      "searchQueries": [
-        {
-          "query": "sdk-first custom surfaces external evidence fixtures",
-          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.fixtures.json"
-        }
-      ],
-      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "sdk-first-custom-surfaces-external-validation-runbook",
-      "kind": "docs-page",
-      "owner": "clawix",
-      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-validation-runbook.md",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/governance/sdk-first-custom-surfaces/completion.md"
-      ],
-      "discoveryTerms": [
-        "sdk-first custom surfaces external validation runbook",
-        "SDK-first exact approval runbook",
-        "signed-host native IoT provider baseline marketplace evidence checklist"
-      ],
-      "searchQueries": [
-        {
-          "query": "sdk-first custom surfaces external validation runbook",
-          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-validation-runbook.md"
-        }
-      ],
-      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
-    },
-    {
-      "id": "sdk-first-custom-surfaces-performance-closure-summary",
-      "kind": "docs-page",
-      "owner": "clawix",
-      "canonicalSource": "../Clawix/clawix/docs/sdk-first-custom-surfaces-performance-closure-summary.md",
-      "requiredEntrypoints": [
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/governance/sdk-first-custom-surfaces/completion.md"
-      ],
-      "discoveryTerms": [
-        "sdk-first custom surfaces performance closure summary",
-        "CLX-SDK-008 performance baseline blocker",
-        "custom surface performance review packet"
-      ],
-      "searchQueries": [
-        {
-          "query": "sdk-first custom surfaces performance closure summary",
-          "expectPath": "../Clawix/clawix/docs/sdk-first-custom-surfaces-performance-closure-summary.md"
-        }
-      ],
-      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-08-20"
     },
     {
       "id": "system-telemetry-completion-audit",
@@ -3971,6 +4119,56 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "sdk-first-custom-surfaces-external-evidence-fixtures",
+      "kind": "validation-manifest",
+      "owner": "clawix",
+      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.fixtures.json",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/sdk-first-custom-surfaces/completion.md"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces external evidence fixtures",
+        "SDK-first synthetic evidence packets",
+        "custom surface external validator negative fixtures"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces external evidence fixtures",
+          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.fixtures.json"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
+      "id": "sdk-first-custom-surfaces-external-evidence-schema",
+      "kind": "validation-manifest",
+      "owner": "clawix",
+      "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/sdk-first-custom-surfaces/completion.md"
+      ],
+      "discoveryTerms": [
+        "sdk-first custom surfaces external evidence schema",
+        "SDK-first external evidence packet",
+        "custom surface external closure schema"
+      ],
+      "searchQueries": [
+        {
+          "query": "sdk-first custom surfaces external evidence schema",
+          "expectPath": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json"
+        }
+      ],
+      "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
+    },
+    {
       "id": "agent-discoverability-golden-queries",
       "kind": "validation-manifest",
       "owner": "claw",
@@ -3990,6 +4188,31 @@
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-20"
+    },
+    {
+      "id": "source-decision-audit-registry",
+      "kind": "validation-manifest",
+      "owner": "claw",
+      "canonicalSource": "docs/governance/source-decision-audits.registry.json",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/source-decision-audits.md"
+      ],
+      "discoveryTerms": [
+        "source decision audit registry",
+        "source decision audit seed precedents",
+        "source decision audit row contract"
+      ],
+      "searchQueries": [
+        {
+          "query": "source decision audit registry",
+          "expectPath": "docs/governance/source-decision-audits.registry.json"
+        }
+      ],
+      "guard": "scripts/source-decision-audit-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-20"
     },

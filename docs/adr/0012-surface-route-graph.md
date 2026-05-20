@@ -40,8 +40,13 @@ The stable surface registry is extended with a graph layer:
 - `edges` connect two registered nodes with exactly one of `owns`, `consumes`,
   `exposes`, or `brokers`.
 - `routes` are named transverse workflows composed of explicit route steps.
-  Each step records source node, target node, edge type, contract, owner,
-  visibility, transport, validation, and gaps when applicable.
+Each step records source node, target node, edge type, contract, owner,
+visibility, transport, validation, and gaps when applicable.
+
+Each new route also records `surfaceNarrative`: the concept implemented by the
+route, the decision that authorizes it, the human and programmatic surfaces
+that complete it, and the boundary of what must not be inferred from the
+route's existence.
 
 `claw inspect` is the public read-only view for agents. It must expose:
 
@@ -84,6 +89,9 @@ missing contract nodes are not captured in `docs/surface-evidence-baseline.json`
 with owner, reason, risk, expiry, next phase, and reentry condition. The gate is
 part of docs validation after the base map closes. Once active, stable surface
 and runtime-critical debt is not accepted as implicit.
+`surface-narrative-guard` additionally fails new routes whose conceptual relato
+is absent, while existing missing route narratives are bounded by
+`docs/surface-narrative-baseline.json`.
 
 Language-specific manifests may continue to be node-only while Clawix closes
 its base map. When a manifest does include `edges` or `routes`, `claw inspect`

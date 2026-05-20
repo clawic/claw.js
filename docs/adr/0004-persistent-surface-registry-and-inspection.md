@@ -148,6 +148,13 @@ SDK, CLI, service API, MCP, Relay, or persistence access. Gaps use the
 classifications from ADR 0009: `required`, `optional`, `local-only`,
 `remote-safe`, `blocked`, and `not applicable`.
 
+Each new stable surface node must also carry `surfaceNarrative` so review can
+answer four questions without inferring intent from a technically correct
+string: what concept the surface implements, which decision authorizes it,
+which human and programmatic surfaces complete it, and what must not be
+inferred from its existence. Existing nodes without this field are bounded by
+`docs/surface-narrative-baseline.json`; new missing narratives are blocked.
+
 ## Rules
 
 Any code that introduces a new durable path, database, collection/table,
@@ -171,6 +178,12 @@ Any code that introduces or promotes an important capability must register
 enough surface parity metadata for `claw inspect` to answer which human and
 programmatic surfaces expose it, and which missing surfaces are required,
 blocked, or not applicable.
+
+Any code that introduces a new API, UI, CLI, schema, storage key, route,
+permission, or feature flag surface must register `surfaceNarrative` before it
+lands. The narrative is not a second source of truth; it points to the
+authorizing ADR, decision-map row, or governance decision and states the
+non-inference boundary for reviewers and agents.
 
 Manual lists are allowed only as generated output or as tests that assert registry coverage. They are not source of truth.
 
@@ -209,5 +222,7 @@ protocols, events, schemas, CLI commands, IDs, external dependencies, and Codex
 external source. Surface parity checks also make UI-only and
 programmatic-only capabilities visible during review instead of leaving them as
 implicit product debt.
+`scripts/surface-narrative-guard.mjs` makes the conceptual relato blocking for
+new surfaces while the baseline tracks older surfaces that still need backfill.
 
 This ADR intentionally makes the generated diagram a view. If generated docs drift from `claw inspect`, the generated docs are wrong.

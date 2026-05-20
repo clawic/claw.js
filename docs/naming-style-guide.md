@@ -25,6 +25,11 @@ shape, and agent-oriented rename workflow, also read
   commands, flags, routes, JSON fields, enum values, event names, env vars,
   sockets, service names, app IDs, hostnames, and deep links as stable
   interfaces.
+- Protected conceptual boundary words are checked separately by
+  `scripts/conceptual-vocabulary-guard.mjs`; do not use `owner`, `tenant`,
+  `workspace`, `project`, `agent`, `surface`, `host`, `relay`, `connector`, or
+  `sync` in docs, UI copy, or public interfaces outside their canonical
+  meanings.
 - Because this is still pre-public, remove accidental legacy names cleanly
   unless a task explicitly requires migration.
 

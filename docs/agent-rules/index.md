@@ -100,6 +100,9 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   services, and native execution belong to the active signed host, not Node.
 - Stable capabilities are complete only when their human and programmatic
   surfaces are registered or their gaps are explicitly classified.
+- New API, UI, CLI, schema, storage key, route, permission, and feature flag
+  surfaces are incomplete without `surfaceNarrative` tying them to concept,
+  authorizing decision, completing surface, and non-inference boundary.
 - Runtime-critical work starts from `claw inspect show|neighbors|routes`.
 - Performance-sensitive work classifies whole-computer resource impact before
   durable acceptance: speed, CPU, RAM, GPU/Neural Engine, disk, network,

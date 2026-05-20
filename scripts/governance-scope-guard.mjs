@@ -24,7 +24,10 @@ const ignoredDirs = new Set([
   "test-results",
 ]);
 const ignoredPathParts = [
+  "/docs/conceptual-vocabulary-baseline.json",
   "/docs/governance-vocabulary-baseline.json",
+  "/docs/vocabulary.registry.json",
+  "/scripts/conceptual-vocabulary-guard.mjs",
   "/scripts/governance-scope-guard.mjs",
   "/package-lock.json",
 ];

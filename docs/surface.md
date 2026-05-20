@@ -630,6 +630,7 @@ The docs check script validates that every current export from
     ClawSurfaceEdgeType
     clawSurfaceGraphEdges
     clawSurfaceGraphRoutes
+    ClawSurfaceNarrative
     ClawSurfaceParityGap
     ClawSurfaceParityStatus
     ClawSurfaceParitySurface

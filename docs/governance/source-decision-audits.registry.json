@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "canonicalDoc": "docs/governance/source-decision-audits.md",
+  "forwardOnly": true,
+  "statusVocabulary": ["implemented", "documented", "blocked", "superseded"],
+  "rowContract": {
+    "requiredFields": [
+      "decisionId",
+      "sourceConversationId",
+      "sourceAnchor",
+      "architectureImpact",
+      "state",
+      "evidenceRefs",
+      "reviewedAt"
+    ],
+    "publicSafeFieldsOnly": true,
+    "blockedRequires": ["blockerReason", "reentryCondition", "remaining"],
+    "supersededRequires": ["supersededBy"]
+  },
+  "closureRule": "Do not complete a goal or durable architecture change while any conversation-made architecture decision is missing from a source decision audit, has an invalid state, lacks required evidence, or remains blocked without reentry details.",
+  "seeds": [
+    {
+      "id": "dense-data-source-audit",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/dense-data/source-audit.md",
+      "sourceConversationId": "019e35a1-06bb-77f2-a712-92ed2646bd15",
+      "sourcePlanId": "019e3659-0335-7811-9cda-c9d176e91515-plan",
+      "artifactKind": "markdown-source-audit",
+      "minimumDecisionRows": 18,
+      "normalizedStates": ["implemented", "documented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/dense-data/completion.md",
+        "docs/governance/dense-data/decision-matrix.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/dense-data/decision-matrix.md",
+        "docs/governance/dense-data/completion.md",
+        "scripts/verify-dense-data-goal.mjs"
+      ]
+    },
+    {
+      "id": "remote-gateway-sync-source-review",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/remote-gateway-sync/source-review.json",
+      "sourceConversationId": "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
+      "sourcePlanId": "019e3732-c90e-7491-9217-37020c43217e-plan",
+      "artifactKind": "json-source-review",
+      "minimumDecisionRows": 23,
+      "legacyStateField": "disposition",
+      "legacyStateMap": {
+        "implemented": "implemented",
+        "external_pending": "blocked"
+      },
+      "blockedRefs": [
+        "docs/governance/remote-gateway-sync/external-validation-evidence.json",
+        "docs/governance/remote-gateway-sync/completion.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/remote-gateway-sync/decision-matrix.md",
+        "scripts/verify-remote-sync-goal.mjs"
+      ]
+    },
+    {
+      "id": "system-telemetry-source-review",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/system-telemetry/source-review.json",
+      "sourceConversationId": "019e359b-c0ab-7dc1-ba94-11a49d11dc76",
+      "sourcePlanId": "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan",
+      "artifactKind": "json-source-review",
+      "minimumDecisionRows": 12,
+      "legacyStateField": "disposition",
+      "legacyStateMap": {
+        "input_reference": "documented",
+        "implemented_local": "implemented",
+        "implemented_with_external_pending": "blocked",
+        "active_closure_gate": "blocked",
+        "continuation": "documented"
+      },
+      "blockedRefs": [
+        "docs/governance/system-telemetry/external-pending.md",
+        "docs/governance/system-telemetry/external-validation.manifest.json"
+      ],
+      "evidenceRefs": [
+        "docs/governance/system-telemetry/decision-matrix.md",
+        "scripts/verify-system-telemetry-goal.mjs"
+      ]
+    },
+    {
+      "id": "v1-surface-closure-decisions",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/v1-surface-closure/decisions.json",
+      "sourceConversationId": "019e2727-cf2b-7c41-9feb-1fd2b5c77554",
+      "artifactKind": "json-decision-review",
+      "minimumDecisionRows": 37,
+      "normalizedStates": ["implemented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/v1-surface-closure/completion.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/v1-surface-closure/acceptance.json",
+        "docs/governance/v1-surface-closure/validation.json",
+        "scripts/v1-surface-closure-audit-check.mjs"
+      ]
+    }
+  ],
+  "mirrorSeeds": [
+    {
+      "repo": "clawix",
+      "registryPath": "../Clawix/clawix/docs/governance/source-decision-audits.registry.json",
+      "checkScript": "../Clawix/clawix/scripts/source_decision_audit_check.mjs",
+      "scope": "app and host-owned source decision evidence"
+    }
+  ]
+}

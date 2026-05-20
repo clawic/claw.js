@@ -638,11 +638,11 @@
       "docs/governance/agents-v1/decision-matrix.md": 1,
       "docs/api.md": 1,
       "docs/cli.md": 6,
-      "docs/decision-map.md": 1,
+      "docs/decision-map.md": 2,
       "docs/governance/governance-workspace-project/completion.md": 1,
       "docs/governance/governance-workspace-project/source-audit.md": 2,
       "docs/interface-matrix.md": 3,
-      "docs/naming-style-guide.md": 1,
+      "docs/naming-style-guide.md": 2,
       "docs/notify.md": 1,
       "docs/persistent-surface.md": 7,
       "docs/relay.md": 14,
@@ -752,7 +752,8 @@
       "tmp/slides/clawjs-system-map/outputs/narrative_plan.md": 2,
       "website/src/demos/relay.js": 1,
       "wiki/scripts/seed.ts": 1,
-      "wiki/src/server/app.ts": 1
+      "wiki/src/server/app.ts": 1,
+      "docs/vocabulary.md": 2
     },
     "tenantId": {
       "AGENTS.md": 1,
@@ -968,8 +969,8 @@
       "occurrences": 7
     },
     "tenant": {
-      "files": 136,
-      "occurrences": 657
+      "files": 137,
+      "occurrences": 661
     },
     "tenantId": {
       "files": 141,

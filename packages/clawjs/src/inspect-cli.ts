@@ -852,9 +852,9 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Routes",
     "",
-    "| ID | From | To | Visibility | Validation |",
-    "| --- | --- | --- | --- | --- |",
-    ...routes.map((route) => `| \`${route.id}\` | \`${route.fromId}\` | \`${route.toId}\` | ${route.visibility} | ${route.validation} |`),
+    "| ID | From | To | Visibility | Validation | Narrative |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...routes.map((route) => `| \`${route.id}\` | \`${route.fromId}\` | \`${route.toId}\` | ${route.visibility} | ${route.validation} | ${route.surfaceNarrative?.concept ?? ""} |`),
     "",
     "## Capability Fiches",
     "",
@@ -870,12 +870,12 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Nodes",
     "",
-    "| ID | Kind | Surface | Owner | Human | Programmatic | Gaps | Path / Key / Value |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Kind | Surface | Owner | Human | Programmatic | Gaps | Narrative | Path / Key / Value |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const node of nodes) {
     const gaps = node.surfaceGaps?.map((gap) => `${gap.surface}:${gap.status}`).join("<br>") ?? "";
-    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.owner} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
+    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.owner} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | ${node.surfaceNarrative?.concept ?? ""} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
   }
   return `${lines.join("\n")}\n`;
 }

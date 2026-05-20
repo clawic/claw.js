@@ -69,6 +69,33 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.equal(Array.isArray(coreDatabase.outgoingEdges), true);
   assert.equal(Array.isArray(coreDatabase.routes), true);
 
+  const narrativeShow = await runCliCapture(["inspect", "show", "claw.contracts", "--json"], process.cwd());
+  assert.equal(narrativeShow.code, CLI_EXIT_OK);
+  const narrativeSurface = parseCliJson<{
+    id: string;
+    surfaceNarrative: {
+      concept: string;
+      authorizingDecision: { ref: string; path: string };
+      completingSurface: { human: string; programmatic: string };
+      nonInference: string;
+    };
+  }>(narrativeShow.stdout).data;
+  assert.equal(narrativeSurface.id, "claw.contracts");
+  assert.match(narrativeSurface.surfaceNarrative.concept, /Stable surface registry/);
+  assert.equal(narrativeSurface.surfaceNarrative.authorizingDecision.path, "docs/adr/0004-persistent-surface-registry-and-inspection.md");
+  assert.match(narrativeSurface.surfaceNarrative.completingSurface.programmatic, /claw inspect/);
+  assert.match(narrativeSurface.surfaceNarrative.nonInference, /does not by itself authorize/);
+
+  const narrativeRoute = await runCliCapture(["inspect", "route", "chat.localDesktop", "--json"], process.cwd());
+  assert.equal(narrativeRoute.code, CLI_EXIT_OK);
+  const narrativeRoutePayload = parseCliJson<{
+    id: string;
+    surfaceNarrative: { authorizingDecision: { path: string }; completingSurface: { human: string; programmatic: string } };
+  }>(narrativeRoute.stdout).data;
+  assert.equal(narrativeRoutePayload.id, "chat.localDesktop");
+  assert.equal(narrativeRoutePayload.surfaceNarrative.authorizingDecision.path, "docs/adr/0012-surface-route-graph.md");
+  assert.match(narrativeRoutePayload.surfaceNarrative.completingSurface.human, /Clawix macOS agent chat UI/);
+
   const markdown = await runCliCapture(["inspect", "render", "--format", "markdown"], process.cwd());
   assert.equal(markdown.code, CLI_EXIT_OK);
   assert.match(markdown.stdout, /Generated from `claw inspect render --format markdown`/);

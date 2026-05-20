@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "clawjs.existing-surfaces-without-narrative",
+      "classification": "lateral_debt",
+      "owner": "claw",
+      "reason": "Initial bounded baseline for stable surfaces that predate the surfaceNarrative contract.",
+      "risk": "Existing surfaces remain inspectable, but their conceptual authorization is not yet machine-checkable.",
+      "expires": "2026-08-18",
+      "missingNarrative": {
+        "nodes": {
+          "count": 1096,
+          "idsSha256": "930ff40c73c6f23993dbd2344acf0536b7d942754bf9048a93a1b4d6cd207eb9"
+        },
+        "routes": {
+          "count": 27,
+          "idsSha256": "246ca4f7bfce72d1a4af621583d0b5172911b0050f868067eab94325eafd4795"
+        }
+      },
+      "nextPhase": "Backfill surfaceNarrative on high-change and runtime-critical surfaces, then reduce this baseline.",
+      "reentryCondition": "Any new API, UI, CLI, schema, storage key, route, permission, or feature flag must carry surfaceNarrative before landing."
+    }
+  ]
+}
