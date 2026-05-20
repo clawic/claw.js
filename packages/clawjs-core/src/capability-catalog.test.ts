@@ -30,6 +30,7 @@ test("SDK-first capability catalog exposes baseline custom-app contracts", () =>
   assert.ok(ids.includes("jobs.list"));
   assert.ok(ids.includes("jobs.get"));
   assert.ok(ids.includes("jobs.events"));
+  assert.ok(ids.includes("jobs.stream"));
   assert.ok(ids.includes("actions.invoke"));
   assert.ok(ids.includes("secrets.broker"));
   assert.ok(ids.includes("mac.action.plan"));
@@ -66,6 +67,7 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.ok(riskMap.ordinaryAccess.includes("jobs.list"));
   assert.ok(riskMap.ordinaryAccess.includes("jobs.get"));
   assert.ok(riskMap.ordinaryAccess.includes("jobs.events"));
+  assert.ok(riskMap.blocked.includes("jobs.stream"));
   assert.ok(riskMap.approvalRequired.includes("actions.invoke"));
   assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
   assert.ok(riskMap.approvalRequired.includes("mac.action.plan"));
@@ -107,6 +109,19 @@ test("custom apps do not receive direct SQLite or plaintext secret capabilities"
       assert.equal(text.includes("customappaccess\":\"localwide"), false);
     }
   }
+});
+
+test("blocked custom-app capabilities expose explicit gaps without SDK execution", () => {
+  const capability = getClawCapability("jobs.stream");
+
+  assert.equal(capability?.customAppAccess, "blocked");
+  assert.equal(capability?.dispatch?.status, "unavailable");
+  assert.equal(capability?.dispatch?.mode, "blocked");
+  assert.equal(capability?.dispatch?.approvalRequired, false);
+  assert.equal(capability?.surfaces.find((surface) => surface.surface === "sdk")?.status, "blocked");
+  assert.equal(capability?.surfaces.find((surface) => surface.surface === "hostBridge")?.status, "blocked");
+  assert.equal(capability?.inputSchemaRef, undefined);
+  assert.equal(capability?.outputSchemaRef, undefined);
 });
 
 test("ordinary custom-app read capabilities declare the shared redaction policy", () => {
@@ -164,8 +179,10 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.list"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.get"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.events"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.stream"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
   assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
+  assert.ok(payload.riskMap.blocked.includes("jobs.stream"));
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
 });
 
@@ -195,6 +212,8 @@ test("custom-app SDK inspection payload exposes dispatch availability and gaps",
   assert.equal(byId.get("actions.invoke")?.dispatch?.mode, "approvalRequiredNoRunner");
   assert.equal(byId.get("secrets.broker")?.dispatch?.status, "unavailable");
   assert.equal(byId.get("secrets.broker")?.dispatch?.mode, "approvalRequiredNoPlaintextBroker");
+  assert.equal(byId.get("jobs.stream")?.dispatch?.status, "unavailable");
+  assert.equal(byId.get("jobs.stream")?.dispatch?.mode, "blocked");
 });
 
 test("custom-app SDK schemas validate current Search DB and resource bridge payloads", () => {

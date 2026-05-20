@@ -85,6 +85,9 @@ for user-authored custom UIs that do not block the main app shell.
   through `window.clawix.jobs.{list,get,events}()` as local-wide jobs/run
   listing, detail, and derived event timeline contracts with shared redaction
   policy and no start/cancel mutation.
+- ClawJS and sibling Clawix expose `jobs.stream` only as a blocked explicit
+  gap in the capability map; it has no SDK/host bridge execution until a true
+  backend stream, policy, audit, and adapter exist.
 - Sibling Clawix exposes `mac.action.plan` through
   `window.clawix.mac.planAction()` as an approval-gated, dry-run-only host
   bridge call; signed-host native execution remains out of scope until approved
