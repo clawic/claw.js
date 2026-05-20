@@ -7,6 +7,7 @@ import { test } from "vitest";
 import {
   buildClawDebtLedger,
   clawDebtLedgerEntrySchema,
+  detectDebtLedgerRepositories,
 } from "./debt-ledger.ts";
 
 test("debt ledger normalizes baselines, external pending rows, and dedupes fingerprints", () => {
@@ -78,4 +79,25 @@ test("public debt ledger redacts private paths from redacted entries", () => {
   assert.ok(entry);
   assert.equal(entry.summary.includes("/Users/"), false);
   assert.equal(entry.risk.includes("/Users/"), false);
+});
+
+test("debt ledger repository detection routes Clawix overlays to public sibling repos", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-debt-overlay-"));
+  const overlayRoot = path.join(tempRoot, "Clawix");
+  const clawixRoot = path.join(overlayRoot, "clawix");
+  const clawjsRoot = path.join(tempRoot, "clawjs");
+
+  fs.mkdirSync(path.join(clawixRoot, "docs"), { recursive: true });
+  fs.writeFileSync(path.join(overlayRoot, "AGENTS.md"), "Private overlay.\n");
+  fs.writeFileSync(path.join(clawixRoot, "AGENTS.md"), "Public Clawix.\n");
+  fs.writeFileSync(path.join(clawixRoot, "docs", "decision-map.md"), "Clawix decisions.\n");
+
+  fs.mkdirSync(path.join(clawjsRoot, "packages", "clawjs-core"), { recursive: true });
+  fs.mkdirSync(path.join(clawjsRoot, "docs"), { recursive: true });
+  fs.writeFileSync(path.join(clawjsRoot, "package.json"), JSON.stringify({ name: "@clawjs/debt-overlay-fixture" }));
+  fs.writeFileSync(path.join(clawjsRoot, "docs", "decision-map.md"), "ClawJS decisions.\n");
+
+  const repositories = detectDebtLedgerRepositories(overlayRoot);
+  assert.deepEqual(repositories.map((repo) => repo.repo), ["clawjs", "clawix"]);
+  assert.deepEqual(repositories.map((repo) => repo.rootDir), [clawjsRoot, clawixRoot]);
 });

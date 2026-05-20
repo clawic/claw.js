@@ -34,10 +34,11 @@ function writeFixtureFile(root: string, relativePath: string, content: string): 
   fs.writeFileSync(target, content);
 }
 
-function createGovernanceFixture(): { tempRoot: string; clawjsRoot: string; clawixRoot: string } {
+function createGovernanceFixture(): { tempRoot: string; overlayRoot: string; clawjsRoot: string; clawixRoot: string } {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-governance-doctor-"));
+  const overlayRoot = path.join(tempRoot, "Clawix");
   const clawjsRoot = path.join(tempRoot, "clawjs");
-  const clawixRoot = path.join(tempRoot, "Clawix", "clawix");
+  const clawixRoot = path.join(overlayRoot, "clawix");
 
   fs.mkdirSync(path.join(clawjsRoot, "packages", "clawjs-core"), { recursive: true });
   writeFixtureFile(clawjsRoot, "package.json", JSON.stringify({ name: "@clawjs/fixture", scripts: { test: `node -e "require('fs').writeFileSync('executed','1')"` } }, null, 2));
@@ -76,6 +77,7 @@ function createGovernanceFixture(): { tempRoot: string; clawjsRoot: string; claw
   }, null, 2));
 
   fs.mkdirSync(path.join(clawixRoot, "macos"), { recursive: true });
+  writeFixtureFile(overlayRoot, "AGENTS.md", "Private overlay; public canon lives in clawix/ and sibling clawjs.\n");
   writeFixtureFile(clawixRoot, "AGENTS.md", "Clawix agent router.\n");
   writeFixtureFile(clawixRoot, "STYLE.md", "# Style\n");
   writeFixtureFile(clawixRoot, "docs/decision-map.md", "External lanes require signed-host validation before completion.\n");
@@ -89,7 +91,7 @@ function createGovernanceFixture(): { tempRoot: string; clawjsRoot: string; claw
   writeFixtureFile(clawixRoot, "docs/persistent-surface-clawix.manifest.json", JSON.stringify({ entries: [] }, null, 2));
   writeFixtureFile(clawixRoot, "skills/ui-canon-review/SKILL.md", "---\nname: ui-canon-review\ndescription: UI canon\nkeywords: [ui]\n---\n");
 
-  return { tempRoot, clawjsRoot, clawixRoot };
+  return { tempRoot, overlayRoot, clawjsRoot, clawixRoot };
 }
 
 test("governance doctor returns compact read-only envelope", async () => {
@@ -124,6 +126,23 @@ test("governance doctor returns compact read-only envelope", async () => {
   assert.equal(payload.data.staleDocs.some((entry) => entry.repo === "clawjs" && entry.path === "docs/source-size-baseline.json" && entry.status === "stale_risk"), true);
   assert.equal(result.stdout.includes("/Users/trabajo"), false);
   assert.equal(fs.existsSync(path.join(fixture.clawjsRoot, "executed")), false);
+});
+
+test("governance doctor federates public repos from a Clawix overlay cwd", async () => {
+  const fixture = createGovernanceFixture();
+  const result = await runCliCapture(["governance", "doctor", "--json", "--now", "2026-05-20T00:00:00.000Z"], fixture.overlayRoot);
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as {
+    data: {
+      scope: { crossRepo: boolean; repositories: Array<{ repo: string; rootDir: string; detectedBy: string }> };
+      checks: Array<{ repo: string; cwd: string }>;
+    };
+  };
+  assert.equal(payload.data.scope.crossRepo, true);
+  assert.deepEqual(payload.data.scope.repositories.map((repo) => repo.repo), ["clawjs", "clawix"]);
+  assert.equal(payload.data.scope.repositories.some((repo) => repo.repo === "clawix" && repo.detectedBy === "nested"), true);
+  assert.equal(payload.data.scope.repositories.some((repo) => repo.detectedBy === "fallback"), false);
+  assert.equal(payload.data.checks.some((check) => check.cwd === fixture.overlayRoot), false);
 });
 
 test("governance command is discoverable through help, inspect, and search", async () => {

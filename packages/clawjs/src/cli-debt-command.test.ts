@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "vitest";
 
 import { CLI_EXIT_OK } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
+
+function writeFixtureFile(root: string, relativePath: string, content: string): void {
+  const target = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, content);
+}
 
 test("debt list and audit expose the report-only public ledger", async () => {
   const list = await runCliCapture(["debt", "list", "--classification", "external_pending", "--json"], process.cwd());
@@ -29,6 +38,30 @@ test("debt list and audit expose the report-only public ledger", async () => {
   assert.equal(auditPayload.data.audit.mode, "report_only");
   assert.equal(Array.isArray(auditPayload.data.audit.unindexedCandidates), true);
   assert.equal(auditPayload.data.audit.privateSummary.included, false);
+});
+
+test("debt sources federate Clawix and ClawJS public repos from an overlay cwd", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-debt-overlay-"));
+  const overlayRoot = path.join(tempRoot, "Clawix");
+  const clawixRoot = path.join(overlayRoot, "clawix");
+  const clawjsRoot = path.join(tempRoot, "clawjs");
+
+  writeFixtureFile(overlayRoot, "AGENTS.md", "Private overlay; public debt is projected from public repos only.\n");
+  writeFixtureFile(clawixRoot, "AGENTS.md", "Clawix public entrypoint.\n");
+  writeFixtureFile(clawixRoot, "docs/decision-map.md", "Clawix public decision map.\n");
+  writeFixtureFile(clawixRoot, "docs/code-hygiene-baseline.json", JSON.stringify({ schemaVersion: 1, entries: [] }));
+
+  writeFixtureFile(clawjsRoot, "package.json", JSON.stringify({ name: "@clawjs/debt-fixture", type: "module" }));
+  fs.mkdirSync(path.join(clawjsRoot, "packages", "clawjs-core"), { recursive: true });
+  writeFixtureFile(clawjsRoot, "docs/decision-map.md", "ClawJS public decision map.\n");
+  writeFixtureFile(clawjsRoot, "docs/code-hygiene-baseline.json", JSON.stringify({ schemaVersion: 1, entries: [] }));
+
+  const sources = await runCliCapture(["debt", "sources", "--json"], overlayRoot);
+  assert.equal(sources.code, CLI_EXIT_OK);
+  const payload = JSON.parse(sources.stdout) as { data: { sources: Array<{ repo: string; path: string }> } };
+  assert.equal(payload.data.sources.some((source) => source.repo === "clawjs" && source.path === "docs/code-hygiene-baseline.json"), true);
+  assert.equal(payload.data.sources.some((source) => source.repo === "clawix" && source.path === "docs/code-hygiene-baseline.json"), true);
+  assert.equal(payload.data.sources.filter((source) => source.path === "docs/code-hygiene-baseline.json").length, 2);
 });
 
 test("debt sources, show, inspect, and search expose stable discovery", async () => {

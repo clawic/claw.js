@@ -1,9 +1,10 @@
+// @clawjs-persistent-surface-ddl-source
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
-import { clawCliCommandRegistry, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult } from "@clawjs/core";
+import { clawCliCommandRegistry, detectClawPublicRepositories, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core";
 import {
   DEFAULT_SEARCH_BUDGETS,
   LOCAL_TEXT_EMBEDDING_MODEL,
@@ -84,6 +85,19 @@ import {
   type SearchServiceWorkerStopReason,
 } from "./cli-search-command-constants.ts";
 import {
+  commandFallbackForSearchQuery as importedCommandFallbackForSearchQuery,
+  ensureCommandSourceIndexed as importedEnsureCommandSourceIndexed,
+  parseCommandFallbackPolicy as importedParseCommandFallbackPolicy,
+  sourceCanIndex as importedSourceCanIndex,
+} from "./cli-search-command-source.ts";
+import {
+  enableNativeSystemSourceFromSnapshotFlag as importedEnableNativeSystemSourceFromSnapshotFlag,
+  ensureNativeSystemSourceIndexed as importedEnsureNativeSystemSourceIndexed,
+  hasNativeSystemSnapshotFlag as importedHasNativeSystemSnapshotFlag,
+  type NativeSystemSearchSourceSnapshot,
+  type NativeSystemSearchSourceSnapshotDocument,
+} from "./cli-search-native-system-source.ts";
+import {
   codeFileSearchDocument,
   discoverCodeSearchFiles,
   ensureCodeSymbolResourceIndexed,
@@ -119,34 +133,6 @@ type SimpleChangedSourceScheduleInput = {
   flags: Record<string, string>;
   observedAt?: string;
   workspaceRoot?: string;
-};
-
-type NativeSystemSearchSourceSnapshot = {
-  source: "native.system";
-  domain: "native";
-  state: "enabled" | "external_pending" | "disabled" | "paused" | "degraded";
-  updatedAt?: string;
-  error?: string;
-  documents?: NativeSystemSearchSourceSnapshotDocument[];
-};
-
-type NativeSystemSearchSourceSnapshotDocument = {
-  id: string;
-  source?: string;
-  domain?: string;
-  type: string;
-  title: string;
-  subtitle?: string;
-  snippet?: string;
-  body?: string;
-  resourceId?: string;
-  path?: string;
-  updatedAt?: string;
-  metadata?: Record<string, unknown>;
-  permissions?: SearchDocumentInput["permissions"];
-  rankingHints?: SearchDocumentInput["rankingHints"];
-  fragments?: SearchDocumentInput["fragments"];
-  actions?: SearchAction[];
 };
 
 const SIMPLE_CHANGED_SOURCE_SCHEDULES = new Map<string, {
@@ -196,7 +182,7 @@ export async function runSearchQueryCli(input: {
   const store = openCliSearchStore(input.flags);
   try {
     registerCliSearchSources(store, input.flags);
-    const indexedCommands = sourceCanIndex(store, "commands") ? ensureCommandSourceIndexed(store) : 0;
+    const indexedCommands = importedSourceCanIndex(store, "commands") ? importedEnsureCommandSourceIndexed(store) : 0;
     const sources = parseListFlag(input.flags.sources ?? input.flags.source);
     const shards = parseListFlag(input.flags.shards ?? input.flags.shard);
     const shouldRefreshDatabase = domains?.includes("database") || sources?.includes("database.records");
@@ -234,44 +220,51 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
     const shouldSearchNativeSystem = domains?.includes("native") || sources?.includes("native.system");
-    const shouldRefreshNativeSystem = shouldSearchNativeSystem && hasNativeSystemSnapshotFlag(input.flags);
-    enableNativeSystemSourceFromSnapshotFlag(store, input.flags, shouldRefreshNativeSystem ? ["native.system"] : sources);
-    const indexedDatabase = shouldRefreshDatabase && sourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
-    const indexedWork = shouldRefreshWork && sourceCanIndex(store, "work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
-    const indexedDocuments = shouldRefreshDocuments && sourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
-    const indexedNotes = shouldRefreshNotes && sourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
-    const indexedKnowledge = shouldRefreshKnowledge && sourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
-    const indexedSignals = shouldRefreshSignals && sourceCanIndex(store, "signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
-    const indexedCalendar = shouldRefreshCalendar && sourceCanIndex(store, "calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
-    const indexedFinance = shouldRefreshFinance && sourceCanIndex(store, "finance.records") ? ensureFinanceRecordsSourceIndexed(store, input.flags) : 0;
-    const indexedEln = shouldRefreshEln && sourceCanIndex(store, "eln.records") ? ensureElnRecordsSourceIndexed(store, input.flags) : 0;
-    const indexedImages = shouldRefreshImages && sourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedMedia = shouldRefreshMedia && sourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedSlides = shouldRefreshSlides && sourceCanIndex(store, "slides.decks") ? ensureSlidesDecksSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedSheets = shouldRefreshSheets && sourceCanIndex(store, "sheets.workbooks") ? ensureSheetsWorkbooksSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedGenerations = shouldRefreshGenerations && sourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedCode = shouldRefreshCode && sourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedDocs = shouldRefreshDocs && sourceCanIndex(store, "docs.pages") ? ensureDocsPagesSourceIndexed(store, input.context.cwd) : 0;
-    const indexedSkills = shouldRefreshSkills && sourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
-    const indexedProviders = shouldRefreshProviders && sourceCanIndex(store, "providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
-    const indexedSnippets = shouldRefreshSnippets && sourceCanIndex(store, "snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
-    const indexedAgents = shouldRefreshAgents && sourceCanIndex(store, "agents.catalog") ? ensureAgentsCatalogSourceIndexed(store, input.flags) : 0;
-    const indexedMarketplace = shouldRefreshMarketplace && sourceCanIndex(store, "marketplace.choices") ? ensureMarketplaceChoicesSourceIndexed(store, input.flags) : 0;
-    const indexedContent = shouldRefreshContent && sourceCanIndex(store, "content.items") ? ensureContentItemsSourceIndexed(store, input.flags) : 0;
-    const indexedBusiness = shouldRefreshBusiness && sourceCanIndex(store, "business.records") ? ensureBusinessRecordsSourceIndexed(store, input.flags) : 0;
-    const indexedSocial = shouldRefreshSocial && sourceCanIndex(store, "social.posts") ? ensureSocialPostsSourceIndexed(store, input.flags) : 0;
-    const indexedIot = shouldRefreshIot && sourceCanIndex(store, "iot.config") ? ensureIotConfigSourceIndexed(store, input.flags) : 0;
-    const indexedConnectors = shouldRefreshConnectors && sourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
-    const indexedMcp = shouldRefreshMcp && sourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedApps = shouldRefreshApps && sourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
-    const indexedDesign = shouldRefreshDesign && sourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
-    const indexedSurfaces = shouldRefreshSurfaces && sourceCanIndex(store, "surfaces.routes") ? ensureSurfacesRoutesSourceIndexed(store) : 0;
-    const indexedSurfaceRegistry = shouldRefreshSurfaces && sourceCanIndex(store, "surfaces.registry") ? ensureSurfacesRegistrySourceIndexed(store) : 0;
-    const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const indexedNativeSystem = shouldRefreshNativeSystem && sourceCanIndex(store, "native.system") ? ensureNativeSystemSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const shouldRefreshNativeSystem = shouldSearchNativeSystem && importedHasNativeSystemSnapshotFlag(input.flags);
+    importedEnableNativeSystemSourceFromSnapshotFlag({
+      store,
+      flags: input.flags,
+      selectedSources: shouldRefreshNativeSystem ? ["native.system"] : sources,
+      writeCanonicalSearchSourceState,
+    });
+    const indexedDatabase = shouldRefreshDatabase && importedSourceCanIndex(store, "database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedWork = shouldRefreshWork && importedSourceCanIndex(store, "work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
+    const indexedDocuments = shouldRefreshDocuments && importedSourceCanIndex(store, "documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
+    const indexedNotes = shouldRefreshNotes && importedSourceCanIndex(store, "notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
+    const indexedKnowledge = shouldRefreshKnowledge && importedSourceCanIndex(store, "knowledge.graph") ? ensureKnowledgeGraphSourceIndexed(store, input.flags) : 0;
+    const indexedSignals = shouldRefreshSignals && importedSourceCanIndex(store, "signals.observations") ? ensureSignalsObservationsSourceIndexed(store, input.flags) : 0;
+    const indexedCalendar = shouldRefreshCalendar && importedSourceCanIndex(store, "calendar.events") ? ensureCalendarEventsSourceIndexed(store, input.flags) : 0;
+    const indexedFinance = shouldRefreshFinance && importedSourceCanIndex(store, "finance.records") ? ensureFinanceRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedEln = shouldRefreshEln && importedSourceCanIndex(store, "eln.records") ? ensureElnRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedImages = shouldRefreshImages && importedSourceCanIndex(store, "images.derived") ? ensureImagesDerivedSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedMedia = shouldRefreshMedia && importedSourceCanIndex(store, "media.assets") ? ensureMediaAssetsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedSlides = shouldRefreshSlides && importedSourceCanIndex(store, "slides.decks") ? ensureSlidesDecksSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedSheets = shouldRefreshSheets && importedSourceCanIndex(store, "sheets.workbooks") ? ensureSheetsWorkbooksSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedGenerations = shouldRefreshGenerations && importedSourceCanIndex(store, "generations.artifacts") ? ensureGenerationsArtifactsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedCode = shouldRefreshCode && importedSourceCanIndex(store, "code.symbols") ? ensureCodeSymbolsSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedDocs = shouldRefreshDocs && importedSourceCanIndex(store, "docs.pages") ? ensureDocsPagesSourceIndexed(store, input.context.cwd) : 0;
+    const indexedSkills = shouldRefreshSkills && importedSourceCanIndex(store, "skills.registry") ? ensureSkillsRegistrySourceIndexed(store, input.flags) : 0;
+    const indexedProviders = shouldRefreshProviders && importedSourceCanIndex(store, "providers.routing") ? ensureProvidersRoutingSourceIndexed(store, input.flags) : 0;
+    const indexedSnippets = shouldRefreshSnippets && importedSourceCanIndex(store, "snippets.library") ? ensureSnippetsLibrarySourceIndexed(store, input.flags) : 0;
+    const indexedAgents = shouldRefreshAgents && importedSourceCanIndex(store, "agents.catalog") ? ensureAgentsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedMarketplace = shouldRefreshMarketplace && importedSourceCanIndex(store, "marketplace.choices") ? ensureMarketplaceChoicesSourceIndexed(store, input.flags) : 0;
+    const indexedContent = shouldRefreshContent && importedSourceCanIndex(store, "content.items") ? ensureContentItemsSourceIndexed(store, input.flags) : 0;
+    const indexedBusiness = shouldRefreshBusiness && importedSourceCanIndex(store, "business.records") ? ensureBusinessRecordsSourceIndexed(store, input.flags) : 0;
+    const indexedSocial = shouldRefreshSocial && importedSourceCanIndex(store, "social.posts") ? ensureSocialPostsSourceIndexed(store, input.flags) : 0;
+    const indexedIot = shouldRefreshIot && importedSourceCanIndex(store, "iot.config") ? ensureIotConfigSourceIndexed(store, input.flags) : 0;
+    const indexedConnectors = shouldRefreshConnectors && importedSourceCanIndex(store, "connectors.catalog") ? ensureConnectorsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedMcp = shouldRefreshMcp && importedSourceCanIndex(store, "mcp.servers") ? ensureMcpServersSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedApps = shouldRefreshApps && importedSourceCanIndex(store, "apps.catalog") ? ensureAppsCatalogSourceIndexed(store, input.flags) : 0;
+    const indexedDesign = shouldRefreshDesign && importedSourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedRuntime = shouldRefreshRuntime && importedSourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
+    const indexedSurfaces = shouldRefreshSurfaces && importedSourceCanIndex(store, "surfaces.routes") ? ensureSurfacesRoutesSourceIndexed(store) : 0;
+    const indexedSurfaceRegistry = shouldRefreshSurfaces && importedSourceCanIndex(store, "surfaces.registry") ? ensureSurfacesRegistrySourceIndexed(store) : 0;
+    const indexedLocalFiles = shouldRefreshLocalFiles && importedSourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedWeb = shouldRefreshWeb && importedSourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedExternal = shouldRefreshExternal && importedSourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const indexedNativeSystem = shouldRefreshNativeSystem && importedSourceCanIndex(store, "native.system")
+      ? importedEnsureNativeSystemSourceIndexed({ store, flags: input.flags, cwd: input.context.cwd, writeCanonicalSearchSourceState })
+      : 0;
     const filters = parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
     const strategy = parseSearchStrategyFlag(input.flags.strategy);
     const embedding = parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model)
@@ -293,10 +286,10 @@ export async function runSearchQueryCli(input: {
       surface: input.flags.surface,
       actor: input.flags.actor,
     });
-    const commandFallback = commandFallbackForSearchQuery(store, {
+    const commandFallback = importedCommandFallbackForSearchQuery(store, {
       query,
       flags: input.flags,
-      policy: parseCommandFallbackPolicy(input.flags["command-fallback"] ?? input.flags["fallback-commands"]),
+      policy: importedParseCommandFallbackPolicy(input.flags["command-fallback"] ?? input.flags["fallback-commands"]),
       limit: limit ?? 20,
       domains,
       sources,
@@ -448,7 +441,7 @@ export async function runSearchRebuildCli(input: {
       || readBooleanFlag(input.argv, input.flags, "background")
       || readBooleanFlag(input.argv, input.flags, "async");
     if (enqueueRebuild) {
-      const jobSources = (selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id)).filter((source) => sourceCanIndex(store, source));
+      const jobSources = (selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id)).filter((source) => importedSourceCanIndex(store, source));
       const jobShards = selectedShards ?? ["default"];
       const hasMultipleJobs = jobSources.length * jobShards.length > 1;
       const jobs = jobSources.flatMap((source) => jobShards.map((shard) => store.enqueueIndexJob({
@@ -484,9 +477,14 @@ export async function runSearchRebuildCli(input: {
     else if (selectedSources) store.resetSources(selectedSources);
     else store.reset();
     registerCliSearchSources(store, input.flags, preservedStates);
-    enableNativeSystemSourceFromSnapshotFlag(store, input.flags, selectedSources);
-    const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && sourceCanIndex(store, source);
-    const commandsIndexed = rebuildsSource("commands") ? ensureCommandSourceIndexed(store) : 0;
+    importedEnableNativeSystemSourceFromSnapshotFlag({
+      store,
+      flags: input.flags,
+      selectedSources,
+      writeCanonicalSearchSourceState,
+    });
+    const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && importedSourceCanIndex(store, source);
+    const commandsIndexed = rebuildsSource("commands") ? importedEnsureCommandSourceIndexed(store) : 0;
     const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
     const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const workIndexed = rebuildsSource("work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
@@ -523,7 +521,9 @@ export async function runSearchRebuildCli(input: {
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
-    const nativeSystemIndexed = rebuildsSource("native.system") ? ensureNativeSystemSourceIndexed(store, input.flags, input.context.cwd) : 0;
+    const nativeSystemIndexed = rebuildsSource("native.system")
+      ? importedEnsureNativeSystemSourceIndexed({ store, flags: input.flags, cwd: input.context.cwd, writeCanonicalSearchSourceState })
+      : 0;
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
@@ -567,7 +567,7 @@ export async function runSearchRebuildCli(input: {
     const pendingScope = selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id);
     const pendingSources = BUILTIN_SEARCH_SOURCES
       .filter((source) => pendingScope.includes(source.id))
-      .filter((source) => !indexedSourceIds.has(source.id) && sourceCanIndex(store, source.id))
+      .filter((source) => !indexedSourceIds.has(source.id) && importedSourceCanIndex(store, source.id))
       .map((source) => source.id);
     const data = {
       rebuilt: true,
@@ -644,13 +644,21 @@ export async function runCliDiscoverySearch(input: {
     return CLI_EXIT_OK;
   }
   const limit = input.flags.limit ? Number(input.flags.limit) : 10;
+  const repositories = detectClawPublicRepositories(input.context.cwd, { includeFallback: true });
   const results = mergeSearchResults([
     ...searchCliDiscovery(query, { limit }),
-    ...searchRegisteredLocalFiles(query, input.context.cwd),
+    ...searchRegisteredRepositoryFiles(query, repositories),
   ], limit);
   if (input.wantsJson) {
     writeJsonOk(input.context.stdout, {
       query,
+      scope: {
+        repositories: repositories.map((repo) => ({
+          repo: repo.repo,
+          rootDir: repo.rootDir,
+          detectedBy: repo.detectedBy,
+        })),
+      },
       results,
     }, {
       schemaVersion: 1,
@@ -1884,7 +1892,7 @@ function numericPayloadValue(payload: Record<string, unknown>, key: string): num
 }
 
 function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Record<string, string>, cwd: string): number {
-  if (!sourceCanIndex(store, job.source)) return 0;
+  if (!importedSourceCanIndex(store, job.source)) return 0;
   if (job.operation === "delete") {
     if (!job.resourceId) return 0;
     store.tombstone({ source: job.source, resourceId: job.resourceId, reason: "search service delete job" });
@@ -1908,7 +1916,7 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
   }
   switch (job.source) {
     case "commands":
-      return ensureCommandSourceIndexed(store);
+      return importedEnsureCommandSourceIndexed(store);
     case "sessions.chats":
       return ensureSessionsChatsSourceIndexed(store, flags);
     case "database.records":
@@ -1982,8 +1990,13 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
     case "external.cache":
       return ensureExternalCacheSourceIndexed(store, flags, cwd);
     case "native.system":
-      enableNativeSystemSourceFromSnapshotFlag(store, flags, ["native.system"]);
-      return ensureNativeSystemSourceIndexed(store, flags, cwd);
+      importedEnableNativeSystemSourceFromSnapshotFlag({
+        store,
+        flags,
+        selectedSources: ["native.system"],
+        writeCanonicalSearchSourceState,
+      });
+      return importedEnsureNativeSystemSourceIndexed({ store, flags, cwd, writeCanonicalSearchSourceState });
     default:
       throw new Error(`Search service cannot index source: ${job.source}`);
   }
@@ -2456,92 +2469,6 @@ function registerBuiltinSources(store: SearchStore, states: Map<string, SearchSo
   }
 }
 
-function sourceCanIndex(store: SearchStore, source: string): boolean {
-  return !["disabled", "paused", "excluded", "external_pending"].includes(store.sourceState(source) ?? "enabled");
-}
-
-function parseCommandFallbackPolicy(value: string | undefined): CommandFallbackPolicy {
-  const normalized = value?.trim().toLowerCase();
-  if (!normalized || normalized === "off" || normalized === "none" || normalized === "never" || normalized === "false" || normalized === "0") return "off";
-  if (normalized === "empty" || normalized === "empty-results" || normalized === "no-results" || normalized === "missing") return "empty";
-  if (normalized === "always" || normalized === "on" || normalized === "true" || normalized === "1") return "always";
-  return "off";
-}
-
-function commandFallbackForSearchQuery(store: SearchStore, input: {
-  query: string;
-  flags: Record<string, string>;
-  policy: CommandFallbackPolicy;
-  limit: number;
-  domains?: string[];
-  sources?: string[];
-  shards?: string[];
-  filters?: Record<string, unknown>;
-  strategy?: SearchQueryInput["strategy"];
-  agentBudget?: SearchQueryInput["agentBudget"];
-  embedding?: SearchQueryInput["embedding"];
-  explain?: boolean;
-  surface?: string;
-  actor?: string;
-  baseResults: SearchQueryOutput;
-}): {
-  output?: SearchQueryOutput;
-  report: {
-    policy: CommandFallbackPolicy;
-    applied: boolean;
-    reason: "disabled" | "already_in_scope" | "not_needed" | "source_disabled" | "no_budget" | "queried";
-    added: number;
-  };
-} {
-  if (input.policy === "off") {
-    return { report: { policy: "off", applied: false, reason: "disabled", added: 0 } };
-  }
-  if (input.domains?.includes("commands") || input.sources?.includes("commands")) {
-    return { report: { policy: input.policy, applied: false, reason: "already_in_scope", added: 0 } };
-  }
-  if (input.policy === "empty" && input.baseResults.results.length > 0) {
-    return { report: { policy: input.policy, applied: false, reason: "not_needed", added: 0 } };
-  }
-  if (!sourceCanIndex(store, "commands")) {
-    return { report: { policy: input.policy, applied: false, reason: "source_disabled", added: 0 } };
-  }
-  const fallbackLimit = boundedNumberFlag(input.flags["command-fallback-limit"] ?? input.flags["fallback-commands-limit"], 5, 1, 20);
-  const remaining = input.policy === "empty" ? input.limit : Math.max(0, input.limit - input.baseResults.results.length);
-  const limit = Math.min(fallbackLimit, remaining);
-  if (limit <= 0) {
-    return { report: { policy: input.policy, applied: false, reason: "no_budget", added: 0 } };
-  }
-  const commandOutput = store.query({
-    query: input.query,
-    profile: input.flags.profile === "full" ? "full" : "framework",
-    domains: ["commands"],
-    shards: input.shards,
-    filters: input.filters,
-    strategy: input.strategy,
-    agentBudget: input.agentBudget,
-    embedding: input.embedding,
-    limit,
-    explain: input.explain,
-    surface: input.surface,
-    actor: input.actor,
-  });
-  const existingIds = new Set(input.baseResults.results.map((result) => result.id));
-  const addedResults = commandOutput.results.filter((result) => !existingIds.has(result.id)).slice(0, limit);
-  if (!addedResults.length) {
-    return { report: { policy: input.policy, applied: true, reason: "queried", added: 0 } };
-  }
-  return {
-    output: {
-      ...input.baseResults,
-      results: [...input.baseResults.results, ...addedResults].slice(0, input.limit),
-      partial: input.baseResults.partial || commandOutput.partial,
-      omittedSources: [...input.baseResults.omittedSources, ...commandOutput.omittedSources],
-      elapsedMs: input.baseResults.elapsedMs + commandOutput.elapsedMs,
-    },
-    report: { policy: input.policy, applied: true, reason: "queried", added: addedResults.length },
-  };
-}
-
 function runSearchMonitorEvaluations(
   store: SearchStore,
   input: {
@@ -2576,7 +2503,7 @@ function runSearchMonitorEvaluations(
     if (monitorId) return monitor.id === monitorId;
     return includeDisabled || monitor.enabled;
   });
-  if (sourceCanIndex(store, "commands")) ensureCommandSourceIndexed(store);
+  if (importedSourceCanIndex(store, "commands")) importedEnsureCommandSourceIndexed(store);
   const limit = input.flags.limit ? Number(input.flags.limit) : undefined;
   const evaluatedAt = new Date().toISOString();
   const items = monitors.map((monitor) => {
@@ -2649,179 +2576,13 @@ function runSearchMonitorEvaluations(
 
 function sourceStateForAction(action: string, sourceId?: string, flags: Record<string, string> = {}): SearchSourceState {
   if ((action === "enable" || action === "resume") && sourceId === "native.system") {
-    return hasNativeSystemSnapshotFlag(flags) ? "enabled" : "external_pending";
+    return importedHasNativeSystemSnapshotFlag(flags) ? "enabled" : "external_pending";
   }
   if (action === "enable" || action === "resume") return "enabled";
   if (action === "disable") return "disabled";
   if (action === "pause") return "paused";
   if (action === "exclude") return "excluded";
   return "enabled";
-}
-
-function enableNativeSystemSourceFromSnapshotFlag(store: SearchStore, flags: Record<string, string>, selectedSources?: string[]): void {
-  if (!hasNativeSystemSnapshotFlag(flags)) return;
-  if (selectedSources && !selectedSources.includes("native.system")) return;
-  store.setSourceState("native.system", "enabled", {
-    error: null,
-  });
-  writeCanonicalSearchSourceState(flags, "native.system", "enabled", {
-    profile: "full",
-    actor: flags.actor,
-    surface: flags.surface ?? "claw.search.native_system.snapshot",
-  });
-}
-
-function hasNativeSystemSnapshotFlag(flags: Record<string, string>): boolean {
-  return Boolean(nativeSystemSnapshotFlag(flags));
-}
-
-function nativeSystemSnapshotFlag(flags: Record<string, string>): string | undefined {
-  return flags["native-system-snapshot"] ?? flags["native-system-snapshot-json"] ?? flags["host-native-system-snapshot"] ?? flags["host-native-system-snapshot-json"];
-}
-
-function nativeSystemSnapshotSource(flags: Record<string, string>): "path" | "json" | undefined {
-  if (flags["native-system-snapshot"] || flags["host-native-system-snapshot"]) return "path";
-  if (flags["native-system-snapshot-json"] || flags["host-native-system-snapshot-json"]) return "json";
-  return undefined;
-}
-
-function ensureNativeSystemSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
-  const snapshotText = readNativeSystemSnapshotFlag(flags, cwd);
-  if (!snapshotText) {
-    store.setSourceState("native.system", "external_pending", {
-      backlog: 0,
-      error: "native.system requires --native-system-snapshot from the signed host",
-      lastIndexedAt: null,
-    });
-    return 0;
-  }
-  const snapshot = parseNativeSystemSnapshot(snapshotText);
-  if (snapshot.state !== "enabled") {
-    store.setSourceState("native.system", snapshot.state === "degraded" ? "degraded" : "external_pending", {
-      backlog: 0,
-      error: snapshot.error ?? `native.system snapshot state is ${snapshot.state}`,
-      lastIndexedAt: snapshot.updatedAt ?? null,
-    });
-    return 0;
-  }
-  const documents = (snapshot.documents ?? []).map(nativeSystemSnapshotSearchDocument);
-  for (const document of documents) store.upsertDocument(document);
-  const checksum = stableSearchId(snapshotText);
-  store.setCursor({
-    source: "native.system",
-    cursor: `host-snapshot:${checksum}:documents:${documents.length}`,
-    watermark: snapshot.updatedAt,
-    metadata: {
-      source: "signed_host_snapshot",
-      documents: documents.length,
-      checksum,
-    },
-  });
-  store.setSourceState("native.system", "enabled", {
-    backlog: 0,
-    error: null,
-    lastIndexedAt: snapshot.updatedAt ?? new Date().toISOString(),
-  });
-  writeCanonicalSearchSourceState(flags, "native.system", "enabled", {
-    profile: "full",
-    actor: flags.actor,
-    surface: flags.surface ?? "claw.search.native_system.snapshot",
-  });
-  return documents.length;
-}
-
-function readNativeSystemSnapshotFlag(flags: Record<string, string>, cwd: string): string | undefined {
-  const value = nativeSystemSnapshotFlag(flags);
-  if (!value) return undefined;
-  if (nativeSystemSnapshotSource(flags) === "json") return value;
-  const expanded = expandSearchHome(value);
-  const snapshotPath = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
-  return fs.readFileSync(snapshotPath, "utf8");
-}
-
-function parseNativeSystemSnapshot(value: string): NativeSystemSearchSourceSnapshot {
-  const parsed = JSON.parse(value) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot must be a JSON object.", CLI_EXIT_USAGE);
-  }
-  const snapshot = parsed as Partial<NativeSystemSearchSourceSnapshot>;
-  if (snapshot.source !== "native.system" || snapshot.domain !== "native") {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot must declare source native.system and domain native.", CLI_EXIT_USAGE);
-  }
-  const state = snapshot.state;
-  if (state !== "enabled" && state !== "external_pending" && state !== "disabled" && state !== "paused" && state !== "degraded") {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot state must be enabled, external_pending, disabled, paused, or degraded.", CLI_EXIT_USAGE);
-  }
-  if (snapshot.documents !== undefined && !Array.isArray(snapshot.documents)) {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot documents must be an array.", CLI_EXIT_USAGE);
-  }
-  return {
-    source: "native.system",
-    domain: "native",
-    state,
-    ...(typeof snapshot.updatedAt === "string" ? { updatedAt: snapshot.updatedAt } : {}),
-    ...(typeof snapshot.error === "string" ? { error: snapshot.error } : {}),
-    documents: (snapshot.documents ?? []).map(validateNativeSystemSnapshotDocument),
-  };
-}
-
-function validateNativeSystemSnapshotDocument(value: unknown): NativeSystemSearchSourceSnapshotDocument {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot document must be a JSON object.", CLI_EXIT_USAGE);
-  }
-  const document = value as Partial<NativeSystemSearchSourceSnapshotDocument>;
-  if (typeof document.id !== "string" || typeof document.type !== "string" || typeof document.title !== "string") {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot documents require id, type, and title.", CLI_EXIT_USAGE);
-  }
-  if (document.source && document.source !== "native.system") {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot document source must be native.system.", CLI_EXIT_USAGE);
-  }
-  if (document.domain && document.domain !== "native") {
-    throw new CliHandledError("invalid_native_system_snapshot", "Native system snapshot document domain must be native.", CLI_EXIT_USAGE);
-  }
-  return {
-    id: document.id,
-    source: "native.system",
-    domain: "native",
-    type: document.type,
-    title: document.title,
-    ...(typeof document.subtitle === "string" ? { subtitle: document.subtitle } : {}),
-    ...(typeof document.snippet === "string" ? { snippet: document.snippet } : {}),
-    ...(typeof document.body === "string" ? { body: document.body } : {}),
-    ...(typeof document.resourceId === "string" ? { resourceId: document.resourceId } : {}),
-    ...(typeof document.path === "string" ? { path: document.path } : {}),
-    ...(typeof document.updatedAt === "string" ? { updatedAt: document.updatedAt } : {}),
-    ...(document.metadata && typeof document.metadata === "object" && !Array.isArray(document.metadata) ? { metadata: document.metadata } : {}),
-    ...(document.permissions && typeof document.permissions === "object" && !Array.isArray(document.permissions) ? { permissions: document.permissions } : {}),
-    ...(document.rankingHints && typeof document.rankingHints === "object" && !Array.isArray(document.rankingHints) ? { rankingHints: document.rankingHints } : {}),
-    ...(Array.isArray(document.fragments) ? { fragments: document.fragments } : {}),
-    ...(Array.isArray(document.actions) ? { actions: document.actions } : {}),
-  };
-}
-
-function nativeSystemSnapshotSearchDocument(document: NativeSystemSearchSourceSnapshotDocument): SearchDocumentInput {
-  const metadataText = document.metadata ? Object.values(document.metadata).filter((value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean").join(" ") : "";
-  const body = [document.body, document.title, document.subtitle, document.snippet, metadataText].filter(Boolean).join("\n");
-  return {
-    ...document,
-    source: "native.system",
-    domain: "native",
-    body,
-  };
-}
-
-function ensureCommandSourceIndexed(store: SearchStore): number {
-  let reindexed = 0;
-  for (const command of clawCliCommandRegistry.commands) {
-    store.upsertDocument(commandSearchDocument(command));
-    reindexed += 1;
-  }
-  store.setCursor({
-    source: "commands",
-    cursor: `registry:${clawCliCommandRegistry.version}:${clawCliCommandRegistry.commands.length}`,
-    metadata: { version: clawCliCommandRegistry.version },
-  });
-  return reindexed;
 }
 
 function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
@@ -7967,84 +7728,6 @@ function isSensitiveKnowledge(sensitivity: string): boolean {
   return ["sensitive", "private", "secret", "restricted"].includes(sensitivity.toLowerCase());
 }
 
-function commandSearchDocument(command: ClawCliCommandRegistryEntry): SearchDocumentInput {
-  const canonicalName = command.target ?? command.name;
-  const references = [...command.docs, ...command.adrs, ...command.tests, command.source.file];
-  const aliases = command.aliases ?? [];
-  const title = command.name;
-  const subtitle = command.kind === "alias" ? `Alias for ${canonicalName}` : command.kind;
-  const snippet = command.summary;
-  const usage = command.usage ? `Usage: ${command.usage}` : "";
-  const body = [
-    command.name,
-    canonicalName,
-    command.kind,
-    command.summary,
-    usage,
-    aliases.length ? `Aliases: ${aliases.join(", ")}` : "",
-    command.family ? `Family: ${command.family}` : "",
-    command.support.reason,
-    command.support.scenario,
-    references.join("\n"),
-  ].filter(Boolean).join("\n");
-  return {
-    id: `commands:${command.name}`,
-    source: "commands",
-    domain: "commands",
-    type: "command",
-    title,
-    subtitle,
-    snippet,
-    body,
-    resourceId: command.name,
-    path: command.source.file,
-    metadata: {
-      canonicalName,
-      kind: command.kind,
-      aliases,
-      family: command.family ?? null,
-      schemaVersion: command.schemaVersion,
-      support: command.support,
-      securityPolicy: command.securityPolicy,
-      docs: command.docs,
-      adrs: command.adrs,
-      tests: command.tests,
-    },
-    rankingHints: {
-      fastPath: 1,
-      command: 1,
-      advanced: command.advanced ? -0.1 : 0,
-    },
-    fragments: [
-      ...command.docs.map((doc, index) => ({
-        id: `commands:${command.name}:doc:${index}`,
-        title: "Documentation",
-        body: doc,
-        sortOrder: index,
-        metadata: { kind: "doc", path: doc },
-      })),
-      ...command.adrs.map((adr, index) => ({
-        id: `commands:${command.name}:adr:${index}`,
-        title: "ADR",
-        body: adr,
-        sortOrder: 100 + index,
-        metadata: { kind: "adr", path: adr },
-      })),
-      ...command.tests.map((test, index) => ({
-        id: `commands:${command.name}:test:${index}`,
-        title: "Test",
-        body: test,
-        sortOrder: 200 + index,
-        metadata: { kind: "test", path: test },
-      })),
-    ],
-    actions: [
-      { id: "help", kind: "run", label: `Show ${command.name} help`, requiresApproval: true, risk: "system", grant: "search.commands.run" },
-      { id: "copy-reference", kind: "copy", label: "Copy command reference", requiresApproval: false },
-    ],
-  };
-}
-
 function parseListFlag(value: string | undefined): string[] | undefined {
   if (!value) return undefined;
   const entries = value.split(",").map((entry) => entry.trim()).filter(Boolean);
@@ -8210,13 +7893,26 @@ function parseFilterValue(value: string): unknown {
   return value;
 }
 
+type SearchRepositoryRoot = Pick<ClawRepositoryRoot, "repo" | "rootDir">;
+
+function searchRegisteredRepositoryFiles(query: string, repositories: SearchRepositoryRoot[]): ClawCliSearchResult[] {
+  return repositories.flatMap((repository) => searchRegisteredRepositoryLocalFiles(query, repository));
+}
+
 function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchResult[] {
+  return searchRegisteredRepositoryFiles(query, [{ repo: "clawjs", rootDir: cwd }]);
+}
+
+function searchRegisteredRepositoryLocalFiles(query: string, repository: SearchRepositoryRoot): ClawCliSearchResult[] {
+  const cwd = repository.rootDir;
   const paths = new Map<string, { type: ClawCliSearchResult["type"]; canonicalName: string }>();
-  for (const entry of clawCliCommandRegistry.commands) {
-    for (const doc of entry.docs) paths.set(doc, { type: doc.includes("/adr/") ? "adr" : "doc", canonicalName: entry.target ?? entry.name });
-    for (const adr of entry.adrs) paths.set(adr, { type: "adr", canonicalName: entry.target ?? entry.name });
-    for (const test of entry.tests) paths.set(test, { type: "test", canonicalName: entry.target ?? entry.name });
-    paths.set(entry.source.file, { type: "source", canonicalName: entry.target ?? entry.name });
+  if (repository.repo === "clawjs") {
+    for (const entry of clawCliCommandRegistry.commands) {
+      for (const doc of entry.docs) paths.set(doc, { type: doc.includes("/adr/") ? "adr" : "doc", canonicalName: entry.target ?? entry.name });
+      for (const adr of entry.adrs) paths.set(adr, { type: "adr", canonicalName: entry.target ?? entry.name });
+      for (const test of entry.tests) paths.set(test, { type: "test", canonicalName: entry.target ?? entry.name });
+      paths.set(entry.source.file, { type: "source", canonicalName: entry.target ?? entry.name });
+    }
   }
   for (const entry of discoverabilitySearchFiles(cwd)) {
     paths.set(entry.path, { type: entry.type, canonicalName: entry.canonicalName });
@@ -8243,6 +7939,7 @@ function searchRegisteredLocalFiles(query: string, cwd: string): ClawCliSearchRe
       score: match.score,
       summary: match.summary,
       path: relativePath,
+      repo: repository.repo,
     });
   }
   return results;
@@ -8309,7 +8006,7 @@ function scoreFileContent(query: string, content: string): { score: number; summ
 function mergeSearchResults(results: ClawCliSearchResult[], limit: number): ClawCliSearchResult[] {
   const byKey = new Map<string, ClawCliSearchResult>();
   for (const result of results) {
-    const key = `${result.type}:${result.name}:${result.canonicalName ?? ""}`;
+    const key = `${result.repo ?? ""}:${result.type}:${result.name}:${result.canonicalName ?? ""}`;
     const previous = byKey.get(key);
     if (!previous || result.score > previous.score) byKey.set(key, result);
   }

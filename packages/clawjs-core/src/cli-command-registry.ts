@@ -325,6 +325,7 @@ export interface ClawCliSearchResult {
   summary: string;
   command?: ClawCliCommandRegistryEntry;
   path?: string;
+  repo?: string;
   source?: "command" | "collection";
   shadowedByCommand?: string;
 }

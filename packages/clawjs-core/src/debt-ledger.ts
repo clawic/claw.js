@@ -3,6 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 
+import {
+  detectClawPublicRepositories,
+  type ClawRepositoryRoot,
+} from "./repository-discovery.ts";
+
 export const CLAW_DEBT_LEDGER_CLASSIFICATIONS = [
   "direct_blocker",
   "lateral_debt",
@@ -55,7 +60,9 @@ export const clawDebtLedgerEntrySchema = z.object({
   summary: z.string().min(1),
   risk: z.string().min(1),
   expires: z.string().optional(),
+  reviewBy: z.string().optional(),
   reentryCondition: z.string().min(1),
+  reentryCommand: z.string().min(1).optional(),
   validation: z.string().min(1),
   privacy: z.enum(CLAW_DEBT_LEDGER_PRIVACY),
   fingerprint: z.string().min(12),
@@ -75,6 +82,24 @@ export const clawDebtLedgerAuditSchema = z.object({
   ok: z.literal(true),
   mode: z.literal("report_only"),
   warnings: z.array(z.string()),
+  missingActionability: z.array(z.object({
+    repo: z.string(),
+    id: z.string(),
+    sourceType: z.enum(CLAW_DEBT_LEDGER_SOURCE_TYPES),
+    classification: z.enum(CLAW_DEBT_LEDGER_CLASSIFICATIONS),
+    status: z.enum(CLAW_DEBT_LEDGER_STATUSES),
+    canonicalSource: z.string(),
+    summary: z.string(),
+    missing: z.array(z.string()),
+  })),
+  aliasHits: z.array(z.object({
+    repo: z.string(),
+    path: z.string(),
+    term: z.string(),
+    normalizedClassification: z.enum(CLAW_DEBT_LEDGER_CLASSIFICATIONS),
+    normalizedStatus: z.enum(CLAW_DEBT_LEDGER_STATUSES),
+    matches: z.number().int().positive(),
+  })),
   unindexedCandidates: z.array(z.object({
     repo: z.string(),
     path: z.string(),
@@ -113,10 +138,7 @@ export type ClawDebtLedgerSource = z.infer<typeof clawDebtLedgerSourceSchema>;
 export type ClawDebtLedgerAudit = z.infer<typeof clawDebtLedgerAuditSchema>;
 export type ClawDebtLedger = z.infer<typeof clawDebtLedgerSchema>;
 
-export interface ClawDebtLedgerRepositoryRoot {
-  repo: string;
-  rootDir: string;
-}
+export type ClawDebtLedgerRepositoryRoot = Pick<ClawRepositoryRoot, "repo" | "rootDir">;
 
 export interface BuildClawDebtLedgerOptions {
   rootDir: string;
@@ -130,7 +152,33 @@ interface MutableDebtLedger {
   warnings: string[];
 }
 
-const candidateTerms = ["EXTERNAL PENDING", "external_pending", "blocked-external-pending", "lateral_debt", "pre_existing_dirty", "TODO", "FIXME"];
+const debtAliasTerms: ReadonlyArray<{
+  term: string;
+  normalizedClassification: ClawDebtLedgerClassification;
+  normalizedStatus: ClawDebtLedgerStatus;
+}> = [
+  { term: "EXTERNAL PENDING", normalizedClassification: "external_pending", normalizedStatus: "external_pending" },
+  { term: "external_pending", normalizedClassification: "external_pending", normalizedStatus: "external_pending" },
+  { term: "blocked-external-pending", normalizedClassification: "external_pending", normalizedStatus: "blocked" },
+  { term: "lateral_debt", normalizedClassification: "lateral_debt", normalizedStatus: "open" },
+  { term: "pre_existing_dirty", normalizedClassification: "pre_existing_dirty", normalizedStatus: "open" },
+  { term: "goal sigue activo", normalizedClassification: "goal_blocker", normalizedStatus: "active" },
+  { term: "deuda lateral", normalizedClassification: "lateral_debt", normalizedStatus: "open" },
+  { term: "pendiente", normalizedClassification: "external_pending", normalizedStatus: "open" },
+  { term: "blocked", normalizedClassification: "direct_blocker", normalizedStatus: "blocked" },
+];
+
+const candidateTerms = [...debtAliasTerms.map((entry) => entry.term), "TODO", "FIXME"];
+const aliasScanPaths = [
+  "docs/decision-map.md",
+  "docs/discoverability.md",
+  "docs/agent-rules/index.md",
+  "docs/debt-ledger.md",
+  "docs/code-hygiene-ledger.md",
+  "docs/governance/system-telemetry/completion.md",
+  "docs/governance/sdk-first-custom-surfaces/completion.md",
+  "docs/governance/ui/completion.md",
+];
 
 export function buildClawDebtLedger(options: BuildClawDebtLedgerOptions): ClawDebtLedger {
   const generatedAt = options.generatedAt ?? new Date().toISOString();
@@ -148,10 +196,13 @@ export function buildClawDebtLedger(options: BuildClawDebtLedgerOptions): ClawDe
     entries: entries.filter((entry) => entry.repo === source.repo && entry.sourceType === source.sourceType && entry.canonicalSource === source.path).length,
   }));
   const expiredEntries = entries.filter((entry) => isExpired(entry, generatedAt));
+  const missingActionability = collectMissingActionability(entries, generatedAt);
   const audit: ClawDebtLedgerAudit = {
     ok: true,
     mode: "report_only",
     warnings: state.warnings,
+    missingActionability,
+    aliasHits: collectAliasHits(repositories),
     unindexedCandidates: collectUnindexedCandidates(repositories, entries),
     expiredEntries,
     duplicateFingerprints,
@@ -175,20 +226,7 @@ export function buildClawDebtLedger(options: BuildClawDebtLedgerOptions): ClawDe
 }
 
 export function detectDebtLedgerRepositories(rootDir: string): ClawDebtLedgerRepositoryRoot[] {
-  const resolved = path.resolve(rootDir);
-  const candidates: ClawDebtLedgerRepositoryRoot[] = [];
-  if (fs.existsSync(path.join(resolved, "package.json")) && fs.existsSync(path.join(resolved, "packages", "clawjs-core"))) {
-    candidates.push({ repo: "clawjs", rootDir: resolved });
-    const siblingClawix = path.resolve(resolved, "../Clawix/clawix");
-    if (fs.existsSync(path.join(siblingClawix, "docs", "decision-map.md"))) candidates.push({ repo: "clawix", rootDir: siblingClawix });
-  } else if (fs.existsSync(path.join(resolved, "docs", "decision-map.md"))) {
-    candidates.push({ repo: inferRepoName(resolved), rootDir: resolved });
-    const siblingClawjs = path.resolve(resolved, "../../clawjs");
-    if (fs.existsSync(path.join(siblingClawjs, "packages", "clawjs-core"))) candidates.unshift({ repo: "clawjs", rootDir: siblingClawjs });
-  } else {
-    candidates.push({ repo: inferRepoName(resolved), rootDir: resolved });
-  }
-  return dedupeRepositories(candidates);
+  return detectClawPublicRepositories(rootDir, { includeFallback: true });
 }
 
 function collectRepositoryDebt(repository: ClawDebtLedgerRepositoryRoot, state: MutableDebtLedger): void {
@@ -218,7 +256,9 @@ function collectCodeHygieneBaseline(repository: ClawDebtLedgerRepositoryRoot, st
       summary: stringField(entry.reason) ?? `Code hygiene baseline ${id}`,
       risk: `Retained finding types: ${stringArray(entry.findingTypes).join(", ") || "unspecified"}.`,
       expires: stringField(entry.expiresAt),
+      reviewBy: stringField(entry.expiresAt),
       reentryCondition: `Review ${id} before expiry or when listed paths are touched.`,
+      reentryCommand: "node scripts/code-hygiene-check.mjs",
       validation: "scripts/code-hygiene-check.mjs",
       privacy: "public",
     });
@@ -241,6 +281,7 @@ function collectSourceSizeBaseline(repository: ClawDebtLedgerRepositoryRoot, sta
       summary: `${filePath}: ${stringField(entry.reason) ?? "source-size baseline"}`,
       risk: "Large hand-authored source can keep growing unless split work is routed deliberately.",
       reentryCondition: `Any change that expands ${filePath}, or expiry of the source-size baseline policy.`,
+      reentryCommand: "node scripts/source-size-check.mjs",
       validation: "scripts/source-size-check.mjs",
       privacy: "public",
     });
@@ -263,7 +304,9 @@ function collectSurfaceEvidenceBaseline(repository: ClawDebtLedgerRepositoryRoot
       summary: stringField(entry.reason) ?? `Surface evidence baseline ${id}`,
       risk: stringField(entry.risk) ?? "Route or contract evidence is incomplete.",
       expires: stringField(entry.expires),
+      reviewBy: stringField(entry.expires),
       reentryCondition: stringField(entry.reentryCondition) ?? "Review when affected route, surface, or contract changes.",
+      reentryCommand: sourcePath.includes("projection") ? "node scripts/surface-evidence-projection-check.mjs" : "node --import tsx scripts/surface-evidence-guard.mjs",
       validation: sourcePath.includes("projection") ? "scripts/surface-evidence-projection-check.mjs" : "scripts/surface-evidence-guard.mjs",
       privacy: "public",
     });
@@ -287,7 +330,9 @@ function collectUiDebtBaseline(repository: ClawDebtLedgerRepositoryRoot, state: 
       summary: stringField(entry.reason) ?? `UI debt baseline ${id}`,
       risk: stringField(entry.allowedAction) ?? "Existing visual drift is frozen and must not expand.",
       expires: stringField(entry.reviewAfter) ?? defaultExpiry,
+      reviewBy: stringField(entry.reviewAfter) ?? defaultExpiry,
       reentryCondition: "Review when the scoped surface is touched or visual-authorized cleanup starts.",
+      reentryCommand: "node scripts/ui_governance_guard.mjs",
       validation: "scripts/ui_governance_guard.mjs",
       privacy: "public_redacted",
     });
@@ -302,7 +347,9 @@ function collectExternalValidationManifest(repository: ClawDebtLedgerRepositoryR
     ...stringArray(recordAt(json, ["completionAudit", "statusSummary"])?.externalPendingRowIds),
     ...stringArray(recordAt(json, ["externalValidationRunbook"])?.externalPendingRowIds),
   ];
+  const rows = arrayOfRecords(json.rows);
   for (const rowId of [...new Set(rowIds)]) {
+    const row = rows.find((candidate) => stringField(candidate.id) === rowId);
     addEntry(state, repository, {
       id: stableId(repository.repo, sourcePath, rowId),
       sourceType: "external_validation",
@@ -313,6 +360,7 @@ function collectExternalValidationManifest(repository: ClawDebtLedgerRepositoryR
       summary: `${rowId} remains externally pending in the system telemetry validation manifest.`,
       risk: "Local validation cannot prove provider, physical sensor, or dangerous-control behavior.",
       reentryCondition: "Replace only with exact-run approval, redacted evidence, same-lane closure, and source Q/A review.",
+      reentryCommand: stringField(row?.reentryCommand),
       validation: "scripts/verify-system-telemetry-goal.mjs",
       privacy: "public_redacted",
     });
@@ -330,6 +378,12 @@ function collectCompletionAudits(repository: ClawDebtLedgerRepositoryRoot, state
     for (const line of text.split(/\r?\n/)) {
       if (!/EXTERNAL PENDING|blocked-external-pending|active_goal_not_complete/i.test(line)) continue;
       const clean = compact(line.replaceAll("`", ""));
+      const validation = sourcePath.includes("/ui/") ? "scripts/ui_completion_audit_check.mjs" : "goal verifier listed in the completion audit";
+      const reentryCommand = sourcePath.includes("/ui/")
+        ? "node scripts/ui_completion_audit_check.mjs"
+        : sourcePath.includes("sdk-first")
+          ? "node scripts/verify-sdk-first-custom-surfaces-goal.mjs"
+          : "node scripts/verify-system-telemetry-goal.mjs";
       addEntry(state, repository, {
         id: stableId(repository.repo, sourcePath, clean),
         sourceType: "completion_audit",
@@ -340,7 +394,8 @@ function collectCompletionAudits(repository: ClawDebtLedgerRepositoryRoot, state
         summary: clean.slice(0, 220),
         risk: "Completion can be misread as finished unless this blocker stays visible in the unified ledger.",
         reentryCondition: "Review before marking the source goal complete.",
-        validation: sourcePath.includes("/ui/") ? "scripts/ui_completion_audit_check.mjs" : "goal verifier listed in the completion audit",
+        reentryCommand,
+        validation,
         privacy: "public_redacted",
       });
     }
@@ -366,6 +421,7 @@ function collectCodeHygieneLedger(repository: ClawDebtLedgerRepositoryRoot, stat
       summary: title.trim(),
       risk: compact(section).slice(0, 220),
       reentryCondition: "Review during code hygiene campaigns or before closing the hygiene program.",
+      reentryCommand: "node scripts/code-hygiene-check.mjs",
       validation: "scripts/code-hygiene-check.mjs",
       privacy: "public_redacted",
     });
@@ -375,15 +431,15 @@ function collectCodeHygieneLedger(repository: ClawDebtLedgerRepositoryRoot, stat
 function readRepoJson(repository: ClawDebtLedgerRepositoryRoot, relativePath: string, sourceType: ClawDebtLedgerSourceType, state: MutableDebtLedger): unknown {
   const absolutePath = path.join(repository.rootDir, relativePath);
   if (!fs.existsSync(absolutePath)) {
-    state.sources.push({ repo: repository.repo, root: ".", sourceType, path: relativePath, status: "missing", entries: 0 });
+    state.sources.push({ repo: repository.repo, root: repository.rootDir, sourceType, path: relativePath, status: "missing", entries: 0 });
     return null;
   }
   try {
     const json = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
-    state.sources.push({ repo: repository.repo, root: ".", sourceType, path: relativePath, status: "read", entries: 0 });
+    state.sources.push({ repo: repository.repo, root: repository.rootDir, sourceType, path: relativePath, status: "read", entries: 0 });
     return json;
   } catch (error) {
-    state.sources.push({ repo: repository.repo, root: ".", sourceType, path: relativePath, status: "invalid", entries: 0, warning: error instanceof Error ? error.message : String(error) });
+    state.sources.push({ repo: repository.repo, root: repository.rootDir, sourceType, path: relativePath, status: "invalid", entries: 0, warning: error instanceof Error ? error.message : String(error) });
     state.warnings.push(`${repository.repo}:${relativePath} could not be parsed as JSON`);
     return null;
   }
@@ -392,15 +448,15 @@ function readRepoJson(repository: ClawDebtLedgerRepositoryRoot, relativePath: st
 function readRepoText(repository: ClawDebtLedgerRepositoryRoot, relativePath: string, sourceType: ClawDebtLedgerSourceType, state: MutableDebtLedger): string | null {
   const absolutePath = path.join(repository.rootDir, relativePath);
   if (!fs.existsSync(absolutePath)) {
-    state.sources.push({ repo: repository.repo, root: ".", sourceType, path: relativePath, status: "missing", entries: 0 });
+    state.sources.push({ repo: repository.repo, root: repository.rootDir, sourceType, path: relativePath, status: "missing", entries: 0 });
     return null;
   }
   try {
     const text = fs.readFileSync(absolutePath, "utf8");
-    state.sources.push({ repo: repository.repo, root: ".", sourceType, path: relativePath, status: "read", entries: 0 });
+    state.sources.push({ repo: repository.repo, root: repository.rootDir, sourceType, path: relativePath, status: "read", entries: 0 });
     return text;
   } catch (error) {
-    state.sources.push({ repo: repository.repo, root: ".", sourceType, path: relativePath, status: "invalid", entries: 0, warning: error instanceof Error ? error.message : String(error) });
+    state.sources.push({ repo: repository.repo, root: repository.rootDir, sourceType, path: relativePath, status: "invalid", entries: 0, warning: error instanceof Error ? error.message : String(error) });
     state.warnings.push(`${repository.repo}:${relativePath} could not be read`);
     return null;
   }
@@ -438,6 +494,39 @@ function collectUnindexedCandidates(repositories: ClawDebtLedgerRepositoryRoot[]
     }
   }
   return candidates;
+}
+
+function collectMissingActionability(entries: ClawDebtLedgerEntry[], generatedAt: string): ClawDebtLedgerAudit["missingActionability"] {
+  return entries
+    .map((entry) => ({ entry, missing: debtLedgerMissingActionabilityFields(entry, generatedAt) }))
+    .filter((candidate) => candidate.missing.length > 0)
+    .map(({ entry, missing }) => ({
+      repo: entry.repo,
+      id: entry.id,
+      sourceType: entry.sourceType,
+      classification: entry.classification,
+      status: entry.status,
+      canonicalSource: entry.canonicalSource,
+      summary: entry.summary,
+      missing,
+    }));
+}
+
+function collectAliasHits(repositories: ClawDebtLedgerRepositoryRoot[]): ClawDebtLedgerAudit["aliasHits"] {
+  const hits: ClawDebtLedgerAudit["aliasHits"] = [];
+  for (const repository of repositories) {
+    for (const relativePath of aliasScanPaths) {
+      const absolutePath = path.join(repository.rootDir, relativePath);
+      if (!fs.existsSync(absolutePath)) continue;
+      const text = fs.readFileSync(absolutePath, "utf8");
+      for (const alias of debtAliasTerms) {
+        const matches = countTermMatches(text, alias.term);
+        if (matches === 0) continue;
+        hits.push({ repo: repository.repo, path: relativePath, ...alias, matches });
+      }
+    }
+  }
+  return hits;
 }
 
 function findDuplicateFingerprints(entries: ClawDebtLedgerEntry[]): ClawDebtLedgerAudit["duplicateFingerprints"] {
@@ -489,15 +578,23 @@ function parseClassification(value: string | undefined, fallback: ClawDebtLedger
 }
 
 function isExpired(entry: ClawDebtLedgerEntry, generatedAt: string): boolean {
-  return !!entry.expires && entry.expires < generatedAt.slice(0, 10);
+  const reviewDate = entry.reviewBy ?? entry.expires;
+  return !!reviewDate && reviewDate < generatedAt.slice(0, 10);
 }
 
-function inferRepoName(rootDir: string): string {
-  return path.basename(rootDir).toLowerCase() === "clawix" ? "clawix" : path.basename(rootDir).toLowerCase();
+export function debtLedgerMissingActionabilityFields(entry: ClawDebtLedgerEntry, generatedAt = new Date().toISOString()): string[] {
+  const missing: string[] = [];
+  if (!entry.ownerArea) missing.push("ownerArea");
+  if (!entry.reviewBy && !entry.expires) missing.push("reviewBy_or_expires");
+  if (!entry.reentryCondition) missing.push("reentryCondition");
+  if (!entry.reentryCommand) missing.push("reentryCommand");
+  if (!entry.validation) missing.push("validation");
+  if (isExpired(entry, generatedAt)) missing.push("review_expired");
+  return missing;
 }
 
-function dedupeRepositories(repositories: ClawDebtLedgerRepositoryRoot[]): ClawDebtLedgerRepositoryRoot[] {
-  return [...new Map(repositories.map((entry) => [`${entry.repo}:${entry.rootDir}`, entry])).values()];
+export function debtLedgerEntryNeedsAction(entry: ClawDebtLedgerEntry, generatedAt = new Date().toISOString()): boolean {
+  return debtLedgerMissingActionabilityFields(entry, generatedAt).length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -527,6 +624,11 @@ function stringArray(value: unknown): string[] {
 
 function compact(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function countTermMatches(text: string, term: string): number {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.match(new RegExp(escaped, "gi"))?.length ?? 0;
 }
 
 function containsPrivatePath(value: string): boolean {

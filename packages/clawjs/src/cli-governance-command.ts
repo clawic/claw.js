@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { buildClawDebtLedger, type ClawDebtLedgerEntry, type ClawDebtLedgerRepositoryRoot } from "@clawjs/core";
+import { buildClawDebtLedger, detectClawPublicRepositories, type ClawDebtLedgerEntry, type ClawRepositoryRoot } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
@@ -9,9 +9,7 @@ import { writeJsonOk } from "./cli-json.ts";
 
 const CLAWIX_HOST_BOUNDARY_DOC = "docs/host-" + "owner" + "ship.md";
 
-type GovernanceDoctorRepo = ClawDebtLedgerRepositoryRoot & {
-  detectedBy: "root" | "ancestor" | "sibling" | "fallback";
-};
+type GovernanceDoctorRepo = ClawRepositoryRoot;
 
 type GovernanceDoctorInput = {
   positionals: string[];
@@ -131,59 +129,7 @@ function writeGovernanceUsage(input: GovernanceDoctorInput): number {
 }
 
 function detectGovernanceRepositories(startDir: string): GovernanceDoctorRepo[] {
-  const start = path.resolve(startDir);
-  const clawjsRoot = findAncestor(start, isClawjsRoot);
-  const clawixRoot = findAncestor(start, isClawixRoot);
-  const repositories: GovernanceDoctorRepo[] = [];
-
-  if (clawjsRoot) {
-    repositories.push({ repo: "clawjs", rootDir: clawjsRoot, detectedBy: clawjsRoot === start ? "root" : "ancestor" });
-    const siblingClawix = path.resolve(clawjsRoot, "../Clawix/clawix");
-    if (isClawixRoot(siblingClawix)) repositories.push({ repo: "clawix", rootDir: siblingClawix, detectedBy: "sibling" });
-  } else if (clawixRoot) {
-    const siblingClawjs = path.resolve(clawixRoot, "../../../clawjs");
-    if (isClawjsRoot(siblingClawjs)) repositories.push({ repo: "clawjs", rootDir: siblingClawjs, detectedBy: "sibling" });
-    repositories.push({ repo: "clawix", rootDir: clawixRoot, detectedBy: clawixRoot === start ? "root" : "ancestor" });
-  }
-
-  if (repositories.length === 0) {
-    repositories.push({
-      repo: inferRepoName(start),
-      rootDir: start,
-      detectedBy: "fallback",
-    });
-  }
-
-  return [...new Map(repositories.map((repo) => [`${repo.repo}:${repo.rootDir}`, repo])).values()];
-}
-
-function findAncestor(startDir: string, predicate: (candidate: string) => boolean): string | null {
-  let current = path.resolve(startDir);
-  while (true) {
-    if (predicate(current)) return current;
-    const parent = path.dirname(current);
-    if (parent === current) return null;
-    current = parent;
-  }
-}
-
-function isClawjsRoot(candidate: string): boolean {
-  return fs.existsSync(path.join(candidate, "package.json"))
-    && fs.existsSync(path.join(candidate, "packages", "clawjs-core"))
-    && fs.existsSync(path.join(candidate, "docs", "decision-map.md"));
-}
-
-function isClawixRoot(candidate: string): boolean {
-  return fs.existsSync(path.join(candidate, "AGENTS.md"))
-    && fs.existsSync(path.join(candidate, "docs", "decision-map.md"))
-    && (fs.existsSync(path.join(candidate, "macos")) || fs.existsSync(path.join(candidate, "STYLE.md")) || path.basename(candidate).toLowerCase() === "clawix");
-}
-
-function inferRepoName(rootDir: string): string {
-  const base = path.basename(rootDir).toLowerCase();
-  if (base === "clawix") return "clawix";
-  if (base === "clawjs") return "clawjs";
-  return base || "workspace";
+  return detectClawPublicRepositories(startDir, { includeFallback: true });
 }
 
 function buildReads(repositories: GovernanceDoctorRepo[]): GovernanceDoctorRead[] {

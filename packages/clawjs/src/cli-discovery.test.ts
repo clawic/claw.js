@@ -16,6 +16,12 @@ async function enableDenseDomainModules(workspaceRoot: string): Promise<void> {
   }
 }
 
+function writeFixtureFile(root: string, relativePath: string, content: string): void {
+  const target = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, content);
+}
+
 test("runCli returns structured related matches for unknown JSON commands", async () => {
   const result = await runCliCapture(["peopel", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_USAGE);
@@ -3546,6 +3552,61 @@ test("runCli searches discoverability and route governance artifacts", async () 
       assert.equal(payload.data.results.some((entry) => entry.path === expectedPath && entry.canonicalName === query), true, query);
     }
   }
+});
+
+test("runCli federates public Clawix and ClawJS discoverability from an overlay cwd", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-overlay-search-"));
+  const overlayRoot = path.join(tempRoot, "Clawix");
+  const clawixRoot = path.join(overlayRoot, "clawix");
+  const clawjsRoot = path.join(tempRoot, "clawjs");
+
+  writeFixtureFile(overlayRoot, "AGENTS.md", "Private overlay; public canon lives in clawix/ and sibling clawjs.\n");
+  writeFixtureFile(clawixRoot, "AGENTS.md", "Clawix public entrypoint.\n");
+  writeFixtureFile(clawixRoot, "docs/decision-map.md", "Clawix public decision map.\n");
+  writeFixtureFile(clawixRoot, "docs/shared.md", "clawix-overlay-only-sentinel shared path.\n");
+  writeFixtureFile(clawixRoot, "docs/discoverability.registry.json", JSON.stringify({
+    version: 1,
+    artifacts: [{
+      id: "clawix-overlay-sentinel",
+      kind: "docs-page",
+      canonicalName: "clawix:overlay-sentinel",
+      canonicalSource: "docs/shared.md",
+      searchQueries: [{ query: "clawix-overlay-only-sentinel", expectPath: "docs/shared.md" }],
+    }],
+  }));
+
+  writeFixtureFile(clawjsRoot, "package.json", JSON.stringify({ name: "@clawjs/overlay-fixture", type: "module" }));
+  fs.mkdirSync(path.join(clawjsRoot, "packages", "clawjs-core"), { recursive: true });
+  writeFixtureFile(clawjsRoot, "docs/decision-map.md", "ClawJS public decision map.\n");
+  writeFixtureFile(clawjsRoot, "docs/shared.md", "clawjs-overlay-only-sentinel shared path.\n");
+  writeFixtureFile(clawjsRoot, "docs/discoverability.registry.json", JSON.stringify({
+    version: 1,
+    artifacts: [{
+      id: "clawjs-overlay-sentinel",
+      kind: "docs-page",
+      canonicalName: "clawjs:overlay-sentinel",
+      canonicalSource: "docs/shared.md",
+      searchQueries: [{ query: "clawjs-overlay-only-sentinel", expectPath: "docs/shared.md" }],
+    }],
+  }));
+
+  const clawixSearch = await runCliCapture(["search", "clawix-overlay-only-sentinel", "--json"], overlayRoot);
+  assert.equal(clawixSearch.code, CLI_EXIT_OK);
+  const clawixPayload = JSON.parse(clawixSearch.stdout) as { data: { scope: { repositories: Array<{ repo: string; detectedBy: string }> }; results: Array<{ repo?: string; path?: string }> } };
+  assert.deepEqual(clawixPayload.data.scope.repositories.map((repo) => repo.repo), ["clawjs", "clawix"]);
+  assert.equal(clawixPayload.data.scope.repositories.some((repo) => repo.repo === "clawix" && repo.detectedBy === "nested"), true);
+  assert.equal(clawixPayload.data.results.some((entry) => entry.repo === "clawix" && entry.path === "docs/shared.md"), true);
+
+  const clawjsSearch = await runCliCapture(["search", "clawjs-overlay-only-sentinel", "--json"], overlayRoot);
+  assert.equal(clawjsSearch.code, CLI_EXIT_OK);
+  const clawjsPayload = JSON.parse(clawjsSearch.stdout) as { data: { results: Array<{ repo?: string; path?: string }> } };
+  assert.equal(clawjsPayload.data.results.some((entry) => entry.repo === "clawjs" && entry.path === "docs/shared.md"), true);
+
+  const sharedPathSearch = await runCliCapture(["search", "shared path", "--json", "--limit", "20"], overlayRoot);
+  assert.equal(sharedPathSearch.code, CLI_EXIT_OK);
+  const sharedPathPayload = JSON.parse(sharedPathSearch.stdout) as { data: { results: Array<{ repo?: string; path?: string }> } };
+  assert.equal(sharedPathPayload.data.results.some((entry) => entry.repo === "clawjs" && entry.path === "docs/shared.md"), true);
+  assert.equal(sharedPathPayload.data.results.some((entry) => entry.repo === "clawix" && entry.path === "docs/shared.md"), true);
 });
 
 test("runCli prints related matches for unknown human commands", async () => {
