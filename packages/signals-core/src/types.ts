@@ -167,8 +167,8 @@ export interface RegistryProjectionSource {
 export interface RegistryProjectionService {
   id: "signals";
   port: number;
-  basePath: "/v1/signals";
-  verticalRouteTemplate: "/v1/signals/{verticalId}";
+  basePath: "/v1";
+  verticalRouteTemplate: "/v1/{verticalId}";
 }
 
 export interface RegistryProjectionEntry {

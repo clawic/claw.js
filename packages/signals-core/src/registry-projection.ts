@@ -91,8 +91,8 @@ export function buildSignalsRegistryProjection(input: {
     service: {
       id: "signals",
       port: input.servicePort,
-      basePath: "/v1/signals",
-      verticalRouteTemplate: "/v1/signals/{verticalId}",
+      basePath: "/v1",
+      verticalRouteTemplate: "/v1/{verticalId}",
     },
     categories,
     entries,

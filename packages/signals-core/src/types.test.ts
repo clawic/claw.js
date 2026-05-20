@@ -21,7 +21,7 @@ test("signals registry projection is host-safe and versioned", () => {
   assert.equal(projection.source.path, "tracking-registry.json");
   assert.match(projection.source.checksum, /^sha256:/);
   assert.equal(projection.service.port, 24110);
-  assert.equal(projection.service.verticalRouteTemplate, "/v1/signals/{verticalId}");
+  assert.equal(projection.service.verticalRouteTemplate, "/v1/{verticalId}");
   assert.equal(projection.categories.length, 10);
   assert.equal(projection.entries.length, 80);
   assert.equal(projection.entries.some((entry) => entry.status === "dev_only"), true);
