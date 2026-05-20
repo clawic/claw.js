@@ -113,6 +113,7 @@ function assertCompletionAudit() {
     "| CLJ-SDK-008 | Shells and hosts remain modular and nonblocking",
     "exact reviewed core survival route and heavy dependency sets",
     "exact reviewed surface lifecycle state and report sets",
+    "exact reviewed readiness mode and direct child-reported route sets",
     "redacted installed-app Time Profiler smoke",
     "launched `/Applications/Clawix.app` under Instruments",
     "rescue reachability, and a deliberately delayed-heavy-surface Web fixture reaching route-local timeout",
@@ -631,6 +632,14 @@ function assertSiblingClawixArtifacts() {
       "\"unavailable\"",
       "SurfaceRouteSupervisor",
       "cancel",
+    ],
+    "macos/Tests/ClawixMeshTests/SurfaceRouteRegistryTests.swift": [
+      "testReadinessModesAndDirectChildReportedRoutesStayExact",
+      "reviewedSurfaceReadinessModeKinds",
+      "reviewedDirectChildReportedReadinessRouteIds",
+      "\"immediateAfterFirstRender\"",
+      "\"childReported\"",
+      "SurfaceRouteReadinessPolicy.mode(for: entry, hasActiveCustomVariant: true)",
     ],
     "docs/sdk-first-custom-surfaces-installed-app-smoke.md": [
       "`/Applications/Clawix.app/Contents/Helpers/ClawixSwiftSurfaceRunner`",
