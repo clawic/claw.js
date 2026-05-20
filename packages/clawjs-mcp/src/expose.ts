@@ -38,6 +38,21 @@ export function customAppSDKMCPContractPayload() {
   };
 }
 
+const publicCredentialLeaseRefInputSchema = {
+  type: "string",
+  description: "Public credential lease reference. Raw secret refs, file URLs, private local paths, key material, and key-like tokens are rejected.",
+  not: {
+    anyOf: [
+      { pattern: "secret://" },
+      { pattern: "file://" },
+      { pattern: "[/\\\\][Uu]sers[/\\\\]" },
+      { pattern: "-----BEGIN" },
+      { pattern: "\\bsk-[A-Za-z0-9_-]+" },
+      { pattern: "\\bAKIA[A-Z0-9]+" },
+    ],
+  },
+};
+
 export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): MCPExposedTool[] {
   const macSignedHostBridge = options.macSignedHostBridge ?? null;
   return [
@@ -210,7 +225,7 @@ export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): M
         type: "object",
         properties: {
           providerId: { type: "string" },
-          credentialRef: { type: "string" },
+          credentialRef: publicCredentialLeaseRefInputSchema,
           reason: { type: "string" },
         },
         required: ["providerId"],

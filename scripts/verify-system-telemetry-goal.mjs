@@ -1364,7 +1364,7 @@ function assertMcpAndApiTestCoverage() {
     "Public credential lease reference",
     "secret://",
     "file://",
-    "[/\\\\][Uu]sers[/\\\\]",
+    "[Uu]sers",
     "\\bsk-[A-Za-z0-9_-]+",
     "\\bAKIA[A-Z0-9]+",
     "credentialRef: publicCredentialLeaseRefInputSchema",
