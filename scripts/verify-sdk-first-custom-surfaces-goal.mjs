@@ -123,7 +123,7 @@ function assertCompletionAudit() {
   assert(rowIds.length === 10, "docs/governance/sdk-first-custom-surfaces/completion.md: must contain exactly CLJ-SDK-001 through CLJ-SDK-010");
   assert(!text.includes("/Users/"), "docs/governance/sdk-first-custom-surfaces/completion.md: must not publish private filesystem paths");
   for (const [rowId, status] of [
-    ["CLJ-SDK-002", "PARTIAL LOCAL"],
+    ["CLJ-SDK-002", "VALIDATED LOCAL"],
     ["CLJ-SDK-005", "EXTERNAL PENDING"],
     ["CLJ-SDK-007", "VALIDATED LOCAL"],
     ["CLJ-SDK-008", "EXTERNAL PENDING"],
