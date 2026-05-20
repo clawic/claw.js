@@ -6,6 +6,7 @@ import path from "node:path";
 
 import type { FastifyInstance } from "fastify";
 
+import { clawApiPath } from "@clawjs/core";
 import { RuntimeApiClient, buildRuntimeApp } from "@clawjs/runtime";
 import { SessionsApiClient, buildSessionsApp } from "@clawjs/sessions";
 import { UserModelApiClient, buildUserModelApp } from "@clawjs/user-model";
@@ -30,6 +31,7 @@ function injectFetch(app: FastifyInstance): typeof fetch {
 
 interface TestContext {
   runtimeClient: RuntimeApiClient;
+  runtimeFetch: typeof fetch;
   sessionsClient: SessionsApiClient;
   userModelClient: UserModelApiClient;
   skillsOutputDir: string;
@@ -87,14 +89,16 @@ async function spinUp(): Promise<TestContext> {
     },
   });
 
+  const runtimeFetch = injectFetch(runtime.app);
   const runtimeClient = new RuntimeApiClient({
     baseUrl: "http://runtime.test",
     token: SECRET,
-    fetchImpl: injectFetch(runtime.app),
+    fetchImpl: runtimeFetch,
   });
 
   return {
     runtimeClient,
+    runtimeFetch,
     sessionsClient,
     userModelClient,
     skillsOutputDir,
@@ -218,6 +222,29 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
       payload.capabilities.find((capability) => capability.id === "actions.invoke")?.dispatch?.mode,
       "approvalRequiredNoRunner",
     );
+  } finally {
+    await ctx.close();
+  }
+});
+
+test("runtime custom app SDK contract route does not execute DB or Search calls", async () => {
+  const ctx = await spinUp();
+  try {
+    const response = await ctx.runtimeFetch(`http://runtime.test${clawApiPath("contracts/custom-app-sdk")}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${SECRET}`,
+      },
+      body: JSON.stringify({
+        operation: "db.query",
+        query: { collection: "tasks", filter: {} },
+      }),
+    });
+
+    assert.equal(response.status, 404);
+    const body = await response.json() as { error: string };
+    assert.equal(body.error, "Not Found");
   } finally {
     await ctx.close();
   }
