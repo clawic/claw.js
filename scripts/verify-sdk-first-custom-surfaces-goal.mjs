@@ -216,6 +216,8 @@ function assertSiblingClawixArtifacts() {
       "Status: `active_goal_not_complete`",
       "The Clawix verifier inspects sibling ClawJS evidence when that checkout is present.",
       "| CLX-SDK-010 | Final decision-by-decision source-session audit",
+      "| CLX-SDK-007 | Swift custom surfaces are native but isolated",
+      "verified the signed bundled helper, valid stdout `render` output",
     ],
     "scripts/verify-sdk-first-custom-surfaces-goal.mjs": [
       "assertSiblingClawJSArtifacts",
@@ -240,6 +242,12 @@ function assertSiblingClawixArtifacts() {
     "macos/Tests/ClawixMeshTests/SurfaceShellPerformanceTests.swift": [
       "testCriticalShellStartFastPathStaysBoundedWithAllHeavyDependenciesUnavailable",
       "testExtensionSurfaceStartMeasurementRemainsRouteLocalUnderUnavailableDependencies",
+    ],
+    "docs/sdk-first-custom-surfaces-installed-app-smoke.md": [
+      "`/Applications/Clawix.app/Contents/Helpers/ClawixSwiftSurfaceRunner`",
+      "`codex-swift-runner-smoke`",
+      "`Rendered by the installed Swift surface runner.`",
+      "The Clawix app process stayed alive with the same PID",
     ],
     "macos/Sources/Clawix/NetworkControl/NetworkControlBridge.swift": [
       "NetworkControlBridge",
