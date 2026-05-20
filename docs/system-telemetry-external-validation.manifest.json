@@ -1,4 +1,5 @@
 {
+  "$schema": "docs/system-telemetry-external-validation.manifest.schema.json",
   "schemaVersion": 1,
   "id": "system-telemetry-external-validation-manifest",
   "description": "System telemetry external validation manifest for structured external lane completion blockers.",

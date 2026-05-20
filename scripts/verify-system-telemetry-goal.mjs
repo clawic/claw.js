@@ -178,6 +178,7 @@ function assertExternalPendingLedger() {
     "`docs/system-telemetry-external-validation-runbook.md`",
     "Accepted external",
     "`docs/system-telemetry-external-evidence.schema.json`",
+    "`docs/system-telemetry-external-validation.manifest.schema.json`",
     "`node scripts/validate-system-telemetry-external-evidence.mjs <packet.json>`",
     "before any row is updated",
     "public-safe rows, the completion audit binds each goal requirement",
@@ -233,6 +234,7 @@ function assertExternalPendingLedger() {
 
 function assertExternalValidationManifest() {
   const manifest = readJson("docs/system-telemetry-external-validation.manifest.json");
+  assert(manifest.$schema === "docs/system-telemetry-external-validation.manifest.schema.json", "external validation manifest: wrong schema ref");
   assert(manifest.schemaVersion === 1, "external validation manifest: schemaVersion must be 1");
   assert(manifest.id === "system-telemetry-external-validation-manifest", "external validation manifest: wrong id");
   assert(manifest.conversationId === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external validation manifest: wrong conversationId");
@@ -316,6 +318,32 @@ function assertExternalValidationManifest() {
   }
 }
 
+function assertExternalValidationManifestSchema() {
+  const schema = readJson("docs/system-telemetry-external-validation.manifest.schema.json");
+  const manifest = readJson("docs/system-telemetry-external-validation.manifest.json");
+  const serialized = JSON.stringify(schema);
+  assert(schema.$schema === "https://json-schema.org/draft/2020-12/schema", "external validation manifest schema: wrong JSON schema version");
+  assert(schema.$id === "https://clawjs.dev/schemas/system-telemetry-external-validation.manifest.schema.json", "external validation manifest schema: wrong id");
+  assert(schema.title === "System Telemetry External Validation Manifest", "external validation manifest schema: wrong title");
+  for (const snippet of [
+    "active_goal_not_complete",
+    "externalPendingBlocksCompletion",
+    "requiresExactRunApprovalForExternalLanes",
+    "SYS-TEL-EXT-001",
+    "SYS-TEL-EXT-002",
+    "SYS-TEL-EXT-003",
+    "VALIDATED LOCAL",
+    "EXTERNAL PENDING",
+    "scripts/validate-system-telemetry-external-evidence.mjs",
+  ]) {
+    assert(serialized.includes(snippet), `external validation manifest schema: missing ${snippet}`);
+  }
+  const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
+  const validate = ajv.compile(schema);
+  assert(validate(manifest), `external validation manifest schema: manifest must validate: ${ajv.errorsText(validate.errors)}`);
+  assert(!serialized.includes("/Users/"), "external validation manifest schema: must not publish private filesystem paths");
+}
+
 function assertExternalValidationRunbook() {
   const text = read("docs/system-telemetry-external-validation-runbook.md");
   for (const snippet of [
@@ -329,6 +357,8 @@ function assertExternalValidationRunbook() {
     "Any accepted run must produce a redacted evidence packet conforming to",
     "`docs/system-telemetry-external-evidence.schema.json`",
     "lane-closing record",
+    "`docs/system-telemetry-external-validation.manifest.schema.json`",
+    "lane status update",
     "`node scripts/validate-system-telemetry-external-evidence.mjs <packet.json>`",
     "before updating any ledger, manifest, completion audit, or source Q/A review",
     "`docs/system-telemetry-external-evidence.fixtures.json`",
@@ -606,6 +636,8 @@ function assertDecisionMatrix() {
     "scripts/validate-system-telemetry-external-evidence.mjs",
     "evidence validator",
     "docs/system-telemetry-external-validation.manifest.json",
+    "docs/system-telemetry-external-validation.manifest.schema.json",
+    "manifest schema",
     "external validation manifest",
     "docs/system-telemetry-source-qa-review.json",
     "source Q/A review",
@@ -672,6 +704,7 @@ function assertDocsAndRegistry() {
       "docs/system-telemetry-external-evidence.fixtures.json",
       "scripts/validate-system-telemetry-external-evidence.mjs",
       "docs/system-telemetry-external-validation.manifest.json",
+      "docs/system-telemetry-external-validation.manifest.schema.json",
       "docs/system-telemetry-source-qa-review.json",
       "npm run test:system-telemetry-goal",
     ]],
@@ -688,6 +721,9 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-external-validation-manifest\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-validation.manifest.json\"",
       "\"query\": \"system telemetry external validation manifest\"",
+      "\"id\": \"system-telemetry-external-validation-manifest-schema\"",
+      "\"canonicalSource\": \"docs/system-telemetry-external-validation.manifest.schema.json\"",
+      "\"query\": \"system telemetry external validation manifest schema\"",
       "\"id\": \"system-telemetry-external-validation-runbook\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-validation-runbook.md\"",
       "\"query\": \"system telemetry external validation runbook\"",
@@ -710,6 +746,8 @@ function assertDocsAndRegistry() {
       "[docs/system-telemetry-external-pending-validation.md](/system-telemetry-external-pending-validation)",
       "`system-telemetry-external-validation-manifest`",
       "[docs/system-telemetry-external-validation.manifest.json](/system-telemetry-external-validation.manifest.json)",
+      "`system-telemetry-external-validation-manifest-schema`",
+      "[docs/system-telemetry-external-validation.manifest.schema.json](/system-telemetry-external-validation.manifest.schema.json)",
       "`system-telemetry-external-validation-runbook`",
       "[docs/system-telemetry-external-validation-runbook.md](/system-telemetry-external-validation-runbook)",
       "`system-telemetry-external-evidence-schema`",
@@ -1265,6 +1303,7 @@ function main() {
   assertNoForbiddenPublicNames();
   assertExternalPendingLedger();
   assertExternalValidationManifest();
+  assertExternalValidationManifestSchema();
   assertExternalValidationRunbook();
   assertExternalEvidenceSchema();
   assertExternalEvidenceFixtures();
