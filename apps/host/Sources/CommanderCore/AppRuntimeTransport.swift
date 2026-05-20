@@ -1,7 +1,7 @@
 import Foundation
 
 @objc public protocol AppRuntimeXPCProtocol {
-    func sendCommand(_ requestData: Data, withReply reply: @escaping @Sendable (Data?, String?) -> Void)
+    func sendCommand(_ requestBytes: Data, withReply reply: @escaping @Sendable (Data?, String?) -> Void)
 }
 
 public final class AppRuntimeHost: NSObject, @unchecked Sendable {
@@ -123,12 +123,12 @@ final class AppRuntimeXPCService: NSObject, AppRuntimeXPCProtocol {
         self.stopHost = stopHost
     }
 
-    func sendCommand(_ requestData: Data, withReply reply: @escaping @Sendable (Data?, String?) -> Void) {
+    func sendCommand(_ requestBytes: Data, withReply reply: @escaping @Sendable (Data?, String?) -> Void) {
         let service = self.service
         let stopHost = self.stopHost
         Task.detached {
             do {
-                let request = try JSONDecoder().decode(CommandRequest.self, from: requestData)
+                let request = try JSONDecoder().decode(CommandRequest.self, from: requestBytes)
                 let response = await service.execute(request)
                 let responseData = try JSONEncoder().encode(response)
                 reply(responseData, nil)

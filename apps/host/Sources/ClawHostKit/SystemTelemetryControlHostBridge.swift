@@ -57,10 +57,10 @@ public enum SystemTelemetryControlHostBridge {
             approved: bool(arguments["confirm"] ?? arguments["approved"])
         )
 
-        let requestData = try JSONEncoder().encode(request)
+        let requestBytes = try JSONEncoder().encode(request)
         let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
         let evaluationData = try MacControlWire.evaluateJSON(
-            for: requestData,
+            for: requestBytes,
             auditURL: stateDirectory.appendingPathComponent(MacControlPolicy.auditFilename),
             policyURL: MacControlPolicyGrantStore.fileURL(stateDirectory: stateDirectory),
             continuityURL: MacControlContinuityStore.fileURL(stateDirectory: stateDirectory),

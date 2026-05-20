@@ -176,12 +176,12 @@ public final class DaemonSocketServer: @unchecked Sendable {
         }
 
         guard let newlineIndex = payload.firstIndex(of: 0x0A) else { return }
-        let requestData = payload.prefix(upTo: newlineIndex)
+        let requestBytes = payload.prefix(upTo: newlineIndex)
         let decoder = JSONDecoder()
         let encoder = JSONEncoder()
 
         do {
-            let request = try decoder.decode(CommandRequest.self, from: requestData)
+            let request = try decoder.decode(CommandRequest.self, from: requestBytes)
             let response = await service.execute(request)
             let data = try encoder.encode(response)
             try SocketIO.writeAll(data: data, to: clientFD)
