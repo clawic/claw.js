@@ -123,7 +123,9 @@ for user-authored custom UIs that do not block the main app shell.
   newer host-liveness and all-process captures confirmed post-capture app
   liveness and redacted stack attribution separating Clawix host
   SwiftUI/route/render work from WebKit WebContent and GPU work. An approved
-  baseline and reviewable closure summary remain closure blockers.
+  baseline remains the closure blocker; the sibling reviewable summary in
+  `docs/sdk-first-custom-surfaces-performance-closure-summary.md` maps current
+  evidence to required flows without treating it as an approved baseline.
 - Protected routes reject replacement attempts.
 - Variant defaults preserve access to the original screen.
 - CLI smoke paths remain available for framework capability validation.
