@@ -48,6 +48,7 @@ function assertCompletionAudit() {
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
     "`SystemTelemetryBridge.localStatusBridge`",
+    "resources.list` as a separate local-wide registered-resource catalog read",
     "`window.clawix.mac.planAction()`",
     "dry-run-only Mac Control plan projection",
     "imported/marketplace app trust handling with host-local `app-package-trust-roots.json`",
@@ -102,6 +103,7 @@ function assertPublicRouting() {
       "launch and attach capture paths",
       "rescue, delayed-heavy-surface",
       "Sibling Clawix mirrors `system.telemetry.snapshot` and",
+      "ClawJS and sibling Clawix expose `resources.list` and",
       "Sibling Clawix exposes `mac.action.plan` through",
       "Sibling Clawix validates imported/marketplace packages through host-local",
     ],
@@ -133,6 +135,7 @@ function assertFrameworkArtifacts() {
     "packages/clawjs-core/src/capability-catalog.ts": [
       "sdk-first-custom-surfaces",
       "buildCustomAppCapabilityRiskMap",
+      "id: \"resources.list\"",
       "approvalRequired",
       "blocked",
     ],
@@ -173,6 +176,7 @@ function assertTests() {
       "custom-app SDK inspection payload exposes dispatch availability and gaps",
       "payload.executionBoundary.executesCapabilityCalls",
       "custom-app DB query schema rejects collection creation",
+      "resources.list",
       "approvalRequiredNoPlaintextBroker",
     ],
     "packages/clawjs/src/inspect-cli.test.ts": [
@@ -229,6 +233,7 @@ function assertSiblingClawixArtifacts() {
       "`clawix.capabilities.contracts()` exposes `executionBoundary`",
       "Direct SQLite is not exposed as a custom-app action surface.",
       "`system.telemetry.snapshot` and `system.telemetry.history` are mirrored as",
+      "`resources.list` and `resources.read` are separate local-wide capabilities",
       "`mac.action.plan` is exposed to Web custom apps through",
     ],
     "docs/sdk-first-custom-surfaces-completion-audit.md": [
@@ -254,6 +259,8 @@ function assertSiblingClawixArtifacts() {
       "systemTelemetrySnapshotSchemaRef",
       "system.telemetry.snapshot",
       "system.telemetry.history",
+      "resourcesListSchemaRef",
+      "resources.list",
     ],
     "macos/Sources/Clawix/Apps/AppPackageTrustPolicy.swift": [
       "app-package-trust-roots.json",
@@ -278,6 +285,7 @@ function assertSiblingClawixArtifacts() {
       "capabilities",
       "contracts: function () { return send('capabilities.contracts'); }",
       "db.query",
+      "resources.list",
       "mac.action.plan",
       "planAction",
       "system.telemetry.snapshot",
@@ -296,6 +304,7 @@ function assertSiblingClawixArtifacts() {
     ],
     "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityTests.swift": [
       "testHostBridgeExposesCustomAppSDKContractPayload",
+      "testSwiftSurfaceResourceListExecutesThroughRegisteredResources",
       "testInjectedAppsSdkExposesMacPlanOnlyFacade",
       "testDBQueryDSLRejectsCollectionEscapesAndDDLKeys",
       "testSwiftSurfaceRunnerSupervisorRejectsInProcessPlans",
