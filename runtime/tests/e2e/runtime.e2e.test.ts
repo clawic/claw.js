@@ -187,6 +187,13 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
     const payload = await ctx.runtimeClient.customAppSDKContracts() as {
       serviceApiRole: string;
       richUiRuntime: string;
+      executionBoundary: {
+        kind: string;
+        executesCapabilityCalls: boolean;
+        richUiExecutionPath: string;
+        nonExecutableSurfaces: string[];
+        dbSearchExecution: string;
+      };
       schemaRefs: string[];
       missingSchemaRefs: string[];
       riskMap: { ordinaryAccess: string[]; approvalRequired: string[] };
@@ -194,6 +201,11 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
     };
     assert.equal(payload.serviceApiRole, "inspection_validation_contract_resource");
     assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_service_api_process");
+    assert.equal(payload.executionBoundary.kind, "metadata_only_contract_catalog");
+    assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
+    assert.equal(payload.executionBoundary.richUiExecutionPath, "sdk_host_bridge");
+    assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("service_api.contracts"), true);
+    assert.equal(payload.executionBoundary.dbSearchExecution, "host_bridge_only");
     assert.deepEqual(payload.missingSchemaRefs, []);
     assert.ok(payload.schemaRefs.includes("claw.resources.payload.v1"));
     assert.ok(payload.riskMap.ordinaryAccess.includes("search.query"));

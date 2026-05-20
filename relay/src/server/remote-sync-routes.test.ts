@@ -119,6 +119,13 @@ test("relay exposes custom app SDK dispatch metadata as remote-safe contract pro
       localWideReadsRemoteExecution: string;
       writes: boolean;
       missingSchemaRefs: string[];
+      executionBoundary: {
+        kind: string;
+        executesCapabilityCalls: boolean;
+        richUiExecutionPath: string;
+        nonExecutableSurfaces: string[];
+        dbSearchExecution: string;
+      };
       capabilities: Array<{ id: string; dispatch?: { status: string; mode: string; externalValidation?: string } }>;
     };
 
@@ -127,6 +134,11 @@ test("relay exposes custom app SDK dispatch metadata as remote-safe contract pro
     assert.equal(payload.remoteExecution, "not_enabled");
     assert.equal(payload.localWideReadsRemoteExecution, "not_exposed");
     assert.equal(payload.writes, false);
+    assert.equal(payload.executionBoundary.kind, "metadata_only_contract_catalog");
+    assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
+    assert.equal(payload.executionBoundary.richUiExecutionPath, "sdk_host_bridge");
+    assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("relay.remote.custom_app_sdk"), true);
+    assert.equal(payload.executionBoundary.dbSearchExecution, "host_bridge_only");
     assert.deepEqual(payload.missingSchemaRefs, []);
 
     const byId = new Map(payload.capabilities.map((capability) => [capability.id, capability]));

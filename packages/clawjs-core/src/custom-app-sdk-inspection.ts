@@ -19,6 +19,20 @@ function referencedSchemaRefs(capabilities: ClawCapabilityDescriptor[]): string[
   ].filter((ref): ref is string => Boolean(ref))))].sort();
 }
 
+export const CUSTOM_APP_SDK_EXECUTION_BOUNDARY = {
+  kind: "metadata_only_contract_catalog",
+  executesCapabilityCalls: false,
+  richUiExecutionPath: "sdk_host_bridge",
+  localExecutableSurface: "host_bridge",
+  nonExecutableSurfaces: [
+    "cli.inspect",
+    "service_api.contracts",
+    "mcp.custom_app_sdk",
+    "relay.remote.custom_app_sdk",
+  ],
+  dbSearchExecution: "host_bridge_only",
+} as const;
+
 export function buildCustomAppSDKInspectionPayload() {
   const capabilities = listClawCapabilities();
   const schemaRefs = listCustomAppSDKSchemaRefs();
@@ -26,6 +40,7 @@ export function buildCustomAppSDKInspectionPayload() {
   return {
     schemaVersion: 1,
     source: sdkFirstCapabilityCatalogSource(),
+    executionBoundary: CUSTOM_APP_SDK_EXECUTION_BOUNDARY,
     riskMap: buildCustomAppCapabilityRiskMap(),
     schemaRefs,
     referencedSchemaRefs: refs,

@@ -145,6 +145,17 @@ test("custom-app SDK inspection payload exposes dispatch availability and gaps",
   const payload = buildCustomAppSDKInspectionPayload();
   const byId = new Map(payload.capabilities.map((capability) => [capability.id, capability]));
 
+  assert.equal(payload.executionBoundary.kind, "metadata_only_contract_catalog");
+  assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
+  assert.equal(payload.executionBoundary.richUiExecutionPath, "sdk_host_bridge");
+  assert.equal(payload.executionBoundary.localExecutableSurface, "host_bridge");
+  assert.equal(payload.executionBoundary.dbSearchExecution, "host_bridge_only");
+  assert.deepEqual(payload.executionBoundary.nonExecutableSurfaces, [
+    "cli.inspect",
+    "service_api.contracts",
+    "mcp.custom_app_sdk",
+    "relay.remote.custom_app_sdk",
+  ]);
   assert.equal(byId.get("search.query")?.dispatch?.status, "available");
   assert.equal(byId.get("search.query")?.dispatch?.mode, "localWideRead");
   assert.equal(byId.get("search.query")?.dispatch?.approvalRequired, false);

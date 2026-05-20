@@ -94,6 +94,15 @@ Every new stable capability must answer:
 Gaps must be explicit in the ADR, source catalog, or surface registry. Silent
 gaps are regressions.
 
+The shared custom-app SDK inspection payload includes an `executionBoundary`
+declaring that CLI inspect, service API contracts, MCP `clawjs.custom_app_sdk`,
+and Relay `/v1/remote/custom-app-sdk` are metadata-only contract projections.
+They expose schemas, dispatch availability, risk, redaction, and gaps; they do
+not execute `search.query`, `db.query`, or other SDK capability calls. Rich UI
+dispatch for ordinary local reads runs through the SDK host bridge, such as
+Clawix `window.clawix`, where the host can apply validation, cancellation,
+redaction, audit, and high-risk approval.
+
 ## Clawix Shell Contract
 
 Clawix must treat the sidebar, chat, rescue, approvals, and custom surfaces as
