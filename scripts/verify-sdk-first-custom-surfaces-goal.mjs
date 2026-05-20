@@ -44,6 +44,7 @@ function assertCompletionAudit() {
     "24 decision prompt ids",
     "three interrupted unanswered ids",
     "The Network Control Plane now provides a typed executable route-family example",
+    "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "disabled-by-default rule suggestions",
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
@@ -99,6 +100,7 @@ function assertPublicRouting() {
     "docs/sdk-first-custom-surfaces-plan.md": [
       "Expose `executionBoundary` in the shared custom-app SDK inspection payload",
       "Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/",
+      "Sibling Clawix mirrors the ClawJS capability facade shape",
       "Sibling Clawix installed-app Time Profiler smoke",
       "launch and attach capture paths",
       "rescue, delayed-heavy-surface",
@@ -231,6 +233,7 @@ function assertSiblingClawixArtifacts() {
     "docs/sdk-first-custom-surfaces-plan.md": [
       "metadata-only `executionBoundary`",
       "`clawix.capabilities.contracts()` exposes `executionBoundary`",
+      "`window.clawix.capabilities` mirrors the shared SDK facade shape",
       "Direct SQLite is not exposed as a custom-app action surface.",
       "`system.telemetry.snapshot` and `system.telemetry.history` are mirrored as",
       "`resources.list` and `resources.read` are separate local-wide capabilities",
@@ -283,7 +286,9 @@ function assertSiblingClawixArtifacts() {
     ],
     "macos/Sources/Clawix/Apps/ClawixAppsSDK.swift": [
       "capabilities",
+      "get: function (id) { return send('capabilities.get'",
       "contracts: function () { return send('capabilities.contracts'); }",
+      "source: function () { return send('capabilities.source'); }",
       "db.query",
       "resources.list",
       "mac.action.plan",
@@ -305,6 +310,8 @@ function assertSiblingClawixArtifacts() {
     "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityTests.swift": [
       "testHostBridgeExposesCustomAppSDKContractPayload",
       "testSwiftSurfaceResourceListExecutesThroughRegisteredResources",
+      "capabilities.get",
+      "capabilities.source",
       "testInjectedAppsSdkExposesMacPlanOnlyFacade",
       "testDBQueryDSLRejectsCollectionEscapesAndDDLKeys",
       "testSwiftSurfaceRunnerSupervisorRejectsInProcessPlans",

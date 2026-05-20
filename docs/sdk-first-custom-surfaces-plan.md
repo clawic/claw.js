@@ -67,6 +67,10 @@ for user-authored custom UIs that do not block the main app shell.
 - `@clawjs/claw` exposes `claw.capabilities.list|get|riskMap|source`.
 - Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/
   Relay and declares those routes metadata-only.
+- Sibling Clawix mirrors the ClawJS capability facade shape for
+  `capabilities.list`, `capabilities.get`, `capabilities.riskMap`, and
+  `capabilities.source`, while `capabilities.contracts` carries host-specific
+  boundary metadata.
 - Network Control Plane schemas, Gateway route policy, redacted event audit,
   CLI tests, and Clawix host projection evidence are part of the executable
   route-family gate; unrelated future executors remain blocked until they have
