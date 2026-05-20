@@ -86,7 +86,8 @@ function surfaces(input: Record<ClawCapabilitySurface, string | ClawCapabilitySu
   return (["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"] as const).map((surface) => {
     const value = input[surface];
     if (value === undefined) throw new Error(`Missing capability surface binding: ${surface}`);
-    if (value === "pending" || value === "blocked" || value === "notApplicable" || value === "available") {
+    if (value === "pending") throw new Error(`Pending capability surface binding is not allowed: ${surface}`);
+    if (value === "blocked" || value === "notApplicable" || value === "available") {
       return { surface, status: value };
     }
     return { surface, status: "available" as const, ref: value };
