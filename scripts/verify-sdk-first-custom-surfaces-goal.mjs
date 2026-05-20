@@ -174,6 +174,7 @@ function assertPublicRouting() {
       "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs",
       "metadata-only projection boundaries",
+      "Generic `actions.invoke` and `secrets.broker` remain explicit approval-gated no-runner/no-plaintext-broker gaps until safe runners exist",
     ],
     "docs/discoverability.registry.json": [
       "docs/governance/sdk-first-custom-surfaces/completion.md",
@@ -195,6 +196,8 @@ function assertPublicRouting() {
   })) {
     for (const snippet of snippets) requireSnippet(relativePath, snippet);
   }
+
+  forbidSnippet("docs/decision-map.md", "backend executor");
 }
 
 function assertFrameworkArtifacts() {
