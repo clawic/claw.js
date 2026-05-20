@@ -18,6 +18,8 @@ import {
 } from "./custom-app-sdk-contracts.ts";
 import { buildCustomAppSDKInspectionPayload } from "./custom-app-sdk-inspection.ts";
 
+const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
   const ids = listClawCapabilities().map((capability) => capability.id);
 
@@ -52,6 +54,15 @@ test("stable capabilities declare SDK and CLI coverage or an explicit gap", () =
       } else {
         assert.ok(["pending", "blocked", "notApplicable"].includes(surface.status), `${capability.id}:${surface.surface}`);
       }
+    }
+  }
+});
+
+test("published capability surface bindings are complete and resolved", () => {
+  for (const capability of listClawCapabilities()) {
+    assert.deepEqual(capability.surfaces.map((surface) => surface.surface), CANONICAL_CAPABILITY_SURFACES, capability.id);
+    for (const surface of capability.surfaces) {
+      assert.notEqual(surface.status, "pending", `${capability.id}:${surface.surface}`);
     }
   }
 });
