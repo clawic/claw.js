@@ -85,6 +85,11 @@ for user-authored custom UIs that do not block the main app shell.
   `window.clawix.mac.planAction()` as an approval-gated, dry-run-only host
   bridge call; signed-host native execution remains out of scope until approved
   external evidence exists.
+- Sibling Clawix exposes `iot.device.action.invoke` through
+  `window.clawix.iot.invokeAction()` as an approval-gated host bridge call with
+  declared capability checks, dispatcher policy, and high-risk audit receipts;
+  live provider or physical-device validation remains external pending until
+  explicitly approved.
 - Sibling Clawix validates imported/marketplace packages through host-local
   `app-package-trust-roots.json`, records signature key/trust-source
   provenance, and still requires the activation ficha before running them.
