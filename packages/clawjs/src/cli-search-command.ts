@@ -64,6 +64,7 @@ import {
   scheduleSlidesDeckSearchEvent,
   scheduleSnippetsLibrarySearchEvent,
   scheduleSocialPostsSearchEvent,
+  scheduleSurfaceRegistrySearchEvent,
   scheduleSurfaceRouteSearchEvent,
   scheduleWebIngestedSearchEvent,
   scheduleWorkItemsSearchEvent,
@@ -95,7 +96,7 @@ import { ensureGenerationArtifactResourceIndexed, ensureGenerationsArtifactsSour
 import { ensureImageDerivedResourceIndexed, ensureImagesDerivedSourceIndexed, ensureMediaAssetResourceIndexed, ensureMediaAssetsSourceIndexed } from "./cli-search-image-media-sources.ts";
 import { ensureLocalFileResourceIndexed, ensureLocalFilesSourceIndexed } from "./cli-search-local-files-source.ts";
 import { ensureSheetsWorkbookResourceIndexed, ensureSheetsWorkbooksSourceIndexed, ensureSlidesDeckResourceIndexed, ensureSlidesDecksSourceIndexed } from "./cli-search-slides-sheets-sources.ts";
-import { ensureSurfaceRouteResourceIndexed, ensureSurfacesRoutesSourceIndexed } from "./cli-search-surface-routes-source.ts";
+import { ensureSurfaceRegistryResourceIndexed, ensureSurfaceRouteResourceIndexed, ensureSurfacesRegistrySourceIndexed, ensureSurfacesRoutesSourceIndexed } from "./cli-search-surface-routes-source.ts";
 import {
   ensureExternalCacheResourceIndexed,
   ensureExternalCacheSourceIndexed,
@@ -170,6 +171,7 @@ const SIMPLE_CHANGED_SOURCE_SCHEDULES = new Map<string, {
   ["connectors.catalog", { idFlagNames: ["operation-id", "operation"], idLabel: "operation-id", schedule: (input) => scheduleConnectorCatalogSearchEvent({ operation: input.operation, operationId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
   ["apps.catalog", { idFlagNames: ["app-id", "app"], idLabel: "app-id", schedule: (input) => scheduleAppsCatalogSearchEvent({ operation: input.operation, appId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
   ["design.resources", { idFlagNames: ["resource-id", "resource"], idLabel: "resource-id", workspaceRoot: true, schedule: (input) => scheduleDesignResourcesSearchEvent({ operation: input.operation, resourceId: input.id, workspaceRoot: input.workspaceRoot, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
+  ["surfaces.registry", { idFlagNames: ["surface-id", "surface"], idLabel: "surface-id", schedule: (input) => scheduleSurfaceRegistrySearchEvent({ operation: input.operation, surfaceId: input.id, dataDir: input.dataDir, flags: input.flags, observedAt: input.observedAt }) }],
 ]);
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
@@ -227,7 +229,7 @@ export async function runSearchQueryCli(input: {
     const shouldRefreshApps = domains?.includes("apps") || sources?.includes("apps.catalog");
     const shouldRefreshDesign = domains?.includes("design") || sources?.includes("design.resources");
     const shouldRefreshRuntime = domains?.includes("runtime") || sources?.includes("runtime.events");
-    const shouldRefreshSurfaces = domains?.includes("surfaces") || sources?.includes("surfaces.routes");
+    const shouldRefreshSurfaces = domains?.includes("surfaces") || sources?.includes("surfaces.routes") || sources?.includes("surfaces.registry");
     const shouldRefreshLocalFiles = domains?.includes("files") || sources?.includes("local.files");
     const shouldRefreshWeb = domains?.includes("web") || sources?.includes("web.ingested");
     const shouldRefreshExternal = domains?.includes("external") || sources?.includes("external.cache");
@@ -265,6 +267,7 @@ export async function runSearchQueryCli(input: {
     const indexedDesign = shouldRefreshDesign && sourceCanIndex(store, "design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedRuntime = shouldRefreshRuntime && sourceCanIndex(store, "runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const indexedSurfaces = shouldRefreshSurfaces && sourceCanIndex(store, "surfaces.routes") ? ensureSurfacesRoutesSourceIndexed(store) : 0;
+    const indexedSurfaceRegistry = shouldRefreshSurfaces && sourceCanIndex(store, "surfaces.registry") ? ensureSurfacesRegistrySourceIndexed(store) : 0;
     const indexedLocalFiles = shouldRefreshLocalFiles && sourceCanIndex(store, "local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedWeb = shouldRefreshWeb && sourceCanIndex(store, "web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const indexedExternal = shouldRefreshExternal && sourceCanIndex(store, "external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -373,7 +376,7 @@ export async function runSearchQueryCli(input: {
         ...(shouldRefreshApps ? { "apps.catalog": indexedApps } : {}),
         ...(shouldRefreshDesign ? { "design.resources": indexedDesign } : {}),
         ...(shouldRefreshRuntime ? { "runtime.events": indexedRuntime } : {}),
-        ...(shouldRefreshSurfaces ? { "surfaces.routes": indexedSurfaces } : {}),
+        ...(shouldRefreshSurfaces ? { "surfaces.routes": indexedSurfaces, "surfaces.registry": indexedSurfaceRegistry } : {}),
         ...(shouldRefreshLocalFiles ? { "local.files": indexedLocalFiles } : {}),
         ...(shouldRefreshWeb ? { "web.ingested": indexedWeb } : {}),
         ...(shouldRefreshExternal ? { "external.cache": indexedExternal } : {}),
@@ -516,6 +519,7 @@ export async function runSearchRebuildCli(input: {
     const designIndexed = rebuildsSource("design.resources") ? ensureDesignResourcesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const runtimeIndexed = rebuildsSource("runtime.events") ? ensureRuntimeEventsSourceIndexed(store, input.flags) : 0;
     const surfacesIndexed = rebuildsSource("surfaces.routes") ? ensureSurfacesRoutesSourceIndexed(store) : 0;
+    const surfaceRegistryIndexed = rebuildsSource("surfaces.registry") ? ensureSurfacesRegistrySourceIndexed(store) : 0;
     const localFilesIndexed = rebuildsSource("local.files") ? ensureLocalFilesSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const webIndexed = rebuildsSource("web.ingested") ? ensureWebIngestedSourceIndexed(store, input.flags, input.context.cwd) : 0;
     const externalIndexed = rebuildsSource("external.cache") ? ensureExternalCacheSourceIndexed(store, input.flags, input.context.cwd) : 0;
@@ -554,6 +558,7 @@ export async function runSearchRebuildCli(input: {
       ...(designIndexed > 0 ? ["design.resources"] : []),
       ...(runtimeIndexed > 0 ? ["runtime.events"] : []),
       ...(surfacesIndexed > 0 ? ["surfaces.routes"] : []),
+      ...(surfaceRegistryIndexed > 0 ? ["surfaces.registry"] : []),
       ...(localFilesIndexed > 0 ? ["local.files"] : []),
       ...(webIndexed > 0 ? ["web.ingested"] : []),
       ...(externalIndexed > 0 ? ["external.cache"] : []),
@@ -569,7 +574,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + surfaceRegistryIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
       embeddings: 0,
       profile: input.flags.profile === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -608,6 +613,7 @@ export async function runSearchRebuildCli(input: {
         "design.resources": designIndexed,
         "runtime.events": runtimeIndexed,
         "surfaces.routes": surfacesIndexed,
+        "surfaces.registry": surfaceRegistryIndexed,
         "local.files": localFilesIndexed,
         "web.ingested": webIndexed,
         "external.cache": externalIndexed,
@@ -1417,6 +1423,17 @@ function scheduleSearchChangedSourceEvent(input: {
         observedAt,
       });
     }
+    case "surfaces.registry": {
+      const surfaceId = input.flags["surface-id"] ?? input.flags["resource-id"] ?? input.flags.surface ?? input.positionals[5];
+      if (!surfaceId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source surfaces.registry --surface-id <surface-id>" };
+      return scheduleSurfaceRegistrySearchEvent({
+        operation: input.operation,
+        surfaceId,
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
     case "sessions.chats": {
       const sessionId = input.flags["session-id"] ?? input.flags["resource-id"] ?? input.flags.session ?? input.positionals[5];
       if (!sessionId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sessions.chats --session-id <session-id>" };
@@ -1807,6 +1824,7 @@ function typedChangedSourceList(): string {
     "web.ingested",
     "external.cache",
     "surfaces.routes",
+    "surfaces.registry",
     "database.records",
     "work.items",
     "documents.blocks",
@@ -1955,6 +1973,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureRuntimeEventsSourceIndexed(store, flags);
     case "surfaces.routes":
       return ensureSurfacesRoutesSourceIndexed(store);
+    case "surfaces.registry":
+      return ensureSurfacesRegistrySourceIndexed(store);
     case "local.files":
       return ensureLocalFilesSourceIndexed(store, flags, cwd);
     case "web.ingested":
@@ -2060,6 +2080,8 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       return indexJobResource(job, "runtimeResourceId", (resourceId) => ensureRuntimeEventsResourceIndexed(store, flags, resourceId));
     case "surfaces.routes":
       return indexJobResource(job, "routeId", (routeId) => ensureSurfaceRouteResourceIndexed(store, routeId));
+    case "surfaces.registry":
+      return indexJobResource(job, "surfaceId", (surfaceId) => ensureSurfaceRegistryResourceIndexed(store, surfaceId));
     case "local.files": {
       const relativePath = resourceIdFromJobPayload(job, "relativePath") ?? job.resourceId;
       return relativePath ? ensureLocalFileResourceIndexed(store, flags, cwd, relativePath, resourceIdFromJobPayload(job, "root")) : 0;

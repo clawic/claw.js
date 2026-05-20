@@ -3,8 +3,8 @@ import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildCustomAppSDKInspectionPayload, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
-import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildCustomAppSDKInspectionPayload, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
+import type { AgentAuditEvent, ClawCapabilityFiche, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import type { Agent } from "@clawjs/agents";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
@@ -44,6 +44,25 @@ interface InspectCliInput {
   context: CliContext;
   wantsJson: boolean;
   binName: string;
+}
+
+interface SurfaceInspectEvidence {
+  declaration: {
+    file: string;
+    line?: number;
+    symbol?: string;
+    language?: string;
+  };
+  docs: string[];
+  tests: string[];
+  adrs: string[];
+  inspectCommands: string[];
+  searchCommands: string[];
+  changePolicy: {
+    consequence: string;
+    guards: string[];
+    routeIds: string[];
+  };
 }
 
 interface AgentInspectFiche {
@@ -710,12 +729,92 @@ function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
   }).join("\n");
 }
 
+function uniqueStrings(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function routesForSurfaceEvidence(nodeId: string, routes: ClawSurfaceRoute[]): ClawSurfaceRoute[] {
+  return routes.filter((route) => route.fromId === nodeId || route.toId === nodeId || route.steps.some((step) => step.fromId === nodeId || step.toId === nodeId || step.contractId === nodeId));
+}
+
+function edgesForSurfaceEvidence(nodeId: string, edges: ClawSurfaceEdge[]): ClawSurfaceEdge[] {
+  return edges.filter((edge) => edge.fromId === nodeId || edge.toId === nodeId || edge.contractId === nodeId);
+}
+
+function surfaceEvidence(node: ClawPersistentSurfaceNode, edges: ClawSurfaceEdge[], routes: ClawSurfaceRoute[], binName: string): SurfaceInspectEvidence {
+  const relatedRoutes = routesForSurfaceEvidence(node.id, routes);
+  const relatedEdges = edgesForSurfaceEvidence(node.id, edges);
+  const docs = uniqueStrings([
+    ...(node.kind === "cliCommand" ? ["docs/cli.md"] : []),
+    ...(node.surfaceClass || relatedRoutes.length > 0 ? ["docs/persistent-surface.md", "docs/adr/0004-persistent-surface-registry-and-inspection.md"] : []),
+    ...(relatedRoutes.length > 0 ? ["docs/adr/0012-surface-route-graph.md"] : []),
+    ...relatedRoutes.flatMap((route) => route.docs ?? []),
+  ]);
+  const tests = uniqueStrings([
+    ...(relatedRoutes.length > 0 ? ["packages/clawjs/src/inspect-cli.test.ts"] : []),
+    ...(node.surfaceClass ? ["packages/clawjs-core/src/index.test.ts"] : []),
+    ...relatedRoutes.flatMap((route) => route.tests ?? []),
+  ]);
+  const adrs = uniqueStrings([
+    ...(node.surfaceClass || relatedRoutes.length > 0 ? ["docs/adr/0004-persistent-surface-registry-and-inspection.md"] : []),
+    ...(relatedRoutes.length > 0 ? ["docs/adr/0012-surface-route-graph.md"] : []),
+    ...relatedRoutes.flatMap((route) => route.adrs ?? []),
+  ]);
+  const routeIds = relatedRoutes.map((route) => route.id);
+  const guards = uniqueStrings([
+    "scripts/persistent-surface-guard.mjs",
+    ...(relatedRoutes.length > 0 || relatedEdges.length > 0 ? ["scripts/surface-route-graph-guard.mjs"] : []),
+    "scripts/surface-evidence-guard.mjs",
+  ]);
+  return {
+    declaration: {
+      file: node.source?.file ?? "packages/clawjs-core/src/surface-registry.ts",
+      line: node.source?.line,
+      symbol: node.source && "symbol" in node.source ? String((node.source as { symbol?: unknown }).symbol ?? "") || undefined : undefined,
+      language: node.source?.language,
+    },
+    docs,
+    tests,
+    adrs,
+    inspectCommands: [
+      `${binName} inspect show ${node.id} --json`,
+      `${binName} inspect neighbors ${node.id} --json`,
+      ...(routeIds.length > 0 ? routeIds.map((routeId) => `${binName} inspect route ${routeId} --json`) : [`${binName} inspect routes ${node.id} --json`]),
+    ],
+    searchCommands: [
+      `${binName} search query "${node.id}" --domains surfaces --json`,
+      `${binName} search rebuild --source surfaces.registry --json`,
+    ],
+    changePolicy: {
+      consequence: relatedRoutes.length > 0
+        ? "Changing this surface can invalidate registered route steps, inspect/search evidence, and route tests."
+        : "Changing this stable surface must keep the registry node, literal guard coverage, docs, tests, and CLI discovery aligned.",
+      guards,
+      routeIds,
+    },
+  };
+}
+
 function inspectEdgeText(edges: ClawSurfaceEdge[]): string {
   return edges.map((edge) => `${edge.id}\t${edge.type}\t${edge.fromId}\t${edge.toId}\t${edge.contractId ?? "-"}\t${edge.transport ?? "-"}`).join("\n");
 }
 
 function inspectRouteText(routes: ClawSurfaceRoute[]): string {
   return routes.map((route) => `${route.id}\t${route.fromId}\t${route.toId}\t${route.visibility}\t${route.validation}`).join("\n");
+}
+
+function inspectCapabilityFicheText(fiches: ClawCapabilityFiche[]): string {
+  return fiches.map((fiche) => {
+    const routeSummary = fiche.routes.join(",") || "-";
+    const surfaces = [
+      ...fiche.cliApiMcpRelay.cli.map((ref) => `cli:${ref}`),
+      ...fiche.cliApiMcpRelay.serviceApi.map((ref) => `api:${ref}`),
+      ...fiche.cliApiMcpRelay.mcp.map((ref) => `mcp:${ref}`),
+      ...fiche.cliApiMcpRelay.relay.map((ref) => `relay:${ref}`),
+      ...fiche.cliApiMcpRelay.hostBridge.map((ref) => `host:${ref}`),
+    ].join(",") || "-";
+    return `${fiche.id}\t${fiche.system}\t${fiche.title}\troutes=${routeSummary}\tsurfaces=${surfaces}\t${fiche.summary}`;
+  }).join("\n");
 }
 
 function formatSurfaceParity(node: ClawPersistentSurfaceNode): string {
@@ -737,6 +836,7 @@ function inspectJsonMeta(subcommand: string, extra: CliJsonMeta = {}): CliJsonMe
 function renderInspectMarkdown(nodes = inspectNodes()): string {
   const edges = clawPersistentSurfaceRegistry.edges ?? [];
   const routes = clawPersistentSurfaceRegistry.routes ?? [];
+  const fiches = listClawCapabilityFiches();
   const lines = [
     "# Claw stable surface",
     "",
@@ -755,6 +855,12 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "| ID | From | To | Visibility | Validation |",
     "| --- | --- | --- | --- | --- |",
     ...routes.map((route) => `| \`${route.id}\` | \`${route.fromId}\` | \`${route.toId}\` | ${route.visibility} | ${route.validation} |`),
+    "",
+    "## Capability Fiches",
+    "",
+    "| ID | System | Routes | Resources | Permissions | Gaps |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...fiches.map((fiche) => `| \`${fiche.id}\` | ${fiche.system} | ${fiche.routes.map((route) => `\`${route}\``).join("<br>") || ""} | ${fiche.touchedResources.map((resource) => `\`${resource}\``).join("<br>")} | ${fiche.permissions.join("<br>")} | ${fiche.gaps.map((gap) => `${gap.area}:${gap.status}`).join("<br>")} |`),
     "",
     "## Edges",
     "",
@@ -946,7 +1052,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect show <id-or-path> [--json]`, CLI_EXIT_USAGE);
     const node = inspectFind(target, nodes);
     if (!node) throw new InspectCliError("inspect_not_found", `No persistent surface node found for ${target}.`, CLI_EXIT_USAGE);
-    if (input.wantsJson) writeJsonOk(input.context.stdout, { ...node, ...edgesForNode(node.id), routes: routesForNode(node.id) }, inspectJsonMeta(command));
+    if (input.wantsJson) writeJsonOk(input.context.stdout, { ...node, ...edgesForNode(node.id), routes: routesForNode(node.id), evidence: surfaceEvidence(node, edges, routes, input.binName) }, inspectJsonMeta(command));
     else {
       const routeSummary = routesForNode(node.id).map((route) => route.id).join(", ") || "-";
       input.context.stdout.write(`${inspectText([node])}\nroutes\t${routeSummary}\n`);
@@ -969,6 +1075,21 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     const selected = target ? routes.filter((route) => route.id === target || route.fromId === target || route.toId === target || route.steps.some((step) => step.fromId === target || step.toId === target)) : routes;
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectRouteText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "capabilities") {
+    const fiches = listClawCapabilityFiches();
+    const selected = target ? fiches.filter((fiche) => fiche.id === target || fiche.system === target || fiche.routes.includes(target)) : fiches;
+    if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
+    else input.context.stdout.write(`${inspectCapabilityFicheText(selected)}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "capability") {
+    if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect capability <capability-id> [--json]`, CLI_EXIT_USAGE);
+    const fiche = getClawCapabilityFiche(target);
+    if (!fiche) throw new InspectCliError("inspect_not_found", `No capability fiche found for ${target}.`, CLI_EXIT_USAGE);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, fiche, inspectJsonMeta(command, { capabilityId: fiche.id }));
+    else input.context.stdout.write(`${inspectCapabilityFicheText([fiche])}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "route") {
@@ -1392,7 +1513,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|agent|edges|why|commands|command-intents|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

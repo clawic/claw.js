@@ -46,10 +46,13 @@ The stable surface registry is extended with a graph layer:
 `claw inspect` is the public read-only view for agents. It must expose:
 
 - `claw inspect show <id>` with the node fiche plus incoming edges, outgoing
-  edges, and routes that touch the node.
+  edges, routes that touch the node, and evidence for declaration, docs,
+  tests, inspect/search commands, and change policy.
 - `claw inspect neighbors <id>` for adjacent nodes.
 - `claw inspect routes` and `claw inspect route <id>` for transverse workflow
   planning.
+- `claw search query <id-or-topic> --domains surfaces --json` for route and
+  registry evidence through `surfaces.routes` and `surfaces.registry`.
 - generated Markdown and Mermaid renderings from the registry.
 
 The first required routes are:
@@ -75,9 +78,12 @@ canonical local API; it remains the remote-safe control plane described by ADR
 
 `surface-route-graph-guard` fails when required runtime-critical nodes,
 required chat routes, route steps, edge references, contract references, or
-validation fields are missing. The gate is part of docs validation after the
-base map closes. Once active, stable surface and runtime-critical debt is not
-accepted as implicit.
+validation fields are missing. `surface-evidence-guard` fails when critical
+registered surfaces lack declaration evidence, routes lack docs/tests/ADRs, or
+missing contract nodes are not captured in `docs/surface-evidence-baseline.json`
+with owner, reason, risk, expiry, next phase, and reentry condition. The gate is
+part of docs validation after the base map closes. Once active, stable surface
+and runtime-critical debt is not accepted as implicit.
 
 Language-specific manifests may continue to be node-only while Clawix closes
 its base map. When a manifest does include `edges` or `routes`, `claw inspect`

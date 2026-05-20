@@ -28,6 +28,7 @@ export * from "./system-telemetry.ts";
 export * from "./version-governance.ts";
 export * from "./catalog-coverage.ts";
 export * from "./capability-catalog.ts";
+export * from "./capability-fiches.ts";
 export * from "./custom-app-redaction-policy.ts";
 export * from "./custom-app-sdk-contracts.ts";
 export * from "./custom-app-sdk-inspection.ts";

@@ -1286,6 +1286,19 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "hasGaps", label: "Has gaps", type: "boolean" },
       ],
     }),
+    createFrameworkSearchSourceManifest({
+      id: "surfaces.registry",
+      domain: "surfaces",
+      name: "Surface registry",
+      resultTypes: ["surface", "node", "contract"],
+      facets: [
+        { id: "owner", label: "Owner", type: "string" },
+        { id: "kind", label: "Kind", type: "string" },
+        { id: "surfaceClass", label: "Surface class", type: "string" },
+        { id: "stability", label: "Stability", type: "string" },
+        { id: "canonicality", label: "Canonicality", type: "string" },
+      ],
+    }),
     createFullSearchSourceManifest({
       id: "local.files",
       domain: "files",

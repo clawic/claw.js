@@ -276,6 +276,26 @@ export function scheduleSurfaceRouteSearchEvent(input: {
   });
 }
 
+export function scheduleSurfaceRegistrySearchEvent(input: {
+  operation: "upsert" | "delete";
+  surfaceId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "surfaces.registry",
+    operation: input.operation,
+    resourceId: input.surfaceId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      surfaceId: input.surfaceId,
+    },
+  });
+}
+
 export function scheduleImageDerivedSearchEvent(input: {
   operation: "upsert" | "delete";
   imageId: string;

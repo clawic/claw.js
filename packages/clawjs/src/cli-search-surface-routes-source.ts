@@ -1,4 +1,4 @@
-import { listClawSurfaceRoutes, type ClawSurfaceRoute } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry, listClawSurfaceRoutes, type ClawPersistentSurfaceNode, type ClawSurfaceRoute } from "@clawjs/core";
 import type { SearchDocumentInput, SearchStore } from "@clawjs/search";
 
 export function ensureSurfacesRoutesSourceIndexed(store: SearchStore): number {
@@ -22,6 +22,27 @@ export function ensureSurfacesRoutesSourceIndexed(store: SearchStore): number {
   return routes.length;
 }
 
+export function ensureSurfacesRegistrySourceIndexed(store: SearchStore): number {
+  const nodes = clawPersistentSurfaceRegistry.nodes;
+  for (const node of nodes) {
+    store.upsertDocument(surfaceNodeSearchDocument(node));
+  }
+  store.setCursor({
+    source: "surfaces.registry",
+    cursor: `nodes:${nodes.length}`,
+    metadata: {
+      registry: "persistent-surface-registry",
+      source: "packages/clawjs-core/src/surface-registry.ts",
+    },
+  });
+  store.setSourceState("surfaces.registry", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return nodes.length;
+}
+
 export function ensureSurfaceRouteResourceIndexed(store: SearchStore, routeId: string): number {
   const route = listClawSurfaceRoutes().find((candidate) => candidate.id === routeId);
   if (!route) {
@@ -35,6 +56,86 @@ export function ensureSurfaceRouteResourceIndexed(store: SearchStore, routeId: s
     lastIndexedAt: new Date().toISOString(),
   });
   return 1;
+}
+
+export function ensureSurfaceRegistryResourceIndexed(store: SearchStore, surfaceId: string): number {
+  const node = clawPersistentSurfaceRegistry.nodes.find((candidate) => candidate.id === surfaceId);
+  if (!node) {
+    store.tombstone({ source: "surfaces.registry", resourceId: surfaceId, reason: "surface node missing during Search event refresh" });
+    return 1;
+  }
+  store.upsertDocument(surfaceNodeSearchDocument(node));
+  store.setSourceState("surfaces.registry", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
+function surfaceNodeSearchDocument(node: ClawPersistentSurfaceNode): SearchDocumentInput {
+  const relatedRoutes = listClawSurfaceRoutes(node.id).map((route) => route.id);
+  const sourcePath = node.source?.file ?? "packages/clawjs-core/src/surface-registry.ts";
+  const locator = node.path ?? node.route ?? node.key ?? node.value ?? node.name;
+  return {
+    id: `surfaces.registry:${node.id}`,
+    source: "surfaces.registry",
+    domain: "surfaces",
+    type: "surface",
+    title: node.name,
+    subtitle: `${node.id} ${node.kind}`,
+    snippet: node.notes ?? locator,
+    body: [
+      node.id,
+      node.name,
+      node.kind,
+      node.owner,
+      node.repo,
+      node.project,
+      node.surfaceClass,
+      node.stability,
+      locator,
+      node.notes,
+      sourcePath,
+      ...relatedRoutes,
+      "claw inspect show",
+      "claw inspect neighbors",
+      "scripts/persistent-surface-guard.mjs",
+      "scripts/surface-evidence-guard.mjs",
+    ].filter(Boolean).join("\n"),
+    resourceId: node.id,
+    path: sourcePath,
+    metadata: {
+      owner: node.owner,
+      kind: node.kind,
+      surfaceClass: node.surfaceClass,
+      stability: node.stability,
+      canonicality: node.canonicality,
+      lifecycle: node.lifecycle,
+      routeCount: relatedRoutes.length,
+      hasSource: Boolean(node.source?.file),
+    },
+    rankingHints: {
+      technical: 1,
+      route: relatedRoutes.length > 0 ? 1 : 0,
+    },
+    fragments: [{
+      id: `${node.id}:evidence`,
+      title: "Evidence",
+      body: [
+        `declaration ${sourcePath}${node.source?.line ? `:${node.source.line}` : ""}`,
+        `inspect claw inspect show ${node.id} --json`,
+        `search claw search query "${node.id}" --domains surfaces --json`,
+        ...relatedRoutes.map((routeId) => `route ${routeId}`),
+      ].join("\n"),
+      snippet: `Inspect with claw inspect show ${node.id} --json`,
+      sortOrder: 0,
+      metadata: {
+        kind: "evidence",
+        surfaceId: node.id,
+      },
+    }],
+  };
 }
 
 function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInput {

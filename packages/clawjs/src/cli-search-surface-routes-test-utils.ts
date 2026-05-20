@@ -31,11 +31,12 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "surfaces.routes": number };
+        indexedFastPaths: { "surfaces.routes": number; "surfaces.registry": number };
         results: Array<{ source: string; domain: string; type: string; title: string; subtitle?: string; metadata?: { fromId?: string; toId?: string; stepCount?: number }; fragments?: Array<unknown>; actions?: Array<{ id: string; kind: string }> }>;
       };
     };
     assert.ok(queryPayload.data.indexedFastPaths["surfaces.routes"] > 0);
+    assert.ok(queryPayload.data.indexedFastPaths["surfaces.registry"] > 0);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Search index sync");
     assert.equal(result?.source, "surfaces.routes");
     assert.equal(result?.domain, "surfaces");
@@ -46,6 +47,17 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.ok((result?.metadata?.stepCount ?? 0) > 0);
     assert.ok((result?.fragments?.length ?? 0) > 0);
     assert.equal(result?.actions?.some((action) => action.id === "open" && action.kind === "open"), true);
+
+    const nodeQuery = await runCliCapture(["search", "query", "claw.relay", "--domains", "surfaces", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(nodeQuery.code, CLI_EXIT_OK);
+    const nodeQueryPayload = JSON.parse(nodeQuery.stdout) as {
+      data: { results: Array<{ source: string; domain: string; type: string; resourceId?: string; path?: string; metadata?: { hasSource?: boolean; routeCount?: number } }> };
+    };
+    const nodeResult = nodeQueryPayload.data.results.find((candidate) => candidate.source === "surfaces.registry" && candidate.resourceId === "claw.relay");
+    assert.equal(nodeResult?.domain, "surfaces");
+    assert.equal(nodeResult?.type, "surface");
+    assert.equal(nodeResult?.metadata?.hasSource, true);
+    assert.ok((nodeResult?.metadata?.routeCount ?? 0) > 0);
 
     const event = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "surfaces.routes", "--route-id", "sync.searchIndex", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(event.code, CLI_EXIT_OK, event.stderr || event.stdout);
@@ -68,6 +80,16 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.equal(serviceRunPayload.data.worker?.items[0]?.source, "surfaces.routes");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
+
+    const surfaceEvent = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "surfaces.registry", "--surface-id", "claw.relay", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(surfaceEvent.code, CLI_EXIT_OK, surfaceEvent.stderr || surfaceEvent.stdout);
+    const surfaceEventPayload = JSON.parse(surfaceEvent.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { eventDriven?: boolean; surfaceId?: string } } };
+    };
+    assert.equal(surfaceEventPayload.data.item?.source, "surfaces.registry");
+    assert.equal(surfaceEventPayload.data.item?.operation, "upsert");
+    assert.equal(surfaceEventPayload.data.item?.resourceId, "claw.relay");
+    assert.equal(surfaceEventPayload.data.item?.payload?.surfaceId, "claw.relay");
 
     const staleRouteId = "missing.surfaceRoute";
     const store = new SearchStore(path.join(dataRoot, "search.sqlite"));

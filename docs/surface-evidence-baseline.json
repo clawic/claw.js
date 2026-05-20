@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "description": "Bounded existing debt for the stable surface evidence loop. New or touched route contract references must register nodes instead of adding here.",
+  "entries": [
+    {
+      "id": "system-telemetry-contract-node-baseline",
+      "classification": "lateral_debt",
+      "owner": "clawjs",
+      "reason": "System telemetry routes already reference contract ids before the surface evidence guard made contract-node resolution explicit.",
+      "risk": "Agents can inspect the routes, but individual telemetry contract ids do not yet have standalone node fiches.",
+      "expires": "2026-08-20",
+      "nodeIds": [
+        "claw.systemTelemetry.v1",
+        "claw.systemTelemetry.providers.v1",
+        "claw.systemTelemetry.hostSnapshot.v1",
+        "claw.systemTelemetry.audit.v1",
+        "claw.systemTelemetry.widgets.v1"
+      ],
+      "nextPhase": "Register system telemetry contract nodes or move the route contract ids to existing registered schema nodes.",
+      "reentryCondition": "Any change to system telemetry route contracts or expiration of this baseline entry."
+    }
+  ]
+}

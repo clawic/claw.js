@@ -1965,6 +1965,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-agent-instructions-check",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/agent-instructions-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "agent-instructions-check",
+        "Agent Instructions Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "agent-instructions-check",
+          "expectPath": "scripts/agent-instructions-check.mjs"
+        }
+      ],
+      "guard": "scripts/agent-instructions-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-code-hygiene-check",
       "kind": "guardrail",
       "owner": "claw",
@@ -2413,6 +2438,31 @@
         }
       ],
       "guard": "scripts/source-size-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-surface-evidence-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/surface-evidence-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "surface-evidence-guard",
+        "Surface Evidence Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface-evidence-guard",
+          "expectPath": "scripts/surface-evidence-guard.mjs"
+        }
+      ],
+      "guard": "scripts/surface-evidence-guard.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -3144,6 +3194,36 @@
       "guard": "scripts/verify-integration-package-live-harness.test.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "docs-agent-rules-index",
+      "kind": "docs-page",
+      "owner": "claw",
+      "canonicalSource": "docs/agent-rules/index.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "agent rules",
+        "always-loaded instructions",
+        "agent instruction router"
+      ],
+      "searchQueries": [
+        {
+          "query": "agent rules",
+          "expectPath": "docs/agent-rules/index.md"
+        },
+        {
+          "query": "always-loaded instructions",
+          "expectPath": "docs/agent-rules/index.md"
+        }
+      ],
+      "guard": "scripts/agent-instructions-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
     },
     {
       "id": "docs-official-trust-and-compatibility",

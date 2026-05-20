@@ -361,7 +361,7 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_milestones
   claw_privateApi_monitors["/api/monitors private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_monitors
-  claw_privateApi_notes["/api/notes/ private API route\nprivateApiRoute"]
+  claw_privateApi_notes["/api/notes private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_notes
   claw_privateApi_notifyActions["/api/notify/actions private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_notifyActions
@@ -465,8 +465,6 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_integrationsWhatsappChats
   claw_privateApi_memory["/api/memory private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_memory
-  claw_privateApi_notes["/api/notes private API route\nprivateApiRoute"]
-  claw_contracts_api --> claw_privateApi_notes
   claw_privateApi_notifyDashboard["/api/notify/dashboard private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_notifyDashboard
   claw_privateApi_personas["/api/personas private API route\nprivateApiRoute"]
@@ -1213,6 +1211,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_host
   claw_cli_command_system["system\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_system
+  claw_cli_command_network["network\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_network
   claw_cli_command_mac["mac\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_mac
   claw_cli_command_permissions["permissions\ncliCommand"]
@@ -1227,8 +1227,6 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_app
   claw_cli_command_process["process\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_process
-  claw_cli_command_network["network\ncliCommand"]
-  claw_contracts_cli --> claw_cli_command_network
   claw_cli_command_vpn["vpn\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_vpn
   claw_cli_command_proxy["proxy\ncliCommand"]
@@ -2151,6 +2149,46 @@ flowchart TD
 | `gateway.multiTenantAgentService` | `claw.headlessHost` | `claw.agents.assignments` | public | Multi-tenant assignment isolation tests |
 | `mesh.resourceShare` | `claw.mesh.share` | `claw.sync` | external | Inter-mesh sharing primitive tests |
 
+## Capability Fiches
+
+| ID | System | Routes | Resources | Permissions | Gaps |
+| --- | --- | --- | --- | --- | --- |
+| `chat.localDesktop` | chat | `chat.localDesktop` | `clawix.ui.chat`<br>`clawix.bridge.local`<br>`claw.daemon.local`<br>`claw.runtime.agent`<br>`claw.sessions` | local bridge access<br>runtime policy<br>session write authority |  |
+| `chat.companionBridge` | chat | `chat.companionBridge` | `clawix.companion.client`<br>`clawix.bridge.local`<br>`claw.daemon.local`<br>`claw.runtime.agent`<br>`claw.sessions` | companion bridge trust<br>local WebSocket access<br>session write authority |  |
+| `chat.remoteRelay` | chat | `chat.remoteRelay` | `claw.remote.client`<br>`claw.relay`<br>`claw.relay.connector`<br>`claw.workspace`<br>`claw.runtime.agent`<br>`claw.sessions` | Relay auth<br>connector workspace authority<br>remote-safe session classification | live external validation:external_pending |
+| `remote.chatGateway` | remote | `remote.chatGateway` | `claw.remote.client`<br>`claw.coordinator`<br>`claw.gateway`<br>`claw.connector`<br>`claw.runtime.agent`<br>`claw.sessions` | node trust<br>Gateway policy<br>connector runtime authority | live external validation:external_pending |
+| `remote.searchGateway` | remote | `remote.searchGateway` | `claw.remote.client`<br>`claw.coordinator`<br>`claw.gateway`<br>`claw.connector`<br>`claw.search` | remote-safe search classification<br>connector search authority<br>redaction policy | live external validation:external_pending |
+| `remote.secretBrokeredOperation` | remote | `remote.secretBrokeredOperation` | `claw.remote.client`<br>`claw.gateway`<br>`claw.connector`<br>`claw.secrets.broker` | secret reference grant<br>broker approval<br>Gateway policy | live external validation:external_pending |
+| `sync.sessions` | sync | `sync.sessions` | `claw.connector`<br>`claw.sync`<br>`claw.sessions` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.skills` | sync | `sync.skills` | `claw.connector`<br>`claw.sync`<br>`claw.skills.library` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.memoryUserModel` | sync | `sync.memoryUserModel` | `claw.connector`<br>`claw.sync`<br>`claw.memory.userModel` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.driveFiles` | sync | `sync.driveFiles` | `claw.connector`<br>`claw.sync`<br>`claw.drive.files` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.sqliteResources` | sync | `sync.sqliteResources` | `claw.connector`<br>`claw.sync`<br>`claw.database.core` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.sidecars` | sync | `sync.sidecars` | `claw.connector`<br>`claw.sync`<br>`claw.database.runtime` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.agentConfig` | sync | `sync.agentConfig` | `claw.connector`<br>`claw.sync`<br>`claw.agents` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.workspaceState` | sync | `sync.workspaceState` | `claw.connector`<br>`claw.sync`<br>`claw.workspace` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `sync.searchIndex` | sync | `sync.searchIndex` | `claw.connector`<br>`claw.sync`<br>`claw.search` | connector route policy<br>resource authority grant<br>conflict elevation when required | live external validation:external_pending |
+| `mac.directCliAction` | mac | `mac.directCliAction` | `claw.cli.command.wifi`<br>`claw.mac.controlPlane`<br>`claw.mac.capabilityAtlas`<br>`claw.mac.permissionBroker`<br>`claw.mac.actionBroker`<br>`claw.host.signed`<br>`claw.host.audit` | Mac permission broker state<br>signed-host execution approval<br>policy grant | live external validation:external_pending |
+| `mac.permissionLifecycle` | mac | `mac.permissionLifecycle` | `claw.cli.command.permissions`<br>`claw.mac.permissionBroker`<br>`claw.host.permissions`<br>`claw.host.audit` | OS permission state<br>framework grant<br>request confirmation | live external validation:external_pending |
+| `mac.action.plan` | mac | `mac.directCliAction` | `claw.mac.controlPlane`<br>`claw.mac.actionBroker`<br>`claw.host.audit` | approval required<br>signed-host execution remains separate<br>Mac permission broker | live external validation:external_pending |
+| `system.telemetryAgentContext` | system | `system.telemetryAgentContext` | `claw.cli.command.system`<br>`claw.mcp.surface`<br>`claw.systemTelemetry`<br>`claw.systemTelemetry.contextProviders`<br>`claw.database.monitor` | safe telemetry read policy<br>provider credential redaction<br>Monitor retention policy |  |
+| `system.telemetrySignedHostControl` | system | `system.telemetrySignedHostControl` | `claw.cli.command.system`<br>`claw.systemTelemetry`<br>`claw.host.signed`<br>`claw.host.audit` | approval required<br>signed-host native control<br>audit policy | live external validation:external_pending |
+| `system.telemetry.snapshot` | system | `system.telemetryAgentContext` | `claw.systemTelemetry` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `system.telemetry.history` | system | `system.telemetryAgentContext` | `claw.systemTelemetry`<br>`claw.database.monitor` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `search.query` | search | `remote.searchGateway` | `claw.search` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `db.query` | database | `sync.sqliteResources` | `claw.database.core` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `resources.list` | resources | `sync.driveFiles` | `claw.workspace`<br>`claw.drive.files` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `resources.read` | resources | `sync.driveFiles` | `claw.workspace`<br>`claw.drive.files` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `jobs.list` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | custom-app declaration<br>host bridge policy<br>redaction policy | registered route:deferred |
+| `jobs.get` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | custom-app declaration<br>host bridge policy<br>redaction policy | registered route:deferred |
+| `jobs.events` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | custom-app declaration<br>host bridge policy<br>redaction policy | live stream:deferred |
+| `jobs.stream` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | blocked until stream policy and audit exist | execution:blocked |
+| `jobs.start` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | blocked until job start policy and audit exist | execution:blocked |
+| `jobs.cancel` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | blocked until job cancel policy and audit exist | execution:blocked |
+| `actions.invoke` | actions |  | `claw.runtime.agent`<br>`claw.host.audit` | approval required<br>policy grant<br>audit receipt | generic runner:deferred |
+| `secrets.broker` | secrets | `remote.secretBrokeredOperation` | `claw.secrets.broker` | approval required<br>secret reference grant<br>no plaintext lease without broker | plaintext access:blocked |
+| `iot.device.action.invoke` | iot |  | `claw.cli.command.iot`<br>`claw.env.iotBaseUrl`<br>`claw.env.iotDir` | approval required<br>host IoT adapter policy<br>physical-world action review | live external validation:external_pending |
+
 ## Edges
 
 | ID | Type | From | To | Contract | Transport |
@@ -2429,7 +2467,7 @@ flowchart TD
 | `claw.privateApi.memoryPerson` | privateApiRoute | api | claw |  |  |  | `/api/memory/person` |
 | `claw.privateApi.milestones` | privateApiRoute | api | claw |  |  |  | `/api/milestones` |
 | `claw.privateApi.monitors` | privateApiRoute | api | claw |  |  |  | `/api/monitors` |
-| `claw.privateApi.notes` | privateApiRoute | api | claw |  |  |  | `/api/notes/` |
+| `claw.privateApi.notes` | privateApiRoute | api | claw |  |  |  | `/api/notes` |
 | `claw.privateApi.notifyActions` | privateApiRoute | api | claw |  |  |  | `/api/notify/actions` |
 | `claw.privateApi.people` | privateApiRoute | api | claw |  |  |  | `/api/people` |
 | `claw.privateApi.projects` | privateApiRoute | api | claw |  |  |  | `/api/projects` |
@@ -2481,7 +2519,6 @@ flowchart TD
 | `claw.privateApi.integrationsStatus` | privateApiRoute | api | claw |  |  |  | `/api/integrations/status` |
 | `claw.privateApi.integrationsWhatsappChats` | privateApiRoute | api | claw |  |  |  | `/api/integrations/whatsapp/chats` |
 | `claw.privateApi.memory` | privateApiRoute | api | claw |  |  |  | `/api/memory` |
-| `claw.privateApi.notes` | privateApiRoute | api | claw |  |  |  | `/api/notes` |
 | `claw.privateApi.notifyDashboard` | privateApiRoute | api | claw |  |  |  | `/api/notify/dashboard` |
 | `claw.privateApi.personas` | privateApiRoute | api | claw |  |  |  | `/api/personas` |
 | `claw.privateApi.plugins` | privateApiRoute | api | claw |  |  |  | `/api/plugins` |
@@ -2855,6 +2892,7 @@ flowchart TD
 | `claw.cli.command.modules` | cliCommand | cli | claw |  |  |  | `modules` |
 | `claw.cli.command.host` | cliCommand | cli | claw |  |  |  | `host` |
 | `claw.cli.command.system` | cliCommand | cli | claw |  |  |  | `system` |
+| `claw.cli.command.network` | cliCommand | cli | claw |  |  |  | `network` |
 | `claw.cli.command.mac` | cliCommand | cli | claw |  |  |  | `mac` |
 | `claw.cli.command.permissions` | cliCommand | cli | claw |  |  |  | `permissions` |
 | `claw.cli.command.wifi` | cliCommand | cli | claw |  |  |  | `wifi` |
@@ -2862,7 +2900,6 @@ flowchart TD
 | `claw.cli.command.shortcut` | cliCommand | cli | claw |  |  |  | `shortcut` |
 | `claw.cli.command.app` | cliCommand | cli | claw |  |  |  | `app` |
 | `claw.cli.command.process` | cliCommand | cli | claw |  |  |  | `process` |
-| `claw.cli.command.network` | cliCommand | cli | claw |  |  |  | `network` |
 | `claw.cli.command.vpn` | cliCommand | cli | claw |  |  |  | `vpn` |
 | `claw.cli.command.proxy` | cliCommand | cli | claw |  |  |  | `proxy` |
 | `claw.cli.command.firewall` | cliCommand | cli | claw |  |  |  | `firewall` |
