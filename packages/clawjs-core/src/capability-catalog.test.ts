@@ -123,8 +123,14 @@ test("blocked custom-app capabilities expose explicit gaps without SDK execution
     assert.equal(capability?.dispatch?.status, "unavailable", id);
     assert.equal(capability?.dispatch?.mode, "blocked", id);
     assert.equal(capability?.dispatch?.approvalRequired, false, id);
-    assert.equal(capability?.surfaces.find((surface) => surface.surface === "sdk")?.status, "blocked", id);
-    assert.equal(capability?.surfaces.find((surface) => surface.surface === "hostBridge")?.status, "blocked", id);
+    assert.deepEqual(capability?.surfaces.map((surface) => [surface.surface, surface.status]), [
+      ["sdk", "blocked"],
+      ["cli", "blocked"],
+      ["serviceApi", "blocked"],
+      ["mcp", "blocked"],
+      ["relay", "blocked"],
+      ["hostBridge", "blocked"],
+    ], id);
     assert.equal(capability?.inputSchemaRef, undefined, id);
     assert.equal(capability?.outputSchemaRef, undefined, id);
   }
