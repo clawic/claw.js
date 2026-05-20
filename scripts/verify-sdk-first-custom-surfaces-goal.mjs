@@ -33,6 +33,27 @@ function forbidSnippet(relativePath, snippet) {
   assert(!text.includes(snippet), `${relativePath}: must not contain ${JSON.stringify(snippet)}`);
 }
 
+function assertNoPendingCapabilitySurfaceBindings() {
+  const relativePath = "packages/clawjs-core/src/capability-catalog.ts";
+  const text = read(relativePath);
+  const blocks = [...text.matchAll(/surfaces\(\{([\s\S]*?)\n\s*\}\)/g)];
+  assert(blocks.length > 0, `${relativePath}: must declare capability surface bindings`);
+
+  const expectedSurfaces = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+  for (const [index, match] of blocks.entries()) {
+    const block = match[1];
+    const missing = expectedSurfaces.filter((surface) => !new RegExp(`\\b${surface}:`).test(block));
+    assert(
+      missing.length === 0,
+      `${relativePath}: surfaces block ${index + 1} missing ${missing.join(", ")}`,
+    );
+    assert(
+      !/:\s*"pending"\b/.test(block),
+      `${relativePath}: surfaces block ${index + 1} must use explicit available/blocked/notApplicable refs, not pending`,
+    );
+  }
+}
+
 function requireSiblingSnippet(siblingRoot, relativePath, snippet) {
   const text = readFrom(siblingRoot, relativePath);
   assert(text.includes(snippet), `clawix:${relativePath}: missing ${JSON.stringify(snippet)}`);
@@ -202,6 +223,7 @@ function assertFrameworkArtifacts() {
   }
   forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", "claw runtime jobs --json");
   forbidSnippet("packages/clawjs-core/src/capability-fiches.ts", "claw runtime jobs --json");
+  assertNoPendingCapabilitySurfaceBindings();
 }
 
 function assertTests() {
