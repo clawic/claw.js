@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
@@ -69,6 +70,8 @@ function assertCompletionAudit() {
     "private source-session verifier has re-read",
     "24 decision prompt ids",
     "three interrupted unanswered ids",
+    "external evidence lanes",
+    "scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs",
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
@@ -162,20 +165,27 @@ function assertPublicRouting() {
       "Sibling Clawix exposes `mac.action.plan` through",
       "Sibling Clawix exposes `iot.device.action.invoke` through",
       "Sibling Clawix exposes `actions.invoke` and `secrets.broker` through",
+      "docs/governance/sdk-first-custom-surfaces/external-pending.md",
+      "scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs",
       "Sibling Clawix validates imported/marketplace packages through host-local",
     ],
     "docs/decision-map.md": [
       "governance/sdk-first-custom-surfaces/completion.md",
       "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
+      "scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs",
       "metadata-only projection boundaries",
     ],
     "docs/discoverability.registry.json": [
       "docs/governance/sdk-first-custom-surfaces/completion.md",
+      "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-pending.md",
+      "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json",
       "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "sdk-first custom surfaces completion audit",
     ],
     "docs/discoverability.md": [
       "sdk-first-custom-surfaces-completion-audit",
+      "sdk-first-custom-surfaces-external-pending",
+      "sdk-first-custom-surfaces-external-evidence-schema",
       "verify-sdk-first-custom-surfaces-goal",
     ],
     "package.json": [
@@ -348,6 +358,15 @@ function assertSiblingClawixArtifacts() {
     return;
   }
 
+  const externalEvidenceSelfTest = spawnSync(
+    process.execPath,
+    ["scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs", "--self-test"],
+    { cwd: siblingRoot, encoding: "utf8" },
+  );
+  if (externalEvidenceSelfTest.status !== 0) {
+    fail(`clawix:scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs --self-test failed:\n${externalEvidenceSelfTest.stderr || externalEvidenceSelfTest.stdout}`);
+  }
+
   const appSurfaceTestText = [
     "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityTests.swift",
     "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityCatalogTests.swift",
@@ -413,6 +432,8 @@ function assertSiblingClawixArtifacts() {
       "verified the signed bundled helper, valid stdout `render` output",
       "docs/sdk-first-custom-surfaces-installed-performance-smoke.md",
       "docs/sdk-first-custom-surfaces-performance-closure-summary.md",
+      "docs/governance/sdk-first-custom-surfaces/external-pending.md",
+      "scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs",
     ],
     "scripts/verify-sdk-first-custom-surfaces-goal.mjs": [
       "assertSiblingClawJSArtifacts",
@@ -563,6 +584,47 @@ function assertSiblingClawixArtifacts() {
       "Partial:",
       "approved baseline bundle",
       "`CLX-SDK-008` remains `EXTERNAL PENDING`",
+    ],
+    "docs/governance/sdk-first-custom-surfaces/external-pending.md": [
+      "Status: `active_goal_not_complete`",
+      "Rows marked `EXTERNAL PENDING` are blockers",
+      "CLX-SDK-EXT-001",
+      "Signed-host/native high-risk execution from custom apps",
+      "CLX-SDK-EXT-002",
+      "Live IoT/provider action execution from custom apps",
+      "CLX-SDK-EXT-003",
+      "Approved signed-app performance baseline",
+      "CLX-SDK-EXT-004",
+      "Live marketplace trust validation",
+    ],
+    "docs/governance/sdk-first-custom-surfaces/external-validation-runbook.md": [
+      "CLX-SDK-EXT-001 signed-host/native execution",
+      "CLX-SDK-EXT-002 live IoT/provider action",
+      "CLX-SDK-EXT-003 approved performance baseline",
+      "CLX-SDK-EXT-004 live marketplace trust",
+      "Required Critical Performance Flows",
+    ],
+    "docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json": [
+      "\"title\": \"Clawix SDK-first custom surfaces external evidence packet\"",
+      "\"CLX-SDK-EXT-001\"",
+      "\"CLX-SDK-EXT-002\"",
+      "\"CLX-SDK-EXT-003\"",
+      "\"CLX-SDK-EXT-004\"",
+      "\"containsRawTrace\"",
+    ],
+    "docs/governance/sdk-first-custom-surfaces/external-evidence.fixtures.json": [
+      "\"status\": \"synthetic_templates_not_evidence\"",
+      "\"validSyntheticPackets\"",
+      "\"invalidSyntheticPackets\"",
+      "\"rejects performance baseline missing required flow\"",
+    ],
+    "scripts/validate-sdk-first-custom-surfaces-external-evidence.mjs": [
+      "requiredFlows",
+      "CLX-SDK-EXT-001",
+      "CLX-SDK-EXT-002",
+      "CLX-SDK-EXT-003",
+      "CLX-SDK-EXT-004",
+      "--self-test",
     ],
     "macos/Sources/Clawix/NetworkControl/NetworkControlBridge.swift": [
       "NetworkControlBridge",
