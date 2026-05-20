@@ -2180,10 +2180,10 @@ flowchart TD
 | `claw.edge.mac.action.owns.audit` | owns | `claw.mac.actionBroker` | `claw.host.audit` | `claw.mac.actionReceipt.v1` | redacted action receipt and durable audit event |
 | `claw.edge.system.cli.exposes.telemetry` | exposes | `claw.cli.command.system` | `claw.systemTelemetry` | `claw.systemTelemetry.v1` | local CLI portal with JSON envelopes |
 | `claw.edge.system.mcp.exposes.telemetry` | exposes | `claw.mcp.surface` | `claw.systemTelemetry` | `claw.systemTelemetry.v1` | MCP tools/resources policy gate |
-| `claw.edge.system.telemetry.consumes.contextProviders` | consumes | `claw.systemTelemetry` | `claw.systemTelemetry.contextProviders` | `claw.systemTelemetry.providers.v1` | provider catalog, fail-closed provider plans, and local env/file provider values |
+| `claw.edge.system.telemetry.consumes.contextProviders` | consumes | `claw.systemTelemetry` | `claw.systemTelemetry.contextProviders` | `claw.systemTelemetry.providers.v1` | provider catalog, fail-closed provider plans with provided_redacted credential projection, and local env/file provider values |
 | `claw.edge.system.telemetry.brokers.host` | brokers | `claw.systemTelemetry` | `claw.host.signed` | `claw.systemTelemetry.hostSnapshot.v1` | signed-host snapshot/control command |
 | `claw.edge.system.telemetry.owns.monitor` | owns | `claw.systemTelemetry` | `claw.database.monitor` | `claw.database.monitor` | Monitor metric_sources, metric_samples, metric_rollups and metric_incidents |
-| `claw.edge.system.telemetry.owns.audit` | owns | `claw.systemTelemetry` | `claw.host.audit` | `claw.systemTelemetry.controlAudit.v1` | signed-host control receipt and redacted audit event |
+| `claw.edge.system.telemetry.owns.audit` | owns | `claw.systemTelemetry` | `claw.host.audit` | `claw.systemTelemetry.audit.v1` | portable auditPlan metadata plus local CLI and signed-host redacted audit events |
 | `claw.edge.clawix.menuBar.consumes.telemetry` | consumes | `clawix.menuBar.systemIndicators` | `claw.systemTelemetry` | `claw.systemTelemetry.widgets.v1` | Clawix host bridge plus portable widget definitions |
 | `claw.edge.clawix.menuBar.owns.monitorWrites` | owns | `clawix.menuBar.systemIndicators` | `claw.database.monitor` | `claw.database.monitor` | throttled menu bar snapshot recording |
 | `claw.edge.chat.ui.consumes.assignment` | consumes | `clawix.ui.chat` | `claw.agents.assignments` | `claw.agent_assignment.internal_mac.v1` | local assignment selection |

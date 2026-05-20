@@ -196,15 +196,28 @@ native just-in-time prompt and lifecycle recording.
 System telemetry API routes expose the same safe-read and plan-first surface as
 `claw system`: `/v1/system/snapshot`, `/v1/system/metrics`,
 `/v1/system/widgets`, `/v1/system/providers`, and
-`/v1/system/history/{metricKey}` are read-only. `POST
+`/v1/system/history/{metricKey}` are read-only. The SDK/custom-app capability
+catalog exposes the matching
+read-only contracts as `system.telemetry.snapshot` and
+`system.telemetry.history`, backed by
+`claw.system.telemetry.snapshot.v1` and
+`claw.system.telemetry.history.v1`; those SDK contracts deliberately exclude
+recording flags and hardware control execution. `POST
 /v1/system/providers/plan` creates a fail-closed provider broker plan for live
 context providers; it records required grants, credential reference status,
-blocked network access, Monitor write, receipt, and audit metadata without
-calling the provider or reading secrets. `/v1/system/controls` returns the fan,
+blocked network access, Monitor write, receipt, and portable `auditPlan`
+redaction metadata without calling the provider or reading secrets. The
+provider plan response projects any supplied credential reference as
+`provided_redacted`; clients must not expect the original reference to be
+returned by API or MCP surfaces. System telemetry provider credential redaction contract: `provided_redacted` is the only returned credential projection shared with CLI and signed-host plan responses. The
+`auditPlan` is not durable evidence and is not a provider execution receipt;
+durable JSONL evidence is written only by the local CLI or signed host lanes.
+`/v1/system/controls` returns the fan,
 power, process, network, display, and audio control catalog, and `POST
 /v1/system/controls/plan` creates a fail-closed signed-host plan. The plan does
 not execute hardware mutations; it records required grants, confirmation,
-receipt, and audit metadata for the host broker. Host-side execution remains a
+receipt, and portable `auditPlan` redaction metadata for the host broker.
+Host-side execution remains a
 signed-host operation: the macOS broker currently supports audio output volume
 and display brightness through Mac Control, issuing receipts and audit events,
 while unsupported or higher-risk controls return a structured blocked response

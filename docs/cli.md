@@ -542,6 +542,12 @@ returns plaintext; without an approved live provider run it records
 It preserves `claw system capabilities ...` for host capability management and
 adds telemetry, metric history, rules, and widget configuration:
 
+System telemetry SDK custom-app contracts are discoverable through
+`claw inspect custom-app-sdk --json` as read-only `system.telemetry.snapshot`
+and `system.telemetry.history` capabilities backed by
+`claw.system.telemetry.snapshot.v1` and
+`claw.system.telemetry.history.v1`.
+
 ```bash
 claw system snapshot --json
 claw system snapshot --record true --json
@@ -549,6 +555,7 @@ claw system snapshot --record true --raw-retention 6h --rollup-retention 7d --js
 claw system snapshot --source host --host-command /path/to/claw-host --record true --json
 claw system metrics list --json
 claw system history system.cpu.load1 --range 1h --json
+claw system history system.memory.used --range 24h --json
 claw system watch --interval 2000 --jsonl
 claw system rules list --json
 claw system rules upsert cpu-load-high --metric-key system.cpu.load1 --operator gte --threshold 8 --severity warning --json
@@ -591,14 +598,28 @@ external-pending until configured with explicit grants and credential
 references. `system providers
 plan <provider-id>` returns the fail-closed provider broker plan for a live
 provider, including required grants, credential reference status, blocked
-network connection, Monitor write step, audit event, and receipt status; it does
-not call the provider or read secret values. The signed hardware sensor slot
+network connection, Monitor write step, audit event, receipt status, and a
+portable `auditPlan` that states the redaction and non-execution policy; it does
+not call the provider or read secret values. When `--credential-ref` is present,
+the response exposes only `provided_redacted`; the actual reference is never
+returned in the provider plan. System telemetry provider credential redaction contract: `provided_redacted` is the only returned credential projection for CLI, API, MCP, and signed-host plan responses. Local CLI provider and control
+plans append redacted JSONL evidence to `.claw/data/system-telemetry-audit.jsonl`;
+the signed host has its own host-state audit file for blocked live-provider and
+signed-sensor plans. These audits record provider/control id, blocked outcome,
+required grants, and redacted credential/value presence only; they are not
+provider execution receipts and do not prove a live connection, physical sensor
+read, or hardware control. The signed hardware sensor slot
 uses `system.sensor.read`, has no credential reference, and remains blocked
-until compatible hardware access is validated by the host. The macOS host
+until compatible hardware access is validated by the host. The macOS host now
+also attempts a read-only experimental AppleSMC sensor path for aggregate
+temperature and fan speed samples; if that service is absent or returns no
+compatible keys, the metrics stay unavailable and the signed sensor lane
+remains external-pending rather than faking values. The macOS host
 supplies calendar timing and reminder counts only when the relevant OS
 permission is already granted; it does not trigger permission prompts during
 snapshot collection. Local context providers can also be fed without a live
-service through environment variables or single-value/JSON files: build status
+service through environment variables or single-value/JSON files in both the
+local CLI snapshot path and the signed macOS host path: build status
 (`CLAW_CONTEXT_BUILD_STATUS`, `CLAW_CONTEXT_BUILD_STATUS_FILE`), service health
 (`CLAW_CONTEXT_SERVICE_HEALTH`, `CLAW_CONTEXT_SERVICE_HEALTH_FILE`), active
 agent runs (`CLAW_CONTEXT_AGENT_RUNS_ACTIVE`, `CLAW_CONTEXT_AGENT_RUNS_FILE`),
@@ -606,19 +627,24 @@ weather temperature (`CLAW_CONTEXT_WEATHER_TEMPERATURE`,
 `CLAW_CONTEXT_WEATHER_FILE`), focus mode (`CLAW_CONTEXT_FOCUS_MODE`,
 `CLAW_CONTEXT_FOCUS_FILE`), and a custom string metric
 (`CLAW_CONTEXT_CUSTOM_METRIC`, `CLAW_CONTEXT_CUSTOM_METRIC_FILE`). JSON files
-may either contain the metric key or a generic `value` field. `system controls`
+may either contain the metric key or a generic `value` field. The local CLI
+records these fixture/offline provider samples into Monitor with provider
+confidence and redacted weather location tags, so agents can consume context
+widgets without a live provider account. `system controls`
 exposes plan-first contracts for fan, power, process, network, display, and
 audio changes. `controls plan` does not execute hardware mutations: it returns
-a signed-host broker plan with required grants, confirmation policy, receipt and
-audit event metadata, and fail-closed execution state. `controls execute`
+a signed-host broker plan with required grants, confirmation policy, receipt,
+portable `auditPlan` redaction metadata, and fail-closed execution state. `controls execute`
 requires a configured signed host command. In the current macOS host, audio
 output volume and display brightness map to Mac Control capabilities, run
 through the Mac Action Broker, and issue broker receipts plus audit events;
 unsupported or higher-risk controls return a structured fail-closed host
 response with required grants, confirmation step, blocked native execution,
-receipt status and audit event, then remain external-pending until a dedicated
-provider, confirmation flow, and physical validation are available. Physical
-controls, sensitive detail, precise location, calendar detail, network
+receipt status and audit event. The host also writes redacted JSONL audit
+evidence for those blocked attempts, with the requested value redacted; this is
+not an execution receipt and does not prove physical control. They remain
+external-pending until a dedicated provider, confirmation flow, and physical
+validation are available. Physical controls, sensitive detail, precise location, calendar detail, network
 identifiers, and process detail remain grant/audit gated and signed-host
 brokered.
 The surface graph exposes the implementation path through `inspect route`:

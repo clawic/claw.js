@@ -3,9 +3,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const clawSourceRunner = path.join(rootDir, "scripts/claw-source-runner.mjs");
+const require = createRequire(import.meta.url);
+const BetterSqlite3 = require("better-sqlite3");
 const errors = [];
 
 function fail(message) {
@@ -18,6 +21,35 @@ function assert(condition, message) {
 
 function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
+}
+
+function collectTextFiles(relativePaths) {
+  const allowedExtensions = new Set([".swift", ".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".sh", ".yml", ".yaml"]);
+  const ignoredDirectories = new Set([".git", ".build", "build", "DerivedData", "node_modules", "dist", ".tmp", ".swiftpm", "xcuserdata", "coverage"]);
+  const files = [];
+  function walk(absolutePath) {
+    if (!fs.existsSync(absolutePath)) return;
+    const stat = fs.statSync(absolutePath);
+    if (stat.isDirectory()) {
+      if (ignoredDirectories.has(path.basename(absolutePath))) return;
+      for (const entry of fs.readdirSync(absolutePath)) {
+        walk(path.join(absolutePath, entry));
+      }
+      return;
+    }
+    if (stat.isFile() && allowedExtensions.has(path.extname(absolutePath))) {
+      files.push(path.relative(rootDir, absolutePath));
+    }
+  }
+  for (const relativePath of relativePaths) {
+    walk(path.join(rootDir, relativePath));
+  }
+  return [...new Set(files)].sort();
+}
+
+function containsForbiddenExternalProductName(text, term) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(text);
 }
 
 function run(command, args, options = {}) {
@@ -59,6 +91,41 @@ function parseCliPayload(output, label) {
   }
 }
 
+function seedOperationalHealthEvent(dbPath) {
+  const sqlite = new BetterSqlite3(dbPath);
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS operational_events (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        level TEXT NOT NULL DEFAULT 'info',
+        message TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+    `);
+    sqlite.prepare(`
+      INSERT INTO operational_events (id, kind, level, message, created_at, metadata_json)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run("goal-health-heartbeat", "health_check", "info", "Worker alive", new Date().toISOString(), "{}");
+  } finally {
+    sqlite.close();
+  }
+}
+
+function assertOperationalHealthEventRetained(dbPath) {
+  const sqlite = new BetterSqlite3(dbPath, { readonly: true });
+  try {
+    const event = sqlite.prepare("SELECT id, kind, message FROM operational_events WHERE id = ?").get("goal-health-heartbeat");
+    assert(event?.kind === "health_check", "monitor retention: operational health event kind must survive metric purge");
+    assert(event?.message === "Worker alive", "monitor retention: operational health event message must survive metric purge");
+    const rollup = sqlite.prepare("SELECT COUNT(*) AS count FROM metric_rollups WHERE metric_key = ?").get("system.memory.used");
+    assert(rollup?.count >= 1, "monitor retention: metric rollups must coexist with operational health events");
+  } finally {
+    sqlite.close();
+  }
+}
+
 function assertIncludes(array, value, label) {
   assert(Array.isArray(array) && array.includes(value), `${label}: missing ${value}`);
 }
@@ -68,33 +135,18 @@ function assertNoForbiddenPublicNames() {
     [105, 115, 116, 97, 116],
     [98, 106, 97, 110, 103, 111],
   ].map((chars) => String.fromCharCode(...chars).toLowerCase());
-  const scanned = [
-    "docs/api.md",
-    "docs/cli.md",
-    "docs/system-telemetry-external-pending-validation.md",
-    "docs/surface.md",
-    "docs/persistent-surface.md",
-    "docs/evolution/public-surface-baseline.json",
-    "packages/clawjs-core/src/system-telemetry.ts",
-    "packages/clawjs-core/src/system-telemetry.test.ts",
-    "packages/clawjs-core/src/surface-registry.ts",
-    "packages/clawjs/src/cli-system-command.ts",
-    "packages/clawjs/src/index.test.ts",
-    "packages/clawjs/src/inspect-cli.test.ts",
-    "packages/clawjs-mcp/src/system-telemetry.ts",
-    "packages/clawjs-mcp/src/expose.ts",
-    "packages/clawjs-mcp/src/app.ts",
-    "packages/clawjs-mcp/src/control-plane.test.ts",
-    "apps/host/Sources/CommanderCore/SystemTelemetry.swift",
-    "apps/host/Sources/CommanderCore/CommandService.swift",
-    "apps/host/Sources/ClawHostCLI/main.swift",
-    "apps/host/Sources/ClawHostKit/SystemTelemetryControlHostBridge.swift",
-    "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift",
-  ].filter((file) => fs.existsSync(path.join(rootDir, file)));
+  const scanned = collectTextFiles([
+    "docs",
+    "packages/clawjs-core/src",
+    "packages/clawjs/src",
+    "packages/clawjs-mcp/src",
+    "apps/host",
+    "scripts/verify-system-telemetry-goal.mjs",
+  ]);
   for (const file of scanned) {
     const text = read(file).toLowerCase();
     for (const term of forbidden) {
-      if (text.includes(term)) fail(`${file}: contains a forbidden external product name`);
+      if (containsForbiddenExternalProductName(text, term)) fail(`${file}: contains a forbidden external product name`);
     }
   }
 }
@@ -112,6 +164,20 @@ function assertExternalPendingLedger() {
     "| SYS-TEL-EXT-004 | Signed-host live recording loop |",
     "| SYS-TEL-EXT-005 | Strict native menu-bar visual and interaction validation |",
     "| SYS-TEL-EXT-006 | Native time-series graph UI over retained telemetry |",
+    "read-only experimental AppleSMC path",
+    "missing AppleSMC service or missing compatible keys remains a valid external blocker",
+    ".claw/data/system-telemetry-audit.jsonl",
+    "local redacted JSONL plan audit",
+    "provided_redacted",
+    "redacted JSONL audit evidence for blocked provider plans",
+    "not a provider execution receipt",
+    "redacted JSONL audit evidence for unsupported/high-risk blocked controls",
+    "not an execution receipt",
+    "## External Validation Lanes",
+    "| SYS-TEL-EXT-001 | Live context provider lane:",
+    "| SYS-TEL-EXT-002 | Signed sensor provider lane:",
+    "| SYS-TEL-EXT-003 | Dangerous-control lane:",
+    "Rows must stay `EXTERNAL PENDING` if any approval, hardware/provider path,",
     "must not be downgraded to `EXTERNAL PENDING`",
   ]) {
     assert(text.includes(snippet), `docs/system-telemetry-external-pending-validation.md: missing ${JSON.stringify(snippet)}`);
@@ -121,14 +187,54 @@ function assertExternalPendingLedger() {
     "SYS-TEL-EXT-001",
     "SYS-TEL-EXT-002",
     "SYS-TEL-EXT-003",
-    "SYS-TEL-EXT-004",
-    "SYS-TEL-EXT-005",
-    "SYS-TEL-EXT-006",
   ];
   for (const rowId of requiredRows) {
     const rowPattern = new RegExp(`\\|\\s*${rowId}\\s*\\|[^\\n]*\\|\\s*EXTERNAL PENDING\\s*\\|`);
     assert(rowPattern.test(text), `docs/system-telemetry-external-pending-validation.md: ${rowId} must remain EXTERNAL PENDING`);
   }
+
+  const validatedRows = [
+    "SYS-TEL-EXT-004",
+    "SYS-TEL-EXT-005",
+    "SYS-TEL-EXT-006",
+  ];
+  for (const rowId of validatedRows) {
+    const rowPattern = new RegExp(`\\|\\s*${rowId}\\s*\\|[^\\n]*\\|\\s*VALIDATED LOCAL\\s*\\|`);
+    assert(rowPattern.test(text), `docs/system-telemetry-external-pending-validation.md: ${rowId} must remain VALIDATED LOCAL`);
+  }
+}
+
+function assertDecisionMatrix() {
+  const text = read("docs/system-telemetry-decision-matrix.md");
+  for (const snippet of [
+    "Source conversation: `019e359b-c0ab-7dc1-ba94-11a49d11dc76`",
+    "Plan item: `019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan`",
+    "Status: `active_goal_not_complete`",
+    "source session path is intentionally not published here.",
+    "| D01 | Provide a first-class framework plane",
+    "SDK/custom-app read contracts `system.telemetry.snapshot` and `system.telemetry.history`",
+    "| D02 | Cover computer hardware with a Mac-first portable contract",
+    "Bluetooth-peripheral",
+    "| D03 | Keep weather/time as useful context",
+    "| D04 | Support multiple independent menu-bar indicators",
+    "| D05 | Support a combined menu-bar widget/panel",
+    "| D06 | Allow broad indicator variability",
+    "| D07 | Prepare host and app surfaces for real-time display",
+    "| D08 | Reuse and centralize retention, charts, rules, and events in Monitor",
+    "operational `health_check` event coexistence",
+    "metric purge fallback to rollups",
+    "| D09 | Do not mention third-party monitoring product names",
+    "| D10 | Pin the goal to the conversation id, plan id, source review",
+    "| D11 | Do not close the goal until everything is implemented",
+    "`SYS-TEL-EXT-001`, `SYS-TEL-EXT-002`, or `SYS-TEL-EXT-003` remain",
+    "The private source session has not been re-read",
+    "The forbidden-name scan has not been repeated",
+  ]) {
+    assert(text.includes(snippet), `docs/system-telemetry-decision-matrix.md: missing ${JSON.stringify(snippet)}`);
+  }
+  const decisionRows = text.match(/^\| D\d{2} \|/gm) ?? [];
+  assert(decisionRows.length === 11, "docs/system-telemetry-decision-matrix.md: must contain exactly D01-D11 decision rows");
+  assert(!text.includes("/Users/"), "docs/system-telemetry-decision-matrix.md: must not publish private filesystem paths");
 }
 
 function assertDocsAndRegistry() {
@@ -138,9 +244,16 @@ function assertDocsAndRegistry() {
       "claw system providers plan context.weather.live",
       "claw system controls execute system.audio.set_output_volume",
       "claw inspect route system.telemetryAgentContext --json",
+      "portable `auditPlan`",
       "system.sensor.fan_speed",
       "chart-ready",
       "ASCII `render` sparkline",
+      "read-only experimental AppleSMC sensor path",
+      "local CLI snapshot path",
+      "redacted weather location tags",
+      "provided_redacted",
+      ".claw/data/system-telemetry-audit.jsonl",
+      "Local CLI provider and control",
     ]],
     ["docs/api.md", [
       "/v1/system/providers/plan",
@@ -150,6 +263,32 @@ function assertDocsAndRegistry() {
       "ASCII",
       "`render` sparkline",
       "signed-host operation",
+      "portable `auditPlan`",
+      "provided_redacted",
+      "system.telemetry.snapshot",
+      "claw.system.telemetry.snapshot.v1",
+      "system.telemetry.history",
+      "claw.system.telemetry.history.v1",
+    ]],
+    ["docs/decision-map.md", [
+      "System telemetry, context widgets, Monitor-backed history, and menu-bar indicators",
+      "./system-telemetry-decision-matrix.md",
+      "./system-telemetry-external-pending-validation.md",
+      "npm run test:system-telemetry-goal",
+    ]],
+    ["docs/discoverability.registry.json", [
+      "\"id\": \"system-telemetry-decision-matrix\"",
+      "\"canonicalSource\": \"docs/system-telemetry-decision-matrix.md\"",
+      "\"query\": \"system telemetry decision matrix\"",
+      "\"id\": \"system-telemetry-external-pending-ledger\"",
+      "\"canonicalSource\": \"docs/system-telemetry-external-pending-validation.md\"",
+      "\"query\": \"system telemetry external pending validation\"",
+    ]],
+    ["docs/discoverability.md", [
+      "`system-telemetry-decision-matrix`",
+      "[docs/system-telemetry-decision-matrix.md](/system-telemetry-decision-matrix)",
+      "`system-telemetry-external-pending-ledger`",
+      "[docs/system-telemetry-external-pending-validation.md](/system-telemetry-external-pending-validation)",
     ]],
     ["packages/clawjs-core/src/surface-registry.ts", [
       "claw.systemTelemetry",
@@ -158,6 +297,9 @@ function assertDocsAndRegistry() {
       "system.telemetryAgentContext",
       "system.telemetrySignedHostControl",
       "clawix.menuBarSystemIndicators",
+      "claw.systemTelemetry.audit.v1",
+      "portable auditPlan metadata plus local CLI and signed-host redacted audit events",
+      "provider catalog, fail-closed provider plans with provided_redacted credential projection",
       "metric_rollups",
       "metric_incidents",
     ]],
@@ -167,6 +309,116 @@ function assertDocsAndRegistry() {
       assert(text.includes(snippet), `${file}: missing ${JSON.stringify(snippet)}`);
     }
   }
+}
+
+function assertMcpAndApiTestCoverage() {
+  const text = read("packages/clawjs-mcp/src/control-plane.test.ts");
+  for (const snippet of [
+    "exposes system telemetry MCP tools as read-only agent context",
+    "serves system telemetry HTTP routes from catalog and Monitor history without creating stores",
+    "system.snapshot",
+    "system.metrics",
+    "system.widgets",
+    "system.providers",
+    "system.provider_plan",
+    "system.controls",
+    "system.control_plan",
+    "system.history",
+    "auditPlan.redaction",
+    "/v1/system/metrics",
+    "/v1/system/snapshot",
+    "/v1/system/widgets",
+    "/v1/system/providers",
+    "/v1/system/providers/plan",
+    "/v1/system/controls",
+    "/v1/system/controls/plan",
+    "/v1/system/history/system.memory.used",
+    "context.weather.temperature",
+    "willConnect, false",
+    "willExecute, false",
+    "receiptStatus",
+    "execute_native_action",
+    "retention.status",
+    "chart",
+  ]) {
+    assert(text.includes(snippet), `packages/clawjs-mcp/src/control-plane.test.ts: missing ${JSON.stringify(snippet)}`);
+  }
+}
+
+function assertSdkSystemTelemetryCoverage() {
+  const catalog = read("packages/clawjs-core/src/capability-catalog.ts");
+  for (const snippet of [
+    "id: \"system.telemetry.snapshot\"",
+    "claw system snapshot --json",
+    "inputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshotRequest",
+    "outputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot",
+    "id: \"system.telemetry.history\"",
+    "claw system history <metric-key> --range 1h|24h --json",
+    "inputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistoryRequest",
+    "outputSchemaRef: CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory",
+    "customAppAccess: \"localWide\"",
+  ]) {
+    assert(catalog.includes(snippet), `capability-catalog.ts: missing system telemetry SDK coverage ${JSON.stringify(snippet)}`);
+  }
+
+  const contracts = read("packages/clawjs-core/src/custom-app-sdk-contracts.ts");
+  for (const snippet of [
+    "systemTelemetrySnapshotRequest",
+    "claw.system.telemetry.snapshot.request.v1",
+    "systemTelemetrySnapshot",
+    "claw.system.telemetry.snapshot.v1",
+    "systemTelemetryHistoryRequest",
+    "claw.system.telemetry.history.request.v1",
+    "systemTelemetryHistory",
+    "claw.system.telemetry.history.v1",
+    "source: z.literal(\"local\")",
+    "includeUnavailable",
+    "system.telemetry.history",
+  ]) {
+    assert(contracts.includes(snippet), `custom-app-sdk-contracts.ts: missing system telemetry SDK contract ${JSON.stringify(snippet)}`);
+  }
+
+  const tests = read("packages/clawjs-core/src/capability-catalog.test.ts");
+  for (const snippet of [
+    "custom-app SDK schemas validate read-only system telemetry contracts",
+    "system.telemetry.snapshot",
+    "system.telemetry.history",
+    "source: \"host\"",
+    "range: \"24h\"",
+  ]) {
+    assert(tests.includes(snippet), `capability-catalog.test.ts: missing system telemetry SDK test ${JSON.stringify(snippet)}`);
+  }
+
+  const inspectTests = read("packages/clawjs/src/inspect-cli.test.ts");
+  for (const snippet of [
+    "system.telemetry.snapshot",
+    "claw.system.telemetry.snapshot.request.v1",
+    "claw.system.telemetry.snapshot.v1",
+    "system.telemetry.history",
+    "claw.system.telemetry.history.request.v1",
+    "claw.system.telemetry.history.v1",
+    "payload.riskMap.approvalRequired.includes(\"system.telemetry.snapshot\"), false",
+    "claw system history <metric-key> --range 1h|24h --json",
+  ]) {
+    assert(inspectTests.includes(snippet), `inspect-cli.test.ts: missing system telemetry SDK inspect coverage ${JSON.stringify(snippet)}`);
+  }
+
+  const inspection = parseCliPayload(claw(["inspect", "custom-app-sdk", "--json"]), "inspect custom-app-sdk");
+  assert(inspection.missingSchemaRefs?.length === 0, "inspect custom-app-sdk: missing schema refs must be empty");
+  assert(inspection.schemaRefs?.includes("claw.system.telemetry.snapshot.v1"), "inspect custom-app-sdk: missing snapshot schema");
+  assert(inspection.schemaRefs?.includes("claw.system.telemetry.history.v1"), "inspect custom-app-sdk: missing history schema");
+  assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.snapshot"), "inspect custom-app-sdk: snapshot must be ordinary read access");
+  assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.history"), "inspect custom-app-sdk: history must be ordinary read access");
+  assert(!inspection.riskMap?.approvalRequired?.includes("system.telemetry.snapshot"), "inspect custom-app-sdk: snapshot must not be approval-required");
+  assert(!inspection.riskMap?.approvalRequired?.includes("system.telemetry.history"), "inspect custom-app-sdk: history must not be approval-required");
+  const snapshot = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.snapshot");
+  const history = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.history");
+  assert(snapshot?.inputSchemaRef === "claw.system.telemetry.snapshot.request.v1", "inspect custom-app-sdk: snapshot input schema mismatch");
+  assert(snapshot?.outputSchemaRef === "claw.system.telemetry.snapshot.v1", "inspect custom-app-sdk: snapshot output schema mismatch");
+  assert(snapshot?.redactionPolicyRef === "claw.customApps.redaction.v1", "inspect custom-app-sdk: snapshot redaction policy missing");
+  assert(history?.inputSchemaRef === "claw.system.telemetry.history.request.v1", "inspect custom-app-sdk: history input schema mismatch");
+  assert(history?.outputSchemaRef === "claw.system.telemetry.history.v1", "inspect custom-app-sdk: history output schema mismatch");
+  assert(history?.redactionPolicyRef === "claw.customApps.redaction.v1", "inspect custom-app-sdk: history redaction policy missing");
 }
 
 function assertMetricCatalog() {
@@ -196,6 +448,7 @@ function assertMetricCatalog() {
   for (const key of [
     "system.sensor.temperature",
     "system.sensor.fan_speed",
+    "system.peripheral.bluetooth_count",
     "system.notifications.availability_state",
     "context.weather.temperature",
     "context.agent_runs.active",
@@ -211,10 +464,10 @@ function assertSnapshotAndWatch() {
   assert(snapshot.samples?.some((sample) => sample.key === "system.memory.used"), "snapshot: missing memory sample");
   assert(snapshot.unavailableMetrics?.includes("system.sensor.temperature"), "snapshot: missing sensor unavailable marker");
 
-  const watchOutput = claw(["system", "watch", "--interval", "1", "--count", "2", "--json"], { timeout: 30_000 }).trim();
+  const watchOutput = claw(["system", "watch", "--interval", "1", "--count", "2", "--jsonl"], { timeout: 30_000 }).trim();
   const lines = watchOutput.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
   assert(lines.length === 2, `watch: expected 2 jsonl lines, found ${lines.length}`);
-  assert(lines.every((line) => line.ok === true && line.meta?.intervalMs === 1), "watch: every line must be ok with requested interval");
+  assert(lines.every((line) => line.ok === true && line.meta?.intervalMs === 1 && line.meta?.format === "jsonl"), "watch: every line must be ok with requested interval and jsonl format");
   assert(lines.every((line) => line.data?.samples?.some((sample) => sample.key === "system.memory.used")), "watch: every line must include memory sample");
 }
 
@@ -247,6 +500,13 @@ function assertProvidersAndControls() {
   assert(!Array.isArray(weatherPlan.provider?.metricKeys), "weather provider plan: metricKeys must not be exposed as an array in public CLI output");
   assertIncludes(weatherPlan.policy?.requiredGrants, "weather.location.read", "weather provider plan grants");
   assert(weatherPlan.steps?.some((step) => step.id === "connect_provider" && step.status === "blocked"), "weather provider plan: connect step must be blocked");
+  assert(weatherPlan.auditPlan?.redaction?.credentialRefRedacted === true, "weather provider plan: must expose portable credential redaction audit plan");
+  assert(weatherPlan.auditPlan?.receiptStatus === "not_issued", "weather provider plan: audit plan must not claim receipt");
+
+  const weatherCredentialPlan = parseCliPayload(claw(["system", "providers", "plan", "context.weather.live", "--credential-ref", "secret://weather/local", "--reason", "goal-credential-verify", "--json"]), "weather provider credential plan");
+  assert(weatherCredentialPlan.request?.credentialRef === "provided_redacted", "weather provider credential plan: credential ref must be projected as redacted");
+  assert(weatherCredentialPlan.steps?.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), "weather provider credential plan: credential step must stay pending, not connect");
+  assert(!JSON.stringify(weatherCredentialPlan).includes("secret://weather/local"), "weather provider credential plan: must not expose credential ref");
 
   const sensorPlan = parseCliPayload(claw(["system", "providers", "plan", "system.sensors.signed", "--reason", "goal-verify", "--json"]), "sensor provider plan");
   assert(sensorPlan.willConnect === false, "sensor provider plan: must not connect");
@@ -254,6 +514,7 @@ function assertProvidersAndControls() {
   assert(sensorPlan.provider?.metrics?.includes("system.sensor.temperature"), "sensor provider plan: missing temperature metric");
   assert(sensorPlan.provider?.metrics?.includes("system.sensor.fan_speed"), "sensor provider plan: missing fan speed metric");
   assertIncludes(sensorPlan.policy?.requiredGrants, "system.sensor.read", "sensor provider plan grants");
+  assert(sensorPlan.auditPlan?.event === "system.telemetry.provider.hardware_sensor.live", "sensor provider plan: must expose portable audit plan event");
 
   const controls = parseCliPayload(claw(["system", "controls", "list", "--json"]), "controls list");
   assert(controls.mutatesHardware === false, "controls list: must not mutate hardware");
@@ -269,9 +530,67 @@ function assertProvidersAndControls() {
   assertIncludes(fanPlan.policy?.requiredGrants, "system.hardware.control", "fan control plan grants");
   assertIncludes(fanPlan.policy?.requiredGrants, "system.sensor.read", "fan control plan grants");
   assert(fanPlan.steps?.some((step) => step.id === "execute_native_action" && step.status === "blocked"), "fan control plan: execute step must be blocked");
+  assert(fanPlan.auditPlan?.redaction?.valueRedacted === true, "fan control plan: must expose portable value redaction audit plan");
+}
+
+function assertNativeSensorReadPathCoverage() {
+  const host = read("apps/host/Sources/CommanderCore/SystemTelemetry.swift");
+  for (const snippet of [
+    "hardwareSensorStats()",
+    "SMCReadOnlySensorReader.open()",
+    "IOServiceMatching(\"AppleSMC\")",
+    "readTemperatureCelsius(key:",
+    "readFanSpeedRPM(key:",
+    "bluetoothPeripheralCount()",
+    "IOBluetoothDevice",
+    "IOBluetoothHIDDriver",
+    "\"TC0P\"",
+    "\"FNum\"",
+    "\"F\\(index)Ac\"",
+    "confidence: \"experimental\"",
+    "system.sensor.temperature",
+    "system.sensor.fan_speed",
+    "Requires compatible read-only AppleSMC sensor service",
+  ]) {
+    assert(host.includes(snippet), `SystemTelemetry.swift: missing native sensor read path snippet ${JSON.stringify(snippet)}`);
+  }
 }
 
 function assertSignedHostBrokerCoverage() {
+  const cliSystem = read("packages/clawjs/src/cli-system-command.ts");
+  for (const snippet of [
+    "systemTelemetryAuditPath(",
+    "system-telemetry-audit.jsonl",
+    "appendSystemTelemetryPlanAudit(",
+    "credentialRefRedacted",
+    "valueRedacted",
+    "auditStatus: \"recorded\"",
+  ]) {
+    assert(cliSystem.includes(snippet), `cli-system-command.ts: missing local plan audit snippet ${JSON.stringify(snippet)}`);
+  }
+
+  const coreTelemetry = read("packages/clawjs-core/src/system-telemetry.ts");
+  for (const snippet of [
+    "auditPlan",
+    "SystemTelemetryPlanAuditProjection",
+    "Portable plan audit projection only",
+    "receiptStatus: \"not_issued\"",
+  ]) {
+    assert(coreTelemetry.includes(snippet), `system-telemetry.ts: missing portable audit plan snippet ${JSON.stringify(snippet)}`);
+  }
+
+  const commandService = read("apps/host/Sources/CommanderCore/CommandService.swift");
+  for (const snippet of [
+    "appendSystemTelemetryProviderPlanAudit(",
+    "writeSystemTelemetryProviderPlanAudit(",
+    "system-telemetry-provider-audit.jsonl",
+    "\"credential_ref_redacted\"",
+    "\"provider_id\"",
+    "\"outcome\": \"blocked\"",
+  ]) {
+    assert(commandService.includes(snippet), `CommandService.swift: missing provider plan audit snippet ${JSON.stringify(snippet)}`);
+  }
+
   const bridge = read("apps/host/Sources/ClawHostKit/SystemTelemetryControlHostBridge.swift");
   for (const snippet of [
     "public enum SystemTelemetryControlHostBridge",
@@ -284,6 +603,9 @@ function assertSignedHostBrokerCoverage() {
     "\"mac.audio.volume\"",
     "\"mac.display.brightness\"",
     "failClosedResponse(",
+    "appendFailClosedAudit(",
+    "\"value_redacted\"",
+    "\"outcome\": \"blocked\"",
     "System control is not executable by the signed host broker yet.",
   ]) {
     assert(bridge.includes(snippet), `SystemTelemetryControlHostBridge.swift: missing ${JSON.stringify(snippet)}`);
@@ -301,10 +623,53 @@ function assertSignedHostBrokerCoverage() {
     "system.fan.set_speed",
     "system.hardware.control",
     "system.sensor.read",
+    "system-telemetry-provider-audit",
+    "credential_ref_redacted",
+    "context.weather.live",
     "execute_native_action",
+    "audit_status",
+    "value_redacted",
     "runner.nativeCalls.isEmpty",
   ]) {
     assert(tests.includes(snippet), `CommanderE2ETests.swift: missing ${JSON.stringify(snippet)}`);
+  }
+
+  const cliTests = read("packages/clawjs/src/index.test.ts");
+  for (const snippet of [
+    "system-telemetry-audit.jsonl",
+    "credentialRefRedacted",
+    "valueRedacted",
+    "auditStatus",
+  ]) {
+    assert(cliTests.includes(snippet), `index.test.ts: missing local plan audit coverage ${JSON.stringify(snippet)}`);
+  }
+}
+
+function assertLocalContextProviderCoverage() {
+  const cli = read("packages/clawjs/src/cli-system-command.ts");
+  for (const snippet of [
+    "collectLocalContextProviderSamples()",
+    "CLAW_CONTEXT_WEATHER_FILE",
+    "CLAW_CONTEXT_BUILD_STATUS",
+    "CLAW_CONTEXT_SERVICE_HEALTH",
+    "CLAW_CONTEXT_AGENT_RUNS_ACTIVE",
+    "CLAW_CONTEXT_CUSTOM_METRIC",
+    "detail: \"local_fixture\"",
+    "tags: { provider: \"context.weather.mock\", location: \"redacted\" }",
+  ]) {
+    assert(cli.includes(snippet), `cli-system-command.ts: missing local context provider snippet ${JSON.stringify(snippet)}`);
+  }
+
+  const tests = read("packages/clawjs/src/index.test.ts");
+  for (const snippet of [
+    "runCli records local context provider samples into monitor metric history",
+    "context.weather.temperature",
+    "CLAW_CONTEXT_WEATHER_FILE",
+    "CLAW_CONTEXT_BUILD_STATUS",
+    "redacted",
+    "metric_samples",
+  ]) {
+    assert(tests.includes(snippet), `index.test.ts: missing local context provider coverage ${JSON.stringify(snippet)}`);
   }
 }
 
@@ -346,6 +711,66 @@ function assertMonitorRetention() {
   assert(history.render?.kind === "ascii_sparkline", "history: missing ASCII sparkline render");
   assert(history.render?.source === "metric_samples", "history: render must use the same source as chart when raw samples are available");
   assert(typeof history.render?.line === "string" && history.render.line.length > 0, "history: render must expose a non-empty line");
+
+  const dayHistory = parseCliPayload(claw(["system", "history", "system.memory.used", "--range", "24h", "--monitor-db", monitorDb, "--json"]), "24h history");
+  assert(dayHistory.rangeMs === 86_400_000, "24h history: must preserve 24h rangeMs");
+  assert(dayHistory.retention?.status === "recorded", "24h history: retention status must be recorded");
+  assert(dayHistory.chart?.source === "metric_samples", "24h history: chart must use recorded metric samples");
+  assert(dayHistory.chart?.points?.some((point) => point.sourceId === "system.telemetry.local" && typeof point.value === "number"), "24h history: chart must expose recorded numeric points");
+  assert(dayHistory.render?.kind === "ascii_sparkline", "24h history: missing ASCII sparkline render");
+
+  const purgeMonitorDb = path.join(workspaceRoot, "monitor-purge.sqlite");
+  seedOperationalHealthEvent(purgeMonitorDb);
+  const purgedSnapshot = parseCliPayload(claw([
+    "system", "snapshot",
+    "--record", "true",
+    "--raw-retention", "0m",
+    "--monitor-db", purgeMonitorDb,
+    "--json",
+  ]), "purged snapshot");
+  assert(purgedSnapshot.recorded?.purged?.samples >= 1, "purged snapshot: metric samples must be purged under short retention");
+  assertOperationalHealthEventRetained(purgeMonitorDb);
+  const purgedHistory = parseCliPayload(claw(["system", "history", "system.memory.used", "--range", "1h", "--monitor-db", purgeMonitorDb, "--json"]), "purged history");
+  assert(purgedHistory.samples?.length === 0, "purged history: raw metric samples must be empty after purge");
+  assert(purgedHistory.chart?.source === "metric_rollups", "purged history: chart must fall back to metric rollups");
+
+  const deletedRule = parseCliPayload(claw([
+    "system", "rules", "delete", "memory-any",
+    "--workspace", workspaceRoot,
+    "--json",
+  ]), "rules delete");
+  assert(deletedRule.deleted === "memory-any", "rules delete: missing deleted id");
+  assert(deletedRule.mutatesHardware === false, "rules delete: must not mutate hardware");
+  assert(!deletedRule.rules?.some((rule) => rule.id === "memory-any"), "rules delete: rule must be absent after delete");
+
+  const upsertWidget = parseCliPayload(claw([
+    "system", "widgets", "upsert", "goal-memory-widget",
+    "--metric-key", "system.memory.used",
+    "--title", "Memory",
+    "--presentation", "sparkline",
+    "--placement", "menubar",
+    "--enabled", "true",
+    "--workspace", workspaceRoot,
+    "--json",
+  ]), "widgets upsert");
+  assert(upsertWidget.widget?.id === "goal-memory-widget", "widgets upsert: missing created widget");
+  assert(upsertWidget.hostSpecific === true, "widgets upsert: must be host specific");
+
+  const listWidgets = parseCliPayload(claw([
+    "system", "widgets", "list",
+    "--workspace", workspaceRoot,
+    "--json",
+  ]), "widgets list");
+  assert(listWidgets.widgets?.some((widget) => widget.id === "goal-memory-widget"), "widgets list: missing created widget");
+
+  const deletedWidget = parseCliPayload(claw([
+    "system", "widgets", "delete", "goal-memory-widget",
+    "--workspace", workspaceRoot,
+    "--json",
+  ]), "widgets delete");
+  assert(deletedWidget.deleted === "goal-memory-widget", "widgets delete: missing deleted id");
+  assert(deletedWidget.hostSpecific === true, "widgets delete: must be host specific");
+  assert(!deletedWidget.widgets?.some((widget) => widget.id === "goal-memory-widget"), "widgets delete: widget must be absent after delete");
 }
 
 function assertInspectRoutes() {
@@ -371,17 +796,41 @@ function assertSearchDiscoverability() {
   const menuBarResults = menuBar.results ?? [];
   assert(menuBarResults.some((result) => result.path === "docs/cli.md"), "search menu bar indicators: missing CLI docs result");
   assert(menuBarResults.some((result) => String(result.summary ?? "").includes("clawix.menuBarSystemIndicators")), "search menu bar indicators: missing menu bar route evidence");
+
+  const credentialRedaction = parseCliPayload(claw(["search", "system telemetry provider credential redaction", "--json"]), "search provider credential redaction");
+  const credentialRedactionResults = credentialRedaction.results ?? [];
+  assert(credentialRedactionResults.some((result) => result.path === "docs/cli.md" && String(result.summary ?? "").includes("provided_redacted")), "search provider credential redaction: missing CLI redaction contract");
+
+  const sdkTelemetry = parseCliPayload(claw(["search", "system telemetry SDK custom app", "--json"]), "search system telemetry SDK custom app");
+  const sdkTelemetryResults = sdkTelemetry.results ?? [];
+  assert(sdkTelemetryResults.some((result) => result.path === "docs/cli.md" && String(result.summary ?? "").includes("System telemetry SDK custom-app contracts")), "search system telemetry SDK custom app: missing CLI SDK contract docs");
+
+  const decisionMatrix = parseCliPayload(claw(["search", "system telemetry decision matrix", "--json"]), "search system telemetry decision matrix");
+  const decisionMatrixResults = decisionMatrix.results ?? [];
+  assert(decisionMatrixResults.some((result) => result.path === "docs/system-telemetry-decision-matrix.md"), "search system telemetry decision matrix: missing decision matrix doc");
+
+  const externalLedger = parseCliPayload(claw(["search", "system telemetry external pending validation", "--json"]), "search system telemetry external pending validation");
+  const externalLedgerResults = externalLedger.results ?? [];
+  assert(externalLedgerResults.some((result) => result.path === "docs/system-telemetry-external-pending-validation.md"), "search system telemetry external pending validation: missing external-pending ledger doc");
+
+  const route = parseCliPayload(claw(["inspect", "route", "system.telemetryAgentContext", "--json"]), "inspect credential redaction route");
+  assert(route.edges?.some((edge) => edge.id === "claw.edge.system.telemetry.consumes.contextProviders" && String(edge.transport ?? "").includes("provided_redacted credential projection")), "inspect route: provider edge must expose credential redaction projection");
 }
 
 function main() {
   assert(fs.existsSync(clawSourceRunner), "scripts/claw-source-runner.mjs is missing");
   assertNoForbiddenPublicNames();
   assertExternalPendingLedger();
+  assertDecisionMatrix();
   assertDocsAndRegistry();
+  assertMcpAndApiTestCoverage();
+  assertSdkSystemTelemetryCoverage();
   assertMetricCatalog();
   assertSnapshotAndWatch();
   assertProvidersAndControls();
   assertSystemCapabilitiesAlias();
+  assertNativeSensorReadPathCoverage();
+  assertLocalContextProviderCoverage();
   assertSignedHostBrokerCoverage();
   assertMonitorRetention();
   assertInspectRoutes();
