@@ -71,6 +71,9 @@ for user-authored custom UIs that do not block the main app shell.
   CLI tests, and Clawix host projection evidence are part of the executable
   route-family gate; unrelated future executors remain blocked until they have
   equivalent policy/audit/test coverage.
+- Sibling Clawix mirrors `system.telemetry.snapshot` and
+  `system.telemetry.history` as low-risk local-wide reads through the capability
+  catalog, `window.clawix.system.telemetry`, and host bridge contract tests.
 - Tests cover the baseline catalog and SDK facade.
 - Clawix app manifests can declare capabilities and produce a risk map.
 - Clawix bridge exposes capability inspection to hosted apps.

@@ -45,6 +45,9 @@ function assertCompletionAudit() {
     "three interrupted unanswered ids",
     "The Network Control Plane now provides a typed executable route-family example",
     "disabled-by-default rule suggestions",
+    "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
+    "`window.clawix.system.telemetry`",
+    "`SystemTelemetryBridge.localStatusBridge`",
     "The required sibling Clawix checkout is present for this closure gate",
     "Keep the `--require-clawix` verifier path current",
     "| CLJ-SDK-001 | ADR, plan, decision-map, and discoverability routing",
@@ -94,6 +97,7 @@ function assertPublicRouting() {
       "Sibling Clawix installed-app Time Profiler smoke",
       "launch and attach capture paths",
       "rescue, delayed-heavy-surface",
+      "Sibling Clawix mirrors `system.telemetry.snapshot` and",
     ],
     "docs/decision-map.md": [
       "sdk-first-custom-surfaces-completion-audit.md",
@@ -218,6 +222,7 @@ function assertSiblingClawixArtifacts() {
       "metadata-only `executionBoundary`",
       "`clawix.capabilities.contracts()` exposes `executionBoundary`",
       "Direct SQLite is not exposed as a custom-app action surface.",
+      "`system.telemetry.snapshot` and `system.telemetry.history` are mirrored as",
     ],
     "docs/sdk-first-custom-surfaces-completion-audit.md": [
       "Status: `active_goal_not_complete`",
@@ -236,16 +241,32 @@ function assertSiblingClawixArtifacts() {
       "static var executionBoundaryBridgeValue",
       "\"metadata_only_contract_catalog\"",
       "\"hostBridgeImplementation\": \"window.clawix\"",
+      "systemTelemetrySnapshotSchemaRef",
+      "system.telemetry.snapshot",
+      "system.telemetry.history",
     ],
     "macos/Sources/Clawix/Apps/ClawixAppsSDK.swift": [
       "capabilities",
       "contracts: function () { return send('capabilities.contracts'); }",
       "db.query",
+      "system.telemetry.snapshot",
+      "system.telemetry.history",
+    ],
+    "macos/Sources/Clawix/Apps/AppBridgeMessageHandler.swift": [
+      "handleSystemTelemetrySnapshot",
+      "systemTelemetrySnapshotBridgeValue",
+      "SystemTelemetryBridge",
+    ],
+    "macos/Sources/Clawix/SystemTelemetry/SystemTelemetryBridge.swift": [
+      "localStatusBridge",
+      "telemetry",
+      "history",
     ],
     "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityTests.swift": [
       "testHostBridgeExposesCustomAppSDKContractPayload",
       "testDBQueryDSLRejectsCollectionEscapesAndDDLKeys",
       "testSwiftSurfaceRunnerSupervisorRejectsInProcessPlans",
+      "testSystemTelemetryBridgeValuesMatchSdkContracts",
     ],
     "macos/Tests/ClawixMeshTests/SurfaceShellPerformanceTests.swift": [
       "testCriticalShellStartFastPathStaysBoundedWithAllHeavyDependenciesUnavailable",
