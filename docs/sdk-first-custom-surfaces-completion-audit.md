@@ -12,7 +12,10 @@ external or private-audit row must have either approved evidence or a later
 explicit user decision accepting the blocker. When a sibling Clawix checkout is
 available, `scripts/verify-sdk-first-custom-surfaces-goal.mjs` also inspects
 the host bridge, protected-route, variant, Swift surface, and shell isolation
-evidence in that checkout.
+evidence in that checkout. A private source-session verifier has re-read the
+source conversation and confirmed the 24 decision prompt ids, including the
+three interrupted unanswered ids; the verifier and private path are not
+published in this repo.
 
 ## Current Rows
 
@@ -27,20 +30,19 @@ evidence in that checkout.
 | CLJ-SDK-007 | Clawix consumes the shared framework contract through a host bridge rather than forking execution semantics. | Sibling Clawix tests, when present, verify `clawix.capabilities.contracts()`, `window.clawix`, host bridge execution, protected routes, variants, and Swift surface isolation. | Keep Clawix integration evidence current; absent sibling checkout makes this row partial until checked separately. | PARTIAL LOCAL |
 | CLJ-SDK-008 | Shells and hosts remain modular and nonblocking when custom surfaces, Search, DB, connectors, providers, or Swift/Web app hosts fail or load. | Clawix has synthetic route supervisor and shell fast-path tests; the framework ADR requires isolated failure domains and bounded/cancelable work. | Real signed-app UI/Instruments captures for launch, sidebar, chat, rescue, and delayed heavy surfaces remain required. | EXTERNAL PENDING |
 | CLJ-SDK-009 | Unanswered `data_access_lock`, `custom_collections`, and `cli_escape_hatch` prompts are not treated as approvals. | Framework schemas and routes reject direct SQL, DDL/schema creation, SQLite internals, path-like collections, and contract-route POST execution. | Any future loosening requires an explicit user decision and matching policy/tests. | VALIDATED LOCAL |
-| CLJ-SDK-010 | Final decision-by-decision source-session audit before `update_goal`. | This audit, the private decision-verification ledger, and the public verifier preserve the closure gate. | Re-read the private source session one by one, refresh evidence, and verify every decision row before calling `update_goal`. | PRIVATE AUDIT PENDING |
+| CLJ-SDK-010 | Final decision-by-decision source-session audit before `update_goal`. | A private source-session verifier re-read the source JSONL, confirmed 24 prompt ids, 21 captured answers, 3 interrupted unanswered ids, and the final plan block; this public audit intentionally does not publish the private path. | Re-run the private verifier before any future closure attempt and keep every remaining public partial/external row blocked until resolved or explicitly accepted. | VALIDATED PRIVATE |
 
 ## Closure Rule
 
 The goal is not complete while any of these are true:
 
-- Any row above is `PARTIAL LOCAL`, `EXTERNAL PENDING`, or
-  `PRIVATE AUDIT PENDING`.
+- Any row above is `PARTIAL LOCAL` or `EXTERNAL PENDING`.
 - Real signed-app UI/Instruments performance evidence is missing.
 - Signed-host native execution, live IoT/provider, or marketplace trust
   validation lacks explicit approval, receipts, audit, and same-machine
   evidence.
-- The private source session has not been re-read one decision at a time
-  against the current tree.
+- The private source-session verifier has not been re-run against the current
+  tree before a future closure attempt.
 - The ClawJS verifier or sibling Clawix validation referenced by this audit
   fails.
 

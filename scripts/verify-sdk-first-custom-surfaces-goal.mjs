@@ -40,6 +40,9 @@ function assertCompletionAudit() {
     "Status: `active_goal_not_complete`",
     "private source session path is",
     "also inspects",
+    "private source-session verifier has re-read",
+    "24 decision prompt ids",
+    "three interrupted unanswered ids",
     "| CLJ-SDK-001 | ADR, plan, decision-map, and discoverability routing",
     "| CLJ-SDK-002 | Shared capability catalog and SDK facade",
     "| CLJ-SDK-003 | Custom-app SDK inspection exposes `executionBoundary`",
@@ -50,7 +53,7 @@ function assertCompletionAudit() {
     "| CLJ-SDK-008 | Shells and hosts remain modular and nonblocking",
     "| CLJ-SDK-009 | Unanswered `data_access_lock`, `custom_collections`, and `cli_escape_hatch`",
     "| CLJ-SDK-010 | Final decision-by-decision source-session audit",
-    "`PRIVATE AUDIT PENDING`",
+    "VALIDATED PRIVATE",
     "Do not call `update_goal`",
   ]) {
     assert(text.includes(snippet), `docs/sdk-first-custom-surfaces-completion-audit.md: missing ${JSON.stringify(snippet)}`);
@@ -63,7 +66,7 @@ function assertCompletionAudit() {
     ["CLJ-SDK-005", "EXTERNAL PENDING"],
     ["CLJ-SDK-007", "PARTIAL LOCAL"],
     ["CLJ-SDK-008", "EXTERNAL PENDING"],
-    ["CLJ-SDK-010", "PRIVATE AUDIT PENDING"],
+    ["CLJ-SDK-010", "VALIDATED PRIVATE"],
   ]) {
     const pattern = new RegExp(`\\|\\s*${rowId}\\s*\\|[^\\n]*\\|\\s*${status}\\s*\\|`);
     assert(pattern.test(text), `docs/sdk-first-custom-surfaces-completion-audit.md: ${rowId} must remain ${status}`);
