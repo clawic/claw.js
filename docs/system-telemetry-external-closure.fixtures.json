@@ -87,6 +87,18 @@
       "baseLaneId": "SYS-TEL-EXT-002",
       "mutation": "evidencePacket.runAuthorization.nativeGrantRefs=wrong",
       "reason": "Evidence must use exactly the native grants authorized by the approval packet."
+    },
+    {
+      "id": "evidence_execution_completed_before_start",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.execution.completedAt=beforeExecutionStart",
+      "reason": "Closure bundles must reject evidence whose execution completes before it starts."
+    },
+    {
+      "id": "evidence_reviewed_before_execution_completed",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.reviewer.reviewedAt=beforeExecutionCompleted",
+      "reason": "Closure bundles must reject evidence reviewed before execution completion."
     }
   ]
 }
