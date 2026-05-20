@@ -187,6 +187,7 @@ function assertFrameworkArtifacts() {
       "cli: \"blocked\"",
       "export type ClawCapabilitySurfaceStatus = \"available\" | \"blocked\" | \"notApplicable\";",
       "Pending capability surface binding is not allowed",
+      "Available capability surface binding requires a ref",
       "approvalRequired",
       "blocked",
     ],

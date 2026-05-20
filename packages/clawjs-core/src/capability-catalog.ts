@@ -87,7 +87,8 @@ function surfaces(input: Record<ClawCapabilitySurface, string | ClawCapabilitySu
     const value = input[surface];
     if (value === undefined) throw new Error(`Missing capability surface binding: ${surface}`);
     if (value === "pending") throw new Error(`Pending capability surface binding is not allowed: ${surface}`);
-    if (value === "blocked" || value === "notApplicable" || value === "available") {
+    if (value === "available") throw new Error(`Available capability surface binding requires a ref: ${surface}`);
+    if (value === "blocked" || value === "notApplicable") {
       return { surface, status: value };
     }
     return { surface, status: "available" as const, ref: value };
