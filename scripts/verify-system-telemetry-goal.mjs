@@ -23,6 +23,10 @@ function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
 }
 
+function readJson(relativePath) {
+  return JSON.parse(read(relativePath));
+}
+
 function collectTextFiles(relativePaths) {
   const allowedExtensions = new Set([".swift", ".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".sh", ".yml", ".yaml"]);
   const ignoredDirectories = new Set([".git", ".build", "build", "DerivedData", "node_modules", "dist", ".tmp", ".swiftpm", "xcuserdata", "coverage"]);
@@ -201,6 +205,40 @@ function assertExternalPendingLedger() {
   for (const rowId of validatedRows) {
     const rowPattern = new RegExp(`\\|\\s*${rowId}\\s*\\|[^\\n]*\\|\\s*VALIDATED LOCAL\\s*\\|`);
     assert(rowPattern.test(text), `docs/system-telemetry-external-pending-validation.md: ${rowId} must remain VALIDATED LOCAL`);
+  }
+}
+
+function assertExternalValidationManifest() {
+  const manifest = readJson("docs/system-telemetry-external-validation.manifest.json");
+  assert(manifest.schemaVersion === 1, "external validation manifest: schemaVersion must be 1");
+  assert(manifest.conversationId === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external validation manifest: wrong conversationId");
+  assert(manifest.planId === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external validation manifest: wrong planId");
+  assert(manifest.status === "active_goal_not_complete", "external validation manifest: goal must remain active");
+  assert(manifest.completionPolicy?.externalPendingBlocksCompletion === true, "external validation manifest: external pending must block completion");
+  assert(manifest.completionPolicy?.requiresFinalSourceAudit === true, "external validation manifest: final source audit must be required");
+  assert(manifest.completionPolicy?.requiresForbiddenNameScan === true, "external validation manifest: forbidden-name scan must be required");
+  assert(manifest.completionPolicy?.requiresExactRunApprovalForExternalLanes === true, "external validation manifest: exact-run approval must be required");
+  assert(Array.isArray(manifest.rows), "external validation manifest: rows must be an array");
+
+  const rows = new Map(manifest.rows.map((row) => [row.id, row]));
+  for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
+    const row = rows.get(rowId);
+    assert(row?.status === "EXTERNAL PENDING", `external validation manifest: ${rowId} must remain EXTERNAL PENDING`);
+    assert(Array.isArray(row.blockingPrerequisites) && row.blockingPrerequisites.length >= 4, `external validation manifest: ${rowId} must keep blocking prerequisites`);
+    assert(Array.isArray(row.acceptedEvidence) && row.acceptedEvidence.length >= 4, `external validation manifest: ${rowId} must define accepted evidence`);
+    assert(typeof row.reentryCommand === "string" && row.reentryCommand.includes("claw system"), `external validation manifest: ${rowId} must define a system reentry command`);
+  }
+
+  assert(rows.get("SYS-TEL-EXT-001")?.acceptedEvidence?.includes("provider_execution_receipt"), "external validation manifest: live provider lane must require execution receipt");
+  assert(rows.get("SYS-TEL-EXT-001")?.blockingPrerequisites?.includes("network_access_for_exact_run"), "external validation manifest: live provider lane must require exact network approval");
+  assert(rows.get("SYS-TEL-EXT-002")?.acceptedEvidence?.includes("same_machine_evidence"), "external validation manifest: sensor lane must require same-machine evidence");
+  assert(rows.get("SYS-TEL-EXT-003")?.blockingPrerequisites?.includes("physical_validation"), "external validation manifest: control lane must require physical validation");
+  assert(rows.get("SYS-TEL-EXT-003")?.acceptedEvidence?.includes("rollback_or_continuity_evidence"), "external validation manifest: control lane must require rollback or continuity evidence");
+
+  for (const rowId of ["SYS-TEL-EXT-004", "SYS-TEL-EXT-005", "SYS-TEL-EXT-006"]) {
+    const row = rows.get(rowId);
+    assert(row?.status === "VALIDATED LOCAL", `external validation manifest: ${rowId} must remain VALIDATED LOCAL`);
+    assert(Array.isArray(row.blockingPrerequisites) && row.blockingPrerequisites.length === 0, `external validation manifest: ${rowId} must not keep external prerequisites`);
   }
 }
 
@@ -840,6 +878,7 @@ function main() {
   assert(fs.existsSync(clawSourceRunner), "scripts/claw-source-runner.mjs is missing");
   assertNoForbiddenPublicNames();
   assertExternalPendingLedger();
+  assertExternalValidationManifest();
   assertDecisionMatrix();
   assertDocsAndRegistry();
   assertMcpAndApiTestCoverage();

@@ -12,6 +12,12 @@ host planning from validation that requires a real provider account, physical
 hardware, native approval, or current app inspection. Rows marked
 `EXTERNAL PENDING` are not passes and must not be used to close the goal.
 
+Machine-readable closure gates live in
+`docs/system-telemetry-external-validation.manifest.json`. The verifier treats
+that manifest as the structured contract for remaining external lanes, exact-run
+approval, accepted evidence, and the rule that external pending blocks goal
+completion.
+
 ## Current Rows
 
 | ID | Requirement | Local evidence | Missing prerequisite | Status |
