@@ -163,6 +163,11 @@
       "id": "approval_expiry_before_approval",
       "mutation": "approval.expiresAt=beforeApprovedAt",
       "packetRef": "SYS-TEL-EXT-001"
+    },
+    {
+      "id": "raw_secret_reference",
+      "mutation": "authorization.credentialLeaseRefs=rawSecretRef",
+      "packetRef": "SYS-TEL-EXT-001"
     }
   ]
 }

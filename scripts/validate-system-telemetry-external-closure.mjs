@@ -38,7 +38,16 @@ function assert(condition, message) {
 
 function assertPublicSafe(value, label) {
   const serialized = JSON.stringify(value);
-  assert(!serialized.includes("/Users/"), `${label}: contains a private filesystem path`);
+  const checks = [
+    ["/Users/", "private filesystem path"],
+    ["file://", "file URL"],
+    ["secret://", "raw secret reference"],
+    ["-----BEGIN", "key material marker"],
+    ["sk-", "API key-like token"],
+    ["AKIA", "cloud access key-like token"],
+  ];
+  const matched = checks.find(([needle]) => serialized.includes(needle));
+  assert(!matched, `${label}: contains ${matched?.[1] ?? "non public-safe material"}`);
 }
 
 function compileSchema(schemaPath) {

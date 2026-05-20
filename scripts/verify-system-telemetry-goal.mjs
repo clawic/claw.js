@@ -58,6 +58,21 @@ function containsForbiddenExternalProductName(text, term) {
   return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(text);
 }
 
+function publicSafetyErrors(value) {
+  const serialized = JSON.stringify(value);
+  const checks = [
+    ["/Users/", "private filesystem path"],
+    ["file://", "file URL"],
+    ["secret://", "raw secret reference"],
+    ["-----BEGIN", "key material marker"],
+    ["sk-", "API key-like token"],
+    ["AKIA", "cloud access key-like token"],
+  ];
+  return checks
+    .filter(([needle]) => serialized.includes(needle))
+    .map(([, label]) => `contains ${label}`);
+}
+
 function run(command, args, options = {}) {
   try {
     return execFileSync(command, args, {
@@ -299,7 +314,7 @@ function assertExternalValidationManifest() {
   assert(manifest.externalApprovalFixtures?.path === "docs/governance/system-telemetry/external-approval.fixtures.json", "external validation manifest: wrong external approval fixtures path");
   assert(manifest.externalApprovalFixtures?.status === "synthetic_templates_not_approval", "external validation manifest: external approval fixtures must be marked synthetic");
   assert(manifest.externalApprovalFixtures?.validTemplateCount === 3, "external validation manifest: wrong external approval valid fixture count");
-  assert(manifest.externalApprovalFixtures?.invalidTemplateCount === 4, "external validation manifest: wrong external approval invalid fixture count");
+  assert(manifest.externalApprovalFixtures?.invalidTemplateCount === 5, "external validation manifest: wrong external approval invalid fixture count");
   assert(manifest.externalApprovalFixtures?.closureRole?.includes("without representing real approval"), "external validation manifest: external approval fixtures closure role must be explicit");
   assert(manifest.externalApprovalPacketValidator?.required === true, "external validation manifest: external approval validator link must be required");
   assert(manifest.externalApprovalPacketValidator?.artifactId === "system-telemetry-external-approval-validator", "external validation manifest: wrong external approval validator artifact");
@@ -320,7 +335,7 @@ function assertExternalValidationManifest() {
   assert(manifest.externalEvidenceFixtures?.path === "docs/governance/system-telemetry/external-evidence.fixtures.json", "external validation manifest: wrong external evidence fixtures path");
   assert(manifest.externalEvidenceFixtures?.status === "synthetic_templates_not_evidence", "external validation manifest: external evidence fixtures must be marked synthetic");
   assert(manifest.externalEvidenceFixtures?.validTemplateCount === 3, "external validation manifest: wrong valid fixture count");
-  assert(manifest.externalEvidenceFixtures?.invalidTemplateCount === 7, "external validation manifest: wrong invalid fixture count");
+  assert(manifest.externalEvidenceFixtures?.invalidTemplateCount === 8, "external validation manifest: wrong invalid fixture count");
   assert(manifest.externalEvidenceFixtures?.closureRole?.includes("without representing real external evidence"), "external validation manifest: external evidence fixtures closure role must be explicit");
   assert(manifest.externalEvidencePacketValidator?.required === true, "external validation manifest: external evidence validator link must be required");
   assert(manifest.externalEvidencePacketValidator?.artifactId === "system-telemetry-external-evidence-validator", "external validation manifest: wrong external evidence validator artifact");
@@ -470,6 +485,9 @@ function mutateApprovalTemplate(packet, mutation) {
     case "approval.expiresAt=beforeApprovedAt":
       mutated.approval.expiresAt = "2026-05-19T23:59:59Z";
       break;
+    case "authorization.credentialLeaseRefs=rawSecretRef":
+      mutated.authorization.credentialLeaseRefs = ["secret://raw-template"];
+      break;
     default:
       fail(`external approval fixtures: unknown mutation ${mutation}`);
   }
@@ -478,6 +496,7 @@ function mutateApprovalTemplate(packet, mutation) {
 
 function approvalTemplateErrors(packet, validate, ajv) {
   const errors = [];
+  errors.push(...publicSafetyErrors(packet));
   if (!validate(packet)) errors.push(ajv.errorsText(validate.errors));
   const approvedAt = Date.parse(packet.approval?.approvedAt);
   const expiresAt = Date.parse(packet.approval?.expiresAt);
@@ -556,7 +575,7 @@ function assertExternalApprovalFixtures() {
   assert(fixtures.schemaPath === "docs/governance/system-telemetry/external-approval.schema.json", "external approval fixtures: wrong schema path");
   assert(fixtures.validatorPath === "scripts/validate-system-telemetry-external-approval.mjs", "external approval fixtures: wrong validator path");
   assert(Array.isArray(fixtures.validSyntheticPackets) && fixtures.validSyntheticPackets.length === 3, "external approval fixtures: must contain 3 valid synthetic packets");
-  assert(Array.isArray(fixtures.invalidSyntheticPackets) && fixtures.invalidSyntheticPackets.length === 4, "external approval fixtures: must contain 4 invalid synthetic packets");
+  assert(Array.isArray(fixtures.invalidSyntheticPackets) && fixtures.invalidSyntheticPackets.length === 5, "external approval fixtures: must contain 5 invalid synthetic packets");
   const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
   const validate = ajv.compile(schema);
   const validByLaneId = new Map();
@@ -586,7 +605,7 @@ function assertExternalApprovalValidator() {
   assert(result.ok === true, "external approval validator: fixture validation must pass");
   assert(result.status === "synthetic_templates_not_approval", "external approval validator: fixtures must remain synthetic");
   assert(result.validSyntheticPackets === 3, "external approval validator: must accept 3 valid synthetic packets");
-  assert(result.invalidSyntheticPackets === 4, "external approval validator: must reject 4 invalid synthetic packets");
+  assert(result.invalidSyntheticPackets === 5, "external approval validator: must reject 5 invalid synthetic packets");
   for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
     assert(result.accepted?.includes(rowId), `external approval validator: missing accepted fixture for ${rowId}`);
   }
@@ -637,6 +656,14 @@ function assertExternalValidationRunbook() {
     "Pre-execution plan with `willExecute=true` only after approval",
     "rollback/continuity evidence",
     "failed approved execution is a defect",
+    "## Exact Approval Inputs",
+    "These are the minimum public-safe fields that must be resolved before building",
+    "They are not approval by themselves.",
+    "credential lease reference, location grant reference, network approval",
+    "native `system.sensor.read` grant reference",
+    "exact control id, target, value, native grant reference",
+    "Must stay absent from public artifacts",
+    "If any required field is still unknown, keep the lane as `EXTERNAL PENDING`",
     "Do not mark the goal complete until every lane above is either replaced with",
     "source reread, completion audit, approval schema check, evidence schema check,",
     "same-lane closure bundle check",
@@ -725,6 +752,7 @@ function assertExternalEvidenceSchema() {
 
 function evidenceTemplateErrors(packet, validate, ajv) {
   const errors = [];
+  errors.push(...publicSafetyErrors(packet));
   if (!validate(packet)) errors.push(ajv.errorsText(validate.errors));
   const approvedAt = Date.parse(packet.runAuthorization?.approvedAt);
   const preflightCompletedAt = Date.parse(packet.preflight?.completedAt);
@@ -767,6 +795,9 @@ function mutateEvidenceTemplate(packet, mutation) {
     case "reviewer.reviewedAt before execution.completedAt":
       mutated.reviewer.reviewedAt = "2026-05-19T23:59:59Z";
       break;
+    case "evidence.downstreamEvidenceRefs=privatePath":
+      mutated.evidence.downstreamEvidenceRefs = ["file://private/downstream-evidence-template.png"];
+      break;
     default:
       return undefined;
   }
@@ -782,7 +813,7 @@ function assertExternalEvidenceFixtures() {
   assert(fixtures.planId === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external evidence fixtures: wrong plan id");
   assert(fixtures.schemaPath === "docs/governance/system-telemetry/external-evidence.schema.json", "external evidence fixtures: wrong schema path");
   assert(Array.isArray(fixtures.validSyntheticPackets) && fixtures.validSyntheticPackets.length === 3, "external evidence fixtures: must contain 3 valid synthetic packets");
-  assert(Array.isArray(fixtures.invalidSyntheticPackets) && fixtures.invalidSyntheticPackets.length === 7, "external evidence fixtures: must contain 7 invalid synthetic packets");
+  assert(Array.isArray(fixtures.invalidSyntheticPackets) && fixtures.invalidSyntheticPackets.length === 8, "external evidence fixtures: must contain 8 invalid synthetic packets");
   const schema = readJson("docs/governance/system-telemetry/external-evidence.schema.json");
   const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
   const validate = ajv.compile(schema);
@@ -815,7 +846,7 @@ function assertExternalEvidenceValidator() {
   assert(result.ok === true, "external evidence validator: fixture validation must pass");
   assert(result.status === "synthetic_templates_not_evidence", "external evidence validator: fixtures must remain synthetic");
   assert(result.validSyntheticPackets === 3, "external evidence validator: must accept 3 valid synthetic packets");
-  assert(result.invalidSyntheticPackets === 7, "external evidence validator: must reject 7 invalid synthetic packets");
+  assert(result.invalidSyntheticPackets === 8, "external evidence validator: must reject 8 invalid synthetic packets");
   for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
     assert(result.accepted?.includes(rowId), `external evidence validator: missing accepted fixture for ${rowId}`);
   }
@@ -866,7 +897,7 @@ function assertSourceQaReview() {
   assert(review.sourceSessionRef === "private-session-not-published", "source Q/A review: must not publish private source session path");
   assert(!JSON.stringify(review).includes("/Users/"), "source Q/A review: must not publish private filesystem paths");
   assert(review.status === "complete_with_external_pending", "source Q/A review: status must keep external blockers visible");
-  assert(review.reviewedUserRoleMessages === 152, "source Q/A review: reviewed user-role message count drifted");
+  assert(review.reviewedUserRoleMessages === 157, "source Q/A review: reviewed user-role message count drifted");
   assert(review.decisionBearingRowsReviewed === 12, "source Q/A review: decision-bearing row count drifted");
   for (const decisionId of ["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10", "D11"]) {
     assert(review.decisionIdsReviewed?.includes(decisionId), `source Q/A review: missing ${decisionId}`);

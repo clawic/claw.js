@@ -390,6 +390,11 @@
       "id": "reviewed_before_execution_completed",
       "baseLaneId": "SYS-TEL-EXT-001",
       "mutation": "reviewer.reviewedAt before execution.completedAt"
+    },
+    {
+      "id": "private_path_in_downstream_evidence",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidence.downstreamEvidenceRefs=privatePath"
     }
   ]
 }

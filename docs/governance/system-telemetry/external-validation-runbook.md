@@ -59,6 +59,21 @@ before updating any ledger, manifest, completion audit, or source Q/A review.
 | SYS-TEL-EXT-002 | `claw system providers plan system.sensors.signed --json` must return fail-closed signed sensor metadata. | Native `system.sensor.read` grant, compatible hardware/provider path, signed host selection, and approval for that exact physical read. | Execution receipt or `externalPending=false` plan, Monitor sample IDs for `system.sensor.temperature` or `system.sensor.fan_speed`, redacted audit event, and same-machine evidence. | Replace `SYS-TEL-EXT-002` in the ledger, manifest, completion audit, and source Q/A review only after evidence is present. | Missing compatible path, grant, receipt, audit, sample, or same-machine evidence stays `EXTERNAL PENDING`; fake zero samples are defects. |
 | SYS-TEL-EXT-003 | `claw system controls plan <control-id> --json` must stay plan-first and fail-closed until approval. | Exact action, target, value, risk tier, grants, native confirmation, signed-host broker, and rollback/continuity plan. | Pre-execution plan with `willExecute=true` only after approval, signed-host execution receipt, redacted audit event, physical validation, and rollback/continuity evidence. | Replace `SYS-TEL-EXT-003` in the ledger, manifest, completion audit, and source Q/A review only after evidence is present. | Missing exact approval, native confirmation, receipt, audit, physical validation, or rollback/continuity evidence stays `EXTERNAL PENDING`; failed approved execution is a defect. |
 
+## Exact Approval Inputs
+
+These are the minimum public-safe fields that must be resolved before building
+an approval packet. They are not approval by themselves.
+
+| Lane | Required exact-run fields | Must stay absent from public artifacts |
+| --- | --- | --- |
+| Live provider lane (`SYS-TEL-EXT-001`) | `approvalId`, approval window, approving actor, signed host/app reference, credential lease reference, location grant reference, network approval, exact provider-call scope, downstream validation plan. | Raw credential material, precise stored location, provider account secrets, private filesystem paths, and full provider responses beyond redacted receipts/sample ids. |
+| Sensor lane (`SYS-TEL-EXT-002`) | `approvalId`, approval window, approving actor, signed host reference, compatible hardware/provider reference, native `system.sensor.read` grant reference, exact physical read scope, same-machine validation plan. | Private machine identifiers, raw hardware serials, private filesystem paths, and any unredacted sensor-provider internals. |
+| Control lane (`SYS-TEL-EXT-003`) | `approvalId`, approval window, approving actor, signed host reference, exact control id, target, value, native grant reference, native confirmation reference, rollback or continuity plan, physical validation plan. | Sensitive target details unless redacted, raw process/network identifiers when not required for the receipt, private filesystem paths, secrets, and unredacted rollback material. |
+
+If any required field is still unknown, keep the lane as `EXTERNAL PENDING` and
+rerun only the safe preflight command. If an approved run fails after these
+fields are present, treat it as a real defect, not as a pending prerequisite.
+
 ## Closure Rule
 
 Do not mark the goal complete until every lane above is either replaced with

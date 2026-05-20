@@ -34,10 +34,25 @@ function compileSchema() {
 }
 
 function assertPublicSafePacket(packet, label) {
-  const serialized = JSON.stringify(packet);
-  if (serialized.includes("/Users/")) {
-    fail(`${label}: packet contains a private filesystem path`);
+  const errors = publicSafetyErrors(packet);
+  if (errors.length > 0) {
+    fail(`${label}: packet contains non public-safe material`, errors.join("; "));
   }
+}
+
+function publicSafetyErrors(packet) {
+  const serialized = JSON.stringify(packet);
+  const checks = [
+    ["/Users/", "private filesystem path"],
+    ["file://", "file URL"],
+    ["secret://", "raw secret reference"],
+    ["-----BEGIN", "key material marker"],
+    ["sk-", "API key-like token"],
+    ["AKIA", "cloud access key-like token"],
+  ];
+  return checks
+    .filter(([needle]) => serialized.includes(needle))
+    .map(([, label]) => `packet contains ${label}`);
 }
 
 function parseTime(value) {
@@ -47,10 +62,7 @@ function parseTime(value) {
 
 function evidencePacketErrors(packet, compiled) {
   const errors = [];
-  const serialized = JSON.stringify(packet);
-  if (serialized.includes("/Users/")) {
-    errors.push("packet contains a private filesystem path");
-  }
+  errors.push(...publicSafetyErrors(packet));
   if (!compiled.validate(packet)) {
     errors.push(`schema: ${compiled.ajv.errorsText(compiled.validate.errors)}`);
   }
@@ -93,6 +105,9 @@ function mutateTemplate(packet, mutation) {
       break;
     case "reviewer.reviewedAt before execution.completedAt":
       mutated.reviewer.reviewedAt = "2026-05-19T23:59:59Z";
+      break;
+    case "evidence.downstreamEvidenceRefs=privatePath":
+      mutated.evidence.downstreamEvidenceRefs = ["file://private/downstream-evidence-template.png"];
       break;
     default:
       fail(`unknown evidence fixture mutation ${mutation}`);
