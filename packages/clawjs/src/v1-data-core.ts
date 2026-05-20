@@ -57,6 +57,8 @@ const APP_STATE_DOMAIN_TABLES = [
   "app_archives",
   "app_sidebar_snapshots",
   "app_terminal_tabs",
+  "app_state_sync_receipts",
+  "app_state_projection_meta",
 ];
 const SIGNALS_DOMAIN_TABLES = ["signals_verticals", "signals_variables", "signals_sessions", "signals_observations"];
 const RESOURCE_DOMAIN_TABLES = ["resources", "apps", "design_resources"];

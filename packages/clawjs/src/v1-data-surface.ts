@@ -88,6 +88,20 @@ export const v1MainSchemaSurfaceNodes = [
     source: v1MainSchemaSource,
   }),
   clawPersistentSurface.table({
+    id: `claw.database.core.table.app_state_sync_receipts`,
+    name: "app_state_sync_receipts",
+    parentId: v1MainDatabaseId,
+    databaseId: v1MainDatabaseId,
+    source: v1MainSchemaSource,
+  }),
+  clawPersistentSurface.table({
+    id: `claw.database.core.table.app_state_projection_meta`,
+    name: "app_state_projection_meta",
+    parentId: v1MainDatabaseId,
+    databaseId: v1MainDatabaseId,
+    source: v1MainSchemaSource,
+  }),
+  clawPersistentSurface.table({
     id: `claw.database.core.table.signals_verticals`,
     name: "signals_verticals",
     parentId: v1MainDatabaseId,
@@ -934,6 +948,26 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       metadata_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS app_state_sync_receipts (
+      receipt_id TEXT PRIMARY KEY,
+      request_id TEXT NOT NULL,
+      host_id TEXT NOT NULL DEFAULT 'local',
+      status TEXT NOT NULL,
+      operation_count INTEGER NOT NULL DEFAULT 0,
+      applied_at TEXT NOT NULL,
+      error_json TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX IF NOT EXISTS app_state_sync_receipts_request_idx
+      ON app_state_sync_receipts(request_id);
+    CREATE INDEX IF NOT EXISTS app_state_sync_receipts_status_idx
+      ON app_state_sync_receipts(status, applied_at DESC);
+    CREATE TABLE IF NOT EXISTS app_state_projection_meta (
+      profile_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
+      last_receipt_id TEXT,
+      projected_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL DEFAULT '{}'
     );
 
     CREATE TABLE IF NOT EXISTS signals_verticals (
