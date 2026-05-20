@@ -268,6 +268,7 @@ export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): Databas
 }
 export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.ProcessEnv = process.env): void {
   migrateAgentSessionsPreSchema(sqlite);
+  if (tableExists(sqlite, "app_sidebar_snapshots")) ensureColumn(sqlite, "app_sidebar_snapshots", "project_id", "TEXT");
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
   migrateAgentIncidentsV1Schema(sqlite);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
@@ -1611,7 +1612,7 @@ export function usage(binName: string, group: string): string {
         `  ${binName} data reset --domain app-state|knowledge|notes|profile|signals|tasks|business|content|social|calendar|apps|agents|sessions|search|all --json`,
       ].join("\n");
     case "app-state":
-      return `Usage: ${binName} app-state get [KEY]|set KEY --value JSON|snapshot [--json]`;
+      return `Usage: ${binName} app-state get [KEY]|set KEY --value JSON|snapshot|projection [--json]`;
     case "knowledge":
       return `Usage: ${binName} knowledge entity|fact|list|search|promote [--json]`;
     case "notes":

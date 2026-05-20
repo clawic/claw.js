@@ -202,7 +202,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
   if (group === "providers") return command === "routing" || command === "settings";
   const commandsByGroup: Record<string, Set<string>> = {
     data: new Set(["doctor", "backup", "restore", "reset", "help"]),
-    "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
+    "app-state": new Set(["get", "set", "snapshot", "projection", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
     signals: new Set(["registry", "catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     life: new Set(["registry", "catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     knowledge: new Set(["entity", "fact", "list", "search", "promote", "delete", "help"]),
