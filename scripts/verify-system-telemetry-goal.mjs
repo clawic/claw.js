@@ -174,8 +174,11 @@ function assertExternalPendingLedger() {
     "status in `docs/system-telemetry-completion-audit.md`",
     "external run steps in",
     "`docs/system-telemetry-external-validation-runbook.md`",
+    "Accepted external",
+    "`docs/system-telemetry-external-evidence.schema.json`",
     "public-safe rows, the completion audit binds each goal requirement",
     "runbook binds each remaining external lane to preflight, approval, evidence,",
+    "update target, fail-rule, and evidence-packet checks",
     "| SYS-TEL-EXT-001 | Live weather/context provider connection |",
     "| SYS-TEL-EXT-002 | Physical hardware sensor and fan telemetry |",
     "| SYS-TEL-EXT-003 | Dangerous hardware or system controls |",
@@ -193,6 +196,7 @@ function assertExternalPendingLedger() {
     "not an execution receipt",
     "## External Validation Lanes",
     "[System Telemetry External Validation Runbook](./system-telemetry-external-validation-runbook.md)",
+    "[`docs/system-telemetry-external-evidence.schema.json`](./system-telemetry-external-evidence.schema.json)",
     "| SYS-TEL-EXT-001 | Live context provider lane:",
     "| SYS-TEL-EXT-002 | Signed sensor provider lane:",
     "| SYS-TEL-EXT-003 | Dangerous-control lane:",
@@ -235,6 +239,7 @@ function assertExternalValidationManifest() {
   assert(manifest.completionPolicy?.requiresSourceQaReview === true, "external validation manifest: source Q/A review must be required");
   assert(manifest.completionPolicy?.requiresCompletionAudit === true, "external validation manifest: completion audit must be required");
   assert(manifest.completionPolicy?.requiresExternalValidationRunbook === true, "external validation manifest: external validation runbook must be required");
+  assert(manifest.completionPolicy?.requiresExternalEvidenceSchema === true, "external validation manifest: external evidence schema must be required");
   assert(manifest.completionPolicy?.requiresForbiddenNameScan === true, "external validation manifest: forbidden-name scan must be required");
   assert(manifest.completionPolicy?.requiresExactRunApprovalForExternalLanes === true, "external validation manifest: exact-run approval must be required");
   assert(manifest.sourceQaReview?.required === true, "external validation manifest: source Q/A review link must be required");
@@ -262,6 +267,14 @@ function assertExternalValidationManifest() {
     assert(manifest.externalValidationRunbook?.externalPendingRowIds?.includes(rowId), `external validation manifest: external validation runbook missing ${rowId}`);
   }
   assert(manifest.externalValidationRunbook?.closureRole?.includes("safe preflight"), "external validation manifest: external validation runbook closure role must be explicit");
+  assert(manifest.externalEvidencePacketSchema?.required === true, "external validation manifest: external evidence packet schema link must be required");
+  assert(manifest.externalEvidencePacketSchema?.artifactId === "system-telemetry-external-evidence-schema", "external validation manifest: wrong external evidence schema artifact");
+  assert(manifest.externalEvidencePacketSchema?.path === "docs/system-telemetry-external-evidence.schema.json", "external validation manifest: wrong external evidence schema path");
+  assert(manifest.externalEvidencePacketSchema?.laneCount === 3, "external validation manifest: wrong external evidence schema lane count");
+  for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
+    assert(manifest.externalEvidencePacketSchema?.externalPendingRowIds?.includes(rowId), `external validation manifest: external evidence schema missing ${rowId}`);
+  }
+  assert(manifest.externalEvidencePacketSchema?.closureRole?.includes("redacted receipt"), "external validation manifest: external evidence schema closure role must be explicit");
   assert(Array.isArray(manifest.rows), "external validation manifest: rows must be an array");
 
   const rows = new Map(manifest.rows.map((row) => [row.id, row]));
@@ -296,6 +309,9 @@ function assertExternalValidationRunbook() {
     "It does not authorize provider calls,",
     "Each lane requires",
     "explicit approval for the exact run before execution.",
+    "Any accepted run must produce a redacted evidence packet conforming to",
+    "`docs/system-telemetry-external-evidence.schema.json`",
+    "lane-closing record",
     "| Row | Safe preflight | Approval packet | Execution evidence | Update target | Fail rule |",
     "| SYS-TEL-EXT-001 | `claw system providers plan context.weather.live --json`",
     "Provider execution receipt, redacted audit event, Monitor sample IDs for `context.weather.temperature`",
@@ -310,13 +326,66 @@ function assertExternalValidationRunbook() {
     "rollback/continuity evidence",
     "failed approved execution is a defect",
     "Do not mark the goal complete until every lane above is either replaced with",
-    "source reread, completion audit, and forbidden-name scan have been repeated.",
+    "source reread, completion audit, evidence schema check, and forbidden-name scan",
   ]) {
     assert(text.includes(snippet), `docs/system-telemetry-external-validation-runbook.md: missing ${JSON.stringify(snippet)}`);
   }
   const laneRows = text.match(/^\| SYS-TEL-EXT-\d{3} \|/gm) ?? [];
   assert(laneRows.length === 3, "docs/system-telemetry-external-validation-runbook.md: must contain exactly 3 external lane rows");
   assert(!text.includes("/Users/"), "docs/system-telemetry-external-validation-runbook.md: must not publish private filesystem paths");
+}
+
+function assertExternalEvidenceSchema() {
+  const schema = readJson("docs/system-telemetry-external-evidence.schema.json");
+  const serialized = JSON.stringify(schema);
+  assert(schema.$schema === "https://json-schema.org/draft/2020-12/schema", "external evidence schema: wrong JSON schema version");
+  assert(schema.$id === "https://clawjs.dev/schemas/system-telemetry-external-evidence.schema.json", "external evidence schema: wrong id");
+  assert(schema.title === "System Telemetry External Evidence Packet", "external evidence schema: wrong title");
+  assert(schema.properties?.schemaVersion?.const === 1, "external evidence schema: schemaVersion must be 1");
+  assert(schema.properties?.conversationId?.const === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external evidence schema: wrong conversation id");
+  assert(schema.properties?.planId?.const === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external evidence schema: wrong plan id");
+  assert(schema.properties?.repoScope?.const === "framework", "external evidence schema: wrong repo scope");
+  for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
+    assert(schema.properties?.laneId?.enum?.includes(rowId), `external evidence schema: missing lane ${rowId}`);
+  }
+  for (const required of [
+    "schemaVersion",
+    "conversationId",
+    "planId",
+    "laneId",
+    "repoScope",
+    "runAuthorization",
+    "preflight",
+    "execution",
+    "evidence",
+    "redaction",
+    "closureImpact",
+    "reviewer",
+  ]) {
+    assert(schema.required?.includes(required), `external evidence schema: missing required field ${required}`);
+  }
+  assert(schema.properties?.preflight?.properties?.command?.pattern === "^claw system ", "external evidence schema: preflight command must be claw system");
+  assert(schema.properties?.preflight?.properties?.failClosedBeforeApproval?.const === true, "external evidence schema: preflight must fail closed before approval");
+  assert(schema.properties?.execution?.properties?.externalPendingCleared?.const === true, "external evidence schema: accepted execution must clear external pending");
+  assert(schema.properties?.execution?.properties?.failedApprovedRun?.const === false, "external evidence schema: failed approved run cannot be accepted");
+  assert(schema.properties?.evidence?.properties?.auditEventRefs?.minItems === 1, "external evidence schema: audit refs must be required evidence");
+  assert(schema.properties?.redaction?.properties?.containsSecrets?.const === false, "external evidence schema: secrets must be forbidden");
+  assert(schema.properties?.redaction?.properties?.preciseLocationIncluded?.const === false, "external evidence schema: precise location must be forbidden");
+  assert(schema.properties?.redaction?.properties?.privatePathsIncluded?.const === false, "external evidence schema: private paths must be forbidden");
+  assert(schema.properties?.closureImpact?.properties?.requiresFinalSourceReread?.const === true, "external evidence schema: final source reread must be required");
+  assert(schema.properties?.closureImpact?.properties?.requiresForbiddenNameScan?.const === true, "external evidence schema: forbidden-name scan must be required");
+  assert(schema.properties?.reviewer?.properties?.decision?.enum?.includes("accepted"), "external evidence schema: reviewer acceptance must be explicit");
+  for (const snippet of [
+    "receiptRefs",
+    "monitorSampleIds",
+    "sameMachineEvidenceRefs",
+    "downstreamEvidenceRefs",
+    "physicalValidationRefs",
+    "rollbackOrContinuityRefs",
+  ]) {
+    assert(serialized.includes(snippet), `external evidence schema: missing ${snippet}`);
+  }
+  assert(!serialized.includes("/Users/"), "external evidence schema: must not publish private filesystem paths");
 }
 
 function assertSourceQaReview() {
@@ -443,6 +512,8 @@ function assertDecisionMatrix() {
     "completion audit",
     "docs/system-telemetry-external-validation-runbook.md",
     "external validation runbook",
+    "docs/system-telemetry-external-evidence.schema.json",
+    "evidence schema",
     "docs/system-telemetry-external-validation.manifest.json",
     "external validation manifest",
     "docs/system-telemetry-source-qa-review.json",
@@ -506,6 +577,7 @@ function assertDocsAndRegistry() {
       "./system-telemetry-completion-audit.md",
       "./system-telemetry-external-pending-validation.md",
       "./system-telemetry-external-validation-runbook.md",
+      "docs/system-telemetry-external-evidence.schema.json",
       "docs/system-telemetry-external-validation.manifest.json",
       "docs/system-telemetry-source-qa-review.json",
       "npm run test:system-telemetry-goal",
@@ -526,6 +598,9 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-external-validation-runbook\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-validation-runbook.md\"",
       "\"query\": \"system telemetry external validation runbook\"",
+      "\"id\": \"system-telemetry-external-evidence-schema\"",
+      "\"canonicalSource\": \"docs/system-telemetry-external-evidence.schema.json\"",
+      "\"query\": \"system telemetry external evidence schema\"",
       "\"id\": \"system-telemetry-source-qa-review\"",
       "\"canonicalSource\": \"docs/system-telemetry-source-qa-review.json\"",
       "\"query\": \"system telemetry source Q/A review\"",
@@ -541,6 +616,8 @@ function assertDocsAndRegistry() {
       "[docs/system-telemetry-external-validation.manifest.json](/system-telemetry-external-validation.manifest.json)",
       "`system-telemetry-external-validation-runbook`",
       "[docs/system-telemetry-external-validation-runbook.md](/system-telemetry-external-validation-runbook)",
+      "`system-telemetry-external-evidence-schema`",
+      "[docs/system-telemetry-external-evidence.schema.json](/system-telemetry-external-evidence.schema.json)",
       "`system-telemetry-source-qa-review`",
       "[docs/system-telemetry-source-qa-review.json](/system-telemetry-source-qa-review.json)",
     ]],
@@ -1091,6 +1168,7 @@ function main() {
   assertExternalPendingLedger();
   assertExternalValidationManifest();
   assertExternalValidationRunbook();
+  assertExternalEvidenceSchema();
   assertSourceQaReview();
   assertCompletionAudit();
   assertDecisionMatrix();

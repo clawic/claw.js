@@ -11,6 +11,7 @@
     "requiresSourceQaReview": true,
     "requiresCompletionAudit": true,
     "requiresExternalValidationRunbook": true,
+    "requiresExternalEvidenceSchema": true,
     "requiresForbiddenNameScan": true,
     "requiresExactRunApprovalForExternalLanes": true
   },
@@ -50,6 +51,18 @@
       "SYS-TEL-EXT-003"
     ],
     "closureRole": "defines safe preflight, exact approval, accepted evidence, update targets, and fail rules for every remaining external lane"
+  },
+  "externalEvidencePacketSchema": {
+    "required": true,
+    "artifactId": "system-telemetry-external-evidence-schema",
+    "path": "docs/system-telemetry-external-evidence.schema.json",
+    "laneCount": 3,
+    "externalPendingRowIds": [
+      "SYS-TEL-EXT-001",
+      "SYS-TEL-EXT-002",
+      "SYS-TEL-EXT-003"
+    ],
+    "closureRole": "defines the redacted receipt, audit, sample, downstream, physical, rollback, and reviewer fields required before any external lane can replace EXTERNAL PENDING"
   },
   "rows": [
     {
