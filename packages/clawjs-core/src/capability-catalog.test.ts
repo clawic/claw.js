@@ -236,6 +236,42 @@ test("custom-app SDK schemas validate current Search DB and resource bridge payl
   }).success, true);
 });
 
+test("custom-app DB query schema rejects collection creation and direct SQL escape hatches", () => {
+  const dbQuery = getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.dbQuery);
+  const searchQuery = getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery);
+
+  assert.equal(dbQuery?.safeParse({
+    collection: "lab_results",
+    filter: { patientId: "fixture_patient_ada" },
+    limit: 25,
+  }).success, true);
+  assert.equal(dbQuery?.safeParse({
+    collection: "../core.sqlite",
+    filter: {},
+  }).success, false);
+  assert.equal(dbQuery?.safeParse({
+    collection: "sqlite_master",
+    filter: {},
+  }).success, false);
+  assert.equal(dbQuery?.safeParse({
+    collection: "tasks",
+    sql: "SELECT * FROM tasks",
+  }).success, false);
+  assert.equal(dbQuery?.safeParse({
+    collection: "tasks",
+    createCollection: "custom_metrics",
+    schema: { fields: [{ name: "value", type: "number" }] },
+  }).success, false);
+  assert.equal(dbQuery?.safeParse({
+    collection: "tasks",
+    migration: "ALTER TABLE tasks ADD COLUMN raw_secret TEXT",
+  }).success, false);
+  assert.equal(searchQuery?.safeParse({
+    query: "launch",
+    collections: ["tasks", "sqlite_master"],
+  }).success, false);
+});
+
 test("custom-app SDK schemas validate high-risk action contracts without bypass fields", () => {
   assert.equal(getCustomAppSDKSchema("claw.actions.invoke.v1")?.safeParse({
     action: "tasks.create",

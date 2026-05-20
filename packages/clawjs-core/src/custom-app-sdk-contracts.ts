@@ -32,6 +32,9 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
 export type CustomAppSDKSchemaRef = typeof CUSTOM_APP_SDK_SCHEMA_REFS[keyof typeof CUSTOM_APP_SDK_SCHEMA_REFS];
 
 const stringArraySchema = z.array(z.string().min(1)).default([]);
+const customAppSDKCollectionIdSchema = z.string().min(1).max(128)
+  .regex(/^[A-Za-z][A-Za-z0-9_.:-]*$/)
+  .refine((value) => !/^sqlite_/i.test(value));
 
 export const customAppSDKRequestCancelSchema = z.object({
   requestId: z.string().min(1),
@@ -50,7 +53,7 @@ export const customAppSDKFacetBucketSchema = z.object({
 
 export const customAppSDKBridgeRecordSchema = z.object({
   id: z.string().min(1),
-  collection: z.string().min(1),
+  collection: customAppSDKCollectionIdSchema,
   title: z.string().optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
@@ -65,7 +68,7 @@ export const customAppSDKDBFilterOperatorSchema = z.object({
 }).strict();
 
 export const customAppSDKDBQuerySchema = z.object({
-  collection: z.string().min(1),
+  collection: customAppSDKCollectionIdSchema,
   filter: z.record(z.union([
     z.string(),
     z.number(),
@@ -83,7 +86,7 @@ export const customAppSDKDBQuerySchema = z.object({
 }).strict();
 
 export const customAppSDKDBRecordsSchema = z.object({
-  collection: z.string().min(1),
+  collection: customAppSDKCollectionIdSchema,
   items: z.array(customAppSDKBridgeRecordSchema),
   limit: z.number().int().min(1).max(100),
   offset: z.number().int().min(0),
@@ -95,7 +98,7 @@ export const customAppSDKDBRecordsSchema = z.object({
 
 export const customAppSDKSearchQuerySchema = z.object({
   query: z.string().min(1),
-  collections: stringArraySchema,
+  collections: z.array(customAppSDKCollectionIdSchema).default([]),
   limit: z.number().int().min(1).max(100).optional(),
   offset: z.number().int().min(0).max(10_000).optional(),
   cursor: z.string().min(1).optional(),
@@ -104,7 +107,7 @@ export const customAppSDKSearchQuerySchema = z.object({
 
 export const customAppSDKSearchResultsSchema = z.object({
   query: z.string().min(1),
-  collections: z.array(z.string().min(1)),
+  collections: z.array(customAppSDKCollectionIdSchema),
   items: z.array(customAppSDKBridgeRecordSchema),
   limit: z.number().int().min(1).max(100),
   offset: z.number().int().min(0),
