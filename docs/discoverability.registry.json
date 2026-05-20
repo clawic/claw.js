@@ -3510,6 +3510,35 @@
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-20"
+    },
+    {
+      "id": "system-telemetry-external-approval-validator",
+      "kind": "validation-manifest",
+      "owner": "claw",
+      "canonicalSource": "scripts/validate-system-telemetry-external-approval.mjs",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/system-telemetry-external-pending-validation.md",
+        "docs/system-telemetry-external-validation-runbook.md",
+        "docs/system-telemetry-external-approval.schema.json",
+        "docs/system-telemetry-external-approval.fixtures.json",
+        "docs/system-telemetry-external-validation.manifest.json"
+      ],
+      "discoveryTerms": [
+        "system telemetry external approval validator",
+        "system telemetry exact-run approval packet validator",
+        "system telemetry approval fixture validator"
+      ],
+      "searchQueries": [
+        {
+          "query": "system telemetry external approval validator",
+          "expectPath": "scripts/validate-system-telemetry-external-approval.mjs"
+        }
+      ],
+      "guard": "scripts/verify-system-telemetry-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-20"
     }
   ]
 }

@@ -186,6 +186,8 @@ function assertExternalPendingLedger() {
     "before any row is updated",
     "`docs/system-telemetry-external-approval.fixtures.json`",
     "not real approval",
+    "`node scripts/validate-system-telemetry-external-approval.mjs <packet.json>`",
+    "before any external execution starts",
     "public-safe rows, the completion audit binds each goal requirement",
     "runbook binds each remaining external lane to preflight, approval, evidence,",
     "update target, fail-rule, and evidence-packet checks",
@@ -209,6 +211,7 @@ function assertExternalPendingLedger() {
     "[`docs/system-telemetry-external-evidence.schema.json`](./system-telemetry-external-evidence.schema.json)",
     "[`docs/system-telemetry-external-approval.schema.json`](./system-telemetry-external-approval.schema.json)",
     "[`docs/system-telemetry-external-approval.fixtures.json`](./system-telemetry-external-approval.fixtures.json)",
+    "Approval packets are checked with",
     "| SYS-TEL-EXT-001 | Live context provider lane:",
     "| SYS-TEL-EXT-002 | Signed sensor provider lane:",
     "| SYS-TEL-EXT-003 | Dangerous-control lane:",
@@ -295,6 +298,12 @@ function assertExternalValidationManifest() {
   assert(manifest.externalApprovalFixtures?.validTemplateCount === 3, "external validation manifest: wrong external approval valid fixture count");
   assert(manifest.externalApprovalFixtures?.invalidTemplateCount === 3, "external validation manifest: wrong external approval invalid fixture count");
   assert(manifest.externalApprovalFixtures?.closureRole?.includes("without representing real approval"), "external validation manifest: external approval fixtures closure role must be explicit");
+  assert(manifest.externalApprovalPacketValidator?.required === true, "external validation manifest: external approval validator link must be required");
+  assert(manifest.externalApprovalPacketValidator?.artifactId === "system-telemetry-external-approval-validator", "external validation manifest: wrong external approval validator artifact");
+  assert(manifest.externalApprovalPacketValidator?.path === "scripts/validate-system-telemetry-external-approval.mjs", "external validation manifest: wrong external approval validator path");
+  assert(manifest.externalApprovalPacketValidator?.fixtureCommand === "node scripts/validate-system-telemetry-external-approval.mjs --fixtures", "external validation manifest: wrong external approval validator fixture command");
+  assert(manifest.externalApprovalPacketValidator?.packetCommand === "node scripts/validate-system-telemetry-external-approval.mjs <packet.json>", "external validation manifest: wrong external approval validator packet command");
+  assert(manifest.externalApprovalPacketValidator?.closureRole?.includes("validates any future exact-run approval packet"), "external validation manifest: external approval validator closure role must be explicit");
   assert(manifest.externalEvidencePacketSchema?.required === true, "external validation manifest: external evidence packet schema link must be required");
   assert(manifest.externalEvidencePacketSchema?.artifactId === "system-telemetry-external-evidence-schema", "external validation manifest: wrong external evidence schema artifact");
   assert(manifest.externalEvidencePacketSchema?.path === "docs/system-telemetry-external-evidence.schema.json", "external validation manifest: wrong external evidence schema path");
@@ -321,7 +330,7 @@ function assertExternalValidationManifest() {
   assert(manifest.externalValidationManifestFixtures?.path === "docs/system-telemetry-external-validation.manifest.fixtures.json", "external validation manifest: wrong manifest fixtures path");
   assert(manifest.externalValidationManifestFixtures?.status === "synthetic_templates_not_evidence", "external validation manifest: manifest fixtures must be synthetic");
   assert(manifest.externalValidationManifestFixtures?.validTemplateCount === 1, "external validation manifest: wrong manifest valid fixture count");
-  assert(manifest.externalValidationManifestFixtures?.invalidMutationCount === 4, "external validation manifest: wrong manifest invalid mutation count");
+  assert(manifest.externalValidationManifestFixtures?.invalidMutationCount === 5, "external validation manifest: wrong manifest invalid mutation count");
   assert(manifest.externalValidationManifestFixtures?.closureRole?.includes("rejects accidental completion"), "external validation manifest: manifest fixtures closure role must be explicit");
   assert(Array.isArray(manifest.rows), "external validation manifest: rows must be an array");
 
@@ -364,6 +373,7 @@ function assertExternalValidationManifestSchema() {
     "VALIDATED LOCAL",
     "EXTERNAL PENDING",
     "docs/system-telemetry-external-approval.fixtures.json",
+    "scripts/validate-system-telemetry-external-approval.mjs",
     "scripts/validate-system-telemetry-external-evidence.mjs",
     "docs/system-telemetry-external-validation.manifest.fixtures.json",
   ]) {
@@ -387,7 +397,7 @@ function assertExternalValidationManifestFixtures() {
   assert(fixtures.schemaPath === "docs/system-telemetry-external-validation.manifest.schema.json", "external validation manifest fixtures: wrong schema path");
   assert(fixtures.manifestPath === "docs/system-telemetry-external-validation.manifest.json", "external validation manifest fixtures: wrong manifest path");
   assert(Array.isArray(fixtures.validSyntheticManifests) && fixtures.validSyntheticManifests.length === 1, "external validation manifest fixtures: must contain 1 valid manifest reference");
-  assert(Array.isArray(fixtures.invalidSyntheticMutations) && fixtures.invalidSyntheticMutations.length === 4, "external validation manifest fixtures: must contain 4 invalid mutations");
+  assert(Array.isArray(fixtures.invalidSyntheticMutations) && fixtures.invalidSyntheticMutations.length === 5, "external validation manifest fixtures: must contain 5 invalid mutations");
   const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
   const validate = ajv.compile(schema);
   assert(validate(manifest), `external validation manifest fixtures: current manifest must validate: ${ajv.errorsText(validate.errors)}`);
@@ -408,6 +418,9 @@ function assertExternalValidationManifestFixtures() {
       }
       case "delete_external_evidence_packet_validator":
         delete mutated.externalEvidencePacketValidator;
+        break;
+      case "delete_external_approval_packet_validator":
+        delete mutated.externalApprovalPacketValidator;
         break;
       default:
         fail(`external validation manifest fixtures: unknown mutation ${fixture.mutation}`);
@@ -442,6 +455,7 @@ function assertExternalApprovalSchema() {
   assert(schema.$schema === "https://json-schema.org/draft/2020-12/schema", "external approval schema: wrong JSON schema version");
   assert(schema.$id === "https://clawjs.dev/schemas/system-telemetry-external-approval.schema.json", "external approval schema: wrong id");
   assert(schema.title === "System Telemetry External Approval Packet", "external approval schema: wrong title");
+  assert(schema["x-validatorPath"] === "scripts/validate-system-telemetry-external-approval.mjs", "external approval schema: wrong validator path");
   assert(schema["x-fixturePath"] === "docs/system-telemetry-external-approval.fixtures.json", "external approval schema: wrong fixture path");
   assert(schema.properties?.schemaVersion?.const === 1, "external approval schema: schemaVersion must be 1");
   assert(schema.properties?.conversationId?.const === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external approval schema: wrong conversation id");
@@ -498,6 +512,7 @@ function assertExternalApprovalFixtures() {
   assert(fixtures.conversationId === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external approval fixtures: wrong conversation id");
   assert(fixtures.planId === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external approval fixtures: wrong plan id");
   assert(fixtures.schemaPath === "docs/system-telemetry-external-approval.schema.json", "external approval fixtures: wrong schema path");
+  assert(fixtures.validatorPath === "scripts/validate-system-telemetry-external-approval.mjs", "external approval fixtures: wrong validator path");
   assert(Array.isArray(fixtures.validSyntheticPackets) && fixtures.validSyntheticPackets.length === 3, "external approval fixtures: must contain 3 valid synthetic packets");
   assert(Array.isArray(fixtures.invalidSyntheticPackets) && fixtures.invalidSyntheticPackets.length === 3, "external approval fixtures: must contain 3 invalid synthetic packets");
   const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
@@ -521,6 +536,18 @@ function assertExternalApprovalFixtures() {
   assert(!JSON.stringify(fixtures).includes("/Users/"), "external approval fixtures: must not publish private filesystem paths");
 }
 
+function assertExternalApprovalValidator() {
+  const output = run(process.execPath, ["scripts/validate-system-telemetry-external-approval.mjs", "--fixtures"]);
+  const result = JSON.parse(output);
+  assert(result.ok === true, "external approval validator: fixture validation must pass");
+  assert(result.status === "synthetic_templates_not_approval", "external approval validator: fixtures must remain synthetic");
+  assert(result.validSyntheticPackets === 3, "external approval validator: must accept 3 valid synthetic packets");
+  assert(result.invalidSyntheticPackets === 3, "external approval validator: must reject 3 invalid synthetic packets");
+  for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
+    assert(result.accepted?.includes(rowId), `external approval validator: missing accepted fixture for ${rowId}`);
+  }
+}
+
 function assertExternalValidationRunbook() {
   const text = read("docs/system-telemetry-external-validation-runbook.md");
   for (const snippet of [
@@ -534,6 +561,8 @@ function assertExternalValidationRunbook() {
     "`docs/system-telemetry-external-approval.schema.json`",
     "`docs/system-telemetry-external-approval.fixtures.json`",
     "they only prove schema behavior and are not real approval",
+    "`node scripts/validate-system-telemetry-external-approval.mjs <packet.json>`",
+    "before any provider, sensor, or control execution starts",
     "Any accepted run must produce a redacted evidence packet conforming to",
     "`docs/system-telemetry-external-evidence.schema.json`",
     "lane-closing record",
@@ -814,6 +843,8 @@ function assertDecisionMatrix() {
     "docs/system-telemetry-external-approval.schema.json",
     "synthetic approval templates",
     "docs/system-telemetry-external-approval.fixtures.json",
+    "approval validator",
+    "scripts/validate-system-telemetry-external-approval.mjs",
     "approval schema",
     "approval fixture templates",
     "docs/system-telemetry-external-evidence.schema.json",
@@ -891,6 +922,7 @@ function assertDocsAndRegistry() {
       "./system-telemetry-external-validation-runbook.md",
       "docs/system-telemetry-external-approval.schema.json",
       "docs/system-telemetry-external-approval.fixtures.json",
+      "scripts/validate-system-telemetry-external-approval.mjs",
       "docs/system-telemetry-external-evidence.schema.json",
       "docs/system-telemetry-external-evidence.fixtures.json",
       "scripts/validate-system-telemetry-external-evidence.mjs",
@@ -928,6 +960,9 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-external-approval-fixtures\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-approval.fixtures.json\"",
       "\"query\": \"system telemetry external approval fixtures\"",
+      "\"id\": \"system-telemetry-external-approval-validator\"",
+      "\"canonicalSource\": \"scripts/validate-system-telemetry-external-approval.mjs\"",
+      "\"query\": \"system telemetry external approval validator\"",
       "\"id\": \"system-telemetry-external-evidence-schema\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-evidence.schema.json\"",
       "\"query\": \"system telemetry external evidence schema\"",
@@ -957,6 +992,8 @@ function assertDocsAndRegistry() {
       "[docs/system-telemetry-external-approval.schema.json](/system-telemetry-external-approval.schema.json)",
       "`system-telemetry-external-approval-fixtures`",
       "[docs/system-telemetry-external-approval.fixtures.json](/system-telemetry-external-approval.fixtures.json)",
+      "`system-telemetry-external-approval-validator`",
+      "`scripts/validate-system-telemetry-external-approval.mjs`",
       "`system-telemetry-external-evidence-schema`",
       "[docs/system-telemetry-external-evidence.schema.json](/system-telemetry-external-evidence.schema.json)",
       "`system-telemetry-external-evidence-fixtures`",
@@ -1515,6 +1552,7 @@ function main() {
   assertExternalValidationRunbook();
   assertExternalApprovalSchema();
   assertExternalApprovalFixtures();
+  assertExternalApprovalValidator();
   assertExternalEvidenceSchema();
   assertExternalEvidenceFixtures();
   assertExternalEvidenceValidator();
