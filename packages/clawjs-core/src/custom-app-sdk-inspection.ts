@@ -21,9 +21,8 @@ function referencedSchemaRefs(capabilities: ClawCapabilityDescriptor[]): string[
 
 export function buildCustomAppSDKInspectionPayload() {
   const capabilities = listClawCapabilities();
-  const ordinaryReadCapabilities = capabilities.filter((capability) => capability.customAppAccess === "localWide");
   const schemaRefs = listCustomAppSDKSchemaRefs();
-  const refs = referencedSchemaRefs(ordinaryReadCapabilities);
+  const refs = referencedSchemaRefs(capabilities);
   return {
     schemaVersion: 1,
     source: sdkFirstCapabilityCatalogSource(),
@@ -31,7 +30,7 @@ export function buildCustomAppSDKInspectionPayload() {
     schemaRefs,
     referencedSchemaRefs: refs,
     missingSchemaRefs: refs.filter((ref) => !getCustomAppSDKSchema(ref)),
-    capabilities: ordinaryReadCapabilities.map((capability) => ({
+    capabilities: capabilities.map((capability) => ({
       id: capability.id,
       domain: capability.domain,
       operation: capability.operation,

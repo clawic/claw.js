@@ -16,6 +16,14 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
   resourcesListResult: "claw.resources.listResult.v1",
   resourcesRead: "claw.resources.read.v1",
   resourcesPayload: "claw.resources.payload.v1",
+  actionsInvoke: "claw.actions.invoke.v1",
+  actionsReceipt: "claw.actions.receipt.v1",
+  secretsBroker: "claw.secrets.broker.v1",
+  secretsReceipt: "claw.secrets.receipt.v1",
+  macActionRequest: "claw.mac.actionRequest.v1",
+  macActionPlan: "claw.mac.actionPlan.v1",
+  iotAction: "claw.iot.action.v1",
+  iotActionResult: "claw.iot.actionResult.v1",
   requestCancel: "claw.customApp.request.cancel.v1",
   requestProgress: "claw.customApp.request.progress.v1",
   requestPartial: "claw.customApp.request.partial.v1",
@@ -129,6 +137,98 @@ export const customAppSDKResourcesPayloadSchema = z.object({
   source: z.literal("resources.read"),
 }).strict();
 
+const stringRecordSchema = z.record(z.string().min(1));
+
+export const customAppSDKActionsInvokeSchema = z.object({
+  capabilityId: z.string().min(1).optional(),
+  domain: z.string().min(1).optional(),
+  action: z.string().min(1),
+  arguments: z.record(z.unknown()).default({}),
+  dryRun: z.boolean().default(true),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKActionsReceiptSchema = z.object({
+  schemaVersion: z.number().int().min(1).default(1),
+  capabilityId: z.string().min(1),
+  action: z.string().min(1),
+  outcome: z.enum(["planned", "approval_required", "blocked", "dispatched", "failed"]),
+  receiptId: z.string().min(1).optional(),
+  auditId: z.string().min(1).optional(),
+  error: z.string().min(1).optional(),
+  source: z.literal("actions.invoke"),
+}).strict();
+
+export const customAppSDKSecretsBrokerSchema = z.object({
+  operation: z.enum(["resolve_ref", "lease", "use", "revoke"]),
+  secretRef: z.string().min(1),
+  purpose: z.string().min(1).optional(),
+  ttlSeconds: z.number().int().min(1).max(3_600).optional(),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKSecretsReceiptSchema = z.object({
+  schemaVersion: z.number().int().min(1).default(1),
+  operation: z.enum(["resolve_ref", "lease", "use", "revoke"]),
+  secretRef: z.string().min(1),
+  outcome: z.enum(["approved", "denied", "blocked", "leased", "revoked", "failed"]),
+  leaseId: z.string().min(1).optional(),
+  expiresAt: z.string().min(1).optional(),
+  auditId: z.string().min(1).optional(),
+  error: z.string().min(1).optional(),
+  source: z.literal("secrets.broker"),
+}).strict();
+
+export const customAppSDKMacActionRequestSchema = z.object({
+  capabilityId: z.string().regex(/^mac\.[a-z0-9_.-]+$/),
+  arguments: stringRecordSchema.default({}),
+  dryRun: z.literal(true).default(true),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKMacActionPlanSchema = z.object({
+  schemaVersion: z.number().int().min(1),
+  planId: z.string().min(1),
+  requestId: z.string().min(1),
+  capabilityId: z.string().regex(/^mac\.[a-z0-9_.-]+$/),
+  risk: z.enum(["read", "low", "medium", "high", "critical"]),
+  coverageState: z.string().min(1),
+  requiredApprovals: z.array(z.object({
+    risk: z.string().min(1),
+    reason: z.string().min(1),
+    approverRoles: z.array(z.string().min(1)),
+    requestId: z.string().min(1).optional(),
+  }).strict()),
+  willMutate: z.boolean(),
+  executable: z.boolean(),
+  blockedReasons: z.array(z.string()),
+  relatedSurfaces: z.array(z.string()),
+  source: z.literal("mac.action.plan").optional(),
+}).passthrough();
+
+export const customAppSDKIoTActionSchema = z.object({
+  homeId: z.string().min(1).optional(),
+  selector: z.string().min(1).optional(),
+  area: z.string().min(1).optional(),
+  family: z.string().min(1).optional(),
+  capability: z.string().min(1).optional(),
+  action: z.string().min(1),
+  value: z.unknown().optional(),
+  targets: z.array(z.string().min(1)).optional(),
+}).strict();
+
+export const customAppSDKIoTActionResultSchema = z.object({
+  schemaVersion: z.number().int().min(1).optional(),
+  status: z.string().min(1),
+  homeId: z.string().min(1).optional(),
+  actionId: z.string().min(1).optional(),
+  invocationId: z.string().min(1).optional(),
+  value: z.unknown().optional(),
+  changed: z.boolean().optional(),
+  errors: z.array(z.string()).optional(),
+  source: z.literal("iot.device.action.invoke").optional(),
+}).passthrough();
+
 export const customAppSDKRequestPartialSchema = z.object({
   source: z.enum(["search.query", "db.query", "resources.list", "resources.read"]),
   collection: z.string().min(1).optional(),
@@ -151,6 +251,14 @@ export const customAppSDKSchemaRegistry = {
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult]: customAppSDKResourcesListResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesRead]: customAppSDKResourcesReadSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload]: customAppSDKResourcesPayloadSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.actionsInvoke]: customAppSDKActionsInvokeSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.actionsReceipt]: customAppSDKActionsReceiptSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.secretsBroker]: customAppSDKSecretsBrokerSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.secretsReceipt]: customAppSDKSecretsReceiptSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.macActionRequest]: customAppSDKMacActionRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.macActionPlan]: customAppSDKMacActionPlanSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.iotAction]: customAppSDKIoTActionSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.iotActionResult]: customAppSDKIoTActionResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.requestCancel]: customAppSDKRequestCancelSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.requestProgress]: customAppSDKRequestProgressSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial]: customAppSDKRequestPartialSchema,

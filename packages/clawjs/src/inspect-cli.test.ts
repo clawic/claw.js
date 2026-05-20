@@ -268,8 +268,8 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
       id: string;
       inputSchemaRef: string;
       outputSchemaRef: string;
-      eventSchemaRefs: { cancel: string; progress: string; partial: string };
-      redactionPolicyRef: string;
+      eventSchemaRefs?: { cancel: string; progress: string; partial: string };
+      redactionPolicyRef?: string;
       surfaces: Array<{ surface: string; status: string; ref?: string }>;
     }>;
   }>(inspected.stdout).data;
@@ -279,16 +279,23 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
   assert.equal(payload.riskMap.authorityModel, "localWideReadsHighRiskApproval");
   assert.deepEqual(payload.missingSchemaRefs, []);
   assert.equal(payload.schemaRefs.includes("claw.search.query.v1"), true);
+  assert.equal(payload.schemaRefs.includes("claw.mac.actionRequest.v1"), true);
   assert.equal(payload.schemaRefs.includes("claw.customApp.request.partial.v1"), true);
+  assert.equal(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"), true);
 
   const search = payload.capabilities.find((capability) => capability.id === "search.query");
   const db = payload.capabilities.find((capability) => capability.id === "db.query");
   const resources = payload.capabilities.find((capability) => capability.id === "resources.read");
+  const mac = payload.capabilities.find((capability) => capability.id === "mac.action.plan");
+  const secrets = payload.capabilities.find((capability) => capability.id === "secrets.broker");
   assert.equal(search?.inputSchemaRef, "claw.search.query.v1");
-  assert.equal(search?.eventSchemaRefs.partial, "claw.customApp.request.partial.v1");
+  assert.equal(search?.eventSchemaRefs?.partial, "claw.customApp.request.partial.v1");
   assert.equal(db?.outputSchemaRef, "claw.db.records.v1");
   assert.equal(resources?.inputSchemaRef, "claw.resources.read.v1");
   assert.equal(resources?.redactionPolicyRef, "claw.customApps.redaction.v1");
+  assert.equal(mac?.inputSchemaRef, "claw.mac.actionRequest.v1");
+  assert.equal(mac?.outputSchemaRef, "claw.mac.actionPlan.v1");
+  assert.equal(secrets?.inputSchemaRef, "claw.secrets.broker.v1");
   assert.equal(search?.surfaces.some((surface) => surface.surface === "cli" && surface.status === "available"), true);
   assert.equal(payload.riskMap.approvalRequired.includes("actions.invoke"), true);
 });

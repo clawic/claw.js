@@ -117,14 +117,27 @@ test("custom-app read capabilities point at resolvable SDK schemas and stream ev
   }
 });
 
+test("approval-required custom-app capabilities point at resolvable high-risk schemas", () => {
+  for (const capability of listClawCapabilities()) {
+    if (capability.customAppAccess !== "approvalRequired") continue;
+    assert.ok(capability.inputSchemaRef, capability.id);
+    assert.ok(capability.outputSchemaRef, capability.id);
+    assert.ok(getCustomAppSDKSchema(capability.inputSchemaRef), `${capability.id}:input`);
+    assert.ok(getCustomAppSDKSchema(capability.outputSchemaRef), `${capability.id}:output`);
+  }
+});
+
 test("custom-app SDK inspection payload has no missing schema refs", () => {
   const payload = buildCustomAppSDKInspectionPayload();
 
   assert.equal(payload.schemaVersion, 1);
   assert.deepEqual(payload.missingSchemaRefs, []);
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery));
+  assert.ok(payload.schemaRefs.includes("claw.mac.actionRequest.v1"));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial));
   assert.ok(payload.capabilities.some((capability) => capability.id === "resources.read"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
+  assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
 });
 
@@ -203,6 +216,63 @@ test("custom-app SDK schemas validate current Search DB and resource bridge payl
     items: [record],
     partialCount: 1,
     progress: 0.5,
+  }).success, true);
+});
+
+test("custom-app SDK schemas validate high-risk action contracts without bypass fields", () => {
+  assert.equal(getCustomAppSDKSchema("claw.actions.invoke.v1")?.safeParse({
+    action: "tasks.create",
+    arguments: { title: "Launch" },
+    dryRun: true,
+    reason: "Create a workspace task",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema("claw.actions.receipt.v1")?.safeParse({
+    capabilityId: "actions.invoke",
+    action: "tasks.create",
+    outcome: "planned",
+    source: "actions.invoke",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema("claw.secrets.broker.v1")?.safeParse({
+    operation: "lease",
+    secretRef: "sec_provider_token",
+    purpose: "Call provider",
+    ttlSeconds: 300,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema("claw.secrets.broker.v1")?.safeParse({
+    operation: "lease",
+    secretRef: "sec_provider_token",
+    plaintext: "must-not-pass",
+  }).success, false);
+  assert.equal(getCustomAppSDKSchema("claw.mac.actionRequest.v1")?.safeParse({
+    capabilityId: "mac.window.move",
+    arguments: { app: "Safari", x: "20", y: "40" },
+    dryRun: true,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema("claw.mac.actionRequest.v1")?.safeParse({
+    capabilityId: "mac.window.close",
+    execute: true,
+  }).success, false);
+  assert.equal(getCustomAppSDKSchema("claw.mac.actionPlan.v1")?.safeParse({
+    schemaVersion: 1,
+    planId: "macplan_1",
+    requestId: "macreq_1",
+    capabilityId: "mac.window.move",
+    risk: "low",
+    coverageState: "executable",
+    requiredApprovals: [],
+    willMutate: true,
+    executable: true,
+    blockedReasons: [],
+    relatedSurfaces: ["mac_control"],
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema("claw.iot.action.v1")?.safeParse({
+    action: "turn_on",
+    targets: ["light-1"],
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema("claw.iot.actionResult.v1")?.safeParse({
+    status: "ok",
+    changed: true,
+    source: "iot.device.action.invoke",
   }).success, true);
 });
 

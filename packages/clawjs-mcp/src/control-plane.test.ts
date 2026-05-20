@@ -99,8 +99,10 @@ describe("MCP connector control plane", () => {
       assert.equal(http.json().richUiRuntime, "sdk_host_bridge_not_mcp_process");
       assert.deepEqual(http.json().missingSchemaRefs, []);
       assert.equal(http.json().schemaRefs.includes("claw.search.query.v1"), true);
+      assert.equal(http.json().schemaRefs.includes("claw.mac.actionRequest.v1"), true);
       assert.equal(http.json().schemaRefs.includes("claw.customApp.request.partial.v1"), true);
       assert.equal(http.json().capabilities.some((capability: { id: string }) => capability.id === "search.query"), true);
+      assert.equal(http.json().capabilities.some((capability: { id: string }) => capability.id === "mac.action.plan"), true);
       assert.equal(http.json().riskMap.approvalRequired.includes("actions.invoke"), true);
 
       const tools = await app.inject({
