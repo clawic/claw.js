@@ -43,7 +43,7 @@ export type SearchEntrypointId = "root-search" | "search-index" | "chat-search";
 export interface SearchHotkeyContract {
   bindingId: string;
   state: "ready" | "external_pending" | "not_applicable";
-  owner: "framework" | "signed_host" | "host_ui";
+  bindingSteward: "framework" | "signed_host" | "host_ui";
   defaultChord?: string;
   reservedChord?: string;
   notes: string[];
@@ -428,7 +428,7 @@ export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
     hotkey: {
       bindingId: "search.root.global",
       state: "external_pending",
-      owner: "signed_host",
+      bindingSteward: "signed_host",
       notes: [
         "Requires a signed host/global shortcut broker before native binding can be validated.",
         "Must stay separate from the conversations-only chat search shortcut.",
@@ -447,7 +447,7 @@ export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
     hotkey: {
       bindingId: "search.index.admin",
       state: "not_applicable",
-      owner: "framework",
+      bindingSteward: "framework",
       notes: ["Technical/admin surface; no global native shortcut is required."],
     },
     preservesConversationSearchIsolation: true,
@@ -461,7 +461,7 @@ export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
     hotkey: {
       bindingId: "search.chat.current",
       state: "ready",
-      owner: "host_ui",
+      bindingSteward: "host_ui",
       reservedChord: "Command-G",
       notes: ["Existing Clawix Mac search remains conversations-only and must not show Root Search results."],
     },
@@ -1279,7 +1279,7 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       name: "Surface routes",
       resultTypes: ["route", "step", "contract"],
       facets: [
-        { id: "owner", label: "Owner", type: "string" },
+        { id: "routeSteward", label: "Route steward", type: "string" },
         { id: "visibility", label: "Visibility", type: "string" },
         { id: "fromId", label: "From", type: "string" },
         { id: "toId", label: "To", type: "string" },
@@ -1292,7 +1292,7 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
       name: "Surface registry",
       resultTypes: ["surface", "node", "contract"],
       facets: [
-        { id: "owner", label: "Owner", type: "string" },
+        { id: "surfaceSteward", label: "Surface steward", type: "string" },
         { id: "kind", label: "Kind", type: "string" },
         { id: "surfaceClass", label: "Surface class", type: "string" },
         { id: "stability", label: "Stability", type: "string" },
