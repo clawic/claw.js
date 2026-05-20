@@ -115,7 +115,7 @@ function assertPublicRouting() {
       "ClawJS and sibling Clawix expose `resources.list` and",
       "ClawJS and sibling Clawix expose `jobs.list`, `jobs.get`, and `jobs.events`",
       "ClawJS and sibling Clawix expose `jobs.stream` only as a blocked explicit",
-      "ClawJS exposes `jobs.start` and `jobs.cancel` only as",
+      "ClawJS and sibling Clawix expose `jobs.start` and `jobs.cancel` only as",
       "Sibling Clawix exposes `mac.action.plan` through",
       "Sibling Clawix exposes `iot.device.action.invoke` through",
       "Sibling Clawix exposes `actions.invoke` and `secrets.broker` through",
