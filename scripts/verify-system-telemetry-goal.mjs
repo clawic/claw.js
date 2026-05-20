@@ -117,12 +117,19 @@ function seedOperationalHealthEvent(dbPath) {
   }
 }
 
+function sqliteHasTable(sqlite, tableName) {
+  const row = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(tableName);
+  return row?.name === tableName;
+}
+
 function assertOperationalHealthEventRetained(dbPath) {
   const sqlite = new BetterSqlite3(dbPath, { readonly: true });
   try {
     const event = sqlite.prepare("SELECT id, kind, message FROM operational_events WHERE id = ?").get("goal-health-heartbeat");
     assert(event?.kind === "health_check", "monitor retention: operational health event kind must survive metric purge");
     assert(event?.message === "Worker alive", "monitor retention: operational health event message must survive metric purge");
+    assert(sqliteHasTable(sqlite, "metric_rollups"), "monitor retention: metric_rollups table must exist after recording into an existing Monitor database");
+    if (!sqliteHasTable(sqlite, "metric_rollups")) return;
     const rollup = sqlite.prepare("SELECT COUNT(*) AS count FROM metric_rollups WHERE metric_key = ?").get("system.memory.used");
     assert(rollup?.count >= 1, "monitor retention: metric rollups must coexist with operational health events");
   } finally {
@@ -300,6 +307,43 @@ function assertSourceQaReview() {
   assert(review.completionPolicy?.externalPendingBlocksCompletion === true, "source Q/A review: external pending must block completion");
 }
 
+function assertCompletionAudit() {
+  const text = read("docs/system-telemetry-completion-audit.md");
+  for (const snippet of [
+    "Source conversation: `019e359b-c0ab-7dc1-ba94-11a49d11dc76`",
+    "Plan item: `019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan`",
+    "Status: `active_goal_not_complete`",
+    "This public-safe audit tracks the full system telemetry goal requirement by",
+    "| STA-001 | Promote `claw system` to the canonical read-only portal",
+    "| STA-002 | Expose `snapshot`, `metrics list`, `history`, `watch`, `rules`, and `widgets` surfaces.",
+    "| STA-003 | Model CPU, GPU, memory, disks, network, power, processes, displays, audio, Bluetooth/peripherals, focus, notifications, calendar/time, and weather/context metrics.",
+    "| STA-004 | Centralize samples, rollups, incidents, rules, charts, and retention in Monitor.",
+    "| STA-005 | Provide Mac-first native adapter coverage with fail-soft/fail-closed experimental sensor metadata.",
+    "| STA-006 | Keep mutating or risky hardware/system actions behind a plan-first signed-host broker.",
+    "| STA-007 | Provide modular context providers with mock/offline support and real-provider plugin contract.",
+    "| STA-008 | Expose API and MCP read-only agent context for system telemetry.",
+    "| STA-009 | Register inspect/search/discoverability routes for the telemetry plane.",
+    "| STA-010 | Support menu-bar indicator contracts, including multiple independent items and one combined item.",
+    "| STA-011 | Reuse retained Monitor history for graph/chart output.",
+    "| STA-012 | Keep portable widget definitions in ClawJS and host-specific configuration in Clawix.",
+    "| STA-013 | Separate local validation from live provider, physical sensor/fan, and dangerous-control proof.",
+    "| STA-014 | Re-read source decisions one by one before any completion claim.",
+    "| STA-015 | Keep public materials free of disallowed third-party product names.",
+    "| STA-016 | Live weather/context provider execution with approved credential/location/network access.",
+    "| STA-017 | Physical sensor/fan evidence from compatible hardware and native grant.",
+    "| STA-018 | Dangerous control execution with exact approval and rollback/continuity evidence.",
+    "`SYS-TEL-EXT-001` requires provider receipt",
+    "`SYS-TEL-EXT-002` requires compatible path",
+    "`SYS-TEL-EXT-003` requires exact approval",
+    "The goal cannot be marked complete while any `external-pending` row remains",
+  ]) {
+    assert(text.includes(snippet), `docs/system-telemetry-completion-audit.md: missing ${JSON.stringify(snippet)}`);
+  }
+  const requirementRows = text.match(/^\| STA-\d{3} \|/gm) ?? [];
+  assert(requirementRows.length === 18, "docs/system-telemetry-completion-audit.md: must contain exactly STA-001..STA-018 rows");
+  assert(!text.includes("/Users/"), "docs/system-telemetry-completion-audit.md: must not publish private filesystem paths");
+}
+
 function assertDecisionMatrix() {
   const text = read("docs/system-telemetry-decision-matrix.md");
   for (const snippet of [
@@ -322,6 +366,8 @@ function assertDecisionMatrix() {
     "| D09 | Do not mention third-party monitoring product names",
     "| D10 | Pin the goal to the conversation id, plan id, source review",
     "| D11 | Do not close the goal until everything is implemented",
+    "docs/system-telemetry-completion-audit.md",
+    "completion audit",
     "docs/system-telemetry-external-validation.manifest.json",
     "external validation manifest",
     "docs/system-telemetry-source-qa-review.json",
@@ -382,6 +428,7 @@ function assertDocsAndRegistry() {
     ["docs/decision-map.md", [
       "System telemetry, context widgets, Monitor-backed history, and menu-bar indicators",
       "./system-telemetry-decision-matrix.md",
+      "./system-telemetry-completion-audit.md",
       "./system-telemetry-external-pending-validation.md",
       "docs/system-telemetry-external-validation.manifest.json",
       "docs/system-telemetry-source-qa-review.json",
@@ -391,6 +438,9 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-decision-matrix\"",
       "\"canonicalSource\": \"docs/system-telemetry-decision-matrix.md\"",
       "\"query\": \"system telemetry decision matrix\"",
+      "\"id\": \"system-telemetry-completion-audit\"",
+      "\"canonicalSource\": \"docs/system-telemetry-completion-audit.md\"",
+      "\"query\": \"system telemetry completion audit\"",
       "\"id\": \"system-telemetry-external-pending-ledger\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-pending-validation.md\"",
       "\"query\": \"system telemetry external pending validation\"",
@@ -404,6 +454,8 @@ function assertDocsAndRegistry() {
     ["docs/discoverability.md", [
       "`system-telemetry-decision-matrix`",
       "[docs/system-telemetry-decision-matrix.md](/system-telemetry-decision-matrix)",
+      "`system-telemetry-completion-audit`",
+      "[docs/system-telemetry-completion-audit.md](/system-telemetry-completion-audit)",
       "`system-telemetry-external-pending-ledger`",
       "[docs/system-telemetry-external-pending-validation.md](/system-telemetry-external-pending-validation)",
       "`system-telemetry-external-validation-manifest`",
@@ -955,6 +1007,7 @@ function main() {
   assertExternalPendingLedger();
   assertExternalValidationManifest();
   assertSourceQaReview();
+  assertCompletionAudit();
   assertDecisionMatrix();
   assertDocsAndRegistry();
   assertMcpAndApiTestCoverage();
