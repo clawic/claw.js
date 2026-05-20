@@ -190,7 +190,7 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
       schemaRefs: string[];
       missingSchemaRefs: string[];
       riskMap: { ordinaryAccess: string[]; approvalRequired: string[] };
-      capabilities: Array<{ id: string; inputSchemaRef?: string }>;
+      capabilities: Array<{ id: string; inputSchemaRef?: string; dispatch?: { mode: string; status: string } }>;
     };
     assert.equal(payload.serviceApiRole, "inspection_validation_contract_resource");
     assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_service_api_process");
@@ -201,6 +201,10 @@ test("runtime service API exposes custom app SDK contracts as read-only metadata
     assert.equal(
       payload.capabilities.find((capability) => capability.id === "db.query")?.inputSchemaRef,
       "claw.db.query.v1",
+    );
+    assert.equal(
+      payload.capabilities.find((capability) => capability.id === "actions.invoke")?.dispatch?.mode,
+      "approvalRequiredNoRunner",
     );
   } finally {
     await ctx.close();

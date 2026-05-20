@@ -38,6 +38,7 @@ export function buildCustomAppSDKInspectionPayload() {
       cancelable: capability.cancelable,
       streamable: capability.streamable,
       timeoutMs: capability.timeoutMs,
+      dispatch: capability.dispatch,
       inputSchemaRef: capability.inputSchemaRef,
       outputSchemaRef: capability.outputSchemaRef,
       eventSchemaRefs: capability.eventSchemaRefs,

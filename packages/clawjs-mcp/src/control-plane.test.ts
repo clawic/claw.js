@@ -103,6 +103,10 @@ describe("MCP connector control plane", () => {
       assert.equal(http.json().schemaRefs.includes("claw.customApp.request.partial.v1"), true);
       assert.equal(http.json().capabilities.some((capability: { id: string }) => capability.id === "search.query"), true);
       assert.equal(http.json().capabilities.some((capability: { id: string }) => capability.id === "mac.action.plan"), true);
+      const mac = http.json().capabilities.find((capability: { id: string }) => capability.id === "mac.action.plan");
+      const actions = http.json().capabilities.find((capability: { id: string }) => capability.id === "actions.invoke");
+      assert.equal(mac.dispatch.mode, "approvalRequiredPlanOnly");
+      assert.equal(actions.dispatch.mode, "approvalRequiredNoRunner");
       assert.equal(http.json().riskMap.approvalRequired.includes("actions.invoke"), true);
 
       const tools = await app.inject({

@@ -270,6 +270,7 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
       outputSchemaRef: string;
       eventSchemaRefs?: { cancel: string; progress: string; partial: string };
       redactionPolicyRef?: string;
+      dispatch?: { status: string; mode: string; approvalRequired: boolean; runner: string; externalValidation?: string };
       surfaces: Array<{ surface: string; status: string; ref?: string }>;
     }>;
   }>(inspected.stdout).data;
@@ -295,8 +296,11 @@ test("runCli exposes custom app SDK read contracts through inspect", async () =>
   assert.equal(resources?.redactionPolicyRef, "claw.customApps.redaction.v1");
   assert.equal(mac?.inputSchemaRef, "claw.mac.actionRequest.v1");
   assert.equal(mac?.outputSchemaRef, "claw.mac.actionPlan.v1");
+  assert.equal(mac?.dispatch?.mode, "approvalRequiredPlanOnly");
   assert.equal(secrets?.inputSchemaRef, "claw.secrets.broker.v1");
+  assert.equal(secrets?.dispatch?.mode, "approvalRequiredNoPlaintextBroker");
   assert.equal(search?.surfaces.some((surface) => surface.surface === "cli" && surface.status === "available"), true);
+  assert.equal(search?.dispatch?.mode, "localWideRead");
   assert.equal(payload.riskMap.approvalRequired.includes("actions.invoke"), true);
 });
 

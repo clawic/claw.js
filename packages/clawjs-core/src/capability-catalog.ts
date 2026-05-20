@@ -6,6 +6,15 @@ export type ClawCapabilitySurfaceStatus = "available" | "pending" | "blocked" | 
 export type ClawCapabilityRiskTier = "low" | "medium" | "high" | "critical";
 export type ClawCapabilityExecutionMode = "sync" | "async" | "stream";
 export type ClawCapabilityCustomAppAccess = "localWide" | "declared" | "approvalRequired" | "blocked";
+export type ClawCapabilityDispatchStatus = "available" | "unavailable";
+export type ClawCapabilityDispatchMode =
+  | "localWideRead"
+  | "approvalRequiredPlanOnly"
+  | "approvalRequiredDispatch"
+  | "approvalRequiredNoRunner"
+  | "approvalRequiredNoPlaintextBroker"
+  | "blocked"
+  | "unknown";
 
 export interface ClawCapabilitySurfaceBinding {
   surface: ClawCapabilitySurface;
@@ -28,6 +37,15 @@ export interface ClawCapabilityRisk {
   interruptiveApproval: boolean;
 }
 
+export interface ClawCapabilityDispatch {
+  status: ClawCapabilityDispatchStatus;
+  mode: ClawCapabilityDispatchMode;
+  approvalRequired: boolean;
+  runner: string;
+  reason: string;
+  externalValidation?: "EXTERNAL PENDING";
+}
+
 export interface ClawCapabilityDescriptor {
   id: string;
   domain: string;
@@ -40,6 +58,7 @@ export interface ClawCapabilityDescriptor {
   timeoutMs: number;
   customAppAccess: ClawCapabilityCustomAppAccess;
   risk: ClawCapabilityRisk;
+  dispatch?: ClawCapabilityDispatch;
   surfaces: ClawCapabilitySurfaceBinding[];
   inputSchemaRef?: string;
   outputSchemaRef?: string;
@@ -78,6 +97,64 @@ const lowReadRisk: ClawCapabilityRisk = {
   readsUserData: true,
   interruptiveApproval: false,
 };
+
+export function customAppDispatchForCapability(
+  capability: Pick<ClawCapabilityDescriptor, "id" | "operation" | "customAppAccess" | "risk">,
+): ClawCapabilityDispatch {
+  if (capability.customAppAccess === "localWide" && capability.operation === "read") {
+    return {
+      status: "available",
+      mode: "localWideRead",
+      approvalRequired: false,
+      runner: "sdkHostBridgeOrServiceAdapter",
+      reason: "Ordinary local-wide reads use SDK/host/service adapters directly; rich UIs do not need a CLI process.",
+    };
+  }
+
+  switch (capability.id) {
+    case "mac.action.plan":
+      return {
+        status: "available",
+        mode: "approvalRequiredPlanOnly",
+        approvalRequired: true,
+        runner: "signedHostMacActionPlan",
+        reason: "Returns a dry-run Mac Control plan after approval; signed-host execution remains a separate boundary.",
+      };
+    case "iot.device.action.invoke":
+      return {
+        status: "available",
+        mode: "approvalRequiredDispatch",
+        approvalRequired: true,
+        runner: "hostIoTAdapter",
+        externalValidation: "EXTERNAL PENDING",
+        reason: "Dispatches through the host IoT adapter after approval; live provider or physical-device validation is external pending.",
+      };
+    case "actions.invoke":
+      return {
+        status: "unavailable",
+        mode: "approvalRequiredNoRunner",
+        approvalRequired: true,
+        runner: "pending",
+        reason: "Generic framework action dispatch still needs an allowlisted safe runner.",
+      };
+    case "secrets.broker":
+      return {
+        status: "unavailable",
+        mode: "approvalRequiredNoPlaintextBroker",
+        approvalRequired: true,
+        runner: "pending",
+        reason: "Secrets broker dispatch still needs a safe lease/ref runner and must not expose plaintext.",
+      };
+    default:
+      return {
+        status: capability.customAppAccess === "blocked" ? "unavailable" : "unavailable",
+        mode: capability.customAppAccess === "blocked" ? "blocked" : "unknown",
+        approvalRequired: capability.risk.interruptiveApproval,
+        runner: "pending",
+        reason: "No custom-app dispatcher is registered for this capability.",
+      };
+  }
+}
 
 export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
   {
@@ -287,6 +364,7 @@ export function listClawCapabilities(): ClawCapabilityDescriptor[] {
   return clawCapabilityCatalog.map((capability) => ({
     ...capability,
     risk: { ...capability.risk },
+    dispatch: { ...customAppDispatchForCapability(capability) },
     surfaces: capability.surfaces.map((surface) => ({ ...surface })),
   }));
 }

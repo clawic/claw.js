@@ -141,6 +141,23 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
 });
 
+test("custom-app SDK inspection payload exposes dispatch availability and gaps", () => {
+  const payload = buildCustomAppSDKInspectionPayload();
+  const byId = new Map(payload.capabilities.map((capability) => [capability.id, capability]));
+
+  assert.equal(byId.get("search.query")?.dispatch?.status, "available");
+  assert.equal(byId.get("search.query")?.dispatch?.mode, "localWideRead");
+  assert.equal(byId.get("search.query")?.dispatch?.approvalRequired, false);
+  assert.equal(byId.get("mac.action.plan")?.dispatch?.status, "available");
+  assert.equal(byId.get("mac.action.plan")?.dispatch?.mode, "approvalRequiredPlanOnly");
+  assert.equal(byId.get("iot.device.action.invoke")?.dispatch?.mode, "approvalRequiredDispatch");
+  assert.equal(byId.get("iot.device.action.invoke")?.dispatch?.externalValidation, "EXTERNAL PENDING");
+  assert.equal(byId.get("actions.invoke")?.dispatch?.status, "unavailable");
+  assert.equal(byId.get("actions.invoke")?.dispatch?.mode, "approvalRequiredNoRunner");
+  assert.equal(byId.get("secrets.broker")?.dispatch?.status, "unavailable");
+  assert.equal(byId.get("secrets.broker")?.dispatch?.mode, "approvalRequiredNoPlaintextBroker");
+});
+
 test("custom-app SDK schemas validate current Search DB and resource bridge payloads", () => {
   const record = {
     id: "task-1",
