@@ -69,6 +69,24 @@
       "baseLaneId": "SYS-TEL-EXT-001",
       "mutation": "approvalPacket.closureImpact.externalPendingRows=extra",
       "reason": "Approval must authorize exactly the pending row replaced by the bundle."
+    },
+    {
+      "id": "mismatched_approved_by",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.runAuthorization.approvedBy=mismatch",
+      "reason": "Evidence must name the same approving actor as the exact approval packet."
+    },
+    {
+      "id": "mismatched_credential_lease",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.runAuthorization.credentialLeaseRefs=wrong",
+      "reason": "Evidence must use exactly the credential leases authorized by the approval packet."
+    },
+    {
+      "id": "mismatched_native_grant",
+      "baseLaneId": "SYS-TEL-EXT-002",
+      "mutation": "evidencePacket.runAuthorization.nativeGrantRefs=wrong",
+      "reason": "Evidence must use exactly the native grants authorized by the approval packet."
     }
   ]
 }
