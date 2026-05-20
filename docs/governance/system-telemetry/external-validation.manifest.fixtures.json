@@ -47,6 +47,11 @@
       "id": "stale_closure_fixture_mutation_count",
       "mutation": "set_external_closure_fixture_invalid_count_14",
       "reason": "Future manifests must not downgrade the closure bundle guard below the current exact-run-scope binding coverage."
+    },
+    {
+      "id": "missing_external_lane_id",
+      "mutation": "drop_external_pending_lane_id",
+      "reason": "Every external-lane artifact must preserve the exact live provider, physical sensor, and dangerous-control pending row ids."
     }
   ]
 }
