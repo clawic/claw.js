@@ -101,6 +101,47 @@ const remoteHttpSmokePayloads: Record<string, Record<string, unknown>> = {
   },
 };
 
+test("relay exposes custom app SDK dispatch metadata as remote-safe contract projection", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-custom-app-sdk-"));
+  const built = await buildRelayApp({
+    config: {
+      dbPath: path.join(tempRoot, "relay.sqlite"),
+      corsOrigins: [],
+    },
+  });
+  try {
+    const response = await built.app.inject({ method: "GET", url: "/v1/remote/custom-app-sdk" });
+    assert.equal(response.statusCode, 200);
+    const payload = response.json() as {
+      relayRole: string;
+      richUiRuntime: string;
+      remoteExecution: string;
+      localWideReadsRemoteExecution: string;
+      writes: boolean;
+      missingSchemaRefs: string[];
+      capabilities: Array<{ id: string; dispatch?: { status: string; mode: string; externalValidation?: string } }>;
+    };
+
+    assert.equal(payload.relayRole, "remote_safe_contract_projection");
+    assert.equal(payload.richUiRuntime, "sdk_host_bridge_not_relay_process");
+    assert.equal(payload.remoteExecution, "not_enabled");
+    assert.equal(payload.localWideReadsRemoteExecution, "not_exposed");
+    assert.equal(payload.writes, false);
+    assert.deepEqual(payload.missingSchemaRefs, []);
+
+    const byId = new Map(payload.capabilities.map((capability) => [capability.id, capability]));
+    assert.equal(byId.get("search.query")?.dispatch?.mode, "localWideRead");
+    assert.equal(byId.get("mac.action.plan")?.dispatch?.mode, "approvalRequiredPlanOnly");
+    assert.equal(byId.get("iot.device.action.invoke")?.dispatch?.mode, "approvalRequiredDispatch");
+    assert.equal(byId.get("iot.device.action.invoke")?.dispatch?.externalValidation, "EXTERNAL PENDING");
+    assert.equal(byId.get("actions.invoke")?.dispatch?.mode, "approvalRequiredNoRunner");
+    assert.equal(byId.get("secrets.broker")?.dispatch?.mode, "approvalRequiredNoPlaintextBroker");
+  } finally {
+    await built.app.close();
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("relay exposes remote Gateway and Sync conformance API routes", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-relay-remote-sync-"));
   const built = await buildRelayApp({
