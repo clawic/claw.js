@@ -57,6 +57,18 @@
       "baseLaneId": "SYS-TEL-EXT-001",
       "mutation": "evidencePacket.execution.completedAt=afterApprovalExpiry",
       "reason": "Evidence timestamps must stay inside the exact approval window."
+    },
+    {
+      "id": "wrong_completion_audit_row",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.closureImpact.completionAuditRows=wrong",
+      "reason": "Evidence must target the exact completion-audit row for the lane."
+    },
+    {
+      "id": "extra_approved_pending_row",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "approvalPacket.closureImpact.externalPendingRows=extra",
+      "reason": "Approval must authorize exactly the pending row replaced by the bundle."
     }
   ]
 }
