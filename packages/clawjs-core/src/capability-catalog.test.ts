@@ -23,6 +23,7 @@ test("SDK-first capability catalog exposes baseline custom-app contracts", () =>
 
   assert.ok(ids.includes("search.query"));
   assert.ok(ids.includes("db.query"));
+  assert.ok(ids.includes("resources.list"));
   assert.ok(ids.includes("resources.read"));
   assert.ok(ids.includes("system.telemetry.snapshot"));
   assert.ok(ids.includes("system.telemetry.history"));
@@ -55,6 +56,7 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.deepEqual(riskMap.authorityModel, "localWideReadsHighRiskApproval");
   assert.ok(riskMap.ordinaryAccess.includes("search.query"));
   assert.ok(riskMap.ordinaryAccess.includes("db.query"));
+  assert.ok(riskMap.ordinaryAccess.includes("resources.list"));
   assert.ok(riskMap.ordinaryAccess.includes("resources.read"));
   assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.snapshot"));
   assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.history"));
@@ -139,8 +141,11 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesList));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult));
   assert.ok(payload.schemaRefs.includes("claw.mac.actionRequest.v1"));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "resources.list"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "resources.read"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.snapshot"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.history"));
@@ -238,6 +243,14 @@ test("custom-app SDK schemas validate current Search DB and resource bridge payl
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesRead)?.safeParse({
     id: "res_instruction1",
     maxBytes: 4096,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesList)?.safeParse({
+    status: "active",
+    kind: "instruction",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult)?.safeParse({
+    items: [resource],
+    source: "resources.list",
   }).success, true);
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload)?.safeParse({
     resource,
