@@ -595,6 +595,9 @@ The docs check script validates that every current export from
     clawProjectTypeSchema
     clawPublicApiPrefix
     clawRegisteredDdlSources
+    ClawRepositoryDetectedBy
+    ClawRepositoryDiscoveryOptions
+    ClawRepositoryRoot
     clawRiskLevelSchema
     ClawRuntimeAppServer
     ClawRuntimeAppServerOptions
@@ -987,6 +990,7 @@ The docs check script validates that every current export from
     deadlineRecordSchema
     DecisionRecord
     decisionRecordSchema
+    dedupeClawRepositories
     dedupeNeedOpportunities
     DEFAULT_CLAW_OPERATOR_CAPSULE
     DEFAULT_CLAW_OPERATOR_SKILL_ID
@@ -1017,7 +1021,11 @@ The docs check script validates that every current export from
     DetachOpenClawAppContextOptions
     DetachOpenClawAppContextResult
     detectBinary
+    detectClawPublicRepositories
     DeviceInstallation
+    inferClawRepoName
+    isClawixRoot
+    isClawjsRoot
     diffEvolutionPublicSurfaceBaseline
     DiffPreview
     DisclaimerPolicy

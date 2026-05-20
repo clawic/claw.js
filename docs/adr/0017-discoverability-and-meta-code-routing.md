@@ -51,7 +51,10 @@ test. Decision-like comment markers such as `CANON`, `DECISION`, or
   public docs route humans and agents to the canonical source.
 - **Programmatic surface**: `claw search`, `claw inspect`, and
   `scripts/discoverability-check.mjs` expose and validate the registered
-  discovery routes.
+  discovery routes. When invoked from a private Clawix overlay root that
+  contains `clawix/` and has a sibling `clawjs` checkout, public CLI
+  discovery federates only those public repository roots and excludes private
+  overlay artifacts.
 - **Persistence**: `docs/discoverability.registry.json` stores enforced
   routes; `docs/discoverability-baseline.json` stores expiring inherited debt.
 - **Gaps**: existing meta-code not yet routed is `required` debt in the
@@ -71,8 +74,9 @@ test. Decision-like comment markers such as `CANON`, `DECISION`, or
   this contract.
 - **CLI**: `claw search discoverability --json` and
   `claw search "meta-code routing" --json` must return this ADR or its
-  registered docs. `claw inspect why search --json` exposes the CLI discovery
-  surface that backs the query.
+  registered docs from direct repo roots and from a composite Clawix overlay
+  cwd. `claw inspect why search --json` exposes the CLI discovery surface that
+  backs the query.
 
 ## Consequences
 
