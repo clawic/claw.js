@@ -5,6 +5,8 @@ import { randomUUID } from "crypto";
 
 import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
+import { applyAppStateTransaction, appStateRequestFromOperations, readAppStateProjection } from "./app-state-service.ts";
+import type { ClawAppStateOperation } from "@clawjs/core";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
 import { scheduleAppsCatalogSearchEvent, scheduleBusinessRecordsSearchEvent, scheduleCalendarEventsSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleContentItemsSearchEvent, scheduleDesignResourcesSearchEvent, scheduleDocsPagesSearchEvent, scheduleFinanceRecordTableSearchEvent, scheduleIotConfigSearchEvent, scheduleKnowledgeGraphSearchEvent, scheduleMarketplaceChoicesSearchEvent, scheduleMcpServersSearchEvent, scheduleNotesPagesSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSessionChatSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSignalsObservationsSearchEvent, scheduleSkillsRegistrySearchEvent, scheduleSocialPostsSearchEvent } from "./cli-search-events.ts";
 export {
@@ -263,6 +265,11 @@ function runDataMaintenanceCommand(input: V1DataCliInput, store: DatabaseService
 
 function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
+  if (command === "snapshot" || command === "projection") {
+    const projection = readAppStateProjection(store.sqlite, { sidebarLimit: Number(input.flags.limit ?? 200), receiptLimit: Number(input.flags["receipt-limit"] ?? 20) });
+    writeSuccess(input, command === "snapshot" ? snapshotPayload(projection) : projection);
+    return V1_DATA_EXIT_OK;
+  }
   if (command === "get") {
     const key = input.flags.key || input.positionals[2];
     if (!key) {
@@ -274,269 +281,204 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
     writeSuccess(input, row ? { key, value: parseJson(row.value_json, null), updatedAt: row.updated_at } : null);
     return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
-  if (command === "set") {
-    const key = input.flags.key || input.positionals[2];
-    if (!key) return usageError(input, "Usage: claw app-state set KEY --value JSON|TEXT");
-    const value = input.flags.json ? JSON.parse(input.flags.json) : parseMaybeJson(input.flags.value ?? input.positionals.slice(3).join(" "));
-    const now = nowIso();
-    store.sqlite.prepare(`
-      INSERT INTO app_state (profile_id, key, value_json, updated_at)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(profile_id, key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
-    `).run(PROFILE_ID, key, JSON.stringify(value), now);
-    writeSuccess(input, { key, value, updatedAt: now });
+  const listPayload = legacyAppStateListPayload(input, store);
+  if (listPayload !== null) {
+    writeSuccess(input, listPayload);
     return V1_DATA_EXIT_OK;
   }
-  if (command === "snapshot") {
-    const payload = {
-      projects: store.sqlite.prepare("SELECT * FROM app_projects ORDER BY COALESCE(sort_order, 999999), name").all().map(normalizeDbRow),
-      pinnedThreads: store.sqlite.prepare("SELECT * FROM app_pinned_threads ORDER BY sort_order").all().map(normalizeDbRow),
-      titles: store.sqlite.prepare("SELECT * FROM app_session_titles ORDER BY updated_at DESC").all().map(normalizeDbRow),
-      archives: store.sqlite.prepare("SELECT * FROM app_archives ORDER BY archived_at DESC").all().map(normalizeDbRow),
-      sidebar: store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots ORDER BY pinned DESC, updated_at DESC LIMIT ?").all(Number(input.flags.limit ?? 200)).map(normalizeDbRow),
-      terminalTabs: store.sqlite.prepare("SELECT * FROM app_terminal_tabs ORDER BY sort_order, updated_at DESC").all().map(normalizeDbRow),
-    };
-    writeSuccess(input, payload);
-    return V1_DATA_EXIT_OK;
+  const operation = legacyAppStateOperation(input, store);
+  if (!operation) return usageError(input, usage(input.binName, "app-state"));
+  const result = applyAppStateTransaction(store.sqlite, appStateRequestFromOperations([operation], { requestId: input.flags["request-id"], hostId: input.flags["host-id"] ?? "legacy-app-state" }));
+  writeSuccess(input, legacyAppStatePayload(operation, result.projection, result.receipt));
+  return V1_DATA_EXIT_OK;
+}
+
+function legacyAppStateListPayload(input: V1DataCliInput, store: DatabaseServiceStore): unknown | null {
+  const command = input.positionals[1];
+  const action = input.positionals[2] || "list";
+  if (action !== "list") return null;
+  const projection = readAppStateProjection(store.sqlite, { sidebarLimit: Number(input.flags.limit ?? 200), receiptLimit: 0 });
+  if (command === "project") return { items: projection.projects };
+  if (command === "pin") return { items: projection.pinnedThreads };
+  if (command === "title") return { items: projection.titles };
+  if (command === "archive") return { items: projection.archives };
+  if (command === "sidebar") return { items: projection.sidebar };
+  if (command === "terminal") return { items: projection.terminalTabs };
+  return null;
+}
+
+function legacyAppStateOperation(input: V1DataCliInput, store: DatabaseServiceStore): ClawAppStateOperation | null {
+  const command = input.positionals[1];
+  if (command === "set") {
+    const key = input.flags.key || input.positionals[2];
+    if (!key) return null;
+    return { kind: "state.set", key, value: input.flags.json ? JSON.parse(input.flags.json) : parseMaybeJson(input.flags.value ?? input.positionals.slice(3).join(" ")) };
   }
   if (command === "project") {
     const action = input.positionals[2] || "list";
-    if (action === "list") {
-      const rows = store.sqlite.prepare("SELECT * FROM app_projects ORDER BY COALESCE(sort_order, 999999), name").all();
-      writeSuccess(input, { items: rows.map(normalizeDbRow) });
-      return V1_DATA_EXIT_OK;
-    }
-    if (action === "order") {
-      const ids = parseCsvOrJson(input.flags.ids || input.positionals.slice(3).join(",")) ?? [];
-      const now = nowIso();
-      const tx = store.sqlite.transaction(() => {
-        ids.forEach((id, index) => {
-          store.sqlite.prepare(`
-            UPDATE app_projects
-            SET sort_order = ?, updated_at = ?
-            WHERE id = ?
-          `).run((index + 1) * 1000, now, id);
-        });
-      });
-      tx();
-      writeSuccess(input, { items: ids });
-      return V1_DATA_EXIT_OK;
-    }
+    if (action === "list") return null;
+    if (action === "order") return { kind: "project.order", ids: stringArray(input.flags.ids || input.positionals.slice(3).join(",")) };
     const id = input.flags.id || input.positionals[3];
-    if (!id) return usageError(input, "Usage: claw app-state project upsert|delete|order ID [--json]");
-    if (action === "delete") {
-      const changes = store.sqlite.prepare("DELETE FROM app_projects WHERE id = ?").run(id).changes;
-      writeSuccess(input, { id, deleted: changes > 0 });
-      return V1_DATA_EXIT_OK;
-    }
+    if (!id) return null;
+    if (action === "delete") return { kind: "project.delete", id };
     if (action === "upsert" || action === "set") {
-      const now = nowIso();
-      const name = input.flags.name || id;
-      const projectPath = input.flags.path || "";
-      const resourceId = input.flags["resource-id"] || input.flags.resourceId || null, sortOrder = input.flags["sort-order"] !== undefined ? Number(input.flags["sort-order"]) : null;
-      store.sqlite.prepare(`
-        INSERT INTO app_projects (id, resource_id, name, path, sort_order, hidden, metadata_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET name = excluded.name, path = excluded.path,
-          resource_id = COALESCE(excluded.resource_id, app_projects.resource_id), sort_order = COALESCE(excluded.sort_order, app_projects.sort_order),
-          hidden = excluded.hidden, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
-      `).run(id, resourceId, name, projectPath, sortOrder, truthy(input.flags.hidden) ? 1 : 0, input.flags.metadata || "{}", now, now);
-      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_projects WHERE id = ?").get(id) as JsonRecord));
-      return V1_DATA_EXIT_OK;
+      return {
+        kind: "project.upsert",
+        id,
+        resourceId: input.flags["resource-id"] || input.flags.resourceId || null,
+        name: input.flags.name || id,
+        path: input.flags.path || "",
+        sortOrder: input.flags["sort-order"] !== undefined ? Number(input.flags["sort-order"]) : null,
+        hidden: truthy(input.flags.hidden),
+        metadata: parseRecord(input.flags.metadata),
+      };
     }
   }
   if (command === "pin") {
     const action = input.positionals[2] || "list";
-    if (action === "list") {
-      const rows = store.sqlite.prepare("SELECT * FROM app_pinned_threads ORDER BY sort_order").all();
-      writeSuccess(input, { items: rows.map(normalizeDbRow) });
-      return V1_DATA_EXIT_OK;
-    }
+    if (action === "list") return null;
+    if (action === "order") return { kind: "pin.order", threadIds: stringArray(input.flags.ids || input.positionals.slice(3).join(",")) };
     const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
-    if (!threadId) return usageError(input, "Usage: claw app-state pin upsert|delete THREAD_ID [--json]");
-    if (action === "delete" || action === "unset") {
-      const changes = store.sqlite.prepare("DELETE FROM app_pinned_threads WHERE thread_id = ?").run(threadId).changes;
-      writeSuccess(input, { threadId, deleted: changes > 0 });
-      return V1_DATA_EXIT_OK;
-    }
+    if (!threadId) return null;
+    if (action === "delete" || action === "unset") return { kind: "pin.delete", threadId };
     if (action === "upsert" || action === "set") {
-      const now = nowIso();
       const sortOrder = input.flags["sort-order"] !== undefined
         ? Number(input.flags["sort-order"])
         : ((store.sqlite.prepare("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM app_pinned_threads").get() as { max_order: number }).max_order + 1000);
-      store.sqlite.prepare(`
-        INSERT INTO app_pinned_threads (thread_id, sort_order, pinned_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(thread_id) DO UPDATE SET sort_order = excluded.sort_order, pinned_at = excluded.pinned_at
-      `).run(threadId, sortOrder, now);
-      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_pinned_threads WHERE thread_id = ?").get(threadId) as JsonRecord));
-      return V1_DATA_EXIT_OK;
-    }
-    if (action === "order") {
-      const ids = parseCsvOrJson(input.flags.ids || input.positionals.slice(3).join(",")) ?? [];
-      const now = nowIso();
-      const tx = store.sqlite.transaction(() => {
-        store.sqlite.prepare("DELETE FROM app_pinned_threads").run();
-        ids.forEach((id, index) => {
-          store.sqlite.prepare("INSERT INTO app_pinned_threads (thread_id, sort_order, pinned_at) VALUES (?, ?, ?)").run(id, (index + 1) * 1000, now);
-        });
-      });
-      tx();
-      writeSuccess(input, { items: ids });
-      return V1_DATA_EXIT_OK;
+      return { kind: "pin.upsert", threadId, sortOrder };
     }
   }
   if (command === "title") {
     const action = input.positionals[2] || "list";
-    if (action === "list") {
-      const rows = store.sqlite.prepare("SELECT * FROM app_session_titles ORDER BY updated_at DESC").all();
-      writeSuccess(input, { items: rows.map(normalizeDbRow) });
-      return V1_DATA_EXIT_OK;
-    }
+    if (action === "list") return null;
     const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
-    if (!threadId) return usageError(input, "Usage: claw app-state title upsert|delete THREAD_ID --title TEXT [--json]");
-    if (action === "delete") {
-      const changes = store.sqlite.prepare("DELETE FROM app_session_titles WHERE thread_id = ?").run(threadId).changes;
-      writeSuccess(input, { threadId, deleted: changes > 0 });
-      return V1_DATA_EXIT_OK;
-    }
+    if (!threadId) return null;
+    if (action === "delete") return { kind: "title.delete", threadId };
     if (action === "upsert" || action === "set") {
       const title = input.flags.title || input.positionals.slice(4).join(" ");
-      if (!title.trim()) return usageError(input, "Usage: claw app-state title upsert THREAD_ID --title TEXT [--json]");
-      const now = nowIso();
-      store.sqlite.prepare(`
-        INSERT INTO app_session_titles (thread_id, title, source, updated_at)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(thread_id) DO UPDATE SET title = excluded.title, source = excluded.source, updated_at = excluded.updated_at
-      `).run(threadId, title.trim(), input.flags.source || "manual", now);
-      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_session_titles WHERE thread_id = ?").get(threadId) as JsonRecord));
-      return V1_DATA_EXIT_OK;
+      if (!title.trim()) return null;
+      return { kind: "title.upsert", threadId, title: title.trim(), source: input.flags.source || "manual" };
     }
   }
   if (command === "archive") {
     const action = input.positionals[2] || "list";
-    if (action === "list") {
-      const rows = store.sqlite.prepare("SELECT * FROM app_archives ORDER BY archived_at DESC").all();
-      writeSuccess(input, { items: rows.map(normalizeDbRow) });
-      return V1_DATA_EXIT_OK;
-    }
+    if (action === "list") return null;
     const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
-    if (!threadId) return usageError(input, "Usage: claw app-state archive set|delete THREAD_ID [--json]");
-    if (action === "delete" || action === "unset") {
-      const changes = store.sqlite.prepare("DELETE FROM app_archives WHERE thread_id = ?").run(threadId).changes;
-      writeSuccess(input, { threadId, deleted: changes > 0 });
-      return V1_DATA_EXIT_OK;
-    }
-    if (action === "upsert" || action === "set") {
-      const now = nowIso();
-      store.sqlite.prepare(`
-        INSERT INTO app_archives (thread_id, archived_at)
-        VALUES (?, ?)
-        ON CONFLICT(thread_id) DO UPDATE SET archived_at = excluded.archived_at
-      `).run(threadId, now);
-      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_archives WHERE thread_id = ?").get(threadId) as JsonRecord));
-      return V1_DATA_EXIT_OK;
-    }
+    if (!threadId) return null;
+    if (action === "delete" || action === "unset") return { kind: "archive.delete", threadId };
+    if (action === "upsert" || action === "set") return { kind: "archive.set", threadId };
   }
   if (command === "sidebar") {
     const action = input.positionals[2] || "list";
-    if (action === "list") {
-      const rows = store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots ORDER BY pinned DESC, updated_at DESC LIMIT ?").all(Number(input.flags.limit ?? 200));
-      writeSuccess(input, { items: rows.map(normalizeDbRow) });
-      return V1_DATA_EXIT_OK;
-    }
+    if (action === "list") return null;
     if (action === "replace") {
-      const rawItems = input.flags.items || "[]";
-      const items = JSON.parse(rawItems) as Array<Record<string, unknown>>;
-      const now = nowIso();
-      const tx = store.sqlite.transaction(() => {
-        store.sqlite.prepare("DELETE FROM app_sidebar_snapshots").run();
-        for (const item of items) {
-          const threadId = String(item.threadId || "");
-          if (!threadId) continue;
-          store.sqlite.prepare(`
-            INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_id, project_path, updated_at, archived, pinned, captured_at, metadata_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(
-            threadId,
-            String(item.chatUuid || ""),
-            String(item.title || threadId),
-            typeof item.cwd === "string" && item.cwd ? item.cwd : null,
-            typeof item.projectId === "string" && item.projectId ? item.projectId : null,
-            typeof item.projectPath === "string" && item.projectPath ? item.projectPath : null,
-            typeof item.updatedAt === "string" ? item.updatedAt : now,
-            truthy(item.archived) ? 1 : 0,
-            truthy(item.pinned) ? 1 : 0,
-            now,
-            typeof item.metadata === "string" ? item.metadata : JSON.stringify(item.metadata || {}),
-          );
-        }
-      });
-      tx();
-      writeSuccess(input, { count: items.length });
-      return V1_DATA_EXIT_OK;
+      const items = (JSON.parse(input.flags.items || "[]") as Array<Record<string, unknown>>).map((item) => ({
+        threadId: String(item.threadId || ""),
+        chatUuid: String(item.chatUuid || ""),
+        title: String(item.title || item.threadId || ""),
+        cwd: optionalString(item.cwd),
+        projectId: optionalString(item.projectId),
+        projectPath: optionalString(item.projectPath),
+        updatedAt: optionalString(item.updatedAt) ?? undefined,
+        archived: truthy(item.archived),
+        pinned: truthy(item.pinned),
+        metadata: isRecord(item.metadata) ? item.metadata : {},
+      })).filter((item) => item.threadId && item.title);
+      return { kind: "sidebar.replace", items };
     }
     const threadId = input.flags.id || input.flags["thread-id"] || input.positionals[3];
-    if (!threadId) return usageError(input, "Usage: claw app-state sidebar upsert|delete|replace THREAD_ID [--json]");
-    if (action === "delete") {
-      const changes = store.sqlite.prepare("DELETE FROM app_sidebar_snapshots WHERE thread_id = ?").run(threadId).changes;
-      writeSuccess(input, { threadId, deleted: changes > 0 });
-      return V1_DATA_EXIT_OK;
-    }
+    if (!threadId) return null;
+    if (action === "delete") return { kind: "sidebar.delete", threadId };
     if (action === "upsert" || action === "set") {
-      const now = nowIso();
-      const projectId = input.flags["project-id"] || input.flags.projectId || null;
-      store.sqlite.prepare(`
-        INSERT INTO app_sidebar_snapshots (thread_id, chat_uuid, title, cwd, project_id, project_path, updated_at, archived, pinned, captured_at, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(thread_id) DO UPDATE SET chat_uuid = excluded.chat_uuid, title = excluded.title,
-          cwd = excluded.cwd, project_id = excluded.project_id, project_path = excluded.project_path, updated_at = excluded.updated_at,
-          archived = excluded.archived, pinned = excluded.pinned, captured_at = excluded.captured_at,
-          metadata_json = excluded.metadata_json
-      `).run(
+      return {
+        kind: "sidebar.upsert",
         threadId,
-        input.flags["chat-uuid"] || null,
-        input.flags.title || threadId,
-        input.flags.cwd || null,
-        projectId,
-        input.flags["project-path"] || null,
-        input.flags["updated-at"] || now,
-        truthy(input.flags.archived) ? 1 : 0,
-        truthy(input.flags.pinned) ? 1 : 0,
-        now,
-        input.flags.metadata || "{}",
-      );
-      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_sidebar_snapshots WHERE thread_id = ?").get(threadId) as JsonRecord));
-      return V1_DATA_EXIT_OK;
+        chatUuid: input.flags["chat-uuid"] || "",
+        title: input.flags.title || threadId,
+        cwd: input.flags.cwd || null,
+        projectId: input.flags["project-id"] || input.flags.projectId || null,
+        projectPath: input.flags["project-path"] || null,
+        updatedAt: input.flags["updated-at"],
+        archived: truthy(input.flags.archived),
+        pinned: truthy(input.flags.pinned),
+        metadata: parseRecord(input.flags.metadata),
+      };
     }
   }
   if (command === "terminal") {
     const action = input.positionals[2] || "list";
-    if (action === "list") {
-      const rows = store.sqlite.prepare("SELECT * FROM app_terminal_tabs ORDER BY sort_order, updated_at DESC").all();
-      writeSuccess(input, { items: rows.map(normalizeDbRow) });
-      return V1_DATA_EXIT_OK;
-    }
+    if (action === "list") return null;
     const id = input.flags.id || input.positionals[3];
-    if (!id) return usageError(input, "Usage: claw app-state terminal upsert|delete ID [--json]");
-    if (action === "delete") {
-      const changes = store.sqlite.prepare("DELETE FROM app_terminal_tabs WHERE id = ?").run(id).changes;
-      writeSuccess(input, { id, deleted: changes > 0 });
-      return V1_DATA_EXIT_OK;
-    }
+    if (!id) return null;
+    if (action === "delete") return { kind: "terminal.delete", id };
     if (action === "upsert" || action === "set") {
-      const now = nowIso();
-      store.sqlite.prepare(`
-        INSERT INTO app_terminal_tabs (id, title, cwd, sort_order, metadata_json, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET title = excluded.title, cwd = excluded.cwd,
-          sort_order = excluded.sort_order, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
-      `).run(id, input.flags.title || id, input.flags.cwd || null, Number(input.flags["sort-order"] ?? 0), input.flags.metadata || "{}", now, now);
-      writeSuccess(input, normalizeDbRow(store.sqlite.prepare("SELECT * FROM app_terminal_tabs WHERE id = ?").get(id) as JsonRecord));
-      return V1_DATA_EXIT_OK;
+      return {
+        kind: "terminal.upsert",
+        id,
+        title: input.flags.title || id,
+        cwd: input.flags.cwd || null,
+        sortOrder: Number(input.flags["sort-order"] ?? 0),
+        metadata: parseRecord(input.flags.metadata),
+      };
     }
   }
-  return usageError(input, usage(input.binName, "app-state"));
+  return null;
+}
+
+function legacyAppStatePayload(operation: ClawAppStateOperation, projection: ReturnType<typeof readAppStateProjection>, receipt: unknown): unknown {
+  switch (operation.kind) {
+    case "state.set":
+      return { key: operation.key, value: operation.value, receipt };
+    case "project.upsert":
+      return projection.projects.find((project) => project.id === operation.id) ?? { id: operation.id, receipt };
+    case "project.delete":
+      return { id: operation.id, deleted: true, receipt };
+    case "project.order":
+      return { items: operation.ids, receipt };
+    case "pin.upsert":
+      return projection.pinnedThreads.find((pin) => pin.threadId === operation.threadId) ?? { threadId: operation.threadId, receipt };
+    case "pin.delete":
+      return { threadId: operation.threadId, deleted: true, receipt };
+    case "pin.order":
+      return { items: operation.threadIds, receipt };
+    case "title.upsert":
+      return projection.titles.find((title) => title.threadId === operation.threadId) ?? { threadId: operation.threadId, receipt };
+    case "title.delete":
+      return { threadId: operation.threadId, deleted: true, receipt };
+    case "archive.set":
+      return projection.archives.find((archive) => archive.threadId === operation.threadId) ?? { threadId: operation.threadId, receipt };
+    case "archive.delete":
+      return { threadId: operation.threadId, deleted: true, receipt };
+    case "sidebar.upsert":
+      return projection.sidebar.find((row) => row.threadId === operation.threadId) ?? { threadId: operation.threadId, receipt };
+    case "sidebar.delete":
+      return { threadId: operation.threadId, deleted: true, receipt };
+    case "sidebar.replace":
+      return { count: operation.items.length, receipt };
+    case "terminal.upsert":
+      return projection.terminalTabs.find((tab) => tab.id === operation.id) ?? { id: operation.id, receipt };
+    case "terminal.delete":
+      return { id: operation.id, deleted: true, receipt };
+  }
+}
+
+function snapshotPayload(projection: ReturnType<typeof readAppStateProjection>): JsonRecord {
+  const { receipts: _receipts, schemaVersion: _schemaVersion, projectedAt: _projectedAt, ...snapshot } = projection;
+  return snapshot;
+}
+
+function stringArray(value: string): string[] {
+  const parsed = parseCsvOrJson(value) ?? [];
+  return parsed.map((item) => String(item)).filter(Boolean);
+}
+
+function parseRecord(value: string | undefined): Record<string, unknown> {
+  const parsed = value ? parseMaybeJson(value) : {};
+  return isRecord(parsed) ? parsed : {};
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
 }
 
 function runSignalsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {

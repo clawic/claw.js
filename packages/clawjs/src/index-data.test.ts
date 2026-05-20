@@ -902,6 +902,63 @@ test("app-state sidebar persists stable project ids alongside path locators", as
   }
 });
 
+test("host app-state applies typed transactions and records sync receipts", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-app-state-"));
+  let restoreEnv: (() => void) | undefined;
+  const dataRoot = useIsolatedClawDataRoot({ after: (fn) => { restoreEnv = fn; } }, workspaceRoot);
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-app-state-cwd-"));
+  try {
+    const applyStdout = captureStream();
+    assert.equal(await runCli([
+      "host", "app-state", "apply",
+      "--operations", JSON.stringify([
+        { kind: "project.upsert", id: "proj-contract", resourceId: "res_contract", name: "Contract", path: cwd, sortOrder: 1000 },
+        { kind: "pin.upsert", threadId: "thread-contract", sortOrder: 1000 },
+        { kind: "title.upsert", threadId: "thread-contract", title: "Contract thread", source: "test" },
+      ]),
+      "--request-id", "req-contract-1",
+      "--host-id", "clawix-test",
+      "--json",
+    ], {
+      stdout: applyStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const applied = parseCliJsonPayload(applyStdout.getOutput()) as {
+      receipt: { requestId: string; hostId: string; status: string; operationCount: number };
+      projection: { projects: Array<{ id: string; resourceId: string }>; receipts: Array<{ requestId: string }> };
+    };
+    assert.equal(applied.receipt.status, "applied");
+    assert.equal(applied.receipt.operationCount, 3);
+    assert.equal(applied.projection.projects[0]?.resourceId, "res_contract");
+    assert.equal(applied.projection.receipts[0]?.requestId, "req-contract-1");
+
+    const projectionStdout = captureStream();
+    assert.equal(await runCli(["host", "app-state", "projection", "--json"], {
+      stdout: projectionStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const projection = parseCliJsonPayload(projectionStdout.getOutput()) as { titles: Array<{ threadId: string; title: string }>; receipts: Array<{ hostId: string }> };
+    assert.equal(projection.titles[0]?.title, "Contract thread");
+    assert.equal(projection.receipts[0]?.hostId, "clawix-test");
+
+    const sqlite = new Database(path.join(dataRoot, clawStorageFiles.mainDatabase));
+    try {
+      assert.deepEqual(sqlite.prepare("SELECT request_id, status, operation_count FROM app_state_sync_receipts WHERE request_id = ?").get("req-contract-1"), {
+        request_id: "req-contract-1",
+        status: "applied",
+        operation_count: 3,
+      });
+    } finally {
+      sqlite.close();
+    }
+  } finally {
+    restoreEnv?.();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test("V2 main schema upgrades app project resource ids before indexing them", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-schema-upgrade-"));
   await withPatchedEnv({ CLAW_DATA_DIR: tempRoot }, async () => {
@@ -928,6 +985,10 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
       assert.equal(sidebarColumns.some((column) => column.name === "project_id"), true);
       const sidebarIndexes = sqlite.prepare("PRAGMA index_list(app_sidebar_snapshots)").all() as Array<{ name: string }>;
       assert.equal(sidebarIndexes.some((index) => index.name === "app_sidebar_snapshots_project_id_idx"), true);
+      const receiptColumns = sqlite.prepare("PRAGMA table_info(app_state_sync_receipts)").all() as Array<{ name: string }>;
+      assert.equal(receiptColumns.some((column) => column.name === "receipt_id"), true);
+      const projectionMetaColumns = sqlite.prepare("PRAGMA table_info(app_state_projection_meta)").all() as Array<{ name: string }>;
+      assert.equal(projectionMetaColumns.some((column) => column.name === "last_receipt_id"), true);
       const incidentColumns = sqlite.prepare("PRAGMA table_info(agent_incidents)").all() as Array<{ name: string; dflt_value: string | null; notnull: number }>;
       assert.equal(incidentColumns.some((column) => column.name === "run_id"), true);
       assert.equal(incidentColumns.some((column) => column.name === "session_id"), true);

@@ -1,10 +1,12 @@
 import path from "path";
 
 import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, useHost } from "./host-registry.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { runDomainsCli } from "./cli-domains-command.ts";
+import { applyAppStateTransaction, appStateRequestFromOperations, readAppStateProjection } from "./app-state-service.ts";
+import { openMainDataStore } from "./v1-data-core.ts";
 import type { OpenSurface } from "./cli-open-surfaces.ts";
 import type { CliContext } from "./index.ts";
 
@@ -23,6 +25,10 @@ export async function runHostCli(input: {
 }): Promise<number> {
   const [, command, hostIdArg] = input.positionals;
   const options = hostRegistryOptions(input.flags);
+
+  if (command === "app-state") {
+    return runHostAppStateCli(input);
+  }
 
   if (command === "domains") {
     return await runDomainsCli({
@@ -118,4 +124,45 @@ export async function runHostCli(input: {
 
   input.context.stderr.write(`Usage: ${input.binName} host list|register|use|status\n`);
   return CLI_EXIT_USAGE;
+}
+
+function runHostAppStateCli(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): number {
+  const action = input.positionals[2] || "projection";
+  const store = openMainDataStore();
+  try {
+    if (action === "projection" || action === "snapshot") {
+      writeCommandJsonOk(input.context.stdout, "host", readAppStateProjection(store.sqlite, {
+        sidebarLimit: Number(input.flags.limit ?? 200),
+        receiptLimit: Number(input.flags["receipt-limit"] ?? 20),
+      }), { subcommand: "host app-state projection" });
+      return CLI_EXIT_OK;
+    }
+    if (action === "apply") {
+      const rawRequest = input.flags.request
+        ? JSON.parse(input.flags.request)
+        : appStateRequestFromOperations(JSON.parse(input.flags.operations || "[]"), {
+            requestId: input.flags["request-id"],
+            hostId: input.flags["host-id"] ?? "host-cli",
+          });
+      const result = applyAppStateTransaction(store.sqlite, rawRequest);
+      writeCommandJsonOk(input.context.stdout, "host", result, { subcommand: "host app-state apply" });
+      return CLI_EXIT_OK;
+    }
+    input.context.stderr.write(`Usage: ${input.binName} host app-state apply|projection --json\n`);
+    return CLI_EXIT_USAGE;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const receipt = typeof error === "object" && error && "receipt" in error ? (error as { receipt: unknown }).receipt : undefined;
+    writeCommandJsonError(input.context.stdout, "host", new CliHandledError("app_state_apply_failed", message, CLI_EXIT_FAILURE), { subcommand: `host app-state ${action}`, receipt });
+    return CLI_EXIT_FAILURE;
+  } finally {
+    store.close();
+  }
 }

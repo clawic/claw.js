@@ -37,6 +37,9 @@ import {
   buildSyncQueueEntries,
   buildSyncPlan,
   capacityRecordSchema,
+  clawAppStateProjectionSchema,
+  clawAppStateSyncReceiptSchema,
+  clawAppStateTransactionRequestSchema,
   clawCommandRequestSchema,
   clawCommandResponseSchema,
   clawEvolutionLedgerSchema,
@@ -802,6 +805,9 @@ test("host contract fixtures and JSON schema exports cover the public v1 surface
   assert.equal(clawJsonSchemasV1.commandRequest.$id, "https://schemas.clawjs.ai/v1/command-request.schema.json");
   assert.equal(clawJsonSchemasV1.commandResponse.$id, "https://schemas.clawjs.ai/v1/command-response.schema.json");
   assert.equal(clawJsonSchemasV1.hostDescriptor.$id, "https://schemas.clawjs.ai/v1/host-descriptor.schema.json");
+  assert.equal(clawJsonSchemasV1.appStateTransactionRequest.$id, "https://schemas.clawjs.ai/v1/app-state-transaction-request.schema.json");
+  assert.equal(clawJsonSchemasV1.appStateSyncReceipt.$id, "https://schemas.clawjs.ai/v1/app-state-sync-receipt.schema.json");
+  assert.equal(clawJsonSchemasV1.appStateProjection.$id, "https://schemas.clawjs.ai/v1/app-state-projection.schema.json");
 
   const request = clawCommandRequestSchema.parse(clawContractFixturesV1.commandRequest);
   const response = clawCommandResponseSchema.parse(clawContractFixturesV1.commandResponse);
@@ -810,6 +816,44 @@ test("host contract fixtures and JSON schema exports cover the public v1 surface
   assert.equal(request.schemaVersion, clawContractVersionV1);
   assert.equal(response.meta.hostId, "clawix");
   assert.equal(registry.activeHostId, "clawix");
+});
+
+test("appState host contract validates transactional operations, receipts and projections", () => {
+  const request = clawAppStateTransactionRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: "req-appstate-1",
+    hostId: "clawix",
+    operations: [
+      { kind: "project.upsert", id: "proj-1", name: "Project", path: "/tmp/project" },
+      { kind: "pin.upsert", threadId: "thread-1", sortOrder: 1000 },
+    ],
+  });
+  assert.equal(request.operations.length, 2);
+  assert.equal(request.operations[0]?.kind, "project.upsert");
+
+  const receipt = clawAppStateSyncReceiptSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    receiptId: "receipt-req-appstate-1",
+    requestId: "req-appstate-1",
+    hostId: "clawix",
+    status: "applied",
+    operationCount: 2,
+    appliedAt: "2026-05-20T10:00:00.000Z",
+  });
+  assert.equal(receipt.error, null);
+
+  const projection = clawAppStateProjectionSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    projectedAt: "2026-05-20T10:00:00.000Z",
+    projects: [{ id: "proj-1" }],
+    pinnedThreads: [{ threadId: "thread-1" }],
+    titles: [],
+    archives: [],
+    sidebar: [],
+    terminalTabs: [],
+    receipts: [receipt],
+  });
+  assert.equal(projection.receipts[0]?.requestId, "req-appstate-1");
 });
 
 test("domain ownership matrix covers every v1 host domain", () => {
