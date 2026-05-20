@@ -728,6 +728,60 @@ const surfaceRouteGraphSource: ClawPersistentSurfaceSource = { file: "packages/c
 
 const contractDefaults = { storageClass: "external" as const, canonicality: "canonical" as const, privacy: "public" as const, lifecycle: "durable" as const, source: registrySource };
 
+export interface ClawStableContractCatalogEntry<TValue extends string | number = string | number> {
+  readonly id: string;
+  readonly kind: ClawPersistentSurfaceKind;
+  readonly name: string;
+  readonly value: TValue;
+  readonly node: ClawPersistentSurfaceNode;
+  readonly key?: string;
+  readonly route?: string;
+  readonly method?: string;
+  readonly port?: number;
+}
+
+export type ClawStableContractCatalog<TEntries extends Record<string, ClawStableContractCatalogEntry>> = Readonly<TEntries> & {
+  readonly nodes: readonly ClawPersistentSurfaceNode[];
+  readonly values: Readonly<{ [TKey in keyof TEntries]: TEntries[TKey]["value"] }>;
+};
+
+export function clawStableContractCatalogEntry<TValue extends string | number>(
+  input: Omit<SurfaceBuilderInput<ClawPersistentSurfaceKind>, "value"> & { kind: ClawPersistentSurfaceKind; value: TValue },
+): ClawStableContractCatalogEntry<TValue> {
+  const nodeInput = { ...input, value: String(input.value) };
+  const node = input.kind === "envVar" || input.kind === "envOverride"
+    ? clawPersistentSurface.envVar(nodeInput as SurfaceBuilderInput<"envVar" | "envOverride">)
+    : clawPersistentSurface.contract(nodeInput as Parameters<typeof clawPersistentSurface.contract>[0]);
+
+  return Object.freeze({
+    id: node.id,
+    kind: node.kind,
+    name: node.name,
+    value: input.value,
+    node,
+    ...(node.key ? { key: node.key } : {}),
+    ...(node.route ? { route: node.route } : {}),
+    ...(node.method ? { method: node.method } : {}),
+    ...(typeof input.value === "number" ? { port: input.value } : {}),
+  });
+}
+
+export function defineClawStableContractCatalog<TEntries extends Record<string, ClawStableContractCatalogEntry>>(
+  entries: TEntries,
+): ClawStableContractCatalog<TEntries> {
+  const nodes = Object.freeze(Object.values(entries).map((entry) => entry.node));
+  const values = Object.freeze(Object.fromEntries(Object.entries(entries).map(([key, entry]) => [key, entry.value]))) as {
+    readonly [TKey in keyof TEntries]: TEntries[TKey]["value"];
+  };
+  return Object.freeze({ ...entries, nodes, values }) as ClawStableContractCatalog<TEntries>;
+}
+
+function defineStableCatalogFromEntries(
+  entries: Iterable<readonly [string, ClawStableContractCatalogEntry]>,
+): ClawStableContractCatalog<Record<string, ClawStableContractCatalogEntry>> {
+  return defineClawStableContractCatalog(Object.fromEntries(entries));
+}
+
 const cliCommands = clawCliCommandRegistry.commands.map((entry) => entry.name);
 
 const agentsV1RouteContracts = [
@@ -980,6 +1034,270 @@ const stableIdNamespaces = [
   ["claw.id.record", "recordId", "Database record identifiers"],
   ["claw.id.resource", "resourceId", "Opaque registered resource identifiers"],
 ] as const;
+
+const stableEventTopics: ReadonlyArray<{
+  id: string;
+  value: string;
+  name: string;
+  direction: "generated" | "inbound";
+  notes?: string;
+}> = [
+  ..."workspace.initialized compat.refreshed telegram.webhook_configured models.default-set auth.login-started".split(" ").map((event) => ({
+    id: `claw.event.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+  })),
+  ...Object.values(clawDatabaseRecordEvents).map((event) => ({
+    id: `claw.event.database.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Database realtime event topic emitted for persistent record changes.",
+  })),
+  ...Object.values(clawTemporalEvents).map((event) => ({
+    id: `claw.event.time.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Temporal runtime event emitted for due items and notification routing.",
+  })),
+  ...Object.values(clawSessionEvents).map((event) => ({
+    id: `claw.event.sessions.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Sessions service event emitted over the registered session event stream.",
+  })),
+  ...Object.values(clawChannelEvents).map((event) => ({
+    id: `claw.event.channels.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Channel runtime event emitted by listener, transport, and processor surfaces.",
+  })),
+  ...Object.values(clawWorkspaceAuditEvents).map((event) => ({
+    id: `claw.event.workspaceAudit.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Workspace audit event persisted in the canonical workspace audit log.",
+  })),
+  ...Object.values(clawNotifyEventTypes).map((event) => ({
+    id: `claw.event.notify.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "inbound" as const,
+    notes: "Notify event type accepted by source apps and dashboard actions.",
+  })),
+] as const;
+
+function cliFlagCatalogKey(flag: string): string {
+  return flag.slice(2).replace(/-([a-z0-9])/g, (_, char: string) => char.toUpperCase());
+}
+
+export const clawPublicApiRouteContractCatalog = defineStableCatalogFromEntries(corePublicRoutes.map(([id, method, route, name]) => [id, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "apiRoute",
+  name,
+  route,
+  method,
+  value: `${method} ${route}`,
+  parentId: "claw.contracts.api",
+  direction: "inbound",
+})]));
+
+export const clawPrivateApiRouteContractCatalog = defineStableCatalogFromEntries(corePrivateRoutes.map(([id, method, route, name]) => [id, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "privateApiRoute",
+  name,
+  route,
+  method,
+  value: `${method} ${route}`,
+  parentId: "claw.contracts.api",
+  direction: "inbound",
+  notes: "Private app/host UI route. It is still a stable owned surface and must be registered before V1.",
+})]));
+
+export const clawEventTopicContractCatalog = defineStableCatalogFromEntries(stableEventTopics.map((event) => [event.id, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id: event.id,
+  kind: "eventTopic",
+  name: event.name,
+  value: event.value,
+  parentId: "claw.contracts.events",
+  surfaceClass: "event",
+  direction: event.direction,
+  ...("notes" in event && event.notes ? { notes: event.notes } : {}),
+})]));
+
+export const clawJsonFieldContractCatalog = defineStableCatalogFromEntries(stableJsonFields.map(([id, field, name]) => [field, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "jsonField",
+  name,
+  key: field,
+  fieldPath: field,
+  value: field,
+  parentId: "claw.contracts.schemas",
+  surfaceClass: "schema",
+  direction: "bidirectional",
+})]));
+
+export const clawErrorCodeContractCatalog = defineStableCatalogFromEntries(stableErrorCodes.map(([id, code, name]) => [code, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "errorCode",
+  name,
+  value: code,
+  parentId: "claw.contracts.schemas",
+  surfaceClass: "schema",
+  direction: "outbound",
+})]));
+
+export const clawIdNamespaceContractCatalog = defineStableCatalogFromEntries(stableIdNamespaces.map(([id, field, name]) => [field, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "idNamespace",
+  name,
+  key: field,
+  value: field,
+  parentId: "claw.contracts.ids",
+  surfaceClass: "id",
+  direction: "bidirectional",
+})]));
+
+export const clawEnvVarContractCatalog = defineStableCatalogFromEntries(stableEnvVars.map(([id, value, name]) => [value, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "envVar",
+  name,
+  value,
+  key: value,
+  parentId: "claw.contracts.config",
+  direction: "inbound",
+})]));
+
+export const clawPackageNameContractCatalog = defineStableCatalogFromEntries(stablePackageNames.map(([id, value, name]) => [id, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "packageName",
+  name,
+  value,
+  parentId: "claw.contracts.packages",
+  surfaceClass: "package",
+  direction: "outbound",
+})]));
+
+export const clawPackageBinContractCatalog = defineStableCatalogFromEntries(stablePackageBins.map(([id, value, name]) => [value, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "packageBin",
+  name,
+  value,
+  parentId: "claw.contracts.packages",
+  surfaceClass: "package",
+  direction: "outbound",
+})]));
+
+export const clawFileFormatContractCatalog = defineStableCatalogFromEntries(stableFileFormats.map(([id, value, name]) => [value, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "fileFormat",
+  name,
+  value,
+  parentId: "claw.contracts.formats",
+  surfaceClass: "format",
+  direction: "bidirectional",
+})]));
+
+export const clawNativeIdentityContractCatalog = defineStableCatalogFromEntries(stableNativeIdentities.map(([id, value, name]) => [id, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id,
+  kind: "nativeIdentity",
+  name,
+  value,
+  parentId: "claw.contracts.native",
+  surfaceClass: "native",
+  direction: "bidirectional",
+  notes: "Public repo value is a placeholder or public service name. Real signing identities, Team IDs, and release credentials stay outside the public repository.",
+})]));
+
+export const clawDeepLinkContractCatalog = defineStableCatalogFromEntries(Object.entries(clawDeepLinkSchemes).map(([name, scheme]) => [name, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id: `claw.deeplink.scheme.${name}`,
+  kind: "deepLink",
+  name: `${scheme}://`,
+  value: `${scheme}://`,
+  parentId: "claw.contracts.api",
+  surfaceClass: "config",
+  direction: "inbound",
+})]));
+
+export const clawHostnameContractCatalog = defineStableCatalogFromEntries(Object.entries(clawLocalHostnames).map(([name, hostname]) => [name, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id: `claw.hostname.${name}`,
+  kind: "hostname",
+  name: hostname,
+  value: hostname,
+  parentId: "claw.contracts.api",
+  surfaceClass: "config",
+  direction: "inbound",
+})]));
+
+export const clawPortContractCatalog = defineStableCatalogFromEntries(Object.entries({ ...clawCorePorts, ...clawAppPorts, clawixBridge: clawixBridgePort }).map(([name, port]) => [name, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id: `claw.port.${name}`,
+  kind: "port",
+  name,
+  value: port,
+  parentId: "claw.contracts.api",
+  surfaceClass: "config",
+  direction: "inbound",
+})]));
+
+export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliCommands.map((command) => [command, clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id: `claw.cli.command.${command}`,
+  kind: "cliCommand",
+  name: command,
+  value: command,
+  parentId: "claw.contracts.cli",
+  surfaceClass: "cli",
+  direction: "inbound",
+})]));
+
+export const clawCliFlagContractCatalog = defineStableCatalogFromEntries(["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => [cliFlagCatalogKey(flag), clawStableContractCatalogEntry({
+  ...contractDefaults,
+  id: `claw.cli.flag.${flag.slice(2)}`,
+  kind: "cliFlag",
+  name: flag,
+  value: flag,
+  parentId: "claw.contracts.cli",
+  surfaceClass: "cli",
+  direction: "inbound",
+})]));
+
+export const clawStableContractCatalogs = Object.freeze({
+  publicApiRoutes: clawPublicApiRouteContractCatalog,
+  privateApiRoutes: clawPrivateApiRouteContractCatalog,
+  eventTopics: clawEventTopicContractCatalog,
+  jsonFields: clawJsonFieldContractCatalog,
+  errorCodes: clawErrorCodeContractCatalog,
+  idNamespaces: clawIdNamespaceContractCatalog,
+  envVars: clawEnvVarContractCatalog,
+  packageNames: clawPackageNameContractCatalog,
+  packageBins: clawPackageBinContractCatalog,
+  fileFormats: clawFileFormatContractCatalog,
+  nativeIdentities: clawNativeIdentityContractCatalog,
+  deepLinks: clawDeepLinkContractCatalog,
+  hostnames: clawHostnameContractCatalog,
+  ports: clawPortContractCatalog,
+  cliCommands: clawCliCommandContractCatalog,
+  cliFlags: clawCliFlagContractCatalog,
+});
 
 const stableSurfaceRoots = [
   ["claw.contracts.api", "API routes", "api", ["serviceApi"]],
@@ -2109,29 +2427,8 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       notes: node.notes,
     })),
-    ...corePublicRoutes.map(([id, method, route, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "apiRoute",
-      name,
-      route,
-      method,
-      value: `${method} ${route}`,
-      parentId: "claw.contracts.api",
-      direction: "inbound",
-    })),
-    ...corePrivateRoutes.map(([id, method, route, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "privateApiRoute",
-      name,
-      route,
-      method,
-      value: `${method} ${route}`,
-      parentId: "claw.contracts.api",
-      direction: "inbound",
-      notes: "Private app/host UI route. It is still a stable owned surface and must be registered before V1.",
-    })),
+    ...clawPublicApiRouteContractCatalog.nodes,
+    ...clawPrivateApiRouteContractCatalog.nodes,
     clawPersistentSurface.contract({
       ...contractDefaults,
       id: "claw.protocol.hostCommand.v1",
@@ -2167,82 +2464,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       surfaceClass: "protocol",
       direction: "bidirectional",
     })),
-    ...["workspace.initialized", "compat.refreshed", "telegram.webhook_configured", "models.default-set", "auth.login-started"].map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "generated",
-    })),
-    ...Object.values(clawDatabaseRecordEvents).map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.database.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "generated",
-      notes: "Database realtime event topic emitted for persistent record changes.",
-    })),
-    ...Object.values(clawTemporalEvents).map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.time.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "generated",
-      notes: "Temporal runtime event emitted for due items and notification routing.",
-    })),
-    ...Object.values(clawSessionEvents).map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.sessions.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "generated",
-      notes: "Sessions service event emitted over the registered session event stream.",
-    })),
-    ...Object.values(clawChannelEvents).map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.channels.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "generated",
-      notes: "Channel runtime event emitted by listener, transport, and processor surfaces.",
-    })),
-    ...Object.values(clawWorkspaceAuditEvents).map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.workspaceAudit.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "generated",
-      notes: "Workspace audit event persisted in the canonical workspace audit log.",
-    })),
-    ...Object.values(clawNotifyEventTypes).map((event) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.event.notify.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
-      kind: "eventTopic",
-      name: event,
-      value: event,
-      parentId: "claw.contracts.events",
-      surfaceClass: "event",
-      direction: "inbound",
-      notes: "Notify event type accepted by source apps and dashboard actions.",
-    })),
+    ...clawEventTopicContractCatalog.nodes,
     ...Object.entries({ ...clawExternalWebhookEventSamples, ...clawCodexExternalEventSamples }).map(([name, event]) => clawPersistentSurface.contract({
       ...contractDefaults,
       id: `claw.external.mapping.event.${name}`,
@@ -2256,129 +2478,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       direction: "inbound",
       notes: "Sample external event value used by fixtures; Claw registers the dependency/mapping, not the provider schema.",
     })),
-    ...stableJsonFields.map(([id, field, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "jsonField",
-      name,
-      key: field,
-      fieldPath: field,
-      parentId: "claw.contracts.schemas",
-      surfaceClass: "schema",
-      direction: "bidirectional",
-    })),
-    ...stableErrorCodes.map(([id, code, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "errorCode",
-      name,
-      value: code,
-      parentId: "claw.contracts.schemas",
-      surfaceClass: "schema",
-      direction: "outbound",
-    })),
-    ...stableIdNamespaces.map(([id, field, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "idNamespace",
-      name,
-      key: field,
-      value: field,
-      parentId: "claw.contracts.ids",
-      surfaceClass: "id",
-      direction: "bidirectional",
-    })),
-    ...stableEnvVars.map(([id, value, name]) => clawPersistentSurface.envVar({
-      ...contractDefaults,
-      id,
-      kind: "envVar",
-      name,
-      value,
-      key: value,
-      parentId: "claw.contracts.config",
-      direction: "inbound",
-    })),
-    ...stablePackageNames.map(([id, value, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "packageName",
-      name,
-      value,
-      parentId: "claw.contracts.packages",
-      surfaceClass: "package",
-      direction: "outbound",
-    })),
-    ...stablePackageBins.map(([id, value, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "packageBin",
-      name,
-      value,
-      parentId: "claw.contracts.packages",
-      surfaceClass: "package",
-      direction: "outbound",
-    })),
-    ...stableFileFormats.map(([id, value, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "fileFormat",
-      name,
-      value,
-      parentId: "claw.contracts.formats",
-      surfaceClass: "format",
-      direction: "bidirectional",
-    })),
-    ...stableNativeIdentities.map(([id, value, name]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id,
-      kind: "nativeIdentity",
-      name,
-      value,
-      parentId: "claw.contracts.native",
-      surfaceClass: "native",
-      direction: "bidirectional",
-      notes: "Public repo value is a placeholder or public service name. Real signing identities, Team IDs, and release credentials stay outside the public repository.",
-    })),
-    ...Object.entries(clawDeepLinkSchemes).map(([name, scheme]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.deeplink.scheme.${name}`,
-      kind: "deepLink",
-      name: `${scheme}://`,
-      value: `${scheme}://`,
-      parentId: "claw.contracts.api",
-      surfaceClass: "config",
-      direction: "inbound",
-    })),
-    ...Object.entries(clawLocalHostnames).map(([name, hostname]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.hostname.${name}`,
-      kind: "hostname",
-      name: hostname,
-      value: hostname,
-      parentId: "claw.contracts.api",
-      surfaceClass: "config",
-      direction: "inbound",
-    })),
-    ...Object.entries({ ...clawCorePorts, ...clawAppPorts, clawixBridge: clawixBridgePort }).map(([name, port]) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.port.${name}`,
-      kind: "port",
-      name,
-      value: String(port),
-      parentId: "claw.contracts.api",
-      surfaceClass: "config",
-      direction: "inbound",
-    })),
-    ...cliCommands.map((command) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.cli.command.${command}`,
-      kind: "cliCommand",
-      name: command,
-      value: command,
-      parentId: "claw.contracts.cli",
-      surfaceClass: "cli",
-      direction: "inbound",
-    })),
+    ...clawJsonFieldContractCatalog.nodes,
+    ...clawErrorCodeContractCatalog.nodes,
+    ...clawIdNamespaceContractCatalog.nodes,
+    ...clawEnvVarContractCatalog.nodes,
+    ...clawPackageNameContractCatalog.nodes,
+    ...clawPackageBinContractCatalog.nodes,
+    ...clawFileFormatContractCatalog.nodes,
+    ...clawNativeIdentityContractCatalog.nodes,
+    ...clawDeepLinkContractCatalog.nodes,
+    ...clawHostnameContractCatalog.nodes,
+    ...clawPortContractCatalog.nodes,
+    ...clawCliCommandContractCatalog.nodes,
     ...agentsV1RouteContracts.map(([id, name]) => clawPersistentSurface.contract({
       ...contractDefaults,
       id,
@@ -2434,16 +2545,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       direction: "bidirectional",
       notes: "Stable record shape for public surface evolution, migrations, adapters, rescue policy, redacted receipts, and repair planning.",
     }),
-    ...["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => clawPersistentSurface.contract({
-      ...contractDefaults,
-      id: `claw.cli.flag.${flag.slice(2)}`,
-      kind: "cliFlag",
-      name: flag,
-      value: flag,
-      parentId: "claw.contracts.cli",
-      surfaceClass: "cli",
-      direction: "inbound",
-    })),
+    ...clawCliFlagContractCatalog.nodes,
     ...["openai", "anthropic", "stripe", "telegram", "slack", "google", "microsoft"].map((provider) => clawPersistentSurface.contract({
       ...contractDefaults,
       id: `claw.external.${provider}`,

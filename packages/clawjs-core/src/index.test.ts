@@ -67,10 +67,15 @@ import {
   clawExportExtensions,
   clawGlobalHomeLayout,
   clawPersistentSurfaceRegistry,
+  clawCliFlagContractCatalog,
+  clawEventTopicContractCatalog,
+  clawJsonFieldContractCatalog,
   clawLocalHostnames,
+  clawPortContractCatalog,
   clawPublicApiPrefix,
   clawServiceSocketPath,
   clawServiceWindowsPipe,
+  clawStableContractCatalogs,
   clawSurfaceRegistryVersion,
   clawWorkspaceLayout,
   clawixBridgePort,
@@ -934,6 +939,28 @@ test("persistent surface registry exposes framework and host storage nodes", () 
   assert.deepEqual(remoteApiMethodRoutes, expectedRemoteRegistryMethodRoutes);
 });
 
+test("stable contract catalogs feed the persistent surface registry", () => {
+  const registryNodeIds = new Set(clawPersistentSurfaceRegistry.nodes.map((node) => node.id));
+  const catalogNodeIds = Object.values(clawStableContractCatalogs).flatMap((catalog) => catalog.nodes.map((node) => node.id));
+
+  for (const nodeId of catalogNodeIds) {
+    assert.equal(registryNodeIds.has(nodeId), true, `${nodeId} must be rendered from the typed stable contract catalogs`);
+  }
+
+  assert.equal(clawPortContractCatalog.runtime.value, clawCorePorts.runtime);
+  assert.equal(clawPortContractCatalog.runtime.port, clawCorePorts.runtime);
+  assert.equal(findClawPersistentSurfaceNode("claw.port.runtime")?.value, String(clawCorePorts.runtime));
+
+  assert.equal(clawJsonFieldContractCatalog.schemaVersion.value, "schemaVersion");
+  assert.equal(findClawPersistentSurfaceNode("claw.schema.common.field.schemaVersion")?.fieldPath, "schemaVersion");
+
+  assert.equal(clawCliFlagContractCatalog.json.value, "--json");
+  assert.equal(findClawPersistentSurfaceNode("claw.cli.flag.json")?.value, "--json");
+
+  assert.equal(clawEventTopicContractCatalog["claw.event.sessions.message.appended"]?.value, "message.appended");
+  assert.equal(findClawPersistentSurfaceNode("claw.event.sessions.message.appended")?.value, "message.appended");
+});
+
 test("surface graph registers critical chat routes and Relay", () => {
   for (const nodeId of [
     "claw.cli.public",
@@ -972,6 +999,7 @@ test("surface graph registers critical chat routes and Relay", () => {
     "chat.companionBridge",
     "chat.localDesktop",
     "chat.remoteRelay",
+    "clawix.menuBarSystemIndicators",
     "cli.commandIntentResolution",
     "gateway.headlessAgentHost",
     "gateway.multiTenantAgentService",
@@ -991,6 +1019,8 @@ test("surface graph registers critical chat routes and Relay", () => {
     "sync.skills",
     "sync.sqliteResources",
     "sync.workspaceState",
+    "system.telemetryAgentContext",
+    "system.telemetrySignedHostControl",
   ]);
   assert.equal(findClawSurfaceRoute("chat.remoteRelay")?.steps.some((step) => step.toId === "claw.relay"), true);
   assert.equal(findClawSurfaceRoute("cli.commandIntentResolution")?.steps.some((step) => step.toId === "claw.workspace.command_intents.ledger"), true);

@@ -1,11 +1,125 @@
 ---
 title: Agent Rules
-description: Compact ClawJS operating references for prompt-injected agent rules.
+description: Compact ClawJS operating references for agents.
 ---
 
 # Agent Rules
 
-These pages back the builtin ClawJS rules pack. Rules stay short in prompts; use these references only when more detail is needed.
+These pages keep always-loaded instructions short. `AGENTS.md` and `CLAUDE.md`
+route here; this page routes to the durable canon, skills, and validation
+lanes. Do not duplicate long ADR rationale here.
+
+## Canonical Routes
+
+- Decision routing: [Decision Map](../decision-map.md).
+- Framework/host boundary: [Host Ownership](../host-ownership.md) and
+  [ADR 0001](../adr/0001-claw-framework-host-boundary.md).
+- Storage and data placement: [Data Storage Boundary](../data-storage-boundary.md).
+- Naming and source shape: [Naming Style Guide](../naming-style-guide.md),
+  [Agentic Naming Guide](../agentic-naming-guide.md),
+  [Vocabulary](../vocabulary.md), [ADR 0001](../adr/0001-naming-and-stability-surfaces.md),
+  and [ADR 0013](../adr/0013-agentic-naming-and-code-structure.md).
+- Source file boundaries: [ADR 0003](../adr/0003-source-file-boundaries.md).
+- Built-in collections: [Canonical Data Catalog](../canonical-data-catalog.md)
+  and [ADR 0005](../adr/0005-canonical-data-catalog.md).
+- Testing and integration QA: [ADR 0002](../adr/0002-testing-architecture.md),
+  [ADR 0006](../adr/0006-integration-qa-lab.md), and `tests/e2e/README.md`.
+- Stable surfaces: [ADR 0004](../adr/0004-persistent-surface-registry-and-inspection.md),
+  [ADR 0009](../adr/0009-dual-human-programmatic-surfaces.md), and
+  [ADR 0012](../adr/0012-surface-route-graph.md).
+- Remote access: [Relay](../relay.md), [Interface Matrix](../interface-matrix.md),
+  and [ADR 0022](../adr/0022-remote-gateway-sync-redesign.md).
+- CLI and agent discovery: [ADR 0007](../adr/0007-cli-agent-interface.md),
+  [ADR 0010](../adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md),
+  and [ADR 0017](../adr/0017-discoverability-and-meta-code-routing.md).
+- Progressive install: [ADR 0031](../adr/0031-progressive-modularity-and-zero-surprise-install.md).
+- Open trust: [ADR 0033](../adr/0033-open-standard-official-trust.md),
+  [Official Trust And Compatibility](../official-trust-and-compatibility.md),
+  `FORKS.md`, `TRADEMARKS.md`, and `NOTICE`.
+- Security and release: `SECURITY.md`, `RELEASING.md`, and
+  [Git Workflow](../git-workflow.md).
+- OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`.
+
+## Skill Routes
+
+Use `skills/<id>/SKILL.md` instead of loading long procedures into prompts.
+
+- Constitution and ADR alignment: `constitution-drift-audit`,
+  `architecture-drift-repair`, `adr-to-guardrail`, `decision-map-maintenance`.
+- Stable surfaces: `naming-surface-audit`, `surface-registry-alignment`,
+  `surface-route-work`, `cli-agent-surface-work`,
+  `source-file-boundary-refactor`, `progressive-modularity-review`.
+- Data and storage: `canonical-catalog-expansion`,
+  `data-storage-boundary-review`.
+- Host, security, and validation: `host-boundary-review`,
+  `mac-control-plane-work`, `secrets-boundary-review`, `integration-qa-lab`,
+  `host-dependent-validation`, `performance-investigation`.
+- Collaboration hygiene: `public-hygiene-review`, `docs-alignment-update`,
+  `code-review-risk`, `commit-hygiene-public`, `code-hygiene-audit`,
+  `code-hygiene-cleanup`.
+- Design artifacts: `style-extract`, `style-apply`, `template-render`,
+  `brand-guidelines`, `theme-factory`, `canvas-design`.
+
+Run `node ./scripts/skills-check.mjs` after adding or changing skills.
+
+## Invariants
+
+- `claw` is the single public CLI. Do not introduce new public `clawjs`,
+  `clawix`, or `commander` command surfaces.
+- `@clawjs/claw` is the official SDK; `@clawjs/node` is compatibility.
+- MIT-licensed forks, commercial use, source builds, and compatible
+  implementations are legitimate; `official` is reserved for upstream
+  artifacts and channels, while truthful `compatible` claims must not imply
+  endorsement.
+- Framework global data belongs under `~/.claw/`; workspace framework data
+  belongs under `.claw/`; `.clawjs/` is a retired pre-public path.
+- Governance uses principals, entities, scopes, stewards, grants, authority
+  edges, and restrictions. Do not add generic `ownerId`, `ownerKind`, or
+  `tenantId` authority fields.
+- Workspaces are isolated contexts. Projects are collaborable scopes with
+  stable ids and mutable folder locators. Full `.claw/` directories belong to
+  workspace roots; project primary folders carry `claw.project.json`, managed
+  `AGENTS.md`, and `CLAUDE.md` shims.
+- User-facing structured framework records belong in `core.sqlite`; sidecars
+  require explicit technical reasons.
+- Plaintext secrets never live in the main database, logs, fixtures, public
+  docs, screenshots, or generated artifacts.
+- Sensitive native permissions, approvals, grants, audit, LaunchAgents, Mach
+  services, and native execution belong to the active signed host, not Node.
+- Stable capabilities are complete only when their human and programmatic
+  surfaces are registered or their gaps are explicitly classified.
+- Runtime-critical work starts from `claw inspect show|neighbors|routes`.
+- Installing the base `claw` CLI must be zero-surprise: no implicit host
+  startup, OS permission prompt, app launch, model/browser download, provider
+  network call, or niche domain activation.
+
+## Validation Safety
+
+- Hermetic tests are required but not sufficient for host-dependent bugs.
+- Do not send real prompts, touch production data, call paid APIs, mutate real
+  services, or reveal secrets without explicit approval in the current thread.
+- Existing app conversations are read-only unless an approved validation
+  session created them for that exact run.
+- Prefer fixtures, dry-run paths, interceptors, local backends, and mocks.
+- Mark missing physical/provider prerequisites as `EXTERNAL PENDING` and keep
+  them separate from defects.
+- Performance work starts with reproduction and instrumentation before
+  optimization.
+
+## Public Hygiene And Commits
+
+- Public repositories must not contain maintainer-private paths, signing
+  identities, bundle IDs, Team IDs, SKUs, release credentials, local launchers,
+  private automation, private Q&A indexes, logs, caches, or screenshots.
+- Run `npm run privacy:check` and `npm run test:docs` before publication or
+  broad review.
+- Use Conventional Commits and keep commits scoped by intention.
+- Commit `.changeset/*.md` with the behavior it documents when published
+  package surface changes.
+- Push, publish, upload, tagging, and release actions require explicit
+  approval.
+
+## More Specific Rule Pages
 
 - [Workspace loop](./workspace-loop.md): tasks, notes, search, planning records.
 - [Commands](./commands.md): CLI and SDK operating shortcuts.

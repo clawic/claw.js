@@ -229,6 +229,59 @@ function swiftRegisteredKeyFindings(filePath, body, registryBody) {
   return findings;
 }
 
+function registryCatalogFindings(registryBody) {
+  if (!registryBody) return [];
+  const requiredCatalogs = [
+    "clawPublicApiRouteContractCatalog",
+    "clawPrivateApiRouteContractCatalog",
+    "clawEventTopicContractCatalog",
+    "clawJsonFieldContractCatalog",
+    "clawErrorCodeContractCatalog",
+    "clawIdNamespaceContractCatalog",
+    "clawEnvVarContractCatalog",
+    "clawPackageNameContractCatalog",
+    "clawPackageBinContractCatalog",
+    "clawFileFormatContractCatalog",
+    "clawNativeIdentityContractCatalog",
+    "clawDeepLinkContractCatalog",
+    "clawHostnameContractCatalog",
+    "clawPortContractCatalog",
+    "clawCliCommandContractCatalog",
+    "clawCliFlagContractCatalog",
+  ];
+  const findings = [];
+
+  for (const catalog of requiredCatalogs) {
+    if (!registryBody.includes(`export const ${catalog} = defineStableCatalogFromEntries`)) {
+      findings.push({
+        file: "packages/clawjs-core/src/surface-registry.ts",
+        line: 1,
+        rule: "ts.registry-contract-catalog",
+        message: `${catalog} must be declared from the typed stable contract catalog builder`,
+      });
+    }
+    if (!registryBody.includes(`...${catalog}.nodes`)) {
+      findings.push({
+        file: "packages/clawjs-core/src/surface-registry.ts",
+        line: 1,
+        rule: "ts.registry-contract-catalog",
+        message: `${catalog} nodes must be consumed by the persistent surface registry`,
+      });
+    }
+  }
+
+  if (!registryBody.includes("export const clawStableContractCatalogs = Object.freeze({")) {
+    findings.push({
+      file: "packages/clawjs-core/src/surface-registry.ts",
+      line: 1,
+      rule: "ts.registry-contract-catalog",
+      message: "stable contract catalogs must be exposed through a frozen aggregate",
+    });
+  }
+
+  return findings;
+}
+
 function scanFile(filePath, registryBody = "") {
   const ext = path.extname(filePath);
   const body = fs.readFileSync(filePath, "utf8");
@@ -314,6 +367,11 @@ function runSelfTest() {
   if (findings.some((finding) => finding.file.endsWith("PersistentSurfaceRegistry.swift"))) {
     throw new Error("self-test incorrectly flagged builder registry file");
   }
+  const registryPath = path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts");
+  const registryFindings = registryCatalogFindings(fs.readFileSync(registryPath, "utf8"));
+  if (registryFindings.length) {
+    throw new Error(`self-test found missing registry catalog source: ${registryFindings.map((finding) => finding.message).join("; ")}`);
+  }
   const summary = summarizeFindings(findings);
   if (summary.total < 9 || summary.byRule["swift.database-queue-path"] !== 1) {
     throw new Error("self-test summary did not count expected findings");
@@ -358,7 +416,10 @@ const registryBody = [...allFiles, ...canonicalRegistryFiles]
   .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift") || filePath.endsWith("surface-registry.ts"))
   .map((filePath) => fs.readFileSync(filePath, "utf8"))
   .join("\n");
-const findings = allFiles.flatMap((filePath) => scanFile(filePath, registryBody));
+const findings = [
+  ...allFiles.flatMap((filePath) => scanFile(filePath, registryBody)),
+  ...registryCatalogFindings(registryBody),
+];
 if (wantsJson) {
   console.log(JSON.stringify({ ok: findings.length === 0, summary: summarizeFindings(findings), findings }, null, 2));
   process.exit(wantsReport || findings.length === 0 ? 0 : 1);
