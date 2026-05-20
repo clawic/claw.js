@@ -71,6 +71,8 @@ function assertCompletionAudit() {
     "three interrupted unanswered ids",
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
+    "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
+    "no `pending` status, concrete refs for available surfaces",
     "disabled-by-default rule suggestions",
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
