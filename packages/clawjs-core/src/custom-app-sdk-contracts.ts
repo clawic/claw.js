@@ -20,6 +20,8 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
   systemTelemetrySnapshot: "claw.system.telemetry.snapshot.v1",
   systemTelemetryHistoryRequest: "claw.system.telemetry.history.request.v1",
   systemTelemetryHistory: "claw.system.telemetry.history.v1",
+  jobsList: "claw.jobs.list.v1",
+  jobsListResult: "claw.jobs.listResult.v1",
   actionsInvoke: "claw.actions.invoke.v1",
   actionsReceipt: "claw.actions.receipt.v1",
   secretsBroker: "claw.secrets.broker.v1",
@@ -256,6 +258,30 @@ export const customAppSDKSystemTelemetryHistorySchema = z.object({
   redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
 }).strict();
 
+export const customAppSDKJobsListSchema = z.object({
+  kind: z.string().min(1).optional(),
+  status: z.string().min(1).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+}).strict();
+
+export const customAppSDKJobRecordSchema = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  status: z.string().min(1),
+  startedAt: z.union([z.string().min(1), z.number()]).nullable(),
+  endedAt: z.union([z.string().min(1), z.number()]).nullable().optional(),
+  createdAt: z.union([z.string().min(1), z.number()]).nullable().optional(),
+  source: z.string().min(1),
+  metadata: z.record(z.unknown()).default({}),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+export const customAppSDKJobsListResultSchema = z.object({
+  items: z.array(customAppSDKJobRecordSchema),
+  source: z.literal("jobs.list"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
 const stringRecordSchema = z.record(z.string().min(1));
 
 export const customAppSDKActionsInvokeSchema = z.object({
@@ -349,9 +375,9 @@ export const customAppSDKIoTActionResultSchema = z.object({
 }).passthrough();
 
 export const customAppSDKRequestPartialSchema = z.object({
-  source: z.enum(["search.query", "db.query", "resources.list", "resources.read", "system.telemetry.snapshot", "system.telemetry.history"]),
+  source: z.enum(["search.query", "db.query", "resources.list", "resources.read", "system.telemetry.snapshot", "system.telemetry.history", "jobs.list"]),
   collection: z.string().min(1).optional(),
-  items: z.array(z.union([customAppSDKBridgeRecordSchema, resourceRecordSchema])).optional(),
+  items: z.array(z.union([customAppSDKBridgeRecordSchema, resourceRecordSchema, customAppSDKJobRecordSchema])).optional(),
   resource: resourceRecordSchema.optional(),
   content: z.string().optional(),
   truncated: z.boolean().optional(),
@@ -374,6 +400,8 @@ export const customAppSDKSchemaRegistry = {
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot]: customAppSDKSystemTelemetrySnapshotSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistoryRequest]: customAppSDKSystemTelemetryHistoryRequestSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory]: customAppSDKSystemTelemetryHistorySchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsList]: customAppSDKJobsListSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsListResult]: customAppSDKJobsListResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.actionsInvoke]: customAppSDKActionsInvokeSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.actionsReceipt]: customAppSDKActionsReceiptSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.secretsBroker]: customAppSDKSecretsBrokerSchema,

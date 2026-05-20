@@ -81,6 +81,9 @@ for user-authored custom UIs that do not block the main app shell.
 - ClawJS and sibling Clawix expose `resources.list` and `resources.read` as
   separate local-wide registered-resource capabilities with shared schema refs
   and Web/Swift host bridge tests.
+- ClawJS and sibling Clawix expose `jobs.list` through
+  `window.clawix.jobs.list()` as a local-wide jobs/run listing contract with
+  shared redaction policy and no start/cancel mutation.
 - Sibling Clawix exposes `mac.action.plan` through
   `window.clawix.mac.planAction()` as an approval-gated, dry-run-only host
   bridge call; signed-host native execution remains out of scope until approved

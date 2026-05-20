@@ -27,6 +27,7 @@ test("SDK-first capability catalog exposes baseline custom-app contracts", () =>
   assert.ok(ids.includes("resources.read"));
   assert.ok(ids.includes("system.telemetry.snapshot"));
   assert.ok(ids.includes("system.telemetry.history"));
+  assert.ok(ids.includes("jobs.list"));
   assert.ok(ids.includes("actions.invoke"));
   assert.ok(ids.includes("secrets.broker"));
   assert.ok(ids.includes("mac.action.plan"));
@@ -60,6 +61,7 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.ok(riskMap.ordinaryAccess.includes("resources.read"));
   assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.snapshot"));
   assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.history"));
+  assert.ok(riskMap.ordinaryAccess.includes("jobs.list"));
   assert.ok(riskMap.approvalRequired.includes("actions.invoke"));
   assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
   assert.ok(riskMap.approvalRequired.includes("mac.action.plan"));
@@ -141,6 +143,8 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsList));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsListResult));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesList));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult));
   assert.ok(payload.schemaRefs.includes("claw.mac.actionRequest.v1"));
@@ -149,6 +153,7 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.capabilities.some((capability) => capability.id === "resources.read"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.snapshot"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.history"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.list"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
   assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
@@ -251,6 +256,26 @@ test("custom-app SDK schemas validate current Search DB and resource bridge payl
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult)?.safeParse({
     items: [resource],
     source: "resources.list",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsList)?.safeParse({
+    kind: "search.run",
+    status: "completed",
+    limit: 10,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsListResult)?.safeParse({
+    items: [{
+      id: "run-1",
+      kind: "search.run",
+      status: "completed",
+      startedAt: "2026-05-20T00:00:00Z",
+      endedAt: null,
+      createdAt: "2026-05-20T00:00:00Z",
+      source: "index.runs",
+      metadata: { searchId: "search-1" },
+      redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+    }],
+    source: "jobs.list",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
   }).success, true);
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload)?.safeParse({
     resource,
