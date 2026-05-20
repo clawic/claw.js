@@ -378,18 +378,25 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
 
   const providers = await runCliCapture(["system", "providers", "list", "--json"], process.cwd());
   assert.equal(providers.code, CLI_EXIT_OK);
-  const providerPayload = parseCliJsonPayload<{ providers: Array<{ id: string; kind: string; mode: string; status: string; metrics?: string[] }> }>(providers.stdout);
+  const providerPayload = parseCliJsonPayload<{ providers: Array<{ id: string; kind: string; mode: string; status: string; metrics?: string[]; adapterContract?: { input: { credentialRef: string; networkAccess: string }; output: { metrics?: string[]; monitorWriteRequired: boolean }; audit: { receiptRequired: boolean }; executionPolicy: { failClosed: boolean } } }> }>(providers.stdout);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "mock" && provider.status === "ready"), true);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "weather" && provider.mode === "live" && provider.status === "external_pending"), true);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "hardware_sensor" && provider.id === "system.sensors.signed" && provider.status === "external_pending"), true);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.id === "context.agent-runs.offline" && provider.metrics?.includes("context.agent_runs.active")), true);
+  const liveWeatherProvider = providerPayload.providers.find((provider) => provider.id === "context.weather.live");
+  assert.equal(liveWeatherProvider?.adapterContract?.input.credentialRef, "required_redacted");
+  assert.equal(liveWeatherProvider?.adapterContract?.input.networkAccess, "blocked_until_granted");
+  assert.equal(liveWeatherProvider?.adapterContract?.output.metrics?.includes("context.weather.temperature"), true);
+  assert.equal(liveWeatherProvider?.adapterContract?.output.monitorWriteRequired, true);
+  assert.equal(liveWeatherProvider?.adapterContract?.audit.receiptRequired, true);
+  assert.equal(liveWeatherProvider?.adapterContract?.executionPolicy.failClosed, true);
 
   const providerPlan = await runCliCapture(["system", "providers", "plan", "context.weather.live", "--reason", "test-plan", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(providerPlan.code, CLI_EXIT_OK);
   const providerPlanPayload = parseCliJsonPayload<{
     status: string;
     willConnect: boolean;
-    provider: { id: string; mode: string; metrics?: string[]; metricKeys?: unknown };
+    provider: { id: string; mode: string; metrics?: string[]; metricKeys?: unknown; adapterContract?: { providerId: string; input: { credentialRef: string }; output: { metrics?: string[]; monitorWriteRequired: boolean }; audit: { durableReceiptSource: string } } };
     broker: { status: string; failClosed: boolean };
     policy: { requiredGrants: string[]; credentialRefRequired: boolean; networkAccess: string };
     steps: Array<{ id: string; status: string; owner: string }>;
@@ -404,6 +411,11 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(providerPlanPayload.provider.mode, "live");
   assert.equal(providerPlanPayload.provider.metrics?.includes("context.weather.temperature"), true);
   assert.equal(Array.isArray(providerPlanPayload.provider.metricKeys), false);
+  assert.equal(providerPlanPayload.provider.adapterContract?.providerId, "context.weather.live");
+  assert.equal(providerPlanPayload.provider.adapterContract?.input.credentialRef, "required_redacted");
+  assert.equal(providerPlanPayload.provider.adapterContract?.output.metrics?.includes("context.weather.temperature"), true);
+  assert.equal(providerPlanPayload.provider.adapterContract?.output.monitorWriteRequired, true);
+  assert.equal(providerPlanPayload.provider.adapterContract?.audit.durableReceiptSource, "provider_broker_or_signed_host");
   assert.equal(providerPlanPayload.broker.status, "external_pending");
   assert.equal(providerPlanPayload.broker.failClosed, true);
   assert.equal(providerPlanPayload.policy.requiredGrants.includes("weather.location.read"), true);

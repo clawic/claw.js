@@ -209,7 +209,16 @@ blocked network access, Monitor write, receipt, and portable `auditPlan`
 redaction metadata without calling the provider or reading secrets. The
 provider plan response projects any supplied credential reference as
 `provided_redacted`; clients must not expect the original reference to be
-returned by API or MCP surfaces. System telemetry provider credential redaction contract: `provided_redacted` is the only returned credential projection shared with CLI and signed-host plan responses. The
+returned by API or MCP surfaces. Provider list and plan responses also include
+`adapterContract`, the portable plugin contract a real provider must satisfy:
+provider id/kind/mode, required grants, credential-ref policy, network gate,
+metric output keys, `system_telemetry_metric_sample` output shape, required
+Monitor write, audit event, durable receipt source, redaction policy,
+fail-closed execution policy, and the external-pending-until-receipt flag.
+Output metric ids are projected as `adapterContract.output.metrics`, matching
+the existing provider-level `metrics` field so clients do not need unredacted
+`*Keys` fields.
+System telemetry provider credential redaction contract: `provided_redacted` is the only returned credential projection shared with CLI and signed-host plan responses. The
 `auditPlan` is not durable evidence and is not a provider execution receipt;
 durable JSONL evidence is written only by the local CLI or signed host lanes.
 `/v1/system/controls` returns the fan,

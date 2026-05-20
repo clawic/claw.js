@@ -252,6 +252,10 @@ function assertDocsAndRegistry() {
       "local CLI snapshot path",
       "redacted weather location tags",
       "provided_redacted",
+      "`adapterContract`",
+      "system_telemetry_metric_sample",
+      "adapterContract.output.metrics",
+      "stable contract real provider plugins",
       ".claw/data/system-telemetry-audit.jsonl",
       "Local CLI provider and control",
     ]],
@@ -265,6 +269,10 @@ function assertDocsAndRegistry() {
       "signed-host operation",
       "portable `auditPlan`",
       "provided_redacted",
+      "`adapterContract`",
+      "portable plugin contract",
+      "adapterContract.output.metrics",
+      "external-pending-until-receipt",
       "system.telemetry.snapshot",
       "claw.system.telemetry.snapshot.v1",
       "system.telemetry.history",
@@ -492,12 +500,23 @@ function assertProvidersAndControls() {
   const providers = parseCliPayload(claw(["system", "providers", "list", "--json"]), "providers list").providers ?? [];
   assert(providers.some((provider) => provider.id === "context.weather.live" && provider.status === "external_pending"), "providers: missing live weather external-pending provider");
   assert(providers.some((provider) => provider.id === "system.sensors.signed" && provider.metrics?.includes("system.sensor.fan_speed")), "providers: missing signed sensor provider visible metrics");
+  const liveWeatherProvider = providers.find((provider) => provider.id === "context.weather.live");
+  assert(liveWeatherProvider?.adapterContract?.input?.credentialRef === "required_redacted", "providers: live weather adapter contract must require redacted credential refs");
+  assert(liveWeatherProvider?.adapterContract?.input?.networkAccess === "blocked_until_granted", "providers: live weather adapter contract must block network until granted");
+  assert(liveWeatherProvider?.adapterContract?.output?.sampleShape === "system_telemetry_metric_sample", "providers: adapter contract must declare sample shape");
+  assert(liveWeatherProvider?.adapterContract?.output?.metrics?.includes("context.weather.temperature"), "providers: adapter contract must expose visible metrics");
+  assert(liveWeatherProvider?.adapterContract?.output?.monitorWriteRequired === true, "providers: adapter contract must require Monitor writes");
+  assert(liveWeatherProvider?.adapterContract?.audit?.durableReceiptSource === "provider_broker_or_signed_host", "providers: adapter contract must require broker or signed-host receipt source");
+  assert(liveWeatherProvider?.adapterContract?.executionPolicy?.failClosed === true, "providers: adapter contract must fail closed");
 
   const weatherPlan = parseCliPayload(claw(["system", "providers", "plan", "context.weather.live", "--reason", "goal-verify", "--json"]), "weather provider plan");
   assert(weatherPlan.willConnect === false, "weather provider plan: must not connect");
   assert(weatherPlan.externalPending === true, "weather provider plan: must be external pending");
   assert(weatherPlan.provider?.metrics?.includes("context.weather.temperature"), "weather provider plan: missing visible metrics");
   assert(!Array.isArray(weatherPlan.provider?.metricKeys), "weather provider plan: metricKeys must not be exposed as an array in public CLI output");
+  assert(weatherPlan.provider?.adapterContract?.providerId === "context.weather.live", "weather provider plan: missing adapter contract");
+  assert(weatherPlan.provider?.adapterContract?.output?.metrics?.includes("context.weather.temperature"), "weather provider plan: adapter contract must expose visible metrics");
+  assert(weatherPlan.provider?.adapterContract?.output?.monitorWriteRequired === true, "weather provider plan: adapter contract must require Monitor writes");
   assertIncludes(weatherPlan.policy?.requiredGrants, "weather.location.read", "weather provider plan grants");
   assert(weatherPlan.steps?.some((step) => step.id === "connect_provider" && step.status === "blocked"), "weather provider plan: connect step must be blocked");
   assert(weatherPlan.auditPlan?.redaction?.credentialRefRedacted === true, "weather provider plan: must expose portable credential redaction audit plan");

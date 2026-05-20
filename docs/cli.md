@@ -602,7 +602,18 @@ network connection, Monitor write step, audit event, receipt status, and a
 portable `auditPlan` that states the redaction and non-execution policy; it does
 not call the provider or read secret values. When `--credential-ref` is present,
 the response exposes only `provided_redacted`; the actual reference is never
-returned in the provider plan. System telemetry provider credential redaction contract: `provided_redacted` is the only returned credential projection for CLI, API, MCP, and signed-host plan responses. Local CLI provider and control
+returned in the provider plan. `system providers list` and `system providers
+plan` also expose a portable `adapterContract`: provider id/kind/mode, required
+grants, credential-ref policy, network gate, metric output keys,
+`system_telemetry_metric_sample` sample shape, mandatory Monitor write, audit
+event, receipt source, redaction policy, fail-closed execution policy, and
+whether the provider remains external-pending until a real receipt exists. This
+contract exposes output metric ids through `adapterContract.output.metrics`, so
+agents can discover them without disabling global key redaction. This is the stable contract real provider plugins must satisfy before they can feed
+system telemetry samples. System telemetry provider credential redaction contract `provided_redacted`:
+`provided_redacted` is the only returned credential projection for system
+telemetry provider credential redaction across CLI, API, MCP, and signed-host
+plan responses. Local CLI provider and control
 plans append redacted JSONL evidence to `.claw/data/system-telemetry-audit.jsonl`;
 the signed host has its own host-state audit file for blocked live-provider and
 signed-sensor plans. These audits record provider/control id, blocked outcome,

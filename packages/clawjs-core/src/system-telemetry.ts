@@ -134,6 +134,37 @@ export interface SystemTelemetryProviderDefinition {
   credentialRefRequired: boolean;
   freshnessMs: number;
   description: string;
+  adapterContract?: SystemTelemetryProviderAdapterContract;
+}
+
+export interface SystemTelemetryProviderAdapterContract {
+  schemaVersion: 1;
+  providerId: string;
+  adapterKind: SystemTelemetryProviderKind;
+  mode: SystemTelemetryProviderMode;
+  input: {
+    credentialRef: "not_required" | "required_redacted";
+    requiredGrants: string[];
+    networkAccess: "not_required" | "blocked_until_granted";
+  };
+  output: {
+    metrics: string[];
+    sampleShape: "system_telemetry_metric_sample";
+    monitorWriteRequired: true;
+  };
+  audit: {
+    event: string;
+    receiptRequired: true;
+    durableReceiptSource: "provider_broker_or_signed_host";
+    redaction: {
+      credentialRefRedacted: boolean;
+      preciseLocationRedacted: boolean;
+    };
+  };
+  executionPolicy: {
+    failClosed: true;
+    externalPendingUntilReceipt: boolean;
+  };
 }
 
 export interface SystemTelemetryProviderPlanStep {
@@ -993,11 +1024,45 @@ export function listSystemTelemetryProviders(): SystemTelemetryProviderDefinitio
     metrics: [...provider.metricKeys],
     widgetIds: [...provider.widgetIds],
     capabilities: [...provider.capabilities],
+    adapterContract: createSystemTelemetryProviderAdapterContract(provider),
   }));
 }
 
 export function findSystemTelemetryProvider(id: string): SystemTelemetryProviderDefinition | null {
   return listSystemTelemetryProviders().find((provider) => provider.id === id) ?? null;
+}
+
+export function createSystemTelemetryProviderAdapterContract(provider: SystemTelemetryProviderDefinition): SystemTelemetryProviderAdapterContract {
+  const requiredGrants = provider.requiresGrant ? [provider.requiresGrant] : [];
+  return {
+    schemaVersion: 1,
+    providerId: provider.id,
+    adapterKind: provider.kind,
+    mode: provider.mode,
+    input: {
+      credentialRef: provider.credentialRefRequired ? "required_redacted" : "not_required",
+      requiredGrants,
+      networkAccess: provider.mode === "live" ? "blocked_until_granted" : "not_required",
+    },
+    output: {
+      metrics: [...provider.metricKeys],
+      sampleShape: "system_telemetry_metric_sample",
+      monitorWriteRequired: true,
+    },
+    audit: {
+      event: `system.telemetry.provider.${provider.kind}.${provider.mode}`,
+      receiptRequired: true,
+      durableReceiptSource: "provider_broker_or_signed_host",
+      redaction: {
+        credentialRefRedacted: true,
+        preciseLocationRedacted: provider.privacyTier === "precise_location",
+      },
+    },
+    executionPolicy: {
+      failClosed: true,
+      externalPendingUntilReceipt: provider.mode === "live" || provider.status === "external_pending",
+    },
+  };
 }
 
 export function createSystemTelemetryProviderPlan(input: {

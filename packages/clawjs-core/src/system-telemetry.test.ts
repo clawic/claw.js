@@ -1,7 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { createSystemTelemetryControlPlan, createSystemTelemetryProviderPlan, listSystemTelemetryControlActions, listSystemTelemetryMetrics, listSystemTelemetryProviders, listSystemTelemetryWidgets } from "./system-telemetry.ts";
+import { createSystemTelemetryControlPlan, createSystemTelemetryProviderAdapterContract, createSystemTelemetryProviderPlan, listSystemTelemetryControlActions, listSystemTelemetryMetrics, listSystemTelemetryProviders, listSystemTelemetryWidgets } from "./system-telemetry.ts";
 
 test("system telemetry catalog covers required metric families", () => {
   const metrics = listSystemTelemetryMetrics();
@@ -98,6 +98,21 @@ test("system telemetry providers declare mock, offline, and live context slots",
 
   const liveWeather = providers.find((provider) => provider.id === "context.weather.live");
   assert.ok(liveWeather);
+  assert.equal(liveWeather.adapterContract?.providerId, "context.weather.live");
+  assert.equal(liveWeather.adapterContract?.input.credentialRef, "required_redacted");
+  assert.equal(liveWeather.adapterContract?.input.requiredGrants.includes("weather.location.read"), true);
+  assert.equal(liveWeather.adapterContract?.input.networkAccess, "blocked_until_granted");
+  assert.equal(liveWeather.adapterContract?.output.metrics.includes("context.weather.temperature"), true);
+  assert.equal(liveWeather.adapterContract?.output.monitorWriteRequired, true);
+  assert.equal(liveWeather.adapterContract?.audit.receiptRequired, true);
+  assert.equal(liveWeather.adapterContract?.audit.redaction.credentialRefRedacted, true);
+  assert.equal(liveWeather.adapterContract?.audit.redaction.preciseLocationRedacted, true);
+  assert.equal(liveWeather.adapterContract?.executionPolicy.failClosed, true);
+  assert.equal(liveWeather.adapterContract?.executionPolicy.externalPendingUntilReceipt, true);
+
+  const liveWeatherContract = createSystemTelemetryProviderAdapterContract(liveWeather);
+  assert.deepEqual(liveWeatherContract, liveWeather.adapterContract);
+
   const plan = createSystemTelemetryProviderPlan({ provider: liveWeather, reason: "test-plan", now: "2026-05-19T12:00:00.000Z", idSuffix: "test" });
   assert.equal(plan.willConnect, false);
   assert.equal(plan.broker.failClosed, true);
@@ -121,6 +136,16 @@ test("system telemetry providers declare mock, offline, and live context slots",
 
   const sensorProvider = providers.find((provider) => provider.id === "system.sensors.signed");
   assert.ok(sensorProvider);
+  assert.equal(sensorProvider.adapterContract?.input.credentialRef, "not_required");
+  assert.equal(sensorProvider.adapterContract?.input.requiredGrants.includes("system.sensor.read"), true);
+  assert.equal(sensorProvider.adapterContract?.audit.event, "system.telemetry.provider.hardware_sensor.live");
+  assert.equal(sensorProvider.adapterContract?.executionPolicy.externalPendingUntilReceipt, true);
+
+  const buildProvider = providers.find((provider) => provider.id === "context.build.offline");
+  assert.ok(buildProvider);
+  assert.equal(buildProvider.adapterContract?.input.networkAccess, "not_required");
+  assert.equal(buildProvider.adapterContract?.executionPolicy.externalPendingUntilReceipt, false);
+
   const sensorPlan = createSystemTelemetryProviderPlan({ provider: sensorProvider, reason: "sensor-validation", now: "2026-05-19T12:00:00.000Z", idSuffix: "sensor-test" });
   assert.equal(sensorPlan.willConnect, false);
   assert.equal(sensorPlan.policy.requiredGrants.includes("system.sensor.read"), true);
