@@ -117,8 +117,10 @@ for user-authored custom UIs that do not block the main app shell.
   launch and attach capture paths for Web and Swift custom-surface routing,
   sidebar scroll, chat composer editing, rescue reachability, and a
   deliberately delayed-heavy-surface Web fixture reaching route-local timeout;
-  post-capture app liveness and full stack-attributed Instruments analysis
-  remain closure blockers.
+  newer host-liveness and all-process captures confirmed post-capture app
+  liveness and redacted stack attribution separating Clawix host
+  SwiftUI/route/render work from WebKit WebContent and GPU work. An approved
+  baseline and reviewable closure summary remain closure blockers.
 - Protected routes reject replacement attempts.
 - Variant defaults preserve access to the original screen.
 - CLI smoke paths remain available for framework capability validation.
