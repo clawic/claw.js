@@ -19,26 +19,29 @@ import {
 import { buildCustomAppSDKInspectionPayload } from "./custom-app-sdk-inspection.ts";
 
 const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+const EXPECTED_CUSTOM_APP_CAPABILITY_IDS = [
+  "actions.invoke",
+  "db.query",
+  "iot.device.action.invoke",
+  "jobs.cancel",
+  "jobs.events",
+  "jobs.get",
+  "jobs.list",
+  "jobs.start",
+  "jobs.stream",
+  "mac.action.plan",
+  "resources.list",
+  "resources.read",
+  "search.query",
+  "secrets.broker",
+  "system.telemetry.history",
+  "system.telemetry.snapshot",
+];
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
-  const ids = listClawCapabilities().map((capability) => capability.id);
+  const ids = listClawCapabilities().map((capability) => capability.id).sort();
 
-  assert.ok(ids.includes("search.query"));
-  assert.ok(ids.includes("db.query"));
-  assert.ok(ids.includes("resources.list"));
-  assert.ok(ids.includes("resources.read"));
-  assert.ok(ids.includes("system.telemetry.snapshot"));
-  assert.ok(ids.includes("system.telemetry.history"));
-  assert.ok(ids.includes("jobs.list"));
-  assert.ok(ids.includes("jobs.get"));
-  assert.ok(ids.includes("jobs.events"));
-  assert.ok(ids.includes("jobs.stream"));
-  assert.ok(ids.includes("jobs.start"));
-  assert.ok(ids.includes("jobs.cancel"));
-  assert.ok(ids.includes("actions.invoke"));
-  assert.ok(ids.includes("secrets.broker"));
-  assert.ok(ids.includes("mac.action.plan"));
-  assert.ok(ids.includes("iot.device.action.invoke"));
+  assert.deepEqual(ids, EXPECTED_CUSTOM_APP_CAPABILITY_IDS);
   assert.match(sdkFirstCapabilityCatalogSource(), /sdk-first-custom-surfaces/);
 });
 

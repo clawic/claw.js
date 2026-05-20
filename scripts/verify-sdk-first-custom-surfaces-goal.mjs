@@ -75,6 +75,7 @@ function assertCompletionAudit() {
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
+    "exact reviewed custom-app capability ID set",
     "no `pending` status, no future-facade SDK refs, no unknown dispatch modes, no source-level unknown dispatch fallback, no conditional placeholder refs",
     "local-only/custom-app Relay coverage as `relay.remote.custom_app_sdk` metadata-only projection",
     "disabled-by-default rule suggestions",
@@ -315,6 +316,8 @@ function assertFrameworkArtifacts() {
 function assertTests() {
   for (const [relativePath, snippets] of Object.entries({
     "packages/clawjs-core/src/capability-catalog.test.ts": [
+      "EXPECTED_CUSTOM_APP_CAPABILITY_IDS",
+      "assert.deepEqual(ids, EXPECTED_CUSTOM_APP_CAPABILITY_IDS)",
       "available SDK surface bindings do not advertise future facades",
       "available surface refs are concrete rather than conditional placeholders",
       "conditionalRefPattern",
@@ -420,6 +423,8 @@ function assertSiblingClawixArtifacts() {
     "XCTAssertNotNil(surface[\"ref\"]",
     "XCTAssertNil(jobsListSurfaces.first { $0[\"surface\"] == \"cli\" }?[\"ref\"])",
     "XCTAssertEqual(jobsListSurfaces.first { $0[\"surface\"] == \"sdk\" }?[\"ref\"], \"window.clawix.jobs.list\")",
+    "expectedCustomAppCapabilityIds",
+    "XCTAssertEqual(AppCapabilityCatalog.descriptors.map(\\.id).sorted(), expectedCustomAppCapabilityIds)",
     "testSwiftSurfaceResourceListExecutesThroughRegisteredResources",
     "capabilities.get",
     "capabilities.source",
