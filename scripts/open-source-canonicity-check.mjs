@@ -168,8 +168,8 @@ for (const [file, snippets] of [
     "open standard while official trust remains verifiable",
     "scripts/open-source-canonicity-check.mjs",
   ]],
-  ["AGENTS.md", [
-    "docs/adr/0033-open-standard-official-trust.md",
+  ["docs/agent-rules/index.md", [
+    "../adr/0033-open-standard-official-trust.md",
     "MIT-licensed forks, commercial use, source builds, and compatible implementations are legitimate",
   ]],
   ["docs/discoverability.registry.json", [

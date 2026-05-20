@@ -116,22 +116,17 @@ for (const [relativePath, snippets] of [
 }
 
 requireSnippet("CLAUDE.md", "AGENTS.md");
-requireSnippet("CLAUDE.md", "docs/host-ownership.md");
-requireSnippet("CLAUDE.md", "docs/data-storage-boundary.md");
+requireSnippet("CLAUDE.md", "docs/agent-rules/index.md");
 requireSnippet("CLAUDE.md", "docs/decision-map.md");
-requireSnippet("CLAUDE.md", "docs/naming-style-guide.md");
-requireSnippet("CLAUDE.md", "docs/agentic-naming-guide.md");
-requireSnippet("CLAUDE.md", "docs/vocabulary.md");
-requireSnippet("CLAUDE.md", "docs/canonical-data-catalog.md");
-requireSnippet("CLAUDE.md", "docs/adr/0001-claw-framework-host-boundary.md");
-requireSnippet("CLAUDE.md", "docs/adr/0001-naming-and-stability-surfaces.md");
-requireSnippet("CLAUDE.md", "docs/adr/0005-canonical-data-catalog.md");
 requireSnippet("AGENTS.md", "docs/decision-map.md");
-requireSnippet("AGENTS.md", "docs/canonical-data-catalog.md");
-requireSnippet("AGENTS.md", "docs/adr/0005-canonical-data-catalog.md");
-requireSnippet("AGENTS.md", "docs/adr/0003-source-file-boundaries.md");
-requireSnippet("AGENTS.md", "docs/agentic-naming-guide.md");
-requireSnippet("AGENTS.md", "docs/vocabulary.md");
+requireSnippet("AGENTS.md", "docs/agent-rules/index.md");
+requireSnippet("docs/agent-rules/index.md", "../host-ownership.md");
+requireSnippet("docs/agent-rules/index.md", "../data-storage-boundary.md");
+requireSnippet("docs/agent-rules/index.md", "../canonical-data-catalog.md");
+requireSnippet("docs/agent-rules/index.md", "../adr/0005-canonical-data-catalog.md");
+requireSnippet("docs/agent-rules/index.md", "../adr/0003-source-file-boundaries.md");
+requireSnippet("docs/agent-rules/index.md", "../agentic-naming-guide.md");
+requireSnippet("docs/agent-rules/index.md", "../vocabulary.md");
 requireSnippet("CONTRIBUTING.md", "docs/decision-map.md");
 requireSnippet("RELEASING.md", "docs/decision-map.md");
 requireSnippet("docs/AGENTS.md", "decision-map.md");
