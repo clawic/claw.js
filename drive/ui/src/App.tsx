@@ -1,4 +1,3 @@
-import { clawApiPath } from "@clawjs/core";
 import {
   type ChangeEvent,
   type FormEvent,
@@ -66,6 +65,11 @@ const defaultCounts: DriveViewCounts = {
   shared: 0,
   trash: 0,
 };
+
+function clawApiPath(path = ""): string {
+  const suffix = path.replace(/^\/+/, "");
+  return suffix ? `/v1/${suffix}` : "/v1";
+}
 
 function itemIcon(kind: DriveItem["kind"]) {
   switch (kind) {
