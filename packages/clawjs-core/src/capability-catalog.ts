@@ -2,7 +2,7 @@ import { CUSTOM_APP_REDACTION_POLICY_ID } from "./custom-app-redaction-policy.ts
 import { CUSTOM_APP_SDK_SCHEMA_REFS } from "./custom-app-sdk-contracts.ts";
 
 export type ClawCapabilitySurface = "sdk" | "cli" | "serviceApi" | "mcp" | "relay" | "hostBridge";
-export type ClawCapabilitySurfaceStatus = "available" | "pending" | "blocked" | "notApplicable";
+export type ClawCapabilitySurfaceStatus = "available" | "blocked" | "notApplicable";
 export type ClawCapabilityRiskTier = "low" | "medium" | "high" | "critical";
 export type ClawCapabilityExecutionMode = "sync" | "async" | "stream";
 export type ClawCapabilityCustomAppAccess = "localWide" | "declared" | "approvalRequired" | "blocked";

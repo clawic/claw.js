@@ -813,6 +813,61 @@ const agentCoreTables = [
   "agent_runs",
 ] as const;
 
+const searchSidecarTables = [
+  "search_profiles",
+  "search_sources",
+  "search_documents",
+  "search_fts_partitions",
+  "search_shards",
+  "search_fragments",
+  "search_actions",
+  "search_cursors",
+  "search_index_jobs",
+  "search_tombstones",
+  "saved_searches",
+  "search_monitors",
+  "search_audit_events",
+  "search_interactions",
+  "search_vectors",
+  "search_ranking_cache",
+] as const;
+
+const searchSidecarIndexes = [
+  "search_sources_domain_idx",
+  "search_documents_source_idx",
+  "search_documents_shard_idx",
+  "search_documents_domain_idx",
+  "search_documents_resource_idx",
+  "search_fts_partitions_domain_idx",
+  "search_shards_domain_idx",
+  "search_fragments_document_idx",
+  "search_cursors_source_idx",
+  "search_index_jobs_claim_idx",
+  "search_index_jobs_source_idx",
+  "search_tombstones_source_idx",
+  "search_monitors_saved_search_idx",
+  "search_audit_events_type_idx",
+  "search_audit_events_actor_idx",
+  "search_interactions_document_idx",
+  "search_interactions_context_idx",
+] as const;
+
+const monitorMetricIndexes = [
+  "idx_metric_samples_key_time",
+  "idx_metric_rollups_key_bucket",
+  "idx_metric_incidents_key_time",
+] as const;
+
+const networkMonitorTables = [
+  "network_events",
+  "network_rollups",
+] as const;
+
+const networkMonitorIndexes = [
+  "idx_network_events_observed",
+  "idx_network_events_decision",
+] as const;
+
 function stableRouteSurfaceKey(route: string): string {
   return route.replace(/^\/(?:v\d+|api)\/?/, "").split(/[^A-Za-z0-9]+/).filter(Boolean).map((part, index) => index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)).join("") || "root";
 }
@@ -994,6 +1049,10 @@ const stableNativeIdentities = [
 ] as const;
 
 export const clawRegisteredDdlSources = [
+  "packages/clawjs/src/cli-network-command.ts",
+  "packages/clawjs/src/cli-search-command.ts",
+  "packages/clawjs/src/cli-system-command.ts",
+  "packages/clawjs/src/v1-data-core.ts",
   "packages/clawjs-database/src/store.ts",
   "packages/clawjs-audio/src/store.ts",
   "packages/clawjs-channel-base/src/index.ts",
@@ -1022,7 +1081,16 @@ export const clawRegisteredDdlSources = [
   "iot/src/server/db.ts",
   "drive/src/server/db.ts",
   "packages/clawjs-index/src/db/schema.sql",
+  "packages/clawjs-search/src/store.ts",
   "publishing/src/server/db/schema.ts",
+] as const;
+
+export const clawStrictDdlObjectSources = [
+  "packages/clawjs/src/cli-network-command.ts",
+  "packages/clawjs/src/cli-search-command.ts",
+  "packages/clawjs/src/cli-system-command.ts",
+  "packages/clawjs/src/v1-data-core.ts",
+  "packages/clawjs-search/src/store.ts",
 ] as const;
 
 const stableIdNamespaces = [
@@ -2649,6 +2717,21 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       nullable: false,
       source: registrySource,
     })),
+    clawPersistentSurface.table({
+      id: "claw.database.core.table.search_source_config",
+      name: "search_source_config",
+      parentId: "claw.database.core",
+      databaseId: "claw.database.core",
+      source: registrySource,
+      notes: "Canonical search source state table used by the public search CLI.",
+    }),
+    clawPersistentSurface.index({
+      id: "claw.database.core.table.search_source_config.index.search_source_config_state_idx",
+      name: "search_source_config_state_idx",
+      parentId: "claw.database.core.table.search_source_config",
+      databaseId: "claw.database.core",
+      source: registrySource,
+    }),
     clawPersistentSurface.database({
       id: "claw.database.runtime",
       kind: "sidecar",
@@ -2689,6 +2772,23 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       envOverrides: ["CLAW_SEARCH_DB_PATH", "CLAW_SEARCH_DATA_DIR", "CLAW_DATA_DIR", "CLAW_HOME"],
     }),
+    ...searchSidecarTables.map((name) => clawPersistentSurface.table({
+      id: `claw.database.search.table.${name}`,
+      name,
+      parentId: "claw.database.search",
+      databaseId: "claw.database.search",
+      storageClass: "sidecar",
+      source: registrySource,
+      notes: "Search V1.1 sidecar table owned by the Root Search store.",
+    })),
+    ...searchSidecarIndexes.map((name) => clawPersistentSurface.index({
+      id: `claw.database.search.index.${name}`,
+      name,
+      parentId: "claw.database.search",
+      databaseId: "claw.database.search",
+      storageClass: "sidecar",
+      source: registrySource,
+    })),
     clawPersistentSurface.database({
       id: "claw.database.notify",
       kind: "sidecar",
@@ -2755,6 +2855,31 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       notes: "Rule-triggered metric incidents reused by system telemetry, context providers and local charts.",
     }),
+    ...monitorMetricIndexes.map((name) => clawPersistentSurface.index({
+      id: `claw.database.monitor.index.${name}`,
+      name,
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+    })),
+    ...networkMonitorTables.map((name) => clawPersistentSurface.table({
+      id: `claw.database.monitor.table.${name}`,
+      name,
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+      notes: "Network control plane monitor table stored in the Monitor sidecar database.",
+    })),
+    ...networkMonitorIndexes.map((name) => clawPersistentSurface.index({
+      id: `claw.database.monitor.index.${name}`,
+      name,
+      parentId: "claw.database.monitor",
+      databaseId: "claw.database.monitor",
+      storageClass: "sidecar",
+      source: registrySource,
+    })),
     clawPersistentSurface.path({
       id: "claw.workspace.manifest",
       kind: "file",

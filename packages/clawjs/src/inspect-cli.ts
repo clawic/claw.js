@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildClawDebtLedger, buildCustomAppSDKInspectionPayload, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawDenseDataAcceptanceFixture, clawDenseDataOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawDenseDataGapRegistryEntries, listClawDenseDataIntentEntries, listClawDenseDataSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildClawDebtLedger, buildCustomAppSDKInspectionPayload, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawProfessionalRecordsGapRegistryEntries, listClawProfessionalRecordsIntentEntries, listClawProfessionalRecordsSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
 import type { AgentAuditEvent, ClawCapabilityFiche, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import type { Agent } from "@clawjs/agents";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
@@ -1387,20 +1387,20 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   if (command === "dense-data") {
     const payload = {
       schemaVersion: 1,
-      registry: clawDenseDataOsRegistry,
-      gapCount: listClawDenseDataGapRegistryEntries().length,
-      intentCount: listClawDenseDataIntentEntries().length,
-      semanticViewCount: listClawDenseDataSemanticViewEntries().length,
+      registry: clawProfessionalRecordsOsRegistry,
+      gapCount: listClawProfessionalRecordsGapRegistryEntries().length,
+      intentCount: listClawProfessionalRecordsIntentEntries().length,
+      semanticViewCount: listClawProfessionalRecordsSemanticViewEntries().length,
     };
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
-    else input.context.stdout.write(`${clawDenseDataOsRegistry.systems.map((system) => `${system.id}\t${system.wave}\t${system.canonicalCommand}`).join("\n")}\n`);
+    else input.context.stdout.write(`${clawProfessionalRecordsOsRegistry.systems.map((system) => `${system.id}\t${system.wave}\t${system.canonicalCommand}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "dense-gaps") {
-    const gaps = listClawDenseDataGapRegistryEntries();
+    const gaps = listClawProfessionalRecordsGapRegistryEntries();
     const payload = {
       schemaVersion: 1,
-      statuses: clawDenseDataOsRegistry.intentStatuses,
+      statuses: clawProfessionalRecordsOsRegistry.intentStatuses,
       gaps,
     };
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
@@ -1408,10 +1408,10 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "dense-intents") {
-    const intents = listClawDenseDataIntentEntries();
+    const intents = listClawProfessionalRecordsIntentEntries();
     const payload = {
       schemaVersion: 1,
-      statuses: clawDenseDataOsRegistry.intentStatuses,
+      statuses: clawProfessionalRecordsOsRegistry.intentStatuses,
       intents,
     };
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
@@ -1419,7 +1419,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "dense-views") {
-    const semanticViews = listClawDenseDataSemanticViewEntries();
+    const semanticViews = listClawProfessionalRecordsSemanticViewEntries();
     const payload = {
       schemaVersion: 1,
       semanticViews,
@@ -1429,8 +1429,8 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "dense-fixtures") {
-    if (input.wantsJson) writeJsonOk(input.context.stdout, clawDenseDataAcceptanceFixture, inspectJsonMeta(command));
-    else input.context.stdout.write(`${clawDenseDataAcceptanceFixture.records.map((entry) => `${entry.id}\t${entry.collectionName}\t${entry.label}`).join("\n")}\n`);
+    if (input.wantsJson) writeJsonOk(input.context.stdout, clawProfessionalRecordsAcceptanceFixture, inspectJsonMeta(command));
+    else input.context.stdout.write(`${clawProfessionalRecordsAcceptanceFixture.records.map((entry) => `${entry.id}\t${entry.collectionName}\t${entry.label}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "codebase") {

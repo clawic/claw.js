@@ -55,14 +55,14 @@ export const networkRuleSchema = z.object({
   action: networkRuleActionSchema,
   subject: networkSubjectSchema.partial().optional(),
   endpoint: networkEndpointSchema.partial().optional(),
-  profileId: z.string().min(1).default("default"),
+  networkPolicyProfileId: z.string().min(1).default("default"),
   priority: z.number().int().default(0),
   enabled: z.boolean().default(true),
   lifetime: networkRuleLifetimeSchema.default("permanent"),
   expiresAt: z.string().datetime().optional(),
   routeVia: z.string().min(1).optional(),
   vpnProfileId: z.string().min(1).optional(),
-  owner: z.object({
+  ruleSteward: z.object({
     kind: z.enum(["human", "agent", "system"]),
     id: z.string().min(1),
   }).default({ kind: "system", id: "claw.network" }),
@@ -72,7 +72,7 @@ export const networkRuleSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const networkProfileSchema = z.object({
+export const networkPolicyProfileSchema = z.object({
   schemaVersion: z.literal(1),
   id: z.string().min(1),
   label: z.string().min(1),
@@ -139,13 +139,13 @@ export const networkPolicyEvaluationSchema = z.object({
 export type NetworkSubject = z.infer<typeof networkSubjectSchema>;
 export type NetworkEndpoint = z.infer<typeof networkEndpointSchema>;
 export type NetworkRule = z.infer<typeof networkRuleSchema>;
-export type NetworkProfile = z.infer<typeof networkProfileSchema>;
+export type NetworkPolicyProfile = z.infer<typeof networkPolicyProfileSchema>;
 export type NetworkAdapter = z.infer<typeof networkAdapterSchema>;
 export type NetworkAccessManifest = z.infer<typeof networkAccessManifestSchema>;
 export type NetworkEvent = z.infer<typeof networkEventSchema>;
 export type NetworkPolicyEvaluation = z.infer<typeof networkPolicyEvaluationSchema>;
 
-const DEFAULT_PROFILE: NetworkProfile = networkProfileSchema.parse({
+const DEFAULT_NETWORK_POLICY: NetworkPolicyProfile = networkPolicyProfileSchema.parse({
   schemaVersion: 1,
   id: "default",
   label: "Default",
@@ -217,7 +217,7 @@ export const NETWORK_CONTROL_ADAPTERS: NetworkAdapter[] = [
     enforcement: "plan_only",
     externalPending: true,
     reason: "VPN route application needs host-specific adapter validation.",
-    reentryCondition: "Approved VPN profile fixture and continuity-breaker validation.",
+    reentryCondition: "Approved VPN configuration fixture and continuity-breaker validation.",
   },
   {
     schemaVersion: 1,
@@ -238,11 +238,11 @@ export const NETWORK_CONTROL_DEFAULT_RULES: NetworkRule[] = [
     action: "allow",
     subject: { kind: "gateway" },
     endpoint: { kind: "gateway_route" },
-    profileId: "default",
+    networkPolicyProfileId: "default",
     priority: 100,
     enabled: true,
     lifetime: "permanent",
-    owner: { kind: "system", id: "claw.network" },
+    ruleSteward: { kind: "system", id: "claw.network" },
     source: "system_default",
     notes: "Allow declared Claw Gateway routes while preserving audit and redaction.",
     createdAt: "2026-05-20T00:00:00.000Z",
@@ -253,11 +253,11 @@ export const NETWORK_CONTROL_DEFAULT_RULES: NetworkRule[] = [
     id: "network.rule.provider-unknown-endpoint-review",
     action: "ask",
     subject: { kind: "provider" },
-    profileId: "default",
+    networkPolicyProfileId: "default",
     priority: 10,
     enabled: true,
     lifetime: "permanent",
-    owner: { kind: "system", id: "claw.network" },
+    ruleSteward: { kind: "system", id: "claw.network" },
     source: "system_default",
     notes: "Providers without an explicit manifest require review before broad network access.",
     createdAt: "2026-05-20T00:00:00.000Z",
@@ -298,7 +298,7 @@ export const clawNetworkControlPlaneRegistry = {
     agentRuleApplication: "suggest_only" as const,
     humanOrExplicitGrantApplies: true,
   },
-  profiles: [DEFAULT_PROFILE],
+  networkPolicyProfiles: [DEFAULT_NETWORK_POLICY],
   adapters: NETWORK_CONTROL_ADAPTERS,
   manifests: NETWORK_CONTROL_ACCESS_MANIFESTS,
   defaultRules: NETWORK_CONTROL_DEFAULT_RULES,
@@ -308,8 +308,8 @@ export function listNetworkAdapters(): NetworkAdapter[] {
   return [...NETWORK_CONTROL_ADAPTERS];
 }
 
-export function listNetworkProfiles(): NetworkProfile[] {
-  return [DEFAULT_PROFILE];
+export function listNetworkPolicyProfiles(): NetworkPolicyProfile[] {
+  return [DEFAULT_NETWORK_POLICY];
 }
 
 export function listNetworkAccessManifests(): NetworkAccessManifest[] {
@@ -361,17 +361,17 @@ export function evaluateNetworkPolicy(input: {
   subject: NetworkSubject;
   endpoint: NetworkEndpoint;
   rules?: readonly NetworkRule[];
-  profile?: NetworkProfile;
+  networkPolicyProfile?: NetworkPolicyProfile;
   adapterId?: string;
   now?: string;
 }): NetworkPolicyEvaluation {
   const now = input.now ?? new Date().toISOString();
-  const profile = input.profile ?? DEFAULT_PROFILE;
+  const networkPolicy = input.networkPolicyProfile ?? DEFAULT_NETWORK_POLICY;
   const rules = [...(input.rules ?? NETWORK_CONTROL_DEFAULT_RULES)]
-    .filter((rule) => rule.profileId === profile.id && isRuleActive(rule, now))
+    .filter((rule) => rule.networkPolicyProfileId === networkPolicy.id && isRuleActive(rule, now))
     .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id));
   const matchedRule = rules.find((rule) => subjectMatches(rule, input.subject) && endpointMatches(rule, input.endpoint));
-  const decision = matchedRule?.action ?? profile.defaultAction;
+  const decision = matchedRule?.action ?? networkPolicy.defaultAction;
   return networkPolicyEvaluationSchema.parse({
     schemaVersion: 1,
     decision,
@@ -380,11 +380,11 @@ export function evaluateNetworkPolicy(input: {
     adapterId: input.adapterId ?? "network.adapter.clawRuntime",
     explanation: matchedRule
       ? `Matched ${matchedRule.id}: ${matchedRule.action}.`
-      : `No matching rule; profile ${profile.id} default is ${profile.defaultAction}.`,
+      : `No matching rule; network policy ${networkPolicy.id} default is ${networkPolicy.defaultAction}.`,
     requiresReview: decision === "ask",
     redaction: {
-      level: profile.detailOptIn ? "process_domain_opt_in" : "aggregate",
-      detailOptInRequired: !profile.detailOptIn,
+      level: networkPolicy.detailOptIn ? "process_domain_opt_in" : "aggregate",
+      detailOptInRequired: !networkPolicy.detailOptIn,
     },
   });
 }
@@ -405,7 +405,7 @@ export function createNetworkEvent(input: {
     subject: input.subject,
     endpoint: input.endpoint,
     adapterId: input.adapterId,
-    profile: input.detailOptIn ? { ...DEFAULT_PROFILE, detailOptIn: true } : DEFAULT_PROFILE,
+    networkPolicyProfile: input.detailOptIn ? { ...DEFAULT_NETWORK_POLICY, detailOptIn: true } : DEFAULT_NETWORK_POLICY,
   });
   return networkEventSchema.parse({
     schemaVersion: 1,
@@ -453,7 +453,7 @@ export function redactNetworkEvent(event: NetworkEvent, detailOptIn = false): Ne
 export function createNetworkRuleSuggestion(input: {
   event: NetworkEvent;
   action?: NetworkRule["action"];
-  ownerAgentId?: string;
+  ruleStewardAgentId?: string;
   now?: string;
 }): NetworkRule {
   const now = input.now ?? new Date().toISOString();
@@ -473,11 +473,11 @@ export function createNetworkRuleSuggestion(input: {
       port: input.event.endpoint.port,
       protocol: input.event.endpoint.protocol,
     },
-    profileId: "default",
+    networkPolicyProfileId: "default",
     priority: 50,
     enabled: false,
     lifetime: "permanent",
-    owner: { kind: "agent", id: input.ownerAgentId ?? "agent.network-review" },
+    ruleSteward: { kind: "agent", id: input.ruleStewardAgentId ?? "agent.network-review" },
     source: "agent_suggestion",
     notes: "Suggestion only; human or explicit grant must apply it.",
     createdAt: now,

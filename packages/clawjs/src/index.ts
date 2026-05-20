@@ -8,7 +8,7 @@ import { buildCodexCommand, buildSetDefaultModelCommand, createClaw, createLocal
 import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw";
 import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
-import { clawDenseDataOsRegistry, resolveBuiltinCollectionName, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
+import { clawProfessionalRecordsOsRegistry, resolveBuiltinCollectionName, resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
 import { runMagicDbCli } from "./database-magic.ts";
 import { runMemoryCli } from "./memory-local.ts";
@@ -204,16 +204,16 @@ const DENSE_FOUNDATION_OPTIONAL_GROUPS = [
   "vocabularies",
   "vocabulary",
 ];
-const DENSE_DATA_OPTIONAL_GROUPS = new Set([
+const PROFESSIONAL_RECORDS_OPTIONAL_GROUPS = new Set([
   ...DENSE_FOUNDATION_OPTIONAL_GROUPS,
-  ...clawDenseDataOsRegistry.systems.flatMap((system) => [
+  ...clawProfessionalRecordsOsRegistry.systems.flatMap((system) => [
     system.canonicalCommand,
     ...system.aliases,
     ...system.centers.flatMap((center) => [center.commandNoun, ...center.commandAliases]),
   ]),
 ]);
 
-async function runOptionalDenseDataCli(input: {
+async function runOptionalProfessionalRecordsCli(input: {
   argv: string[];
   positionals: string[];
   flags: Record<string, string>;
@@ -224,17 +224,17 @@ async function runOptionalDenseDataCli(input: {
 }): Promise<number | null> {
   const modulePath = [".", "cli-dense-data-command.ts"].join("/");
   try {
-    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runDenseDataCli?: (packInput: unknown) => Promise<number | null> };
-    if (typeof optionalPack.runDenseDataCli === "function") {
-      return await optionalPack.runDenseDataCli(input);
+    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runProfessionalRecordsCli?: (packInput: unknown) => Promise<number | null> };
+    if (typeof optionalPack.runProfessionalRecordsCli === "function") {
+      return await optionalPack.runProfessionalRecordsCli(input);
     }
   } catch (error) {
     const code = (error as NodeJS.ErrnoException & { code?: string }).code;
     if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;
   }
   try {
-    const { runDenseDataCli } = await import(modulePath) as typeof import("./cli-dense-data-command.ts");
-    return await runDenseDataCli(input);
+    const { runProfessionalRecordsCli } = await import(modulePath) as typeof import("./cli-dense-data-command.ts");
+    return await runProfessionalRecordsCli(input);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException & { code?: string }).code;
     if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;
@@ -729,7 +729,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
-  if (group === "debt") return await runDebtCli({ positionals, flags, context, wantsJson, binName });
+  if (group === "debt") return await runDebtCli({ argv, positionals, flags, context, wantsJson, binName });
   if (group === "governance") return await runGovernanceCli({ positionals, flags, context, wantsJson, binName });
   if (group === "evolution") return await runEvolutionCli({ positionals, flags, context, wantsJson, binName });
   if (group === "safety") return await runSafetyCli({ positionals, flags, context, wantsJson, binName });
@@ -759,9 +759,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
   }
 
-  if (group && command && DENSE_DATA_OPTIONAL_GROUPS.has(group)) {
-    const denseDataShortcutExit = await runOptionalDenseDataCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
-    if (denseDataShortcutExit !== null) return denseDataShortcutExit;
+  if (group && command && PROFESSIONAL_RECORDS_OPTIONAL_GROUPS.has(group)) {
+    const professionalRecordsShortcutExit = await runOptionalProfessionalRecordsCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+    if (professionalRecordsShortcutExit !== null) return professionalRecordsShortcutExit;
   }
 
   if (["runtime", "monitor", "infra", "ops"].includes(group ?? "") && command) {

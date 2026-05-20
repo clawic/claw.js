@@ -1,10 +1,10 @@
 import {
-  clawDenseDataAcceptanceFixture,
-  clawDenseDataOsRegistry,
-  findClawDenseDataSystem,
-  listClawDenseDataSemanticViewEntries,
+  clawProfessionalRecordsAcceptanceFixture,
+  clawProfessionalRecordsOsRegistry,
+  findClawProfessionalRecordsSystem,
+  listClawProfessionalRecordsSemanticViewEntries,
   resolveBuiltinCollectionName,
-  resolveClawDenseDataIntent,
+  resolveClawProfessionalRecordsIntent,
 } from "@clawjs/core";
 import fs from "fs";
 import path from "path";
@@ -15,7 +15,7 @@ import { writeJsonOk } from "./cli-json.ts";
 import { runMagicDbCli } from "./database-magic.ts";
 import { openMainDataStore } from "./v1-data.ts";
 
-interface DenseDataCliInput {
+interface ProfessionalRecordsCliInput {
   argv: string[];
   positionals: string[];
   flags: Record<string, string>;
@@ -76,18 +76,18 @@ const FOUNDATION_COLLECTION_COMMANDS: Record<string, string> = {
   "universal-relations": "entity_relations",
 };
 
-export async function runDenseDataCli(input: DenseDataCliInput): Promise<number | null> {
+export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInput): Promise<number | null> {
   const phrase = input.positionals.join(" ");
   const group = input.positionals[0];
   const action = input.positionals[1];
   if (!group || !action) return null;
   if (DENSE_FIXTURE_COMMANDS.has(group)) return runDenseFixtureCli(input, action);
   const directSemanticView = semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input);
-  if (directSemanticView) return writeDenseSemanticView(input, resolveClawDenseDataIntent(phrase), directSemanticView, group, action);
-  if (!isDenseDataCommandGroup(group)) return null;
+  if (directSemanticView) return writeDenseSemanticView(input, resolveClawProfessionalRecordsIntent(phrase), directSemanticView, group, action);
+  if (!isProfessionalRecordsCommandGroup(group)) return null;
   if (group === "finance" && ["upsert", "list", "get", "delete"].includes(action)) return null;
 
-  const intent = resolveClawDenseDataIntent(phrase);
+  const intent = resolveClawProfessionalRecordsIntent(phrase);
   const semanticView = intent.status === "data_gap" ? undefined : (semanticViewForIntent(intent) ?? semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input));
   if (semanticView) return writeDenseSemanticView(input, intent, semanticView, group, action);
 
@@ -153,7 +153,7 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
       canonicalCommand: intent.center?.commandNoun ?? intent.system?.canonicalCommand ?? group,
       invokedCommand: group,
       subcommand: action,
-      denseData: true,
+      professionalRecords: true,
     });
   } else if (inspectionAction) {
     input.context.stdout.write(renderDenseInspection(payload.registry));
@@ -165,7 +165,7 @@ export async function runDenseDataCli(input: DenseDataCliInput): Promise<number 
   return inspectionAction ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
 }
 
-function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | null {
+function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: string): number | null {
   if (action !== "seed") return null;
   const namespaceId = input.flags.namespace ?? "main";
   const dataDir = path.join(input.workspaceRoot, ".claw", "data");
@@ -176,7 +176,7 @@ function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | 
   });
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
 
-  const seeded = clawDenseDataAcceptanceFixture.records.map((fixtureRecord) => {
+  const seeded = clawProfessionalRecordsAcceptanceFixture.records.map((fixtureRecord) => {
     const record = store.putRecord({
       namespaceId,
       collectionName: fixtureRecord.collectionName,
@@ -193,8 +193,8 @@ function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | 
     };
   });
   const payload = {
-    fixtureSetId: clawDenseDataAcceptanceFixture.fixtureSetId,
-    sourceConversationId: clawDenseDataAcceptanceFixture.sourceConversationId,
+    fixtureSetId: clawProfessionalRecordsAcceptanceFixture.fixtureSetId,
+    sourceConversationId: clawProfessionalRecordsAcceptanceFixture.sourceConversationId,
     namespaceId,
     store: "core.sqlite",
     seeded,
@@ -205,7 +205,7 @@ function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | 
       canonicalCommand: "dense-fixtures",
       invokedCommand: input.positionals[0] ?? "dense-fixtures",
       subcommand: action,
-      denseData: true,
+      professionalRecords: true,
     });
   } else {
     input.context.stdout.write(`${formatCliTable(seeded.map((record) => ({
@@ -217,19 +217,19 @@ function runDenseFixtureCli(input: DenseDataCliInput, action: string): number | 
   return CLI_EXIT_OK;
 }
 
-function semanticViewForIntent(intent: ReturnType<typeof resolveClawDenseDataIntent>) {
+function semanticViewForIntent(intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>) {
   if (!intent.system || !intent.operation) return undefined;
-  return listClawDenseDataSemanticViewEntries().find((entry) => entry.systemId === intent.system?.id && entry.operationId === intent.operation?.id);
+  return listClawProfessionalRecordsSemanticViewEntries().find((entry) => entry.systemId === intent.system?.id && entry.operationId === intent.operation?.id);
 }
 
-function semanticTimelineViewForRoute(input: DenseDataCliInput) {
+function semanticTimelineViewForRoute(input: ProfessionalRecordsCliInput) {
   if (input.positionals[2] !== "timeline") return undefined;
   const group = input.positionals[0];
   if (!group) return undefined;
-  return listClawDenseDataSemanticViewEntries().find((entry) => entry.commandPattern === `claw ${group} <id> timeline`);
+  return listClawProfessionalRecordsSemanticViewEntries().find((entry) => entry.commandPattern === `claw ${group} <id> timeline`);
 }
 
-function semanticComposedViewForRoute(input: DenseDataCliInput) {
+function semanticComposedViewForRoute(input: ProfessionalRecordsCliInput) {
   const [group, id, noun, action] = input.positionals;
   if (!group || !id || action !== "list") return undefined;
   const viewId =
@@ -238,12 +238,12 @@ function semanticComposedViewForRoute(input: DenseDataCliInput) {
         : group === "case" && noun === "evidence" ? "case.evidence"
           : undefined;
   if (!viewId) return undefined;
-  return listClawDenseDataSemanticViewEntries().find((entry) => entry.id === viewId);
+  return listClawProfessionalRecordsSemanticViewEntries().find((entry) => entry.id === viewId);
 }
 
 function writeDenseSemanticView(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticTimelineViewForRoute>>,
   group: string,
   action: string,
@@ -284,7 +284,7 @@ function writeDenseSemanticView(
       canonicalCommand: intent.center?.commandNoun ?? intent.system?.canonicalCommand ?? group,
       invokedCommand: group,
       subcommand: action,
-      denseData: true,
+      professionalRecords: true,
       semanticView: true,
     });
   } else {
@@ -294,8 +294,8 @@ function writeDenseSemanticView(
 }
 
 function materializedSemanticViewForIntent(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   if (semanticView.id === "patient.timeline") return materializedPatientTimeline(input, intent, semanticView);
@@ -330,20 +330,20 @@ function materializedSemanticViewForIntent(
   if (semanticView.id === "product_spec.timeline") return materializedProductSpecTimeline(input, intent, semanticView);
   if (semanticView.id === "drug_product.timeline") return materializedDrugProductTimeline(input, intent, semanticView);
   if (semanticView.id === "content_entry.timeline") return materializedContentEntryTimeline(input, intent, semanticView);
-  if (semanticView.id === "thing.timeline") return materializedThingTimeline(input, intent, semanticView);
+  if (semanticView.id === "thing.timeline") return materializedIotDeviceTimeline(input, intent, semanticView);
   if (semanticView.id === "construction_project.timeline") return materializedConstructionProjectTimeline(input, intent, semanticView);
   return undefined;
 }
 
 function materializedPatientTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const patientId = input.positionals[1];
   if (!patientId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const patient = store.getRecord(namespaceId, "patients", patientId);
   if (!patient) return undefined;
@@ -386,14 +386,14 @@ function materializedPatientTimeline(
 }
 
 function materializedPatientMedications(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const patientId = input.positionals[1];
   if (input.positionals[0] !== "patient" || input.positionals[2] !== "medications" || input.positionals[3] !== "list" || !patientId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const patient = store.getRecord(namespaceId, "patients", patientId);
   if (!patient) return undefined;
@@ -451,14 +451,14 @@ function materializedPatientMedications(
 }
 
 function materializedCaseTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const caseId = input.positionals[1];
   if (!caseId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const legalCase = store.getRecord(namespaceId, "legal_cases", caseId);
   if (!legalCase) return undefined;
@@ -497,14 +497,14 @@ function materializedCaseTimeline(
 }
 
 function materializedCaseEvidence(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const caseId = input.positionals[1];
   if (input.positionals[0] !== "case" || input.positionals[2] !== "evidence" || input.positionals[3] !== "list" || !caseId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const legalCase = store.getRecord(namespaceId, "legal_cases", caseId);
   if (!legalCase) return undefined;
@@ -561,14 +561,14 @@ function materializedCaseEvidence(
 }
 
 function materializedServiceTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const serviceId = input.positionals[1];
   if (!serviceId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const service = store.getRecord(namespaceId, "services", serviceId);
   if (!service) return undefined;
@@ -605,14 +605,14 @@ function materializedServiceTimeline(
 }
 
 function materializedSampleTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const sampleId = input.positionals[1];
   if (!sampleId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const sample = store.getRecord(namespaceId, "samples", sampleId);
   if (!sample) return undefined;
@@ -649,14 +649,14 @@ function materializedSampleTimeline(
 }
 
 function materializedStudyTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const studyId = input.positionals[1];
   if (!studyId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const study = store.getRecord(namespaceId, "studies", studyId);
   if (!study) return undefined;
@@ -695,15 +695,15 @@ function materializedStudyTimeline(
 }
 
 function materializedStudyCohort(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const studyId = input.positionals[1];
   const noun = input.positionals[2];
   if (input.positionals[0] !== "study" || (noun !== "cohort" && noun !== "cohorts") || input.positionals[3] !== "list" || !studyId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const study = store.getRecord(namespaceId, "studies", studyId);
   if (!study) return undefined;
@@ -776,14 +776,14 @@ function materializedStudyCohort(
 }
 
 function materializedExperimentTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const experimentId = input.positionals[1];
   if (!experimentId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const experiment = store.getRecord(namespaceId, "biology_experiments", experimentId);
   if (!experiment) return undefined;
@@ -824,14 +824,14 @@ function materializedExperimentTimeline(
 }
 
 function materializedLabNotebookTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const notebookId = input.positionals[1];
   if (!notebookId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const notebook = store.getRecord(namespaceId, "lab_notebooks", notebookId);
   if (!notebook) return undefined;
@@ -909,14 +909,14 @@ function materializedLabNotebookTimeline(
 }
 
 function materializedWorkOrderTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const workOrderId = input.positionals[1];
   if (!workOrderId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const workOrder = store.getRecord(namespaceId, "work_orders", workOrderId);
   if (!workOrder) return undefined;
@@ -951,14 +951,14 @@ function materializedWorkOrderTimeline(
 }
 
 function materializedAssetTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const assetId = input.positionals[1];
   if (!assetId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const asset = store.getRecord(namespaceId, "assets", assetId);
   if (!asset) return undefined;
@@ -1024,14 +1024,14 @@ function materializedAssetTimeline(
 }
 
 function materializedPropertyTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const propertyId = input.positionals[1];
   if (!propertyId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const property = store.getRecord(namespaceId, "property_listings", propertyId);
   if (!property) return undefined;
@@ -1087,14 +1087,14 @@ function materializedPropertyTimeline(
 }
 
 function materializedInsurancePolicyTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const policyId = input.positionals[1];
   if (!policyId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const policy = store.getRecord(namespaceId, "insurance_policies", policyId);
   if (!policy) return undefined;
@@ -1142,14 +1142,14 @@ function materializedInsurancePolicyTimeline(
 }
 
 function materializedVehicleTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const vehicleId = input.positionals[1];
   if (!vehicleId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const vehicle = store.getRecord(namespaceId, "vehicles", vehicleId);
   if (!vehicle) return undefined;
@@ -1201,14 +1201,14 @@ function materializedVehicleTimeline(
 }
 
 function materializedPurchaseOrderTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const purchaseOrderId = input.positionals[1];
   if (!purchaseOrderId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const purchaseOrder = store.getRecord(namespaceId, "purchase_orders", purchaseOrderId);
   if (!purchaseOrder) return undefined;
@@ -1265,14 +1265,14 @@ function materializedPurchaseOrderTimeline(
 }
 
 function materializedWarehouseTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const warehouseId = input.positionals[1];
   if (!warehouseId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const warehouse = store.getRecord(namespaceId, "warehouses", warehouseId);
   if (!warehouse) return undefined;
@@ -1337,14 +1337,14 @@ function materializedWarehouseTimeline(
 }
 
 function materializedSupplyPlanTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const supplyPlanId = input.positionals[1];
   if (!supplyPlanId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const supplyPlan = store.getRecord(namespaceId, "supply_plans", supplyPlanId);
   if (!supplyPlan) return undefined;
@@ -1456,14 +1456,14 @@ function materializedSupplyPlanTimeline(
 }
 
 function materializedShipmentTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const shipmentId = input.positionals[1];
   if (!shipmentId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const shipment = store.getRecord(namespaceId, "shipments", shipmentId);
   if (!shipment) return undefined;
@@ -1523,14 +1523,14 @@ function materializedShipmentTimeline(
 }
 
 function materializedControlTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const controlId = input.positionals[1];
   if (!controlId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const control = store.getRecord(namespaceId, "compliance_controls", controlId);
   if (!control) return undefined;
@@ -1593,14 +1593,14 @@ function materializedControlTimeline(
 }
 
 function materializedPublicCaseTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const publicCaseId = input.positionals[1];
   if (!publicCaseId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const publicCase = store.getRecord(namespaceId, "public_cases", publicCaseId);
   if (!publicCase) return undefined;
@@ -1667,14 +1667,14 @@ function materializedPublicCaseTimeline(
 }
 
 function materializedProductSpecTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const productSpecId = input.positionals[1];
   if (!productSpecId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const productSpec = store.getRecord(namespaceId, "product_specs", productSpecId);
   if (!productSpec) return undefined;
@@ -1747,14 +1747,14 @@ function materializedProductSpecTimeline(
 }
 
 function materializedDrugProductTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const drugProductId = input.positionals[1];
   if (!drugProductId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const drugProduct = store.getRecord(namespaceId, "drug_products", drugProductId);
   if (!drugProduct) return undefined;
@@ -1843,14 +1843,14 @@ function materializedDrugProductTimeline(
 }
 
 function materializedContentEntryTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const contentEntryId = input.positionals[1];
   if (!contentEntryId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const entry = store.getRecord(namespaceId, "content_entries", contentEntryId);
   if (!entry) return undefined;
@@ -1943,15 +1943,15 @@ function materializedContentEntryTimeline(
   };
 }
 
-function materializedThingTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+function materializedIotDeviceTimeline(
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const thingId = input.positionals[1];
   if (!thingId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const thing = store.getRecord(namespaceId, "iot_things", thingId);
   if (!thing) return undefined;
@@ -2023,14 +2023,14 @@ function materializedThingTimeline(
 }
 
 function materializedConstructionProjectTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const projectId = input.positionals[1];
   if (!projectId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const project = store.getRecord(namespaceId, "construction_projects", projectId);
   if (!project) return undefined;
@@ -2097,14 +2097,14 @@ function materializedConstructionProjectTimeline(
 }
 
 function materializedLearnerTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const learnerId = input.positionals[1];
   if (!learnerId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const learner = store.getRecord(namespaceId, "learners", learnerId);
   if (!learner) return undefined;
@@ -2166,14 +2166,14 @@ function materializedLearnerTimeline(
 }
 
 function materializedCourseTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const courseId = input.positionals[1];
   if (!courseId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const course = store.getRecord(namespaceId, "courses", courseId);
   if (!course) return undefined;
@@ -2243,14 +2243,14 @@ function materializedCourseTimeline(
 }
 
 function materializedEmployeeTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const employeeId = input.positionals[1];
   if (!employeeId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const employee = store.getRecord(namespaceId, "employees", employeeId);
   if (!employee) return undefined;
@@ -2316,14 +2316,14 @@ function materializedEmployeeTimeline(
 }
 
 function materializedErpCompanyOverview(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const companyId = input.positionals[2];
   if (input.positionals[0] !== "erp" || input.positionals[1] !== "company" || input.positionals[3] !== "overview" || !companyId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const company = store.getRecord(namespaceId, "companies", companyId);
   if (!company) return undefined;
@@ -2394,13 +2394,13 @@ function materializedErpCompanyOverview(
 }
 
 function materializedInvoiceList(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   if (input.positionals[0] !== "invoice" || input.positionals[1] !== "list") return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
 
   const invoices = store.listRecords(namespaceId, "invoices").items;
@@ -2465,14 +2465,14 @@ function materializedInvoiceList(
 }
 
 function materializedCompanyTimeline(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const companyId = input.positionals[1];
   if (input.positionals[0] !== "company" || input.positionals[2] !== "timeline" || !companyId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const company = store.getRecord(namespaceId, "companies", companyId);
   if (!company) return undefined;
@@ -2568,14 +2568,14 @@ function materializedCompanyTimeline(
 }
 
 function materializedCrmAccountOverview(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const accountId = input.positionals[2];
   if (input.positionals[0] !== "crm" || input.positionals[1] !== "account" || input.positionals[3] !== "overview" || !accountId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const account = store.getRecord(namespaceId, "accounts", accountId);
   if (!account) return undefined;
@@ -2626,15 +2626,15 @@ function materializedCrmAccountOverview(
 }
 
 function materializedFinanceEntityOverview(
-  input: DenseDataCliInput,
-  intent: ReturnType<typeof resolveClawDenseDataIntent>,
+  input: ProfessionalRecordsCliInput,
+  intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticViewForIntent>>,
 ) {
   const entityId = input.positionals[2];
   const command = input.positionals[0];
   if ((command !== "finance" && command !== "accounting") || input.positionals[1] !== "entity" || input.positionals[3] !== "overview" || !entityId) return undefined;
   const namespaceId = input.flags.namespace ?? "main";
-  const store = openDenseDataStore(input.workspaceRoot);
+  const store = openProfessionalRecordsStore(input.workspaceRoot);
   store.ensureNamespace({ id: namespaceId, displayName: namespaceId === "main" ? "Main" : namespaceId });
   const financialAccount = store.getRecord(namespaceId, "financial_accounts", entityId);
   if (!financialAccount) return undefined;
@@ -2709,7 +2709,7 @@ function personLabel(record: Record<string, unknown>): string {
   return [record.firstName, record.lastName].filter((value): value is string => typeof value === "string" && value.length > 0).join(" ") || String(record.email ?? record.id);
 }
 
-function openDenseDataStore(workspaceRoot: string) {
+function openProfessionalRecordsStore(workspaceRoot: string) {
   const root = fs.realpathSync.native(workspaceRoot);
   const dataDir = path.join(root, ".claw", "data");
   fs.mkdirSync(dataDir, { recursive: true });
@@ -2752,7 +2752,7 @@ function collectionForFoundationRoute(command: string | undefined): string | und
   if (explicit) return explicit;
   const resolved = resolveBuiltinCollectionName(command);
   if (!resolved) return undefined;
-  return Object.values(clawDenseDataOsRegistry.foundationCollections).includes(resolved) ? resolved : undefined;
+  return Object.values(clawProfessionalRecordsOsRegistry.foundationCollections).includes(resolved) ? resolved : undefined;
 }
 
 function denseDbArgv(argv: string[], collectionName: string, dbAction: string): string[] {
@@ -3084,7 +3084,7 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   return nextFlags;
 }
 
-function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagicDbCli>[0] | null {
+function nestedDenseDbRoute(input: ProfessionalRecordsCliInput): Parameters<typeof runMagicDbCli>[0] | null {
   return nestedParentDbRoute(input, {
     parentCommand: "patient",
     relationFlag: "patient-id",
@@ -3503,7 +3503,7 @@ function nestedDenseDbRoute(input: DenseDataCliInput): Parameters<typeof runMagi
   });
 }
 
-function nestedParentDbRoute(input: DenseDataCliInput, config: {
+function nestedParentDbRoute(input: ProfessionalRecordsCliInput, config: {
   parentCommand: string;
   relationFlag: string;
   relationField: string;
@@ -3537,9 +3537,9 @@ function nestedParentDbRoute(input: DenseDataCliInput, config: {
   };
 }
 
-function isDenseDataCommandGroup(group: string): boolean {
+function isProfessionalRecordsCommandGroup(group: string): boolean {
   if (collectionForFoundationRoute(group)) return true;
-  return clawDenseDataOsRegistry.systems.some((system) =>
+  return clawProfessionalRecordsOsRegistry.systems.some((system) =>
     system.canonicalCommand === group
     || system.aliases.includes(group)
     || system.centers.some((center) => center.commandNoun === group || center.commandAliases.includes(group))
@@ -3547,15 +3547,15 @@ function isDenseDataCommandGroup(group: string): boolean {
 }
 
 function denseRegistryPayload(systemId: string | undefined, group: string, action: string) {
-  const system = systemId ? findClawDenseDataSystem(systemId) : undefined;
-  const systems = system ? [system] : clawDenseDataOsRegistry.systems.filter((entry) => entry.canonicalCommand === group || entry.aliases.includes(group));
+  const system = systemId ? findClawProfessionalRecordsSystem(systemId) : undefined;
+  const systems = system ? [system] : clawProfessionalRecordsOsRegistry.systems.filter((entry) => entry.canonicalCommand === group || entry.aliases.includes(group));
   return {
     action,
     systems,
-    statuses: clawDenseDataOsRegistry.intentStatuses,
-    standardCollectionActions: clawDenseDataOsRegistry.standardCollectionActions,
-    routeRejectionReasons: clawDenseDataOsRegistry.routeRejectionReasons,
-    foundationPrimitives: clawDenseDataOsRegistry.foundationPrimitives,
+    statuses: clawProfessionalRecordsOsRegistry.intentStatuses,
+    standardCollectionActions: clawProfessionalRecordsOsRegistry.standardCollectionActions,
+    routeRejectionReasons: clawProfessionalRecordsOsRegistry.routeRejectionReasons,
+    foundationPrimitives: clawProfessionalRecordsOsRegistry.foundationPrimitives,
   };
 }
 

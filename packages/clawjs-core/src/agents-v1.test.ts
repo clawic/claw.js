@@ -80,7 +80,7 @@ test("Agents V1 regulated safety blocks final decisions even when grants allow a
       ...request,
       regulatedSafety: {
         regulatedDomains: ["finance"],
-        sensitiveDataClasses: ["financial_record"],
+        sensitiveRecordClasses: ["financial_record"],
         decisionEffect: "final_decision",
         outputLabelsRequired: true,
       },
@@ -105,7 +105,7 @@ test("Agents V1 regulated safety allows labeled summaries through existing contr
       ...request,
       regulatedSafety: {
         regulatedDomains: ["health"],
-        sensitiveDataClasses: ["health_record"],
+        sensitiveRecordClasses: ["health_record"],
         decisionEffect: "summary",
         professionalReviewRequired: true,
         outputLabelsRequired: true,
@@ -130,7 +130,7 @@ test("Agents V1 regulated safety requires review for connector, remote, and expo
       ...request,
       regulatedSafety: {
         regulatedDomains: ["legal"],
-        sensitiveDataClasses: ["legal_record"],
+        sensitiveRecordClasses: ["legal_record"],
         decisionEffect: "external_action",
         externalAction: true,
         sensitiveExport: true,

@@ -1,14 +1,14 @@
 import { regulatedDomains, type RegulatedDomain } from "./regulated-domain-safety.ts";
 
-export type ClawDenseDataWave = "foundation" | "first_wave" | "roadmap";
+export type ClawProfessionalRecordsWave = "foundation" | "first_wave" | "roadmap";
 
-export type ClawDenseDataSensitivityDefault = "normal" | "high";
+export type ClawProfessionalRecordsSensitivityDefault = "normal" | "high";
 
-export type ClawDenseDataStoragePolicy = "core_sqlite" | "sidecar_exception_only";
+export type ClawProfessionalRecordsStoragePolicy = "core_sqlite" | "sidecar_exception_only";
 
-export type ClawDenseDataExistingSurfaceDisposition = "reuse" | "extend" | "split" | "replace" | "retire";
+export type ClawProfessionalRecordsExistingSurfaceDisposition = "reuse" | "extend" | "split" | "replace" | "retire";
 
-export type ClawDenseDataIntentStatus =
+export type ClawProfessionalRecordsIntentStatus =
   | "covered"
   | "partial"
   | "alias_candidate"
@@ -18,7 +18,7 @@ export type ClawDenseDataIntentStatus =
   | "blocked"
   | "custom_pack";
 
-export interface ClawDenseDataCenter {
+export interface ClawProfessionalRecordsCenter {
   id: string;
   label: string;
   commandNoun: string;
@@ -28,14 +28,14 @@ export interface ClawDenseDataCenter {
   notes: string;
 }
 
-export interface ClawDenseDataOperation {
+export interface ClawProfessionalRecordsOperation {
   id: string;
   label: string;
   routes: string[];
   createsOrReads: string[];
 }
 
-export interface ClawDenseDataSemanticView {
+export interface ClawProfessionalRecordsSemanticView {
   id: string;
   label: string;
   commandPattern: string;
@@ -44,60 +44,60 @@ export interface ClawDenseDataSemanticView {
   outputShape: string;
 }
 
-export interface ClawDenseDataIntentResolution {
+export interface ClawProfessionalRecordsIntentResolution {
   schemaVersion: 1;
   phrase: string;
   normalizedPhrase: string;
-  status: ClawDenseDataIntentStatus;
-  system?: ClawDenseDataSystem;
-  center?: ClawDenseDataCenter;
-  operation?: ClawDenseDataOperation;
+  status: ClawProfessionalRecordsIntentStatus;
+  system?: ClawProfessionalRecordsSystem;
+  center?: ClawProfessionalRecordsCenter;
+  operation?: ClawProfessionalRecordsOperation;
   matchedRoute?: string;
   reasons: string[];
   nextSteps: string[];
   execute: false;
 }
 
-export interface ClawDenseDataSystem {
+export interface ClawProfessionalRecordsSystem {
   id: string;
   label: string;
-  wave: ClawDenseDataWave;
+  wave: ClawProfessionalRecordsWave;
   canonicalCommand: string;
   aliases: string[];
   visiblePack: boolean;
   orchestrator: boolean;
-  storagePolicy: ClawDenseDataStoragePolicy;
-  sensitivityDefault: ClawDenseDataSensitivityDefault;
+  storagePolicy: ClawProfessionalRecordsStoragePolicy;
+  sensitivityDefault: ClawProfessionalRecordsSensitivityDefault;
   regulatedDomains: RegulatedDomain[];
   sharedEngines: string[];
-  centers: ClawDenseDataCenter[];
+  centers: ClawProfessionalRecordsCenter[];
   commandPatterns: string[];
-  operations: ClawDenseDataOperation[];
-  semanticViews: ClawDenseDataSemanticView[];
+  operations: ClawProfessionalRecordsOperation[];
+  semanticViews: ClawProfessionalRecordsSemanticView[];
   standards: string[];
   notes: string;
 }
 
-export interface ClawDenseDataOsRegistry {
+export interface ClawProfessionalRecordsOsRegistry {
   schemaVersion: 1;
   sourceConversationId: string;
   sourcePlanId: string;
   privateGoalReference: string;
   foundationPrimitives: string[];
   foundationCollections: Record<string, string>;
-  existingSurfaceIntegrations: ClawDenseDataExistingSurfaceIntegration[];
+  existingSurfaceIntegrations: ClawProfessionalRecordsExistingSurfaceIntegration[];
   sharedEngines: string[];
-  intentStatuses: ClawDenseDataIntentStatus[];
+  intentStatuses: ClawProfessionalRecordsIntentStatus[];
   routeRejectionReasons: string[];
-  externalPendingRequirements: ClawDenseDataExternalPendingRequirement[];
+  externalPendingRequirements: ClawProfessionalRecordsExternalPendingRequirement[];
   standardCollectionActions: string[];
-  systems: ClawDenseDataSystem[];
+  systems: ClawProfessionalRecordsSystem[];
 }
 
-export interface ClawDenseDataExistingSurfaceIntegration {
+export interface ClawProfessionalRecordsExistingSurfaceIntegration {
   id: string;
   surface: string;
-  disposition: ClawDenseDataExistingSurfaceDisposition;
+  disposition: ClawProfessionalRecordsExistingSurfaceDisposition;
   canonicalOwner: string;
   denseSystems: string[];
   sharedPrimitives: string[];
@@ -105,7 +105,7 @@ export interface ClawDenseDataExistingSurfaceIntegration {
   notes: string;
 }
 
-export interface ClawDenseDataExternalPendingRequirement {
+export interface ClawProfessionalRecordsExternalPendingRequirement {
   id: string;
   systemId: string;
   label: string;
@@ -115,12 +115,12 @@ export interface ClawDenseDataExternalPendingRequirement {
   validationNeeded: string;
 }
 
-export interface ClawDenseDataIntentEntry {
+export interface ClawProfessionalRecordsIntentEntry {
   id: string;
   systemId: string;
   command: string;
   phrase: string;
-  status: ClawDenseDataIntentStatus;
+  status: ClawProfessionalRecordsIntentStatus;
   mappedCommand?: string;
   collectionName?: string;
   operationId?: string;
@@ -128,28 +128,28 @@ export interface ClawDenseDataIntentEntry {
   nextSteps: string[];
 }
 
-export type ClawDenseDataGapRegistrySource = "intent" | "external_pending" | "policy";
+export type ClawProfessionalRecordsGapRegistrySource = "intent" | "external_pending" | "policy";
 
-export interface ClawDenseDataGapRegistryEntry {
+export interface ClawProfessionalRecordsGapRegistryEntry {
   id: string;
-  source: ClawDenseDataGapRegistrySource;
-  status: Exclude<ClawDenseDataIntentStatus, "covered" | "alias_candidate" | "custom_pack">;
+  source: ClawProfessionalRecordsGapRegistrySource;
+  status: Exclude<ClawProfessionalRecordsIntentStatus, "covered" | "alias_candidate" | "custom_pack">;
   systemId?: string;
   command?: string;
   phrase?: string;
   collectionName?: string;
   operationId?: string;
   requirementId?: string;
-  requirementType?: ClawDenseDataExternalPendingRequirement["requirementType"];
+  requirementType?: ClawProfessionalRecordsExternalPendingRequirement["requirementType"];
   reason: string;
   nextStep: string;
 }
 
-export interface ClawDenseDataSemanticViewEntry extends ClawDenseDataSemanticView {
+export interface ClawProfessionalRecordsSemanticViewEntry extends ClawProfessionalRecordsSemanticView {
   systemId: string;
 }
 
-export const clawDenseDataIntentStatuses: ClawDenseDataIntentStatus[] = [
+export const clawProfessionalRecordsIntentStatuses: ClawProfessionalRecordsIntentStatus[] = [
   "covered",
   "partial",
   "alias_candidate",
@@ -160,7 +160,7 @@ export const clawDenseDataIntentStatuses: ClawDenseDataIntentStatus[] = [
   "custom_pack",
 ];
 
-export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
+export const clawProfessionalRecordsOsRegistry: ClawProfessionalRecordsOsRegistry = {
   schemaVersion: 1,
   sourceConversationId: "019e35a1-06bb-77f2-a712-92ed2646bd15",
   sourcePlanId: "019e3659-0335-7811-9cda-c9d176e91515-plan",
@@ -334,7 +334,7 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
     "workflow_state",
     "location",
   ],
-  intentStatuses: clawDenseDataIntentStatuses,
+  intentStatuses: clawProfessionalRecordsIntentStatuses,
   routeRejectionReasons: [
     "ambiguous_route",
     "permission_gate",
@@ -1406,20 +1406,20 @@ export const clawDenseDataOsRegistry: ClawDenseDataOsRegistry = {
   ],
 };
 
-export function listClawDenseDataSystems(options: { wave?: ClawDenseDataWave } = {}): ClawDenseDataSystem[] {
-  return clawDenseDataOsRegistry.systems.filter((system) => !options.wave || system.wave === options.wave);
+export function listClawProfessionalRecordsSystems(options: { wave?: ClawProfessionalRecordsWave } = {}): ClawProfessionalRecordsSystem[] {
+  return clawProfessionalRecordsOsRegistry.systems.filter((system) => !options.wave || system.wave === options.wave);
 }
 
-export function listClawDenseDataSemanticViewEntries(): ClawDenseDataSemanticViewEntry[] {
-  return clawDenseDataOsRegistry.systems.flatMap((system) => system.semanticViews.map((semanticView) => ({
+export function listClawProfessionalRecordsSemanticViewEntries(): ClawProfessionalRecordsSemanticViewEntry[] {
+  return clawProfessionalRecordsOsRegistry.systems.flatMap((system) => system.semanticViews.map((semanticView) => ({
     ...semanticView,
     systemId: system.id,
   })));
 }
 
-export function listClawDenseDataIntentEntries(): ClawDenseDataIntentEntry[] {
-  const entries: ClawDenseDataIntentEntry[] = [];
-  for (const system of clawDenseDataOsRegistry.systems) {
+export function listClawProfessionalRecordsIntentEntries(): ClawProfessionalRecordsIntentEntry[] {
+  const entries: ClawProfessionalRecordsIntentEntry[] = [];
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     for (const command of [system.canonicalCommand, ...system.aliases]) {
       for (const action of ["overview", "gaps", "intents"] as const) {
         entries.push({
@@ -1437,7 +1437,7 @@ export function listClawDenseDataIntentEntries(): ClawDenseDataIntentEntry[] {
     for (const centerEntry of system.centers) {
       const commands = [centerEntry.commandNoun, ...centerEntry.commandAliases];
       for (const command of commands) {
-        for (const action of clawDenseDataOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
+        for (const action of clawProfessionalRecordsOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
           const mappedCommand = centerEntry.collectionName ? `claw db ${centerEntry.collectionName} ${action}` : undefined;
           entries.push({
             id: denseIntentId(system.id, command, action),
@@ -1477,14 +1477,14 @@ export function listClawDenseDataIntentEntries(): ClawDenseDataIntentEntry[] {
   return entries;
 }
 
-export function listClawDenseDataGapRegistryEntries(): ClawDenseDataGapRegistryEntry[] {
-  const entries: ClawDenseDataGapRegistryEntry[] = [];
-  for (const intent of listClawDenseDataIntentEntries()) {
+export function listClawProfessionalRecordsGapRegistryEntries(): ClawProfessionalRecordsGapRegistryEntry[] {
+  const entries: ClawProfessionalRecordsGapRegistryEntry[] = [];
+  for (const intent of listClawProfessionalRecordsIntentEntries()) {
     if (["covered", "alias_candidate", "custom_pack"].includes(intent.status)) continue;
     entries.push({
       id: `dense_gap_${intent.id}`,
       source: "intent",
-      status: intent.status as ClawDenseDataGapRegistryEntry["status"],
+      status: intent.status as ClawProfessionalRecordsGapRegistryEntry["status"],
       systemId: intent.systemId,
       command: intent.command,
       phrase: intent.phrase,
@@ -1495,7 +1495,7 @@ export function listClawDenseDataGapRegistryEntries(): ClawDenseDataGapRegistryE
     });
   }
 
-  for (const requirement of clawDenseDataOsRegistry.externalPendingRequirements) {
+  for (const requirement of clawProfessionalRecordsOsRegistry.externalPendingRequirements) {
     entries.push({
       id: `dense_gap_${requirement.id}`,
       source: "external_pending",
@@ -1527,14 +1527,14 @@ export function listClawDenseDataGapRegistryEntries(): ClawDenseDataGapRegistryE
   return entries;
 }
 
-export function findClawDenseDataSystem(idOrCommand: string): ClawDenseDataSystem | undefined {
-  return clawDenseDataOsRegistry.systems.find(
+export function findClawProfessionalRecordsSystem(idOrCommand: string): ClawProfessionalRecordsSystem | undefined {
+  return clawProfessionalRecordsOsRegistry.systems.find(
     (system) => system.id === idOrCommand || system.canonicalCommand === idOrCommand || system.aliases.includes(idOrCommand),
   );
 }
 
-function findClawDenseDataSystemCommand(command: string): ClawDenseDataSystem | undefined {
-  return clawDenseDataOsRegistry.systems.find(
+function findClawProfessionalRecordsSystemCommand(command: string): ClawProfessionalRecordsSystem | undefined {
+  return clawProfessionalRecordsOsRegistry.systems.find(
     (system) => system.canonicalCommand === command || system.aliases.includes(command),
   );
 }
@@ -1554,16 +1554,16 @@ function slugForDenseIntent(value: string): string {
     .slice(0, 96);
 }
 
-export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentResolution {
-  const normalizedPhrase = normalizeDenseDataPhrase(phrase);
+export function resolveClawProfessionalRecordsIntent(phrase: string): ClawProfessionalRecordsIntentResolution {
+  const normalizedPhrase = normalizeProfessionalRecordsPhrase(phrase);
   const tokens = normalizedPhrase.split(" ").filter(Boolean);
   if (tokens.length === 0) {
-    return denseDataIntentResolution(phrase, normalizedPhrase, "data_gap", ["No dense-data command phrase was provided."], ["Provide a domain, acronym, or direct human noun such as `patient`, `invoice`, or `case`."]);
+    return professionalRecordsIntentResolution(phrase, normalizedPhrase, "data_gap", ["No dense-data command phrase was provided."], ["Provide a domain, acronym, or direct human noun such as `patient`, `invoice`, or `case`."]);
   }
 
   const operationMatch = findOperationRouteMatch(normalizedPhrase);
   if (operationMatch) {
-    return denseDataIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(operationMatch.system, tokens), [`Matched canonical operation ${operationMatch.operation.id}.`], nextStepsFor(operationMatch.system, tokens), {
+    return professionalRecordsIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(operationMatch.system, tokens), [`Matched canonical operation ${operationMatch.operation.id}.`], nextStepsFor(operationMatch.system, tokens), {
       system: operationMatch.system,
       operation: operationMatch.operation,
       matchedRoute: operationMatch.matchedRoute,
@@ -1572,7 +1572,7 @@ export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentR
 
   const patternMatch = findCommandPatternMatch(normalizedPhrase);
   if (patternMatch) {
-    return denseDataIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(patternMatch.system, tokens), [`Matched dense-data route pattern ${patternMatch.matchedRoute}.`], nextStepsFor(patternMatch.system, tokens), {
+    return professionalRecordsIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(patternMatch.system, tokens), [`Matched dense-data route pattern ${patternMatch.matchedRoute}.`], nextStepsFor(patternMatch.system, tokens), {
       system: patternMatch.system,
       center: patternMatch.center,
       matchedRoute: patternMatch.matchedRoute,
@@ -1582,8 +1582,8 @@ export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentR
   const centerMatch = findCenterByCommand(tokens[0] ?? "");
   if (centerMatch) {
     const action = tokens[1];
-    if (action && clawDenseDataOsRegistry.standardCollectionActions.includes(action)) {
-      return denseDataIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(centerMatch.system, tokens), [`Matched direct dense-data noun ${centerMatch.center.commandNoun}.`], nextStepsFor(centerMatch.system, tokens), {
+    if (action && clawProfessionalRecordsOsRegistry.standardCollectionActions.includes(action)) {
+      return professionalRecordsIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(centerMatch.system, tokens), [`Matched direct dense-data noun ${centerMatch.center.commandNoun}.`], nextStepsFor(centerMatch.system, tokens), {
         system: centerMatch.system,
         center: centerMatch.center,
         matchedRoute: `claw ${centerMatch.center.commandNoun} ${action}`,
@@ -1591,22 +1591,22 @@ export function resolveClawDenseDataIntent(phrase: string): ClawDenseDataIntentR
     }
   }
 
-  const system = findClawDenseDataSystemCommand(tokens[0] ?? "");
+  const system = findClawProfessionalRecordsSystemCommand(tokens[0] ?? "");
   if (system) {
-    return denseDataIntentResolution(phrase, normalizedPhrase, system.wave === "first_wave" ? "partial" : "external_pending", [`Matched dense-data system ${system.id}, but no specific route pattern matched.`], nextStepsFor(system, tokens), { system });
+    return professionalRecordsIntentResolution(phrase, normalizedPhrase, system.wave === "first_wave" ? "partial" : "external_pending", [`Matched dense-data system ${system.id}, but no specific route pattern matched.`], nextStepsFor(system, tokens), { system });
   }
 
   if (centerMatch) {
-    return denseDataIntentResolution(phrase, normalizedPhrase, "workflow_gap", [`Matched direct dense-data noun ${centerMatch.center.commandNoun}, but no standard action was present.`], [`Use one of ${clawDenseDataOsRegistry.standardCollectionActions.join(", ")} or add a canonical operation to the dense-data registry.`], {
+    return professionalRecordsIntentResolution(phrase, normalizedPhrase, "workflow_gap", [`Matched direct dense-data noun ${centerMatch.center.commandNoun}, but no standard action was present.`], [`Use one of ${clawProfessionalRecordsOsRegistry.standardCollectionActions.join(", ")} or add a canonical operation to the dense-data registry.`], {
       system: centerMatch.system,
       center: centerMatch.center,
     });
   }
 
-  return denseDataIntentResolution(phrase, normalizedPhrase, "data_gap", ["No dense-data system, acronym, center noun, alias, route pattern, or operation matched."], ["Record the phrase as a dense-data gap before adding new schema or CLI surface."]);
+  return professionalRecordsIntentResolution(phrase, normalizedPhrase, "data_gap", ["No dense-data system, acronym, center noun, alias, route pattern, or operation matched."], ["Record the phrase as a dense-data gap before adding new schema or CLI surface."]);
 }
 
-export function assertClawDenseDataOsRegistryComplete(): void {
+export function assertClawProfessionalRecordsOsRegistryComplete(): void {
   const failures: string[] = [];
   const requiredFoundation = [
     "identity_base",
@@ -1630,31 +1630,31 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     "universal_relations",
   ];
   for (const primitive of requiredFoundation) {
-    if (!clawDenseDataOsRegistry.foundationPrimitives.includes(primitive)) failures.push(`missing foundation primitive ${primitive}`);
-    if (!clawDenseDataOsRegistry.foundationCollections[primitive]) failures.push(`missing foundation collection for ${primitive}`);
+    if (!clawProfessionalRecordsOsRegistry.foundationPrimitives.includes(primitive)) failures.push(`missing foundation primitive ${primitive}`);
+    if (!clawProfessionalRecordsOsRegistry.foundationCollections[primitive]) failures.push(`missing foundation collection for ${primitive}`);
   }
 
   const requiredActions = ["list", "get", "create", "update", "delete", "query", "schema", "purge"];
   for (const action of requiredActions) {
-    if (!clawDenseDataOsRegistry.standardCollectionActions.includes(action)) failures.push(`missing standard action ${action}`);
+    if (!clawProfessionalRecordsOsRegistry.standardCollectionActions.includes(action)) failures.push(`missing standard action ${action}`);
   }
 
-  for (const status of ["covered", "partial", "alias_candidate", "data_gap", "workflow_gap", "external_pending", "blocked", "custom_pack"] satisfies ClawDenseDataIntentStatus[]) {
-    if (!clawDenseDataOsRegistry.intentStatuses.includes(status)) failures.push(`missing intent status ${status}`);
+  for (const status of ["covered", "partial", "alias_candidate", "data_gap", "workflow_gap", "external_pending", "blocked", "custom_pack"] satisfies ClawProfessionalRecordsIntentStatus[]) {
+    if (!clawProfessionalRecordsOsRegistry.intentStatuses.includes(status)) failures.push(`missing intent status ${status}`);
   }
-  if (clawDenseDataOsRegistry.externalPendingRequirements.length === 0) {
+  if (clawProfessionalRecordsOsRegistry.externalPendingRequirements.length === 0) {
     failures.push("missing external pending requirements");
   }
-  for (const requirement of clawDenseDataOsRegistry.externalPendingRequirements) {
+  for (const requirement of clawProfessionalRecordsOsRegistry.externalPendingRequirements) {
     if (requirement.status !== "external_pending") failures.push(`${requirement.id}: external pending requirement must use external_pending status`);
-    if (!findClawDenseDataSystem(requirement.systemId)) failures.push(`${requirement.id}: references missing system ${requirement.systemId}`);
+    if (!findClawProfessionalRecordsSystem(requirement.systemId)) failures.push(`${requirement.id}: references missing system ${requirement.systemId}`);
     if (!requirement.validationNeeded.trim()) failures.push(`${requirement.id}: missing validation needed`);
   }
-  if (clawDenseDataOsRegistry.existingSurfaceIntegrations.length === 0) {
+  if (clawProfessionalRecordsOsRegistry.existingSurfaceIntegrations.length === 0) {
     failures.push("missing existing surface integration audit");
   }
   const existingSurfaceIds = new Set<string>();
-  for (const integration of clawDenseDataOsRegistry.existingSurfaceIntegrations) {
+  for (const integration of clawProfessionalRecordsOsRegistry.existingSurfaceIntegrations) {
     if (!integration.id || !/^[a-z][a-z0-9_]*$/.test(integration.id)) failures.push(`${integration.id}: invalid existing surface integration id`);
     if (existingSurfaceIds.has(integration.id)) failures.push(`${integration.id}: duplicate existing surface integration id`);
     existingSurfaceIds.add(integration.id);
@@ -1663,27 +1663,27 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     if (!integration.followUpGate.trim()) failures.push(`${integration.id}: missing follow-up gate`);
     if (!integration.notes.trim()) failures.push(`${integration.id}: missing integration notes`);
     for (const primitive of integration.sharedPrimitives) {
-      if (!clawDenseDataOsRegistry.foundationPrimitives.includes(primitive)) failures.push(`${integration.id}: unknown shared primitive ${primitive}`);
+      if (!clawProfessionalRecordsOsRegistry.foundationPrimitives.includes(primitive)) failures.push(`${integration.id}: unknown shared primitive ${primitive}`);
     }
     for (const systemId of integration.denseSystems) {
-      if (!findClawDenseDataSystem(systemId)) failures.push(`${integration.id}: references missing dense system ${systemId}`);
+      if (!findClawProfessionalRecordsSystem(systemId)) failures.push(`${integration.id}: references missing dense system ${systemId}`);
     }
   }
-  const gapRegistry = listClawDenseDataGapRegistryEntries();
+  const gapRegistry = listClawProfessionalRecordsGapRegistryEntries();
   const gapStatuses = new Set(gapRegistry.map((gap) => gap.status));
-  for (const status of ["partial", "workflow_gap", "data_gap", "external_pending", "blocked"] satisfies ClawDenseDataGapRegistryEntry["status"][]) {
+  for (const status of ["partial", "workflow_gap", "data_gap", "external_pending", "blocked"] satisfies ClawProfessionalRecordsGapRegistryEntry["status"][]) {
     if (!gapStatuses.has(status)) failures.push(`gap registry missing ${status}`);
   }
   for (const gap of gapRegistry) {
     if (!gap.id || !/^dense_gap_[a-z0-9_]+$/.test(gap.id)) failures.push(`${gap.id}: invalid dense gap id`);
     if (!gap.reason.trim()) failures.push(`${gap.id}: missing gap reason`);
     if (!gap.nextStep.trim()) failures.push(`${gap.id}: missing gap next step`);
-    if (gap.systemId && !findClawDenseDataSystem(gap.systemId)) failures.push(`${gap.id}: references missing dense system ${gap.systemId}`);
+    if (gap.systemId && !findClawProfessionalRecordsSystem(gap.systemId)) failures.push(`${gap.id}: references missing dense system ${gap.systemId}`);
   }
 
   const requiredFirstWave = ["health", "research", "biology", "labs", "legal", "erp", "crm", "finance", "education", "manufacturing", "ops", "transport", "eln"];
   for (const id of requiredFirstWave) {
-    const system = findClawDenseDataSystem(id);
+    const system = findClawProfessionalRecordsSystem(id);
     if (!system) {
       failures.push(`missing first-wave dense data system ${id}`);
       continue;
@@ -1698,13 +1698,13 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     if (system.semanticViews.length === 0) failures.push(`${id}: missing semantic views`);
   }
 
-  for (const system of clawDenseDataOsRegistry.systems) {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     if (!system.id || !/^[a-z][a-z0-9_]*$/.test(system.id)) failures.push(`${system.id}: invalid id`);
     if (!system.canonicalCommand || !/^[a-z][a-z0-9-]*$/.test(system.canonicalCommand)) failures.push(`${system.id}: invalid canonical command`);
     if (!system.label.trim()) failures.push(`${system.id}: missing label`);
     if (!system.visiblePack) failures.push(`${system.id}: dense systems must be visible`);
     if (system.sharedEngines.length === 0) failures.push(`${system.id}: missing shared engines`);
-    if (!system.sharedEngines.every((engine) => clawDenseDataOsRegistry.sharedEngines.includes(engine))) {
+    if (!system.sharedEngines.every((engine) => clawProfessionalRecordsOsRegistry.sharedEngines.includes(engine))) {
       failures.push(`${system.id}: references an unknown shared engine`);
     }
     if (!system.regulatedDomains.every((domain) => regulatedDomains.includes(domain))) {
@@ -1750,7 +1750,7 @@ export function assertClawDenseDataOsRegistryComplete(): void {
     "public_safety",
   ];
   for (const systemId of requiredRegulatedSystems) {
-    const system = findClawDenseDataSystem(systemId);
+    const system = findClawProfessionalRecordsSystem(systemId);
     if (!system) {
       failures.push(`${systemId}: regulated dense-data system is missing`);
     } else if (system.regulatedDomains.length === 0) {
@@ -1763,23 +1763,23 @@ export function assertClawDenseDataOsRegistryComplete(): void {
   }
 }
 
-function normalizeDenseDataPhrase(phrase: string): string {
+function normalizeProfessionalRecordsPhrase(phrase: string): string {
   return phrase.trim().replace(/^claw\s+/i, "").replace(/\s+/g, " ").toLowerCase();
 }
 
-function denseDataIntentResolution(
+function professionalRecordsIntentResolution(
   phrase: string,
   normalizedPhrase: string,
-  status: ClawDenseDataIntentStatus,
+  status: ClawProfessionalRecordsIntentStatus,
   reasons: string[],
   nextSteps: string[],
-  matches: Partial<Pick<ClawDenseDataIntentResolution, "system" | "center" | "operation" | "matchedRoute">> = {},
-): ClawDenseDataIntentResolution {
+  matches: Partial<Pick<ClawProfessionalRecordsIntentResolution, "system" | "center" | "operation" | "matchedRoute">> = {},
+): ClawProfessionalRecordsIntentResolution {
   return { schemaVersion: 1, phrase, normalizedPhrase, status, reasons, nextSteps, execute: false, ...matches };
 }
 
-function findOperationRouteMatch(normalizedPhrase: string): { system: ClawDenseDataSystem; operation: ClawDenseDataOperation; matchedRoute: string } | undefined {
-  for (const system of clawDenseDataOsRegistry.systems) {
+function findOperationRouteMatch(normalizedPhrase: string): { system: ClawProfessionalRecordsSystem; operation: ClawProfessionalRecordsOperation; matchedRoute: string } | undefined {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     for (const operationEntry of system.operations) {
       const matchedRoute = operationEntry.routes.find((route) => denseRoutePatternMatches(route, normalizedPhrase));
       if (matchedRoute) return { system, operation: operationEntry, matchedRoute };
@@ -1788,8 +1788,8 @@ function findOperationRouteMatch(normalizedPhrase: string): { system: ClawDenseD
   return undefined;
 }
 
-function findCommandPatternMatch(normalizedPhrase: string): { system: ClawDenseDataSystem; center?: ClawDenseDataCenter; matchedRoute: string } | undefined {
-  for (const system of clawDenseDataOsRegistry.systems) {
+function findCommandPatternMatch(normalizedPhrase: string): { system: ClawProfessionalRecordsSystem; center?: ClawProfessionalRecordsCenter; matchedRoute: string } | undefined {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     const matchedRoute = system.commandPatterns.find((pattern) => denseRoutePatternMatches(pattern, normalizedPhrase));
     if (matchedRoute) {
       const firstToken = normalizedPhrase.split(" ")[0] ?? "";
@@ -1799,20 +1799,20 @@ function findCommandPatternMatch(normalizedPhrase: string): { system: ClawDenseD
   return undefined;
 }
 
-function findCenterByCommand(command: string): { system: ClawDenseDataSystem; center: ClawDenseDataCenter } | undefined {
-  for (const system of clawDenseDataOsRegistry.systems) {
+function findCenterByCommand(command: string): { system: ClawProfessionalRecordsSystem; center: ClawProfessionalRecordsCenter } | undefined {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     const centerEntry = findCenterInSystem(system, command);
     if (centerEntry) return { system, center: centerEntry };
   }
   return undefined;
 }
 
-function findCenterInSystem(system: ClawDenseDataSystem, command: string): ClawDenseDataCenter | undefined {
+function findCenterInSystem(system: ClawProfessionalRecordsSystem, command: string): ClawProfessionalRecordsCenter | undefined {
   return system.centers.find((centerEntry) => centerEntry.commandNoun === command || centerEntry.commandAliases.includes(command));
 }
 
 function denseRoutePatternMatches(pattern: string, normalizedPhrase: string): boolean {
-  const patternTokens = normalizeDenseDataPhrase(pattern).split(" ").filter(Boolean);
+  const patternTokens = normalizeProfessionalRecordsPhrase(pattern).split(" ").filter(Boolean);
   const phraseTokens = normalizedPhrase.split(" ").filter(Boolean);
   if (patternTokens.length !== phraseTokens.length) return false;
   return patternTokens.every((patternToken, index) => {
@@ -1823,14 +1823,14 @@ function denseRoutePatternMatches(pattern: string, normalizedPhrase: string): bo
   });
 }
 
-function sensitivityStatusFor(system: ClawDenseDataSystem, tokens: string[]): ClawDenseDataIntentStatus {
+function sensitivityStatusFor(system: ClawProfessionalRecordsSystem, tokens: string[]): ClawProfessionalRecordsIntentStatus {
   const mutating = tokens.some((token) => ["add", "create", "update", "delete", "purge"].includes(token));
   if (tokens.includes("purge")) return "blocked";
   if (system.sensitivityDefault === "high" && mutating) return "partial";
   return "covered";
 }
 
-function nextStepsFor(system: ClawDenseDataSystem, tokens: string[]): string[] {
+function nextStepsFor(system: ClawProfessionalRecordsSystem, tokens: string[]): string[] {
   if (tokens.includes("purge")) return ["Use an explicit restricted purge flow with approval, audit, and export/snapshot checks."];
   if (system.sensitivityDefault === "high" && tokens.some((token) => ["add", "create", "update", "delete"].includes(token))) {
     return ["Require IDs for composed sensitive operations and record provenance, audit, and quality gaps."];
@@ -1838,15 +1838,15 @@ function nextStepsFor(system: ClawDenseDataSystem, tokens: string[]): string[] {
   return ["Route through the dense-data registry, shared core database, relations, evidence, provenance, and quality-gap engines."];
 }
 
-function center(id: string, label: string, commandNoun: string, profileKind: string | undefined, notes: string, commandAliases: string[] = [pluralizeCommandNoun(commandNoun)], collectionName?: string): ClawDenseDataCenter {
+function center(id: string, label: string, commandNoun: string, profileKind: string | undefined, notes: string, commandAliases: string[] = [pluralizeCommandNoun(commandNoun)], collectionName?: string): ClawProfessionalRecordsCenter {
   return { id, label, commandNoun, commandAliases, collectionName, profileKind, notes };
 }
 
-function operation(id: string, label: string, routes: string[], createsOrReads: string[]): ClawDenseDataOperation {
+function operation(id: string, label: string, routes: string[], createsOrReads: string[]): ClawProfessionalRecordsOperation {
   return { id, label, routes, createsOrReads };
 }
 
-function view(id: string, label: string, commandPattern: string, operationId: string, requiredInputs: string[], outputShape: string): ClawDenseDataSemanticView {
+function view(id: string, label: string, commandPattern: string, operationId: string, requiredInputs: string[], outputShape: string): ClawProfessionalRecordsSemanticView {
   return { id, label, commandPattern, operationId, requiredInputs, outputShape };
 }
 
@@ -1855,16 +1855,16 @@ function denseSystem(input: {
   label: string;
   command: string;
   aliases: string[];
-  sensitivityDefault: ClawDenseDataSensitivityDefault;
+  sensitivityDefault: ClawProfessionalRecordsSensitivityDefault;
   regulatedDomains?: RegulatedDomain[];
   sharedEngines: string[];
-  centers: ClawDenseDataCenter[];
+  centers: ClawProfessionalRecordsCenter[];
   commandPatterns: string[];
-  operations: ClawDenseDataOperation[];
-  semanticViews: ClawDenseDataSemanticView[];
+  operations: ClawProfessionalRecordsOperation[];
+  semanticViews: ClawProfessionalRecordsSemanticView[];
   standards: string[];
   notes: string;
-}): ClawDenseDataSystem {
+}): ClawProfessionalRecordsSystem {
   return {
     id: input.id,
     label: input.label,
@@ -1886,7 +1886,7 @@ function denseSystem(input: {
   };
 }
 
-function roadmapSystem(id: string, label: string, command: string, aliases: string[], centerCommand: string): ClawDenseDataSystem {
+function roadmapSystem(id: string, label: string, command: string, aliases: string[], centerCommand: string): ClawProfessionalRecordsSystem {
   return {
     id,
     label,

@@ -6,7 +6,7 @@ import {
   type RegulatedDomain,
 } from "@clawjs/core";
 
-export type SearchProfileId = "framework" | "full";
+export type SearchSourceSetId = "framework" | "full";
 
 export type SearchAclLevel = "domain" | "source" | "agent";
 
@@ -22,7 +22,7 @@ export type SearchSourceState =
   | "external_pending"
   | "error";
 
-export type SearchSourceProfile = "framework" | "full";
+export type SearchSourceSet = "framework" | "full";
 
 export type SearchMatchKind = "exact" | "prefix" | "fuzzy" | "fts" | "semantic";
 
@@ -55,7 +55,7 @@ export interface SearchEntrypointContract {
   scope: "root" | "admin" | "chat";
   route?: string;
   command?: string;
-  defaultProfile: SearchProfileId;
+  defaultSourceSet: SearchSourceSetId;
   queryScope: "framework" | "technical_admin" | "conversations_only";
   hotkey: SearchHotkeyContract;
   preservesConversationSearchIsolation: boolean;
@@ -139,7 +139,7 @@ export interface SearchSourceManifest {
   domain: string;
   name: string;
   version: number;
-  profile: SearchSourceProfile;
+  sourceSet: SearchSourceSet;
   resultTypes: string[];
   capabilities: SearchSourceCapabilities;
   indexing: SearchSourceIndexingPolicy;
@@ -334,7 +334,7 @@ export interface SearchQueryInput {
   domains?: string[];
   sources?: string[];
   shards?: string[];
-  profile?: SearchProfileId;
+  sourceSet?: SearchSourceSetId;
   actor?: string;
   surface?: string;
   limit?: number;
@@ -356,13 +356,13 @@ export interface SearchAgentResultBudget {
 
 export interface SearchQueryOutput {
   query: string;
-  profile: SearchProfileId;
+  sourceSet: SearchSourceSetId;
   results: SearchResult[];
   facets?: SearchFacetDeclaration[];
   partial: boolean;
   omittedSources: Array<{
     source: string;
-    reason: "timeout" | "disabled" | "profile" | "error";
+    reason: "timeout" | "disabled" | "sourceSet" | "error";
     message?: string;
   }>;
   elapsedMs: number;
@@ -392,7 +392,7 @@ export interface SearchQueryContext {
 
 export interface SearchRegistry {
   register(source: SearchSourceAdapter): void;
-  listSources(profile?: SearchProfileId): SearchSourceManifest[];
+  listSources(sourceSet?: SearchSourceSetId): SearchSourceManifest[];
   status(): Promise<SearchSourceStatus[]>;
   query(input: SearchQueryInput): Promise<SearchQueryOutput>;
 }
@@ -405,7 +405,7 @@ export interface RootSearchFederatorOptions {
   budgets?: Partial<SearchBudgets>;
 }
 
-export const SEARCH_PROFILES: Array<{ id: SearchProfileId; label: string; defaultEnabled: boolean }> = [
+export const SEARCH_SOURCE_SETS: Array<{ id: SearchSourceSetId; label: string; defaultEnabled: boolean }> = [
   { id: "framework", label: "Framework", defaultEnabled: true },
   { id: "full", label: "Full", defaultEnabled: false },
 ];
@@ -423,7 +423,7 @@ export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
     scope: "root",
     route: "/search",
     command: "claw search query",
-    defaultProfile: "framework",
+    defaultSourceSet: "framework",
     queryScope: "framework",
     hotkey: {
       bindingId: "search.root.global",
@@ -442,7 +442,7 @@ export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
     scope: "admin",
     route: "/search-index",
     command: "claw search sources",
-    defaultProfile: "framework",
+    defaultSourceSet: "framework",
     queryScope: "technical_admin",
     hotkey: {
       bindingId: "search.index.admin",
@@ -456,7 +456,7 @@ export const SEARCH_ENTRYPOINT_CONTRACTS: SearchEntrypointContract[] = [
     id: "chat-search",
     label: "Chat Search",
     scope: "chat",
-    defaultProfile: "framework",
+    defaultSourceSet: "framework",
     queryScope: "conversations_only",
     hotkey: {
       bindingId: "search.chat.current",
@@ -528,10 +528,10 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
       }
       sources.set(source.manifest.id, source);
     },
-    listSources(profile = "framework") {
+    listSources(sourceSet = "framework") {
       return [...sources.values()]
         .map((source) => source.manifest)
-        .filter((manifest) => profile === "full" || manifest.profile === "framework")
+        .filter((manifest) => sourceSet === "full" || manifest.sourceSet === "framework")
         .sort((left, right) => left.domain.localeCompare(right.domain) || left.id.localeCompare(right.id));
     },
     async status() {
@@ -552,9 +552,9 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
     },
     async query(input) {
       const startedAt = Date.now();
-      const profile = input.profile ?? "framework";
+      const sourceSet = input.sourceSet ?? "framework";
       const selected = [...sources.values()].filter((source) => {
-        if (profile !== "full" && source.manifest.profile !== "framework") return false;
+        if (sourceSet !== "full" && source.manifest.sourceSet !== "framework") return false;
         if (input.sources?.length && !input.sources.includes(source.manifest.id)) return false;
         if (input.domains?.length && !input.domains.includes(source.manifest.domain)) return false;
         return true;
@@ -597,7 +597,7 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
       const results = applyAgentResultBudget(rankedResults, input);
       return {
         query: input.query,
-        profile,
+        sourceSet,
         results,
         partial: omittedSources.length > 0,
         omittedSources,
@@ -786,7 +786,7 @@ export function createFrameworkSearchSourceManifest(input: {
     domain: input.domain,
     name: input.name,
     version: 1,
-    profile: "framework",
+    sourceSet: "framework",
     resultTypes: input.resultTypes,
     facets: input.facets,
     capabilities: {
@@ -831,7 +831,7 @@ export function createFullSearchSourceManifest(input: {
     domain: input.domain,
     name: input.name,
     version: 1,
-    profile: "full",
+    sourceSet: "full",
     resultTypes: input.resultTypes,
     facets: input.facets,
     capabilities: {
@@ -868,7 +868,7 @@ export function createCommandSearchSourceManifest(): SearchSourceManifest {
     domain: "commands",
     name: "Commands",
     version: 1,
-    profile: "framework",
+    sourceSet: "framework",
     resultTypes: ["command"],
     capabilities: {
       fastPath: true,
@@ -1395,7 +1395,7 @@ function validateSearchSourceManifest(manifest: SearchSourceManifest): void {
   if (!manifest.id.trim()) throw new Error("search source id is required");
   if (!manifest.domain.trim()) throw new Error(`search source ${manifest.id} domain is required`);
   if (!manifest.name.trim()) throw new Error(`search source ${manifest.id} name is required`);
-  if (!manifest.capabilities.fastPath && manifest.profile === "framework") {
+  if (!manifest.capabilities.fastPath && manifest.sourceSet === "framework") {
     throw new Error(`framework search source ${manifest.id} must declare a fast path`);
   }
   if (manifest.permissions.default !== "opt_in") {

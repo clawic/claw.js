@@ -27,7 +27,7 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(plan.steps.first?.arguments, ["-setairportnetwork", "en0", "Office"])
     }
 
-    func testMacPermissionBrokerCoversPrivacyDataDomains() {
+    func testMacPermissionBrokerCoversPrivacyDomains() {
         XCTAssertTrue(MacControlPermissionID.allCases.contains(.calendar))
         XCTAssertTrue(MacControlPermissionID.allCases.contains(.contacts))
         XCTAssertTrue(MacControlPermissionID.allCases.contains(.reminders))

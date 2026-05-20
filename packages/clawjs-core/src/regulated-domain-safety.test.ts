@@ -175,7 +175,7 @@ test("agent and connector declarations can carry regulated safety metadata", () 
     action: "read",
     regulatedSafety: {
       regulatedDomains: ["health"],
-      sensitiveDataClasses: ["health_record"],
+      sensitiveRecordClasses: ["health_record"],
       decisionEffect: "summary",
       professionalReviewRequired: true,
       outputLabelsRequired: true,
@@ -187,7 +187,7 @@ test("agent and connector declarations can carry regulated safety metadata", () 
     summary: "Export health records",
     riskTiers: ["read"],
     regulatedDomains: ["health"],
-    sensitiveDataClasses: ["health_record"],
+    sensitiveRecordClasses: ["health_record"],
     decisionEffects: ["external_action"],
     requiresProfessionalReview: true,
     requiresSensitiveExportReview: true,

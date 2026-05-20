@@ -96,10 +96,10 @@ requireText("docs/decision-map.md", ["progressive modularity", "scripts/progress
 requireText("docs/cli.md", ["claw setup", "claw setup --interactive", "claw modules", "Progressive Setup", "--details", "--enable id1,id2", "@clawjs/domain-pack-dense-data"]);
 requireText("packages/clawjs/src/cli-modules-command.ts", ["ModuleKind = \"capability\" | \"area\"", "requiresExplicitInstall", "optionalPack", "requiredModuleForCliGroup", "hasModuleConfigForCli", "runSetupCli", "runModulesCli"]);
 requireText("packages/clawjs/src/cli-collections-command.ts", ["--available", "activeCollectionFilterForModules", "visibility"]);
-requireText("packages/clawjs/src/index.ts", ["requiredModuleForCliGroup", "module_not_enabled", "optional_pack_missing", "runOptionalDenseDataCli", "using minimal defaults", "Run `"]);
+requireText("packages/clawjs/src/index.ts", ["requiredModuleForCliGroup", "module_not_enabled", "optional_pack_missing", "runOptionalProfessionalRecordsCli", "using minimal defaults", "Run `"]);
 requireText("packages/clawjs/src/index-installed.test.ts", ["cli-dense-data-command", "module_not_enabled", "optional_pack_missing", "@clawjs/domain-pack-dense-data"]);
 requireText("packages/clawjs-domain-pack-dense-data/package.json", ["@clawjs/domain-pack-dense-data", "Optional dense domain command pack"]);
-requireText("packages/clawjs-domain-pack-dense-data/src/index.ts", ["runDenseDataCli", "cli-dense-data-command.ts"]);
+requireText("packages/clawjs-domain-pack-dense-data/src/index.ts", ["runProfessionalRecordsCli", "cli-dense-data-command.ts"]);
 requireText("packages/clawjs/src/cli-modules-command.test.ts", ["setup preview", "setup details allow reviewing and adjusting modules before apply", "setup interactive asks for mode", "modules list hides available niche modules", "collections list shows active safe catalog", "niche domain commands require explicit module enablement", "safe first-use productivity commands accept claw-home"]);
 requireText("packages/clawjs-core/src/cli-command-registry.ts", ["setup", "modules", "0031-progressive-modularity-and-zero-surprise-install"]);
 

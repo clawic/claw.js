@@ -104,7 +104,7 @@ run("node", ["--input-type=module", "-e", `
     throw new Error("@clawjs/cli helpers are missing");
   }
   const densePack = await import("@clawjs/domain-pack-dense-data");
-  if (typeof densePack.runDenseDataCli !== "function") {
+  if (typeof densePack.runProfessionalRecordsCli !== "function") {
     throw new Error("@clawjs/domain-pack-dense-data helpers are missing");
   }
   const search = await import("@clawjs/search");

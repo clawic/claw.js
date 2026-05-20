@@ -3,15 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  assertClawDenseDataOsRegistryComplete,
+  assertClawProfessionalRecordsOsRegistryComplete,
   BUILTIN_COLLECTIONS,
   BUILTIN_COLLECTIONS_BY_NAME,
-  clawDenseDataAcceptanceFixture,
-  clawDenseDataOsRegistry,
-  listClawDenseDataGapRegistryEntries,
-  listClawDenseDataIntentEntries,
-  listClawDenseDataSemanticViewEntries,
-  resolveClawDenseDataIntent,
+  clawProfessionalRecordsAcceptanceFixture,
+  clawProfessionalRecordsOsRegistry,
+  listClawProfessionalRecordsGapRegistryEntries,
+  listClawProfessionalRecordsIntentEntries,
+  listClawProfessionalRecordsSemanticViewEntries,
+  resolveClawProfessionalRecordsIntent,
   resolveClawCliCommandIntent,
   resolveBuiltinCollectionName,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
@@ -578,21 +578,21 @@ for (const requiredPhrase of [
   "quality_gaps",
   "core",
   "sidecars",
-  "clawDenseDataOsRegistry.existingSurfaceIntegrations",
+  "clawProfessionalRecordsOsRegistry.existingSurfaceIntegrations",
 ]) {
   requireText("existing catalog audit", existingCatalogAudit, requiredPhrase);
 }
 
 try {
-  assertClawDenseDataOsRegistryComplete();
+  assertClawProfessionalRecordsOsRegistryComplete();
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
 
-if (clawDenseDataOsRegistry.sourceConversationId !== sourceConversationId) {
+if (clawProfessionalRecordsOsRegistry.sourceConversationId !== sourceConversationId) {
   fail("dense registry sourceConversationId drifted");
 }
-if (clawDenseDataOsRegistry.sourcePlanId !== sourcePlanId) {
+if (clawProfessionalRecordsOsRegistry.sourcePlanId !== sourcePlanId) {
   fail("dense registry sourcePlanId drifted");
 }
 
@@ -602,7 +602,7 @@ const canonicalCollections = new Set([
 ]);
 
 for (const [primitive, collectionName] of Object.entries(requiredFoundationMappings)) {
-  if (clawDenseDataOsRegistry.foundationCollections[primitive] !== collectionName) {
+  if (clawProfessionalRecordsOsRegistry.foundationCollections[primitive] !== collectionName) {
     fail(`foundation primitive ${primitive} must map to ${collectionName}`);
   }
   if (!canonicalCollections.has(collectionName)) {
@@ -610,11 +610,11 @@ for (const [primitive, collectionName] of Object.entries(requiredFoundationMappi
   }
 }
 
-const existingIntegrationIds = new Set(clawDenseDataOsRegistry.existingSurfaceIntegrations.map((entry) => entry.id));
+const existingIntegrationIds = new Set(clawProfessionalRecordsOsRegistry.existingSurfaceIntegrations.map((entry) => entry.id));
 for (const integrationId of requiredExistingIntegrationIds) {
   if (!existingIntegrationIds.has(integrationId)) fail(`dense registry missing existing surface integration ${integrationId}`);
 }
-for (const integration of clawDenseDataOsRegistry.existingSurfaceIntegrations) {
+for (const integration of clawProfessionalRecordsOsRegistry.existingSurfaceIntegrations) {
   if (!requiredExistingAuditSurfaces.includes(integration.surface)) {
     fail(`existing surface integration ${integration.id} is not mirrored in the public audit table`);
   }
@@ -628,14 +628,14 @@ for (const integration of clawDenseDataOsRegistry.existingSurfaceIntegrations) {
     if (!Object.hasOwn(requiredFoundationMappings, primitive)) fail(`existing surface integration ${integration.id} references unknown primitive ${primitive}`);
   }
   for (const systemId of integration.denseSystems) {
-    if (!clawDenseDataOsRegistry.systems.some((entry) => entry.id === systemId)) {
+    if (!clawProfessionalRecordsOsRegistry.systems.some((entry) => entry.id === systemId)) {
       fail(`existing surface integration ${integration.id} references missing system ${systemId}`);
     }
   }
 }
 
 for (const systemId of requiredFirstWaveSystems) {
-  const system = clawDenseDataOsRegistry.systems.find((entry) => entry.id === systemId);
+  const system = clawProfessionalRecordsOsRegistry.systems.find((entry) => entry.id === systemId);
   if (!system) {
     fail(`missing first-wave system ${systemId}`);
     continue;
@@ -650,7 +650,7 @@ for (const systemId of requiredFirstWaveSystems) {
 }
 
 for (const systemId of requiredRoadmapSystems) {
-  const system = clawDenseDataOsRegistry.systems.find((entry) => entry.id === systemId);
+  const system = clawProfessionalRecordsOsRegistry.systems.find((entry) => entry.id === systemId);
   if (!system) {
     fail(`missing roadmap system ${systemId}`);
     continue;
@@ -664,9 +664,9 @@ for (const systemId of requiredRoadmapSystems) {
   if (system.semanticViews.length === 0) fail(`${systemId} must define a roadmap semantic view contract`);
 }
 
-const intents = listClawDenseDataIntentEntries();
-const denseGaps = listClawDenseDataGapRegistryEntries();
-const semanticViews = listClawDenseDataSemanticViewEntries();
+const intents = listClawProfessionalRecordsIntentEntries();
+const denseGaps = listClawProfessionalRecordsGapRegistryEntries();
+const semanticViews = listClawProfessionalRecordsSemanticViewEntries();
 
 if (!intents.some((entry) => entry.phrase === "claw patient list" && entry.status === "covered" && entry.collectionName === "patients")) {
   fail("generated intents must cover claw patient list against patients");
@@ -708,7 +708,7 @@ for (const [phrase, collectionName] of requiredPluralIntentPhrases) {
     fail(`generated intents must cover plural alias ${phrase} against ${collectionName}`);
   }
 }
-for (const system of clawDenseDataOsRegistry.systems) {
+for (const system of clawProfessionalRecordsOsRegistry.systems) {
   for (const center of system.centers) {
     if (!center.collectionName) continue;
     if (!canonicalCollections.has(center.collectionName)) {
@@ -716,7 +716,7 @@ for (const system of clawDenseDataOsRegistry.systems) {
       continue;
     }
     for (const command of [center.commandNoun, ...center.commandAliases]) {
-      for (const action of clawDenseDataOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
+      for (const action of clawProfessionalRecordsOsRegistry.standardCollectionActions.filter((entry) => entry !== "purge")) {
         const phrase = `claw ${command} ${action}`;
         if (!intents.some((entry) => entry.phrase === phrase && entry.status === "covered" && entry.collectionName === center.collectionName)) {
           fail(`generated intents must cover graduated center route ${phrase} against ${center.collectionName}`);
@@ -726,13 +726,13 @@ for (const system of clawDenseDataOsRegistry.systems) {
   }
 }
 let multiRouteOperationCount = 0;
-for (const system of clawDenseDataOsRegistry.systems) {
+for (const system of clawProfessionalRecordsOsRegistry.systems) {
   for (const operation of system.operations) {
     if (operation.routes.length < 2) continue;
     multiRouteOperationCount += 1;
     for (const route of operation.routes) {
       const phrase = route.replace(/<[^>]+>/g, "fixture_id");
-      const resolution = resolveClawDenseDataIntent(phrase);
+      const resolution = resolveClawProfessionalRecordsIntent(phrase);
       if (resolution.system?.id !== system.id || resolution.operation?.id !== operation.id) {
         fail(`operation route ${phrase} must resolve to ${system.id}/${operation.id}`);
       }
@@ -853,7 +853,7 @@ if (resolveClawCliCommand("dense-fixture")?.target !== "dense-fixtures") {
   fail("dense-fixture alias must target dense-fixtures");
 }
 
-const fixtureCoverage = new Set(clawDenseDataAcceptanceFixture.records.flatMap((record) => record.covers));
+const fixtureCoverage = new Set(clawProfessionalRecordsAcceptanceFixture.records.flatMap((record) => record.covers));
 for (const coverage of requiredFixtureCoverage) {
   if (!fixtureCoverage.has(coverage)) fail(`acceptance fixture missing ${coverage}`);
 }
@@ -877,11 +877,11 @@ for (const [id, collectionName] of [
   ["fixture_canonical_operation_health_patient_timeline", "canonical_operations"],
   ["fixture_semantic_view_health_patient_timeline", "semantic_views"],
 ]) {
-  if (!clawDenseDataAcceptanceFixture.records.some((record) => record.id === id && record.collectionName === collectionName)) {
+  if (!clawProfessionalRecordsAcceptanceFixture.records.some((record) => record.id === id && record.collectionName === collectionName)) {
     fail(`acceptance fixture missing dense registry record ${id} in ${collectionName}`);
   }
 }
-const sharedIdentityRelations = clawDenseDataAcceptanceFixture.records.filter((record) => record.collectionName === "entity_relations" && record.covers.includes("shared_identity"));
+const sharedIdentityRelations = clawProfessionalRecordsAcceptanceFixture.records.filter((record) => record.collectionName === "entity_relations" && record.covers.includes("shared_identity"));
 for (const [targetKind, targetId] of [
   ["patients", "fixture_patient_ada"],
   ["participants", "fixture_participant_subject_001"],
@@ -895,24 +895,24 @@ for (const [targetKind, targetId] of [
 if (!sharedIdentityRelations.some((record) => record.data.fromEntityId === "fixture_person_smith" && record.data.toEntityKind === "legal_clients" && record.data.toEntityId === "fixture_legal_client_smith" && record.data.type === "same_as")) {
   fail("acceptance fixture must link fixture_person_smith to legal client identity");
 }
-if (!clawDenseDataAcceptanceFixture.records.some((record) => record.collectionName === "domain_intents" && record.covers.includes("intent_coverage"))) {
+if (!clawProfessionalRecordsAcceptanceFixture.records.some((record) => record.collectionName === "domain_intents" && record.covers.includes("intent_coverage"))) {
   fail("acceptance fixture must materialize generated domain intents");
 }
 
-for (const record of clawDenseDataAcceptanceFixture.records) {
+for (const record of clawProfessionalRecordsAcceptanceFixture.records) {
   if (!canonicalCollections.has(record.collectionName)) {
     fail(`acceptance fixture record ${record.id} uses non-canonical collection ${record.collectionName}`);
   }
 }
 
 for (const [systemId, requirementType] of requiredExternalPending) {
-  if (!clawDenseDataOsRegistry.externalPendingRequirements.some((entry) => entry.systemId === systemId && entry.requirementType === requirementType && entry.status === "external_pending")) {
+  if (!clawProfessionalRecordsOsRegistry.externalPendingRequirements.some((entry) => entry.systemId === systemId && entry.requirementType === requirementType && entry.status === "external_pending")) {
     fail(`missing external_pending requirement for ${systemId}/${requirementType}`);
   }
 }
 
 for (const [systemId, regulatedDomains] of requiredRegulatedDenseSystems) {
-  const system = clawDenseDataOsRegistry.systems.find((entry) => entry.id === systemId);
+  const system = clawProfessionalRecordsOsRegistry.systems.find((entry) => entry.id === systemId);
   if (!system) {
     fail(`missing regulated dense system ${systemId}`);
     continue;

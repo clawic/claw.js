@@ -1,1 +1,1 @@
-export { runDenseDataCli } from "../../clawjs/src/cli-dense-data-command.ts";
+export { runProfessionalRecordsCli } from "../../clawjs/src/cli-dense-data-command.ts";

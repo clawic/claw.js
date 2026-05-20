@@ -25,6 +25,8 @@ test("Network control plane registry preserves privacy and authority defaults", 
   assert.equal(clawNetworkControlPlaneRegistry.defaultPrivacy.tlsDecryption, false);
   assert.equal(clawNetworkControlPlaneRegistry.authority.agentRuleApplication, "suggest_only");
   assert.equal(clawNetworkControlPlaneRegistry.authority.humanOrExplicitGrantApplies, true);
+  assert.deepEqual(clawNetworkControlPlaneRegistry.networkPolicyProfiles.map((entry) => entry.id), ["default"]);
+  assert.equal(listNetworkDefaultRules().every((rule) => rule.ruleSteward.kind === "system"), true);
 });
 
 test("Network adapters distinguish ready framework enforcement from native external pending", () => {
@@ -96,6 +98,7 @@ test("Network events and rule suggestions keep detailed fields opt-in", () => {
   const suggestion = createNetworkRuleSuggestion({ event, action: "allow", now: "2026-05-20T00:00:00.000Z" });
   assert.doesNotThrow(() => networkRuleSchema.parse(suggestion));
   assert.equal(suggestion.enabled, false);
+  assert.deepEqual(suggestion.ruleSteward, { kind: "agent", id: "agent.network-review" });
   assert.equal(suggestion.source, "agent_suggestion");
 });
 

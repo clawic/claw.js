@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -7,7 +8,7 @@ import Database from "better-sqlite3";
 import {
   LOCAL_TEXT_EMBEDDING_MODEL,
   SEARCH_SQLITE_ENGINE,
-  SEARCH_PROFILES,
+  SEARCH_SOURCE_SETS,
   createLocalTextEmbedding,
   createSearchRegistry,
   scoreLexicalMatch,
@@ -17,7 +18,7 @@ import {
   type SearchFacetDeclaration,
   type SearchInteraction,
   type SearchInteractionInput,
-  type SearchProfileId,
+  type SearchSourceSetId,
   type SearchQueryInput,
   type SearchQueryOutput,
   type SearchResult,
@@ -327,13 +328,13 @@ export class SearchStore {
     const manifestJson = JSON.stringify(manifest);
     const existing = this.db.prepare("SELECT state, backlog, error, manifest_json FROM search_sources WHERE id = ?").get(manifest.id) as { state: SearchSourceState; backlog: number; error: string | null; manifest_json: string } | undefined;
     this.db.prepare(`
-      INSERT INTO search_sources (id, domain, name, version, profile, manifest_json, state, backlog, error, updated_at)
+      INSERT INTO search_sources (id, domain, name, version, sourceSet, manifest_json, state, backlog, error, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         domain = excluded.domain,
         name = excluded.name,
         version = excluded.version,
-        profile = excluded.profile,
+        sourceSet = excluded.sourceSet,
         manifest_json = excluded.manifest_json,
         state = CASE WHEN ? THEN excluded.state ELSE search_sources.state END,
         backlog = CASE WHEN ? THEN excluded.backlog ELSE search_sources.backlog END,
@@ -344,7 +345,7 @@ export class SearchStore {
       manifest.domain,
       manifest.name,
       manifest.version,
-      manifest.profile,
+      manifest.sourceSet,
       manifestJson,
       options.state ?? existing?.state ?? (manifest.indexing.defaultState === "on" ? "enabled" : "disabled"),
       options.backlog ?? existing?.backlog ?? 0,
@@ -365,12 +366,12 @@ export class SearchStore {
     }
   }
 
-  listSources(profile: SearchProfileId = "framework"): SearchSourceManifest[] {
+  listSources(sourceSet: SearchSourceSetId = "framework"): SearchSourceManifest[] {
     const rows = this.db.prepare(`
       SELECT manifest_json FROM search_sources
-      WHERE ? = 'full' OR profile = 'framework'
+      WHERE ? = 'full' OR sourceSet = 'framework'
       ORDER BY domain ASC, id ASC
-    `).all(profile) as Array<{ manifest_json: string }>;
+    `).all(sourceSet) as Array<{ manifest_json: string }>;
     return rows.map((row) => JSON.parse(row.manifest_json) as SearchSourceManifest);
   }
 
@@ -547,16 +548,16 @@ export class SearchStore {
     const requestedLimit = Math.max(1, queryInput.limit ?? 20);
     const outputLimit = effectiveResultLimit(requestedLimit, queryInput.agentBudget);
     const candidateLimit = Math.min(200, Math.max(requestedLimit * 4, requestedLimit));
-    const profile = queryInput.profile ?? "framework";
+    const sourceSet = queryInput.sourceSet ?? "framework";
     const strategy = queryInput.strategy ?? (queryInput.embedding ? "hybrid" : "lexical");
     const match = ftsQuery(queryInput.query);
-    const omittedSources = this.omittedSourcesForInput(queryInput, profile);
-    const facets = this.facetsForInput(queryInput, profile);
-    const shardPlan = this.shardQueryPlan(queryInput, profile);
+    const omittedSources = this.omittedSourcesForInput(queryInput, sourceSet);
+    const facets = this.facetsForInput(queryInput, sourceSet);
+    const shardPlan = this.shardQueryPlan(queryInput, sourceSet);
     if (shardPlan.catalogCovered && shardPlan.activeShards.length === 0) {
       const output: SearchQueryOutput = {
         query: queryInput.query,
-        profile,
+        sourceSet,
         results: [],
         ...(facets.length ? { facets } : {}),
         partial: omittedSources.length > 0,
@@ -571,16 +572,16 @@ export class SearchStore {
       : queryInput;
     const rows = new Map<string, SearchDocumentRow>();
     if (strategy !== "semantic" || !plannedQueryInput.embedding) {
-      const lexicalRows = this.lexicalRows(plannedQueryInput, profile, match, candidateLimit);
+      const lexicalRows = this.lexicalRows(plannedQueryInput, sourceSet, match, candidateLimit);
       for (const row of lexicalRows) rows.set(row.id, row);
       if (rows.size < candidateLimit && shouldRunFuzzyFallback(plannedQueryInput.query)) {
-        for (const row of this.fuzzyFallbackRows(plannedQueryInput, profile, candidateLimit, rows)) {
+        for (const row of this.fuzzyFallbackRows(plannedQueryInput, sourceSet, candidateLimit, rows)) {
           rows.set(row.id, row);
         }
       }
     }
     if (plannedQueryInput.embedding && strategy !== "lexical") {
-      for (const row of this.semanticRows(plannedQueryInput, profile, plannedQueryInput.embedding, candidateLimit)) {
+      for (const row of this.semanticRows(plannedQueryInput, sourceSet, plannedQueryInput.embedding, candidateLimit)) {
         const existing = rows.get(row.id);
         rows.set(row.id, existing ? mergeSearchRows(existing, row) : row);
       }
@@ -593,7 +594,7 @@ export class SearchStore {
       .slice(0, outputLimit);
     const output: SearchQueryOutput = {
       query: queryInput.query,
-      profile,
+      sourceSet,
       results,
       ...(facets.length ? { facets } : {}),
       partial: omittedSources.length > 0,
@@ -1150,7 +1151,7 @@ export class SearchStore {
       VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET label = excluded.label, default_enabled = excluded.default_enabled
     `);
-    for (const profile of SEARCH_PROFILES) insert.run(profile.id, profile.label, profile.defaultEnabled ? 1 : 0);
+    for (const sourceSet of SEARCH_SOURCE_SETS) insert.run(sourceSet.id, sourceSet.label, sourceSet.defaultEnabled ? 1 : 0);
   }
 
   private ensureSchema(): void {
@@ -1262,14 +1263,14 @@ export class SearchStore {
     return row ? searchFtsPartitionFromRow(row) : null;
   }
 
-  private lexicalRows(input: SearchQueryInput, profile: SearchProfileId, match: string, limit: number): SearchDocumentRow[] {
-    const partitions = this.ftsPartitionsForInput(input, profile);
-    if (partitions.length > 0) return this.lexicalRowsFromPartitions(partitions, input, profile, match, limit);
-    return this.lexicalRowsFromGlobalFts(input, profile, match, limit);
+  private lexicalRows(input: SearchQueryInput, sourceSet: SearchSourceSetId, match: string, limit: number): SearchDocumentRow[] {
+    const partitions = this.ftsPartitionsForInput(input, sourceSet);
+    if (partitions.length > 0) return this.lexicalRowsFromPartitions(partitions, input, sourceSet, match, limit);
+    return this.lexicalRowsFromGlobalFts(input, sourceSet, match, limit);
   }
 
-  private lexicalRowsFromGlobalFts(input: SearchQueryInput, profile: SearchProfileId, match: string, limit: number): SearchDocumentRow[] {
-    const { clauses, params } = buildDocumentClauses(input, profile, match);
+  private lexicalRowsFromGlobalFts(input: SearchQueryInput, sourceSet: SearchSourceSetId, match: string, limit: number): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, sourceSet, match);
     return this.db.prepare(`
       SELECT d.*, 0 AS rank, NULL AS semantic_score
       FROM search_fts
@@ -1282,8 +1283,8 @@ export class SearchStore {
     `).all(...params, limit) as SearchDocumentRow[];
   }
 
-  private lexicalRowsFromPartitions(partitions: Array<{ tableName: string }>, input: SearchQueryInput, profile: SearchProfileId, match: string, limit: number): SearchDocumentRow[] {
-    const { clauses, params } = buildDocumentClauses(input, profile);
+  private lexicalRowsFromPartitions(partitions: Array<{ tableName: string }>, input: SearchQueryInput, sourceSet: SearchSourceSetId, match: string, limit: number): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, sourceSet);
     const selects: string[] = [];
     const allParams: unknown[] = [];
     for (const partition of partitions) {
@@ -1307,7 +1308,7 @@ export class SearchStore {
     `).all(...allParams, limit) as SearchDocumentRow[];
   }
 
-  private ftsPartitionsForInput(input: SearchQueryInput, profile: SearchProfileId): Array<{ source: string; shard: string; domain: string; tableName: string }> {
+  private ftsPartitionsForInput(input: SearchQueryInput, sourceSet: SearchSourceSetId): Array<{ source: string; shard: string; domain: string; tableName: string }> {
     if (!input.shards?.length || !this.tableExists("search_fts_partitions")) return [];
     const shardClauses: string[] = [`shard IN (${input.shards.map(() => "?").join(", ")})`, "state = 'active'", "document_count > 0"];
     const shardParams: unknown[] = [...input.shards];
@@ -1319,7 +1320,7 @@ export class SearchStore {
       shardClauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
       shardParams.push(...input.domains);
     }
-    if (profile !== "full") shardClauses.push("source IN (SELECT id FROM search_sources WHERE profile = 'framework')");
+    if (sourceSet !== "full") shardClauses.push("source IN (SELECT id FROM search_sources WHERE sourceSet = 'framework')");
     const activeShards = this.db.prepare(`
       SELECT source, shard, domain
       FROM search_shards
@@ -1395,7 +1396,7 @@ export class SearchStore {
     };
   }
 
-  private omittedSourcesForInput(input: SearchQueryInput, profile: SearchProfileId): SearchQueryOutput["omittedSources"] {
+  private omittedSourcesForInput(input: SearchQueryInput, sourceSet: SearchSourceSetId): SearchQueryOutput["omittedSources"] {
     const selectedClauses: string[] = [];
     const params: unknown[] = [];
     const explicitlyScoped = Boolean(input.sources?.length || input.domains?.length);
@@ -1407,22 +1408,22 @@ export class SearchStore {
       selectedClauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
       params.push(...input.domains);
     }
-    if (profile !== "full" && !explicitlyScoped) {
-      selectedClauses.push("profile = 'framework'");
+    if (sourceSet !== "full" && !explicitlyScoped) {
+      selectedClauses.push("sourceSet = 'framework'");
     }
     const omissionClauses = ["state IN ('disabled', 'paused', 'excluded', 'external_pending')"];
-    if (profile !== "full" && explicitlyScoped) omissionClauses.push("profile != 'framework'");
+    if (sourceSet !== "full" && explicitlyScoped) omissionClauses.push("sourceSet != 'framework'");
     const rows = this.db.prepare(`
-      SELECT id, state, profile FROM search_sources
+      SELECT id, state, sourceSet FROM search_sources
       WHERE ${selectedClauses.length ? `${selectedClauses.join(" AND ")} AND ` : ""}(${omissionClauses.join(" OR ")})
       ORDER BY domain ASC, id ASC
-    `).all(...params) as Array<{ id: string; state: SearchSourceState; profile: string }>;
-    return rows.map((row) => row.profile !== "framework" && profile !== "full"
-      ? { source: row.id, reason: "profile" as const, message: "source is only available in the full profile" }
+    `).all(...params) as Array<{ id: string; state: SearchSourceState; sourceSet: string }>;
+    return rows.map((row) => row.sourceSet !== "framework" && sourceSet !== "full"
+      ? { source: row.id, reason: "sourceSet" as const, message: "source is only available in the full sourceSet" }
       : { source: row.id, reason: "disabled" as const, message: `source is ${row.state}` });
   }
 
-  private facetsForInput(input: SearchQueryInput, profile: SearchProfileId): SearchFacetDeclaration[] {
+  private facetsForInput(input: SearchQueryInput, sourceSet: SearchSourceSetId): SearchFacetDeclaration[] {
     const clauses: string[] = [];
     const params: unknown[] = [];
     if (input.sources?.length) {
@@ -1433,7 +1434,7 @@ export class SearchStore {
       clauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
       params.push(...input.domains);
     }
-    if (profile !== "full") clauses.push("profile = 'framework'");
+    if (sourceSet !== "full") clauses.push("sourceSet = 'framework'");
     const rows = this.db.prepare(`
       SELECT manifest_json FROM search_sources
       ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
@@ -1449,7 +1450,7 @@ export class SearchStore {
     return [...facets.values()];
   }
 
-  private shardQueryPlan(input: SearchQueryInput, profile: SearchProfileId): { catalogCovered: boolean; activeShards: string[] } {
+  private shardQueryPlan(input: SearchQueryInput, sourceSet: SearchSourceSetId): { catalogCovered: boolean; activeShards: string[] } {
     if (!input.shards?.length) return { catalogCovered: false, activeShards: [] };
     const coverageClauses: string[] = ["shard IN (" + input.shards.map(() => "?").join(", ") + ")"];
     const activeClauses: string[] = [...coverageClauses, "state = 'active'", "document_count > 0"];
@@ -1469,9 +1470,9 @@ export class SearchStore {
       params.push(...input.domains);
       activeParams.push(...input.domains);
     }
-    if (profile !== "full") {
-      coverageClauses.push("source IN (SELECT id FROM search_sources WHERE profile = 'framework')");
-      activeClauses.push("source IN (SELECT id FROM search_sources WHERE profile = 'framework')");
+    if (sourceSet !== "full") {
+      coverageClauses.push("source IN (SELECT id FROM search_sources WHERE sourceSet = 'framework')");
+      activeClauses.push("source IN (SELECT id FROM search_sources WHERE sourceSet = 'framework')");
     }
     const coverage = this.db.prepare(`
       SELECT COUNT(*) AS count
@@ -1488,9 +1489,9 @@ export class SearchStore {
     return { catalogCovered: true, activeShards: rows.map((row) => row.shard) };
   }
 
-  private semanticRows(input: SearchQueryInput, profile: SearchProfileId, embedding: NonNullable<SearchQueryInput["embedding"]>, limit: number): SearchDocumentRow[] {
+  private semanticRows(input: SearchQueryInput, sourceSet: SearchSourceSetId, embedding: NonNullable<SearchQueryInput["embedding"]>, limit: number): SearchDocumentRow[] {
     const queryVector = normalizeEmbedding(embedding.vector);
-    const { clauses, params } = buildDocumentClauses(input, profile);
+    const { clauses, params } = buildDocumentClauses(input, sourceSet);
     const rows = this.db.prepare(`
       SELECT d.*, 0 AS rank, v.embedding_json
       FROM search_vectors v
@@ -1518,8 +1519,8 @@ export class SearchStore {
       .slice(0, limit);
   }
 
-  private fuzzyFallbackRows(input: SearchQueryInput, profile: SearchProfileId, limit: number, existingRows: Map<string, SearchDocumentRow>): SearchDocumentRow[] {
-    const { clauses, params } = buildDocumentClauses(input, profile);
+  private fuzzyFallbackRows(input: SearchQueryInput, sourceSet: SearchSourceSetId, limit: number, existingRows: Map<string, SearchDocumentRow>): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, sourceSet);
     const scanLimit = Math.min(1000, Math.max(limit * 8, 100));
     const rows = this.db.prepare(`
       SELECT d.*, 100 AS rank, NULL AS semantic_score
@@ -1925,7 +1926,7 @@ function searchVectorFromRow(row: SearchVectorRow): SearchVectorRecord {
   };
 }
 
-function buildDocumentClauses(input: SearchQueryInput, profile: SearchProfileId, match?: string): { clauses: string[]; params: unknown[] } {
+function buildDocumentClauses(input: SearchQueryInput, sourceSet: SearchSourceSetId, match?: string): { clauses: string[]; params: unknown[] } {
   const clauses = ["d.deleted_at IS NULL"];
   const params: unknown[] = [];
   if (match) {
@@ -1945,7 +1946,7 @@ function buildDocumentClauses(input: SearchQueryInput, profile: SearchProfileId,
     params.push(...input.shards);
   }
   applySearchFilters(clauses, params, input.filters);
-  if (profile !== "full") clauses.push("s.profile = 'framework'");
+  if (sourceSet !== "full") clauses.push("s.sourceSet = 'framework'");
   clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')");
   return { clauses, params };
 }
@@ -2335,7 +2336,7 @@ function searchRankingCacheKey(input: SearchQueryInput): string {
     domains: sortedStrings(input.domains),
     sources: sortedStrings(input.sources),
     shards: sortedStrings(input.shards),
-    profile: input.profile ?? "framework",
+    sourceSet: input.sourceSet ?? "framework",
     actor: input.actor ?? "",
     surface: input.surface ?? "",
     limit: input.limit ?? 20,
@@ -2404,7 +2405,7 @@ CREATE TABLE IF NOT EXISTS search_sources (
   domain TEXT NOT NULL,
   name TEXT NOT NULL,
   version INTEGER NOT NULL,
-  profile TEXT NOT NULL,
+  sourceSet TEXT NOT NULL,
   manifest_json TEXT NOT NULL,
   state TEXT NOT NULL,
   backlog INTEGER NOT NULL DEFAULT 0,

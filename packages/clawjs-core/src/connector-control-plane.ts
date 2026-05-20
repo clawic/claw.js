@@ -2,7 +2,7 @@ import {
   evaluateRegulatedAction,
   type RegulatedDecisionEffect,
   type RegulatedDomain,
-  type SensitiveDataClass,
+  type SensitiveRecordClass,
 } from "./regulated-domain-safety.ts";
 import type { ConnectorContextChoice, ConnectorContextDecisionReasonCode, ConnectorContextRequirement } from "./connector-governed-context.ts";
 
@@ -106,7 +106,7 @@ export interface ConnectorCapability {
   riskTiers: ConnectorRiskTier[];
   dataClasses?: string[];
   regulatedDomains?: RegulatedDomain[];
-  sensitiveDataClasses?: SensitiveDataClass[];
+  sensitiveRecordClasses?: SensitiveRecordClass[];
   decisionEffects?: RegulatedDecisionEffect[];
   requiresProfessionalReview?: boolean;
   requiresSensitiveExportReview?: boolean;

@@ -1,6 +1,6 @@
 import type { AgentToolDescriptor, AgentToolRiskLevel } from "./agent_tools.ts";
 import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "./builtins/index.ts";
-import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveDataClass } from "./regulated-domain-safety.ts";
+import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveRecordClass } from "./regulated-domain-safety.ts";
 import { evaluateRegulatedAction } from "./regulated-domain-safety.ts";
 import { AGENTS_FAMILY } from "./builtins/index.ts";
 
@@ -96,7 +96,7 @@ export interface AgentAccessRequest {
 
 export interface AgentRegulatedSafetyDeclaration {
   regulatedDomains: RegulatedDomain[];
-  sensitiveDataClasses?: SensitiveDataClass[];
+  sensitiveRecordClasses?: SensitiveRecordClass[];
   decisionEffect: RegulatedDecisionEffect;
   professionalReviewRequired?: boolean;
   outputLabelsRequired?: boolean;

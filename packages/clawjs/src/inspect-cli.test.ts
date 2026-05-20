@@ -1602,17 +1602,17 @@ test("runCli exposes CLI aliases and decision sources through inspect", async ()
   assert.equal(commandIntentPayload.ledgerSurfaceId, "claw.workspace.command_intents.ledger");
   assert.equal(commandIntentPayload.registryIntents.some((entry) => entry.id === "cmd_intent_house_buy" && entry.status === "future"), true);
 
-  const denseData = await runCliCapture(["inspect", "dense-data", "--json"], process.cwd());
-  assert.equal(denseData.code, CLI_EXIT_OK);
-  const denseDataPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }>; existingSurfaceIntegrations: Array<{ id: string; disposition: string; canonicalOwner: string }> }; gapCount: number; intentCount: number; semanticViewCount: number }>(denseData.stdout).data;
-  assert.equal(denseDataPayload.registry.foundationCollections.quality_gaps, "quality_gaps");
-  assert.equal(denseDataPayload.registry.systems.some((entry) => entry.id === "health"), true);
-  assert.equal(denseDataPayload.registry.externalPendingRequirements.some((entry) => entry.systemId === "labs" && entry.status === "external_pending"), true);
-  assert.equal(denseDataPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "knowledge_graph_relations" && entry.canonicalOwner.includes("entity_relations")), true);
-  assert.equal(denseDataPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "infra_observability_monitor_ops" && entry.disposition === "split"), true);
-  assert.ok(denseDataPayload.gapCount > 0);
-  assert.ok(denseDataPayload.intentCount > 0);
-  assert.ok(denseDataPayload.semanticViewCount > 0);
+  const professionalRecords = await runCliCapture(["inspect", "dense-data", "--json"], process.cwd());
+  assert.equal(professionalRecords.code, CLI_EXIT_OK);
+  const professionalRecordsPayload = parseCliJson<{ registry: { foundationCollections: Record<string, string>; systems: Array<{ id: string }>; externalPendingRequirements: Array<{ systemId: string; status: string }>; existingSurfaceIntegrations: Array<{ id: string; disposition: string; canonicalOwner: string }> }; gapCount: number; intentCount: number; semanticViewCount: number }>(professionalRecords.stdout).data;
+  assert.equal(professionalRecordsPayload.registry.foundationCollections.quality_gaps, "quality_gaps");
+  assert.equal(professionalRecordsPayload.registry.systems.some((entry) => entry.id === "health"), true);
+  assert.equal(professionalRecordsPayload.registry.externalPendingRequirements.some((entry) => entry.systemId === "labs" && entry.status === "external_pending"), true);
+  assert.equal(professionalRecordsPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "knowledge_graph_relations" && entry.canonicalOwner.includes("entity_relations")), true);
+  assert.equal(professionalRecordsPayload.registry.existingSurfaceIntegrations.some((entry) => entry.id === "infra_observability_monitor_ops" && entry.disposition === "split"), true);
+  assert.ok(professionalRecordsPayload.gapCount > 0);
+  assert.ok(professionalRecordsPayload.intentCount > 0);
+  assert.ok(professionalRecordsPayload.semanticViewCount > 0);
 
   const denseGaps = await runCliCapture(["inspect", "dense-gaps", "--json"], process.cwd());
   assert.equal(denseGaps.code, CLI_EXIT_OK);

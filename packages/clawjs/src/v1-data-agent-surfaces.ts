@@ -6,7 +6,7 @@ const v1AgentDataSchemaSource = {
   language: "typescript",
 } as const;
 
-export const v1AgentDataSurfaceNodes = [
+const v1AgentDataTables = [
   "personalities",
   "agent_assignments",
   "agent_execution_profiles",
@@ -23,15 +23,38 @@ export const v1AgentDataSurfaceNodes = [
   "provider_routing",
   "provider_settings",
   "snippets",
-].map((name) =>
-  clawPersistentSurface.table({
-    id: `claw.database.core.table.${name}`,
-    name,
-    parentId: v1MainDatabaseId,
-    databaseId: v1MainDatabaseId,
-    source: v1AgentDataSchemaSource,
-  }),
-);
+] as const;
+
+const v1AgentDataIndexes = [
+  "agent_incidents_agent_idx",
+  "agent_incidents_status_idx",
+  "agent_sessions_company_idx",
+  "agent_sessions_workspace_idx",
+  "agent_sessions_project_idx",
+  "agent_sessions_scope_idx",
+  "agent_sessions_status_idx",
+] as const;
+
+export const v1AgentDataSurfaceNodes = [
+  ...v1AgentDataTables.map((name) =>
+    clawPersistentSurface.table({
+      id: `claw.database.core.table.${name}`,
+      name,
+      parentId: v1MainDatabaseId,
+      databaseId: v1MainDatabaseId,
+      source: v1AgentDataSchemaSource,
+    }),
+  ),
+  ...v1AgentDataIndexes.map((name) =>
+    clawPersistentSurface.index({
+      id: `claw.database.core.index.${name}`,
+      name,
+      parentId: v1MainDatabaseId,
+      databaseId: v1MainDatabaseId,
+      source: v1AgentDataSchemaSource,
+    }),
+  ),
+];
 
 export const V1_AGENT_DATA_SCHEMA_SQL = String.raw`
     CREATE TABLE IF NOT EXISTS personalities (

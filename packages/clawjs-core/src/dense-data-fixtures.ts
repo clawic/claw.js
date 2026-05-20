@@ -1,10 +1,10 @@
 import {
-  clawDenseDataOsRegistry,
-  listClawDenseDataIntentEntries,
-  listClawDenseDataSemanticViewEntries,
+  clawProfessionalRecordsOsRegistry,
+  listClawProfessionalRecordsIntentEntries,
+  listClawProfessionalRecordsSemanticViewEntries,
 } from "./dense-data-os.ts";
 
-export interface ClawDenseDataFixtureRecord {
+export interface ClawProfessionalRecordsFixtureRecord {
   id: string;
   collectionName: string;
   label: string;
@@ -12,14 +12,14 @@ export interface ClawDenseDataFixtureRecord {
   data: Record<string, unknown>;
 }
 
-export interface ClawDenseDataAcceptanceFixture {
+export interface ClawProfessionalRecordsAcceptanceFixture {
   schemaVersion: 1;
   sourceConversationId: string;
   fixtureSetId: string;
-  records: ClawDenseDataFixtureRecord[];
+  records: ClawProfessionalRecordsFixtureRecord[];
 }
 
-export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
+export const clawProfessionalRecordsAcceptanceFixture: ClawProfessionalRecordsAcceptanceFixture = {
   schemaVersion: 1,
   sourceConversationId: "019e35a1-06bb-77f2-a712-92ed2646bd15",
   fixtureSetId: "dense-data-acceptance-v1",
@@ -913,16 +913,16 @@ export const clawDenseDataAcceptanceFixture: ClawDenseDataAcceptanceFixture = {
       covers: ["partial_data_gap", "quality_gap", "finance_entity_overview"],
       data: { label: "Missing reconciliation status", targetCollection: "financial_accounts", targetId: "fixture_financial_account_ops", gapKind: "missing", status: "open", severity: "medium", evidenceSourceId: "fixture_evidence_finance_statement" },
     },
-    ...listClawDenseDataRegistryFixtureRecords(),
+    ...listClawProfessionalRecordsRegistryFixtureRecords(),
   ],
 };
 
-export function listClawDenseDataAcceptanceFixtureRecords(): ClawDenseDataFixtureRecord[] {
-  return [...clawDenseDataAcceptanceFixture.records];
+export function listClawProfessionalRecordsAcceptanceFixtureRecords(): ClawProfessionalRecordsFixtureRecord[] {
+  return [...clawProfessionalRecordsAcceptanceFixture.records];
 }
 
-export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureRecord[] {
-  const records: ClawDenseDataFixtureRecord[] = [];
+export function listClawProfessionalRecordsRegistryFixtureRecords(): ClawProfessionalRecordsFixtureRecord[] {
+  const records: ClawProfessionalRecordsFixtureRecord[] = [];
   const profileTargets: Record<string, { entityKind: string; entityId: string; fields: Record<string, unknown> }> = {
     patient_profile: { entityKind: "patients", entityId: "fixture_patient_ada", fields: { status: "active" } },
     participant_profile: { entityKind: "participants", entityId: "fixture_participant_subject_001", fields: { status: "screening", consentStatus: "unknown" } },
@@ -933,7 +933,7 @@ export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureR
     account_profile: { entityKind: "accounts", entityId: "fixture_account_acme", fields: { industry: "research_manufacturing" } },
   };
 
-  for (const system of clawDenseDataOsRegistry.systems) {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     records.push({
       id: `fixture_domain_system_${system.id}`,
       collectionName: "domain_systems",
@@ -949,7 +949,7 @@ export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureR
         storagePolicy: system.storagePolicy,
         standards: system.standards,
         status: "active",
-        source: { sourceConversationId: clawDenseDataOsRegistry.sourceConversationId, sourcePlanId: clawDenseDataOsRegistry.sourcePlanId },
+        source: { sourceConversationId: clawProfessionalRecordsOsRegistry.sourceConversationId, sourcePlanId: clawProfessionalRecordsOsRegistry.sourcePlanId },
         metadata: { visiblePack: system.visiblePack, orchestrator: system.orchestrator, sharedEngines: system.sharedEngines, notes: system.notes },
       },
     });
@@ -1036,7 +1036,7 @@ export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureR
     }
   }
 
-  for (const view of listClawDenseDataSemanticViewEntries()) {
+  for (const view of listClawProfessionalRecordsSemanticViewEntries()) {
     records.push({
       id: `fixture_semantic_view_${slugFixtureId(view.systemId, view.id)}`,
       collectionName: "semantic_views",
@@ -1057,7 +1057,7 @@ export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureR
     });
   }
 
-  for (const intent of listClawDenseDataIntentEntries()) {
+  for (const intent of listClawProfessionalRecordsIntentEntries()) {
     records.push({
       id: `fixture_domain_intent_${intent.id}`,
       collectionName: "domain_intents",
@@ -1078,7 +1078,7 @@ export function listClawDenseDataRegistryFixtureRecords(): ClawDenseDataFixtureR
     });
   }
 
-  for (const requirement of clawDenseDataOsRegistry.externalPendingRequirements) {
+  for (const requirement of clawProfessionalRecordsOsRegistry.externalPendingRequirements) {
     records.push({
       id: `fixture_external_pending_${requirement.id}`,
       collectionName: "quality_gaps",

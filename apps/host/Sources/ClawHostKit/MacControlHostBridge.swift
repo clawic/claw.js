@@ -66,10 +66,10 @@ public enum MacControlHostBridge {
     }
 
     private static func planResponse(arguments: [String: String], environment: [String: String]) throws -> CommandResponse {
-        let requestData = try requestData(from: arguments, environment: environment, defaultDryRun: true)
-        let data = try MacControlWire.planJSON(for: requestData)
+        let requestBytes = try requestBytes(from: arguments, environment: environment, defaultDryRun: true)
+        let data = try MacControlWire.planJSON(for: requestBytes)
         let json = try decodeJSONValue(data)
-        let request = try MacControlWire.decodeRequest(requestData)
+        let request = try MacControlWire.decodeRequest(requestBytes)
         let risk = json.objectValue?["risk"]?.stringValue ?? "read"
         return commandResponse(
             requestId: request.requestId,
@@ -87,21 +87,21 @@ public enum MacControlHostBridge {
         environment: [String: String],
         runner: MacControlCommandRunning
     ) throws -> CommandResponse {
-        let requestData = try requestData(from: arguments, environment: environment, defaultDryRun: false)
+        let requestBytes = try requestBytes(from: arguments, environment: environment, defaultDryRun: false)
         let auditURL = try StatePaths.ensureStateDirectory(environment: environment)
             .appendingPathComponent(MacControlPolicy.auditFilename)
         let stateDirectory = auditURL.deletingLastPathComponent()
         let policyURL = MacControlPolicyGrantStore.fileURL(stateDirectory: stateDirectory)
         let continuityURL = MacControlContinuityStore.fileURL(stateDirectory: stateDirectory)
         let data = try MacControlWire.evaluateJSON(
-            for: requestData,
+            for: requestBytes,
             auditURL: auditURL,
             policyURL: policyURL,
             continuityURL: continuityURL,
             runner: runner
         )
         let json = try decodeJSONValue(data)
-        let request = try MacControlWire.decodeRequest(requestData)
+        let request = try MacControlWire.decodeRequest(requestBytes)
         let risk = json.objectValue?["receipt"]?.objectValue?["risk"]?.stringValue ?? "high"
         return commandResponse(
             requestId: request.requestId,
@@ -447,7 +447,7 @@ public enum MacControlHostBridge {
         }
     }
 
-    private static func requestData(
+    private static func requestBytes(
         from arguments: [String: String],
         environment: [String: String],
         defaultDryRun: Bool

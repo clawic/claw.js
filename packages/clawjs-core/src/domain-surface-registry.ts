@@ -1,6 +1,6 @@
 import { BUILTIN_COLLECTIONS, BUILTIN_FAMILIES } from "./builtins/index.ts";
 import { clawCliCommandRegistry } from "./cli-command-registry.ts";
-import { clawDenseDataOsRegistry } from "./dense-data-os.ts";
+import { clawProfessionalRecordsOsRegistry } from "./dense-data-os.ts";
 import { clawDomainOwnershipEntriesV1 } from "./domain-ownership.ts";
 import { PRODUCTIVITY_COLLECTION_DEFINITIONS } from "./productivity.ts";
 import { clawPersistentSurfaceRegistry } from "./surface-registry.ts";
@@ -254,7 +254,7 @@ const aggregateEntries: ClawDomainSurfaceEntry[] = [
   },
 ];
 
-const denseDataSystemEntries: ClawDomainSurfaceEntry[] = clawDenseDataOsRegistry.systems.map((system): ClawDomainSurfaceEntry => ({
+const professionalRecordsSystemEntries: ClawDomainSurfaceEntry[] = clawProfessionalRecordsOsRegistry.systems.map((system): ClawDomainSurfaceEntry => ({
   id: `dense-system:${system.id}`,
   kind: "system",
   name: system.id,
@@ -270,7 +270,7 @@ const denseDataSystemEntries: ClawDomainSurfaceEntry[] = clawDenseDataOsRegistry
   packageNames: ["@clawjs/core"],
   source: {
     file: "packages/clawjs-core/src/dense-data-os.ts",
-    symbol: "clawDenseDataOsRegistry",
+    symbol: "clawProfessionalRecordsOsRegistry",
   },
   aliases: system.aliases,
   family: "dense-data",
@@ -475,7 +475,7 @@ export const clawDomainSurfaceRegistry: ClawDomainSurfaceRegistry = {
     ...signalVerticalEntries,
     ...conceptualFamilyEntries,
     ...aggregateEntries,
-    ...denseDataSystemEntries,
+    ...professionalRecordsSystemEntries,
     ...systemEntries,
     ...serviceRuntimeEntries,
     ...packageEntries,
@@ -503,7 +503,7 @@ export function assertClawDomainSurfaceRegistryComplete(): void {
     ...trackingRegistry.entries.map((entry) => `signal:${entry.id}`),
     ...trackingRegistry.entries.map((entry) => `module:${entry.id}`),
     ...clawCliCommandRegistry.commands.map((command) => `cli:${command.name}`),
-    ...clawDenseDataOsRegistry.systems.map((system) => `dense-system:${system.id}`),
+    ...clawProfessionalRecordsOsRegistry.systems.map((system) => `dense-system:${system.id}`),
     ...clawDomainOwnershipEntriesV1.map((entry) => `service:${entry.domain}`),
     ...SIGNALS_STORAGE_IDS.map((id) => `storage:${id}`),
   ].filter((id) => !ids.has(id));

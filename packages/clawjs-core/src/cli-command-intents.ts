@@ -1,8 +1,8 @@
 import { resolveClawCliCommand, searchClawCliRegistry } from "./cli-command-registry.ts";
 import type { ClawCliCommandRegistryEntry, ClawCliSearchResult } from "./cli-command-registry.ts";
 import { resolveBuiltinCollectionName } from "./builtins/index.ts";
-import { resolveClawDenseDataIntent } from "./dense-data-os.ts";
-import type { ClawDenseDataIntentResolution, ClawDenseDataIntentStatus } from "./dense-data-os.ts";
+import { resolveClawProfessionalRecordsIntent } from "./dense-data-os.ts";
+import type { ClawProfessionalRecordsIntentResolution, ClawProfessionalRecordsIntentStatus } from "./dense-data-os.ts";
 import { scoreNeedOpportunity } from "./need-route-lab.ts";
 import type { NeedOpportunity, NeedOpportunityKind, NeedRouteMaturityState } from "./need-route-lab.ts";
 
@@ -252,9 +252,9 @@ export function resolveClawCliCommandIntent(input: {
   const command = firstToken ? resolveClawCliCommand(firstToken) : undefined;
   if (command) return resolutionFromCommand(input.phrase, normalizedPhrase, command, related);
   const collectionResolution = resolutionFromCollectionAlias(input.phrase, normalizedPhrase, related);
-  const denseDataIntent = resolveClawDenseDataIntent(input.phrase);
-  if (collectionResolution && (denseDataIntent.status === "data_gap" || denseDataIntent.status === "external_pending")) return collectionResolution;
-  if (denseDataIntent.status !== "data_gap") return resolutionFromDenseDataIntent(input.phrase, normalizedPhrase, denseDataIntent, related);
+  const professionalRecordsIntent = resolveClawProfessionalRecordsIntent(input.phrase);
+  if (collectionResolution && (professionalRecordsIntent.status === "data_gap" || professionalRecordsIntent.status === "external_pending")) return collectionResolution;
+  if (professionalRecordsIntent.status !== "data_gap") return resolutionFromProfessionalRecordsIntent(input.phrase, normalizedPhrase, professionalRecordsIntent, related);
   if (collectionResolution) return collectionResolution;
   return resolutionFromRelated(input.phrase, normalizedPhrase, related);
 }
@@ -307,25 +307,25 @@ function resolutionFromCommand(query: string, normalizedPhrase: string, command:
   return { schemaVersion: 1, query, normalizedPhrase, status: entry.status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
 }
 
-function resolutionFromDenseDataIntent(query: string, normalizedPhrase: string, denseDataIntent: ClawDenseDataIntentResolution, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution {
-  const status = cliStatusForDenseDataStatus(denseDataIntent.status);
-  const mappedCommand = denseDataIntent.center?.commandNoun ?? denseDataIntent.system?.canonicalCommand;
+function resolutionFromProfessionalRecordsIntent(query: string, normalizedPhrase: string, professionalRecordsIntent: ClawProfessionalRecordsIntentResolution, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution {
+  const status = cliStatusForProfessionalRecordsStatus(professionalRecordsIntent.status);
+  const mappedCommand = professionalRecordsIntent.center?.commandNoun ?? professionalRecordsIntent.system?.canonicalCommand;
   const relatedCommands = [
-    denseDataIntent.system?.canonicalCommand,
-    ...(denseDataIntent.system?.aliases ?? []),
-    denseDataIntent.center?.commandNoun,
-    ...(denseDataIntent.center?.commandAliases ?? []),
+    professionalRecordsIntent.system?.canonicalCommand,
+    ...(professionalRecordsIntent.system?.aliases ?? []),
+    professionalRecordsIntent.center?.commandNoun,
+    ...(professionalRecordsIntent.center?.commandAliases ?? []),
   ].filter((command): command is string => Boolean(command));
-  const entry = intent(`cmd_intent_dense_${normalizedPhrase.replace(/[^a-z0-9]+/g, "_") || "empty"}`, query, `Resolve dense-data phrase through ${denseDataIntent.system?.label ?? "the dense-data registry"}.`, status, {
+  const entry = intent(`cmd_intent_dense_${normalizedPhrase.replace(/[^a-z0-9]+/g, "_") || "empty"}`, query, `Resolve dense-data phrase through ${professionalRecordsIntent.system?.label ?? "the dense-data registry"}.`, status, {
     mappedCommand,
     relatedCommands,
-    risk: denseDataIntent.system?.sensitivityDefault === "high" ? ["local_read", "local_write"] : ["local_read"],
+    risk: professionalRecordsIntent.system?.sensitivityDefault === "high" ? ["local_read", "local_write"] : ["local_read"],
     evidence: [
-      ...denseDataIntent.reasons,
-      ...(denseDataIntent.matchedRoute ? [`matchedRoute=${denseDataIntent.matchedRoute}`] : []),
-      ...(denseDataIntent.operation ? [`operation=${denseDataIntent.operation.id}`] : []),
+      ...professionalRecordsIntent.reasons,
+      ...(professionalRecordsIntent.matchedRoute ? [`matchedRoute=${professionalRecordsIntent.matchedRoute}`] : []),
+      ...(professionalRecordsIntent.operation ? [`operation=${professionalRecordsIntent.operation.id}`] : []),
     ],
-    nextSteps: denseDataIntent.nextSteps,
+    nextSteps: professionalRecordsIntent.nextSteps,
     reportTarget: status === "covered" || status === "candidate_alias" ? "none" : status === "blocked" ? "github_discussions_feedback" : "github_discussions_ideas",
   });
   return { schemaVersion: 1, query, normalizedPhrase, status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
@@ -366,7 +366,7 @@ function resolutionFromRelated(query: string, normalizedPhrase: string, related:
   return { schemaVersion: 1, query, normalizedPhrase, status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
 }
 
-function cliStatusForDenseDataStatus(status: ClawDenseDataIntentStatus): ClawCliCommandIntentStatus {
+function cliStatusForProfessionalRecordsStatus(status: ClawProfessionalRecordsIntentStatus): ClawCliCommandIntentStatus {
   if (status === "covered") return "covered";
   if (status === "partial" || status === "alias_candidate") return "candidate_alias";
   if (status === "external_pending") return "external_pending";

@@ -52,7 +52,7 @@ test("stable capabilities declare SDK and CLI coverage or an explicit gap", () =
       if (surface.status === "available") {
         assert.equal(Boolean(surface.ref), true, `${capability.id}:${surface.surface}`);
       } else {
-        assert.ok(["pending", "blocked", "notApplicable"].includes(surface.status), `${capability.id}:${surface.surface}`);
+        assert.ok(["blocked", "notApplicable"].includes(surface.status), `${capability.id}:${surface.surface}`);
       }
     }
   }

@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { clawDenseDataOsRegistry } from "@clawjs/core";
+import { clawProfessionalRecordsOsRegistry } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
@@ -129,9 +129,9 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
         items: Array<{ kind: string; label: string }>;
       };
     };
-    meta: { denseData: boolean; semanticView: boolean };
+    meta: { professionalRecords: boolean; semanticView: boolean };
   };
-  assert.equal(patientMedicationsPayload.meta.denseData, true);
+  assert.equal(patientMedicationsPayload.meta.professionalRecords, true);
   assert.equal(patientMedicationsPayload.meta.semanticView, true);
   assert.equal(patientMedicationsPayload.data.coverage.implementationStatus, "materialized_semantic_view");
   assert.equal(patientMedicationsPayload.data.coverage.recordsMaterialized, true);
@@ -217,8 +217,8 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
 
   const healthGaps = await runCliCapture(["health", "gaps", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(healthGaps.code, CLI_EXIT_OK);
-  const gapsPayload = JSON.parse(healthGaps.stdout) as { data: { coverage: { executable: boolean }; registry: { systems: Array<{ id: string }> } }; meta: { denseData: boolean } };
-  assert.equal(gapsPayload.meta.denseData, true);
+  const gapsPayload = JSON.parse(healthGaps.stdout) as { data: { coverage: { executable: boolean }; registry: { systems: Array<{ id: string }> } }; meta: { professionalRecords: boolean } };
+  assert.equal(gapsPayload.meta.professionalRecords, true);
   assert.equal(gapsPayload.data.coverage.executable, true);
   assert.equal(gapsPayload.data.registry.systems.some((system) => system.id === "health"), true);
 
@@ -231,9 +231,9 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
       view: { operationId: string; requiredInputs: string[]; createsOrReads: string[] };
       materializedView: { subject: { id: string; label: string }; itemCount: number; partial: boolean; items: Array<{ kind: string; recordId: string; label: string }>; gaps: Array<{ id: string; gapKind: string }> };
     };
-    meta: { denseData: boolean; semanticView: boolean };
+    meta: { professionalRecords: boolean; semanticView: boolean };
   };
-  assert.equal(patientTimelinePayload.meta.denseData, true);
+  assert.equal(patientTimelinePayload.meta.professionalRecords, true);
   assert.equal(patientTimelinePayload.meta.semanticView, true);
   assert.equal(patientTimelinePayload.data.coverage.executable, true);
   assert.equal(patientTimelinePayload.data.coverage.implementationStatus, "materialized_semantic_view");
@@ -1799,9 +1799,9 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
         items: Array<{ kind: string; label: string }>;
       };
     };
-    meta: { denseData: boolean; semanticView: boolean };
+    meta: { professionalRecords: boolean; semanticView: boolean };
   };
-  assert.equal(caseEvidenceListPayload.meta.denseData, true);
+  assert.equal(caseEvidenceListPayload.meta.professionalRecords, true);
   assert.equal(caseEvidenceListPayload.meta.semanticView, true);
   assert.equal(caseEvidenceListPayload.data.coverage.implementationStatus, "materialized_semantic_view");
   assert.equal(caseEvidenceListPayload.data.coverage.recordsMaterialized, true);
@@ -1970,9 +1970,9 @@ test("runCli routes graduated dense-data direct nouns through the shared databas
         items: Array<{ kind: string; label: string }>;
       };
     };
-    meta: { denseData: boolean; semanticView: boolean };
+    meta: { professionalRecords: boolean; semanticView: boolean };
   };
-  assert.equal(studyCohortPayload.meta.denseData, true);
+  assert.equal(studyCohortPayload.meta.professionalRecords, true);
   assert.equal(studyCohortPayload.meta.semanticView, true);
   assert.equal(studyCohortPayload.data.coverage.implementationStatus, "materialized_semantic_view");
   assert.equal(studyCohortPayload.data.coverage.recordsMaterialized, true);
@@ -2615,7 +2615,7 @@ test("runCli exposes every graduated dense-data noun and alias as a top-level sh
   await enableDenseDomainModules(workspaceRoot);
   const checkedRoutes = new Set<string>();
 
-  for (const system of clawDenseDataOsRegistry.systems) {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
     for (const center of system.centers) {
       if (!center.collectionName) continue;
 
@@ -2630,7 +2630,7 @@ test("runCli exposes every graduated dense-data noun and alias as a top-level sh
         const payload = JSON.parse(result.stdout) as {
           ok: boolean;
           data: unknown[] | { coverage?: { executable?: boolean; implementationStatus?: string }; semanticView?: { id: string } };
-          meta: { canonicalCommand: string; collection?: string; action?: string; denseData?: boolean; semanticView?: boolean };
+          meta: { canonicalCommand: string; collection?: string; action?: string; professionalRecords?: boolean; semanticView?: boolean };
         };
         assert.equal(payload.ok, true, `${command} list must return ok`);
         if (payload.meta.canonicalCommand === "database") {
@@ -2639,12 +2639,12 @@ test("runCli exposes every graduated dense-data noun and alias as a top-level sh
           assert.equal(payload.meta.action, "list", `${command} list must execute list`);
           assert.ok(Array.isArray(payload.data), `${command} list must return a record array`);
         } else {
-          const denseData = payload.data as { coverage?: { executable?: boolean; implementationStatus?: string }; semanticView?: { id: string } };
-          assert.equal(payload.meta.denseData, true, `${command} list without direct DB meta must be a dense-data semantic route`);
+          const professionalRecords = payload.data as { coverage?: { executable?: boolean; implementationStatus?: string }; semanticView?: { id: string } };
+          assert.equal(payload.meta.professionalRecords, true, `${command} list without direct DB meta must be a dense-data semantic route`);
           assert.equal(payload.meta.semanticView, true, `${command} list without direct DB meta must expose a semantic view`);
-          assert.equal(denseData.coverage?.executable, true, `${command} list semantic route must be executable`);
-          assert.match(denseData.coverage?.implementationStatus ?? "", /^(materialized_semantic_view|semantic_view_contract)$/);
-          assert.ok(denseData.semanticView?.id, `${command} list semantic route must identify the view`);
+          assert.equal(professionalRecords.coverage?.executable, true, `${command} list semantic route must be executable`);
+          assert.match(professionalRecords.coverage?.implementationStatus ?? "", /^(materialized_semantic_view|semantic_view_contract)$/);
+          assert.ok(professionalRecords.semanticView?.id, `${command} list semantic route must identify the view`);
         }
       }
     }
@@ -2785,13 +2785,13 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   const seedPayload = JSON.parse(seedResult.stdout) as {
     ok: boolean;
     data: { fixtureSetId: string; store: string; seeded: Array<{ id: string; collectionName: string; covers: string[] }> };
-    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string; denseData: boolean };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string; professionalRecords: boolean };
   };
   assert.equal(seedPayload.ok, true);
   assert.equal(seedPayload.meta.canonicalCommand, "dense-fixtures");
   assert.equal(seedPayload.meta.invokedCommand, "dense-fixtures");
   assert.equal(seedPayload.meta.subcommand, "seed");
-  assert.equal(seedPayload.meta.denseData, true);
+  assert.equal(seedPayload.meta.professionalRecords, true);
   assert.equal(seedPayload.data.fixtureSetId, "dense-data-acceptance-v1");
   assert.equal(seedPayload.data.store, "core.sqlite");
   assert.equal(seedPayload.data.seeded.some((record) => record.id === "fixture_patient_ada" && record.collectionName === "patients" && record.covers.includes("patient")), true);

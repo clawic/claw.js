@@ -42,12 +42,12 @@ test("published CLI tarballs install with npm and manage local-first productivit
     index: path.resolve(process.cwd(), "packages/clawjs-index"),
     sessions: path.resolve(process.cwd(), "packages/clawjs-sessions"),
     cli: path.resolve(process.cwd(), "packages/clawjs"),
-    denseDataPack: path.resolve(process.cwd(), "packages/clawjs-domain-pack-dense-data"), // @clawjs/domain-pack-dense-data
+    professionalRecordsPack: path.resolve(process.cwd(), "packages/clawjs-domain-pack-dense-data"), // @clawjs/domain-pack-dense-data
   };
-  assert.equal(JSON.parse(fs.readFileSync(path.join(packageRoots.denseDataPack, "package.json"), "utf8")).name, "@clawjs/domain-pack-dense-data");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(packageRoots.professionalRecordsPack, "package.json"), "utf8")).name, "@clawjs/domain-pack-dense-data");
 
   let tarballs: string[];
-  let denseDataPackTarball = "";
+  let professionalRecordsPackTarball = "";
   try {
     tarballs = [
       packWorkspacePackage(packageRoots.core, packDir),
@@ -61,7 +61,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
       packWorkspacePackage(packageRoots.sessions, packDir),
       packWorkspacePackage(packageRoots.cli, packDir),
     ];
-    denseDataPackTarball = packWorkspacePackage(packageRoots.denseDataPack, packDir);
+    professionalRecordsPackTarball = packWorkspacePackage(packageRoots.professionalRecordsPack, packDir);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       assertCliPackageBinSurface(packageRoots.cli);
@@ -102,7 +102,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(missingDensePack.status, 64);
   assert.equal(JSON.parse(missingDensePack.stdout).error.code, "optional_pack_missing");
 
-  runCommand("npm", ["install", "--prefer-offline", denseDataPackTarball], { cwd: installRoot });
+  runCommand("npm", ["install", "--prefer-offline", professionalRecordsPackTarball], { cwd: installRoot });
   const densePackCommand = spawnSync(process.execPath, [binPath, "patient", "list", "--json"], {
     cwd: installRoot,
     encoding: "utf8",

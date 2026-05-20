@@ -173,7 +173,7 @@ The docs check script validates that every current export from
     areaRecordSchema
     ArtifactRecord
     artifactRecordSchema
-    assertClawDenseDataOsRegistryComplete
+    assertClawProfessionalRecordsOsRegistryComplete
     assertClawDomainSurfaceRegistryComplete
     assertCodexReadOnlyPath
     assertMacControlPlaneRegistryComplete
@@ -449,28 +449,28 @@ The docs check script validates that every current export from
     clawDatabaseRecordEvents
     clawDeepLinkSchemes
     clawDefaultBindAddress
-    clawDenseDataAcceptanceFixture
-    ClawDenseDataAcceptanceFixture
-    ClawDenseDataCenter
-    ClawDenseDataExistingSurfaceDisposition
-    ClawDenseDataExistingSurfaceIntegration
-    ClawDenseDataExternalPendingRequirement
-    ClawDenseDataFixtureRecord
-    ClawDenseDataGapRegistryEntry
-    ClawDenseDataGapRegistrySource
-    ClawDenseDataIntentEntry
-    ClawDenseDataIntentResolution
-    ClawDenseDataIntentStatus
-    clawDenseDataIntentStatuses
-    ClawDenseDataOperation
-    clawDenseDataOsRegistry
-    ClawDenseDataOsRegistry
-    ClawDenseDataSemanticView
-    ClawDenseDataSemanticViewEntry
-    ClawDenseDataSensitivityDefault
-    ClawDenseDataStoragePolicy
-    ClawDenseDataSystem
-    ClawDenseDataWave
+    clawProfessionalRecordsAcceptanceFixture
+    ClawProfessionalRecordsAcceptanceFixture
+    ClawProfessionalRecordsCenter
+    ClawProfessionalRecordsExistingSurfaceDisposition
+    ClawProfessionalRecordsExistingSurfaceIntegration
+    ClawProfessionalRecordsExternalPendingRequirement
+    ClawProfessionalRecordsFixtureRecord
+    ClawProfessionalRecordsGapRegistryEntry
+    ClawProfessionalRecordsGapRegistrySource
+    ClawProfessionalRecordsIntentEntry
+    ClawProfessionalRecordsIntentResolution
+    ClawProfessionalRecordsIntentStatus
+    clawProfessionalRecordsIntentStatuses
+    ClawProfessionalRecordsOperation
+    clawProfessionalRecordsOsRegistry
+    ClawProfessionalRecordsOsRegistry
+    ClawProfessionalRecordsSemanticView
+    ClawProfessionalRecordsSemanticViewEntry
+    ClawProfessionalRecordsSensitivityDefault
+    ClawProfessionalRecordsStoragePolicy
+    ClawProfessionalRecordsSystem
+    ClawProfessionalRecordsWave
     ClawDomain
     ClawDomainMigrationStatus
     ClawDomainMinimumContract
@@ -1123,7 +1123,7 @@ The docs check script validates that every current export from
     FilesIntentState
     filterOpenClawProviderAuthByIntent
     FINANCE_FAMILY
-    findClawDenseDataSystem
+    findClawProfessionalRecordsSystem
     findClawDomainSurfaceEntry
     findClawPersistentSurfaceNode
     findClawProjectManifestPortabilityViolations
@@ -1410,12 +1410,12 @@ The docs check script validates that every current export from
     listClawCliAliases
     listClawCliCommandIntentRegistry
     listClawCliCommands
-    listClawDenseDataAcceptanceFixtureRecords
-    listClawDenseDataGapRegistryEntries
-    listClawDenseDataIntentEntries
-    listClawDenseDataRegistryFixtureRecords
-    listClawDenseDataSemanticViewEntries
-    listClawDenseDataSystems
+    listClawProfessionalRecordsAcceptanceFixtureRecords
+    listClawProfessionalRecordsGapRegistryEntries
+    listClawProfessionalRecordsIntentEntries
+    listClawProfessionalRecordsRegistryFixtureRecords
+    listClawProfessionalRecordsSemanticViewEntries
+    listClawProfessionalRecordsSystems
     listClawDomainSurfaceEntries
     listClawPersistentSurfaceNodes
     listClawRuntimeModels
@@ -2031,7 +2031,7 @@ The docs check script validates that every current export from
     resolveChannelsStatePath
     resolveClawCliCommand
     resolveClawCliCommandIntent
-    resolveClawDenseDataIntent
+    resolveClawProfessionalRecordsIntent
     resolveClawGlobalDataDir
     resolveClawHostRegistryPath
     resolveClawHostStateDir
@@ -2222,8 +2222,8 @@ The docs check script validates that every current export from
     semanticRiskLevelSchema
     SendChannelMessageInput
     SendNotificationInput
-    SensitiveDataClass
-    sensitiveDataClasses
+    SensitiveRecordClass
+    sensitiveRecordClasses
     SESSION_FILE_EXTENSION
     SessionAgent
     SessionAttachment

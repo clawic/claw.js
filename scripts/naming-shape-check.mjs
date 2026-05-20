@@ -16,6 +16,7 @@ const requiredDocs = [
 
 const sourceExtensions = new Set([".swift", ".ts", ".tsx", ".js", ".mjs", ".cs", ".kt"]);
 const broadTerms = ["Thing", "Stuff", "Helper", "Helpers", "Util", "Utils", "Common", "Data", "Info", "Manager"];
+const blockedBroadSymbolTerms = new Set(["Data", "Thing"]);
 const allowedBroadSymbolContexts = [
   "DataTable",
   "FormData",
@@ -291,7 +292,13 @@ function collectBroadSymbolWarnings(relativePath, text) {
       if (seen.has(identifier)) continue;
       seen.add(identifier);
       const term = findBroadTerm(identifier);
-      if (term) warnings.push({ path: relativePath, kind: "broad-symbol", term, symbol: identifier });
+      if (term) {
+        if (blockedBroadSymbolTerms.has(term)) {
+          failures.push(`${relativePath} broad source symbol ${identifier} uses imprecise ${term}`);
+        } else {
+          warnings.push({ path: relativePath, kind: "broad-symbol", term, symbol: identifier });
+        }
+      }
     }
   }
   return warnings;

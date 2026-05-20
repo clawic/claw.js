@@ -40,6 +40,14 @@ test("network CLI exposes status, adapters, manifests and aggregate privacy defa
     assert.equal(manifests.code, CLI_EXIT_OK);
     const manifestsPayload = JSON.parse(manifests.stdout) as { data: { manifests: Array<{ id: string; reviewRequired: boolean }> } };
     assert.equal(manifestsPayload.data.manifests.some((manifest) => manifest.id === "network.manifest.gateway" && !manifest.reviewRequired), true);
+
+    const policyProfiles = await runCliCapture(["network", "policy-profiles", "--workspace", workspace, "--json"], workspace);
+    assert.equal(policyProfiles.code, CLI_EXIT_OK);
+    const policyProfilesPayload = JSON.parse(policyProfiles.stdout) as {
+      data: { networkPolicyProfiles: Array<{ id: string }>; activeNetworkPolicyProfileId: string };
+    };
+    assert.deepEqual(policyProfilesPayload.data.networkPolicyProfiles.map((entry) => entry.id), ["default"]);
+    assert.equal(policyProfilesPayload.data.activeNetworkPolicyProfileId, "default");
   });
 });
 

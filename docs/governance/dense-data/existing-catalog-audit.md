@@ -7,7 +7,7 @@ close by creating a second catalog, graph, evidence model, CRM, billing, ERP,
 or ops model that ignores the current framework surface.
 
 The same decisions are mirrored as structured registry data in
-`clawDenseDataOsRegistry.existingSurfaceIntegrations`. The public table below is
+`clawProfessionalRecordsOsRegistry.existingSurfaceIntegrations`. The public table below is
 the human-readable canon; the registry entry is the executable guard that
 requires every audited surface to declare a disposition, canonical owner,
 shared primitive set, dense-system references, and follow-up gate.

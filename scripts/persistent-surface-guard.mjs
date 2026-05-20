@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const exceptionPath = path.join(rootDir, "docs", "persistent-surface-guard-exceptions.json");
+const today = new Date().toISOString().slice(0, 10);
 
 const rules = [
   {
@@ -150,6 +152,25 @@ function isRegisteredDdlSource(filePath, body, registryBody) {
     && registryBody.includes(`"${relative}"`);
 }
 
+function isStrictDdlObjectSource(filePath, registryBody) {
+  const relative = path.relative(rootDir, filePath);
+  const strictSection = registryBody.match(/export const clawStrictDdlObjectSources = \[([\s\S]*?)\] as const;/)?.[1] ?? "";
+  return strictSection.includes(`"${relative}"`);
+}
+
+function ddlObjectFromMatch(match) {
+  const source = typeof match.input === "string" && typeof match.index === "number"
+    ? match.input.slice(match.index, match.index + 200)
+    : match[0];
+  const object = source.match(/\bCREATE\s+(TABLE|INDEX)\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/i);
+  return object ? { kind: object[1].toLowerCase(), name: object[2] } : null;
+}
+
+function ddlObjectRegistered(object, registryBody) {
+  if (!object) return false;
+  return quotedRegistryContains(registryBody, object.name);
+}
+
 function lineNumber(body, index) {
   return body.slice(0, index).split("\n").length;
 }
@@ -195,6 +216,106 @@ function registeredRuleValue(rule, match, body, registryBody) {
   }
 
   return false;
+}
+
+function readGuardExceptions() {
+  if (!fs.existsSync(exceptionPath)) return { version: 1, entries: [] };
+  try {
+    return JSON.parse(fs.readFileSync(exceptionPath, "utf8"));
+  } catch (error) {
+    return { version: 1, entries: [], parseError: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function guardExceptionValidationFindings(exceptions) {
+  const findings = [];
+  if (exceptions.parseError) {
+    findings.push({
+      file: path.relative(rootDir, exceptionPath),
+      line: 1,
+      rule: "guard.exception-parse-error",
+      message: `persistent surface guard exceptions must be valid JSON: ${exceptions.parseError}`,
+    });
+    return findings;
+  }
+  if (exceptions.version !== 1) {
+    findings.push({
+      file: path.relative(rootDir, exceptionPath),
+      line: 1,
+      rule: "guard.exception-schema",
+      message: "persistent surface guard exceptions version must be 1",
+    });
+  }
+  const seen = new Set();
+  for (const [index, entry] of (exceptions.entries ?? []).entries()) {
+    const label = entry?.id ?? `<entry ${index + 1}>`;
+    for (const field of ["id", "path", "rule", "objectKind", "objectName", "owner", "reason", "expiresOn"]) {
+      if (!entry?.[field]) {
+        findings.push({
+          file: path.relative(rootDir, exceptionPath),
+          line: index + 1,
+          rule: "guard.exception-schema",
+          message: `${label} is missing ${field}`,
+        });
+      }
+    }
+    if (entry?.id && seen.has(entry.id)) {
+      findings.push({
+        file: path.relative(rootDir, exceptionPath),
+        line: index + 1,
+        rule: "guard.exception-schema",
+        message: `${label} duplicates exception id ${entry.id}`,
+      });
+    }
+    if (entry?.id) seen.add(entry.id);
+    if (entry?.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)) {
+      findings.push({
+        file: path.relative(rootDir, exceptionPath),
+        line: index + 1,
+        rule: "guard.exception-schema",
+        message: `${label} expiresOn must use YYYY-MM-DD`,
+      });
+    }
+    if (entry?.expiresOn && entry.expiresOn < today) {
+      findings.push({
+        file: path.relative(rootDir, exceptionPath),
+        line: index + 1,
+        rule: "guard.exception-expired",
+        message: `${label} expired on ${entry.expiresOn}`,
+      });
+    }
+    if (!Array.isArray(entry?.tests) || entry.tests.length === 0) {
+      findings.push({
+        file: path.relative(rootDir, exceptionPath),
+        line: index + 1,
+        rule: "guard.exception-schema",
+        message: `${label} must declare tests`,
+      });
+    }
+    if (entry?.path && !fs.existsSync(path.join(rootDir, entry.path))) {
+      findings.push({
+        file: path.relative(rootDir, exceptionPath),
+        line: index + 1,
+        rule: "guard.exception-schema",
+        message: `${label} references missing path ${entry.path}`,
+      });
+    }
+  }
+  return findings;
+}
+
+function hasGuardException(filePath, rule, match, exceptions) {
+  if (rule.id !== "ts.ddl-literal") return false;
+  const object = ddlObjectFromMatch(match);
+  if (!object) return false;
+  const relative = path.relative(rootDir, filePath);
+  return (exceptions.entries ?? []).some((entry) =>
+    entry.path === relative
+    && entry.rule === rule.id
+    && entry.objectKind === object.kind
+    && entry.objectName === object.name
+    && entry.expiresOn >= today
+  );
 }
 
 function enclosingSwiftType(body, index) {
@@ -282,7 +403,7 @@ function registryCatalogFindings(registryBody) {
   return findings;
 }
 
-function scanFile(filePath, registryBody = "") {
+function scanFile(filePath, registryBody = "", exceptions = { entries: [] }) {
   const ext = path.extname(filePath);
   const body = fs.readFileSync(filePath, "utf8");
   if (isBuilderFile(filePath, body)) return [];
@@ -290,12 +411,15 @@ function scanFile(filePath, registryBody = "") {
   const findings = [];
   for (const rule of rules) {
     if (!rule.extensions.includes(ext)) continue;
-    if (rule.id === "ts.ddl-literal" && isRegisteredDdlSource(filePath, body, registryBody)) continue;
     const flags = rule.pattern.flags.includes("g") ? rule.pattern.flags : `${rule.pattern.flags}g`;
     const pattern = new RegExp(rule.pattern.source, flags);
     for (const match of body.matchAll(pattern)) {
       match.inputPath = filePath;
-      if (registeredRuleValue(rule, match, body, registryBody)) continue;
+      if (hasGuardException(filePath, rule, match, exceptions)) continue;
+      if (rule.id === "ts.ddl-literal" && isRegisteredDdlSource(filePath, body, registryBody)) {
+        if (!isStrictDdlObjectSource(filePath, registryBody)) continue;
+        if (ddlObjectRegistered(ddlObjectFromMatch(match), registryBody)) continue;
+      } else if (registeredRuleValue(rule, match, body, registryBody)) continue;
       findings.push({
         file: path.relative(rootDir, filePath),
         line: lineNumber(body, match.index),
@@ -367,6 +491,24 @@ function runSelfTest() {
   if (findings.some((finding) => finding.file.endsWith("PersistentSurfaceRegistry.swift"))) {
     throw new Error("self-test incorrectly flagged builder registry file");
   }
+  const ddlException = {
+    id: "self-test-ddl-exception",
+    path: path.relative(rootDir, badTs),
+    rule: "ts.ddl-literal",
+    objectKind: "table",
+    objectName: "direct_table",
+    owner: "self-test",
+    reason: "self-test fixture",
+    expiresOn: "2999-01-01",
+    tests: ["self-test"],
+  };
+  if (scanFile(badTs, "", { entries: [ddlException] }).some((finding) => finding.rule === "ts.ddl-literal")) {
+    throw new Error("self-test did not honor valid DDL exception");
+  }
+  const expiredExceptionFindings = guardExceptionValidationFindings({ version: 1, entries: [{ ...ddlException, expiresOn: "2000-01-01" }] });
+  if (!expiredExceptionFindings.some((finding) => finding.rule === "guard.exception-expired")) {
+    throw new Error("self-test did not reject expired DDL exception");
+  }
   const registryPath = path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts");
   const registryFindings = registryCatalogFindings(fs.readFileSync(registryPath, "utf8"));
   if (registryFindings.length) {
@@ -409,15 +551,19 @@ if (targets.length === 0) {
 const allFiles = targets.flatMap((target) => listFiles(path.resolve(rootDir, target)));
 const canonicalRegistryFiles = [
   path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts"),
+  path.join(rootDir, "packages/clawjs/src/v1-data-surface.ts"),
+  path.join(rootDir, "packages/clawjs/src/v1-data-agent-surfaces.ts"),
   path.join(rootDir, "../Clawix/clawix/macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift"),
   path.join(rootDir, "../Clawix/clawix/ios/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift"),
 ].filter((filePath) => fs.existsSync(filePath));
 const registryBody = [...allFiles, ...canonicalRegistryFiles]
-  .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift") || filePath.endsWith("surface-registry.ts"))
+  .filter((filePath) => canonicalRegistryFiles.includes(filePath) || filePath.endsWith("PersistentSurfaceRegistry.swift") || filePath.endsWith("surface-registry.ts"))
   .map((filePath) => fs.readFileSync(filePath, "utf8"))
   .join("\n");
+const guardExceptions = readGuardExceptions();
 const findings = [
-  ...allFiles.flatMap((filePath) => scanFile(filePath, registryBody)),
+  ...guardExceptionValidationFindings(guardExceptions),
+  ...allFiles.flatMap((filePath) => scanFile(filePath, registryBody, guardExceptions)),
   ...registryCatalogFindings(registryBody),
 ];
 if (wantsJson) {

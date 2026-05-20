@@ -93,3 +93,12 @@ test("debt sources, show, inspect, and search expose stable discovery", async ()
   const searchPayload = JSON.parse(search.stdout) as { data: { results: Array<{ path: string }> } };
   assert.equal(searchPayload.data.results.some((result) => result.path === "docs/debt-ledger.md"), true);
 });
+
+test("debt list accepts needs-action filter", async () => {
+  const list = await runCliCapture(["debt", "list", "--needs-action", "--json"], process.cwd());
+  assert.equal(list.code, CLI_EXIT_OK);
+  const payload = JSON.parse(list.stdout) as { data: { entries: unknown[]; summary: { missingActionability?: number; aliasHits?: number } } };
+  assert.equal(Array.isArray(payload.data.entries), true);
+  assert.equal(typeof payload.data.summary.missingActionability, "number");
+  assert.equal(typeof payload.data.summary.aliasHits, "number");
+});

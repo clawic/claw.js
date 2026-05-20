@@ -47,14 +47,22 @@ test("debt ledger normalizes baselines, external pending rows, and dedupes finge
     schemaVersion: 1,
     completionAudit: { statusSummary: { externalPendingRowIds: ["STA-001"] } },
     externalValidationRunbook: { externalPendingRowIds: ["STA-001"] },
+    rows: [{
+      id: "STA-001",
+      status: "EXTERNAL PENDING",
+      reentryCommand: "claw system providers plan context.weather.live --json",
+    }],
   }));
-  fs.writeFileSync(path.join(root, "docs", "decision-map.md"), "EXTERNAL PENDING appears here as report-only candidate.");
+  fs.writeFileSync(path.join(root, "docs", "decision-map.md"), "EXTERNAL PENDING appears here as report-only candidate. La deuda lateral queda pendiente.");
 
   const ledger = buildClawDebtLedger({ rootDir: root, repositories: [{ repo: "sample", rootDir: root }], generatedAt: "2026-05-20T00:00:00.000Z" });
   assert.equal(ledger.mode, "report_only");
   assert.equal(ledger.entries.some((entry) => entry.id === "baseline-one" && entry.classification === "baseline_exception"), true);
-  assert.equal(ledger.entries.some((entry) => entry.classification === "external_pending" && entry.summary.includes("STA-001")), true);
+  assert.equal(ledger.entries.some((entry) => entry.classification === "external_pending" && entry.summary.includes("STA-001") && entry.reentryCommand === "claw system providers plan context.weather.live --json"), true);
   assert.equal(ledger.entries.some((entry) => entry.classification === "lateral_debt"), true);
+  assert.equal(ledger.audit.missingActionability.some((entry) => entry.missing.includes("reviewBy_or_expires")), true);
+  assert.equal(ledger.audit.aliasHits.some((entry) => entry.term === "EXTERNAL PENDING" && entry.normalizedClassification === "external_pending"), true);
+  assert.equal(ledger.audit.aliasHits.some((entry) => entry.term === "deuda lateral" && entry.normalizedClassification === "lateral_debt"), true);
   assert.equal(ledger.audit.duplicateFingerprints.length, 1);
   assert.equal(ledger.audit.unindexedCandidates.some((entry) => entry.path === "docs/decision-map.md"), true);
   for (const entry of ledger.entries) clawDebtLedgerEntrySchema.parse(entry);

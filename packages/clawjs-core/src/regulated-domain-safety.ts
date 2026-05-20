@@ -25,7 +25,7 @@ export const regulatedDomains = [
 
 export type RegulatedDomain = typeof regulatedDomains[number];
 
-export const sensitiveDataClasses = [
+export const sensitiveRecordClasses = [
   "health_record",
   "mental_health_record",
   "sexual_reproductive_record",
@@ -46,7 +46,7 @@ export const sensitiveDataClasses = [
   "third_party_sensitive_record",
 ] as const;
 
-export type SensitiveDataClass = typeof sensitiveDataClasses[number];
+export type SensitiveRecordClass = typeof sensitiveRecordClasses[number];
 
 export const regulatedDecisionEffects = [
   "none",
@@ -138,7 +138,7 @@ export interface RegulatedActionPolicyConfig {
 
 export interface RegulatedDomainPolicy {
   regulatedDomain: RegulatedDomain;
-  sensitiveDataClasses: SensitiveDataClass[];
+  sensitiveRecordClasses: SensitiveRecordClass[];
   allowedUses: AllowedRegulatedUse[];
   blockedUses: BlockedRegulatedUse[];
   prohibitedPractices: ProhibitedRegulatedPractice[];
@@ -200,10 +200,10 @@ const baseAllowedUses = [...allowedRegulatedUses];
 const baseBlockedUses = [...blockedRegulatedUses];
 const baseProhibitedPractices = [...prohibitedRegulatedPractices];
 
-function policy(domain: RegulatedDomain, sensitiveDataClassesForDomain: SensitiveDataClass[]): RegulatedDomainPolicy {
+function policy(domain: RegulatedDomain, sensitiveRecordClassesForDomain: SensitiveRecordClass[]): RegulatedDomainPolicy {
   return {
     regulatedDomain: domain,
-    sensitiveDataClasses: sensitiveDataClassesForDomain,
+    sensitiveRecordClasses: sensitiveRecordClassesForDomain,
     allowedUses: baseAllowedUses,
     blockedUses: baseBlockedUses,
     prohibitedPractices: baseProhibitedPractices,

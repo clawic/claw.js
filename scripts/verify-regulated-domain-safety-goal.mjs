@@ -244,7 +244,7 @@ function assertLegalDocVersionsAreAligned() {
   }
 }
 
-function assertDemoDataIsSynthetic() {
+function assertDemoFixturesAreSynthetic() {
   const seedPath = "examples/mock/seed.mjs";
   const seed = read(seedPath);
   if (!seed.includes("All people, messages, emails, tokens, costs, and incidents are synthetic placeholders.")) {
@@ -262,7 +262,7 @@ function assertDemoDataIsSynthetic() {
   for (const match of seed.matchAll(emailPattern)) {
     const domain = match[1].toLowerCase();
     if (!allowedEmailDomains.has(domain)) {
-      errors.push(`${seedPath}: public mock data must use reserved email domains, found ${match[0]}`);
+      errors.push(`${seedPath}: public mock fixtures must use reserved email domains, found ${match[0]}`);
     }
   }
 }
@@ -907,7 +907,7 @@ assertPackageReadmeDisclaimers();
 assertReleaseScriptsRunLegalGate();
 assertLegalDocsAreBilingual();
 assertLegalDocVersionsAreAligned();
-assertDemoDataIsSynthetic();
+assertDemoFixturesAreSynthetic();
 assertNoCredentialLikePublicSecrets();
 
 if (errors.length > 0) {

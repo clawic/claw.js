@@ -1532,13 +1532,13 @@ private final class SMCReadOnlySensorReader {
         input.data8 = SMCCommand.readKeyInfo
         guard call(input: &input, output: &output) == KERN_SUCCESS,
               output.result == 0,
-              output.keyInfo.dataSize > 0 else {
+              output.keyMetadata.dataSize > 0 else {
             return nil
         }
 
         input = SMCParamStruct()
         input.key = keyCode
-        input.keyInfo = output.keyInfo
+        input.keyMetadata = output.keyMetadata
         input.data8 = SMCCommand.readBytes
         output = SMCParamStruct()
         guard call(input: &input, output: &output) == KERN_SUCCESS,
@@ -1546,9 +1546,9 @@ private final class SMCReadOnlySensorReader {
             return nil
         }
 
-        let size = min(Int(input.keyInfo.dataSize), SMCParamStruct.byteCapacity)
+        let size = min(Int(input.keyMetadata.dataSize), SMCParamStruct.byteCapacity)
         return SMCReadValue(
-            type: SMCParamStruct.string(from: input.keyInfo.dataType),
+            type: SMCParamStruct.string(from: input.keyMetadata.dataType),
             bytes: output.byteArray(prefix: size)
         )
     }
@@ -1600,7 +1600,7 @@ private struct SMCVersion {
     var release: UInt16 = 0
 }
 
-private struct SMCPLimitData {
+private struct SMCPLimitPacket {
     var version: UInt16 = 0
     var length: UInt16 = 0
     var cpuPLimit: UInt32 = 0
@@ -1608,7 +1608,7 @@ private struct SMCPLimitData {
     var memPLimit: UInt32 = 0
 }
 
-private struct SMCKeyInfoData {
+private struct SMCKeyMetadataPacket {
     var dataSize: UInt32 = 0
     var dataType: UInt32 = 0
     var dataAttributes: UInt8 = 0
@@ -1619,8 +1619,8 @@ private struct SMCParamStruct {
 
     var key: UInt32 = 0
     var vers = SMCVersion()
-    var pLimitData = SMCPLimitData()
-    var keyInfo = SMCKeyInfoData()
+    var pLimitPacket = SMCPLimitPacket()
+    var keyMetadata = SMCKeyMetadataPacket()
     var result: UInt8 = 0
     var status: UInt8 = 0
     var data8: UInt8 = 0

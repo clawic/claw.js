@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -12,7 +13,7 @@ import {
   listNetworkAccessManifests,
   listNetworkAdapters,
   listNetworkDefaultRules,
-  listNetworkProfiles,
+  listNetworkPolicyProfiles,
   networkEndpointSchema,
   networkRuleSchema,
   networkSubjectSchema,
@@ -180,11 +181,11 @@ function upsertRule(state: NetworkControlState, flags: Record<string, string>, i
       protocol: flags.protocol ?? existing?.endpoint?.protocol ?? "unknown",
       ...(flags.port ? { port: Number(flags.port) } : existing?.endpoint?.port ? { port: existing.endpoint.port } : {}),
     },
-    profileId: flags.profile ?? existing?.profileId ?? "default",
+    networkPolicyProfileId: flags["network-policy-profile"] ?? existing?.networkPolicyProfileId ?? "default",
     priority: flags.priority === undefined ? existing?.priority ?? 0 : Number(flags.priority),
     enabled: parseBoolean(flags.enabled, existing?.enabled ?? true),
     lifetime: flags.lifetime ?? existing?.lifetime ?? "permanent",
-    owner: { kind: "human", id: flags.owner ?? "local" },
+    ruleSteward: { kind: "human", id: flags["rule-steward"] ?? "local" },
     source: flags.source ?? existing?.source ?? "human",
     notes: flags.notes ?? existing?.notes,
     createdAt: existing?.createdAt ?? now,
@@ -285,7 +286,7 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
   const detailOptIn = parseBoolean(input.flags["detail-opt-in"], state.detailOptIn);
 
   if (!command || command === "help") {
-    input.context.stdout.write(`Usage: ${input.binName} network status|events|rules|profiles|lists|manifests|routes|adapters|suggestions|explain|doctor [options]\n`);
+    input.context.stdout.write(`Usage: ${input.binName} network status|events|rules|policy-profiles|lists|manifests|routes|adapters|suggestions|explain|doctor [options]\n`);
     return CLI_EXIT_OK;
   }
 
@@ -310,9 +311,9 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
 
-  if (command === "profiles") {
-    const payload = { profiles: listNetworkProfiles(), activeProfileId: "default", detailOptIn };
-    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "network", payload, { subcommand: "profiles" });
+  if (command === "policy-profiles") {
+    const payload = { networkPolicyProfiles: listNetworkPolicyProfiles(), activeNetworkPolicyProfileId: "default", detailOptIn };
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "network", payload, { subcommand: "policy-profiles" });
     else writeHuman(input.context, payload);
     return CLI_EXIT_OK;
   }
@@ -379,7 +380,7 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
         endpoint,
         rules: mergedRules(state),
         adapterId: input.flags["adapter-id"] ?? "network.adapter.gateway",
-        profile: { ...listNetworkProfiles()[0], detailOptIn },
+        networkPolicyProfile: { ...listNetworkPolicyProfiles()[0], detailOptIn },
       });
       const event = createNetworkEvent({
         id: input.flags.id ?? `network_event_${Date.now()}`,
@@ -444,7 +445,7 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
     const history = readEvents(input.flags, true, Number(input.flags.limit ?? 10));
     const suggestions = history.events
       .filter((event) => event.decision === "ask" || event.decision === "deny")
-      .map((event) => createNetworkRuleSuggestion({ event, ownerAgentId: input.flags["agent-id"] }));
+      .map((event) => createNetworkRuleSuggestion({ event, ruleStewardAgentId: input.flags["agent-id"] }));
     const payload = { suggestions, autoApply: false, note: "Agents propose rules only; human or explicit grant applies them." };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "network", payload, { subcommand: "suggestions" });
     else writeHuman(input.context, payload);
@@ -465,5 +466,5 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
 
-  throw new CliHandledError("usage_error", `Usage: ${input.binName} network status|events|rules|profiles|lists|manifests|routes|adapters|suggestions|explain|doctor`, CLI_EXIT_USAGE);
+  throw new CliHandledError("usage_error", `Usage: ${input.binName} network status|events|rules|policy-profiles|lists|manifests|routes|adapters|suggestions|explain|doctor`, CLI_EXIT_USAGE);
 }
