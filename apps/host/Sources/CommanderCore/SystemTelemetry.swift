@@ -38,6 +38,7 @@ public enum SystemTelemetry {
         let credentialStatus = definition.credentialRefRequired
             ? ((credentialRef?.isEmpty == false) ? "pending" : "blocked")
             : "skipped"
+        let credentialRefProjection: JSONValue = (credentialRef?.isEmpty == false) ? .string("provided_redacted") : .null
 
         return .object([
             "schema_version": .integer(1),
@@ -47,7 +48,7 @@ public enum SystemTelemetry {
             "will_connect": .bool(false),
             "provider": providerJSON(definition),
             "request": .object([
-                "credential_ref": credentialRef.map(JSONValue.string) ?? .null,
+                "credential_ref": credentialRefProjection,
                 "reason": reason.map(JSONValue.string) ?? .string("not_provided"),
             ]),
             "broker": .object([
@@ -474,6 +475,27 @@ public enum SystemTelemetry {
                     key: "system.gpu.memory_used_bytes",
                     value: Double(memoryUsed),
                     unit: "bytes",
+                    timestamp: timestamp,
+                    confidence: "experimental"
+                ))
+            }
+        }
+
+        if let sensors = hardwareSensorStats() {
+            if let temperature = sensors.temperatureCelsius {
+                samples.append(sample(
+                    key: "system.sensor.temperature",
+                    value: temperature,
+                    unit: "celsius",
+                    timestamp: timestamp,
+                    confidence: "experimental"
+                ))
+            }
+            if let fanSpeed = sensors.fanSpeedRPM {
+                samples.append(sample(
+                    key: "system.sensor.fan_speed",
+                    value: fanSpeed,
+                    unit: "rpm",
                     timestamp: timestamp,
                     confidence: "experimental"
                 ))
@@ -1169,6 +1191,37 @@ public enum SystemTelemetry {
         return count
     }
 
+    private static func hardwareSensorStats() -> (temperatureCelsius: Double?, fanSpeedRPM: Double?)? {
+        guard let reader = SMCReadOnlySensorReader.open() else {
+            return nil
+        }
+        defer { reader.close() }
+
+        let temperatures = [
+            "TC0P", "TC0E", "TC0F", "TC0D",
+            "TG0P", "TG0D",
+            "Tm0P", "Ts0P",
+        ].compactMap { reader.readTemperatureCelsius(key: $0) }
+        let fanCount = max(0, min(reader.readUInt8(key: "FNum") ?? 0, 8))
+        let fanSpeeds = (0..<fanCount).compactMap { index in
+            reader.readFanSpeedRPM(key: "F\(index)Ac")
+        }
+
+        let temperature = average(temperatures)
+        let fanSpeed = average(fanSpeeds)
+        guard temperature != nil || fanSpeed != nil else {
+            return nil
+        }
+        return (temperature, fanSpeed)
+    }
+
+    private static func average(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else {
+            return nil
+        }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
     private static func nextCalendarEventDeltaSeconds(now: Date = Date()) -> Double? {
         guard hasEventKitAccess(for: .event) else { return nil }
         let store = EKEventStore()
@@ -1378,6 +1431,216 @@ private struct ControlDefinition: Sendable {
     var description: String
 }
 
+private final class SMCReadOnlySensorReader {
+    private let connection: io_connect_t
+
+    private init(connection: io_connect_t) {
+        self.connection = connection
+    }
+
+    static func open() -> SMCReadOnlySensorReader? {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSMC"))
+        guard service != 0 else {
+            return nil
+        }
+        defer { IOObjectRelease(service) }
+
+        var connection: io_connect_t = 0
+        guard IOServiceOpen(service, mach_task_self_, 0, &connection) == KERN_SUCCESS,
+              connection != 0 else {
+            return nil
+        }
+        return SMCReadOnlySensorReader(connection: connection)
+    }
+
+    func close() {
+        IOServiceClose(connection)
+    }
+
+    func readTemperatureCelsius(key: String) -> Double? {
+        guard let value = read(key: key) else {
+            return nil
+        }
+        switch value.type {
+        case "sp78":
+            guard value.bytes.count >= 2 else { return nil }
+            let raw = Int16(bitPattern: UInt16(value.bytes[0]) << 8 | UInt16(value.bytes[1]))
+            return Double(raw) / 256.0
+        case "flt ":
+            return value.float32
+        default:
+            return nil
+        }
+    }
+
+    func readFanSpeedRPM(key: String) -> Double? {
+        guard let value = read(key: key) else {
+            return nil
+        }
+        switch value.type {
+        case "fpe2":
+            guard value.bytes.count >= 2 else { return nil }
+            let raw = UInt16(value.bytes[0]) << 8 | UInt16(value.bytes[1])
+            return Double(raw) / 4.0
+        case "flt ":
+            return value.float32
+        default:
+            return nil
+        }
+    }
+
+    func readUInt8(key: String) -> Int? {
+        guard let value = read(key: key),
+              let first = value.bytes.first else {
+            return nil
+        }
+        return Int(first)
+    }
+
+    private func read(key: String) -> SMCReadValue? {
+        guard let keyCode = SMCParamStruct.keyCode(key) else {
+            return nil
+        }
+
+        var input = SMCParamStruct()
+        var output = SMCParamStruct()
+        input.key = keyCode
+        input.data8 = SMCCommand.readKeyInfo
+        guard call(input: &input, output: &output) == KERN_SUCCESS,
+              output.result == 0,
+              output.keyInfo.dataSize > 0 else {
+            return nil
+        }
+
+        input = SMCParamStruct()
+        input.key = keyCode
+        input.keyInfo = output.keyInfo
+        input.data8 = SMCCommand.readBytes
+        output = SMCParamStruct()
+        guard call(input: &input, output: &output) == KERN_SUCCESS,
+              output.result == 0 else {
+            return nil
+        }
+
+        let size = min(Int(input.keyInfo.dataSize), SMCParamStruct.byteCapacity)
+        return SMCReadValue(
+            type: SMCParamStruct.string(from: input.keyInfo.dataType),
+            bytes: output.byteArray(prefix: size)
+        )
+    }
+
+    private func call(input: inout SMCParamStruct, output: inout SMCParamStruct) -> kern_return_t {
+        var outputSize = MemoryLayout<SMCParamStruct>.stride
+        return withUnsafePointer(to: &input) { inputPointer in
+            withUnsafeMutablePointer(to: &output) { outputPointer in
+                IOConnectCallStructMethod(
+                    connection,
+                    SMCCommand.kernelIndex,
+                    inputPointer,
+                    MemoryLayout<SMCParamStruct>.stride,
+                    outputPointer,
+                    &outputSize
+                )
+            }
+        }
+    }
+}
+
+private enum SMCCommand {
+    static let kernelIndex: UInt32 = 2
+    static let readBytes: UInt8 = 5
+    static let readKeyInfo: UInt8 = 9
+}
+
+private struct SMCReadValue {
+    var type: String
+    var bytes: [UInt8]
+
+    var float32: Double? {
+        guard bytes.count >= 4 else {
+            return nil
+        }
+        let bits = UInt32(bytes[0]) << 24
+            | UInt32(bytes[1]) << 16
+            | UInt32(bytes[2]) << 8
+            | UInt32(bytes[3])
+        return Double(Float32(bitPattern: bits))
+    }
+}
+
+private struct SMCVersion {
+    var major: UInt8 = 0
+    var minor: UInt8 = 0
+    var build: UInt8 = 0
+    var reserved: UInt8 = 0
+    var release: UInt16 = 0
+}
+
+private struct SMCPLimitData {
+    var version: UInt16 = 0
+    var length: UInt16 = 0
+    var cpuPLimit: UInt32 = 0
+    var gpuPLimit: UInt32 = 0
+    var memPLimit: UInt32 = 0
+}
+
+private struct SMCKeyInfoData {
+    var dataSize: UInt32 = 0
+    var dataType: UInt32 = 0
+    var dataAttributes: UInt8 = 0
+}
+
+private struct SMCParamStruct {
+    static let byteCapacity = 32
+
+    var key: UInt32 = 0
+    var vers = SMCVersion()
+    var pLimitData = SMCPLimitData()
+    var keyInfo = SMCKeyInfoData()
+    var result: UInt8 = 0
+    var status: UInt8 = 0
+    var data8: UInt8 = 0
+    var data32: UInt32 = 0
+    var bytes: (
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
+        UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+    ) = (
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0
+    )
+
+    func byteArray(prefix count: Int) -> [UInt8] {
+        withUnsafeBytes(of: bytes) { rawBuffer in
+            Array(rawBuffer.prefix(max(0, min(count, Self.byteCapacity))))
+        }
+    }
+
+    static func keyCode(_ key: String) -> UInt32? {
+        let bytes = Array(key.utf8)
+        guard bytes.count == 4 else {
+            return nil
+        }
+        return UInt32(bytes[0]) << 24
+            | UInt32(bytes[1]) << 16
+            | UInt32(bytes[2]) << 8
+            | UInt32(bytes[3])
+    }
+
+    static func string(from code: UInt32) -> String {
+        let bytes: [UInt8] = [
+            UInt8((code >> 24) & 0xff),
+            UInt8((code >> 16) & 0xff),
+            UInt8((code >> 8) & 0xff),
+            UInt8(code & 0xff),
+        ]
+        return String(bytes: bytes, encoding: .ascii) ?? ""
+    }
+}
+
 private let metricDefinitions: [MetricDefinition] = [
     .init(key: "system.cpu.load1", family: "cpu", label: "CPU load 1m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
     .init(key: "system.cpu.load5", family: "cpu", label: "CPU load 5m", unit: "load", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
@@ -1395,8 +1658,8 @@ private let metricDefinitions: [MetricDefinition] = [
     .init(key: "system.network.bytes_in", family: "network", label: "Network in", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires network interface sampler."),
     .init(key: "system.network.bytes_out", family: "network", label: "Network out", unit: "bytes_per_second", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires network interface sampler."),
     .init(key: "system.network.public_ip", family: "network", label: "Public IP", unit: "string", sampleSupport: "snapshot", availability: "provider_required", privacyTier: "sensitive", agentAccess: "restricted", retention: "latest_only", unavailableReason: "Requires explicit external network lookup."),
-    .init(key: "system.sensor.temperature", family: "sensor", label: "Temperature", unit: "celsius", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires signed hardware sensor provider."),
-    .init(key: "system.sensor.fan_speed", family: "sensor", label: "Fan speed", unit: "rpm", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires signed hardware sensor provider."),
+    .init(key: "system.sensor.temperature", family: "sensor", label: "Temperature", unit: "celsius", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires compatible read-only AppleSMC sensor service or another signed hardware sensor provider."),
+    .init(key: "system.sensor.fan_speed", family: "sensor", label: "Fan speed", unit: "rpm", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires compatible read-only AppleSMC fan service or another signed hardware sensor provider."),
     .init(key: "system.power.uptime", family: "power", label: "Uptime", unit: "seconds", sampleSupport: "snapshot_history", availability: "available", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: ""),
     .init(key: "system.power.battery", family: "power", label: "Battery", unit: "percent", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires power source provider."),
     .init(key: "system.process.count", family: "process", label: "Process count", unit: "count", sampleSupport: "snapshot_history", availability: "host_required", privacyTier: "aggregate", agentAccess: "safe_read", retention: "timeseries", unavailableReason: "Requires process provider."),

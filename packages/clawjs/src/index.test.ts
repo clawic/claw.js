@@ -4,6 +4,7 @@ import fs from "fs";
 import http from "http";
 import os from "os";
 import path from "path";
+import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
@@ -383,7 +384,7 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "hardware_sensor" && provider.id === "system.sensors.signed" && provider.status === "external_pending"), true);
   assert.equal(providerPayload.providers.some((provider) => provider.kind === "agent_run" && provider.id === "context.agent-runs.offline" && provider.metrics?.includes("context.agent_runs.active")), true);
 
-  const providerPlan = await runCliCapture(["system", "providers", "plan", "context.weather.live", "--reason", "test-plan", "--json"], process.cwd());
+  const providerPlan = await runCliCapture(["system", "providers", "plan", "context.weather.live", "--reason", "test-plan", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(providerPlan.code, CLI_EXIT_OK);
   const providerPlanPayload = parseCliJsonPayload<{
     status: string;
@@ -392,7 +393,9 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
     broker: { status: string; failClosed: boolean };
     policy: { requiredGrants: string[]; credentialRefRequired: boolean; networkAccess: string };
     steps: Array<{ id: string; status: string; owner: string }>;
-    receipt: { status: string; auditEvent: string };
+    receipt: { status: string; auditEvent: string; auditStatus: string; auditId: string };
+    auditPlan: { status: string; durable: boolean; outcome: string; receiptStatus: string; redaction: { credentialRefRedacted: boolean; preciseLocationRedacted: boolean } };
+    audit: { status: string; auditPath: string; outcome: string; durable: boolean };
     externalPending: boolean;
   }>(providerPlan.stdout);
   assert.equal(providerPlanPayload.status, "planned");
@@ -410,16 +413,54 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(providerPlanPayload.steps.some((step) => step.id === "connect_provider" && step.status === "blocked" && step.owner === "provider_broker"), true);
   assert.equal(providerPlanPayload.receipt.status, "not_issued");
   assert.equal(providerPlanPayload.receipt.auditEvent, "system.telemetry.provider.weather.live");
+  assert.equal(providerPlanPayload.auditPlan.status, "planned");
+  assert.equal(providerPlanPayload.auditPlan.durable, false);
+  assert.equal(providerPlanPayload.auditPlan.outcome, "blocked");
+  assert.equal(providerPlanPayload.auditPlan.receiptStatus, "not_issued");
+  assert.equal(providerPlanPayload.auditPlan.redaction.credentialRefRedacted, true);
+  assert.equal(providerPlanPayload.auditPlan.redaction.preciseLocationRedacted, true);
+  assert.equal(providerPlanPayload.receipt.auditStatus, "recorded");
+  assert.equal(providerPlanPayload.audit.status, "recorded");
+  assert.equal(providerPlanPayload.audit.outcome, "blocked");
+  assert.equal(providerPlanPayload.audit.durable, true);
+  assert.equal(providerPlanPayload.audit.auditPath.endsWith("system-telemetry-audit.jsonl"), true);
+  const providerPlanAudit = fs.readFileSync(providerPlanPayload.audit.auditPath, "utf8");
+  assert.equal(providerPlanAudit.includes("\"providerId\":\"context.weather.live\""), true);
+  assert.equal(providerPlanAudit.includes("\"credentialRefRedacted\":false"), true);
+  assert.equal(providerPlanAudit.includes("\"outcome\":\"blocked\""), true);
   assert.equal(providerPlanPayload.externalPending, true);
 
-  const sensorProviderPlan = await runCliCapture(["system", "providers", "plan", "system.sensors.signed", "--reason", "sensor-validation", "--json"], process.cwd());
+  const providerPlanWithCredential = await runCliCapture([
+    "system", "providers", "plan", "context.weather.live",
+    "--credential-ref", "secret://weather/local",
+    "--reason", "credential-test",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(providerPlanWithCredential.code, CLI_EXIT_OK);
+  const providerPlanWithCredentialPayload = parseCliJsonPayload<{
+    request: { credentialRef: string | null; reason: string };
+    steps: Array<{ id: string; status: string }>;
+    audit: { auditPath: string };
+  }>(providerPlanWithCredential.stdout);
+  assert.equal(providerPlanWithCredentialPayload.request.credentialRef, "provided_redacted");
+  assert.equal(providerPlanWithCredentialPayload.request.reason, "credential-test");
+  assert.equal(providerPlanWithCredentialPayload.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), true);
+  assert.equal(providerPlanWithCredential.stdout.includes("secret://weather/local"), false);
+  const providerPlanWithCredentialAudit = fs.readFileSync(providerPlanWithCredentialPayload.audit.auditPath, "utf8");
+  assert.equal(providerPlanWithCredentialAudit.includes("\"credentialRefRedacted\":true"), true);
+  assert.equal(providerPlanWithCredentialAudit.includes("secret://weather/local"), false);
+
+  const sensorProviderPlan = await runCliCapture(["system", "providers", "plan", "system.sensors.signed", "--reason", "sensor-validation", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(sensorProviderPlan.code, CLI_EXIT_OK);
   const sensorProviderPlanPayload = parseCliJsonPayload<{
     willConnect: boolean;
     provider: { id: string; kind: string; metrics?: string[]; metricKeys?: unknown };
     policy: { requiredGrants: string[]; credentialRefRequired: boolean };
     steps: Array<{ id: string; status: string }>;
-    receipt: { auditEvent: string };
+    receipt: { auditEvent: string; auditStatus: string };
+    auditPlan: { event: string; receiptStatus: string };
+    audit: { status: string; auditPath: string };
   }>(sensorProviderPlan.stdout);
   assert.equal(sensorProviderPlanPayload.willConnect, false);
   assert.equal(sensorProviderPlanPayload.provider.id, "system.sensors.signed");
@@ -432,6 +473,13 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(sensorProviderPlanPayload.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "skipped"), true);
   assert.equal(sensorProviderPlanPayload.steps.some((step) => step.id === "connect_provider" && step.status === "blocked"), true);
   assert.equal(sensorProviderPlanPayload.receipt.auditEvent, "system.telemetry.provider.hardware_sensor.live");
+  assert.equal(sensorProviderPlanPayload.auditPlan.event, "system.telemetry.provider.hardware_sensor.live");
+  assert.equal(sensorProviderPlanPayload.auditPlan.receiptStatus, "not_issued");
+  assert.equal(sensorProviderPlanPayload.receipt.auditStatus, "recorded");
+  assert.equal(sensorProviderPlanPayload.audit.status, "recorded");
+  const sensorProviderPlanAudit = fs.readFileSync(sensorProviderPlanPayload.audit.auditPath, "utf8");
+  assert.equal(sensorProviderPlanAudit.includes("\"providerId\":\"system.sensors.signed\""), true);
+  assert.equal(sensorProviderPlanAudit.includes("system.sensor.read"), true);
 
   const controls = await runCliCapture(["system", "controls", "list", "--json"], process.cwd());
   assert.equal(controls.code, CLI_EXIT_OK);
@@ -440,20 +488,22 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(controlsPayload.controls.some((control) => control.id === "system.fan.set_speed" && control.requiresSignedHostBroker), true);
   assert.equal(controlsPayload.controls.some((control) => control.family === "audio" && control.requiredGrants.includes("system.audio.control")), true);
 
-  const watch = await runCliCapture(["system", "watch", "--interval", "1", "--count", "2", "--json"], process.cwd());
+  const watch = await runCliCapture(["system", "watch", "--interval", "1", "--count", "2", "--jsonl"], process.cwd());
   assert.equal(watch.code, CLI_EXIT_OK);
-  const watchLines = watch.stdout.trim().split("\n").map((line) => JSON.parse(line) as { ok: boolean; data: { samples: Array<{ key: string }> }; meta: { intervalMs: number } });
+  const watchLines = watch.stdout.trim().split("\n").map((line) => JSON.parse(line) as { ok: boolean; data: { samples: Array<{ key: string }> }; meta: { intervalMs: number; format: string } });
   assert.equal(watchLines.length, 2);
-  assert.equal(watchLines.every((line) => line.ok && line.meta.intervalMs === 1), true);
+  assert.equal(watchLines.every((line) => line.ok && line.meta.intervalMs === 1 && line.meta.format === "jsonl"), true);
   assert.equal(watchLines.every((line) => line.data.samples.some((sample) => sample.key === "system.memory.used")), true);
 });
 
 test("runCli plans system controls without executing hardware mutations", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-control-plan-"));
   const plan = await runCliCapture([
     "system", "controls", "plan", "system.display.set_brightness",
     "--target", "main",
     "--value", "70",
     "--reason", "test-plan",
+    "--workspace", workspaceRoot,
     "--json",
   ], process.cwd());
   assert.equal(plan.code, CLI_EXIT_OK);
@@ -465,7 +515,9 @@ test("runCli plans system controls without executing hardware mutations", async 
     broker: { required: boolean; status: string; failClosed: boolean };
     policy: { requiredGrants: string[]; sensitiveDetailRedacted: boolean };
     steps: Array<{ id: string; status: string; owner: string }>;
-    receipt: { required: boolean; status: string; auditEvent: string };
+    receipt: { required: boolean; status: string; auditEvent: string; auditStatus: string };
+    auditPlan: { status: string; outcome: string; receiptStatus: string; redaction: { targetRedacted: boolean; valueRedacted: boolean; sensitiveDetailRedacted: boolean } };
+    audit: { status: string; auditPath: string; outcome: string; durable: boolean };
     externalPending: boolean;
   }>(plan.stdout);
   assert.equal(payload.status, "planned");
@@ -483,6 +535,19 @@ test("runCli plans system controls without executing hardware mutations", async 
   assert.equal(payload.receipt.required, true);
   assert.equal(payload.receipt.status, "not_issued");
   assert.equal(payload.receipt.auditEvent, "system.telemetry.control.display.set_brightness");
+  assert.equal(payload.auditPlan.status, "planned");
+  assert.equal(payload.auditPlan.outcome, "blocked");
+  assert.equal(payload.auditPlan.receiptStatus, "not_issued");
+  assert.equal(payload.auditPlan.redaction.targetRedacted, true);
+  assert.equal(payload.auditPlan.redaction.valueRedacted, true);
+  assert.equal(payload.auditPlan.redaction.sensitiveDetailRedacted, true);
+  assert.equal(payload.receipt.auditStatus, "recorded");
+  assert.equal(payload.audit.status, "recorded");
+  assert.equal(payload.audit.outcome, "blocked");
+  assert.equal(payload.audit.durable, true);
+  const controlPlanAudit = fs.readFileSync(payload.audit.auditPath, "utf8");
+  assert.equal(controlPlanAudit.includes("\"controlId\":\"system.display.set_brightness\""), true);
+  assert.equal(controlPlanAudit.includes("\"valueRedacted\":true"), true);
   assert.equal(payload.externalPending, true);
 });
 
@@ -558,6 +623,75 @@ console.log(JSON.stringify({
   assert.equal(payload.response.data.receipt.mac_receipt_id, "macact_test");
 });
 
+test("runCli records local context provider samples into monitor metric history", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-context-provider-"));
+  const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
+  const weatherFile = path.join(workspaceRoot, "weather.json");
+  fs.writeFileSync(weatherFile, JSON.stringify({ "context.weather.temperature": 21.5 }));
+
+  await withPatchedEnv({
+    CLAW_CONTEXT_WEATHER_FILE: weatherFile,
+    CLAW_CONTEXT_BUILD_STATUS: "passed",
+    CLAW_CONTEXT_SERVICE_HEALTH: "degraded",
+    CLAW_CONTEXT_AGENT_RUNS_ACTIVE: "2",
+    CLAW_CONTEXT_CUSTOM_METRIC: "desk-ready",
+  }, async () => {
+    const snapshot = await runCliCapture([
+      "system", "snapshot",
+      "--record", "true",
+      "--workspace", workspaceRoot,
+      "--monitor-db", monitorDb,
+      "--json",
+    ], process.cwd());
+    assert.equal(snapshot.code, CLI_EXIT_OK, snapshot.stderr);
+    const payload = parseCliJsonPayload<{
+      samples: Array<{
+        key: string;
+        value: number | string;
+        unit: string;
+        source: { adapter: string; confidence: string; detail?: string };
+        tags?: Record<string, string>;
+      }>;
+      unavailableMetrics: string[];
+      recorded: { sampleCount: number; sourceId: string };
+    }>(snapshot.stdout);
+    const weather = payload.samples.find((entry) => entry.key === "context.weather.temperature");
+    assert.equal(weather?.value, 21.5);
+    assert.equal(weather?.unit, "celsius");
+    assert.equal(weather?.source.adapter, "provider");
+    assert.equal(weather?.source.confidence, "provider");
+    assert.equal(weather?.source.detail, "local_fixture");
+    assert.equal(weather?.tags?.location, "redacted");
+    assert.equal(payload.samples.some((entry) => entry.key === "context.build.status" && entry.value === 0), true);
+    assert.equal(payload.samples.some((entry) => entry.key === "context.service.health" && entry.value === 1), true);
+    assert.equal(payload.samples.some((entry) => entry.key === "context.agent_runs.active" && entry.value === 2), true);
+    assert.equal(payload.samples.some((entry) => entry.key === "context.custom.metric" && entry.value === "desk-ready"), true);
+    assert.equal(payload.unavailableMetrics.includes("context.weather.temperature"), false);
+    assert.equal(payload.recorded.sourceId, "system.telemetry.local");
+    assert.equal(payload.recorded.sampleCount >= 8, true);
+
+    const history = await runCliCapture([
+      "system", "history", "context.weather.temperature",
+      "--range", "1h",
+      "--monitor-db", monitorDb,
+      "--json",
+    ], process.cwd());
+    assert.equal(history.code, CLI_EXIT_OK, history.stderr);
+    const historyPayload = parseCliJsonPayload<{
+      retention: { status: string };
+      samples: Array<{ metricKey: string; value: number; tags: Record<string, string> }>;
+      chart: { source: string; points: Array<{ value: number }> };
+      render: { source: string; empty: boolean; line: string };
+    }>(history.stdout);
+    assert.equal(historyPayload.retention.status, "recorded");
+    assert.equal(historyPayload.samples.some((entry) => entry.metricKey === "context.weather.temperature" && entry.value === 21.5 && entry.tags.location === "redacted"), true);
+    assert.equal(historyPayload.chart.source, "metric_samples");
+    assert.equal(historyPayload.chart.points.some((entry) => entry.value === 21.5), true);
+    assert.equal(historyPayload.render.source, "metric_samples");
+    assert.equal(historyPayload.render.empty, false);
+  });
+});
+
 test("runCli records system telemetry snapshots into monitor metric history", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-history-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
@@ -606,6 +740,22 @@ test("runCli records system telemetry snapshots into monitor metric history", as
   assert.equal(historyPayload.chart.source, "metric_samples");
   assert.equal(historyPayload.chart.empty, false);
   assert.equal(historyPayload.chart.points.some((point) => point.sourceId === "system.telemetry.local" && typeof point.value === "number"), true);
+
+  const dayHistory = await runCliCapture(["system", "history", "system.memory.used", "--range", "24h", "--monitor-db", monitorDb, "--json"], process.cwd());
+  assert.equal(dayHistory.code, CLI_EXIT_OK);
+  const dayHistoryPayload = parseCliJsonPayload<{
+    rangeMs: number;
+    retention: { status: string };
+    chart: { source: string; points: Array<{ value: number; sourceId: string }> };
+    render: { kind: string; source: string; line: string };
+  }>(dayHistory.stdout);
+  assert.equal(dayHistoryPayload.rangeMs, 86_400_000);
+  assert.equal(dayHistoryPayload.retention.status, "recorded");
+  assert.equal(dayHistoryPayload.chart.source, "metric_samples");
+  assert.equal(dayHistoryPayload.chart.points.some((point) => point.sourceId === "system.telemetry.local" && typeof point.value === "number"), true);
+  assert.equal(dayHistoryPayload.render.kind, "ascii_sparkline");
+  assert.equal(dayHistoryPayload.render.source, "metric_samples");
+  assert.equal(dayHistoryPayload.render.line.length > 0, true);
   assert.equal(historyPayload.render.kind, "ascii_sparkline");
   assert.equal(historyPayload.render.source, "metric_samples");
   assert.equal(historyPayload.render.empty, false);
@@ -695,9 +845,25 @@ console.log(JSON.stringify({
   assert.equal(focusHistoryPayload.incidents.some((incident) => incident.ruleId === "focus-work" && incident.metricKey === "system.focus.mode" && incident.severity === "info" && incident.operator === "eq" && incident.threshold === "work" && incident.sampleValue === "work" && incident.unit === "string"), true);
 });
 
-test("runCli applies short local retention to system telemetry samples", async () => {
+test("runCli applies short local retention to system telemetry samples without purging Monitor health events", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-retention-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
+  const sqlite = new Database(monitorDb);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS operational_events (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      level TEXT NOT NULL DEFAULT 'info',
+      message TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL DEFAULT '{}'
+    );
+  `);
+  sqlite.prepare(`
+    INSERT INTO operational_events (id, kind, level, message, created_at, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run("health-heartbeat", "health_check", "info", "Worker alive", new Date().toISOString(), "{}");
+  sqlite.close();
 
   const snapshot = await runCliCapture(["system", "snapshot", "--record", "true", "--raw-retention", "0m", "--monitor-db", monitorDb, "--json"], process.cwd());
   assert.equal(snapshot.code, CLI_EXIT_OK);
@@ -706,6 +872,16 @@ test("runCli applies short local retention to system telemetry samples", async (
   }>(snapshot.stdout);
   assert.equal(snapshotPayload.recorded.sampleCount >= 3, true);
   assert.equal(snapshotPayload.recorded.purged.samples >= 1, true);
+
+  const retained = new Database(monitorDb, { readonly: true });
+  try {
+    const event = retained.prepare("SELECT id, kind, message FROM operational_events WHERE id = ?").get("health-heartbeat") as { id: string; kind: string; message: string } | undefined;
+    const rollupCount = (retained.prepare("SELECT COUNT(*) AS count FROM metric_rollups WHERE metric_key = ?").get("system.memory.used") as { count: number }).count;
+    assert.deepEqual(event, { id: "health-heartbeat", kind: "health_check", message: "Worker alive" });
+    assert.equal(rollupCount >= 1, true);
+  } finally {
+    retained.close();
+  }
 
   const history = await runCliCapture(["system", "history", "system.memory.used", "--range", "1h", "--monitor-db", monitorDb, "--json"], process.cwd());
   assert.equal(history.code, CLI_EXIT_OK);
@@ -743,7 +919,9 @@ test("runCli persists system telemetry rules and widgets in workspace state", as
 
   const deleteRule = await runCliCapture(["system", "rules", "delete", "memory-high", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(deleteRule.code, CLI_EXIT_OK);
-  const deletedRulesPayload = parseCliJsonPayload<{ rules: Array<{ id: string }> }>(deleteRule.stdout);
+  const deletedRulesPayload = parseCliJsonPayload<{ deleted: string; rules: Array<{ id: string }>; mutatesHardware: boolean }>(deleteRule.stdout);
+  assert.equal(deletedRulesPayload.deleted, "memory-high");
+  assert.equal(deletedRulesPayload.mutatesHardware, false);
   assert.equal(deletedRulesPayload.rules.some((rule) => rule.id === "memory-high"), false);
 
   const upsertWidget = await runCliCapture([
@@ -766,7 +944,9 @@ test("runCli persists system telemetry rules and widgets in workspace state", as
 
   const deleteWidget = await runCliCapture(["system", "widgets", "delete", "battery-text", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(deleteWidget.code, CLI_EXIT_OK);
-  const deletedWidgetPayload = parseCliJsonPayload<{ widgets: Array<{ id: string }> }>(deleteWidget.stdout);
+  const deletedWidgetPayload = parseCliJsonPayload<{ deleted: string; widgets: Array<{ id: string }>; hostSpecific: boolean }>(deleteWidget.stdout);
+  assert.equal(deletedWidgetPayload.deleted, "battery-text");
+  assert.equal(deletedWidgetPayload.hostSpecific, true);
   assert.equal(deletedWidgetPayload.widgets.some((widget) => widget.id === "battery-text"), false);
 });
 

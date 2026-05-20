@@ -188,6 +188,10 @@ function systemTelemetryStatePath(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "system-telemetry-state.json");
 }
 
+function systemTelemetryAuditPath(workspaceRoot: string): string {
+  return resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "system-telemetry-audit.jsonl");
+}
+
 function expandHome(value: string): string {
   return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }
@@ -261,6 +265,87 @@ function writeSystemTelemetryState(workspaceRoot: string, state: SystemTelemetry
   const file = systemTelemetryStatePath(workspaceRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(normalizeSystemTelemetryState({ ...state, updatedAt: nowIso() }), null, 2)}\n`);
+}
+
+function appendSystemTelemetryPlanAudit<T extends { receipt?: Record<string, unknown> }>(
+  workspaceRoot: string,
+  kind: "provider" | "control",
+  plan: T,
+): T & { audit: Record<string, unknown>; receipt?: Record<string, unknown> } {
+  const auditPath = systemTelemetryAuditPath(workspaceRoot);
+  const auditId = `systel_audit_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const object = plan as Record<string, unknown>;
+  const receipt = (object.receipt && typeof object.receipt === "object" ? object.receipt : {}) as Record<string, unknown>;
+  const policy = (object.policy && typeof object.policy === "object" ? object.policy : {}) as Record<string, unknown>;
+  const broker = (object.broker && typeof object.broker === "object" ? object.broker : {}) as Record<string, unknown>;
+  const request = (object.request && typeof object.request === "object" ? object.request : {}) as Record<string, unknown>;
+  const provider = (object.provider && typeof object.provider === "object" ? object.provider : {}) as Record<string, unknown>;
+  const action = (object.action && typeof object.action === "object" ? object.action : {}) as Record<string, unknown>;
+  const auditEvent = typeof receipt.auditEvent === "string" ? receipt.auditEvent : `system.telemetry.${kind}.plan`;
+  const blockedOutcome = kind === "provider" ? object.willConnect === false : object.willExecute === false;
+  const event = {
+    schemaVersion: 1,
+    id: auditId,
+    createdAt: nowIso(),
+    event: auditEvent,
+    outcome: blockedOutcome ? "blocked" : "planned",
+    kind,
+    providerId: kind === "provider" && typeof provider.id === "string" ? provider.id : undefined,
+    providerKind: kind === "provider" && typeof provider.kind === "string" ? provider.kind : undefined,
+    providerMode: kind === "provider" && typeof provider.mode === "string" ? provider.mode : undefined,
+    controlId: kind === "control" && typeof action.id === "string" ? action.id : undefined,
+    controlFamily: kind === "control" && typeof action.family === "string" ? action.family : undefined,
+    credentialRefRedacted: kind === "provider" ? request.credentialRef != null : undefined,
+    targetRedacted: kind === "control" ? request.target != null : undefined,
+    valueRedacted: kind === "control" ? request.value != null : undefined,
+    requestReason: typeof request.reason === "string" ? request.reason : undefined,
+    brokerStatus: typeof broker.status === "string" ? broker.status : "external_pending",
+    willConnect: kind === "provider" ? false : undefined,
+    willExecute: kind === "control" ? false : undefined,
+    externalPending: object.externalPending === true,
+    requiredGrants: Array.isArray(policy.requiredGrants) ? policy.requiredGrants.filter((grant): grant is string => typeof grant === "string") : [],
+    networkAccess: typeof policy.networkAccess === "string" ? policy.networkAccess : undefined,
+    privacyTier: typeof policy.privacyTier === "string" ? policy.privacyTier : undefined,
+    sensitiveDetailRedacted: policy.sensitiveDetailRedacted === true || undefined,
+  };
+  const cleanEvent = Object.fromEntries(Object.entries(event).filter(([, value]) => value !== undefined));
+  try {
+    fs.mkdirSync(path.dirname(auditPath), { recursive: true });
+    fs.appendFileSync(auditPath, `${JSON.stringify(cleanEvent)}\n`);
+    return {
+      ...plan,
+      audit: {
+        status: "recorded",
+        auditId,
+        auditPath,
+        event: auditEvent,
+        outcome: cleanEvent.outcome,
+        durable: true,
+      },
+      receipt: {
+        ...receipt,
+        auditStatus: "recorded",
+        auditId,
+      },
+    };
+  } catch (error) {
+    return {
+      ...plan,
+      audit: {
+        status: "unavailable",
+        auditId,
+        event: auditEvent,
+        outcome: cleanEvent.outcome,
+        durable: false,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      receipt: {
+        ...receipt,
+        auditStatus: "unavailable",
+        auditId,
+      },
+    };
+  }
 }
 
 function emptySystemTelemetryState(): SystemTelemetryState {
@@ -465,7 +550,11 @@ function upsertWidget(state: SystemTelemetryState, input: { id: string; flags: R
   };
 }
 
-function sample(input: Omit<SystemTelemetryMetricSample, "capturedAt" | "source"> & { detail?: string }): SystemTelemetryMetricSample {
+function sample(input: Omit<SystemTelemetryMetricSample, "capturedAt" | "source"> & {
+  detail?: string;
+  adapter?: SystemTelemetryMetricSample["source"]["adapter"];
+  confidence?: SystemTelemetryMetricSample["source"]["confidence"];
+}): SystemTelemetryMetricSample {
   return {
     key: input.key,
     value: input.value,
@@ -475,8 +564,8 @@ function sample(input: Omit<SystemTelemetryMetricSample, "capturedAt" | "source"
     quality: input.quality,
     tags: input.tags,
     source: {
-      adapter: "node",
-      confidence: "official",
+      adapter: input.adapter ?? "node",
+      confidence: input.confidence ?? "official",
       detail: input.detail,
     },
   };
@@ -681,6 +770,7 @@ function collectSafeLocalSnapshot(): SystemTelemetrySnapshot {
       availability: uptime === null ? "unavailable" : "available",
       quality: uptime === null ? "unsupported" : "ok",
     }),
+    ...collectLocalContextProviderSamples(),
   ];
   const sampledKeys = new Set(samples.map((entry) => entry.key));
   return {
@@ -701,6 +791,159 @@ function collectSafeLocalSnapshot(): SystemTelemetrySnapshot {
       .filter((metric) => !sampledKeys.has(metric.key))
       .map((metric) => metric.key),
   };
+}
+
+function collectLocalContextProviderSamples(): SystemTelemetryMetricSample[] {
+  const samples: SystemTelemetryMetricSample[] = [];
+  const buildStatus = stateContextValue("context.build.status", ["CLAW_CONTEXT_BUILD_STATUS", "CLAW_SYSTEM_CONTEXT_BUILD_STATUS"], ["CLAW_CONTEXT_BUILD_STATUS_FILE"]);
+  if (buildStatus !== null) {
+    samples.push(sample({
+      key: "context.build.status",
+      value: buildStatus,
+      unit: "state",
+      availability: "available",
+      adapter: "provider",
+      confidence: "provider",
+      detail: "local_context",
+    }));
+  }
+
+  const serviceHealth = stateContextValue("context.service.health", ["CLAW_CONTEXT_SERVICE_HEALTH", "CLAW_SYSTEM_CONTEXT_SERVICE_HEALTH"], ["CLAW_CONTEXT_SERVICE_HEALTH_FILE"]);
+  if (serviceHealth !== null) {
+    samples.push(sample({
+      key: "context.service.health",
+      value: serviceHealth,
+      unit: "state",
+      availability: "available",
+      adapter: "provider",
+      confidence: "provider",
+      detail: "local_context",
+    }));
+  }
+
+  const activeRuns = numericContextValue("context.agent_runs.active", ["CLAW_CONTEXT_AGENT_RUNS_ACTIVE", "CLAW_AGENT_RUNS_ACTIVE"], ["CLAW_CONTEXT_AGENT_RUNS_FILE"]);
+  if (activeRuns !== null) {
+    samples.push(sample({
+      key: "context.agent_runs.active",
+      value: Math.max(0, activeRuns),
+      unit: "count",
+      availability: "available",
+      adapter: "provider",
+      confidence: "provider",
+      detail: "local_context",
+    }));
+  }
+
+  const weatherTemperature = numericContextValue("context.weather.temperature", ["CLAW_CONTEXT_WEATHER_TEMPERATURE", "CLAW_WEATHER_TEMPERATURE"], ["CLAW_CONTEXT_WEATHER_FILE"]);
+  if (weatherTemperature !== null) {
+    samples.push(sample({
+      key: "context.weather.temperature",
+      value: weatherTemperature,
+      unit: "celsius",
+      availability: "available",
+      adapter: "provider",
+      confidence: "provider",
+      detail: "local_fixture",
+      tags: { provider: "context.weather.mock", location: "redacted" },
+    }));
+  }
+
+  const focusMode = rawContextValue("system.focus.mode", ["CLAW_CONTEXT_FOCUS_MODE", "CLAW_FOCUS_MODE"], ["CLAW_CONTEXT_FOCUS_FILE"]);
+  if (focusMode !== null) {
+    samples.push(sample({
+      key: "system.focus.mode",
+      value: focusMode,
+      unit: "string",
+      availability: "available",
+      adapter: "provider",
+      confidence: "provider",
+      detail: "local_context",
+    }));
+  }
+
+  const customMetric = rawContextValue("context.custom.metric", ["CLAW_CONTEXT_CUSTOM_METRIC"], ["CLAW_CONTEXT_CUSTOM_METRIC_FILE"]);
+  if (customMetric !== null) {
+    samples.push(sample({
+      key: "context.custom.metric",
+      value: customMetric,
+      unit: "string",
+      availability: "available",
+      adapter: "provider",
+      confidence: "provider",
+      detail: "local_context",
+    }));
+  }
+  return samples;
+}
+
+function stateContextValue(metricKey: string, envKeys: string[], fileEnvKeys: string[]): number | null {
+  const raw = rawContextValue(metricKey, envKeys, fileEnvKeys);
+  if (raw === null) return null;
+  return stateValue(raw);
+}
+
+function numericContextValue(metricKey: string, envKeys: string[], fileEnvKeys: string[]): number | null {
+  const raw = rawContextValue(metricKey, envKeys, fileEnvKeys);
+  if (raw === null) return null;
+  const value = Number(raw.trim());
+  return Number.isFinite(value) ? value : null;
+}
+
+function rawContextValue(metricKey: string, envKeys: string[], fileEnvKeys: string[]): string | null {
+  for (const key of envKeys) {
+    const value = nonEmpty(process.env[key]);
+    if (value !== null) return value;
+  }
+  for (const key of fileEnvKeys) {
+    const filePath = nonEmpty(process.env[key]);
+    if (filePath === null) continue;
+    const value = contextValueFromFile(filePath, metricKey);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function contextValueFromFile(filePath: string, metricKey: string): string | null {
+  try {
+    const text = fs.readFileSync(expandHome(filePath), "utf8");
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const object = parsed as Record<string, unknown>;
+        const normalizedKey = metricKey.replaceAll(".", "_");
+        for (const key of [metricKey, normalizedKey, "value"]) {
+          if (key in object) return stringContextValue(object[key]);
+        }
+      }
+    } catch {
+      return nonEmpty(text);
+    }
+    return nonEmpty(text);
+  } catch {
+    return null;
+  }
+}
+
+function stringContextValue(value: unknown): string | null {
+  if (typeof value === "string") return nonEmpty(value);
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return null;
+}
+
+function stateValue(raw: string): number | null {
+  const value = raw.trim().toLowerCase();
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric;
+  if (["ok", "pass", "passed", "success", "succeeded", "healthy", "green", "clean", "idle"].includes(value)) return 0;
+  if (["warn", "warning", "pending", "running", "busy", "degraded", "yellow"].includes(value)) return 1;
+  if (["fail", "failed", "failure", "error", "unhealthy", "red", "broken"].includes(value)) return 2;
+  return null;
+}
+
+function nonEmpty(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 function parseRangeMs(value: string | undefined): number {
@@ -1171,9 +1414,10 @@ export async function runSystemCli(input: {
   if (command === "watch") {
     const intervalMs = parsePositiveInteger(input.flags.interval, 1_000, "--interval");
     const count = parsePositiveInteger(input.flags.count, Number.POSITIVE_INFINITY, "--count");
+    const wantsJsonLines = input.wantsJson || input.argv.includes("--jsonl");
     for (let emitted = 0; emitted < count; emitted += 1) {
       const snapshot = await collectSystemTelemetrySnapshot(input.flags);
-      if (input.wantsJson) writeJsonLine(input.context.stdout, { ok: true, data: snapshot, meta: { schemaVersion: 1, canonicalCommand: "system", subcommand: "watch", intervalMs } });
+      if (wantsJsonLines) writeJsonLine(input.context.stdout, { ok: true, data: snapshot, meta: { schemaVersion: 1, canonicalCommand: "system", subcommand: "watch", intervalMs, format: "jsonl" } });
       else writeHuman(input.context, snapshot);
       if (emitted + 1 < count) await sleep(intervalMs);
     }
@@ -1272,8 +1516,9 @@ export async function runSystemCli(input: {
         credentialRef: input.flags["credential-ref"] ?? input.flags.credentialRef,
         reason: input.flags.reason,
       });
-      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "providers plan" });
-      else writeHuman(input.context, payload);
+      const auditedPayload = appendSystemTelemetryPlanAudit(input.workspaceRoot, "provider", payload);
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", auditedPayload, { subcommand: "providers plan" });
+      else writeHuman(input.context, auditedPayload);
       return CLI_EXIT_OK;
     }
     throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers list|plan`, CLI_EXIT_USAGE);
@@ -1297,8 +1542,9 @@ export async function runSystemCli(input: {
         value: input.flags.value,
         reason: input.flags.reason,
       });
-      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", payload, { subcommand: "controls plan" });
-      else writeHuman(input.context, payload);
+      const auditedPayload = appendSystemTelemetryPlanAudit(input.workspaceRoot, "control", payload);
+      if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", auditedPayload, { subcommand: "controls plan" });
+      else writeHuman(input.context, auditedPayload);
       return CLI_EXIT_OK;
     }
     if (subcommand === "execute") {

@@ -180,7 +180,18 @@ final class CommanderE2ETests: XCTestCase {
         }) == true)
         XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["status"]?.stringValue, "not_issued")
         XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["audit_event"]?.stringValue, "system.telemetry.control.fan.set_speed")
+        XCTAssertEqual(response.data?.objectValue?["receipt"]?.objectValue?["audit_status"]?.stringValue, "recorded")
+        XCTAssertEqual(response.data?.objectValue?["audit"]?.objectValue?["status"]?.stringValue, "recorded")
+        XCTAssertEqual(response.data?.objectValue?["audit"]?.objectValue?["outcome"]?.stringValue, "blocked")
         XCTAssertTrue(runner.nativeCalls.isEmpty)
+
+        let auditURL = stateDirectory.appendingPathComponent(MacControlPolicy.auditFilename)
+        let audit = try String(contentsOf: auditURL)
+        XCTAssertTrue(audit.contains("system.telemetry.control.fan.set_speed"))
+        XCTAssertTrue(audit.contains("\"outcome\":\"blocked\""))
+        XCTAssertTrue(audit.contains("\"value_redacted\":true"))
+        XCTAssertTrue(audit.contains("system.hardware.control"))
+        XCTAssertTrue(audit.contains("system.sensor.read"))
     }
 
     func testCapabilityRevokeAndMetadata() throws {
@@ -435,6 +446,35 @@ final class CommanderE2ETests: XCTestCase {
             $0.objectValue?["id"]?.stringValue == "connect_provider"
                 && $0.objectValue?["status"]?.stringValue == "blocked"
         }) == true)
+        XCTAssertEqual(providerPlan.data?.objectValue?["audit"]?.objectValue?["status"]?.stringValue, "recorded")
+        XCTAssertEqual(providerPlan.data?.objectValue?["audit"]?.objectValue?["outcome"]?.stringValue, "blocked")
+        XCTAssertEqual(providerPlan.data?.objectValue?["receipt"]?.objectValue?["audit_status"]?.stringValue, "recorded")
+        let providerAuditPath = try XCTUnwrap(providerPlan.data?.objectValue?["audit"]?.objectValue?["audit_path"]?.stringValue)
+        XCTAssertTrue(providerAuditPath.contains("system-telemetry-provider-audit.jsonl"))
+        let providerAudit = try String(contentsOfFile: providerAuditPath, encoding: .utf8)
+        XCTAssertTrue(providerAudit.contains("\"provider_id\":\"context.weather.live\""))
+        XCTAssertTrue(providerAudit.contains("\"credential_ref_redacted\":false"))
+        XCTAssertTrue(providerAudit.contains("\"outcome\":\"blocked\""))
+
+        let providerPlanWithCredential = try context.runCLI([
+            "system", "providers", "plan",
+            "--provider-id", "context.weather.live",
+            "--credential-ref", "secret://weather/local",
+            "--reason", "credential-test",
+            "--json",
+        ])
+        XCTAssertTrue(providerPlanWithCredential.ok)
+        XCTAssertEqual(providerPlanWithCredential.data?.objectValue?["request"]?.objectValue?["credential_ref"]?.stringValue, "provided_redacted")
+        XCTAssertTrue(providerPlanWithCredential.data?.objectValue?["steps"]?.arrayValue?.contains(where: {
+            $0.objectValue?["id"]?.stringValue == "resolve_credential_ref"
+                && $0.objectValue?["status"]?.stringValue == "pending"
+        }) == true)
+        let providerPlanWithCredentialJSON = try JSONEncoder().encode(providerPlanWithCredential.data)
+        XCTAssertFalse(String(data: providerPlanWithCredentialJSON, encoding: .utf8)?.contains("secret://weather/local") ?? true)
+        let providerAuditPathWithCredential = try XCTUnwrap(providerPlanWithCredential.data?.objectValue?["audit"]?.objectValue?["audit_path"]?.stringValue)
+        let providerAuditWithCredential = try String(contentsOfFile: providerAuditPathWithCredential, encoding: .utf8)
+        XCTAssertTrue(providerAuditWithCredential.contains("\"credential_ref_redacted\":true"))
+        XCTAssertFalse(providerAuditWithCredential.contains("secret://weather/local"))
 
         let sensorProviderPlan = try context.runCLI([
             "system", "providers", "plan",
@@ -456,6 +496,12 @@ final class CommanderE2ETests: XCTestCase {
                 && $0.objectValue?["status"]?.stringValue == "blocked"
         }) == true)
         XCTAssertEqual(sensorProviderPlan.data?.objectValue?["receipt"]?.objectValue?["audit_event"]?.stringValue, "system.telemetry.provider.hardware_sensor.live")
+        XCTAssertEqual(sensorProviderPlan.data?.objectValue?["audit"]?.objectValue?["status"]?.stringValue, "recorded")
+        XCTAssertEqual(sensorProviderPlan.data?.objectValue?["receipt"]?.objectValue?["audit_status"]?.stringValue, "recorded")
+        let sensorProviderAuditPath = try XCTUnwrap(sensorProviderPlan.data?.objectValue?["audit"]?.objectValue?["audit_path"]?.stringValue)
+        let sensorProviderAudit = try String(contentsOfFile: sensorProviderAuditPath, encoding: .utf8)
+        XCTAssertTrue(sensorProviderAudit.contains("\"provider_id\":\"system.sensors.signed\""))
+        XCTAssertTrue(sensorProviderAudit.contains("system.sensor.read"))
 
         let controls = try context.runCLI(["system", "controls", "list", "--json"])
         XCTAssertTrue(controls.ok)

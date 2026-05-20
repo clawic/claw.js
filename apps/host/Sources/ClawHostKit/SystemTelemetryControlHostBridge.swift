@@ -17,7 +17,7 @@ public enum SystemTelemetryControlHostBridge {
             throw CommanderError.invalidArguments("Missing --control-id for system controls execute.")
         }
         guard let mapping = macMapping(for: controlID) else {
-            return failClosedResponse(
+            return try failClosedResponse(
                 controlID: controlID,
                 target: arguments["target"],
                 value: arguments["value"],
@@ -27,7 +27,7 @@ public enum SystemTelemetryControlHostBridge {
             )
         }
         guard let value = arguments["value"], !value.isEmpty else {
-            return failClosedResponse(
+            return try failClosedResponse(
                 controlID: controlID,
                 target: arguments["target"],
                 value: arguments["value"],
@@ -192,7 +192,7 @@ public enum SystemTelemetryControlHostBridge {
         reasonArgument: String?,
         reason: String,
         environment: [String: String]
-    ) -> CommandResponse {
+    ) throws -> CommandResponse {
         let plan = SystemTelemetry.controlPlan(
             controlID: controlID,
             target: target,
@@ -223,6 +223,23 @@ public enum SystemTelemetryControlHostBridge {
             ])
         }
 
+        let audit = appendFailClosedAudit(
+            controlID: controlID,
+            target: target,
+            value: value,
+            reasonArgument: reasonArgument,
+            reason: reason,
+            environment: environment,
+            data: data
+        )
+        data["audit"] = audit
+        if var receipt = data["receipt"]?.objectValue,
+           let auditObject = audit.objectValue {
+            receipt["audit_status"] = auditObject["status"]
+            receipt["audit_id"] = auditObject["audit_id"] ?? .null
+            data["receipt"] = .object(receipt)
+        }
+
         return CommandResponse(
             ok: false,
             data: .object(data),
@@ -237,6 +254,69 @@ public enum SystemTelemetryControlHostBridge {
                 durationMS: 0
             )
         )
+    }
+
+    private static func appendFailClosedAudit(
+        controlID: String,
+        target: String?,
+        value: String?,
+        reasonArgument: String?,
+        reason: String,
+        environment: [String: String],
+        data: [String: JSONValue]
+    ) -> JSONValue {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let auditID = "sysctl_audit_\(UUID().uuidString)"
+        let auditEvent = data["receipt"]?.objectValue?["audit_event"]?.stringValue
+            ?? "system.telemetry.control.\(controlID.replacingOccurrences(of: ".", with: "_"))"
+        let requiredGrants = data["policy"]?.objectValue?["required_grants"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        let host = HostConfiguration.current(environment: environment)
+        let event: [String: Any] = [
+            "schema_version": 1,
+            "id": auditID,
+            "created_at": timestamp,
+            "event": auditEvent,
+            "outcome": "blocked",
+            "control_id": controlID,
+            "target": target ?? NSNull(),
+            "value_redacted": value != nil,
+            "reason": reason,
+            "request_reason": reasonArgument ?? NSNull(),
+            "broker_status": "external_pending",
+            "will_execute": false,
+            "external_pending": true,
+            "required_grants": requiredGrants,
+            "host_id": host.id,
+        ]
+
+        do {
+            let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
+            let auditURL = stateDirectory.appendingPathComponent(MacControlPolicy.auditFilename)
+            let data = try JSONSerialization.data(withJSONObject: event, options: [.sortedKeys])
+            if !FileManager.default.fileExists(atPath: auditURL.path) {
+                FileManager.default.createFile(atPath: auditURL.path, contents: nil)
+            }
+            let handle = try FileHandle(forWritingTo: auditURL)
+            try handle.seekToEnd()
+            try handle.write(contentsOf: data)
+            try handle.write(contentsOf: Data([0x0A]))
+            try handle.close()
+            return .object([
+                "status": .string("recorded"),
+                "audit_id": .string(auditID),
+                "audit_path": .string(auditURL.path),
+                "event": .string(auditEvent),
+                "outcome": .string("blocked"),
+            ])
+        } catch {
+            return .object([
+                "status": .string("unavailable"),
+                "audit_id": .string(auditID),
+                "event": .string(auditEvent),
+                "outcome": .string("blocked"),
+                "error": .string(error.localizedDescription),
+            ])
+        }
     }
 
     private static func hostIdentity(environment: [String: String]) -> MacControlWireHost {

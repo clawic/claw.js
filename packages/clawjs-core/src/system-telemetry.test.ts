@@ -107,6 +107,17 @@ test("system telemetry providers declare mock, offline, and live context slots",
   assert.equal(plan.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "blocked"), true);
   assert.equal(plan.steps.some((step) => step.id === "connect_provider" && step.status === "blocked"), true);
   assert.equal(plan.receipt.auditEvent, "system.telemetry.provider.weather.live");
+  assert.equal(plan.auditPlan.status, "planned");
+  assert.equal(plan.auditPlan.durable, false);
+  assert.equal(plan.auditPlan.outcome, "blocked");
+  assert.equal(plan.auditPlan.redaction.credentialRefRedacted, true);
+  assert.equal(plan.auditPlan.redaction.preciseLocationRedacted, true);
+  assert.equal(plan.auditPlan.receiptStatus, "not_issued");
+
+  const credentialPlan = createSystemTelemetryProviderPlan({ provider: liveWeather, credentialRef: "secret://weather/local", reason: "credential-test", now: "2026-05-19T12:00:00.000Z", idSuffix: "credential-test" });
+  assert.equal(credentialPlan.request.credentialRef, "provided_redacted");
+  assert.equal(credentialPlan.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), true);
+  assert.equal(JSON.stringify(credentialPlan).includes("secret://weather/local"), false);
 
   const sensorProvider = providers.find((provider) => provider.id === "system.sensors.signed");
   assert.ok(sensorProvider);
@@ -119,6 +130,8 @@ test("system telemetry providers declare mock, offline, and live context slots",
   assert.equal(sensorPlan.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "skipped"), true);
   assert.equal(sensorPlan.steps.some((step) => step.id === "connect_provider" && step.status === "blocked"), true);
   assert.equal(sensorPlan.receipt.auditEvent, "system.telemetry.provider.hardware_sensor.live");
+  assert.equal(sensorPlan.auditPlan.event, "system.telemetry.provider.hardware_sensor.live");
+  assert.equal(sensorPlan.auditPlan.receiptStatus, "not_issued");
 });
 
 test("system telemetry control actions are signed-host plan-first contracts", () => {
@@ -145,4 +158,10 @@ test("system telemetry control actions are signed-host plan-first contracts", ()
   assert.equal(plan.policy.requiredGrants.includes("system.display.control"), true);
   assert.equal(plan.steps.some((step) => step.id === "execute_native_action" && step.status === "blocked"), true);
   assert.equal(plan.receipt.auditEvent, "system.telemetry.control.display.set_brightness");
+  assert.equal(plan.auditPlan.status, "planned");
+  assert.equal(plan.auditPlan.outcome, "blocked");
+  assert.equal(plan.auditPlan.redaction.targetRedacted, true);
+  assert.equal(plan.auditPlan.redaction.valueRedacted, true);
+  assert.equal(plan.auditPlan.redaction.sensitiveDetailRedacted, true);
+  assert.equal(plan.auditPlan.receiptStatus, "not_issued");
 });

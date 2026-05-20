@@ -319,11 +319,20 @@ public actor CommandService {
                 source: .framework
             )
         case ("providers", "plan"):
+            let providerID = request.arguments["provider_id"] ?? request.arguments["provider-id"] ?? request.arguments["id"]
+            let credentialRef = request.arguments["credential_ref"] ?? request.arguments["credential-ref"]
+            let reason = request.arguments["reason"]
+            let plan = SystemTelemetry.providerPlan(
+                providerID: providerID,
+                credentialRef: credentialRef,
+                reason: reason
+            )
             return success(
-                data: SystemTelemetry.providerPlan(
-                    providerID: request.arguments["provider_id"] ?? request.arguments["provider-id"] ?? request.arguments["id"],
-                    credentialRef: request.arguments["credential_ref"] ?? request.arguments["credential-ref"],
-                    reason: request.arguments["reason"]
+                data: appendSystemTelemetryProviderPlanAudit(
+                    to: plan,
+                    providerID: providerID,
+                    credentialRef: credentialRef,
+                    reason: reason
                 ),
                 adapter: "system-telemetry",
                 source: .framework
@@ -639,6 +648,102 @@ public actor CommandService {
                 "value": .string(environment["CLAW_HOST_TEST_SAFARI_WINDOW"] ?? "1"),
             ]),
         ]
+    }
+
+    private func appendSystemTelemetryProviderPlanAudit(
+        to plan: JSONValue,
+        providerID: String?,
+        credentialRef: String?,
+        reason: String?
+    ) -> JSONValue {
+        guard var object = plan.objectValue,
+              object["status"]?.stringValue == "planned",
+              object["will_connect"]?.boolValue == false else {
+            return plan
+        }
+
+        let audit = writeSystemTelemetryProviderPlanAudit(
+            plan: object,
+            providerID: providerID,
+            credentialRef: credentialRef,
+            reason: reason
+        )
+        object["audit"] = audit
+        if var receipt = object["receipt"]?.objectValue {
+            receipt["audit_status"] = audit.objectValue?["status"] ?? .string("unavailable")
+            if let auditID = audit.objectValue?["audit_id"] {
+                receipt["audit_id"] = auditID
+            }
+            object["receipt"] = .object(receipt)
+        }
+        return .object(object)
+    }
+
+    private func writeSystemTelemetryProviderPlanAudit(
+        plan: [String: JSONValue],
+        providerID: String?,
+        credentialRef: String?,
+        reason: String?
+    ) -> JSONValue {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let auditID = "sysprovider_audit_\(UUID().uuidString)"
+        let provider = plan["provider"]?.objectValue ?? [:]
+        let policy = plan["policy"]?.objectValue ?? [:]
+        let broker = plan["broker"]?.objectValue ?? [:]
+        let receipt = plan["receipt"]?.objectValue ?? [:]
+        let resolvedProviderID = providerID ?? provider["id"]?.stringValue ?? "unknown"
+        let auditEvent = receipt["audit_event"]?.stringValue ?? "system.telemetry.provider.plan"
+        let requiredGrants = policy["required_grants"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        let host = HostConfiguration.current(environment: environment)
+        let event: [String: Any] = [
+            "schema_version": 1,
+            "id": auditID,
+            "created_at": timestamp,
+            "event": auditEvent,
+            "outcome": "blocked",
+            "provider_id": resolvedProviderID,
+            "provider_kind": provider["kind"]?.stringValue ?? NSNull(),
+            "provider_mode": provider["mode"]?.stringValue ?? NSNull(),
+            "credential_ref_redacted": credentialRef?.isEmpty == false,
+            "reason": reason ?? NSNull(),
+            "broker_status": broker["status"]?.stringValue ?? "external_pending",
+            "will_connect": false,
+            "external_pending": true,
+            "required_grants": requiredGrants,
+            "network_access": policy["network_access"]?.stringValue ?? NSNull(),
+            "privacy_tier": policy["privacy_tier"]?.stringValue ?? NSNull(),
+            "precise_location_redacted": policy["precise_location_redacted"]?.boolValue ?? true,
+            "host_id": host.id,
+        ]
+
+        do {
+            let stateDirectory = try StatePaths.ensureStateDirectory(environment: environment)
+            let auditURL = stateDirectory.appendingPathComponent("system-telemetry-provider-audit.jsonl")
+            let data = try JSONSerialization.data(withJSONObject: event, options: [.sortedKeys])
+            if !FileManager.default.fileExists(atPath: auditURL.path) {
+                FileManager.default.createFile(atPath: auditURL.path, contents: nil)
+            }
+            let handle = try FileHandle(forWritingTo: auditURL)
+            try handle.seekToEnd()
+            try handle.write(contentsOf: data)
+            try handle.write(contentsOf: Data([0x0A]))
+            try handle.close()
+            return .object([
+                "status": .string("recorded"),
+                "audit_id": .string(auditID),
+                "audit_path": .string(auditURL.path),
+                "event": .string(auditEvent),
+                "outcome": .string("blocked"),
+            ])
+        } catch {
+            return .object([
+                "status": .string("unavailable"),
+                "audit_id": .string(auditID),
+                "event": .string(auditEvent),
+                "outcome": .string("blocked"),
+                "error": .string(error.localizedDescription),
+            ])
+        }
     }
 }
 

@@ -208,7 +208,24 @@ describe("MCP connector control plane", () => {
       assert.equal(providerPlan.json().result.content.provider.metrics.includes("context.weather.temperature"), true);
       assert.equal(providerPlan.json().result.content.willConnect, false);
       assert.equal(providerPlan.json().result.content.broker.failClosed, true);
+      assert.equal(providerPlan.json().result.content.auditPlan.status, "planned");
+      assert.equal(providerPlan.json().result.content.auditPlan.redaction.credentialRefRedacted, true);
+      assert.equal(providerPlan.json().result.content.auditPlan.receiptStatus, "not_issued");
       assert.equal(providerPlan.json().result.content.steps.some((entry: { id: string; status: string }) => entry.id === "connect_provider" && entry.status === "blocked"), true);
+
+      const providerPlanWithCredential = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 46,
+          method: "tools/call",
+          params: { name: "system.provider_plan", arguments: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "credential-test" } },
+        },
+      });
+      assert.equal(providerPlanWithCredential.statusCode, 200);
+      assert.equal(providerPlanWithCredential.json().result.content.request.credentialRef, "provided_redacted");
+      assert.equal(JSON.stringify(providerPlanWithCredential.json()).includes("secret://weather/local"), false);
 
       const controls = await app.inject({
         method: "POST",
@@ -238,6 +255,8 @@ describe("MCP connector control plane", () => {
       assert.equal(plan.json().result.content.willExecute, false);
       assert.equal(plan.json().result.content.broker.failClosed, true);
       assert.equal(plan.json().result.content.receipt.auditEvent, "system.telemetry.control.audio.set_output_volume");
+      assert.equal(plan.json().result.content.auditPlan.redaction.valueRedacted, true);
+      assert.equal(plan.json().result.content.auditPlan.receiptStatus, "not_issued");
     } finally {
       await app.close();
     }
@@ -290,7 +309,19 @@ describe("MCP connector control plane", () => {
       assert.equal(providerPlan.json().provider.metrics.includes("context.weather.temperature"), true);
       assert.equal(providerPlan.json().request.reason, "test-plan");
       assert.equal(providerPlan.json().willConnect, false);
+      assert.equal(providerPlan.json().auditPlan.redaction.preciseLocationRedacted, true);
+      assert.equal(providerPlan.json().auditPlan.receiptStatus, "not_issued");
       assert.equal(providerPlan.json().steps.some((entry: { id: string; status: string }) => entry.id === "resolve_credential_ref" && entry.status === "blocked"), true);
+
+      const providerPlanWithCredential = await app.inject({
+        method: "POST",
+        url: "/v1/system/providers/plan",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "credential-test" },
+      });
+      assert.equal(providerPlanWithCredential.statusCode, 200);
+      assert.equal(providerPlanWithCredential.json().request.credentialRef, "provided_redacted");
+      assert.equal(JSON.stringify(providerPlanWithCredential.json()).includes("secret://weather/local"), false);
 
       const controls = await app.inject({
         method: "GET",

@@ -142,6 +142,22 @@ export interface SystemTelemetryProviderPlanStep {
   owner: "provider_broker" | "monitor" | "audit";
 }
 
+export interface SystemTelemetryPlanAuditProjection {
+  status: "planned";
+  durable: false;
+  event: string;
+  outcome: "blocked";
+  redaction: {
+    credentialRefRedacted?: boolean;
+    targetRedacted?: boolean;
+    valueRedacted?: boolean;
+    preciseLocationRedacted?: boolean;
+    sensitiveDetailRedacted?: boolean;
+  };
+  receiptStatus: "not_issued";
+  note: string;
+}
+
 export interface SystemTelemetryProviderPlan {
   schemaVersion: 1;
   id: string;
@@ -172,6 +188,7 @@ export interface SystemTelemetryProviderPlan {
     status: "not_issued";
     auditEvent: string;
   };
+  auditPlan: SystemTelemetryPlanAuditProjection;
   externalPending: true;
 }
 
@@ -228,6 +245,7 @@ export interface SystemTelemetryControlPlan {
     status: "not_issued";
     auditEvent: string;
   };
+  auditPlan: SystemTelemetryPlanAuditProjection;
   externalPending: true;
 }
 
@@ -993,6 +1011,8 @@ export function createSystemTelemetryProviderPlan(input: {
   const idSuffix = input.idSuffix ?? String(Date.now());
   const requiredGrants = input.provider.requiresGrant ? [input.provider.requiresGrant] : [];
   const credentialProvided = Boolean(input.credentialRef);
+  const credentialRefProjection = credentialProvided ? "provided_redacted" : null;
+  const auditEvent = `system.telemetry.provider.${input.provider.kind}.${input.provider.mode}`;
   return {
     schemaVersion: 1,
     id: `system-provider-plan-${input.provider.id.replaceAll(".", "-")}-${idSuffix}`,
@@ -1007,7 +1027,7 @@ export function createSystemTelemetryProviderPlan(input: {
       capabilities: [...input.provider.capabilities],
     },
     request: {
-      credentialRef: input.credentialRef ?? null,
+      credentialRef: credentialRefProjection,
       reason: input.reason || "not_provided",
     },
     broker: {
@@ -1034,7 +1054,19 @@ export function createSystemTelemetryProviderPlan(input: {
     receipt: {
       required: true,
       status: "not_issued",
-      auditEvent: `system.telemetry.provider.${input.provider.kind}.${input.provider.mode}`,
+      auditEvent,
+    },
+    auditPlan: {
+      status: "planned",
+      durable: false,
+      event: auditEvent,
+      outcome: "blocked",
+      redaction: {
+        credentialRefRedacted: true,
+        preciseLocationRedacted: true,
+      },
+      receiptStatus: "not_issued",
+      note: "Portable plan audit projection only; durable audit evidence is written by the local CLI or signed host and this is not a provider execution receipt.",
     },
     externalPending: true,
   };
@@ -1062,6 +1094,7 @@ export function createSystemTelemetryControlPlan(input: {
 }): SystemTelemetryControlPlan {
   const createdAt = input.now ?? new Date().toISOString();
   const idSuffix = input.idSuffix ?? String(Date.now());
+  const auditEvent = input.action.auditEvent;
   return {
     schemaVersion: 1,
     id: `system-control-plan-${input.action.id.replaceAll(".", "-")}-${idSuffix}`,
@@ -1100,7 +1133,20 @@ export function createSystemTelemetryControlPlan(input: {
     receipt: {
       required: true,
       status: "not_issued",
-      auditEvent: input.action.auditEvent,
+      auditEvent,
+    },
+    auditPlan: {
+      status: "planned",
+      durable: false,
+      event: auditEvent,
+      outcome: "blocked",
+      redaction: {
+        targetRedacted: true,
+        valueRedacted: true,
+        sensitiveDetailRedacted: true,
+      },
+      receiptStatus: "not_issued",
+      note: "Portable plan audit projection only; durable audit evidence is written by the local CLI or signed host and this is not an execution receipt.",
     },
     externalPending: true,
   };
