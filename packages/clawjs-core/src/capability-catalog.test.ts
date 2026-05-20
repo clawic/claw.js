@@ -80,9 +80,9 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.ok(riskMap.ordinaryAccess.includes("jobs.list"));
   assert.ok(riskMap.ordinaryAccess.includes("jobs.get"));
   assert.ok(riskMap.ordinaryAccess.includes("jobs.events"));
-  assert.ok(riskMap.blocked.includes("jobs.stream"));
-  assert.ok(riskMap.blocked.includes("jobs.start"));
-  assert.ok(riskMap.blocked.includes("jobs.cancel"));
+  assert.ok(riskMap.ordinaryAccess.includes("jobs.stream"));
+  assert.ok(riskMap.approvalRequired.includes("jobs.start"));
+  assert.ok(riskMap.approvalRequired.includes("jobs.cancel"));
   assert.ok(riskMap.approvalRequired.includes("actions.invoke"));
   assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
   assert.ok(riskMap.approvalRequired.includes("mac.action.plan"));
@@ -126,24 +126,26 @@ test("custom apps do not receive direct SQLite or plaintext secret capabilities"
   }
 });
 
-test("blocked custom-app capabilities expose explicit gaps without SDK execution", () => {
-  for (const id of ["jobs.stream", "jobs.start", "jobs.cancel"]) {
-    const capability = getClawCapability(id);
+test("runtime jobs bridge capabilities expose SDK and runtime API execution", () => {
+  const stream = getClawCapability("jobs.stream");
+  assert.equal(stream?.customAppAccess, "localWide");
+  assert.equal(stream?.dispatch?.status, "available");
+  assert.equal(stream?.dispatch?.mode, "localWideRead");
+  assert.equal(stream?.surfaces.find((surface) => surface.surface === "sdk")?.status, "available");
+  assert.equal(stream?.surfaces.find((surface) => surface.surface === "cli")?.status, "blocked");
+  assert.equal(stream?.inputSchemaRef, CUSTOM_APP_SDK_SCHEMA_REFS.jobsStream);
+  assert.equal(stream?.outputSchemaRef, CUSTOM_APP_SDK_SCHEMA_REFS.jobsStreamResult);
 
-    assert.equal(capability?.customAppAccess, "blocked", id);
-    assert.equal(capability?.dispatch?.status, "unavailable", id);
-    assert.equal(capability?.dispatch?.mode, "blocked", id);
-    assert.equal(capability?.dispatch?.approvalRequired, false, id);
-    assert.deepEqual(capability?.surfaces.map((surface) => [surface.surface, surface.status]), [
-      ["sdk", "blocked"],
-      ["cli", "blocked"],
-      ["serviceApi", "blocked"],
-      ["mcp", "blocked"],
-      ["relay", "blocked"],
-      ["hostBridge", "blocked"],
-    ], id);
-    assert.equal(capability?.inputSchemaRef, undefined, id);
-    assert.equal(capability?.outputSchemaRef, undefined, id);
+  for (const id of ["jobs.start", "jobs.cancel"]) {
+    const capability = getClawCapability(id);
+    assert.equal(capability?.customAppAccess, "approvalRequired", id);
+    assert.equal(capability?.dispatch?.status, "available", id);
+    assert.equal(capability?.dispatch?.mode, "approvalRequiredDispatch", id);
+    assert.equal(capability?.dispatch?.approvalRequired, true, id);
+    assert.equal(capability?.surfaces.find((surface) => surface.surface === "sdk")?.status, "available", id);
+    assert.equal(capability?.surfaces.find((surface) => surface.surface === "cli")?.status, "blocked", id);
+    assert.ok(capability?.inputSchemaRef, id);
+    assert.ok(capability?.outputSchemaRef, id);
   }
 });
 
@@ -201,6 +203,12 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsDetail));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsEvents));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsEventsResult));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStream));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStreamResult));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStart));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStartResult));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsCancel));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.jobsCancelResult));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesList));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult));
   assert.ok(payload.schemaRefs.includes("claw.mac.actionRequest.v1"));
@@ -217,9 +225,9 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.cancel"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
   assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
-  assert.ok(payload.riskMap.blocked.includes("jobs.stream"));
-  assert.ok(payload.riskMap.blocked.includes("jobs.start"));
-  assert.ok(payload.riskMap.blocked.includes("jobs.cancel"));
+  assert.ok(payload.riskMap.ordinaryAccess.includes("jobs.stream"));
+  assert.ok(payload.riskMap.approvalRequired.includes("jobs.start"));
+  assert.ok(payload.riskMap.approvalRequired.includes("jobs.cancel"));
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
 });
 
@@ -249,12 +257,12 @@ test("custom-app SDK inspection payload exposes dispatch availability and gaps",
   assert.equal(byId.get("actions.invoke")?.dispatch?.mode, "approvalRequiredNoRunner");
   assert.equal(byId.get("secrets.broker")?.dispatch?.status, "unavailable");
   assert.equal(byId.get("secrets.broker")?.dispatch?.mode, "approvalRequiredNoPlaintextBroker");
-  assert.equal(byId.get("jobs.stream")?.dispatch?.status, "unavailable");
-  assert.equal(byId.get("jobs.stream")?.dispatch?.mode, "blocked");
-  assert.equal(byId.get("jobs.start")?.dispatch?.status, "unavailable");
-  assert.equal(byId.get("jobs.start")?.dispatch?.mode, "blocked");
-  assert.equal(byId.get("jobs.cancel")?.dispatch?.status, "unavailable");
-  assert.equal(byId.get("jobs.cancel")?.dispatch?.mode, "blocked");
+  assert.equal(byId.get("jobs.stream")?.dispatch?.status, "available");
+  assert.equal(byId.get("jobs.stream")?.dispatch?.mode, "localWideRead");
+  assert.equal(byId.get("jobs.start")?.dispatch?.status, "available");
+  assert.equal(byId.get("jobs.start")?.dispatch?.mode, "approvalRequiredDispatch");
+  assert.equal(byId.get("jobs.cancel")?.dispatch?.status, "available");
+  assert.equal(byId.get("jobs.cancel")?.dispatch?.mode, "approvalRequiredDispatch");
 });
 
 test("custom-app SDK inspection payload exposes complete resolved surfaces", () => {
@@ -427,6 +435,59 @@ test("custom-app SDK schemas validate current Search DB and resource bridge payl
     }],
     source: "jobs.events",
     redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStream)?.safeParse({
+    id: "job-1",
+    after: 1,
+    limit: 100,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStreamResult)?.safeParse({
+    items: [{
+      id: 1,
+      jobId: "job-1",
+      kind: "job.started",
+      level: "info",
+      message: "Job started",
+      recordedAt: 1_765_000_000_000,
+      payload: { kind: "distill" },
+    }],
+    source: "jobs.stream",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStart)?.safeParse({
+    kind: "distill",
+    input: { sessionId: "session-1" },
+    reason: "custom app request",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsStartResult)?.safeParse({
+    job: {
+      id: "job-1",
+      kind: "distill",
+      status: "completed",
+      startedAt: 1_765_000_000_000,
+      completedAt: 1_765_000_001_000,
+      error: null,
+      payload: { sessionId: "session-1" },
+    },
+    result: { ok: true },
+    source: "runtime.jobs.start",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsCancel)?.safeParse({
+    id: "job-1",
+    reason: "user requested",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.jobsCancelResult)?.safeParse({
+    job: {
+      id: "job-1",
+      kind: "distill",
+      status: "cancelled",
+      startedAt: 1_765_000_000_000,
+      completedAt: 1_765_000_001_000,
+      error: null,
+      payload: null,
+    },
+    cancelled: true,
+    source: "runtime.jobs.cancel",
   }).success, true);
   assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload)?.safeParse({
     resource,

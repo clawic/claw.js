@@ -26,6 +26,12 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
   jobsDetail: "claw.jobs.detail.v1",
   jobsEvents: "claw.jobs.events.v1",
   jobsEventsResult: "claw.jobs.eventsResult.v1",
+  jobsStream: "claw.jobs.stream.v1",
+  jobsStreamResult: "claw.jobs.streamResult.v1",
+  jobsStart: "claw.jobs.start.v1",
+  jobsStartResult: "claw.jobs.startResult.v1",
+  jobsCancel: "claw.jobs.cancel.v1",
+  jobsCancelResult: "claw.jobs.cancelResult.v1",
   actionsInvoke: "claw.actions.invoke.v1",
   actionsReceipt: "claw.actions.receipt.v1",
   secretsBroker: "claw.secrets.broker.v1",
@@ -336,6 +342,61 @@ export const customAppSDKJobsEventsResultSchema = z.object({
   redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
 }).strict();
 
+export const customAppSDKJobsStreamSchema = z.object({
+  id: z.string().min(1).optional(),
+  after: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+}).strict();
+
+export const customAppSDKRuntimeJobRecordSchema = z.object({
+  id: z.string().min(1),
+  kind: z.string().min(1),
+  status: z.string().min(1),
+  startedAt: z.number(),
+  completedAt: z.number().nullable(),
+  error: z.string().nullable(),
+  payload: z.record(z.unknown()).nullable(),
+}).passthrough();
+
+export const customAppSDKRuntimeJobEventSchema = z.object({
+  id: z.number().int().min(0),
+  jobId: z.string().min(1),
+  kind: z.string().min(1),
+  level: z.enum(["info", "warning", "error"]),
+  message: z.string().min(1),
+  recordedAt: z.number(),
+  payload: z.record(z.unknown()).nullable(),
+}).passthrough();
+
+export const customAppSDKJobsStreamResultSchema = z.object({
+  items: z.array(customAppSDKRuntimeJobEventSchema),
+  source: z.literal("jobs.stream"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).passthrough();
+
+export const customAppSDKJobsStartSchema = z.object({
+  kind: z.enum(["distill", "nudge", "user_model_refresh"]),
+  input: z.record(z.unknown()).default({}),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKJobsStartResultSchema = z.object({
+  job: customAppSDKRuntimeJobRecordSchema,
+  result: z.unknown(),
+  source: z.literal("runtime.jobs.start"),
+}).passthrough();
+
+export const customAppSDKJobsCancelSchema = z.object({
+  id: z.string().min(1),
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const customAppSDKJobsCancelResultSchema = z.object({
+  job: customAppSDKRuntimeJobRecordSchema,
+  cancelled: z.boolean(),
+  source: z.literal("runtime.jobs.cancel"),
+}).passthrough();
+
 const stringRecordSchema = z.record(z.string().min(1));
 
 export const customAppSDKActionsInvokeSchema = z.object({
@@ -460,6 +521,12 @@ export const customAppSDKSchemaRegistry = {
   [CUSTOM_APP_SDK_SCHEMA_REFS.jobsDetail]: customAppSDKJobDetailSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.jobsEvents]: customAppSDKJobsEventsSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.jobsEventsResult]: customAppSDKJobsEventsResultSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsStream]: customAppSDKJobsStreamSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsStreamResult]: customAppSDKJobsStreamResultSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsStart]: customAppSDKJobsStartSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsStartResult]: customAppSDKJobsStartResultSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsCancel]: customAppSDKJobsCancelSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.jobsCancelResult]: customAppSDKJobsCancelResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.actionsInvoke]: customAppSDKActionsInvokeSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.actionsReceipt]: customAppSDKActionsReceiptSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.secretsBroker]: customAppSDKSecretsBrokerSchema,
