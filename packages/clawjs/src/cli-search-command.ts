@@ -792,6 +792,12 @@ export async function runSearchAdminCli(input: {
     return CLI_EXIT_OK;
   }
 
+  if (command === "profiles") {
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { profiles: SEARCH_SOURCE_SETS }, { subcommand: "profiles" });
+    else input.context.stdout.write(`${SEARCH_SOURCE_SETS.map((entry) => `${entry.id}\t${entry.defaultEnabled ? "default" : "opt-in"}\t${entry.label}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+
   if (command === "entrypoints") {
     const entrypoints = listSearchEntrypointContracts().map((entrypoint) => {
       const { hotkey, ...publicEntrypoint } = entrypoint;
