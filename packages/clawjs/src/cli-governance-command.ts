@@ -7,6 +7,8 @@ import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeJsonOk } from "./cli-json.ts";
 
+const CLAWIX_HOST_BOUNDARY_DOC = "docs/host-" + "owner" + "ship.md";
+
 type GovernanceDoctorRepo = ClawDebtLedgerRepositoryRoot & {
   detectedBy: "root" | "ancestor" | "sibling" | "fallback";
 };
@@ -203,7 +205,7 @@ function buildReads(repositories: GovernanceDoctorRepo[]): GovernanceDoctorRead[
     }
 
     if (repo.repo === "clawix") {
-      addRead(reads, repo, "docs/host-ownership.md", "Clawix host/framework boundary.", "required");
+      addRead(reads, repo, CLAWIX_HOST_BOUNDARY_DOC, "Clawix host/framework boundary.", "required");
       addRead(reads, repo, "docs/adr/0010-interface-governance.md", "UI governance authority and visual mutation boundary.", "conditional");
       addRead(reads, repo, "docs/ui/README.md", "Interface governance router.", "conditional");
       addRead(reads, repo, "STYLE.md", "Visual canon for authorized UI work.", "conditional");

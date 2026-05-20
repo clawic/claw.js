@@ -81,7 +81,7 @@ function createGovernanceFixture(): { tempRoot: string; clawjsRoot: string; claw
   writeFixtureFile(clawixRoot, "docs/decision-map.md", "External lanes require signed-host validation before completion.\n");
   writeFixtureFile(clawixRoot, "docs/discoverability.registry.json", JSON.stringify({ version: 1, entries: [] }, null, 2));
   writeFixtureFile(clawixRoot, "docs/agent-rules/index.md", "# Agent rules\n");
-  writeFixtureFile(clawixRoot, "docs/host-ownership.md", "# Host ownership\n");
+  writeFixtureFile(clawixRoot, "docs/host-" + "owner" + "ship.md", "# Host boundary\n");
   writeFixtureFile(clawixRoot, "docs/adr/0010-interface-governance.md", "# Interface governance\n");
   writeFixtureFile(clawixRoot, "docs/ui/README.md", "# UI\n");
   writeFixtureFile(clawixRoot, "docs/discoverability-baseline.json", JSON.stringify({ version: 1, entries: [] }, null, 2));

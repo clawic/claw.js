@@ -346,6 +346,11 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(snapshotPayload.policy.defaultAgentAccess, "safe_read");
   assert.equal(snapshotPayload.policy.controlsRequireSignedHostBroker, true);
   assert.equal(snapshotPayload.samples.some((entry) => entry.key === "system.memory.used" && entry.availability === "available"), true);
+  assert.equal(snapshotPayload.samples.some((entry) => entry.key === "system.cpu.load5" && entry.availability === "available"), true);
+  assert.equal(snapshotPayload.samples.some((entry) => entry.key === "system.memory.free" && entry.availability === "available"), true);
+  assert.equal(snapshotPayload.samples.some((entry) => entry.key === "system.memory.pressure" && entry.availability === "available"), true);
+  assert.equal(snapshotPayload.unavailableMetrics.includes("system.cpu.load5"), false);
+  assert.equal(snapshotPayload.unavailableMetrics.includes("system.memory.free"), false);
   assert.equal(snapshotPayload.unavailableMetrics.includes("system.sensor.temperature"), true);
 
   const metrics = await runCliCapture(["system", "metrics", "list", "--json"], process.cwd());

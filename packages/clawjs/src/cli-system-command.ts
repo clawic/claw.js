@@ -750,18 +750,47 @@ function collectSafeLocalSnapshot(): SystemTelemetrySnapshot {
   const totalMemory = os.totalmem();
   const freeMemory = os.freemem();
   const uptime = safeOsUptime();
+  const loadAverage = os.loadavg();
+  const usedMemory = Math.max(0, totalMemory - freeMemory);
+  const memoryUsedRatio = totalMemory > 0 ? usedMemory / totalMemory : null;
+  const memoryPressure = memoryUsedRatio === null ? "unknown" : memoryUsedRatio >= 0.9 ? "critical" : memoryUsedRatio >= 0.75 ? "warning" : "nominal";
   const samples: SystemTelemetryMetricSample[] = [
     sample({
       key: "system.cpu.load1",
-      value: os.loadavg()[0] ?? null,
+      value: loadAverage[0] ?? null,
       unit: "count",
       availability: "available",
     }),
     sample({
+      key: "system.cpu.load5",
+      value: loadAverage[1] ?? null,
+      unit: "load",
+      availability: "available",
+    }),
+    sample({
+      key: "system.cpu.load15",
+      value: loadAverage[2] ?? null,
+      unit: "load",
+      availability: "available",
+    }),
+    sample({
       key: "system.memory.used",
-      value: Math.max(0, totalMemory - freeMemory),
+      value: usedMemory,
       unit: "bytes",
       availability: "available",
+    }),
+    sample({
+      key: "system.memory.free",
+      value: freeMemory,
+      unit: "bytes",
+      availability: "available",
+    }),
+    sample({
+      key: "system.memory.pressure",
+      value: memoryPressure,
+      unit: "state",
+      availability: memoryUsedRatio === null ? "unavailable" : "available",
+      quality: memoryUsedRatio === null ? "unsupported" : "ok",
     }),
     sample({
       key: "system.power.uptime",
