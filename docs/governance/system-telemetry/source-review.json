@@ -11,8 +11,8 @@
   "sourceSessionRef": "private-session-not-published",
   "privateAuditAlias": "private-goal-audit:claw-system-telemetry-context-menubar-source-audit-2026-05-20",
   "status": "complete_with_external_pending",
-  "reviewedUserRoleMessages": 102,
-  "decisionBearingRowsReviewed": 10,
+  "reviewedUserRoleMessages": 137,
+  "decisionBearingRowsReviewed": 11,
   "decisionIdsReviewed": [
     "D01",
     "D02",
@@ -187,6 +187,19 @@
         "D11"
       ],
       "requirement": "Continue the same active goal after interruption without reducing scope.",
+      "evidenceRefs": [
+        "docs/governance/system-telemetry/decision-matrix.md#D11"
+      ]
+    },
+    {
+      "qaId": "STQA-011",
+      "sourceRow": "USER_113",
+      "sourceLine": 25003,
+      "disposition": "continuation",
+      "decisionIds": [
+        "D11"
+      ],
+      "requirement": "Continue the same active goal without reducing scope after the refreshed goal-context run.",
       "evidenceRefs": [
         "docs/governance/system-telemetry/decision-matrix.md#D11"
       ]
