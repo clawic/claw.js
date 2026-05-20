@@ -17,9 +17,17 @@
         "approvedAt": "2026-05-20T00:00:00Z",
         "approvedBy": "user",
         "exactRunScope": "live context provider template only",
-        "grants": ["context.weather.read"],
-        "credentialLeaseRefs": ["lease_weather_template"],
+        "grants": [
+          "context.weather.read"
+        ],
+        "credentialLeaseRefs": [
+          "lease_weather_template"
+        ],
         "nativeGrantRefs": [],
+        "locationGrantRefs": [
+          "location_grant_template"
+        ],
+        "hardwareProviderRefs": [],
         "networkAccessApproved": true
       },
       "preflight": {
@@ -33,15 +41,23 @@
         "startedAt": "2026-05-20T00:00:00Z",
         "completedAt": "2026-05-20T00:00:01Z",
         "executor": "provider_broker",
-        "receiptRefs": ["receipt_weather_template"],
+        "receiptRefs": [
+          "receipt_weather_template"
+        ],
         "externalPendingCleared": true,
         "failedApprovedRun": false
       },
       "evidence": {
-        "auditEventRefs": ["audit_weather_template"],
-        "monitorSampleIds": ["sample_context_weather_temperature_template"],
+        "auditEventRefs": [
+          "audit_weather_template"
+        ],
+        "monitorSampleIds": [
+          "sample_context_weather_temperature_template"
+        ],
         "sameMachineEvidenceRefs": [],
-        "downstreamEvidenceRefs": ["menu_weather_template"],
+        "downstreamEvidenceRefs": [
+          "menu_weather_template"
+        ],
         "physicalValidationRefs": [],
         "rollbackOrContinuityRefs": []
       },
@@ -51,10 +67,18 @@
         "privatePathsIncluded": false
       },
       "closureImpact": {
-        "rowsToReplace": ["SYS-TEL-EXT-001"],
-        "completionAuditRows": ["STA-016"],
-        "sourceQaRows": ["STQA-003"],
-        "manifestRows": ["SYS-TEL-EXT-001"],
+        "rowsToReplace": [
+          "SYS-TEL-EXT-001"
+        ],
+        "completionAuditRows": [
+          "STA-016"
+        ],
+        "sourceQaRows": [
+          "STQA-003"
+        ],
+        "manifestRows": [
+          "SYS-TEL-EXT-001"
+        ],
         "requiresFinalSourceReread": true,
         "requiresForbiddenNameScan": true
       },
@@ -75,9 +99,17 @@
         "approvedAt": "2026-05-20T00:00:00Z",
         "approvedBy": "user",
         "exactRunScope": "physical sensor template only",
-        "grants": ["system.sensor.read"],
+        "grants": [
+          "system.sensor.read"
+        ],
         "credentialLeaseRefs": [],
-        "nativeGrantRefs": ["grant_sensor_template"],
+        "nativeGrantRefs": [
+          "grant_sensor_template"
+        ],
+        "locationGrantRefs": [],
+        "hardwareProviderRefs": [
+          "compatible_hardware_template"
+        ],
         "networkAccessApproved": false
       },
       "preflight": {
@@ -91,14 +123,22 @@
         "startedAt": "2026-05-20T00:00:00Z",
         "completedAt": "2026-05-20T00:00:01Z",
         "executor": "signed_host",
-        "receiptRefs": ["receipt_sensor_template"],
+        "receiptRefs": [
+          "receipt_sensor_template"
+        ],
         "externalPendingCleared": true,
         "failedApprovedRun": false
       },
       "evidence": {
-        "auditEventRefs": ["audit_sensor_template"],
-        "monitorSampleIds": ["sample_system_sensor_temperature_template"],
-        "sameMachineEvidenceRefs": ["machine_sensor_template"],
+        "auditEventRefs": [
+          "audit_sensor_template"
+        ],
+        "monitorSampleIds": [
+          "sample_system_sensor_temperature_template"
+        ],
+        "sameMachineEvidenceRefs": [
+          "machine_sensor_template"
+        ],
         "downstreamEvidenceRefs": [],
         "physicalValidationRefs": [],
         "rollbackOrContinuityRefs": []
@@ -109,10 +149,18 @@
         "privatePathsIncluded": false
       },
       "closureImpact": {
-        "rowsToReplace": ["SYS-TEL-EXT-002"],
-        "completionAuditRows": ["STA-017"],
-        "sourceQaRows": ["STQA-003"],
-        "manifestRows": ["SYS-TEL-EXT-002"],
+        "rowsToReplace": [
+          "SYS-TEL-EXT-002"
+        ],
+        "completionAuditRows": [
+          "STA-017"
+        ],
+        "sourceQaRows": [
+          "STQA-003"
+        ],
+        "manifestRows": [
+          "SYS-TEL-EXT-002"
+        ],
         "requiresFinalSourceReread": true,
         "requiresForbiddenNameScan": true
       },
@@ -133,9 +181,15 @@
         "approvedAt": "2026-05-20T00:00:00Z",
         "approvedBy": "user",
         "exactRunScope": "dangerous control template only",
-        "grants": ["system.control.execute"],
+        "grants": [
+          "system.control.execute"
+        ],
         "credentialLeaseRefs": [],
-        "nativeGrantRefs": ["grant_control_template"],
+        "nativeGrantRefs": [
+          "grant_control_template"
+        ],
+        "locationGrantRefs": [],
+        "hardwareProviderRefs": [],
         "networkAccessApproved": false
       },
       "preflight": {
@@ -149,17 +203,25 @@
         "startedAt": "2026-05-20T00:00:00Z",
         "completedAt": "2026-05-20T00:00:01Z",
         "executor": "signed_host_broker",
-        "receiptRefs": ["receipt_control_template"],
+        "receiptRefs": [
+          "receipt_control_template"
+        ],
         "externalPendingCleared": true,
         "failedApprovedRun": false
       },
       "evidence": {
-        "auditEventRefs": ["audit_control_template"],
+        "auditEventRefs": [
+          "audit_control_template"
+        ],
         "monitorSampleIds": [],
         "sameMachineEvidenceRefs": [],
         "downstreamEvidenceRefs": [],
-        "physicalValidationRefs": ["physical_control_template"],
-        "rollbackOrContinuityRefs": ["rollback_control_template"]
+        "physicalValidationRefs": [
+          "physical_control_template"
+        ],
+        "rollbackOrContinuityRefs": [
+          "rollback_control_template"
+        ]
       },
       "redaction": {
         "containsSecrets": false,
@@ -167,10 +229,18 @@
         "privatePathsIncluded": false
       },
       "closureImpact": {
-        "rowsToReplace": ["SYS-TEL-EXT-003"],
-        "completionAuditRows": ["STA-018"],
-        "sourceQaRows": ["STQA-003"],
-        "manifestRows": ["SYS-TEL-EXT-003"],
+        "rowsToReplace": [
+          "SYS-TEL-EXT-003"
+        ],
+        "completionAuditRows": [
+          "STA-018"
+        ],
+        "sourceQaRows": [
+          "STQA-003"
+        ],
+        "manifestRows": [
+          "SYS-TEL-EXT-003"
+        ],
         "requiresFinalSourceReread": true,
         "requiresForbiddenNameScan": true
       },
@@ -197,9 +267,15 @@
           "approvedAt": "2026-05-20T00:00:00Z",
           "approvedBy": "user",
           "exactRunScope": "invalid live context provider template",
-          "grants": ["context.weather.read"],
+          "grants": [
+            "context.weather.read"
+          ],
           "credentialLeaseRefs": [],
           "nativeGrantRefs": [],
+          "locationGrantRefs": [
+            "location_grant_template"
+          ],
+          "hardwareProviderRefs": [],
           "networkAccessApproved": true
         },
         "preflight": {
@@ -213,15 +289,23 @@
           "startedAt": "2026-05-20T00:00:00Z",
           "completedAt": "2026-05-20T00:00:01Z",
           "executor": "provider_broker",
-          "receiptRefs": ["receipt_weather_template"],
+          "receiptRefs": [
+            "receipt_weather_template"
+          ],
           "externalPendingCleared": true,
           "failedApprovedRun": false
         },
         "evidence": {
-          "auditEventRefs": ["audit_weather_template"],
-          "monitorSampleIds": ["sample_context_weather_temperature_template"],
+          "auditEventRefs": [
+            "audit_weather_template"
+          ],
+          "monitorSampleIds": [
+            "sample_context_weather_temperature_template"
+          ],
           "sameMachineEvidenceRefs": [],
-          "downstreamEvidenceRefs": ["menu_weather_template"],
+          "downstreamEvidenceRefs": [
+            "menu_weather_template"
+          ],
           "physicalValidationRefs": [],
           "rollbackOrContinuityRefs": []
         },
@@ -231,10 +315,18 @@
           "privatePathsIncluded": false
         },
         "closureImpact": {
-          "rowsToReplace": ["SYS-TEL-EXT-001"],
-          "completionAuditRows": ["STA-016"],
-          "sourceQaRows": ["STQA-003"],
-          "manifestRows": ["SYS-TEL-EXT-001"],
+          "rowsToReplace": [
+            "SYS-TEL-EXT-001"
+          ],
+          "completionAuditRows": [
+            "STA-016"
+          ],
+          "sourceQaRows": [
+            "STQA-003"
+          ],
+          "manifestRows": [
+            "SYS-TEL-EXT-001"
+          ],
           "requiresFinalSourceReread": true,
           "requiresForbiddenNameScan": true
         },
@@ -244,6 +336,26 @@
           "decision": "accepted"
         }
       }
+    },
+    {
+      "id": "extra_credential_lease_ref",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "runAuthorization.credentialLeaseRefs has extra"
+    },
+    {
+      "id": "extra_native_grant_ref",
+      "baseLaneId": "SYS-TEL-EXT-002",
+      "mutation": "runAuthorization.nativeGrantRefs has extra"
+    },
+    {
+      "id": "missing_live_location_grant",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "runAuthorization.locationGrantRefs is empty"
+    },
+    {
+      "id": "missing_sensor_hardware_provider",
+      "baseLaneId": "SYS-TEL-EXT-002",
+      "mutation": "runAuthorization.hardwareProviderRefs is empty"
     },
     {
       "id": "missing_sensor_same_machine_evidence",
@@ -260,9 +372,17 @@
           "approvedAt": "2026-05-20T00:00:00Z",
           "approvedBy": "user",
           "exactRunScope": "invalid physical sensor template",
-          "grants": ["system.sensor.read"],
+          "grants": [
+            "system.sensor.read"
+          ],
           "credentialLeaseRefs": [],
-          "nativeGrantRefs": ["grant_sensor_template"],
+          "nativeGrantRefs": [
+            "grant_sensor_template"
+          ],
+          "locationGrantRefs": [],
+          "hardwareProviderRefs": [
+            "compatible_hardware_template"
+          ],
           "networkAccessApproved": false
         },
         "preflight": {
@@ -276,13 +396,19 @@
           "startedAt": "2026-05-20T00:00:00Z",
           "completedAt": "2026-05-20T00:00:01Z",
           "executor": "signed_host",
-          "receiptRefs": ["receipt_sensor_template"],
+          "receiptRefs": [
+            "receipt_sensor_template"
+          ],
           "externalPendingCleared": true,
           "failedApprovedRun": false
         },
         "evidence": {
-          "auditEventRefs": ["audit_sensor_template"],
-          "monitorSampleIds": ["sample_system_sensor_temperature_template"],
+          "auditEventRefs": [
+            "audit_sensor_template"
+          ],
+          "monitorSampleIds": [
+            "sample_system_sensor_temperature_template"
+          ],
           "sameMachineEvidenceRefs": [],
           "downstreamEvidenceRefs": [],
           "physicalValidationRefs": [],
@@ -294,10 +420,18 @@
           "privatePathsIncluded": false
         },
         "closureImpact": {
-          "rowsToReplace": ["SYS-TEL-EXT-002"],
-          "completionAuditRows": ["STA-017"],
-          "sourceQaRows": ["STQA-003"],
-          "manifestRows": ["SYS-TEL-EXT-002"],
+          "rowsToReplace": [
+            "SYS-TEL-EXT-002"
+          ],
+          "completionAuditRows": [
+            "STA-017"
+          ],
+          "sourceQaRows": [
+            "STQA-003"
+          ],
+          "manifestRows": [
+            "SYS-TEL-EXT-002"
+          ],
           "requiresFinalSourceReread": true,
           "requiresForbiddenNameScan": true
         },
@@ -323,9 +457,15 @@
           "approvedAt": "2026-05-20T00:00:00Z",
           "approvedBy": "user",
           "exactRunScope": "invalid dangerous control template",
-          "grants": ["system.control.execute"],
+          "grants": [
+            "system.control.execute"
+          ],
           "credentialLeaseRefs": [],
-          "nativeGrantRefs": ["grant_control_template"],
+          "nativeGrantRefs": [
+            "grant_control_template"
+          ],
+          "locationGrantRefs": [],
+          "hardwareProviderRefs": [],
           "networkAccessApproved": false
         },
         "preflight": {
@@ -339,17 +479,25 @@
           "startedAt": "2026-05-20T00:00:00Z",
           "completedAt": "2026-05-20T00:00:01Z",
           "executor": "signed_host_broker",
-          "receiptRefs": ["receipt_control_template"],
+          "receiptRefs": [
+            "receipt_control_template"
+          ],
           "externalPendingCleared": true,
           "failedApprovedRun": true
         },
         "evidence": {
-          "auditEventRefs": ["audit_control_template"],
+          "auditEventRefs": [
+            "audit_control_template"
+          ],
           "monitorSampleIds": [],
           "sameMachineEvidenceRefs": [],
           "downstreamEvidenceRefs": [],
-          "physicalValidationRefs": ["physical_control_template"],
-          "rollbackOrContinuityRefs": ["rollback_control_template"]
+          "physicalValidationRefs": [
+            "physical_control_template"
+          ],
+          "rollbackOrContinuityRefs": [
+            "rollback_control_template"
+          ]
         },
         "redaction": {
           "containsSecrets": false,
@@ -357,10 +505,18 @@
           "privatePathsIncluded": false
         },
         "closureImpact": {
-          "rowsToReplace": ["SYS-TEL-EXT-003"],
-          "completionAuditRows": ["STA-018"],
-          "sourceQaRows": ["STQA-003"],
-          "manifestRows": ["SYS-TEL-EXT-003"],
+          "rowsToReplace": [
+            "SYS-TEL-EXT-003"
+          ],
+          "completionAuditRows": [
+            "STA-018"
+          ],
+          "sourceQaRows": [
+            "STQA-003"
+          ],
+          "manifestRows": [
+            "SYS-TEL-EXT-003"
+          ],
           "requiresFinalSourceReread": true,
           "requiresForbiddenNameScan": true
         },

@@ -181,6 +181,16 @@ function assertAuthorizationBindings(bundle, label) {
     bundle.approvalPacket.authorization?.nativeGrantRefs ?? [],
     `${label}.evidencePacket.runAuthorization.nativeGrantRefs`,
   );
+  assertSameStringSet(
+    bundle.evidencePacket.runAuthorization?.locationGrantRefs,
+    bundle.approvalPacket.authorization?.locationGrantRefs ?? [],
+    `${label}.evidencePacket.runAuthorization.locationGrantRefs`,
+  );
+  assertSameStringSet(
+    bundle.evidencePacket.runAuthorization?.hardwareProviderRefs,
+    bundle.approvalPacket.authorization?.hardwareProviderRefs ?? [],
+    `${label}.evidencePacket.runAuthorization.hardwareProviderRefs`,
+  );
   const approvedActions = bundle.approvalPacket.approval?.approvedActions ?? [];
   assertSameStringSet(
     approvedActions,
@@ -299,6 +309,12 @@ function mutateBundle(bundle, mutation) {
       break;
     case "evidencePacket.runAuthorization.nativeGrantRefs=wrong":
       mutated.evidencePacket.runAuthorization.nativeGrantRefs = ["wrong_native_grant_template"];
+      break;
+    case "evidencePacket.runAuthorization.locationGrantRefs=wrong":
+      mutated.evidencePacket.runAuthorization.locationGrantRefs = ["wrong_location_grant_template"];
+      break;
+    case "evidencePacket.runAuthorization.hardwareProviderRefs=wrong":
+      mutated.evidencePacket.runAuthorization.hardwareProviderRefs = ["wrong_hardware_provider_template"];
       break;
     case "evidencePacket.runAuthorization.grants=extra":
       mutated.evidencePacket.runAuthorization.grants = [

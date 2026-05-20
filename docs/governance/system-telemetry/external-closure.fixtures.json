@@ -107,6 +107,18 @@
       "reason": "Evidence must use exactly the native grants authorized by the approval packet."
     },
     {
+      "id": "mismatched_location_grant",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.runAuthorization.locationGrantRefs=wrong",
+      "reason": "Evidence must use exactly the location grants authorized by the approval packet."
+    },
+    {
+      "id": "mismatched_hardware_provider",
+      "baseLaneId": "SYS-TEL-EXT-002",
+      "mutation": "evidencePacket.runAuthorization.hardwareProviderRefs=wrong",
+      "reason": "Evidence must use exactly the hardware provider refs authorized by the approval packet."
+    },
+    {
       "id": "extra_execution_grant",
       "baseLaneId": "SYS-TEL-EXT-001",
       "mutation": "evidencePacket.runAuthorization.grants=extra",

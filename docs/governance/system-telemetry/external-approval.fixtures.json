@@ -180,6 +180,11 @@
       "packetRef": "SYS-TEL-EXT-001"
     },
     {
+      "id": "extra_native_grant_ref",
+      "mutation": "authorization.nativeGrantRefs=extra",
+      "packetRef": "SYS-TEL-EXT-002"
+    },
+    {
       "id": "raw_secret_reference",
       "mutation": "authorization.credentialLeaseRefs=rawSecretRef",
       "packetRef": "SYS-TEL-EXT-001"
