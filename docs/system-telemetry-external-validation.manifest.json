@@ -9,6 +9,7 @@
     "externalPendingBlocksCompletion": true,
     "requiresFinalSourceAudit": true,
     "requiresSourceQaReview": true,
+    "requiresCompletionAudit": true,
     "requiresForbiddenNameScan": true,
     "requiresExactRunApprovalForExternalLanes": true
   },
@@ -18,6 +19,14 @@
     "path": "docs/system-telemetry-source-qa-review.json",
     "privateAuditAlias": "private-goal-audit:claw-system-telemetry-context-menubar-source-audit-2026-05-20",
     "closureRole": "binds private source decisions to public-safe validation rows before goal completion"
+  },
+  "completionAudit": {
+    "required": true,
+    "artifactId": "system-telemetry-completion-audit",
+    "path": "docs/system-telemetry-completion-audit.md",
+    "requiredRowPrefix": "STA",
+    "requiredRowCount": 18,
+    "closureRole": "tracks the full system telemetry goal requirement by requirement before goal completion"
   },
   "rows": [
     {
