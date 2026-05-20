@@ -24,6 +24,7 @@ import type {
   ListKanbanFilter,
   NudgeInput,
   RuntimeJobKind,
+  RuntimeJobStartInput,
   RuntimeServicesContext,
   UpdateKanbanTaskInput,
   UserModelRefreshInput,
@@ -66,6 +67,47 @@ function asNumber(value: unknown): number | undefined {
   if (value === undefined || value === null || value === "") return undefined;
   const n = Number(value);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function asRuntimeJobKind(value: unknown): RuntimeJobKind | null {
+  return value === "distill" || value === "nudge" || value === "user_model_refresh" ? value : null;
+}
+
+async function startRuntimeJob(
+  store: RuntimeServiceStore,
+  context: RuntimeServicesContext,
+  input: RuntimeJobStartInput,
+): Promise<unknown> {
+  if (input.kind === "distill") {
+    const payload = input.input as Record<string, unknown>;
+    const sessionId = String(payload.sessionId ?? "");
+    if (!sessionId) throw new Error("sessionId is required");
+    return runDistillation(store, context, {
+      sessionId,
+      taskId: (payload.taskId as string | null | undefined) ?? null,
+      minToolCalls: asNumber(payload.minToolCalls),
+      forceRedistill: payload.forceRedistill === true,
+      reason: asString(payload.reason) ?? input.reason,
+    });
+  }
+  if (input.kind === "nudge") {
+    const payload = input.input as Record<string, unknown>;
+    const sessionId = String(payload.sessionId ?? "");
+    if (!sessionId) throw new Error("sessionId is required");
+    return runNudgeCycle(store, context, {
+      sessionId,
+      sinceMessageId: (payload.sinceMessageId as string | null | undefined) ?? null,
+      lookbackMinutes: asNumber(payload.lookbackMinutes),
+      maxMessages: asNumber(payload.maxMessages),
+    });
+  }
+  const payload = input.input as Record<string, unknown>;
+  return runUserModelRefresh(store, context, {
+    reason: asString(payload.reason) ?? input.reason,
+    agent: asString(payload.agent),
+    sinceCreatedAt: asNumber(payload.sinceCreatedAt),
+    maxSessions: asNumber(payload.maxSessions),
+  });
 }
 
 export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
@@ -199,6 +241,70 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
     return { items: store.listJobs(asString(query.kind) as RuntimeJobKind | undefined, asNumber(query.limit) ?? 50) };
+  });
+
+  app.get(clawApiPath("runtime/jobs/events"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    return {
+      items: store.listJobEvents({
+        jobId: asString(query.jobId),
+        afterId: asNumber(query.after),
+        limit: asNumber(query.limit),
+      }),
+      source: "runtime.jobs.stream",
+    };
+  });
+
+  app.post(clawApiPath("runtime/jobs/start"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const body = readBody(request);
+      const kind = asRuntimeJobKind(body.kind);
+      if (!kind) return await reply.code(400).send({ error: "kind must be distill, nudge, or user_model_refresh" });
+      const result = await startRuntimeJob(store, context, {
+        kind,
+        input: (body.input as Record<string, unknown> | undefined) ?? {},
+        reason: asString(body.reason),
+      });
+      const job = store.listJobs(kind, 1)[0];
+      if (!job) return await reply.code(500).send({ error: "job record was not created" });
+      return { job, result, source: "runtime.jobs.start" };
+    } catch (error) {
+      return await reply.code(500).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.get(clawApiPath("runtime/jobs/:id"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const job = store.getJob(params.id);
+    if (!job) return await reply.code(404).send({ error: "job_not_found" });
+    return job;
+  });
+
+  app.get(clawApiPath("runtime/jobs/:id/events"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    if (!store.getJob(params.id)) return await reply.code(404).send({ error: "job_not_found" });
+    const query = readQuery(request);
+    return {
+      items: store.listJobEvents({
+        jobId: params.id,
+        afterId: asNumber(query.after),
+        limit: asNumber(query.limit),
+      }),
+      source: "runtime.jobs.stream",
+    };
+  });
+
+  app.post(clawApiPath("runtime/jobs/:id/cancel"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const body = readBody(request);
+    const result = store.cancelJob(params.id, asString(body.reason));
+    if (!result) return await reply.code(404).send({ error: "job_not_found" });
+    return { ...result, source: "runtime.jobs.cancel" };
   });
 
   app.post(clawApiPath("kanban/tasks"), async (request, reply) => {

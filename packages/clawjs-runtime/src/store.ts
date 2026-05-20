@@ -22,6 +22,9 @@ import type {
   KanbanTaskRecord,
   ListKanbanFilter,
   NudgeRecord,
+  RuntimeJobEventKind,
+  RuntimeJobEventLevel,
+  RuntimeJobEventRecord,
   RuntimeJobKind,
   RuntimeJobRecord,
   RuntimeJobStatus,
@@ -73,7 +76,7 @@ const SCHEMA_DDL = `
   CREATE TABLE IF NOT EXISTS runtime_jobs (
     id            TEXT PRIMARY KEY,
     kind          TEXT NOT NULL CHECK (kind IN ('distill','nudge','user_model_refresh')),
-    status        TEXT NOT NULL CHECK (status IN ('pending','running','completed','failed')),
+    status        TEXT NOT NULL CHECK (status IN ('pending','running','completed','failed','cancelled')),
     started_at    INTEGER NOT NULL,
     completed_at  INTEGER,
     error         TEXT,
@@ -81,6 +84,18 @@ const SCHEMA_DDL = `
   );
   CREATE INDEX IF NOT EXISTS idx_jobs_kind_started ON runtime_jobs(kind, started_at DESC);
   CREATE INDEX IF NOT EXISTS idx_jobs_status       ON runtime_jobs(status, started_at DESC);
+
+  CREATE TABLE IF NOT EXISTS runtime_job_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id        TEXT NOT NULL REFERENCES runtime_jobs(id) ON DELETE CASCADE,
+    kind          TEXT NOT NULL CHECK (kind IN ('job.started','job.completed','job.failed','job.cancelled')),
+    level         TEXT NOT NULL CHECK (level IN ('info','warning','error')),
+    message       TEXT NOT NULL,
+    recorded_at   INTEGER NOT NULL,
+    payload_json  TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_job_events_job_id ON runtime_job_events(job_id, id ASC);
+  CREATE INDEX IF NOT EXISTS idx_job_events_id     ON runtime_job_events(id ASC);
 
   CREATE TABLE IF NOT EXISTS kanban_tasks (
     id                  TEXT PRIMARY KEY,
@@ -285,6 +300,16 @@ interface JobRow {
   payload_json: string | null;
 }
 
+interface JobEventRow {
+  id: number;
+  job_id: string;
+  kind: RuntimeJobEventKind;
+  level: RuntimeJobEventLevel;
+  message: string;
+  recorded_at: number;
+  payload_json: string | null;
+}
+
 function rowToDist(row: DistRow): DistillationRecord {
   return {
     id: row.id,
@@ -339,6 +364,18 @@ function rowToJob(row: JobRow): RuntimeJobRecord {
   };
 }
 
+function rowToJobEvent(row: JobEventRow): RuntimeJobEventRecord {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    kind: row.kind,
+    level: row.level,
+    message: row.message,
+    recordedAt: row.recorded_at,
+    payload: parseJsonField<Record<string, unknown>>(row.payload_json),
+  };
+}
+
 export class RuntimeServiceStore {
   private readonly db: Database.Database;
 
@@ -360,10 +397,15 @@ export class RuntimeServiceStore {
       INSERT INTO runtime_jobs (id, kind, status, started_at, payload_json)
       VALUES (@id, @kind, 'running', @started_at, @payload)
     `).run({ id, kind, started_at: Date.now(), payload: payload ? JSON.stringify(payload) : null });
+    this.recordJobEvent(id, "job.started", "info", `Started ${kind} job`, payload);
     return rowToJob(this.db.prepare("SELECT * FROM runtime_jobs WHERE id = ?").get(id) as JobRow);
   }
 
   finishJob(id: string, success: boolean, error: string | null = null): RuntimeJobRecord | null {
+    const current = this.getJob(id);
+    if (current?.status === "cancelled") {
+      return current;
+    }
     this.db.prepare(`
       UPDATE runtime_jobs
       SET status = @status, completed_at = @completed_at, error = @error
@@ -375,7 +417,38 @@ export class RuntimeServiceStore {
       error,
     });
     const row = this.db.prepare("SELECT * FROM runtime_jobs WHERE id = ?").get(id) as JobRow | undefined;
+    if (row) {
+      this.recordJobEvent(
+        id,
+        success ? "job.completed" : "job.failed",
+        success ? "info" : "error",
+        success ? `Completed ${row.kind} job` : `Failed ${row.kind} job`,
+        error ? { error } : null,
+      );
+    }
     return row ? rowToJob(row) : null;
+  }
+
+  getJob(id: string): RuntimeJobRecord | null {
+    const row = this.db.prepare("SELECT * FROM runtime_jobs WHERE id = ?").get(id) as JobRow | undefined;
+    return row ? rowToJob(row) : null;
+  }
+
+  cancelJob(id: string, reason: string | null = null): { job: RuntimeJobRecord; cancelled: boolean } | null {
+    const current = this.getJob(id);
+    if (!current) return null;
+    if (current.status === "completed" || current.status === "failed" || current.status === "cancelled") {
+      return { job: current, cancelled: false };
+    }
+    const message = reason ?? "cancelled by runtime jobs API";
+    this.db.prepare(`
+      UPDATE runtime_jobs
+      SET status = 'cancelled', completed_at = @completed_at, error = @error
+      WHERE id = @id
+    `).run({ id, completed_at: Date.now(), error: message });
+    this.recordJobEvent(id, "job.cancelled", "warning", "Cancelled job", { reason: message });
+    const job = this.getJob(id);
+    return job ? { job, cancelled: true } : null;
   }
 
   listJobs(kind?: RuntimeJobKind, limit = 50): RuntimeJobRecord[] {
@@ -387,6 +460,49 @@ export class RuntimeServiceStore {
           "SELECT * FROM runtime_jobs ORDER BY started_at DESC LIMIT ?",
         ).all(Math.min(limit, 500)) as JobRow[]);
     return rows.map(rowToJob);
+  }
+
+  recordJobEvent(
+    jobId: string,
+    kind: RuntimeJobEventKind,
+    level: RuntimeJobEventLevel,
+    message: string,
+    payload: Record<string, unknown> | null = null,
+  ): RuntimeJobEventRecord {
+    const result = this.db.prepare(`
+      INSERT INTO runtime_job_events (job_id, kind, level, message, recorded_at, payload_json)
+      VALUES (@job_id, @kind, @level, @message, @recorded_at, @payload_json)
+    `).run({
+      job_id: jobId,
+      kind,
+      level,
+      message,
+      recorded_at: Date.now(),
+      payload_json: payload ? JSON.stringify(payload) : null,
+    });
+    return rowToJobEvent(this.db.prepare("SELECT * FROM runtime_job_events WHERE id = ?").get(result.lastInsertRowid) as JobEventRow);
+  }
+
+  listJobEvents(input: { jobId?: string; afterId?: number; limit?: number } = {}): RuntimeJobEventRecord[] {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.jobId) {
+      clauses.push("job_id = ?");
+      params.push(input.jobId);
+    }
+    if (input.afterId !== undefined) {
+      clauses.push("id > ?");
+      params.push(input.afterId);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const limit = Math.min(Math.max(input.limit ?? 100, 1), 500);
+    const rows = this.db.prepare(`
+      SELECT * FROM runtime_job_events
+      ${where}
+      ORDER BY id ASC
+      LIMIT ?
+    `).all(...params, limit) as JobEventRow[];
+    return rows.map(rowToJobEvent);
   }
 
   recordDistillation(input: Omit<DistillationRecord, "id" | "distilledAt" | "provenance"> & {

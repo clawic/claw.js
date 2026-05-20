@@ -57,6 +57,9 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
     "  runtime distillations [--session ID] [--limit N]",
     "  runtime nudges [--session ID] [--limit N]",
     "  runtime jobs [--kind distill|nudge|user_model_refresh] [--limit N]",
+    "  runtime jobs start --kind distill|nudge|user_model_refresh [job flags]",
+    "  runtime jobs events [--job ID] [--after N] [--limit N]",
+    "  runtime jobs cancel --id ID [--reason TEXT]",
     "",
     "Service flags for client commands:",
     "  --url URL (default http://127.0.0.1:4660)",
@@ -137,6 +140,40 @@ async function main(): Promise<void> {
   }
 
   if (group === "jobs") {
+    if (sub === "start") {
+      const kind = flags.kind as "distill" | "nudge" | "user_model_refresh" | undefined;
+      if (!kind) throw new Error("--kind required");
+      write(await client.startJob({
+        kind,
+        reason: flags.reason,
+        input: {
+          sessionId: flags.session,
+          taskId: flags.task,
+          minToolCalls: flags["min-tool-calls"] ? Number(flags["min-tool-calls"]) : undefined,
+          forceRedistill: flags.force === "true" || flags.force === "",
+          sinceMessageId: flags["since-message"],
+          lookbackMinutes: flags["lookback-min"] ? Number(flags["lookback-min"]) : undefined,
+          maxMessages: flags.max ? Number(flags.max) : undefined,
+          agent: flags.agent,
+          maxSessions: flags["max-sessions"] ? Number(flags["max-sessions"]) : undefined,
+        },
+      }));
+      return;
+    }
+    if (sub === "events") {
+      write(await client.listJobEvents({
+        jobId: flags.job ?? flags.id,
+        after: flags.after ? Number(flags.after) : undefined,
+        limit: flags.limit ? Number(flags.limit) : undefined,
+      }));
+      return;
+    }
+    if (sub === "cancel") {
+      const id = flags.id;
+      if (!id) throw new Error("--id required");
+      write(await client.cancelJob(id, flags.reason));
+      return;
+    }
     const kind = flags.kind as "distill" | "nudge" | "user_model_refresh" | undefined;
     write(await client.listJobs(kind, flags.limit ? Number(flags.limit) : undefined));
     return;

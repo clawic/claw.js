@@ -93,6 +93,11 @@ for user-authored custom UIs that do not block the main app shell.
 - ClawJS and sibling Clawix expose `jobs.start` and `jobs.cancel` only as
   blocked explicit mutation gaps in the capability map; they have no SDK/host
   bridge execution until mutation contracts, policy, audit, and adapters exist.
+- ClawJS runtime now has local authenticated backend routes for
+  `runtime/jobs/start`, `runtime/jobs/:id/cancel`, `runtime/jobs/events`, and
+  per-job event snapshots, covered by Runtime E2E. These routes are framework
+  runtime API evidence only; custom-app SDK, MCP, Relay, and Clawix host bridge
+  execution remain blocked until policy, audit, and adapters are added.
 - Sibling Clawix exposes `mac.action.plan` through
   `window.clawix.mac.planAction()` as an approval-gated, dry-run-only host
   bridge call; signed-host native execution remains out of scope until approved

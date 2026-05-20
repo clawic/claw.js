@@ -12,8 +12,12 @@ import type {
   ListKanbanFilter,
   NudgeInput,
   NudgeRecord,
+  RuntimeJobCancelResult,
+  RuntimeJobEventRecord,
   RuntimeJobKind,
   RuntimeJobRecord,
+  RuntimeJobStartInput,
+  RuntimeJobStartResult,
   UpdateKanbanTaskInput,
   UserModelRefreshInput,
   UserModelRefreshRecord,
@@ -107,6 +111,33 @@ export class RuntimeApiClient {
 
   listJobs(kind?: RuntimeJobKind, limit?: number): Promise<{ items: RuntimeJobRecord[] }> {
     return this.call("GET", clawApiPath(`runtime/jobs${buildQuery({ kind, limit })}`));
+  }
+
+  getJob(id: string): Promise<RuntimeJobRecord> {
+    return this.call("GET", clawApiPath(`runtime/jobs/${encodeURIComponent(id)}`));
+  }
+
+  listJobEvents(input: { jobId?: string; after?: number; limit?: number } = {}): Promise<{ items: RuntimeJobEventRecord[]; source: "runtime.jobs.stream" }> {
+    return this.call("GET", clawApiPath(`runtime/jobs/events${buildQuery({
+      jobId: input.jobId,
+      after: input.after,
+      limit: input.limit,
+    })}`));
+  }
+
+  listEventsForJob(id: string, input: { after?: number; limit?: number } = {}): Promise<{ items: RuntimeJobEventRecord[]; source: "runtime.jobs.stream" }> {
+    return this.call("GET", clawApiPath(`runtime/jobs/${encodeURIComponent(id)}/events${buildQuery({
+      after: input.after,
+      limit: input.limit,
+    })}`));
+  }
+
+  startJob(input: RuntimeJobStartInput): Promise<RuntimeJobStartResult> {
+    return this.call("POST", clawApiPath("runtime/jobs/start"), input);
+  }
+
+  cancelJob(id: string, reason?: string): Promise<RuntimeJobCancelResult> {
+    return this.call("POST", clawApiPath(`runtime/jobs/${encodeURIComponent(id)}/cancel`), { reason });
   }
 
   createKanbanTask(input: CreateKanbanTaskInput): Promise<KanbanTaskRecord> {

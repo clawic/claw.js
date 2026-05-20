@@ -81,6 +81,8 @@ function assertCompletionAudit() {
     "ClawJS and sibling Clawix now expose `jobs.list`, `jobs.get`, and `jobs.events`",
     "ClawJS now blocks public CLI jobs read surfaces",
     "ClawJS now marks `jobs.stream`, `jobs.start`, and `jobs.cancel` only as blocked explicit gaps",
+    "ClawJS runtime now has local authenticated backend routes for `runtime/jobs/start`",
+    "custom-app SDK, MCP, Relay, and Clawix host bridge execution remain blocked",
     "`window.clawix.mac.planAction()`",
     "dry-run-only Mac Control plan projection",
     "`window.clawix.iot.invokeAction()`",
@@ -155,6 +157,8 @@ function assertPublicRouting() {
       "ClawJS blocks public CLI jobs read surfaces",
       "ClawJS and sibling Clawix expose `jobs.stream` only as a blocked explicit",
       "ClawJS and sibling Clawix expose `jobs.start` and `jobs.cancel` only as",
+      "ClawJS runtime now has local authenticated backend routes",
+      "runtime API evidence only",
       "Sibling Clawix exposes `mac.action.plan` through",
       "Sibling Clawix exposes `iot.device.action.invoke` through",
       "Sibling Clawix exposes `actions.invoke` and `secrets.broker` through",
@@ -232,6 +236,36 @@ function assertFrameworkArtifacts() {
       "createNetworkEvent",
       "createNetworkRuleSuggestion",
     ],
+    "packages/clawjs-runtime/src/app.ts": [
+      "runtime/jobs/start",
+      "runtime/jobs/:id/cancel",
+      "runtime/jobs/events",
+      "startRuntimeJob",
+    ],
+    "packages/clawjs-runtime/src/client.ts": [
+      "startJob(input: RuntimeJobStartInput)",
+      "cancelJob(id: string",
+      "listJobEvents",
+      "listEventsForJob",
+    ],
+    "packages/clawjs-runtime/src/store.ts": [
+      "runtime_job_events",
+      "recordJobEvent",
+      "cancelJob",
+      "listJobEvents",
+    ],
+    "packages/clawjs-runtime/src/types.ts": [
+      "RuntimeJobStartInput",
+      "RuntimeJobCancelResult",
+      "RuntimeJobEventRecord",
+      "\"cancelled\"",
+    ],
+    "packages/clawjs-runtime/README.md": [
+      "GET /v1/runtime/jobs/events",
+      "POST /v1/runtime/jobs/start",
+      "POST /v1/runtime/jobs/:id/cancel",
+      "Custom-app execution through",
+    ],
   })) {
     for (const snippet of snippets) requireSnippet(relativePath, snippet);
   }
@@ -259,6 +293,12 @@ function assertTests() {
       "jobs.cancel",
       "jobs read capabilities do not advertise removed runtime CLI sidecars",
       "approvalRequiredNoPlaintextBroker",
+    ],
+    "runtime/tests/e2e/runtime.e2e.test.ts": [
+      "jobs start, events, detail, and cancel contracts round-trip through runtime API",
+      "ctx.runtimeClient.startJob",
+      "ctx.runtimeClient.listEventsForJob",
+      "ctx.runtimeClient.cancelJob",
     ],
     "packages/clawjs/src/inspect-cli.test.ts": [
       "runCli exposes custom app SDK read contracts through inspect",

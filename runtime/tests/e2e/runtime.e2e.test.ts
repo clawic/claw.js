@@ -400,3 +400,46 @@ test("jobs endpoint lists by kind", async () => {
     await ctx.close();
   }
 });
+
+test("jobs start, events, detail, and cancel contracts round-trip through runtime API", async () => {
+  const ctx = await spinUp();
+  try {
+    const sessionId = await seedSession(ctx, {
+      userMessages: ["remember this runtime nudge"],
+      assistantMessages: ["ok"],
+      toolMessages: 1,
+    });
+
+    const started = await ctx.runtimeClient.startJob({
+      kind: "nudge",
+      input: { sessionId, lookbackMinutes: 60 * 24 * 365 },
+      reason: "e2e_contract",
+    });
+    assert.equal(started.source, "runtime.jobs.start");
+    assert.equal(started.job.kind, "nudge");
+    assert.equal(started.job.status, "completed");
+
+    const detail = await ctx.runtimeClient.getJob(started.job.id);
+    assert.equal(detail.id, started.job.id);
+    assert.equal(detail.status, "completed");
+
+    const scopedEvents = await ctx.runtimeClient.listEventsForJob(started.job.id);
+    assert.equal(scopedEvents.source, "runtime.jobs.stream");
+    assert.ok(scopedEvents.items.some((event) => event.kind === "job.started"));
+    assert.ok(scopedEvents.items.some((event) => event.kind === "job.completed"));
+    assert.ok(scopedEvents.items.every((event) => event.jobId === started.job.id));
+
+    const afterFirst = await ctx.runtimeClient.listJobEvents({
+      jobId: started.job.id,
+      after: scopedEvents.items[0]?.id,
+    });
+    assert.ok(afterFirst.items.every((event) => event.id > scopedEvents.items[0]!.id));
+
+    const cancelled = await ctx.runtimeClient.cancelJob(started.job.id, "already finished");
+    assert.equal(cancelled.source, "runtime.jobs.cancel");
+    assert.equal(cancelled.cancelled, false);
+    assert.equal(cancelled.job.status, "completed");
+  } finally {
+    await ctx.close();
+  }
+});

@@ -2,7 +2,10 @@ import type { SessionMessageRecord, SessionRecord, SessionsApiClient } from "@cl
 import type { UserModelApiClient, UserProfileItem } from "@clawjs/user-model";
 
 export type RuntimeJobKind = "distill" | "nudge" | "user_model_refresh";
-export type RuntimeJobStatus = "pending" | "running" | "completed" | "failed";
+export type RuntimeJobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+
+export type RuntimeJobEventKind = "job.started" | "job.completed" | "job.failed" | "job.cancelled";
+export type RuntimeJobEventLevel = "info" | "warning" | "error";
 
 export interface RuntimeJobRecord {
   id: string;
@@ -12,6 +15,34 @@ export interface RuntimeJobRecord {
   completedAt: number | null;
   error: string | null;
   payload: Record<string, unknown> | null;
+}
+
+export interface RuntimeJobEventRecord {
+  id: number;
+  jobId: string;
+  kind: RuntimeJobEventKind;
+  level: RuntimeJobEventLevel;
+  message: string;
+  recordedAt: number;
+  payload: Record<string, unknown> | null;
+}
+
+export interface RuntimeJobStartInput {
+  kind: RuntimeJobKind;
+  input: Record<string, unknown>;
+  reason?: string;
+}
+
+export interface RuntimeJobStartResult {
+  job: RuntimeJobRecord;
+  result: unknown;
+  source: "runtime.jobs.start";
+}
+
+export interface RuntimeJobCancelResult {
+  job: RuntimeJobRecord;
+  cancelled: boolean;
+  source: "runtime.jobs.cancel";
 }
 
 export interface DistillationRecord {
