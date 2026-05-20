@@ -139,12 +139,16 @@ requireSnippet("docs/index.md", "Canonical Data Catalog");
 requireSnippet("docs/repository-map.md", "Constitution Operational Map");
 requireSnippet("docs/repository-map.md", "Decision Map");
 requireSnippet("CONSTITUTION.md", "Capabilities are complete only when dual-surfaced");
+requireSnippet("CONSTITUTION.md", "The computer's resources are product correctness");
 requireSnippet("docs/constitution-map.md", "not a second source of truth");
 requireSnippet("docs/constitution-map.md", "Affected surfaces");
 requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");
 requireSnippet("docs/adr/TEMPLATE.md", "## Decision Tensions");
+requireSnippet("docs/adr/TEMPLATE.md", "## Performance Impact");
 requireSnippet("docs/governance/decision-tension-rubric.md", "Canon and semantic coherence");
+requireSnippet("docs/governance/performance-governance.md", "whole-computer resource behavior");
 requireSnippet("docs/agent-rules/index.md", "Decision Tension Rubric");
+requireSnippet("docs/agent-rules/index.md", "Performance governance");
 requireSnippet("docs/adr/0009-dual-human-programmatic-surfaces.md", "MCP is the model-native surface");
 requireSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "surface parity metadata");
 
@@ -152,6 +156,7 @@ for (const snippet of [
   "decision -> document",
   "Constitution Operational Map",
   "Decision Tension Rubric",
+  "Performance Governance",
   "ClawJS/Claw owns framework contracts",
   "New workspace-local framework writes use `.claw/`",
   "Sensitive native permissions",
@@ -159,6 +164,7 @@ for (const snippet of [
   "Changesets are release metadata",
   "Built-in collections follow the canonical data catalog",
   "scripts/verify-host-permission-contract.mjs",
+  "scripts/performance-governance-check.mjs",
   "No known pending guardrails",
 ]) {
   requireSnippet("docs/decision-map.md", snippet);
