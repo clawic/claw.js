@@ -77,7 +77,10 @@ const DEFAULT_SOURCE: ClawCliCommandSource = {
 const MAC_CONTROL_DOCS = ["docs/cli.md", "docs/mac-control-plane.md"];
 const MAC_CONTROL_ADRS = [...CLI_ADRS, "docs/adr/0023-mac-control-plane-v1.md", "docs/adr/0024-mac-permission-broker-v1.md"];
 const MAC_CONTROL_TESTS = ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts"];
-const EXISTING_MAC_COLLISION_ROOTS = new Set(["audio"]);
+const NETWORK_CONTROL_DOCS = ["docs/cli.md", "docs/network-control-plane.md"];
+const NETWORK_CONTROL_ADRS = [...CLI_ADRS, "docs/adr/0034-network-control-plane.md"];
+const NETWORK_CONTROL_TESTS = ["packages/clawjs-core/src/network-control-plane.test.ts", "packages/clawjs/src/cli-network-command.test.ts"];
+const EXISTING_MAC_COLLISION_ROOTS = new Set(["audio", "network"]);
 
 function defaultSupportForPolicy(name: string, securityPolicy: ClawCliSecurityPolicy): ClawCliSupportDeclaration {
   if (securityPolicy === "signed_host_broker") {
@@ -158,6 +161,7 @@ export const clawCliCommandRegistry: ClawCliCommandRegistry = {
     command({ name: "modules", kind: "canonical", summary: "List, enable, disable and explicitly install progressive capabilities and areas.", usage: "modules list|status|enable|disable|install [module-id] [--available] [--workspace PATH]", family: "diagnostics", securityPolicy: "local_write", docs: ["docs/cli.md"], adrs: [...CLI_ADRS, "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md"], tests: ["packages/clawjs/src/cli-modules-command.test.ts"], source: { file: "packages/clawjs/src/cli-modules-command.ts", symbol: "runModulesCli" } }),
     command({ name: "host", kind: "canonical", summary: "Host registry, status, services, capabilities, permissions, logs, doctor, daemon lifecycle and domains.", usage: "host list|register|use|status|doctor|domains", securityPolicy: "signed_host_broker", source: { file: "packages/clawjs/src/cli-host-command.ts", symbol: "runHostCli" }, relatedSurfaces: ["system capabilities"] }),
     command({ name: "system", kind: "canonical", summary: "Read-only system telemetry, signed-host snapshots, metric history, rules, widgets, provider catalog, plan-first controls and preserved capabilities alias.", usage: "system snapshot [--source host]|metrics list|history|watch|rules|widgets|providers|controls|capabilities", securityPolicy: "local_read", source: { file: "packages/clawjs/src/cli-system-command.ts", symbol: "runSystemCli" }, relatedSurfaces: ["claw host capabilities", "claw monitor"] }),
+    command({ name: "network", kind: "canonical", summary: "Claw-native network control plane for policy, events, rules, manifests, route enforcement, adapter readiness and review.", usage: "network status|events|rules|profiles|lists|manifests|routes|adapters|suggestions|explain|doctor", family: "network", securityPolicy: "local_write", docs: NETWORK_CONTROL_DOCS, adrs: NETWORK_CONTROL_ADRS, tests: NETWORK_CONTROL_TESTS, source: { file: "packages/clawjs/src/cli-network-command.ts", symbol: "runNetworkCli" }, relatedSurfaces: ["claw gateway", "claw firewall", "claw vpn", "claw proxy", "claw wifi", "claw system metrics list"] }),
     ...MAC_CONTROL_COMMAND_ROOTS.filter((root) => !EXISTING_MAC_COLLISION_ROOTS.has(root.root)).map(macControlCommand),
     command({ name: "database", kind: "canonical", summary: "Local database admin surface.", usage: "database serve|login|namespace|collection|record|token|file", securityPolicy: "local_write", source: { file: "packages/clawjs/src/cli-delegated-domains.ts", symbol: "runDelegatedDatabaseCli" } }),
     command({ name: "db", kind: "alias", target: "database", summary: "Exact alias for local-first database CRUD.", usage: "db <collection> list|get|create|update|delete|schema|query", securityPolicy: "local_write", source: { file: "packages/clawjs/src/cli-productivity-command.ts", symbol: "runCoreProductivityDbCli" } }),

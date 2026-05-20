@@ -574,6 +574,36 @@ claw inspect route clawix.menuBarSystemIndicators --json
 claw inspect neighbors claw.systemTelemetry --json
 ```
 
+### Network Control Plane
+
+`claw network` is the framework-owned portal for local network policy,
+Gateway/route enforcement decisions, Monitor-backed network events, manifests,
+adapter readiness, and review suggestions:
+
+```bash
+claw network status --json
+claw network events record --route-id remote.chatGateway --json
+claw network events --json
+claw network rules list --json
+claw network rules upsert network.rule.example --action deny --subject-kind gateway --endpoint-kind gateway_route --endpoint remote.searchGateway --json
+claw network explain remote.chatGateway --json
+claw network routes --route-id remote.chatGateway --json
+claw network adapters --json
+claw network manifests --json
+claw network suggestions --json
+claw network doctor --json
+```
+
+The default privacy posture is aggregate. Process and domain detail requires
+explicit opt-in (`--detail-opt-in true` or the equivalent host UI setting).
+Agents can propose rule suggestions, but suggestions are disabled until a human
+or explicit grant applies them. Native macOS content filter, DNS proxy, Endpoint
+Security, and VPN adapters are represented as planned or `external_pending`
+until the signed host has entitlements, fixtures, receipts, and validation
+evidence. Related roots such as `claw wifi`, `claw vpn`, `claw proxy`,
+`claw firewall`, and `claw gateway` remain visible and route back to this shared
+policy model where relevant.
+
 Snapshots expose safe aggregate values by default and mark deeper hardware,
 permissioned, signed-host, or provider-backed metrics as unavailable until a
 validated provider supplies them. `--source host` executes a configured signed

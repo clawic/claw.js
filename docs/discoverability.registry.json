@@ -1064,6 +1064,39 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "adr-docs-adr-0034-network-control-plane",
+      "kind": "adr",
+      "owner": "claw",
+      "canonicalSource": "docs/adr/0034-network-control-plane.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0034: Network Control Plane",
+        "0034-network-control-plane",
+        "ADR 0034",
+        "network control plane",
+        "claw network"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0034: Network Control Plane",
+          "expectPath": "docs/adr/0034-network-control-plane.md"
+        },
+        {
+          "query": "network control plane claw network",
+          "expectPath": "docs/adr/0034-network-control-plane.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "owner": "claw",

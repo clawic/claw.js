@@ -12,6 +12,7 @@ export * from "./host-contracts.ts";
 export * from "./host-contract-fixtures.ts";
 export * from "./host-json-schemas.ts";
 export * from "./mac-control-plane.ts";
+export * from "./network-control-plane.ts";
 export * from "./productivity.ts";
 export * from "./project-manifest.ts";
 export * from "./remote-sync.ts";

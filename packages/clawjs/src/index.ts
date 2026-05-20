@@ -59,6 +59,7 @@ import { runDomainsCli } from "./cli-domains-command.ts";
 import { hostRegistryOptions, runHostCli } from "./cli-host-command.ts";
 import { runDirectHostDomainCli, runHostForwardCli, runSystemCapabilitiesCli } from "./cli-host-forward.ts";
 import { runSystemCli } from "./cli-system-command.ts";
+import { runNetworkCli } from "./cli-network-command.ts";
 import { createCliClaw, createCliWorkspaceClaw } from "./cli-claw-factory.ts";
 import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -716,6 +717,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "system") {
     return await runSystemCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
+  }
+
+  if (group === "network") {
+    return await runNetworkCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   }
 
   if (group === "collections") return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });

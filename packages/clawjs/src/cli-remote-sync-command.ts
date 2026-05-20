@@ -33,6 +33,7 @@ import {
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
   createTransportHandshakeReceipt,
+  evaluateGatewayNetworkAccess,
   evaluateRemoteAgentServiceAccess,
   parseRemoteExternalValidationEvidenceInput,
   parseRemoteSourceQaReviewInput,
@@ -960,6 +961,15 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
       assignment,
       budget,
     });
+    const networkPolicy = evaluateGatewayNetworkAccess({
+      routeId: request.routeId,
+      agentId: request.agentId,
+      endpoint: input.flags["network-endpoint"] ?? request.routeId,
+      now: request.now,
+    });
+    const networkDecision = networkPolicy.decision === "deny" || networkPolicy.decision === "ask"
+      ? { ...decision, allowed: false, reasons: [...decision.reasons, `network_policy_${networkPolicy.decision}`] }
+      : decision;
     if (wantsDurableRecord(input)) {
       const usage = "gateway agent-service --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--tenant-id <id>] [--agent-id <id>] [--assignment-id <id>]";
       const store = requireStateStore(input, usage);
@@ -970,7 +980,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
         request,
         assignment,
         budget,
-        decision,
+        decision: networkDecision,
         createdAt: request.now,
         runtimeExecutionVerified: approvedValidationFlag(input, "runtime-verified", "agent_runtime_execution"),
         billingMeterPersisted: approvedValidationFlag(input, "billing-meter-persisted", "billing_meter_persistence"),
@@ -979,12 +989,13 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
       return writeOutput(input, "gateway", {
         status: "signed_agent_service_receipt_recorded",
         writes: false,
-        decision,
+        decision: networkDecision,
+        networkPolicy,
         receipt: state.receipt,
         state,
       }, "agent-service: signed_agent_service_receipt_recorded", command);
     }
-    return writeOutput(input, "gateway", decision, `agent-service: ${decision.allowed ? "allow" : "deny"}`, command);
+    return writeOutput(input, "gateway", { ...networkDecision, networkPolicy }, `agent-service: ${networkDecision.allowed ? "allow" : "deny"}`, command);
   }
   if (command === "audit") {
     const usage = "gateway audit --state-dir <dir> --record true --route-id <route-id> --resource-type <type> --action <action> --coordinator-private-key-file <pem> --coordinator-public-key-file <pem>";
