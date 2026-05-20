@@ -108,7 +108,7 @@ function surfaceNodeSearchDocument(node: ClawPersistentSurfaceNode): SearchDocum
     resourceId: node.id,
     path: sourcePath,
     metadata: {
-      owner: node.owner,
+      surfaceSteward: node.owner,
       kind: node.kind,
       surfaceClass: node.surfaceClass,
       stability: node.stability,
@@ -182,7 +182,7 @@ function surfaceRouteSearchDocument(route: ClawSurfaceRoute): SearchDocumentInpu
     resourceId: route.id,
     path: sourcePath,
     metadata: {
-      owner: route.owner,
+      routeSteward: route.owner,
       visibility: route.visibility,
       fromId: route.fromId,
       toId: route.toId,

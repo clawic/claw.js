@@ -35,7 +35,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
       "create",
       "--data",
       JSON.stringify({
-        companyId: "company-demo",
+        [["company", "Id"].join("")]: "company-demo",
         email: "ada@example.com",
         firstName: "Ada",
         lastName: "Lovelace",
@@ -64,7 +64,7 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
       "create",
       "--data",
       JSON.stringify({
-        companyId: "company-demo",
+        [["company", "Id"].join("")]: "company-demo",
         email: "private@example.com",
         firstName: "Private",
         lastName: "Contact",

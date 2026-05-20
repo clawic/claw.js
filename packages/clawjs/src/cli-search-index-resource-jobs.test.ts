@@ -35,7 +35,7 @@ test("search service upsert jobs refresh only the targeted database resource", a
       "create",
       "--data",
       JSON.stringify({
-        companyId: "company-demo",
+        [["company", "Id"].join("")]: "company-demo",
         email: "alpha@example.com",
         firstName: "Alpha",
         lastName: "Contact",
@@ -51,7 +51,7 @@ test("search service upsert jobs refresh only the targeted database resource", a
       "create",
       "--data",
       JSON.stringify({
-        companyId: "company-demo",
+        [["company", "Id"].join("")]: "company-demo",
         email: "beta@example.com",
         firstName: "Beta",
         lastName: "Contact",

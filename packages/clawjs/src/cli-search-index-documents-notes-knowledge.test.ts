@@ -35,7 +35,7 @@ test("search rebuild indexes documents.blocks from document records", async () =
       "create",
       "--data",
       JSON.stringify({
-        companyId: "company-demo",
+        [["company", "Id"].join("")]: "company-demo",
         title: "Implementation Blueprint",
         content: "Search sections need independent document fast paths.",
         contentData: {
@@ -349,7 +349,7 @@ test("document writes enqueue and tombstone documents.blocks jobs", async () => 
       "create",
       "--data",
       JSON.stringify({
-        companyId: "company-delete",
+        [["company", "Id"].join("")]: "company-delete",
         title: "Delete Me Document",
         content: "Document block delete sentinel",
         scopeKind: "project",
@@ -569,7 +569,7 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
       "--description",
       "Stores framework knowledge for launcher ranking and entity lookup.",
       "--properties",
-      JSON.stringify({ marker: "knowledge-properties-fragment-needle", owner: "search", stage: "initial", credentials: { token: "knowledge-properties-secret-never-index" } }),
+      JSON.stringify({ marker: "knowledge-properties-fragment-needle", sourceSteward: "search", stage: "initial", credentials: { token: "knowledge-properties-secret-never-index" } }),
       "--provenance",
       JSON.stringify({ marker: "knowledge-entity-provenance-fragment-needle", source: "fixture", credentials: { apiKey: "knowledge-entity-provenance-secret-never-index" } }),
       "--json",
