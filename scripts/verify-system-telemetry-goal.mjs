@@ -324,6 +324,9 @@ function assertCompletionAudit() {
     "Plan item: `019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan`",
     "Status: `active_goal_not_complete`",
     "This public-safe audit tracks the full system telemetry goal requirement by",
+    "- `validated-local`: 14 rows.",
+    "- `active-closure-gate`: 1 row.",
+    "- `external-pending`: 3 rows, `STA-016`, `STA-017`, and `STA-018`.",
     "| STA-001 | Promote `claw system` to the canonical read-only portal",
     "| STA-002 | Expose `snapshot`, `metrics list`, `history`, `watch`, `rules`, and `widgets` surfaces.",
     "| STA-003 | Model CPU, GPU, memory, disks, network, power, processes, displays, audio, Bluetooth/peripherals, focus, notifications, calendar/time, and weather/context metrics.",
@@ -351,6 +354,15 @@ function assertCompletionAudit() {
   }
   const requirementRows = text.match(/^\| STA-\d{3} \|/gm) ?? [];
   assert(requirementRows.length === 18, "docs/system-telemetry-completion-audit.md: must contain exactly STA-001..STA-018 rows");
+  const validatedRows = text.match(/^\| STA-\d{3} \|[^|]+\| validated-local \|/gm) ?? [];
+  const activeRows = text.match(/^\| STA-\d{3} \|[^|]+\| active-closure-gate \|/gm) ?? [];
+  const externalRows = text.match(/^\| STA-\d{3} \|[^|]+\| external-pending \|/gm) ?? [];
+  assert(validatedRows.length === 14, "docs/system-telemetry-completion-audit.md: must contain exactly 14 validated-local rows");
+  assert(activeRows.length === 1, "docs/system-telemetry-completion-audit.md: must contain exactly 1 active-closure-gate row");
+  assert(externalRows.length === 3, "docs/system-telemetry-completion-audit.md: must contain exactly 3 external-pending rows");
+  for (const rowId of ["STA-016", "STA-017", "STA-018"]) {
+    assert(new RegExp(`^\\\\| ${rowId} \\\\|[^\\n]+\\\\| external-pending \\\\|`, "m").test(text), `docs/system-telemetry-completion-audit.md: ${rowId} must remain external-pending`);
+  }
   assert(!text.includes("/Users/"), "docs/system-telemetry-completion-audit.md: must not publish private filesystem paths");
 }
 

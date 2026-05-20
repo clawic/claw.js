@@ -12,6 +12,12 @@ covered by reproducible local evidence; rows marked `external-pending` require
 approved live provider, physical hardware, native grant, execution receipt,
 audit event, or same-machine evidence before they can be cleared.
 
+## Status Summary
+
+- `validated-local`: 14 rows.
+- `active-closure-gate`: 1 row.
+- `external-pending`: 3 rows, `STA-016`, `STA-017`, and `STA-018`.
+
 ## Requirement Status
 
 | ID | Requirement | Status | Evidence | Remaining gate |
