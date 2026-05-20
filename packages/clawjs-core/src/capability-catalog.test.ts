@@ -92,6 +92,16 @@ const EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS = [
   "system.telemetry.history",
   "system.telemetry.snapshot",
 ];
+const EXPECTED_LOCAL_WIDE_DISPATCH_CAPABILITY_IDS = EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS;
+const EXPECTED_APPROVAL_DISPATCH_CAPABILITY_IDS = [
+  "iot.device.action.invoke",
+  "jobs.cancel",
+  "jobs.start",
+];
+const EXPECTED_PLAN_ONLY_DISPATCH_CAPABILITY_IDS = ["mac.action.plan"];
+const EXPECTED_NO_RUNNER_DISPATCH_CAPABILITY_IDS = ["actions.invoke"];
+const EXPECTED_NO_PLAINTEXT_BROKER_DISPATCH_CAPABILITY_IDS = ["secrets.broker"];
+const EXPECTED_EXTERNAL_PENDING_DISPATCH_CAPABILITY_IDS = ["iot.device.action.invoke"];
 const sorted = (items: readonly string[]) => [...items].sort();
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
@@ -211,6 +221,28 @@ test("registered custom-app dispatch modes are explicit", () => {
       assert.equal(capability.dispatch.status, "unavailable", capability.id);
     }
   }
+});
+
+test("registered custom-app dispatch modes preserve reviewed partitions", () => {
+  const idsForDispatchMode = (mode: string) => sorted(
+    listClawCapabilities()
+      .filter((capability) => capability.dispatch?.mode === mode)
+      .map((capability) => capability.id),
+  );
+  const externalPendingIds = sorted(
+    listClawCapabilities()
+      .filter((capability) => capability.dispatch?.externalValidation === "EXTERNAL PENDING")
+      .map((capability) => capability.id),
+  );
+
+  assert.deepEqual(idsForDispatchMode("localWideRead"), EXPECTED_LOCAL_WIDE_DISPATCH_CAPABILITY_IDS);
+  assert.deepEqual(idsForDispatchMode("approvalRequiredDispatch"), EXPECTED_APPROVAL_DISPATCH_CAPABILITY_IDS);
+  assert.deepEqual(idsForDispatchMode("approvalRequiredPlanOnly"), EXPECTED_PLAN_ONLY_DISPATCH_CAPABILITY_IDS);
+  assert.deepEqual(idsForDispatchMode("approvalRequiredNoRunner"), EXPECTED_NO_RUNNER_DISPATCH_CAPABILITY_IDS);
+  assert.deepEqual(idsForDispatchMode("approvalRequiredNoPlaintextBroker"), EXPECTED_NO_PLAINTEXT_BROKER_DISPATCH_CAPABILITY_IDS);
+  assert.deepEqual(idsForDispatchMode("blocked"), []);
+  assert.deepEqual(idsForDispatchMode("unclassifiedBlocked"), []);
+  assert.deepEqual(externalPendingIds, EXPECTED_EXTERNAL_PENDING_DISPATCH_CAPABILITY_IDS);
 });
 
 test("custom apps do not receive direct SQLite or plaintext secret capabilities", () => {
