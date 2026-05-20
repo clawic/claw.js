@@ -109,6 +109,7 @@ function assertCompletionAudit() {
     "| CLJ-SDK-005 | High-risk actions stay brokered",
     "| CLJ-SDK-006 | Service API, MCP, and Relay custom-app routes",
     "| CLJ-SDK-007 | Clawix consumes the shared framework contract",
+    "exact reviewed Web/Swift surface kind set",
     "exact protected route target sets",
     "| CLJ-SDK-008 | Shells and hosts remain modular and nonblocking",
     "exact reviewed core survival route and heavy dependency sets",
@@ -442,6 +443,9 @@ function assertSiblingClawixArtifacts() {
   ].map((relativePath) => fs.readFileSync(path.join(siblingRoot, relativePath), "utf8")).join("\n");
   for (const snippet of [
     "testHostBridgeExposesCustomAppSDKContractPayload",
+    "testAppSurfaceKindsStayExactAndManifestBacked",
+    "expectedAppSurfaceKindRawValues",
+    "\"swiftDeclarative\"",
     "testHostBridgeSurfaceBindingsAreCompleteAndResolvedWhenPublished",
     "XCTAssertEqual(checkedSurfaceGroups, capabilities.count)",
     "XCTAssertNotNil(surface[\"ref\"]",
