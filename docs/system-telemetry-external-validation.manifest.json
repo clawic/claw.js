@@ -53,6 +53,27 @@
     ],
     "closureRole": "defines safe preflight, exact approval, accepted evidence, update targets, and fail rules for every remaining external lane"
   },
+  "externalApprovalPacketSchema": {
+    "required": true,
+    "artifactId": "system-telemetry-external-approval-schema",
+    "path": "docs/system-telemetry-external-approval.schema.json",
+    "laneCount": 3,
+    "externalPendingRowIds": [
+      "SYS-TEL-EXT-001",
+      "SYS-TEL-EXT-002",
+      "SYS-TEL-EXT-003"
+    ],
+    "closureRole": "defines the exact-run approval packet required before any live provider, physical sensor, or dangerous-control lane may execute"
+  },
+  "externalApprovalFixtures": {
+    "required": true,
+    "artifactId": "system-telemetry-external-approval-fixtures",
+    "path": "docs/system-telemetry-external-approval.fixtures.json",
+    "status": "synthetic_templates_not_approval",
+    "validTemplateCount": 3,
+    "invalidTemplateCount": 3,
+    "closureRole": "proves the approval schema accepts complete exact-run approvals and rejects ambiguous or incomplete approvals without representing real approval"
+  },
   "externalEvidencePacketSchema": {
     "required": true,
     "artifactId": "system-telemetry-external-evidence-schema",
