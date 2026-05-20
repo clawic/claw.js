@@ -182,7 +182,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     customAppAccess: "localWide",
     risk: lowReadRisk,
     surfaces: surfaces({
-      sdk: "@clawjs/claw:capabilities + future search facade",
+      sdk: "@clawjs/claw:capabilities metadata + claw.search.query.v1 schema",
       cli: "claw search query --json",
       serviceApi: "claw.api.search.searches",
       mcp: "clawjs-search-mcp",
@@ -211,7 +211,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
     customAppAccess: "localWide",
     risk: lowReadRisk,
     surfaces: surfaces({
-      sdk: "@clawjs/claw:capabilities + future db facade",
+      sdk: "@clawjs/claw:capabilities metadata + claw.db.query.v1 schema",
       cli: "claw db <collection> query --json",
       serviceApi: "@clawjs/database",
       mcp: customAppSDKMCPMetadataProjection,
@@ -536,7 +536,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       interruptiveApproval: true,
     },
     surfaces: surfaces({
-      sdk: "@clawjs/claw:future actions facade",
+      sdk: "@clawjs/claw:capabilities metadata + claw.actions.invoke.v1 schema",
       cli: "brokered claw <domain> <action> --json",
       serviceApi: "connector/control-plane + domain APIs",
       mcp: "MCP tools when policy grants allow",
@@ -593,7 +593,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       interruptiveApproval: true,
     },
     surfaces: surfaces({
-      sdk: "@clawjs/claw:future mac facade",
+      sdk: "@clawjs/claw:capabilities metadata + claw.mac.actionRequest.v1 schema",
       cli: "claw wifi/window/permissions/system mac --json",
       serviceApi: "MacControlWire",
       mcp: "Mac Control MCP tools",

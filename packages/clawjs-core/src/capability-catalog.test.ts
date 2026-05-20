@@ -67,6 +67,16 @@ test("published capability surface bindings are complete and resolved", () => {
   }
 });
 
+test("available SDK surface bindings do not advertise future facades", () => {
+  for (const capability of listClawCapabilities()) {
+    const sdkSurface = capability.surfaces.find((surface) => surface.surface === "sdk");
+    assert.equal(sdkSurface?.status, "available", capability.id);
+    const ref = sdkSurface?.ref ?? "";
+    assert.notEqual(ref, "", capability.id);
+    assert.equal(/future/i.test(ref), false, `${capability.id}:sdk`);
+  }
+});
+
 test("custom app authority is broad for ordinary reads and approval-gated for high risk", () => {
   const riskMap = buildCustomAppCapabilityRiskMap();
 

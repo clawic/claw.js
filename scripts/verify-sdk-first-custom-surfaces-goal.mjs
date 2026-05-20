@@ -75,7 +75,7 @@ function assertCompletionAudit() {
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
-    "no `pending` status, concrete refs for available surfaces",
+    "no `pending` status, no future-facade SDK refs, concrete refs for available surfaces",
     "disabled-by-default rule suggestions",
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
@@ -218,6 +218,10 @@ function assertFrameworkArtifacts() {
       "Available capability surface binding requires a ref",
       "approvalRequired",
       "blocked",
+      "@clawjs/claw:capabilities metadata + claw.search.query.v1 schema",
+      "@clawjs/claw:capabilities metadata + claw.db.query.v1 schema",
+      "@clawjs/claw:capabilities metadata + claw.actions.invoke.v1 schema",
+      "@clawjs/claw:capabilities metadata + claw.mac.actionRequest.v1 schema",
     ],
     "packages/clawjs-core/src/custom-app-sdk-inspection.ts": [
       "CUSTOM_APP_SDK_EXECUTION_BOUNDARY",
@@ -285,11 +289,20 @@ function assertFrameworkArtifacts() {
   forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", "claw runtime jobs --json");
   forbidSnippet("packages/clawjs-core/src/capability-fiches.ts", "claw runtime jobs --json");
   assertNoPendingCapabilitySurfaceBindings();
+  for (const snippet of [
+    "future search facade",
+    "future db facade",
+    "future actions facade",
+    "future mac facade",
+  ]) {
+    forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", snippet);
+  }
 }
 
 function assertTests() {
   for (const [relativePath, snippets] of Object.entries({
     "packages/clawjs-core/src/capability-catalog.test.ts": [
+      "available SDK surface bindings do not advertise future facades",
       "custom-app SDK inspection payload has no missing schema refs",
       "custom-app SDK inspection payload exposes dispatch availability and gaps",
       "custom-app SDK inspection payload exposes complete resolved surfaces",
