@@ -88,6 +88,9 @@ for user-authored custom UIs that do not block the main app shell.
 - ClawJS and sibling Clawix expose `jobs.stream` only as a blocked explicit
   gap in the capability map; it has no SDK/host bridge execution until a true
   backend stream, policy, audit, and adapter exist.
+- ClawJS exposes `jobs.start` and `jobs.cancel` only as blocked explicit
+  mutation gaps in the capability map; they have no SDK/host bridge execution
+  until mutation contracts, policy, audit, and adapters exist.
 - Sibling Clawix exposes `mac.action.plan` through
   `window.clawix.mac.planAction()` as an approval-gated, dry-run-only host
   bridge call; signed-host native execution remains out of scope until approved
