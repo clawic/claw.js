@@ -155,6 +155,11 @@
       "id": "missing_native_grant",
       "mutation": "authorization.nativeGrantRefs=[]",
       "packetRef": "SYS-TEL-EXT-003"
+    },
+    {
+      "id": "approval_expiry_before_approval",
+      "mutation": "approval.expiresAt=beforeApprovedAt",
+      "packetRef": "SYS-TEL-EXT-001"
     }
   ]
 }

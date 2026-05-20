@@ -71,8 +71,8 @@
     "path": "docs/system-telemetry-external-approval.fixtures.json",
     "status": "synthetic_templates_not_approval",
     "validTemplateCount": 3,
-    "invalidTemplateCount": 3,
-    "closureRole": "proves the approval schema accepts complete exact-run approvals and rejects ambiguous or incomplete approvals without representing real approval"
+    "invalidTemplateCount": 4,
+    "closureRole": "proves the approval schema accepts complete exact-run approvals and rejects ambiguous, expired, or incomplete approvals without representing real approval"
   },
   "externalApprovalPacketValidator": {
     "required": true,
