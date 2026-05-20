@@ -74,6 +74,9 @@ for user-authored custom UIs that do not block the main app shell.
 - Sibling Clawix mirrors `system.telemetry.snapshot` and
   `system.telemetry.history` as low-risk local-wide reads through the capability
   catalog, `window.clawix.system.telemetry`, and host bridge contract tests.
+- Sibling Clawix validates imported/marketplace packages through host-local
+  `app-package-trust-roots.json`, records signature key/trust-source
+  provenance, and still requires the activation ficha before running them.
 - Tests cover the baseline catalog and SDK facade.
 - Clawix app manifests can declare capabilities and produce a risk map.
 - Clawix bridge exposes capability inspection to hosted apps.

@@ -48,6 +48,8 @@ function assertCompletionAudit() {
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
     "`SystemTelemetryBridge.localStatusBridge`",
+    "imported/marketplace app trust handling with host-local `app-package-trust-roots.json`",
+    "signature key/trust-source provenance",
     "The required sibling Clawix checkout is present for this closure gate",
     "Keep the `--require-clawix` verifier path current",
     "| CLJ-SDK-001 | ADR, plan, decision-map, and discoverability routing",
@@ -98,6 +100,7 @@ function assertPublicRouting() {
       "launch and attach capture paths",
       "rescue, delayed-heavy-surface",
       "Sibling Clawix mirrors `system.telemetry.snapshot` and",
+      "Sibling Clawix validates imported/marketplace packages through host-local",
     ],
     "docs/decision-map.md": [
       "sdk-first-custom-surfaces-completion-audit.md",
@@ -227,6 +230,8 @@ function assertSiblingClawixArtifacts() {
     "docs/sdk-first-custom-surfaces-completion-audit.md": [
       "Status: `active_goal_not_complete`",
       "The Clawix verifier inspects sibling ClawJS evidence when that checkout is present.",
+      "| CLX-SDK-005 | Imported/marketplace apps require origin/capability/risk ficha",
+      "host-local `app-package-trust-roots.json` policy",
       "| CLX-SDK-010 | Final decision-by-decision source-session audit",
       "| CLX-SDK-007 | Swift custom surfaces are native but isolated",
       "verified the signed bundled helper, valid stdout `render` output",
@@ -244,6 +249,25 @@ function assertSiblingClawixArtifacts() {
       "systemTelemetrySnapshotSchemaRef",
       "system.telemetry.snapshot",
       "system.telemetry.history",
+    ],
+    "macos/Sources/Clawix/Apps/AppPackageTrustPolicy.swift": [
+      "app-package-trust-roots.json",
+      "TrustedSignatureKey",
+      "trustSource",
+      "ed25519",
+    ],
+    "macos/Sources/Clawix/Apps/AppRecord.swift": [
+      "signatureKeyId",
+      "signatureTrustSource",
+    ],
+    "macos/Sources/Clawix/Apps/AppTrustAudit.swift": [
+      "signatureKeyId",
+      "signatureTrustSource",
+    ],
+    "macos/Sources/Clawix/Apps/AGENT_CONTRACT.md": [
+      "app-package-trust-roots.json",
+      "signatureKeyId",
+      "signatureTrustSource",
     ],
     "macos/Sources/Clawix/Apps/ClawixAppsSDK.swift": [
       "capabilities",
@@ -267,6 +291,13 @@ function assertSiblingClawixArtifacts() {
       "testDBQueryDSLRejectsCollectionEscapesAndDDLKeys",
       "testSwiftSurfaceRunnerSupervisorRejectsInProcessPlans",
       "testSystemTelemetryBridgeValuesMatchSdkContracts",
+      "Signature key",
+      "Trust source",
+    ],
+    "macos/Tests/ClawixMeshTests/AppsStoreCancellationTests.swift": [
+      "testImportAppVerifiesSignedPackageDigestWithHostTrustPolicy",
+      "AppPackageTrustPolicy.defaultURL",
+      "signatureTrustSource",
     ],
     "macos/Tests/ClawixMeshTests/SurfaceShellPerformanceTests.swift": [
       "testCriticalShellStartFastPathStaysBoundedWithAllHeavyDependenciesUnavailable",
