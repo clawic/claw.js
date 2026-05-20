@@ -1361,8 +1361,21 @@ function assertSdkSystemTelemetryCoverage() {
     "system.telemetry.history",
     "claw.system.telemetry.history.request.v1",
     "claw.system.telemetry.history.v1",
+    "system.telemetry.metrics",
+    "claw.system.telemetry.metrics.request.v1",
+    "claw.system.telemetry.metrics.v1",
+    "system.telemetry.widgets",
+    "claw.system.telemetry.widgets.request.v1",
+    "claw.system.telemetry.widgets.v1",
+    "system.telemetry.providers",
+    "claw.system.telemetry.providers.request.v1",
+    "claw.system.telemetry.providers.v1",
+    "system.telemetry.control.plan",
+    "claw.system.telemetry.controlPlan.request.v1",
+    "claw.system.telemetry.controlPlan.v1",
     "payload.riskMap.approvalRequired.includes(\"system.telemetry.snapshot\"), false",
     "claw system history <metric-key> --range 1h|24h --json",
+    "claw system controls plan <control-id> --json",
   ]) {
     assert(inspectTests.includes(snippet), `inspect-cli.test.ts: missing system telemetry SDK inspect coverage ${JSON.stringify(snippet)}`);
   }
@@ -1371,18 +1384,39 @@ function assertSdkSystemTelemetryCoverage() {
   assert(inspection.missingSchemaRefs?.length === 0, "inspect custom-app-sdk: missing schema refs must be empty");
   assert(inspection.schemaRefs?.includes("claw.system.telemetry.snapshot.v1"), "inspect custom-app-sdk: missing snapshot schema");
   assert(inspection.schemaRefs?.includes("claw.system.telemetry.history.v1"), "inspect custom-app-sdk: missing history schema");
+  assert(inspection.schemaRefs?.includes("claw.system.telemetry.metrics.v1"), "inspect custom-app-sdk: missing metrics schema");
+  assert(inspection.schemaRefs?.includes("claw.system.telemetry.widgets.v1"), "inspect custom-app-sdk: missing widgets schema");
+  assert(inspection.schemaRefs?.includes("claw.system.telemetry.providers.v1"), "inspect custom-app-sdk: missing providers schema");
+  assert(inspection.schemaRefs?.includes("claw.system.telemetry.controlPlan.v1"), "inspect custom-app-sdk: missing control plan schema");
   assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.snapshot"), "inspect custom-app-sdk: snapshot must be ordinary read access");
   assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.history"), "inspect custom-app-sdk: history must be ordinary read access");
+  assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.metrics"), "inspect custom-app-sdk: metrics must be ordinary read access");
+  assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.widgets"), "inspect custom-app-sdk: widgets must be ordinary read access");
+  assert(inspection.riskMap?.ordinaryAccess?.includes("system.telemetry.providers"), "inspect custom-app-sdk: providers must be ordinary read access");
   assert(!inspection.riskMap?.approvalRequired?.includes("system.telemetry.snapshot"), "inspect custom-app-sdk: snapshot must not be approval-required");
   assert(!inspection.riskMap?.approvalRequired?.includes("system.telemetry.history"), "inspect custom-app-sdk: history must not be approval-required");
+  assert(inspection.riskMap?.approvalRequired?.includes("system.telemetry.control.plan"), "inspect custom-app-sdk: control plan must be approval-required");
   const snapshot = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.snapshot");
   const history = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.history");
+  const metrics = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.metrics");
+  const widgets = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.widgets");
+  const providers = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.providers");
+  const controlPlan = inspection.capabilities?.find((capability) => capability.id === "system.telemetry.control.plan");
   assert(snapshot?.inputSchemaRef === "claw.system.telemetry.snapshot.request.v1", "inspect custom-app-sdk: snapshot input schema mismatch");
   assert(snapshot?.outputSchemaRef === "claw.system.telemetry.snapshot.v1", "inspect custom-app-sdk: snapshot output schema mismatch");
   assert(snapshot?.redactionPolicyRef === "claw.customApps.redaction.v1", "inspect custom-app-sdk: snapshot redaction policy missing");
   assert(history?.inputSchemaRef === "claw.system.telemetry.history.request.v1", "inspect custom-app-sdk: history input schema mismatch");
   assert(history?.outputSchemaRef === "claw.system.telemetry.history.v1", "inspect custom-app-sdk: history output schema mismatch");
   assert(history?.redactionPolicyRef === "claw.customApps.redaction.v1", "inspect custom-app-sdk: history redaction policy missing");
+  assert(metrics?.inputSchemaRef === "claw.system.telemetry.metrics.request.v1", "inspect custom-app-sdk: metrics input schema mismatch");
+  assert(metrics?.outputSchemaRef === "claw.system.telemetry.metrics.v1", "inspect custom-app-sdk: metrics output schema mismatch");
+  assert(widgets?.inputSchemaRef === "claw.system.telemetry.widgets.request.v1", "inspect custom-app-sdk: widgets input schema mismatch");
+  assert(widgets?.outputSchemaRef === "claw.system.telemetry.widgets.v1", "inspect custom-app-sdk: widgets output schema mismatch");
+  assert(providers?.inputSchemaRef === "claw.system.telemetry.providers.request.v1", "inspect custom-app-sdk: providers input schema mismatch");
+  assert(providers?.outputSchemaRef === "claw.system.telemetry.providers.v1", "inspect custom-app-sdk: providers output schema mismatch");
+  assert(controlPlan?.inputSchemaRef === "claw.system.telemetry.controlPlan.request.v1", "inspect custom-app-sdk: control plan input schema mismatch");
+  assert(controlPlan?.outputSchemaRef === "claw.system.telemetry.controlPlan.v1", "inspect custom-app-sdk: control plan output schema mismatch");
+  assert(controlPlan?.dispatch?.mode === "approvalRequiredPlanOnly", "inspect custom-app-sdk: control plan must be plan-only");
 }
 
 function assertMetricCatalog() {
@@ -1807,6 +1841,12 @@ function assertSearchDiscoverability() {
   const systemCommand = parseCliPayload(claw(["search", "system", "--json"]), "search system");
   const systemCommandResults = systemCommand.results ?? [];
   assert(systemCommandResults.some((result) => result.type === "command" && result.name === "system"), "search system: missing system command result");
+
+  for (const query of ["system telemetry metrics", "system telemetry widgets", "system telemetry control plan"]) {
+    const commandSearch = parseCliPayload(claw(["search", query, "--json"]), `search ${query}`);
+    const commandResults = commandSearch.results ?? commandSearch.items ?? [];
+    assert(commandResults.some((result) => result.canonicalName === "system"), `search ${query}: missing system command discoverability`);
+  }
 
   const menuBar = parseCliPayload(claw(["search", "menu bar indicators", "--json"]), "search menu bar indicators");
   const menuBarResults = menuBar.results ?? [];

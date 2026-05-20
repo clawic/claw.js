@@ -708,8 +708,9 @@ brokered.
 The surface graph exposes the implementation path through `inspect route`:
 `system.telemetryAgentContext` links `claw system`, MCP, context providers and
 Monitor retention; `system.telemetrySignedHostControl` links plan-first controls
-to the signed host and audit; `clawix.menuBarSystemIndicators` links the macOS
-menu bar indicators to portable widgets and Monitor writes.
+to the signed host and audit; `clawix.menuBarSystemIndicators` is the menu bar
+indicators route that links the macOS indicators to portable widgets and Monitor
+writes.
 
 Local agent records are managed through the agent-facing data commands. These
 commands write canonical files under `~/.claw/` and project searchable

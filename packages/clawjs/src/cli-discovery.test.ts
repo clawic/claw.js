@@ -3110,6 +3110,13 @@ test("runCli searches the registered CLI discovery surface", async () => {
   assert.equal(payload.meta.canonicalCommand, "search");
   assert.equal(payload.data.results.some((entry) => entry.canonicalName === "host"), true);
 
+  const telemetry = await runCliCapture(["search", "system telemetry metrics", "--json"], process.cwd());
+  assert.equal(telemetry.code, CLI_EXIT_OK);
+  const telemetryPayload = JSON.parse(telemetry.stdout) as { ok: boolean; data: { results: Array<{ canonicalName?: string; type?: string; name?: string }> }; meta: { canonicalCommand: string } };
+  assert.equal(telemetryPayload.ok, true);
+  assert.equal(telemetryPayload.meta.canonicalCommand, "search");
+  assert.equal(telemetryPayload.data.results.some((entry) => entry.canonicalName === "system" && entry.type === "alias" && entry.name === "system telemetry metrics"), true);
+
   const collection = await runCliCapture(["search", "lead", "--json"], process.cwd());
   assert.equal(collection.code, CLI_EXIT_OK);
   const collectionPayload = JSON.parse(collection.stdout) as { data: { results: Array<{ canonicalName?: string; source?: string }> } };

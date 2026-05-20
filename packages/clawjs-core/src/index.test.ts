@@ -2296,6 +2296,11 @@ test("CLI command registry is the source for stable CLI surface nodes", () => {
 
   const matches = searchClawCliRegistry("system capabilities");
   assert.equal(matches.some((entry) => entry.canonicalName === "host"), true);
+
+  for (const query of ["system telemetry metrics", "system telemetry widgets", "system telemetry control plan", "menu bar indicators", "context widgets"]) {
+    const systemMatches = searchClawCliRegistry(query);
+    assert.equal(systemMatches.some((entry) => entry.canonicalName === "system"), true, query);
+  }
 });
 
 test("storage helpers resolve Claw roots and enforce Codex read-only policy", () => {
