@@ -75,7 +75,7 @@ function assertCompletionAudit() {
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
-    "no `pending` status, no future-facade SDK refs, concrete refs for available surfaces",
+    "no `pending` status, no future-facade SDK refs, no unknown dispatch modes",
     "disabled-by-default rule suggestions",
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
@@ -303,6 +303,8 @@ function assertTests() {
   for (const [relativePath, snippets] of Object.entries({
     "packages/clawjs-core/src/capability-catalog.test.ts": [
       "available SDK surface bindings do not advertise future facades",
+      "registered custom-app dispatch modes are explicit",
+      "assert.notEqual(capability.dispatch.mode, \"unknown\"",
       "custom-app SDK inspection payload has no missing schema refs",
       "custom-app SDK inspection payload exposes dispatch availability and gaps",
       "custom-app SDK inspection payload exposes complete resolved surfaces",

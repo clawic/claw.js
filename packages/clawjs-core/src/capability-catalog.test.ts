@@ -124,6 +124,19 @@ test("approval-required custom-app access is interruptive high risk", () => {
   }
 });
 
+test("registered custom-app dispatch modes are explicit", () => {
+  const pendingRunnerIds = new Set(["actions.invoke", "secrets.broker"]);
+
+  for (const capability of listClawCapabilities()) {
+    assert.ok(capability.dispatch, capability.id);
+    assert.notEqual(capability.dispatch.mode, "unknown", capability.id);
+    if (capability.dispatch.runner === "pending") {
+      assert.equal(pendingRunnerIds.has(capability.id), true, capability.id);
+      assert.equal(capability.dispatch.status, "unavailable", capability.id);
+    }
+  }
+});
+
 test("custom apps do not receive direct SQLite or plaintext secret capabilities", () => {
   for (const capability of listClawCapabilities()) {
     const text = JSON.stringify(capability).toLowerCase();
