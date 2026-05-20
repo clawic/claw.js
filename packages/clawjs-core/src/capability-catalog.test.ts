@@ -57,6 +57,41 @@ const EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS = [
   "mac.action.plan",
   "secrets.broker",
 ];
+const EXPECTED_CLI_BLOCKED_CAPABILITY_IDS = [
+  "jobs.cancel",
+  "jobs.events",
+  "jobs.get",
+  "jobs.list",
+  "jobs.start",
+  "jobs.stream",
+];
+const EXPECTED_MCP_METADATA_PROJECTION_CAPABILITY_IDS = [
+  "actions.invoke",
+  "db.query",
+  "iot.device.action.invoke",
+  "jobs.cancel",
+  "jobs.events",
+  "jobs.get",
+  "jobs.list",
+  "jobs.start",
+  "jobs.stream",
+];
+const EXPECTED_MCP_BLOCKED_CAPABILITY_IDS = ["secrets.broker"];
+const EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS = [
+  "actions.invoke",
+  "iot.device.action.invoke",
+  "jobs.cancel",
+  "jobs.events",
+  "jobs.get",
+  "jobs.list",
+  "jobs.start",
+  "jobs.stream",
+  "mac.action.plan",
+  "resources.list",
+  "resources.read",
+  "system.telemetry.history",
+  "system.telemetry.snapshot",
+];
 const sorted = (items: readonly string[]) => [...items].sort();
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
@@ -89,6 +124,24 @@ test("published capability surface bindings are complete and resolved", () => {
       assert.notEqual(surface.status, "pending", `${capability.id}:${surface.surface}`);
     }
   }
+});
+
+test("published capability surfaces preserve reviewed blocked and metadata-only partitions", () => {
+  const idsForSurfaceStatus = (surfaceName: string, status: string) => sorted(
+    listClawCapabilities()
+      .filter((capability) => capability.surfaces.some((surface) => surface.surface === surfaceName && surface.status === status))
+      .map((capability) => capability.id),
+  );
+  const idsForSurfaceRef = (surfaceName: string, ref: string) => sorted(
+    listClawCapabilities()
+      .filter((capability) => capability.surfaces.some((surface) => surface.surface === surfaceName && surface.ref === ref))
+      .map((capability) => capability.id),
+  );
+
+  assert.deepEqual(idsForSurfaceStatus("cli", "blocked"), EXPECTED_CLI_BLOCKED_CAPABILITY_IDS);
+  assert.deepEqual(idsForSurfaceStatus("mcp", "blocked"), EXPECTED_MCP_BLOCKED_CAPABILITY_IDS);
+  assert.deepEqual(idsForSurfaceRef("mcp", "clawjs.custom_app_sdk metadata-only contract projection"), EXPECTED_MCP_METADATA_PROJECTION_CAPABILITY_IDS);
+  assert.deepEqual(idsForSurfaceRef("relay", "relay.remote.custom_app_sdk metadata-only contract projection"), EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS);
 });
 
 test("available SDK surface bindings do not advertise future facades", () => {
@@ -333,7 +386,7 @@ test("custom-app MCP coverage is metadata-only for contract projections", () => 
 
   assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
   assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("mcp.custom_app_sdk"), true);
-  for (const id of ["db.query", "jobs.list", "jobs.get", "jobs.events", "actions.invoke", "iot.device.action.invoke"]) {
+  for (const id of EXPECTED_MCP_METADATA_PROJECTION_CAPABILITY_IDS) {
     const capability = getClawCapability(id);
     const mcpSurface = capability?.surfaces.find((surface) => surface.surface === "mcp");
 
@@ -347,21 +400,7 @@ test("custom-app Relay coverage is metadata-only for local host execution", () =
 
   assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
   assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("relay.remote.custom_app_sdk"), true);
-  for (const id of [
-    "resources.list",
-    "resources.read",
-    "system.telemetry.snapshot",
-    "system.telemetry.history",
-    "jobs.list",
-    "jobs.get",
-    "jobs.events",
-    "jobs.stream",
-    "jobs.start",
-    "jobs.cancel",
-    "actions.invoke",
-    "mac.action.plan",
-    "iot.device.action.invoke",
-  ]) {
+  for (const id of EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS) {
     const capability = getClawCapability(id);
     const relaySurface = capability?.surfaces.find((surface) => surface.surface === "relay");
 
