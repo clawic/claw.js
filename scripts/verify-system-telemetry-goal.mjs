@@ -551,6 +551,7 @@ function assertExternalApprovalSchema() {
   assert(schema.properties?.privacy?.properties?.containsSecrets?.const === false, "external approval schema: secrets must be forbidden");
   assert(schema.properties?.privacy?.properties?.preciseLocationApprovedForStorage?.const === false, "external approval schema: precise location storage must be forbidden");
   assert(schema.properties?.privacy?.properties?.privatePathsIncluded?.const === false, "external approval schema: private paths must be forbidden");
+  assert(schema.properties?.closureImpact?.properties?.externalPendingRows?.maxItems === 1, "external approval schema: closure external rows must be exact");
   for (const snippet of [
     "provider_connection",
     "physical_sensor_read",
@@ -568,10 +569,13 @@ function assertExternalApprovalSchema() {
   assert(laneRules.size === 3, "external approval schema: must define exactly 3 lane-specific rules");
   assert(laneRules.get("SYS-TEL-EXT-001")?.properties?.authorization?.properties?.credentialLeaseRefs?.minItems === 1, "external approval schema: live lane must require credential lease refs");
   assert(laneRules.get("SYS-TEL-EXT-001")?.properties?.authorization?.properties?.networkAccessApproved?.const === true, "external approval schema: live lane must require network approval");
+  assert(laneRules.get("SYS-TEL-EXT-001")?.properties?.closureImpact?.properties?.externalPendingRows?.maxItems === 1, "external approval schema: live lane must close only its own external row");
   assert(laneRules.get("SYS-TEL-EXT-002")?.properties?.authorization?.properties?.nativeGrantRefs?.minItems === 1, "external approval schema: sensor lane must require native grant refs");
   assert(laneRules.get("SYS-TEL-EXT-002")?.properties?.authorization?.properties?.hardwareProviderRefs?.minItems === 1, "external approval schema: sensor lane must require hardware provider refs");
+  assert(laneRules.get("SYS-TEL-EXT-002")?.properties?.closureImpact?.properties?.externalPendingRows?.maxItems === 1, "external approval schema: sensor lane must close only its own external row");
   assert(laneRules.get("SYS-TEL-EXT-003")?.properties?.risk?.properties?.rollbackOrContinuityPlanRef?.minLength === 1, "external approval schema: control lane must require rollback plan");
   assert(laneRules.get("SYS-TEL-EXT-003")?.properties?.risk?.properties?.physicalValidationPlanRef?.minLength === 1, "external approval schema: control lane must require physical validation plan");
+  assert(laneRules.get("SYS-TEL-EXT-003")?.properties?.closureImpact?.properties?.externalPendingRows?.maxItems === 1, "external approval schema: control lane must close only its own external row");
   const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
   const validate = ajv.compile(schema);
   for (const packet of readJson("docs/governance/system-telemetry/external-approval.fixtures.json").validSyntheticPackets) {
@@ -733,6 +737,9 @@ function assertExternalEvidenceSchema() {
   assert(schema.properties?.redaction?.properties?.privatePathsIncluded?.const === false, "external evidence schema: private paths must be forbidden");
   assert(schema.properties?.closureImpact?.properties?.requiresFinalSourceReread?.const === true, "external evidence schema: final source reread must be required");
   assert(schema.properties?.closureImpact?.properties?.requiresForbiddenNameScan?.const === true, "external evidence schema: forbidden-name scan must be required");
+  for (const field of ["rowsToReplace", "completionAuditRows", "sourceQaRows", "manifestRows"]) {
+    assert(schema.properties?.closureImpact?.properties?.[field]?.maxItems === 1, `external evidence schema: ${field} must be exact`);
+  }
   assert(schema.properties?.reviewer?.properties?.decision?.enum?.includes("accepted"), "external evidence schema: reviewer acceptance must be explicit");
   for (const snippet of [
     "receiptRefs",
@@ -753,18 +760,21 @@ function assertExternalEvidenceSchema() {
   assert(liveRule?.properties?.evidence?.properties?.monitorSampleIds?.minItems === 1, "external evidence schema: live lane must require monitor samples");
   assert(liveRule?.properties?.evidence?.properties?.downstreamEvidenceRefs?.minItems === 1, "external evidence schema: live lane must require downstream evidence");
   assert(liveRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-016", "external evidence schema: live lane must close STA-016");
+  assert(liveRule?.properties?.closureImpact?.properties?.sourceQaRows?.contains?.const === "STQA-003", "external evidence schema: live lane must update source Q/A row");
   const sensorRule = laneRules.get("SYS-TEL-EXT-002");
   assert(sensorRule?.properties?.runAuthorization?.properties?.grants?.contains?.const === "system.sensor.read", "external evidence schema: sensor lane must require sensor grant");
   assert(sensorRule?.properties?.runAuthorization?.properties?.nativeGrantRefs?.minItems === 1, "external evidence schema: sensor lane must require native grant refs");
   assert(sensorRule?.properties?.evidence?.properties?.monitorSampleIds?.minItems === 1, "external evidence schema: sensor lane must require monitor samples");
   assert(sensorRule?.properties?.evidence?.properties?.sameMachineEvidenceRefs?.minItems === 1, "external evidence schema: sensor lane must require same-machine evidence");
   assert(sensorRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-017", "external evidence schema: sensor lane must close STA-017");
+  assert(sensorRule?.properties?.closureImpact?.properties?.sourceQaRows?.contains?.const === "STQA-003", "external evidence schema: sensor lane must update source Q/A row");
   const controlRule = laneRules.get("SYS-TEL-EXT-003");
   assert(controlRule?.properties?.runAuthorization?.properties?.grants?.contains?.const === "system.control.execute", "external evidence schema: control lane must require control grant");
   assert(controlRule?.properties?.runAuthorization?.properties?.nativeGrantRefs?.minItems === 1, "external evidence schema: control lane must require native grant refs");
   assert(controlRule?.properties?.evidence?.properties?.physicalValidationRefs?.minItems === 1, "external evidence schema: control lane must require physical validation");
   assert(controlRule?.properties?.evidence?.properties?.rollbackOrContinuityRefs?.minItems === 1, "external evidence schema: control lane must require rollback or continuity evidence");
   assert(controlRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-018", "external evidence schema: control lane must close STA-018");
+  assert(controlRule?.properties?.closureImpact?.properties?.sourceQaRows?.contains?.const === "STQA-003", "external evidence schema: control lane must update source Q/A row");
   assert(!serialized.includes("/Users/"), "external evidence schema: must not publish private filesystem paths");
 }
 

@@ -148,10 +148,10 @@
         "requiresForbiddenNameScan"
       ],
       "properties": {
-        "rowsToReplace": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-        "completionAuditRows": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-        "sourceQaRows": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-        "manifestRows": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "rowsToReplace": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string" } },
+        "completionAuditRows": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string" } },
+        "sourceQaRows": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string" } },
+        "manifestRows": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string" } },
         "requiresFinalSourceReread": { "const": true },
         "requiresForbiddenNameScan": { "const": true }
       }
@@ -190,9 +190,10 @@
           },
           "closureImpact": {
             "properties": {
-              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-001" } },
-              "completionAuditRows": { "contains": { "const": "STA-016" } },
-              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-001" } }
+              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-001" }, "maxItems": 1 },
+              "completionAuditRows": { "contains": { "const": "STA-016" }, "maxItems": 1 },
+              "sourceQaRows": { "contains": { "const": "STQA-003" }, "maxItems": 1 },
+              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-001" }, "maxItems": 1 }
             }
           }
         }
@@ -219,9 +220,10 @@
           },
           "closureImpact": {
             "properties": {
-              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-002" } },
-              "completionAuditRows": { "contains": { "const": "STA-017" } },
-              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-002" } }
+              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-002" }, "maxItems": 1 },
+              "completionAuditRows": { "contains": { "const": "STA-017" }, "maxItems": 1 },
+              "sourceQaRows": { "contains": { "const": "STQA-003" }, "maxItems": 1 },
+              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-002" }, "maxItems": 1 }
             }
           }
         }
@@ -248,9 +250,10 @@
           },
           "closureImpact": {
             "properties": {
-              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-003" } },
-              "completionAuditRows": { "contains": { "const": "STA-018" } },
-              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-003" } }
+              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-003" }, "maxItems": 1 },
+              "completionAuditRows": { "contains": { "const": "STA-018" }, "maxItems": 1 },
+              "sourceQaRows": { "contains": { "const": "STQA-003" }, "maxItems": 1 },
+              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-003" }, "maxItems": 1 }
             }
           }
         }
