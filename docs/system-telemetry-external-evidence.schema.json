@@ -165,5 +165,92 @@
         "decision": { "enum": ["accepted"] }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "laneId": { "const": "SYS-TEL-EXT-001" } },
+        "required": ["laneId"]
+      },
+      "then": {
+        "properties": {
+          "runAuthorization": {
+            "properties": {
+              "credentialLeaseRefs": { "minItems": 1 },
+              "networkAccessApproved": { "const": true }
+            }
+          },
+          "evidence": {
+            "properties": {
+              "monitorSampleIds": { "minItems": 1 },
+              "downstreamEvidenceRefs": { "minItems": 1 }
+            }
+          },
+          "closureImpact": {
+            "properties": {
+              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-001" } },
+              "completionAuditRows": { "contains": { "const": "STA-016" } },
+              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-001" } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "laneId": { "const": "SYS-TEL-EXT-002" } },
+        "required": ["laneId"]
+      },
+      "then": {
+        "properties": {
+          "runAuthorization": {
+            "properties": {
+              "nativeGrantRefs": { "minItems": 1 }
+            }
+          },
+          "evidence": {
+            "properties": {
+              "monitorSampleIds": { "minItems": 1 },
+              "sameMachineEvidenceRefs": { "minItems": 1 }
+            }
+          },
+          "closureImpact": {
+            "properties": {
+              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-002" } },
+              "completionAuditRows": { "contains": { "const": "STA-017" } },
+              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-002" } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "laneId": { "const": "SYS-TEL-EXT-003" } },
+        "required": ["laneId"]
+      },
+      "then": {
+        "properties": {
+          "runAuthorization": {
+            "properties": {
+              "nativeGrantRefs": { "minItems": 1 }
+            }
+          },
+          "evidence": {
+            "properties": {
+              "physicalValidationRefs": { "minItems": 1 },
+              "rollbackOrContinuityRefs": { "minItems": 1 }
+            }
+          },
+          "closureImpact": {
+            "properties": {
+              "rowsToReplace": { "contains": { "const": "SYS-TEL-EXT-003" } },
+              "completionAuditRows": { "contains": { "const": "STA-018" } },
+              "manifestRows": { "contains": { "const": "SYS-TEL-EXT-003" } }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

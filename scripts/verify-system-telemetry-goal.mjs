@@ -385,6 +385,24 @@ function assertExternalEvidenceSchema() {
   ]) {
     assert(serialized.includes(snippet), `external evidence schema: missing ${snippet}`);
   }
+  const laneRules = new Map((schema.allOf ?? []).map((rule) => [rule.if?.properties?.laneId?.const, rule.then]));
+  assert(laneRules.size === 3, "external evidence schema: must define exactly 3 lane-specific rules");
+  const liveRule = laneRules.get("SYS-TEL-EXT-001");
+  assert(liveRule?.properties?.runAuthorization?.properties?.credentialLeaseRefs?.minItems === 1, "external evidence schema: live lane must require credential lease refs");
+  assert(liveRule?.properties?.runAuthorization?.properties?.networkAccessApproved?.const === true, "external evidence schema: live lane must require network approval");
+  assert(liveRule?.properties?.evidence?.properties?.monitorSampleIds?.minItems === 1, "external evidence schema: live lane must require monitor samples");
+  assert(liveRule?.properties?.evidence?.properties?.downstreamEvidenceRefs?.minItems === 1, "external evidence schema: live lane must require downstream evidence");
+  assert(liveRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-016", "external evidence schema: live lane must close STA-016");
+  const sensorRule = laneRules.get("SYS-TEL-EXT-002");
+  assert(sensorRule?.properties?.runAuthorization?.properties?.nativeGrantRefs?.minItems === 1, "external evidence schema: sensor lane must require native grant refs");
+  assert(sensorRule?.properties?.evidence?.properties?.monitorSampleIds?.minItems === 1, "external evidence schema: sensor lane must require monitor samples");
+  assert(sensorRule?.properties?.evidence?.properties?.sameMachineEvidenceRefs?.minItems === 1, "external evidence schema: sensor lane must require same-machine evidence");
+  assert(sensorRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-017", "external evidence schema: sensor lane must close STA-017");
+  const controlRule = laneRules.get("SYS-TEL-EXT-003");
+  assert(controlRule?.properties?.runAuthorization?.properties?.nativeGrantRefs?.minItems === 1, "external evidence schema: control lane must require native grant refs");
+  assert(controlRule?.properties?.evidence?.properties?.physicalValidationRefs?.minItems === 1, "external evidence schema: control lane must require physical validation");
+  assert(controlRule?.properties?.evidence?.properties?.rollbackOrContinuityRefs?.minItems === 1, "external evidence schema: control lane must require rollback or continuity evidence");
+  assert(controlRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-018", "external evidence schema: control lane must close STA-018");
   assert(!serialized.includes("/Users/"), "external evidence schema: must not publish private filesystem paths");
 }
 
