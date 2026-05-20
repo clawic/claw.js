@@ -16,6 +16,10 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
   resourcesListResult: "claw.resources.listResult.v1",
   resourcesRead: "claw.resources.read.v1",
   resourcesPayload: "claw.resources.payload.v1",
+  systemTelemetrySnapshotRequest: "claw.system.telemetry.snapshot.request.v1",
+  systemTelemetrySnapshot: "claw.system.telemetry.snapshot.v1",
+  systemTelemetryHistoryRequest: "claw.system.telemetry.history.request.v1",
+  systemTelemetryHistory: "claw.system.telemetry.history.v1",
   actionsInvoke: "claw.actions.invoke.v1",
   actionsReceipt: "claw.actions.receipt.v1",
   secretsBroker: "claw.secrets.broker.v1",
@@ -140,6 +144,118 @@ export const customAppSDKResourcesPayloadSchema = z.object({
   source: z.literal("resources.read"),
 }).strict();
 
+const systemTelemetryMetricValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const systemTelemetryUnitSchema = z.enum([
+  "count",
+  "load",
+  "percent",
+  "bytes",
+  "bytes_per_second",
+  "milliseconds",
+  "minutes",
+  "seconds",
+  "celsius",
+  "rpm",
+  "volts",
+  "amps",
+  "watts",
+  "hertz",
+  "lux",
+  "boolean",
+  "state",
+  "string",
+]);
+const systemTelemetryAvailabilitySchema = z.enum(["available", "unavailable", "external_pending", "permission_required", "host_required"]);
+const systemTelemetrySourceConfidenceSchema = z.enum(["official", "derived", "experimental", "provider"]);
+const systemTelemetryTagsSchema = z.record(z.string());
+
+export const customAppSDKSystemTelemetrySnapshotRequestSchema = z.object({
+  source: z.literal("local").default("local"),
+  metricKeys: z.array(z.string().min(1)).max(100).optional(),
+  includeUnavailable: z.boolean().default(true),
+}).strict();
+
+export const customAppSDKSystemTelemetrySampleSchema = z.object({
+  key: z.string().min(1),
+  value: systemTelemetryMetricValueSchema,
+  unit: systemTelemetryUnitSchema,
+  capturedAt: z.string().min(1),
+  availability: systemTelemetryAvailabilitySchema,
+  source: z.object({
+    adapter: z.enum(["node", "signed_host", "provider", "fixture"]),
+    confidence: systemTelemetrySourceConfidenceSchema,
+    detail: z.string().min(1).optional(),
+  }).strict(),
+  quality: z.enum(["ok", "degraded", "unsupported"]).optional(),
+  tags: systemTelemetryTagsSchema.optional(),
+}).strict();
+
+export const customAppSDKSystemTelemetrySnapshotSchema = z.object({
+  schemaVersion: z.literal(1),
+  generatedAt: z.string().min(1),
+  host: z.object({
+    platform: z.string().min(1),
+    arch: z.string().min(1),
+    id: z.literal("local"),
+  }).strict(),
+  policy: z.object({
+    defaultAgentAccess: z.literal("safe_read"),
+    sensitiveRequiresGrant: z.literal(true),
+    controlsRequireSignedHostBroker: z.literal(true),
+  }).strict(),
+  samples: z.array(customAppSDKSystemTelemetrySampleSchema),
+  unavailableMetrics: z.array(z.string().min(1)),
+  source: z.literal("system.telemetry.snapshot"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+export const customAppSDKSystemTelemetryHistoryRequestSchema = z.object({
+  metricKey: z.string().min(1),
+  range: z.enum(["1h", "24h"]).default("1h"),
+}).strict();
+
+export const customAppSDKSystemTelemetryHistorySchema = z.object({
+  metricKey: z.string().min(1),
+  rangeMs: z.union([z.literal(3_600_000), z.literal(86_400_000)]),
+  retention: z.object({
+    store: z.literal("monitor.sqlite"),
+    status: z.enum(["recorded", "empty"]),
+  }).passthrough(),
+  samples: z.array(z.object({
+    metricKey: z.string().min(1),
+    value: systemTelemetryMetricValueSchema.optional(),
+    unit: systemTelemetryUnitSchema.optional(),
+    capturedAt: z.number().optional(),
+    tags: systemTelemetryTagsSchema.optional(),
+  }).passthrough()),
+  rollups: z.array(z.object({
+    metricKey: z.string().min(1),
+    bucketMs: z.number().int().positive().optional(),
+    count: z.number().int().nonnegative().optional(),
+  }).passthrough()),
+  incidents: z.array(z.object({
+    metricKey: z.string().min(1),
+    ruleId: z.string().min(1).optional(),
+    status: z.string().min(1).optional(),
+  }).passthrough()),
+  chart: z.object({
+    kind: z.literal("line"),
+    source: z.enum(["metric_samples", "metric_rollups", "empty"]),
+    empty: z.boolean(),
+    points: z.array(z.object({
+      value: z.number(),
+    }).passthrough()),
+  }).strict(),
+  render: z.object({
+    kind: z.literal("ascii_sparkline"),
+    source: z.enum(["metric_samples", "metric_rollups", "empty"]),
+    empty: z.boolean(),
+    line: z.string(),
+  }).passthrough(),
+  source: z.literal("system.telemetry.history"),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
 const stringRecordSchema = z.record(z.string().min(1));
 
 export const customAppSDKActionsInvokeSchema = z.object({
@@ -233,7 +349,7 @@ export const customAppSDKIoTActionResultSchema = z.object({
 }).passthrough();
 
 export const customAppSDKRequestPartialSchema = z.object({
-  source: z.enum(["search.query", "db.query", "resources.list", "resources.read"]),
+  source: z.enum(["search.query", "db.query", "resources.list", "resources.read", "system.telemetry.snapshot", "system.telemetry.history"]),
   collection: z.string().min(1).optional(),
   items: z.array(z.union([customAppSDKBridgeRecordSchema, resourceRecordSchema])).optional(),
   resource: resourceRecordSchema.optional(),
@@ -254,6 +370,10 @@ export const customAppSDKSchemaRegistry = {
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult]: customAppSDKResourcesListResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesRead]: customAppSDKResourcesReadSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload]: customAppSDKResourcesPayloadSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshotRequest]: customAppSDKSystemTelemetrySnapshotRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot]: customAppSDKSystemTelemetrySnapshotSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistoryRequest]: customAppSDKSystemTelemetryHistoryRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory]: customAppSDKSystemTelemetryHistorySchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.actionsInvoke]: customAppSDKActionsInvokeSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.actionsReceipt]: customAppSDKActionsReceiptSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.secretsBroker]: customAppSDKSecretsBrokerSchema,

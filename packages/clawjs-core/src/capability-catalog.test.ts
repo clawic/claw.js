@@ -24,6 +24,8 @@ test("SDK-first capability catalog exposes baseline custom-app contracts", () =>
   assert.ok(ids.includes("search.query"));
   assert.ok(ids.includes("db.query"));
   assert.ok(ids.includes("resources.read"));
+  assert.ok(ids.includes("system.telemetry.snapshot"));
+  assert.ok(ids.includes("system.telemetry.history"));
   assert.ok(ids.includes("actions.invoke"));
   assert.ok(ids.includes("secrets.broker"));
   assert.ok(ids.includes("mac.action.plan"));
@@ -54,6 +56,8 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   assert.ok(riskMap.ordinaryAccess.includes("search.query"));
   assert.ok(riskMap.ordinaryAccess.includes("db.query"));
   assert.ok(riskMap.ordinaryAccess.includes("resources.read"));
+  assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.snapshot"));
+  assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.history"));
   assert.ok(riskMap.approvalRequired.includes("actions.invoke"));
   assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
   assert.ok(riskMap.approvalRequired.includes("mac.action.plan"));
@@ -133,9 +137,13 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.equal(payload.schemaVersion, 1);
   assert.deepEqual(payload.missingSchemaRefs, []);
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.searchQuery));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot));
+  assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory));
   assert.ok(payload.schemaRefs.includes("claw.mac.actionRequest.v1"));
   assert.ok(payload.schemaRefs.includes(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial));
   assert.ok(payload.capabilities.some((capability) => capability.id === "resources.read"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.snapshot"));
+  assert.ok(payload.capabilities.some((capability) => capability.id === "system.telemetry.history"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
   assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
   assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
@@ -281,6 +289,62 @@ test("custom-app DB query schema rejects collection creation and direct SQL esca
     query: "launch",
     collections: ["tasks", "sqlite_master"],
   }).success, false);
+});
+
+test("custom-app SDK schemas validate read-only system telemetry contracts", () => {
+  const sample = {
+    key: "system.memory.used",
+    value: 2048,
+    unit: "bytes",
+    capturedAt: "2026-05-19T00:00:00Z",
+    availability: "available",
+    source: { adapter: "node", confidence: "official" },
+    quality: "ok",
+  };
+
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshotRequest)?.safeParse({
+    source: "local",
+    metricKeys: ["system.memory.used"],
+    includeUnavailable: true,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshotRequest)?.safeParse({
+    source: "host",
+  }).success, false);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot)?.safeParse({
+    schemaVersion: 1,
+    generatedAt: "2026-05-19T00:00:00Z",
+    host: { platform: "darwin", arch: "arm64", id: "local" },
+    policy: {
+      defaultAgentAccess: "safe_read",
+      sensitiveRequiresGrant: true,
+      controlsRequireSignedHostBroker: true,
+    },
+    samples: [sample],
+    unavailableMetrics: ["system.sensor.temperature"],
+    source: "system.telemetry.snapshot",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistoryRequest)?.safeParse({
+    metricKey: "system.memory.used",
+    range: "24h",
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistory)?.safeParse({
+    metricKey: "system.memory.used",
+    rangeMs: 86_400_000,
+    retention: { store: "monitor.sqlite", status: "recorded" },
+    samples: [{ metricKey: "system.memory.used", value: 2048, unit: "bytes", capturedAt: 1 }],
+    rollups: [{ metricKey: "system.memory.used", bucketMs: 60_000, count: 1 }],
+    incidents: [{ metricKey: "system.memory.used", ruleId: "memory-any", status: "open" }],
+    chart: { kind: "line", source: "metric_samples", empty: false, points: [{ value: 2048 }] },
+    render: { kind: "ascii_sparkline", source: "metric_samples", empty: false, line: "*" },
+    source: "system.telemetry.history",
+    redactionPolicy: CUSTOM_APP_REDACTION_POLICY_ID,
+  }).success, true);
+  assert.equal(getCustomAppSDKSchema(CUSTOM_APP_SDK_SCHEMA_REFS.requestPartial)?.safeParse({
+    source: "system.telemetry.history",
+    progress: 0.5,
+    partialCount: 1,
+  }).success, true);
 });
 
 test("custom-app SDK schemas validate high-risk action contracts without bypass fields", () => {
