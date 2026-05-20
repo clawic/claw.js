@@ -3295,6 +3295,33 @@ test("runCli returns productivity database JSON in the common envelope", { concu
   assert.equal(queryPayload.data.some((item) => item.title === "Canonical query task"), true);
 });
 
+test("runCli keeps inspect schemas JSON inspectable for agents", async () => {
+  const result = await runCliCapture(["inspect", "schemas", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: Array<{ id: string; surfaceClass?: string }>; meta: { canonicalCommand: string; subcommand: string; schemaVersion: number } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.schemaVersion, 1);
+  assert.equal(payload.meta.canonicalCommand, "inspect");
+  assert.equal(payload.meta.subcommand, "schemas");
+  assert.equal(payload.data.some((entry) => entry.id === "claw.contracts.schemas"), true);
+  assert.equal(payload.data.some((entry) => entry.id === "claw.schema.common.field.schemaVersion" && entry.surfaceClass === "schema"), true);
+});
+
+test("runCli keeps built-in collection schemas inspectable from a clean workspace", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-patients-schema-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+  const result = await runCliCapture(["collections", "patients", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { exists: boolean; collection: { name: string; fields: Array<{ name: string; required?: boolean }> } }; meta: { schemaVersion: number; collection: string; action: string } };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.meta.schemaVersion, 1);
+  assert.equal(payload.meta.collection, "patients");
+  assert.equal(payload.meta.action, "schema");
+  assert.equal(payload.data.exists, true);
+  assert.equal(payload.data.collection.name, "patients");
+  assert.equal(payload.data.collection.fields.some((field) => field.name === "displayName" && field.required === true), true);
+});
+
 test("runCli exposes the local collection catalog for agents", async () => {
   const result = await runCliCapture(["collections", "list", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

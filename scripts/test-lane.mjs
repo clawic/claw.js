@@ -42,6 +42,10 @@ function buildPackages() {
   npmRun("build:packages");
 }
 
+function inspectabilityGate() {
+  npmRun("test:inspectability");
+}
+
 function evolutionGate() {
   npmRun("test:evolution");
 }
@@ -50,6 +54,7 @@ function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
   buildPackages();
+  inspectabilityGate();
   npmRun("test:policy");
   evolutionGate();
   npmRun("code-hygiene:check");

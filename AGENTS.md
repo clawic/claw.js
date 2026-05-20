@@ -50,6 +50,9 @@ claw db <collection> list|query --json
 Treat source files as evidence after the CLI/registry map. If `claw` is not
 available, say so and use direct docs/source reads.
 
+Schema inspection is a blocking agent contract: keep
+`npm run test:inspectability` green before adding routes, domains, or surfaces.
+
 ## Critical Routes
 
 Read the relevant canon before changing its surface:
