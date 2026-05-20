@@ -83,6 +83,12 @@
       "reason": "Approval must authorize exactly the pending row replaced by the bundle."
     },
     {
+      "id": "extra_evidence_replacement_row",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.closureImpact.rowsToReplace=extra",
+      "reason": "Evidence must replace exactly the pending row authorized by the bundle."
+    },
+    {
       "id": "mismatched_approved_by",
       "baseLaneId": "SYS-TEL-EXT-001",
       "mutation": "evidencePacket.runAuthorization.approvedBy=mismatch",
@@ -99,6 +105,12 @@
       "baseLaneId": "SYS-TEL-EXT-002",
       "mutation": "evidencePacket.runAuthorization.nativeGrantRefs=wrong",
       "reason": "Evidence must use exactly the native grants authorized by the approval packet."
+    },
+    {
+      "id": "extra_execution_grant",
+      "baseLaneId": "SYS-TEL-EXT-001",
+      "mutation": "evidencePacket.runAuthorization.grants=extra",
+      "reason": "Evidence execution grants must match the single action authorized by the approval packet."
     },
     {
       "id": "evidence_execution_completed_before_start",

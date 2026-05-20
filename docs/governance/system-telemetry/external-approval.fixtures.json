@@ -165,8 +165,28 @@
       "packetRef": "SYS-TEL-EXT-001"
     },
     {
+      "id": "approval_timestamp_not_parseable",
+      "mutation": "approval.approvedAt=notTimestamp",
+      "packetRef": "SYS-TEL-EXT-001"
+    },
+    {
+      "id": "extra_approved_action",
+      "mutation": "approval.approvedActions=extra",
+      "packetRef": "SYS-TEL-EXT-001"
+    },
+    {
+      "id": "extra_credential_lease_ref",
+      "mutation": "authorization.credentialLeaseRefs=extra",
+      "packetRef": "SYS-TEL-EXT-001"
+    },
+    {
       "id": "raw_secret_reference",
       "mutation": "authorization.credentialLeaseRefs=rawSecretRef",
+      "packetRef": "SYS-TEL-EXT-001"
+    },
+    {
+      "id": "extra_external_pending_row",
+      "mutation": "closureImpact.externalPendingRows=extra",
       "packetRef": "SYS-TEL-EXT-001"
     }
   ]
