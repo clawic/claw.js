@@ -80,6 +80,7 @@ export interface ClawCustomAppCapabilityRiskMap {
 }
 
 const sdkFirstSource = "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md";
+const customAppSDKMCPMetadataProjection = "clawjs.custom_app_sdk metadata-only contract projection";
 
 function surfaces(input: Partial<Record<ClawCapabilitySurface, string | ClawCapabilitySurfaceStatus>>): ClawCapabilitySurfaceBinding[] {
   return (["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"] as const).map((surface) => {
@@ -202,7 +203,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       sdk: "@clawjs/claw:capabilities + future db facade",
       cli: "claw db <collection> query --json",
       serviceApi: "@clawjs/database",
-      mcp: "pending",
+      mcp: customAppSDKMCPMetadataProjection,
       relay: "sync.sqliteResources",
       hostBridge: "clawix.bridge.local",
     }),
@@ -347,7 +348,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       sdk: "@clawjs/claw:jobs.list",
       cli: "blocked",
       serviceApi: "claw.api.runtime.jobs",
-      mcp: "pending",
+      mcp: customAppSDKMCPMetadataProjection,
       relay: "local-only",
       hostBridge: "clawix.bridge.local",
     }),
@@ -376,7 +377,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       sdk: "@clawjs/claw:jobs.get",
       cli: "blocked",
       serviceApi: "claw.api.runtime.jobs",
-      mcp: "pending",
+      mcp: customAppSDKMCPMetadataProjection,
       relay: "local-only",
       hostBridge: "clawix.bridge.local",
     }),
@@ -405,7 +406,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       sdk: "@clawjs/claw:jobs.events",
       cli: "blocked",
       serviceApi: "claw.api.runtime.jobs",
-      mcp: "pending",
+      mcp: customAppSDKMCPMetadataProjection,
       relay: "local-only",
       hostBridge: "clawix.bridge.local",
     }),
@@ -598,7 +599,7 @@ export const clawCapabilityCatalog: readonly ClawCapabilityDescriptor[] = [
       sdk: "@clawjs/claw:iot",
       cli: "claw iot ... --json",
       serviceApi: "iot service API",
-      mcp: "pending",
+      mcp: customAppSDKMCPMetadataProjection,
       relay: "local-only unless explicitly classified",
       hostBridge: "clawix.bridge.local",
     }),

@@ -240,6 +240,20 @@ test("custom-app SDK inspection payload exposes dispatch availability and gaps",
   assert.equal(byId.get("jobs.cancel")?.dispatch?.mode, "blocked");
 });
 
+test("custom-app MCP coverage is metadata-only for contract projections", () => {
+  const payload = buildCustomAppSDKInspectionPayload();
+
+  assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
+  assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("mcp.custom_app_sdk"), true);
+  for (const id of ["db.query", "jobs.list", "jobs.get", "jobs.events", "iot.device.action.invoke"]) {
+    const capability = getClawCapability(id);
+    const mcpSurface = capability?.surfaces.find((surface) => surface.surface === "mcp");
+
+    assert.equal(mcpSurface?.status, "available", id);
+    assert.equal(mcpSurface?.ref, "clawjs.custom_app_sdk metadata-only contract projection", id);
+  }
+});
+
 test("custom-app SDK schemas validate current Search DB and resource bridge payloads", () => {
   const record = {
     id: "task-1",
