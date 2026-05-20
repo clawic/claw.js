@@ -55,6 +55,9 @@ function assertCompletionAudit() {
     "| CLJ-SDK-006 | Service API, MCP, and Relay custom-app routes",
     "| CLJ-SDK-007 | Clawix consumes the shared framework contract",
     "| CLJ-SDK-008 | Shells and hosts remain modular and nonblocking",
+    "redacted installed-app Time Profiler smoke",
+    "raw trace artifacts private because Instruments captures local environment details",
+    "Complete real signed-app UI/Instruments performance evidence is missing.",
     "| CLJ-SDK-009 | Unanswered `data_access_lock`, `custom_collections`, and `cli_escape_hatch`",
     "| CLJ-SDK-010 | Final decision-by-decision source-session audit",
     "VALIDATED PRIVATE",
@@ -87,6 +90,8 @@ function assertPublicRouting() {
     "docs/sdk-first-custom-surfaces-plan.md": [
       "Expose `executionBoundary` in the shared custom-app SDK inspection payload",
       "Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/",
+      "Sibling Clawix installed-app Time Profiler smoke",
+      "launch, rescue, delayed-heavy-surface",
     ],
     "docs/decision-map.md": [
       "sdk-first-custom-surfaces-completion-audit.md",
@@ -218,6 +223,7 @@ function assertSiblingClawixArtifacts() {
       "| CLX-SDK-010 | Final decision-by-decision source-session audit",
       "| CLX-SDK-007 | Swift custom surfaces are native but isolated",
       "verified the signed bundled helper, valid stdout `render` output",
+      "docs/sdk-first-custom-surfaces-installed-performance-smoke.md",
     ],
     "scripts/verify-sdk-first-custom-surfaces-goal.mjs": [
       "assertSiblingClawJSArtifacts",
@@ -248,6 +254,15 @@ function assertSiblingClawixArtifacts() {
       "`codex-swift-runner-smoke`",
       "`Rendered by the installed Swift surface runner.`",
       "The Clawix app process stayed alive with the same PID",
+    ],
+    "docs/sdk-first-custom-surfaces-installed-performance-smoke.md": [
+      "Status: `partial_local_evidence`",
+      "Do not publish the raw trace",
+      "`/Applications/Clawix.app/Contents/MacOS/Clawix`",
+      "`Time Profiler`",
+      "A local Web custom app route opened through the sidebar.",
+      "A local Swift declarative app route opened through the sidebar.",
+      "`CLX-SDK-008` remains `EXTERNAL PENDING`",
     ],
     "macos/Sources/Clawix/NetworkControl/NetworkControlBridge.swift": [
       "NetworkControlBridge",

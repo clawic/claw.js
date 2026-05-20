@@ -75,6 +75,10 @@ for user-authored custom UIs that do not block the main app shell.
 - Clawix app manifests can declare capabilities and produce a risk map.
 - Clawix bridge exposes capability inspection to hosted apps.
 - Sidebar/custom surface failures do not break shell navigation or chat.
+- Sibling Clawix installed-app Time Profiler smoke verifies the signed app
+  capture path for Web and Swift custom-surface routing, sidebar scroll, and
+  chat composer editing; launch, rescue, delayed-heavy-surface, and full
+  stack-attributed Instruments analysis remain closure blockers.
 - Protected routes reject replacement attempts.
 - Variant defaults preserve access to the original screen.
 - CLI smoke paths remain available for framework capability validation.
