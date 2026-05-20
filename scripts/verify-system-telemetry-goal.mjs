@@ -320,6 +320,7 @@ function assertDocsAndRegistry() {
       "System telemetry, context widgets, Monitor-backed history, and menu-bar indicators",
       "./system-telemetry-decision-matrix.md",
       "./system-telemetry-external-pending-validation.md",
+      "docs/system-telemetry-external-validation.manifest.json",
       "npm run test:system-telemetry-goal",
     ]],
     ["docs/discoverability.registry.json", [
@@ -329,12 +330,17 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-external-pending-ledger\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-pending-validation.md\"",
       "\"query\": \"system telemetry external pending validation\"",
+      "\"id\": \"system-telemetry-external-validation-manifest\"",
+      "\"canonicalSource\": \"docs/system-telemetry-external-validation.manifest.json\"",
+      "\"query\": \"system telemetry external validation manifest\"",
     ]],
     ["docs/discoverability.md", [
       "`system-telemetry-decision-matrix`",
       "[docs/system-telemetry-decision-matrix.md](/system-telemetry-decision-matrix)",
       "`system-telemetry-external-pending-ledger`",
       "[docs/system-telemetry-external-pending-validation.md](/system-telemetry-external-pending-validation)",
+      "`system-telemetry-external-validation-manifest`",
+      "[docs/system-telemetry-external-validation.manifest.json](/system-telemetry-external-validation.manifest.json)",
     ]],
     ["packages/clawjs-core/src/surface-registry.ts", [
       "claw.systemTelemetry",

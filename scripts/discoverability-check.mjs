@@ -15,6 +15,7 @@ const allowedKinds = new Set([
   "ui-governance",
   "surface-route",
   "docs-page",
+  "validation-manifest",
   "code-comment-policy",
 ]);
 const allowedStatuses = new Set(["enforced", "baseline", "external_pending"]);
