@@ -6,7 +6,53 @@ import IOKit
 import IOKit.graphics
 import IOKit.ps
 
+private final class SystemTelemetryRateStatsCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var previousDiskIOCounters: (timestamp: Date, bytesRead: UInt64, bytesWritten: UInt64)?
+    private var previousNetworkCounters: (timestamp: Date, bytesIn: UInt64, bytesOut: UInt64)?
+
+    func diskIORate(current: (bytesRead: UInt64, bytesWritten: UInt64), now: Date) -> (bytesReadPerSecond: Double, bytesWrittenPerSecond: Double) {
+        lock.lock()
+        let previous = previousDiskIOCounters
+        previousDiskIOCounters = (timestamp: now, bytesRead: current.bytesRead, bytesWritten: current.bytesWritten)
+        lock.unlock()
+
+        guard let previous else {
+            return (bytesReadPerSecond: 0, bytesWrittenPerSecond: 0)
+        }
+
+        let elapsed = max(now.timeIntervalSince(previous.timestamp), 0.001)
+        let read = current.bytesRead >= previous.bytesRead ? current.bytesRead - previous.bytesRead : 0
+        let written = current.bytesWritten >= previous.bytesWritten ? current.bytesWritten - previous.bytesWritten : 0
+        return (
+            bytesReadPerSecond: Double(read) / elapsed,
+            bytesWrittenPerSecond: Double(written) / elapsed
+        )
+    }
+
+    func networkRate(current: (bytesIn: UInt64, bytesOut: UInt64), now: Date) -> (bytesInPerSecond: Double, bytesOutPerSecond: Double) {
+        lock.lock()
+        let previous = previousNetworkCounters
+        previousNetworkCounters = (timestamp: now, bytesIn: current.bytesIn, bytesOut: current.bytesOut)
+        lock.unlock()
+
+        guard let previous else {
+            return (bytesInPerSecond: 0, bytesOutPerSecond: 0)
+        }
+
+        let elapsed = max(now.timeIntervalSince(previous.timestamp), 0.001)
+        let bytesIn = current.bytesIn >= previous.bytesIn ? current.bytesIn - previous.bytesIn : 0
+        let bytesOut = current.bytesOut >= previous.bytesOut ? current.bytesOut - previous.bytesOut : 0
+        return (
+            bytesInPerSecond: Double(bytesIn) / elapsed,
+            bytesOutPerSecond: Double(bytesOut) / elapsed
+        )
+    }
+}
+
 public enum SystemTelemetry {
+    private static let rateStatsCache = SystemTelemetryRateStatsCache()
+
     public static func metricsCatalog() -> JSONValue {
         .array(metricDefinitions.map(metricJSON))
     }
@@ -847,21 +893,10 @@ public enum SystemTelemetry {
     }
 
     private static func diskIORateStats() -> (bytesReadPerSecond: Double, bytesWrittenPerSecond: Double)? {
-        guard let first = diskIOCounters() else {
+        guard let current = diskIOCounters() else {
             return nil
         }
-        let start = Date()
-        usleep(100_000)
-        guard let second = diskIOCounters() else {
-            return nil
-        }
-        let elapsed = max(Date().timeIntervalSince(start), 0.001)
-        let read = second.bytesRead >= first.bytesRead ? second.bytesRead - first.bytesRead : 0
-        let written = second.bytesWritten >= first.bytesWritten ? second.bytesWritten - first.bytesWritten : 0
-        return (
-            bytesReadPerSecond: Double(read) / elapsed,
-            bytesWrittenPerSecond: Double(written) / elapsed
-        )
+        return rateStatsCache.diskIORate(current: current, now: Date())
     }
 
     private static func diskIOCounters() -> (bytesRead: UInt64, bytesWritten: UInt64)? {
@@ -1021,21 +1056,10 @@ public enum SystemTelemetry {
     }
 
     private static func networkRateStats() -> (bytesInPerSecond: Double, bytesOutPerSecond: Double)? {
-        guard let first = networkCounters() else {
+        guard let current = networkCounters() else {
             return nil
         }
-        let start = Date()
-        usleep(100_000)
-        guard let second = networkCounters() else {
-            return nil
-        }
-        let elapsed = max(Date().timeIntervalSince(start), 0.001)
-        let bytesIn = second.bytesIn >= first.bytesIn ? second.bytesIn - first.bytesIn : 0
-        let bytesOut = second.bytesOut >= first.bytesOut ? second.bytesOut - first.bytesOut : 0
-        return (
-            bytesInPerSecond: Double(bytesIn) / elapsed,
-            bytesOutPerSecond: Double(bytesOut) / elapsed
-        )
+        return rateStatsCache.networkRate(current: current, now: Date())
     }
 
     private static func networkCounters() -> (bytesIn: UInt64, bytesOut: UInt64)? {
