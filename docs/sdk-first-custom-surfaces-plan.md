@@ -38,6 +38,10 @@ for user-authored custom UIs that do not block the main app shell.
 7. Expose `executionBoundary` in the shared custom-app SDK inspection payload
    so CLI inspect, service API, MCP, and Relay remain metadata-only contract
    projections while executable rich UI flows use SDK host bridges.
+8. Use the Network Control Plane as the current executable route-family
+   baseline for schema validation, Gateway route policy, redacted event audit,
+   suggestion gating, CLI coverage, and host projection evidence. Future
+   executors must meet the same standard before they count as complete.
 
 ## Clawix Work
 
@@ -63,6 +67,10 @@ for user-authored custom UIs that do not block the main app shell.
 - `@clawjs/claw` exposes `claw.capabilities.list|get|riskMap|source`.
 - Custom-app SDK inspection exposes `executionBoundary` across CLI/API/MCP/
   Relay and declares those routes metadata-only.
+- Network Control Plane schemas, Gateway route policy, redacted event audit,
+  CLI tests, and Clawix host projection evidence are part of the executable
+  route-family gate; unrelated future executors remain blocked until they have
+  equivalent policy/audit/test coverage.
 - Tests cover the baseline catalog and SDK facade.
 - Clawix app manifests can declare capabilities and produce a risk map.
 - Clawix bridge exposes capability inspection to hosted apps.

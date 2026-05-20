@@ -43,6 +43,8 @@ function assertCompletionAudit() {
     "private source-session verifier has re-read",
     "24 decision prompt ids",
     "three interrupted unanswered ids",
+    "The Network Control Plane now provides a typed executable route-family example",
+    "disabled-by-default rule suggestions",
     "| CLJ-SDK-001 | ADR, plan, decision-map, and discoverability routing",
     "| CLJ-SDK-002 | Shared capability catalog and SDK facade",
     "| CLJ-SDK-003 | Custom-app SDK inspection exposes `executionBoundary`",
@@ -134,6 +136,12 @@ function assertFrameworkArtifacts() {
       "claw.capabilities.source()",
       "sdk-first-custom-surfaces",
     ],
+    "packages/clawjs-core/src/network-control-plane.ts": [
+      "networkPolicyEvaluationSchema",
+      "evaluateGatewayNetworkAccess",
+      "createNetworkEvent",
+      "createNetworkRuleSuggestion",
+    ],
   })) {
     for (const snippet of snippets) requireSnippet(relativePath, snippet);
   }
@@ -167,6 +175,15 @@ function assertTests() {
       "relay exposes custom app SDK dispatch metadata as remote-safe contract projection",
       "/v1/remote/custom-app-sdk",
       "relay.remote.custom_app_sdk",
+    ],
+    "packages/clawjs-core/src/network-control-plane.test.ts": [
+      "Network policy evaluation matches gateway routes and redacts by default",
+      "Network events and rule suggestions keep detailed fields opt-in",
+      "Network access manifests and CLI registry expose the framework portal",
+    ],
+    "packages/clawjs/src/cli-network-command.test.ts": [
+      "network CLI records Monitor-backed events and keeps details redacted unless opted in",
+      "network CLI applies rules to Gateway route explanations and suggestions never auto-apply",
     ],
   })) {
     for (const snippet of snippets) requireSnippet(relativePath, snippet);
@@ -221,6 +238,16 @@ function assertSiblingClawixArtifacts() {
     "macos/Tests/ClawixMeshTests/SurfaceShellPerformanceTests.swift": [
       "testCriticalShellStartFastPathStaysBoundedWithAllHeavyDependenciesUnavailable",
       "testExtensionSurfaceStartMeasurementRemainsRouteLocalUnderUnavailableDependencies",
+    ],
+    "macos/Sources/Clawix/NetworkControl/NetworkControlBridge.swift": [
+      "NetworkControlBridge",
+      "resource: \"network\"",
+      "action: \"routes\"",
+      "NetworkControlRouteDecision",
+    ],
+    "macos/Tests/ClawixMeshTests/NetworkControlBridgeTests.swift": [
+      "testDecodesGatewayRouteDecision",
+      "testBridgeUsesSystemNetworkResourceWithoutNativeMutation",
     ],
   })) {
     for (const snippet of snippets) requireSiblingSnippet(siblingRoot, relativePath, snippet);
