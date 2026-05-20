@@ -286,6 +286,37 @@ function assertSiblingClawixArtifacts() {
     return;
   }
 
+  const appSurfaceTestText = [
+    "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityTests.swift",
+    "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityCatalogTests.swift",
+    "macos/Tests/ClawixMeshTests/AppCustomSurfaceResourceQueryTests.swift",
+    "macos/Tests/ClawixMeshTests/AppCustomSurfaceSDKBridgeTests.swift",
+    "macos/Tests/ClawixMeshTests/AppCustomSurfaceTrustPolicyTests.swift",
+    "macos/Tests/ClawixMeshTests/AppHighRiskActionDispatcherTests.swift",
+    "macos/Tests/ClawixMeshTests/AppSwiftSurfaceActionBridgeTests.swift",
+    "macos/Tests/ClawixMeshTests/AppSwiftSurfaceContractTests.swift",
+    "macos/Tests/ClawixMeshTests/AppVariantDefaultsTests.swift",
+  ].map((relativePath) => fs.readFileSync(path.join(siblingRoot, relativePath), "utf8")).join("\n");
+  for (const snippet of [
+    "testHostBridgeExposesCustomAppSDKContractPayload",
+    "testSwiftSurfaceResourceListExecutesThroughRegisteredResources",
+    "capabilities.get",
+    "capabilities.source",
+    "testInjectedAppsSdkExposesMacPlanOnlyFacade",
+    "testInjectedAppsSdkExposesIoTActionFacade",
+    "testInjectedAppsSdkExposesActionsAndSecretsBrokerFacades",
+    "testInjectedAppsSdkExposesJobsListFacade",
+    "testJobsListBridgeValueRedactsRunMetadataThroughSharedPolicy",
+    "testFrameworkHighRiskActionDispatcherKeepsGenericActionsAndSecretsUnavailable",
+    "testDBQueryDSLRejectsCollectionEscapesAndDDLKeys",
+    "testSwiftSurfaceRunnerSupervisorRejectsInProcessPlans",
+    "testSystemTelemetryBridgeValuesMatchSdkContracts",
+    "Signature key",
+    "Trust source",
+  ]) {
+    assert(appSurfaceTestText.includes(snippet), `clawix:macos/Tests/ClawixMeshTests/AppCustomSurface*Tests.swift: missing ${JSON.stringify(snippet)}`);
+  }
+
   for (const [relativePath, snippets] of Object.entries({
     "docs/adr/0019-sdk-first-custom-surfaces-and-nonblocking-shell.md": [
       "SDK-first custom surfaces and nonblocking shell mirror",
@@ -394,23 +425,6 @@ function assertSiblingClawixArtifacts() {
       "localStatusBridge",
       "telemetry",
       "history",
-    ],
-    "macos/Tests/ClawixMeshTests/AppCustomSurfaceCapabilityTests.swift": [
-      "testHostBridgeExposesCustomAppSDKContractPayload",
-      "testSwiftSurfaceResourceListExecutesThroughRegisteredResources",
-      "capabilities.get",
-      "capabilities.source",
-      "testInjectedAppsSdkExposesMacPlanOnlyFacade",
-      "testInjectedAppsSdkExposesIoTActionFacade",
-      "testInjectedAppsSdkExposesActionsAndSecretsBrokerFacades",
-      "testInjectedAppsSdkExposesJobsListFacade",
-      "testJobsListBridgeValueRedactsRunMetadataThroughSharedPolicy",
-      "testFrameworkHighRiskActionDispatcherKeepsGenericActionsAndSecretsUnavailable",
-      "testDBQueryDSLRejectsCollectionEscapesAndDDLKeys",
-      "testSwiftSurfaceRunnerSupervisorRejectsInProcessPlans",
-      "testSystemTelemetryBridgeValuesMatchSdkContracts",
-      "Signature key",
-      "Trust source",
     ],
     "macos/Tests/ClawixMeshTests/AppsStoreCancellationTests.swift": [
       "testImportAppVerifiesSignedPackageDigestWithHostTrustPolicy",
