@@ -115,8 +115,10 @@ for user-authored custom UIs that do not block the main app shell.
 - Sidebar/custom surface failures do not break shell navigation or chat.
 - Sibling Clawix installed-app Time Profiler smoke verifies the signed app
   launch and attach capture paths for Web and Swift custom-surface routing,
-  sidebar scroll, and chat composer editing; rescue, delayed-heavy-surface, and
-  full stack-attributed Instruments analysis remain closure blockers.
+  sidebar scroll, chat composer editing, rescue reachability, and a
+  deliberately delayed-heavy-surface Web fixture reaching route-local timeout;
+  post-capture app liveness and full stack-attributed Instruments analysis
+  remain closure blockers.
 - Protected routes reject replacement attempts.
 - Variant defaults preserve access to the original screen.
 - CLI smoke paths remain available for framework capability validation.
