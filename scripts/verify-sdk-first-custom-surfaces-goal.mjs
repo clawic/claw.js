@@ -185,6 +185,7 @@ function assertFrameworkArtifacts() {
       "id: \"jobs.start\"",
       "id: \"jobs.cancel\"",
       "cli: \"blocked\"",
+      "export type ClawCapabilitySurfaceStatus = \"available\" | \"blocked\" | \"notApplicable\";",
       "Pending capability surface binding is not allowed",
       "approvalRequired",
       "blocked",
