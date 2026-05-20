@@ -299,6 +299,8 @@ function assertSiblingClawixArtifacts() {
   ].map((relativePath) => fs.readFileSync(path.join(siblingRoot, relativePath), "utf8")).join("\n");
   for (const snippet of [
     "testHostBridgeExposesCustomAppSDKContractPayload",
+    "testHostBridgeSurfaceBindingsAreCompleteAndResolvedWhenPublished",
+    "XCTAssertEqual(checkedSurfaceGroups, capabilities.count)",
     "testSwiftSurfaceResourceListExecutesThroughRegisteredResources",
     "capabilities.get",
     "capabilities.source",
@@ -366,6 +368,10 @@ function assertSiblingClawixArtifacts() {
       "jobs.get",
       "jobsEventsSchemaRef",
       "jobs.events",
+      "static let canonicalSurfaceNames",
+      "static func surfaceBindingsBridgeValue(for descriptor",
+      "statuses[\"cli\"] = \"blocked\"",
+      "statuses[\"mcp\"] = \"blocked\"",
     ],
     "macos/Sources/Clawix/Apps/AppPackageTrustPolicy.swift": [
       "app-package-trust-roots.json",
