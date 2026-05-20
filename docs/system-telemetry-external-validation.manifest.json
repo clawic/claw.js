@@ -26,6 +26,16 @@
     "path": "docs/system-telemetry-completion-audit.md",
     "requiredRowPrefix": "STA",
     "requiredRowCount": 18,
+    "statusSummary": {
+      "validatedLocalRows": 14,
+      "activeClosureGateRows": 1,
+      "externalPendingRows": 3,
+      "externalPendingRowIds": [
+        "STA-016",
+        "STA-017",
+        "STA-018"
+      ]
+    },
     "closureRole": "tracks the full system telemetry goal requirement by requirement before goal completion"
   },
   "rows": [
