@@ -37,6 +37,27 @@ const EXPECTED_CUSTOM_APP_CAPABILITY_IDS = [
   "system.telemetry.history",
   "system.telemetry.snapshot",
 ];
+const EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS = [
+  "db.query",
+  "jobs.events",
+  "jobs.get",
+  "jobs.list",
+  "jobs.stream",
+  "resources.list",
+  "resources.read",
+  "search.query",
+  "system.telemetry.history",
+  "system.telemetry.snapshot",
+];
+const EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS = [
+  "actions.invoke",
+  "iot.device.action.invoke",
+  "jobs.cancel",
+  "jobs.start",
+  "mac.action.plan",
+  "secrets.broker",
+];
+const sorted = (items: readonly string[]) => [...items].sort();
 
 test("SDK-first capability catalog exposes baseline custom-app contracts", () => {
   const ids = listClawCapabilities().map((capability) => capability.id).sort();
@@ -95,23 +116,11 @@ test("custom app authority is broad for ordinary reads and approval-gated for hi
   const riskMap = buildCustomAppCapabilityRiskMap();
 
   assert.deepEqual(riskMap.authorityModel, "localWideReadsHighRiskApproval");
-  assert.ok(riskMap.ordinaryAccess.includes("search.query"));
-  assert.ok(riskMap.ordinaryAccess.includes("db.query"));
-  assert.ok(riskMap.ordinaryAccess.includes("resources.list"));
-  assert.ok(riskMap.ordinaryAccess.includes("resources.read"));
-  assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.snapshot"));
-  assert.ok(riskMap.ordinaryAccess.includes("system.telemetry.history"));
-  assert.ok(riskMap.ordinaryAccess.includes("jobs.list"));
-  assert.ok(riskMap.ordinaryAccess.includes("jobs.get"));
-  assert.ok(riskMap.ordinaryAccess.includes("jobs.events"));
-  assert.ok(riskMap.ordinaryAccess.includes("jobs.stream"));
-  assert.ok(riskMap.approvalRequired.includes("jobs.start"));
-  assert.ok(riskMap.approvalRequired.includes("jobs.cancel"));
-  assert.ok(riskMap.approvalRequired.includes("actions.invoke"));
-  assert.ok(riskMap.approvalRequired.includes("secrets.broker"));
-  assert.ok(riskMap.approvalRequired.includes("mac.action.plan"));
-  assert.ok(riskMap.approvalRequired.includes("iot.device.action.invoke"));
-  assert.deepEqual(new Set(riskMap.highRisk), new Set(riskMap.approvalRequired));
+  assert.deepEqual(sorted(riskMap.capabilityIds), EXPECTED_CUSTOM_APP_CAPABILITY_IDS);
+  assert.deepEqual(sorted(riskMap.ordinaryAccess), EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS);
+  assert.deepEqual(sorted(riskMap.approvalRequired), EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS);
+  assert.deepEqual(sorted(riskMap.highRisk), EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS);
+  assert.deepEqual(riskMap.blocked, []);
 });
 
 test("ordinary custom-app access cannot include high-risk behavior", () => {
@@ -262,10 +271,11 @@ test("custom-app SDK inspection payload has no missing schema refs", () => {
   assert.ok(payload.capabilities.some((capability) => capability.id === "jobs.cancel"));
   assert.ok(payload.capabilities.some((capability) => capability.id === "mac.action.plan"));
   assert.ok(payload.referencedSchemaRefs.includes("claw.actions.invoke.v1"));
-  assert.ok(payload.riskMap.ordinaryAccess.includes("jobs.stream"));
-  assert.ok(payload.riskMap.approvalRequired.includes("jobs.start"));
-  assert.ok(payload.riskMap.approvalRequired.includes("jobs.cancel"));
-  assert.ok(payload.riskMap.approvalRequired.includes("actions.invoke"));
+  assert.deepEqual(sorted(payload.riskMap.capabilityIds), EXPECTED_CUSTOM_APP_CAPABILITY_IDS);
+  assert.deepEqual(sorted(payload.riskMap.ordinaryAccess), EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS);
+  assert.deepEqual(sorted(payload.riskMap.approvalRequired), EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS);
+  assert.deepEqual(sorted(payload.riskMap.highRisk), EXPECTED_APPROVAL_REQUIRED_CAPABILITY_IDS);
+  assert.deepEqual(payload.riskMap.blocked, []);
 });
 
 test("custom-app SDK inspection payload exposes dispatch availability and gaps", () => {
