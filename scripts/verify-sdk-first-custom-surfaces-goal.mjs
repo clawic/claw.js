@@ -114,6 +114,7 @@ function assertCompletionAudit() {
     "exact reviewed core survival route and heavy dependency sets",
     "exact reviewed surface lifecycle state and report sets",
     "exact reviewed readiness mode and direct child-reported route sets",
+    "exact reviewed surface route module set",
     "redacted installed-app Time Profiler smoke",
     "launched `/Applications/Clawix.app` under Instruments",
     "rescue reachability, and a deliberately delayed-heavy-surface Web fixture reaching route-local timeout",
@@ -634,6 +635,10 @@ function assertSiblingClawixArtifacts() {
       "cancel",
     ],
     "macos/Tests/ClawixMeshTests/SurfaceRouteRegistryTests.swift": [
+      "testSurfaceRouteModuleSetAndRepresentativeRoutingStayExact",
+      "reviewedSurfaceRouteModuleKinds",
+      "SurfaceRouteModule.allCases",
+      "\"network\"",
       "testReadinessModesAndDirectChildReportedRoutesStayExact",
       "reviewedSurfaceReadinessModeKinds",
       "reviewedDirectChildReportedReadinessRouteIds",
