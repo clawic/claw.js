@@ -153,6 +153,10 @@ describe("MCP connector control plane", () => {
       assert.equal(toolNames.includes("system.controls"), true);
       assert.equal(toolNames.includes("system.control_plan"), true);
       assert.equal(toolNames.includes("system.history"), true);
+      const providerPlanTool = tools.json().result.tools.find((entry: { name: string }) => entry.name === "system.provider_plan");
+      assert.equal(providerPlanTool.inputSchema.properties.credentialRef.description.includes("Public credential lease reference"), true);
+      assert.equal(providerPlanTool.inputSchema.properties.credentialRef.not.anyOf.some((rule: { pattern: string }) => rule.pattern === "secret://"), true);
+      assert.equal(providerPlanTool.inputSchema.properties.credentialRef.not.anyOf.some((rule: { pattern: string }) => rule.pattern === "file://"), true);
 
       const snapshot = await app.inject({
         method: "POST",
@@ -220,12 +224,25 @@ describe("MCP connector control plane", () => {
           jsonrpc: "2.0",
           id: 46,
           method: "tools/call",
-          params: { name: "system.provider_plan", arguments: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "credential-test" } },
+          params: { name: "system.provider_plan", arguments: { providerId: "context.weather.live", credentialRef: "credential-lease:weather-local", reason: "credential-test" } },
         },
       });
       assert.equal(providerPlanWithCredential.statusCode, 200);
       assert.equal(providerPlanWithCredential.json().result.content.request.credentialRef, "provided_redacted");
-      assert.equal(JSON.stringify(providerPlanWithCredential.json()).includes("secret://weather/local"), false);
+      assert.equal(JSON.stringify(providerPlanWithCredential.json()).includes("credential-lease:weather-local"), false);
+
+      const providerPlanWithUnsafeCredential = await app.inject({
+        method: "POST",
+        url: "/v1/mcp/expose/rpc",
+        payload: {
+          jsonrpc: "2.0",
+          id: 47,
+          method: "tools/call",
+          params: { name: "system.provider_plan", arguments: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "unsafe-credential-test" } },
+        },
+      });
+      assert.equal(providerPlanWithUnsafeCredential.statusCode, 200);
+      assert.equal(providerPlanWithUnsafeCredential.json().result.content.error, "unsafe_credential_ref");
 
       const controls = await app.inject({
         method: "POST",
@@ -317,11 +334,20 @@ describe("MCP connector control plane", () => {
         method: "POST",
         url: "/v1/system/providers/plan",
         headers: { authorization: `Bearer ${config.sharedSecret}` },
-        payload: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "credential-test" },
+        payload: { providerId: "context.weather.live", credentialRef: "credential-lease:weather-local", reason: "credential-test" },
       });
       assert.equal(providerPlanWithCredential.statusCode, 200);
       assert.equal(providerPlanWithCredential.json().request.credentialRef, "provided_redacted");
-      assert.equal(JSON.stringify(providerPlanWithCredential.json()).includes("secret://weather/local"), false);
+      assert.equal(JSON.stringify(providerPlanWithCredential.json()).includes("credential-lease:weather-local"), false);
+
+      const providerPlanWithUnsafeCredential = await app.inject({
+        method: "POST",
+        url: "/v1/system/providers/plan",
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "unsafe-credential-test" },
+      });
+      assert.equal(providerPlanWithUnsafeCredential.statusCode, 200);
+      assert.equal(providerPlanWithUnsafeCredential.json().error, "unsafe_credential_ref");
 
       const controls = await app.inject({
         method: "GET",

@@ -207,9 +207,11 @@ recording flags and hardware control execution. `POST
 context providers; it records required grants, credential reference status,
 blocked network access, Monitor write, receipt, and portable `auditPlan`
 redaction metadata without calling the provider or reading secrets. The
-provider plan response projects any supplied credential reference as
-`provided_redacted`; clients must not expect the original reference to be
-returned by API or MCP surfaces. Provider list and plan responses also include
+provider plan response requires any supplied credential reference to be a
+`public credential lease reference`. Raw secret refs, file URLs, private local
+paths, and key-like tokens are rejected with `unsafe_credential_ref`. Accepted references
+are projected only as `provided_redacted`; clients must not expect the original
+reference to be returned by API or MCP surfaces. Provider list and plan responses also include
 `adapterContract`, the portable plugin contract a real provider must satisfy:
 provider id/kind/mode, required grants, credential-ref policy, network gate,
 metric output keys, `system_telemetry_metric_sample` output shape, required

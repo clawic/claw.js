@@ -73,6 +73,17 @@ function publicSafetyErrors(value) {
     .map(([, label]) => `contains ${label}`);
 }
 
+function assertPublicCredentialLeaseRefSchema(schema, label) {
+  const definition = schema.$defs?.publicCredentialLeaseRef;
+  const patterns = definition?.not?.anyOf?.map((rule) => rule.pattern) ?? [];
+  assert(definition?.type === "string", `${label}: publicCredentialLeaseRef must be a string`);
+  assert(definition?.minLength === 1, `${label}: publicCredentialLeaseRef must be non-empty`);
+  for (const pattern of ["secret://", "file://", "[/\\\\][Uu]sers[/\\\\]", "-----BEGIN", "\\bsk-[A-Za-z0-9_-]+", "\\bAKIA[A-Z0-9]+"]) {
+    assert(patterns.includes(pattern), `${label}: publicCredentialLeaseRef must reject ${pattern}`);
+  }
+  return "#/$defs/publicCredentialLeaseRef";
+}
+
 function run(command, args, options = {}) {
   try {
     return execFileSync(command, args, {
@@ -565,6 +576,8 @@ function assertExternalApprovalSchema() {
   for (const field of ["credentialLeaseRefs", "nativeGrantRefs", "locationGrantRefs", "hardwareProviderRefs"]) {
     assert(schema.properties?.authorization?.properties?.[field]?.maxItems === 1, `external approval schema: ${field} must be exact`);
   }
+  const publicCredentialLeaseRef = assertPublicCredentialLeaseRefSchema(schema, "external approval schema");
+  assert(schema.properties?.authorization?.properties?.credentialLeaseRefs?.items?.$ref === publicCredentialLeaseRef, "external approval schema: credential lease refs must use public-safe refs");
   assert(schema.properties?.approval?.properties?.approvedAt?.format === "date-time", "external approval schema: approvedAt must be date-time");
   assert(schema.properties?.approval?.properties?.expiresAt?.format === "date-time", "external approval schema: expiresAt must be date-time");
   assert(schema.properties?.preflight?.properties?.command?.pattern === "^claw system ", "external approval schema: preflight command must be claw system");
@@ -765,6 +778,8 @@ function assertExternalEvidenceSchema() {
   }
   assert(schema.properties?.runAuthorization?.properties?.grants?.maxItems === 1, "external evidence schema: run authorization grants must be exact");
   assert(schema.properties?.runAuthorization?.properties?.credentialLeaseRefs?.maxItems === 1, "external evidence schema: credential lease refs must be exact");
+  const publicCredentialLeaseRef = assertPublicCredentialLeaseRefSchema(schema, "external evidence schema");
+  assert(schema.properties?.runAuthorization?.properties?.credentialLeaseRefs?.items?.$ref === publicCredentialLeaseRef, "external evidence schema: credential lease refs must use public-safe refs");
   assert(schema.properties?.runAuthorization?.properties?.nativeGrantRefs?.maxItems === 1, "external evidence schema: native grant refs must be exact");
   assert(schema.properties?.runAuthorization?.properties?.locationGrantRefs?.maxItems === 1, "external evidence schema: location grant refs must be exact");
   assert(schema.properties?.runAuthorization?.properties?.hardwareProviderRefs?.maxItems === 1, "external evidence schema: hardware provider refs must be exact");
@@ -1157,12 +1172,16 @@ function assertDocsAndRegistry() {
       "local CLI snapshot path",
       "redacted weather location tags",
       "provided_redacted",
+      "public credential lease reference",
+      "unsafe_credential_ref",
       "`adapterContract`",
       "system_telemetry_metric_sample",
       "adapterContract.output.metrics",
       "stable contract real provider plugins",
       ".claw/data/system-telemetry-audit.jsonl",
       "Local CLI provider and control",
+      "`--dry-run true`",
+      "`--host-approval-id`",
     ]],
     ["docs/api.md", [
       "/v1/system/providers/plan",
@@ -1174,6 +1193,8 @@ function assertDocsAndRegistry() {
       "signed-host operation",
       "portable `auditPlan`",
       "provided_redacted",
+      "public credential lease reference",
+      "unsafe_credential_ref",
       "`adapterContract`",
       "portable plugin contract",
       "adapterContract.output.metrics",
@@ -1330,10 +1351,25 @@ function assertMcpAndApiTestCoverage() {
     "willExecute, false",
     "receiptStatus",
     "execute_native_action",
+    "Public credential lease reference",
+    "credentialRef.not.anyOf",
     "retention.status",
     "chart",
   ]) {
     assert(text.includes(snippet), `packages/clawjs-mcp/src/control-plane.test.ts: missing ${JSON.stringify(snippet)}`);
+  }
+  const expose = read("packages/clawjs-mcp/src/expose.ts");
+  for (const snippet of [
+    "publicCredentialLeaseRefInputSchema",
+    "Public credential lease reference",
+    "secret://",
+    "file://",
+    "[/\\\\][Uu]sers[/\\\\]",
+    "\\bsk-[A-Za-z0-9_-]+",
+    "\\bAKIA[A-Z0-9]+",
+    "credentialRef: publicCredentialLeaseRefInputSchema",
+  ]) {
+    assert(expose.includes(snippet), `packages/clawjs-mcp/src/expose.ts: missing ${JSON.stringify(snippet)}`);
   }
 }
 
@@ -1543,11 +1579,22 @@ function assertProvidersAndControls() {
   assert(weatherPlan.audit?.auditPath === undefined, "weather provider plan: audit must not expose local filesystem path");
   assert(!JSON.stringify(weatherPlan).includes("/Users/"), "weather provider plan: must not expose private filesystem paths");
 
-  const weatherCredentialPlan = parseCliPayload(claw(["system", "providers", "plan", "context.weather.live", "--credential-ref", "secret://weather/local", "--reason", "goal-credential-verify", "--json"]), "weather provider credential plan");
+  const weatherCredentialPlan = parseCliPayload(claw(["system", "providers", "plan", "context.weather.live", "--credential-ref", "credential-lease:weather-local", "--reason", "goal-credential-verify", "--json"]), "weather provider credential plan");
   assert(weatherCredentialPlan.request?.credentialRef === "provided_redacted", "weather provider credential plan: credential ref must be projected as redacted");
   assert(weatherCredentialPlan.steps?.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), "weather provider credential plan: credential step must stay pending, not connect");
-  assert(!JSON.stringify(weatherCredentialPlan).includes("secret://weather/local"), "weather provider credential plan: must not expose credential ref");
+  assert(!JSON.stringify(weatherCredentialPlan).includes("credential-lease:weather-local"), "weather provider credential plan: must not expose credential ref");
   assert(weatherCredentialPlan.audit?.auditPath === undefined, "weather provider credential plan: audit must not expose local filesystem path");
+
+  const unsafeWeatherCredentialPlan = clawRaw(["system", "providers", "plan", "context.weather.live", "--credential-ref", "secret://weather/local", "--reason", "goal-unsafe-credential-verify", "--json"]);
+  assert(unsafeWeatherCredentialPlan.status === 64, `weather provider unsafe credential plan: expected usage exit, got ${unsafeWeatherCredentialPlan.status}`);
+  let unsafeCredentialPayload = {};
+  try {
+    unsafeCredentialPayload = JSON.parse(unsafeWeatherCredentialPlan.stdout);
+  } catch (error) {
+    fail(`weather provider unsafe credential plan: invalid JSON output: ${error.message}`);
+  }
+  assert(unsafeCredentialPayload.ok === false, "weather provider unsafe credential plan: must return JSON error envelope");
+  assert(unsafeCredentialPayload.error?.code === "unsafe_credential_ref", "weather provider unsafe credential plan: must reject unsafe credential refs");
 
   const sensorPlan = parseCliPayload(claw(["system", "providers", "plan", "system.sensors.signed", "--reason", "goal-verify", "--json"]), "sensor provider plan");
   assert(sensorPlan.willConnect === false, "sensor provider plan: must not connect");
@@ -1613,10 +1660,18 @@ function assertSignedHostBrokerCoverage() {
     "appendSystemTelemetryPlanAudit(",
     "credentialRefRedacted",
     "valueRedacted",
+    "approval_required",
+    "System control execution requires --dry-run true",
+    "input.flags[\"host-approval-id\"]",
+    "isTruthyFlag(input.flags.confirm",
     "auditStatus: \"recorded\"",
   ]) {
     assert(cliSystem.includes(snippet), `cli-system-command.ts: missing local plan audit snippet ${JSON.stringify(snippet)}`);
   }
+
+  const controlGateTests = read("packages/clawjs/src/index.test.ts");
+  assert(controlGateTests.includes("blocks non-dry-run system control execution before invoking the host without exact approval"), "index.test.ts: missing non-dry-run control approval gate test");
+  assert(controlGateTests.includes("fs.existsSync(markerPath), false"), "index.test.ts: control approval gate test must prove host was not invoked");
 
   const coreTelemetry = read("packages/clawjs-core/src/system-telemetry.ts");
   for (const snippet of [

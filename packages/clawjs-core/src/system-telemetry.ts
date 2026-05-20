@@ -1065,6 +1065,20 @@ export function createSystemTelemetryProviderAdapterContract(provider: SystemTel
   };
 }
 
+export function systemTelemetryCredentialRefSafetyError(value: string | null | undefined): string | null {
+  const ref = value?.trim();
+  if (!ref) return null;
+  const checks: Array<[RegExp, string]> = [
+    [/secret:\/\//i, "secret_scheme"],
+    [/file:\/\//i, "file_url"],
+    [/\/Users\//, "private_filesystem_path"],
+    [/-----BEGIN/, "key_material"],
+    [/\bsk-[a-z0-9_-]+/i, "api_key_like_token"],
+    [/\bAKIA[A-Z0-9]+/, "cloud_access_key_like_token"],
+  ];
+  return checks.find(([pattern]) => pattern.test(ref))?.[1] ?? null;
+}
+
 export function createSystemTelemetryProviderPlan(input: {
   provider: SystemTelemetryProviderDefinition;
   credentialRef?: string | null;
@@ -1075,7 +1089,9 @@ export function createSystemTelemetryProviderPlan(input: {
   const createdAt = input.now ?? new Date().toISOString();
   const idSuffix = input.idSuffix ?? String(Date.now());
   const requiredGrants = input.provider.requiresGrant ? [input.provider.requiresGrant] : [];
-  const credentialProvided = Boolean(input.credentialRef);
+  const credentialSafetyError = systemTelemetryCredentialRefSafetyError(input.credentialRef);
+  if (credentialSafetyError) throw new Error(`Unsafe system telemetry credential reference: ${credentialSafetyError}`);
+  const credentialProvided = Boolean(input.credentialRef?.trim());
   const credentialRefProjection = credentialProvided ? "provided_redacted" : null;
   const auditEvent = `system.telemetry.provider.${input.provider.kind}.${input.provider.mode}`;
   return {

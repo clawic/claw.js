@@ -581,10 +581,10 @@ claw system widgets list --json
 claw system widgets upsert cpu-menu --metric-key system.cpu.load1 --presentation sparkline --placement menubar --json
 claw system widgets delete cpu-menu --json
 claw system providers list --json
-claw system providers plan context.weather.live --credential-ref secret://weather/local --json
+claw system providers plan context.weather.live --credential-ref credential-lease:weather-local --json
 claw system controls list --json
 claw system controls plan system.display.set_brightness --target main --value 70 --json
-claw system controls execute system.audio.set_output_volume --value 35 --host-command /path/to/claw-host --json
+claw system controls execute system.audio.set_output_volume --value 35 --dry-run true --host-command /path/to/claw-host --json
 claw inspect route system.telemetryAgentContext --json
 claw inspect route system.telemetrySignedHostControl --json
 claw inspect route clawix.menuBarSystemIndicators --json
@@ -647,9 +647,11 @@ plan <provider-id>` returns the fail-closed provider broker plan for a live
 provider, including required grants, credential reference status, blocked
 network connection, Monitor write step, audit event, receipt status, and a
 portable `auditPlan` that states the redaction and non-execution policy; it does
-not call the provider or read secret values. When `--credential-ref` is present,
-the response exposes only `provided_redacted`; the actual reference is never
-returned in the provider plan. `system providers list` and `system providers
+not call the provider or read secret values. `--credential-ref` must be a
+public credential lease reference; raw secret refs, file URLs, private local
+paths, and key-like tokens are rejected with `unsafe_credential_ref`. When
+`--credential-ref` is present, the response exposes only `provided_redacted`;
+the actual reference is never returned in the provider plan. `system providers list` and `system providers
 plan` also expose a portable `adapterContract`: provider id/kind/mode, required
 grants, credential-ref policy, network gate, metric output keys,
 `system_telemetry_metric_sample` sample shape, mandatory Monitor write, audit
@@ -693,7 +695,9 @@ exposes plan-first contracts for fan, power, process, network, display, and
 audio changes. `controls plan` does not execute hardware mutations: it returns
 a signed-host broker plan with required grants, confirmation policy, receipt,
 portable `auditPlan` redaction metadata, and fail-closed execution state. `controls execute`
-requires a configured signed host command. In the current macOS host, audio
+requires either `--dry-run true`, or an exact `--host-approval-id`/`--approval-id`
+plus `--confirm true`, before the CLI invokes the configured signed host command.
+In the current macOS host, audio
 output volume and display brightness map to Mac Control capabilities, run
 through the Mac Action Broker, and issue broker receipts plus audit events;
 unsupported or higher-risk controls return a structured fail-closed host

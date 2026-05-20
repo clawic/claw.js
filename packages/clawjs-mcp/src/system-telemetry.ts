@@ -13,6 +13,7 @@ import {
   listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
   resolveClawPersistentSurfacePath,
+  systemTelemetryCredentialRefSafetyError,
   type SystemTelemetryMetricSample,
   type SystemTelemetrySnapshot,
 } from "@clawjs/core";
@@ -367,6 +368,14 @@ export function mcpSystemTelemetryProviderPlanPayload(input: { providerId: strin
       error: "unknown_provider",
       providerId: input.providerId,
       providers: listSystemTelemetryProviders().map((entry) => entry.id),
+    };
+  }
+  const credentialSafetyError = systemTelemetryCredentialRefSafetyError(input.credentialRef);
+  if (credentialSafetyError) {
+    return {
+      error: "unsafe_credential_ref",
+      reason: credentialSafetyError,
+      message: "System telemetry provider plans require a public credential lease reference.",
     };
   }
   return createSystemTelemetryProviderPlan({

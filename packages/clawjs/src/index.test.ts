@@ -451,7 +451,7 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
 
   const providerPlanWithCredential = await runCliCapture([
     "system", "providers", "plan", "context.weather.live",
-    "--credential-ref", "secret://weather/local",
+    "--credential-ref", "credential-lease:weather-local",
     "--reason", "credential-test",
     "--workspace", workspaceRoot,
     "--json",
@@ -465,12 +465,25 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(providerPlanWithCredentialPayload.request.credentialRef, "provided_redacted");
   assert.equal(providerPlanWithCredentialPayload.request.reason, "credential-test");
   assert.equal(providerPlanWithCredentialPayload.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), true);
-  assert.equal(providerPlanWithCredential.stdout.includes("secret://weather/local"), false);
+  assert.equal(providerPlanWithCredential.stdout.includes("credential-lease:weather-local"), false);
   assert.equal(providerPlanWithCredentialPayload.audit.storageRef, "claw.workspace.data/system-telemetry-audit.jsonl");
   assert.equal(providerPlanWithCredentialPayload.audit.auditPath, undefined);
   const providerPlanWithCredentialAudit = fs.readFileSync(providerPlanAuditPath, "utf8");
   assert.equal(providerPlanWithCredentialAudit.includes("\"credentialRefRedacted\":true"), true);
-  assert.equal(providerPlanWithCredentialAudit.includes("secret://weather/local"), false);
+  assert.equal(providerPlanWithCredentialAudit.includes("credential-lease:weather-local"), false);
+
+  const providerPlanWithUnsafeCredential = await runCliCapture([
+    "system", "providers", "plan", "context.weather.live",
+    "--credential-ref", "secret://weather/local",
+    "--reason", "unsafe-credential-test",
+    "--workspace", workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(providerPlanWithUnsafeCredential.code, CLI_EXIT_USAGE);
+  const unsafeCredentialPayload = JSON.parse(providerPlanWithUnsafeCredential.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(unsafeCredentialPayload.ok, false);
+  assert.equal(unsafeCredentialPayload.error.code, "unsafe_credential_ref");
+  assert.match(unsafeCredentialPayload.error.message, /public credential lease reference/);
 
   const sensorProviderPlan = await runCliCapture(["system", "providers", "plan", "system.sensors.signed", "--reason", "sensor-validation", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(sensorProviderPlan.code, CLI_EXIT_OK);
@@ -646,6 +659,32 @@ console.log(JSON.stringify({
   assert.equal(payload.response.data.receipt.status, "issued");
   assert.equal(payload.response.data.receipt.result, "planned");
   assert.equal(payload.response.data.receipt.mac_receipt_id, "macact_test");
+});
+
+test("runCli blocks non-dry-run system control execution before invoking the host without exact approval", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-control-approval-"));
+  const hostCommand = path.join(workspaceRoot, "host-control.js");
+  const markerPath = path.join(workspaceRoot, "invoked.txt");
+  fs.writeFileSync(hostCommand, `#!/usr/bin/env node
+require("fs").writeFileSync(${JSON.stringify(markerPath)}, "invoked");
+console.log(JSON.stringify({ ok: true, data: { status: "executed" } }));
+`);
+  fs.chmodSync(hostCommand, 0o755);
+
+  const result = await runCliCapture([
+    "system", "controls", "execute", "system.audio.set_output_volume",
+    "--target", "default",
+    "--value", "35",
+    "--reason", "missing-approval",
+    "--host-command", hostCommand,
+    "--json",
+  ], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "approval_required");
+  assert.match(payload.error.message, /--host-approval-id|--approval-id/);
+  assert.equal(fs.existsSync(markerPath), false);
 });
 
 test("runCli records local context provider samples into monitor metric history", async () => {

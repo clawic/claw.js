@@ -16,6 +16,7 @@ import {
   listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
   resolveClawPersistentSurfacePath,
+  systemTelemetryCredentialRefSafetyError,
   type SystemTelemetryMetricDefinition,
   type SystemTelemetryMetricSample,
   type SystemTelemetrySnapshot,
@@ -423,6 +424,10 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   throw new CliHandledError("invalid_boolean", `Invalid boolean value: ${value}`, CLI_EXIT_USAGE);
 }
 
+function isTruthyFlag(value: string | undefined): boolean {
+  return value !== undefined && ["true", "1", "yes", "on"].includes(value.toLowerCase());
+}
+
 function parseThreshold(value: string | undefined): number | string | boolean {
   if (value === undefined) throw new CliHandledError("missing_threshold", "Missing --threshold.", CLI_EXIT_USAGE);
   if (["true", "false"].includes(value.toLowerCase())) return value.toLowerCase() === "true";
@@ -726,6 +731,7 @@ async function executeHostSystemControl(input: {
     ["actor-role", input.flags["actor-role"] ?? input.flags.actorRole],
     ["confirm", input.flags.confirm ?? input.flags.approved],
     ["dry-run", input.flags["dry-run"] ?? input.flags.dryRun],
+    ["approval-id", input.flags["host-approval-id"] ?? input.flags.hostApprovalId ?? input.flags["approval-id"] ?? input.flags.approvalId],
   ] as Array<[string, string | undefined]>) {
     if (value !== undefined) args.splice(args.length - 1, 0, `--${flag}`, value);
   }
@@ -1541,9 +1547,14 @@ export async function runSystemCli(input: {
       if (!id) throw new CliHandledError("usage_error", `Usage: ${input.binName} system providers plan <provider-id> [--credential-ref <ref>]`, CLI_EXIT_USAGE);
       const provider = findSystemTelemetryProvider(id);
       if (!provider) throw new CliHandledError("unknown_provider", `Unknown system provider: ${id}`, CLI_EXIT_USAGE);
+      const credentialRef = input.flags["credential-ref"] ?? input.flags.credentialRef;
+      const credentialSafetyError = systemTelemetryCredentialRefSafetyError(credentialRef);
+      if (credentialSafetyError) {
+        throw new CliHandledError("unsafe_credential_ref", `System telemetry provider plans require a public credential lease reference, not ${credentialSafetyError}.`, CLI_EXIT_USAGE);
+      }
       const payload = createSystemTelemetryProviderPlan({
         provider,
-        credentialRef: input.flags["credential-ref"] ?? input.flags.credentialRef,
+        credentialRef,
         reason: input.flags.reason,
       });
       const auditedPayload = appendSystemTelemetryPlanAudit(input.workspaceRoot, "provider", payload);
@@ -1582,6 +1593,12 @@ export async function runSystemCli(input: {
       if (!id) throw new CliHandledError("usage_error", `Usage: ${input.binName} system controls execute <control-id> --value <value> --host-command <path>`, CLI_EXIT_USAGE);
       const action = findSystemTelemetryControlAction(id);
       if (!action) throw new CliHandledError("unknown_control", `Unknown system control: ${id}`, CLI_EXIT_USAGE);
+      const dryRun = isTruthyFlag(input.flags["dry-run"] ?? input.flags.dryRun);
+      const approvalId = input.flags["host-approval-id"] ?? input.flags.hostApprovalId ?? input.flags["approval-id"] ?? input.flags.approvalId;
+      const confirmed = isTruthyFlag(input.flags.confirm ?? input.flags.approved);
+      if (!dryRun && (!approvalId || !confirmed)) {
+        throw new CliHandledError("approval_required", "System control execution requires --dry-run true, or an exact --host-approval-id/--approval-id plus --confirm true.", CLI_EXIT_USAGE);
+      }
       const response = await executeHostSystemControl({ id, flags: input.flags });
       if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "system", { control: action, response }, { subcommand: "controls execute" });
       else writeHuman(input.context, { control: action, response });

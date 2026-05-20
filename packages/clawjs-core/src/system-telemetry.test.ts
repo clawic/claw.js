@@ -129,10 +129,14 @@ test("system telemetry providers declare mock, offline, and live context slots",
   assert.equal(plan.auditPlan.redaction.preciseLocationRedacted, true);
   assert.equal(plan.auditPlan.receiptStatus, "not_issued");
 
-  const credentialPlan = createSystemTelemetryProviderPlan({ provider: liveWeather, credentialRef: "secret://weather/local", reason: "credential-test", now: "2026-05-19T12:00:00.000Z", idSuffix: "credential-test" });
+  const credentialPlan = createSystemTelemetryProviderPlan({ provider: liveWeather, credentialRef: "credential-lease:weather-local", reason: "credential-test", now: "2026-05-19T12:00:00.000Z", idSuffix: "credential-test" });
   assert.equal(credentialPlan.request.credentialRef, "provided_redacted");
   assert.equal(credentialPlan.steps.some((step) => step.id === "resolve_credential_ref" && step.status === "pending"), true);
-  assert.equal(JSON.stringify(credentialPlan).includes("secret://weather/local"), false);
+  assert.equal(JSON.stringify(credentialPlan).includes("credential-lease:weather-local"), false);
+  assert.throws(
+    () => createSystemTelemetryProviderPlan({ provider: liveWeather, credentialRef: "secret://weather/local", reason: "unsafe-credential-test", now: "2026-05-19T12:00:00.000Z", idSuffix: "unsafe-credential-test" }),
+    /Unsafe system telemetry credential reference: secret_scheme/,
+  );
 
   const sensorProvider = providers.find((provider) => provider.id === "system.sensors.signed");
   assert.ok(sensorProvider);
