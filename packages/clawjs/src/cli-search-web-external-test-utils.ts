@@ -35,7 +35,7 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const enabled = await runCliCapture(["search", "sources", "enable", "web.ingested", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const enabled = await runCliCapture(["search", "sources", "enable", "web.ingested", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enabled.code, CLI_EXIT_OK);
 
     const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "web.ingested", "--root", webRoot, "--path", pagePath, "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -56,7 +56,7 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     const outsideRootPayload = JSON.parse(outsideRoot.stdout) as { error: { message: string } };
     assert.match(outsideRootPayload.error.message, /outside root/);
 
-    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--source-set", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
@@ -66,7 +66,7 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
 
-    const query = await runCliCapture(["search", "query", "web-ingested-event-refresh-needle", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "web-ingested-event-refresh-needle", "--source-set", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { url?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
@@ -89,7 +89,7 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
     assert.equal(deletedPayload.data.item?.payload?.relativePath, "pages/event-page.json");
 
-    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "web.ingested", "--source-set", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
     const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
       data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
@@ -97,7 +97,7 @@ export async function runSearchWebIngestedEventScenario(): Promise<void> {
     const webDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "web.ingested");
     assert.deepEqual({ source: webDeleteRunItem?.source, operation: webDeleteRunItem?.operation, status: webDeleteRunItem?.status, indexed: webDeleteRunItem?.indexed }, { source: "web.ingested", operation: "delete", status: "done", indexed: 1 });
 
-    const afterDelete = await runCliCapture(["search", "query", "web-ingested-event-refresh-needle", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const afterDelete = await runCliCapture(["search", "query", "web-ingested-event-refresh-needle", "--source-set", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
     assert.deepEqual(afterDeletePayload.data.results, []);
@@ -137,7 +137,7 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const enabled = await runCliCapture(["search", "sources", "enable", "external.cache", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const enabled = await runCliCapture(["search", "sources", "enable", "external.cache", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enabled.code, CLI_EXIT_OK);
 
     const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "external.cache", "--root", externalRoot, "--path", recordPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -158,7 +158,7 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     const outsideRootPayload = JSON.parse(outsideRoot.stdout) as { error: { message: string } };
     assert.match(outsideRootPayload.error.message, /outside root/);
 
-    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--source-set", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
@@ -168,7 +168,7 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
 
-    const query = await runCliCapture(["search", "query", "external-cache-event-refresh-needle", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "external-cache-event-refresh-needle", "--source-set", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { externalId?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
@@ -192,7 +192,7 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
     assert.equal(deletedPayload.data.item?.payload?.relativePath, "provider/event-record.json");
 
-    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "external.cache", "--source-set", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
     const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
       data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
@@ -200,7 +200,7 @@ export async function runSearchExternalCacheEventScenario(): Promise<void> {
     const externalDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "external.cache");
     assert.deepEqual({ source: externalDeleteRunItem?.source, operation: externalDeleteRunItem?.operation, status: externalDeleteRunItem?.status, indexed: externalDeleteRunItem?.indexed }, { source: "external.cache", operation: "delete", status: "done", indexed: 1 });
 
-    const afterDelete = await runCliCapture(["search", "query", "external-cache-event-refresh-needle", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const afterDelete = await runCliCapture(["search", "query", "external-cache-event-refresh-needle", "--source-set", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
     assert.deepEqual(afterDeletePayload.data.results, []);

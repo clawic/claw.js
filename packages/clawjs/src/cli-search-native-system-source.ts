@@ -6,7 +6,7 @@ import {
   SearchStore,
   type SearchAction,
   type SearchDocumentInput,
-  type SearchProfileId,
+  type SearchSourceSetId,
   type SearchSourceState,
 } from "@clawjs/search";
 import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -15,7 +15,7 @@ type NativeSystemSourceStateWriter = (
   flags: Record<string, string>,
   source: string,
   state: SearchSourceState,
-  input?: { profile: SearchProfileId; actor?: string; surface?: string },
+  input?: { sourceSet: SearchSourceSetId; actor?: string; surface?: string },
 ) => void;
 
 export type NativeSystemSearchSourceSnapshot = {
@@ -62,7 +62,7 @@ export function enableNativeSystemSourceFromSnapshotFlag(input: {
     error: null,
   });
   input.writeCanonicalSearchSourceState(input.flags, "native.system", "enabled", {
-    profile: "full",
+    sourceSet: "full",
     actor: input.flags.actor,
     surface: input.flags.surface ?? "claw.search.native_system.snapshot",
   });
@@ -111,7 +111,7 @@ export function ensureNativeSystemSourceIndexed(input: {
     lastIndexedAt: snapshot.updatedAt ?? new Date().toISOString(),
   });
   input.writeCanonicalSearchSourceState(input.flags, "native.system", "enabled", {
-    profile: "full",
+    sourceSet: "full",
     actor: input.flags.actor,
     surface: input.flags.surface ?? "claw.search.native_system.snapshot",
   });

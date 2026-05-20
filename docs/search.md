@@ -18,7 +18,7 @@ Search V1.1 has four layers:
 
 1. **Search Source Registry**: each source declares a `SearchSourceManifest`
    with domain, result types, capabilities, indexing policy, permissions, facets,
-   and profile.
+   and source set.
 2. **Source fast path**: each domain or UI section owns a fast query route. A
    source can use its own store, `search.sqlite`, or both.
 3. **Root Search federator**: `createRootSearchFederator()` fans out across
@@ -40,16 +40,16 @@ queue, audit, saved-search, monitor, and ranking-cache capabilities. Future
 engines must enter through the same descriptor contract instead of changing
 source manifests or UI section fast paths.
 
-## Profiles
+## Source Sets
 
-`framework` is the default profile. It includes framework-owned sources and must
+`framework` is the default source set. It includes framework-owned sources and must
 stay fast enough for UI sections and CLI use.
 
 `full` is opt-in. Native, local-file, external-provider, web, and broad
 Spotlight-style sources belong here unless a specific source is promoted into a
 framework section with its own fast path.
 
-The `full` profile registers optional source manifests for local files, native
+The `full` source set registers optional source manifests for local files, native
 system data, explicit web ingestion, and external provider caches. These sources
 are disabled by default and have no built-in extractor in the framework slice;
 enabling them requires a host/provider adapter, permissions, and source-specific
@@ -125,17 +125,17 @@ claw search query "launch deck template" --domains design --json
 claw search query "worker failed" --domains runtime --filters metadata.level=error --json
 claw search query "system capabilities" --domains database --command-fallback empty --json
 claw search query "launch checklist" --actor agent:codex --agent-result-limit 5 --agent-source-limit 2 --json
-claw search sources enable local.files --profile full --json
-claw search rebuild --source local.files --profile full --file-root /path/to/folder --json
-claw search query "invoice" --domains files --profile full --file-root /path/to/folder --json
-claw search sources enable web.ingested --profile full --json
-claw search rebuild --source web.ingested --profile full --web-root /path/to/web-cache --json
-claw search query "release notes" --domains web --profile full --web-root /path/to/web-cache --json
-claw search sources enable external.cache --profile full --json
-claw search rebuild --source external.cache --profile full --external-root /path/to/provider-cache --json
-claw search query "provider thread" --domains external --profile full --external-root /path/to/provider-cache --json
-claw search rebuild --source native.system --profile full --native-system-snapshot /path/to/signed-host-snapshot.json --json
-claw search query "daily plan" --domains native --profile full --json
+claw search sources enable local.files --source-set full --json
+claw search rebuild --source local.files --source-set full --file-root /path/to/folder --json
+claw search query "invoice" --domains files --source-set full --file-root /path/to/folder --json
+claw search sources enable web.ingested --source-set full --json
+claw search rebuild --source web.ingested --source-set full --web-root /path/to/web-cache --json
+claw search query "release notes" --domains web --source-set full --web-root /path/to/web-cache --json
+claw search sources enable external.cache --source-set full --json
+claw search rebuild --source external.cache --source-set full --external-root /path/to/provider-cache --json
+claw search query "provider thread" --domains external --source-set full --external-root /path/to/provider-cache --json
+claw search rebuild --source native.system --source-set full --native-system-snapshot /path/to/signed-host-snapshot.json --json
+claw search query "daily plan" --domains native --source-set full --json
 claw search query "diagram" --domains images --shards hot --json
 claw search query "Search V1.1 architecture" --domains docs --json
 claw search query "related concept" --domains documents --strategy hybrid --embedding-model local --embedding '[0.1,0.2,0.3]' --json
@@ -172,7 +172,7 @@ claw search actions execute <result-id> <action-id> --dry-run --json
 claw search actions execute <result-id> <action-id> --host-approval-id <id> --json
 claw search audit --json
 claw search audit --type action --limit 20 --json
-claw search profiles --json
+claw search source-sets --json
 claw search explain "text" --json
 ```
 
@@ -309,7 +309,7 @@ tokens are split before FTS so metadata markers, file-like labels, and dashed
 ids remain searchable. When FTS cannot produce enough candidates, the store runs
 a bounded fuzzy fallback over the already-scoped candidate set so small typos can
 still return section-safe results without broadening source, domain, shard,
-profile, ACL, or metadata filters.
+source set, ACL, or metadata filters.
 
 Command fallback is explicit. Scoped section searches do not broaden into
 commands by default, preserving section-only result contracts. CLI callers can
@@ -356,7 +356,7 @@ canonical source records. `--explain` includes a compact score breakdown for
 debugging.
 
 Ranked query output is cached in `search_ranking_cache` by normalized query,
-profile, domain/source/shard filters, actor, surface, explain mode, strategy,
+source set, domain/source/shard filters, actor, surface, explain mode, strategy,
 filters, agent budget, and embedding hash. The cache is rebuildable and is
 invalidated when sources, documents, vectors, tombstones, or source state change,
 so repeated Root Search queries get a fast path without moving ranking into
@@ -401,8 +401,8 @@ job; paths outside the root are rejected before a job is written.
 bounded snapshot-based producer when no file watcher is attached.
 
 `local.files` follows the same explicit-source rule. It stays in the `full`
-profile and is disabled until explicitly enabled with `claw search sources
-enable local.files --profile full`. Once enabled, `--file-root` selects the
+source set and is disabled until explicitly enabled with `claw search sources
+enable local.files --source-set full`. Once enabled, `--file-root` selects the
 local tree; `--file-limit`, `--file-max-depth`, and `--file-max-bytes` cap
 traversal and content reads. Text-like files are indexed with content; binary
 office/media files are indexed by metadata and path only. Markdown and MDX files
@@ -425,7 +425,7 @@ Mac-control grant and approval boundary.
 
 `web.ingested` is the first explicit web cache adapter. It does not crawl the
 network itself; it indexes bounded local exports under `--web-root` after the
-full-profile source is explicitly enabled. Supported cache files are HTML, text,
+full-source-set source is explicitly enabled. Supported cache files are HTML, text,
 Markdown, and JSON records with fields such as `url`, `title`, `description`,
 `text`, `html`, `crawlScope`, and `updatedAt`. `--web-limit`,
 `--web-max-depth`, and `--web-max-bytes` cap ingestion, and the adapter also
@@ -438,7 +438,7 @@ written. The typed CLI form is `claw search changes schedule upsert|delete
 
 `external.cache` follows the same local-only rule for provider exports. It
 indexes JSON, JSONL, Markdown, and text files under `--external-root` only after
-the full-profile source is explicitly enabled. JSON records can declare
+the full-source-set source is explicitly enabled. JSON records can declare
 `provider`, `app`, `externalId`, `type`, `title`, `summary`, `text`, `syncMode`,
 and `updatedAt`; fallback JSON text is redacted for secret-like keys before it
 is indexed. Markdown-shaped exported text is split into bounded section
@@ -677,7 +677,7 @@ audit rule as the CLI.
 `@clawjs/search-mcp` exposes the same Search sidecar directly through
 `@clawjs/search`; it does not depend on the legacy Index package and publishes
 the `claw-search-mcp` binary. Its tool surface includes query, source/status,
-source-state control, source/shard checkpoint cursors, profiles, entrypoints,
+source-state control, source/shard checkpoint cursors, source sets, entrypoints,
 aliases, explain, action listing/execution with brokered host-approval plans,
 saved searches, monitor evaluation, monitor management, shard catalog
 inspection, audit, and indexing-job tools, including compacted event scheduling
@@ -693,7 +693,7 @@ contract used by agent callers. `search.saved.delete` and
 `search.monitors.delete` expose the same lifecycle controls for MCP clients.
 
 The showcase app exposes `/search-index` as the Search Index admin surface. It
-shows framework and full-profile sources separately, keeps optional native/web/
+shows framework and full-source-set sources separately, keeps optional native/web/
 provider/file sources off by default, and can pause, exclude, resume, or enqueue
 source rebuild jobs without changing the normal chat search scope. Its source
 onboarding control requires explicit source selection before enabling optional
@@ -704,7 +704,7 @@ preselect sources that need a local root, cache, provider export, or signed host
 before they can produce useful index rows.
 
 The showcase app also exposes `/search` as the first Root Search entrypoint.
-It is separate from chat search, uses the `framework` profile by default, and
+It is separate from chat search, uses the `framework` source set by default, and
 seeds only the commands hot path on demand so the launcher remains immediately
 usable without waiting for universal backfill.
 `claw search entrypoints` exposes the same contract for automation: Root Search
@@ -759,13 +759,13 @@ signed host shortcut broker validates it.
 - Expand Root Search to saved searches, monitor evaluation, aliases/hotkeys, explain, and
   source onboarding controls.
 - Keep `/search` as the initial Root Search UI: small fast-source set, framework
-  profile by default, domain filters, partial-source metadata, and a link to
+  source set by default, domain filters, partial-source metadata, and a link to
   Search Index controls.
 - Expose `claw search entrypoints` so agents and hosts can inspect Root Search,
   Search Index, and chat-search shortcut contracts before binding native
   shortcuts.
 - Keep `/search-index` as the technical/admin Search Index surface for source
-  state, opt-in profile checks, first-run source onboarding, setup readiness,
+  state, opt-in source set checks, first-run source onboarding, setup readiness,
   and rebuild queue control.
 - Keep `framework` as default and use `full` for optional native, web, provider,
   and local-file sources.
@@ -797,7 +797,7 @@ Required validation for Search work:
   redaction, actions, permissions, tombstones, cursors, rebuild, and timeout
   behavior;
 - CLI integration tests for `query`, `sources`, `status`, `rebuild`, `saved`,
-  `monitors` create/run, `actions`, `audit`, `profiles`, and `explain`;
+  `monitors` create/run, `actions`, `audit`, `source sets`, and `explain`;
 - Clawix Search/`Command-G` conversations-only regression tests;
 - performance tests for 50 ms hot path and 200 ms Root Search first batch
   (`packages/clawjs-search/src/index.test.ts`) plus the larger scale lab;

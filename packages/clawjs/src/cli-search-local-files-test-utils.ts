@@ -30,7 +30,7 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const enabled = await runCliCapture(["search", "sources", "enable", "local.files", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const enabled = await runCliCapture(["search", "sources", "enable", "local.files", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enabled.code, CLI_EXIT_OK);
 
     const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "local.files", "--root", fileRoot, "--path", filePath, "--data-dir", dataRoot, "--json"], workspaceRoot);
@@ -51,7 +51,7 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     const outsideRootPayload = JSON.parse(outsideRoot.stdout) as { error: { message: string } };
     assert.match(outsideRootPayload.error.message, /outside root/);
 
-    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--source-set", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(serviceRun.code, CLI_EXIT_OK);
     const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
       data: { worker?: { items: Array<{ id: string; source: string; status: string; indexed?: number }> } };
@@ -61,7 +61,7 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
 
-    const query = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const query = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--source-set", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: { results: Array<{ source: string; domain: string; resourceId?: string; metadata?: { indexedContent?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }> };
@@ -84,7 +84,7 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     assert.equal(deletedPayload.data.item?.payload?.eventDriven, true);
     assert.equal(deletedPayload.data.item?.payload?.relativePath, "docs/event-file.md");
 
-    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "local.files", "--source-set", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK);
     const deleteRunPayload = JSON.parse(deleteRun.stdout) as {
       data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
@@ -92,7 +92,7 @@ export async function runSearchLocalFilesEventScenario(): Promise<void> {
     const localFileDeleteRunItem = deleteRunPayload.data.worker?.items.find((entry) => entry.source === "local.files");
     assert.deepEqual({ source: localFileDeleteRunItem?.source, operation: localFileDeleteRunItem?.operation, status: localFileDeleteRunItem?.status, indexed: localFileDeleteRunItem?.indexed }, { source: "local.files", operation: "delete", status: "done", indexed: 1 });
 
-    const afterDelete = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const afterDelete = await runCliCapture(["search", "query", "local-file-event-refresh-needle", "--source-set", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
     assert.deepEqual(afterDeletePayload.data.results, []);

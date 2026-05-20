@@ -93,8 +93,8 @@ test("search source controls persist canonical config in core.sqlite", async () 
     assert.equal(paused.code, CLI_EXIT_OK);
     const core = new Database(path.join(dataRoot, "core.sqlite"));
     try {
-      const row = core.prepare("SELECT source, state, profile FROM search_source_config WHERE source = ?").get("commands") as { source: string; state: string; profile: string } | undefined;
-      assert.deepEqual(row, { source: "commands", state: "paused", profile: "framework" });
+      const row = core.prepare("SELECT source, state, source_set AS sourceSet FROM search_source_config WHERE source = ?").get("commands") as { source: string; state: string; sourceSet: string } | undefined;
+      assert.deepEqual(row, { source: "commands", state: "paused", sourceSet: "framework" });
     } finally {
       core.close();
     }

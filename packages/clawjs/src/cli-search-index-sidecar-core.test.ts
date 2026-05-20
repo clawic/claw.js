@@ -59,7 +59,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       ok: boolean;
       data: {
         query: string;
-        profile: string;
+        sourceSet: string;
         results: Array<{
           id: string;
           source: string;
@@ -77,7 +77,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(queryPayload.meta.canonicalCommand, "search");
     assert.equal(queryPayload.meta.subcommand, "query");
     assert.equal(queryPayload.data.query, "system capabilities");
-    assert.equal(queryPayload.data.profile, "framework");
+    assert.equal(queryPayload.data.sourceSet, "framework");
     assert.equal(queryPayload.data.partial, false);
     assert.deepEqual(queryPayload.data.omittedSources, []);
     assert.equal(queryPayload.data.results.some((result) => result.source === "commands" && result.title === "system"), true);
@@ -185,11 +185,11 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     const completedJobPayload = JSON.parse(completedJob.stdout) as { data: { item: { id: string; status: string } } };
     assert.equal(completedJobPayload.data.item.id, "job:commands:backfill");
     assert.equal(completedJobPayload.data.item.status, "done");
-    const fullSources = await runCliCapture(["search", "sources", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const fullSources = await runCliCapture(["search", "sources", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(fullSources.code, CLI_EXIT_OK);
-    const fullSourcesPayload = JSON.parse(fullSources.stdout) as { data: { sources: Array<{ id: string; profile: string; defaultState: string; state: string; fastPath: boolean }> } };
+    const fullSourcesPayload = JSON.parse(fullSources.stdout) as { data: { sources: Array<{ id: string; sourceSet: string; defaultState: string; state: string; fastPath: boolean }> } };
     const localFilesSource = fullSourcesPayload.data.sources.find((source) => source.id === "local.files");
-    assert.equal(localFilesSource?.profile, "full");
+    assert.equal(localFilesSource?.sourceSet, "full");
     assert.equal(localFilesSource?.defaultState, "off");
     assert.equal(localFilesSource?.state, "disabled");
     assert.equal(localFilesSource?.fastPath, false);
@@ -206,12 +206,12 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       data: { results: unknown[]; omittedSources: Array<{ source: string; reason: string }> };
     };
     assert.deepEqual(localFileDefaultPayload.data.results, []);
-    assert.equal(localFileDefaultPayload.data.omittedSources.some((source) => source.source === "local.files" && source.reason === "profile"), true);
-    const enableLocalFiles = await runCliCapture(["search", "sources", "enable", "local.files", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(localFileDefaultPayload.data.omittedSources.some((source) => source.source === "local.files" && source.reason === "sourceSet"), true);
+    const enableLocalFiles = await runCliCapture(["search", "sources", "enable", "local.files", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enableLocalFiles.code, CLI_EXIT_OK);
     const enableLocalFilesPayload = JSON.parse(enableLocalFiles.stdout) as { data: { state: string } };
     assert.equal(enableLocalFilesPayload.data.state, "enabled");
-    const localFilesRebuild = await runCliCapture(["search", "rebuild", "--source", "local.files", "--profile", "full", "--file-root", fileRoot, "--file-limit", "20", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const localFilesRebuild = await runCliCapture(["search", "rebuild", "--source", "local.files", "--source-set", "full", "--file-root", fileRoot, "--file-limit", "20", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(localFilesRebuild.code, CLI_EXIT_OK);
     const localFilesRebuildPayload = JSON.parse(localFilesRebuild.stdout) as {
       data: { sources: string[]; indexedBySource: { "local.files": number }; pendingSources: string[] };
@@ -219,7 +219,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(localFilesRebuildPayload.data.sources.includes("local.files"), true);
     assert.equal(localFilesRebuildPayload.data.indexedBySource["local.files"], 1);
     assert.equal(localFilesRebuildPayload.data.pendingSources.includes("local.files"), false);
-    const localFileQuery = await runCliCapture(["search", "query", "offline invoice", "--domains", "files", "--profile", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const localFileQuery = await runCliCapture(["search", "query", "offline invoice", "--domains", "files", "--source-set", "full", "--file-root", fileRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(localFileQuery.code, CLI_EXIT_OK);
     const localFileQueryPayload = JSON.parse(localFileQuery.stdout) as {
       data: {
@@ -258,10 +258,10 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       data: { results: unknown[]; omittedSources: Array<{ source: string; reason: string }> };
     };
     assert.deepEqual(webDefaultPayload.data.results, []);
-    assert.equal(webDefaultPayload.data.omittedSources.some((source) => source.source === "web.ingested" && source.reason === "profile"), true);
-    const enableWeb = await runCliCapture(["search", "sources", "enable", "web.ingested", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(webDefaultPayload.data.omittedSources.some((source) => source.source === "web.ingested" && source.reason === "sourceSet"), true);
+    const enableWeb = await runCliCapture(["search", "sources", "enable", "web.ingested", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enableWeb.code, CLI_EXIT_OK);
-    const webRebuild = await runCliCapture(["search", "rebuild", "--source", "web.ingested", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const webRebuild = await runCliCapture(["search", "rebuild", "--source", "web.ingested", "--source-set", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(webRebuild.code, CLI_EXIT_OK);
     const webRebuildPayload = JSON.parse(webRebuild.stdout) as {
       data: { sources: string[]; indexedBySource: { "web.ingested": number }; pendingSources: string[] };
@@ -269,7 +269,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webRebuildPayload.data.sources.includes("web.ingested"), true);
     assert.equal(webRebuildPayload.data.indexedBySource["web.ingested"], 2);
     assert.equal(webRebuildPayload.data.pendingSources.includes("web.ingested"), false);
-    const webQuery = await runCliCapture(["search", "query", "semantic crawler", "--domains", "web", "--profile", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const webQuery = await runCliCapture(["search", "query", "semantic crawler", "--domains", "web", "--source-set", "full", "--web-root", webRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(webQuery.code, CLI_EXIT_OK);
     const webQueryPayload = JSON.parse(webQuery.stdout) as {
       data: {
@@ -317,10 +317,10 @@ test("search rebuild and query use the Search sidecar without workspace state", 
       data: { results: unknown[]; omittedSources: Array<{ source: string; reason: string }> };
     };
     assert.deepEqual(externalDefaultPayload.data.results, []);
-    assert.equal(externalDefaultPayload.data.omittedSources.some((source) => source.source === "external.cache" && source.reason === "profile"), true);
-    const enableExternal = await runCliCapture(["search", "sources", "enable", "external.cache", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(externalDefaultPayload.data.omittedSources.some((source) => source.source === "external.cache" && source.reason === "sourceSet"), true);
+    const enableExternal = await runCliCapture(["search", "sources", "enable", "external.cache", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(enableExternal.code, CLI_EXIT_OK);
-    const externalRebuild = await runCliCapture(["search", "rebuild", "--source", "external.cache", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    const externalRebuild = await runCliCapture(["search", "rebuild", "--source", "external.cache", "--source-set", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(externalRebuild.code, CLI_EXIT_OK);
     const externalRebuildPayload = JSON.parse(externalRebuild.stdout) as {
       data: { sources: string[]; indexedBySource: { "external.cache": number }; pendingSources: string[] };
@@ -328,7 +328,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(externalRebuildPayload.data.sources.includes("external.cache"), true);
     assert.equal(externalRebuildPayload.data.indexedBySource["external.cache"], 2);
     assert.equal(externalRebuildPayload.data.pendingSources.includes("external.cache"), false);
-    const externalQuery = await runCliCapture(["search", "query", "semantic search ingestion", "--domains", "external", "--profile", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const externalQuery = await runCliCapture(["search", "query", "semantic search ingestion", "--domains", "external", "--source-set", "full", "--external-root", externalRoot, "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(externalQuery.code, CLI_EXIT_OK);
     const externalQueryPayload = JSON.parse(externalQuery.stdout) as {
       data: {
@@ -707,16 +707,16 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(pausedPayload.data.sources.find((source) => source.id === "commands")?.state, "paused");
     const configDb = new Database(resolveClawjsMainDbPath({ ...process.env, CLAW_DATA_DIR: dataRoot }));
     try {
-      const configRow = configDb.prepare("SELECT source, state, profile, surface FROM search_source_config WHERE source = ?").get("commands") as {
+      const configRow = configDb.prepare("SELECT source, state, source_set AS sourceSet, surface FROM search_source_config WHERE source = ?").get("commands") as {
         source: string;
         state: string;
-        profile: string;
+        sourceSet: string;
         surface: string;
       };
       assert.deepEqual(configRow, {
         source: "commands",
         state: "paused",
-        profile: "framework",
+        sourceSet: "framework",
         surface: "claw.search.sources",
       });
     } finally {

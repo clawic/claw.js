@@ -249,7 +249,7 @@ test("framework sources are opt-in and require fast paths", () => {
   assert.equal(manifest.indexing.limits?.maxFragments, 50);
 });
 
-test("full profile sources are opt-in and may defer their fast path to external adapters", () => {
+test("full sourceSet sources are opt-in and may defer their fast path to external adapters", () => {
   const manifest = createFullSearchSourceManifest({
     id: "local.files",
     domain: "files",
@@ -258,7 +258,7 @@ test("full profile sources are opt-in and may defer their fast path to external 
     facets: [{ id: "extension", label: "Extension", type: "string" }],
   });
 
-  assert.equal(manifest.profile, "full");
+  assert.equal(manifest.sourceSet, "full");
   assert.equal(manifest.indexing.defaultState, "off");
   assert.equal(manifest.indexing.freshness, "manual");
   assert.equal(manifest.permissions.default, "opt_in");
@@ -298,7 +298,7 @@ test("SearchStore does not mark default framework queries partial because full s
     const explicitlyFullSource = store.query({ query: "search", sources: ["local.files"] });
     assert.equal(explicitlyFullSource.partial, true);
     assert.equal(explicitlyFullSource.omittedSources[0]?.source, "local.files");
-    assert.equal(explicitlyFullSource.omittedSources[0]?.reason, "profile");
+    assert.equal(explicitlyFullSource.omittedSources[0]?.reason, "sourceSet");
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -1730,7 +1730,7 @@ test("SearchStore omits external-pending sources from query, actions and embeddi
       embedding: createLocalTextEmbedding("native settings panel").vector,
     });
 
-    const output = store.query({ query: "settings", profile: "full", sources: ["native.system"] });
+    const output = store.query({ query: "settings", sourceSet: "full", sources: ["native.system"] });
     assert.equal(output.results.length, 0);
     assert.equal(output.partial, true);
     assert.equal(output.omittedSources[0]?.source, "native.system");

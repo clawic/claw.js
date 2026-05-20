@@ -8745,7 +8745,7 @@
     {
       "name": "search",
       "kind": "canonical",
-      "usage": "search query|sources|status|service|rebuild|changes|saved|monitors|actions|audit|profiles|explain",
+      "usage": "search query|sources|status|service|rebuild|changes|saved|monitors|actions|audit|source-sets|explain",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.search.v1"
     },

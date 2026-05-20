@@ -1449,12 +1449,12 @@ claw search people
 claw search "system capabilities" --json
 claw search query "release branch" --json
 claw search sources --json
-claw search sources enable local.files --profile full --json
-claw search query "invoice" --domains files --profile full --file-root ~/Documents --json
-claw search sources enable web.ingested --profile full --json
-claw search query "release notes" --domains web --profile full --web-root ./web-cache --json
-claw search sources enable external.cache --profile full --json
-claw search query "provider thread" --domains external --profile full --external-root ./provider-cache --json
+claw search sources enable local.files --source-set full --json
+claw search query "invoice" --domains files --source-set full --file-root ~/Documents --json
+claw search sources enable web.ingested --source-set full --json
+claw search query "release notes" --domains web --source-set full --web-root ./web-cache --json
+claw search sources enable external.cache --source-set full --json
+claw search query "provider thread" --domains external --source-set full --external-root ./provider-cache --json
 claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
 claw search changes schedule upsert --source docs.pages --workspace . --path docs/guide.md --json
 claw search changes schedule upsert --source sheets.workbooks --workbook-id forecast-q2 --workspace . --json
@@ -1463,7 +1463,7 @@ claw search changes scan --source code.symbols --root ./repo --json
 claw search status --json
 claw search service status --json
 claw search service run-once --json
-claw search profiles --json
+claw search source-sets --json
 claw search entrypoints --json
 claw search saved list --json
 claw search monitors list --json

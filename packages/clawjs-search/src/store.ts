@@ -240,13 +240,13 @@ export class SearchStore {
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
     this.ensureSchema();
-    this.seedProfiles();
+    this.seedSourceSets();
   }
 
   reset(): void {
     this.resetSearchSchema();
     this.db.exec(SEARCH_SCHEMA_SQL);
-    this.seedProfiles();
+    this.seedSourceSets();
   }
 
   resetSources(sources: string[]): void {
@@ -328,13 +328,13 @@ export class SearchStore {
     const manifestJson = JSON.stringify(manifest);
     const existing = this.db.prepare("SELECT state, backlog, error, manifest_json FROM search_sources WHERE id = ?").get(manifest.id) as { state: SearchSourceState; backlog: number; error: string | null; manifest_json: string } | undefined;
     this.db.prepare(`
-      INSERT INTO search_sources (id, domain, name, version, sourceSet, manifest_json, state, backlog, error, updated_at)
+      INSERT INTO search_sources (id, domain, name, version, source_set, manifest_json, state, backlog, error, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         domain = excluded.domain,
         name = excluded.name,
         version = excluded.version,
-        sourceSet = excluded.sourceSet,
+        source_set = excluded.source_set,
         manifest_json = excluded.manifest_json,
         state = CASE WHEN ? THEN excluded.state ELSE search_sources.state END,
         backlog = CASE WHEN ? THEN excluded.backlog ELSE search_sources.backlog END,
@@ -369,7 +369,7 @@ export class SearchStore {
   listSources(sourceSet: SearchSourceSetId = "framework"): SearchSourceManifest[] {
     const rows = this.db.prepare(`
       SELECT manifest_json FROM search_sources
-      WHERE ? = 'full' OR sourceSet = 'framework'
+      WHERE ? = 'full' OR source_set = 'framework'
       ORDER BY domain ASC, id ASC
     `).all(sourceSet) as Array<{ manifest_json: string }>;
     return rows.map((row) => JSON.parse(row.manifest_json) as SearchSourceManifest);
@@ -1145,9 +1145,9 @@ export class SearchStore {
     return row ? searchIndexJobFromRow(row) : null;
   }
 
-  private seedProfiles(): void {
+  private seedSourceSets(): void {
     const insert = this.db.prepare(`
-      INSERT INTO search_profiles (id, label, default_enabled)
+      INSERT INTO search_source_sets (id, label, default_enabled)
       VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET label = excluded.label, default_enabled = excluded.default_enabled
     `);
@@ -1165,6 +1165,8 @@ export class SearchStore {
         || !this.tableHasColumn("search_fragments", "shard")
         || !this.tableHasColumn("search_fts", "shard")
         || !this.tableHasColumn("search_ranking_cache", "query_json")
+        || !this.tableExists("search_source_sets")
+        || !this.tableHasColumn("search_sources", "source_set")
       ) {
         this.resetSearchSchema();
         this.db.exec(SEARCH_SCHEMA_SQL);
@@ -1320,7 +1322,7 @@ export class SearchStore {
       shardClauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
       shardParams.push(...input.domains);
     }
-    if (sourceSet !== "full") shardClauses.push("source IN (SELECT id FROM search_sources WHERE sourceSet = 'framework')");
+    if (sourceSet !== "full") shardClauses.push("source IN (SELECT id FROM search_sources WHERE source_set = 'framework')");
     const activeShards = this.db.prepare(`
       SELECT source, shard, domain
       FROM search_shards
@@ -1409,12 +1411,12 @@ export class SearchStore {
       params.push(...input.domains);
     }
     if (sourceSet !== "full" && !explicitlyScoped) {
-      selectedClauses.push("sourceSet = 'framework'");
+      selectedClauses.push("source_set = 'framework'");
     }
     const omissionClauses = ["state IN ('disabled', 'paused', 'excluded', 'external_pending')"];
-    if (sourceSet !== "full" && explicitlyScoped) omissionClauses.push("sourceSet != 'framework'");
+    if (sourceSet !== "full" && explicitlyScoped) omissionClauses.push("source_set != 'framework'");
     const rows = this.db.prepare(`
-      SELECT id, state, sourceSet FROM search_sources
+      SELECT id, state, source_set AS sourceSet FROM search_sources
       WHERE ${selectedClauses.length ? `${selectedClauses.join(" AND ")} AND ` : ""}(${omissionClauses.join(" OR ")})
       ORDER BY domain ASC, id ASC
     `).all(...params) as Array<{ id: string; state: SearchSourceState; sourceSet: string }>;
@@ -1434,7 +1436,7 @@ export class SearchStore {
       clauses.push(`domain IN (${input.domains.map(() => "?").join(", ")})`);
       params.push(...input.domains);
     }
-    if (sourceSet !== "full") clauses.push("sourceSet = 'framework'");
+    if (sourceSet !== "full") clauses.push("source_set = 'framework'");
     const rows = this.db.prepare(`
       SELECT manifest_json FROM search_sources
       ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
@@ -1471,8 +1473,8 @@ export class SearchStore {
       activeParams.push(...input.domains);
     }
     if (sourceSet !== "full") {
-      coverageClauses.push("source IN (SELECT id FROM search_sources WHERE sourceSet = 'framework')");
-      activeClauses.push("source IN (SELECT id FROM search_sources WHERE sourceSet = 'framework')");
+      coverageClauses.push("source IN (SELECT id FROM search_sources WHERE source_set = 'framework')");
+      activeClauses.push("source IN (SELECT id FROM search_sources WHERE source_set = 'framework')");
     }
     const coverage = this.db.prepare(`
       SELECT COUNT(*) AS count
@@ -1946,7 +1948,7 @@ function buildDocumentClauses(input: SearchQueryInput, sourceSet: SearchSourceSe
     params.push(...input.shards);
   }
   applySearchFilters(clauses, params, input.filters);
-  if (sourceSet !== "full") clauses.push("s.sourceSet = 'framework'");
+  if (sourceSet !== "full") clauses.push("s.source_set = 'framework'");
   clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')");
   return { clauses, params };
 }
@@ -2394,7 +2396,7 @@ function normalizeCacheValue(value: unknown): unknown {
 }
 
 const SEARCH_SCHEMA_SQL = String.raw`
-CREATE TABLE IF NOT EXISTS search_profiles (
+CREATE TABLE IF NOT EXISTS search_source_sets (
   id TEXT PRIMARY KEY,
   label TEXT NOT NULL,
   default_enabled INTEGER NOT NULL DEFAULT 0
@@ -2405,7 +2407,7 @@ CREATE TABLE IF NOT EXISTS search_sources (
   domain TEXT NOT NULL,
   name TEXT NOT NULL,
   version INTEGER NOT NULL,
-  sourceSet TEXT NOT NULL,
+  source_set TEXT NOT NULL,
   manifest_json TEXT NOT NULL,
   state TEXT NOT NULL,
   backlog INTEGER NOT NULL DEFAULT 0,
@@ -2624,5 +2626,5 @@ DROP TABLE IF EXISTS search_fragments;
 DROP TABLE IF EXISTS search_shards;
 DROP TABLE IF EXISTS search_documents;
 DROP TABLE IF EXISTS search_sources;
-DROP TABLE IF EXISTS search_profiles;
+DROP TABLE IF EXISTS search_source_sets;
 `;

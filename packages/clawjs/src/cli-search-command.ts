@@ -8,7 +8,7 @@ import { clawCliCommandRegistry, detectClawPublicRepositories, listClawCliAliase
 import {
   DEFAULT_SEARCH_BUDGETS,
   LOCAL_TEXT_EMBEDDING_MODEL,
-  SEARCH_PROFILES,
+  SEARCH_SOURCE_SETS,
   SearchStore,
   createBuiltinSearchSourceManifests,
   createLocalTextEmbedding,
@@ -18,7 +18,7 @@ import {
   type SearchActionExecutionPlan,
   type SearchDocumentInput,
   type SearchIndexJob,
-  type SearchProfileId,
+  type SearchSourceSetId,
   type SearchQueryInput,
   type SearchQueryOutput,
   type SearchResult,
@@ -273,7 +273,7 @@ export async function runSearchQueryCli(input: {
     const limit = input.flags.limit ? boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
     const results = store.query({
       query,
-      profile: input.flags.profile === "full" ? "full" : "framework",
+      sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
       domains,
       sources,
       shards,
@@ -319,7 +319,7 @@ export async function runSearchQueryCli(input: {
         query,
         reason: "sensitive_query_or_redacted_result",
         metadata: {
-          profile: input.flags.profile === "full" ? "full" : "framework",
+          sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
           domains: domains ?? [],
           sources: sources ?? [],
           shards: shards ?? [],
@@ -452,7 +452,7 @@ export async function runSearchRebuildCli(input: {
         payload: {
           requestedBy: "search.rebuild",
           background: true,
-          profile: input.flags.profile === "full" ? "full" : "framework",
+          sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
           ...(selectedShards ? { shardScoped: true } : {}),
         },
         priority: input.flags.priority ? Number(input.flags.priority) : 50,
@@ -576,7 +576,7 @@ export async function runSearchRebuildCli(input: {
       selectedShards: selectedShards ?? null,
       reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + surfaceRegistryIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
       embeddings: 0,
-      profile: input.flags.profile === "full" ? "full" : "framework",
+      sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
       sources: Array.from(indexedSourceIds),
       indexedBySource: {
@@ -681,7 +681,7 @@ export async function runSearchAdminCli(input: {
   usage: string;
 }): Promise<number> {
   const command = input.positionals[1];
-  const profile: SearchProfileId = input.flags.profile === "full" ? "full" : "framework";
+  const sourceSet: SearchSourceSetId = input.flags["source-set"] === "full" ? "full" : "framework";
   if (command === "sources") {
     const action = input.positionals[2] ?? "list";
     const store = openCliSearchStore(input.flags);
@@ -690,12 +690,12 @@ export async function runSearchAdminCli(input: {
       action: string;
       source?: string;
       state?: SearchSourceState;
-      profile: string;
+      sourceSet: string;
       sources: Array<{
         id: string;
         domain: string;
         name: string;
-        profile: string;
+        sourceSet: string;
         defaultState: string;
         state: string;
         fastPath: boolean;
@@ -715,19 +715,19 @@ export async function runSearchAdminCli(input: {
           : null;
         store.setSourceState(sourceId, state, { error });
         writeCanonicalSearchSourceState(input.flags, sourceId, state, {
-          profile,
+          sourceSet,
           actor: input.flags.actor,
           surface: input.flags.surface ?? "claw.search.sources",
         });
       }
       const statusById = new Map(store.sourceStatus().map((status) => [status.source, status]));
       const sources = BUILTIN_SEARCH_SOURCES
-        .filter((source) => profile === "full" || source.profile === "framework")
+        .filter((source) => sourceSet === "full" || source.sourceSet === "framework")
         .map((source) => ({
           id: source.id,
           domain: source.domain,
           name: source.name,
-          profile: source.profile,
+          sourceSet: source.sourceSet,
           defaultState: source.indexing.defaultState,
           state: statusById.get(source.id)?.state ?? (source.indexing.defaultState === "on" ? "enabled" : "disabled"),
           fastPath: source.capabilities.fastPath,
@@ -736,7 +736,7 @@ export async function runSearchAdminCli(input: {
       data = {
         action,
         ...(sourceId ? { source: sourceId, state: statusById.get(sourceId)?.state } : {}),
-        profile,
+        sourceSet,
         sources,
       };
     } finally {
@@ -767,14 +767,14 @@ export async function runSearchAdminCli(input: {
     }
     const data = {
       state: "ready",
-      profile,
+      sourceSet,
       budgets: DEFAULT_SEARCH_BUDGETS,
       sources,
       cursors,
       storage: searchStorageMetadata(input.flags),
     };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "status" });
-    else input.context.stdout.write(`state=${data.state} profile=${profile} sources=${sources.length} index=search.sqlite\n`);
+    else input.context.stdout.write(`state=${data.state} sourceSet=${sourceSet} sources=${sources.length} index=search.sqlite\n`);
     return CLI_EXIT_OK;
   }
 
@@ -786,9 +786,9 @@ export async function runSearchAdminCli(input: {
     return data.service.state === "external_pending" ? CLI_EXIT_DEGRADED : CLI_EXIT_OK;
   }
 
-  if (command === "profiles") {
-    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { profiles: SEARCH_PROFILES }, { subcommand: "profiles" });
-    else input.context.stdout.write(`${SEARCH_PROFILES.map((entry) => `${entry.id}\t${entry.defaultEnabled ? "default" : "opt-in"}\t${entry.label}`).join("\n")}\n`);
+  if (command === "source-sets") {
+    if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", { sourceSets: SEARCH_SOURCE_SETS }, { subcommand: "source-sets" });
+    else input.context.stdout.write(`${SEARCH_SOURCE_SETS.map((entry) => `${entry.id}\t${entry.defaultEnabled ? "default" : "opt-in"}\t${entry.label}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
 
@@ -845,7 +845,7 @@ export async function runSearchAdminCli(input: {
           name: input.flags.name ?? id,
           query: {
             query,
-            profile,
+            sourceSet,
             domains: parseListFlag(input.flags.domains),
             sources: parseListFlag(input.flags.sources ?? input.flags.source),
             shards: parseListFlag(input.flags.shards ?? input.flags.shard),
@@ -1133,7 +1133,7 @@ export async function runSearchAdminCli(input: {
     }
     const data = {
       state: shards.length ? "ready" : "empty",
-      profile,
+      sourceSet,
       source: input.flags.source ?? null,
       domain: input.flags.domain ?? null,
       shards,
@@ -1179,7 +1179,7 @@ export async function runSearchAdminCli(input: {
     }
     const data = {
       query,
-      profile,
+      sourceSet,
       budgets: DEFAULT_SEARCH_BUDGETS,
       matching: ["exact", "prefix", "fuzzy", "fts"],
       semantic: "optional per source with local embeddings indexed by adapters, CLI, or embed jobs",
@@ -2353,7 +2353,7 @@ function ensureSearchCanonicalConfigSchema(sqlite: Database.Database): void {
     CREATE TABLE IF NOT EXISTS search_source_config (
       source TEXT PRIMARY KEY,
       state TEXT NOT NULL,
-      profile TEXT NOT NULL DEFAULT 'framework',
+      source_set TEXT NOT NULL DEFAULT 'framework',
       updated_at TEXT NOT NULL,
       actor TEXT,
       surface TEXT,
@@ -2361,6 +2361,8 @@ function ensureSearchCanonicalConfigSchema(sqlite: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS search_source_config_state_idx ON search_source_config(state);
   `);
+  const columns = new Set((sqlite.prepare("PRAGMA table_info(search_source_config)").all() as Array<{ name: string }>).map((column) => column.name));
+  if (!columns.has("source_set")) sqlite.exec("ALTER TABLE search_source_config ADD COLUMN source_set TEXT NOT NULL DEFAULT 'framework'");
 }
 
 function readCanonicalSearchSourceStates(flags: Record<string, string>): Map<string, SearchSourceState> {
@@ -2384,7 +2386,7 @@ function writeCanonicalSearchSourceState(
   flags: Record<string, string>,
   source: string,
   state: SearchSourceState,
-  input: { profile: SearchProfileId; actor?: string; surface?: string } = { profile: "framework" },
+  input: { sourceSet: SearchSourceSetId; actor?: string; surface?: string } = { sourceSet: "framework" },
 ): void {
   const env = searchCanonicalConfigEnv(flags);
   const dbPath = resolveClawjsMainDbPath(env);
@@ -2394,11 +2396,11 @@ function writeCanonicalSearchSourceState(
     ensureV1MainSchema(db, env);
     ensureSearchCanonicalConfigSchema(db);
     db.prepare(`
-      INSERT INTO search_source_config (source, state, profile, updated_at, actor, surface, metadata_json)
+      INSERT INTO search_source_config (source, state, source_set, updated_at, actor, surface, metadata_json)
       VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(source) DO UPDATE SET
         state = excluded.state,
-        profile = excluded.profile,
+        source_set = excluded.source_set,
         updated_at = excluded.updated_at,
         actor = excluded.actor,
         surface = excluded.surface,
@@ -2406,7 +2408,7 @@ function writeCanonicalSearchSourceState(
     `).run(
       source,
       state,
-      input.profile,
+      input.sourceSet,
       new Date().toISOString(),
       input.actor ?? null,
       input.surface ?? null,
@@ -2542,7 +2544,7 @@ function runSearchMonitorEvaluations(
         query: query.query,
         reason: "sensitive_query_or_redacted_result",
         metadata: {
-          profile: query.profile ?? "framework",
+          sourceSet: query.sourceSet ?? "framework",
           domains: query.domains ?? [],
           sources: query.sources ?? [],
           shards: query.shards ?? [],

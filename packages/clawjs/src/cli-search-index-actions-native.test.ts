@@ -116,17 +116,17 @@ test("search indexes native.system only from signed host snapshots", async () =>
       },
     ],
   }));
-  const withoutSnapshot = await runCliCapture(["search", "sources", "enable", "native.system", "--profile", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  const withoutSnapshot = await runCliCapture(["search", "sources", "enable", "native.system", "--source-set", "full", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(withoutSnapshot.code, CLI_EXIT_OK);
   const withoutSnapshotPayload = JSON.parse(withoutSnapshot.stdout) as { data: { source: string; state: string } };
   assert.equal(withoutSnapshotPayload.data.source, "native.system");
   assert.equal(withoutSnapshotPayload.data.state, "external_pending");
-  const withSnapshot = await runCliCapture(["search", "sources", "enable", "native.system", "--profile", "full", "--native-system-snapshot", snapshotPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+  const withSnapshot = await runCliCapture(["search", "sources", "enable", "native.system", "--source-set", "full", "--native-system-snapshot", snapshotPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(withSnapshot.code, CLI_EXIT_OK);
   const withSnapshotPayload = JSON.parse(withSnapshot.stdout) as { data: { source: string; state: string } };
   assert.equal(withSnapshotPayload.data.source, "native.system");
   assert.equal(withSnapshotPayload.data.state, "enabled");
-  const rebuild = await runCliCapture(["search", "rebuild", "--source", "native.system", "--profile", "full", "--native-system-snapshot", snapshotPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+  const rebuild = await runCliCapture(["search", "rebuild", "--source", "native.system", "--source-set", "full", "--native-system-snapshot", snapshotPath, "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(rebuild.code, CLI_EXIT_OK);
   const rebuildPayload = JSON.parse(rebuild.stdout) as { data: { sources: string[]; indexedBySource: Record<string, number>; pendingSources: string[] } };
   assert.deepEqual(rebuildPayload.data.sources, ["native.system"]);
@@ -139,7 +139,7 @@ test("search indexes native.system only from signed host snapshots", async () =>
   } finally {
     canonicalDb.close();
   }
-  const query = await runCliCapture(["search", "query", "daily plan", "--profile", "full", "--sources", "native.system", "--data-dir", dataRoot, "--json"], workspaceRoot);
+  const query = await runCliCapture(["search", "query", "daily plan", "--source-set", "full", "--sources", "native.system", "--data-dir", dataRoot, "--json"], workspaceRoot);
   assert.equal(query.code, CLI_EXIT_OK, query.stdout);
   const queryPayload = JSON.parse(query.stdout) as { data: { results: Array<{ id: string; source: string; domain: string; actions?: Array<{ id: string; hostBroker?: { capabilityId: string } }> }> } };
   assert.equal(queryPayload.data.results[0]?.id, "native.system:shortcut:daily-plan");

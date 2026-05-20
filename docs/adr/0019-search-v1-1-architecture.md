@@ -15,7 +15,7 @@ guarantee that adding more sources would not slow down a narrow UI or CLI
 search.
 
 The primary requirement is framework search. Native computer or OS-style source
-indexing is optional, off by default, profile-scoped, and must not make domain
+indexing is optional, off by default, source set-scoped, and must not make domain
 search slower or noisier.
 
 ## Decision
@@ -28,12 +28,12 @@ Search V1.1 is built from these layers:
 
 - **Search Source Registry**: every source declares a `SearchSourceManifest`
   with domain, result types, capabilities, indexing policy, permissions, facets,
-  and profile.
+  and source set.
 - **Source adapter**: each source owns a fast path for its domain or UI section.
   A source may index into `search.sqlite`, query its own store, or both, but it
   must not force unrelated sources into the critical path.
 - **Root Search federator**: `createRootSearchFederator()` is the lightweight
-  query fan-out layer. It applies profile/source/domain selection, strict source
+  query fan-out layer. It applies source set/source/domain selection, strict source
   timeouts, result normalization, central ranking, and partial-result reporting.
   `createSearchRegistry()` remains a compatible alias for existing code.
 - **Filters and facets**: sources declare facets in their manifests. Query input
@@ -55,7 +55,7 @@ Search V1.1 is built from these layers:
   `generations.artifacts`, `code.symbols`, `docs.pages`, and `commands` are
   initial framework sources. More framework domains are added source by source;
   global Search must never replace a section-specific fast path.
-- **Profiles**: `framework` is default. `full` is opt-in and is where native,
+- **Source Sets**: `framework` is default. `full` is opt-in and is where native,
   external, web, or broad local sources can be enabled later. `local.files`,
   `web.ingested`, and `external.cache` have bounded, explicit local adapters but
   remain disabled by default. `native.system` remains disabled by default and
@@ -116,7 +116,7 @@ Search V1.1 is built from these layers:
 - `claw search actions`
 - `claw search actions execute <result-id> <action-id>`
 - `claw search audit`
-- `claw search profiles`
+- `claw search source-sets`
 - `claw search entrypoints`
 - `claw search explain`
 
@@ -164,7 +164,7 @@ from Root Search and the current Clawix Mac chat search, so enabling wider
 indexing does not broaden or slow section-specific search surfaces by default.
 
 The showcase `/search` page is the first Root Search UI. It queries Search
-through `/api/search/query`, defaults to the framework profile, exposes simple
+through `/api/search/query`, defaults to the framework source set, exposes simple
 domain filters, and primes only the commands hot path so the entrypoint is
 usable before broader source backfills complete.
 

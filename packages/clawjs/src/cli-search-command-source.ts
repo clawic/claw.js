@@ -64,7 +64,7 @@ export function commandFallbackForSearchQuery(store: SearchStore, input: {
   }
   const commandOutput = store.query({
     query: input.query,
-    profile: input.flags.profile === "full" ? "full" : "framework",
+    sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
     domains: ["commands"],
     shards: input.shards,
     filters: input.filters,

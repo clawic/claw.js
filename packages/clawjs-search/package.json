@@ -1,7 +1,7 @@
 {
   "name": "@clawjs/search",
   "version": "0.1.2",
-  "description": "Framework-wide Search contracts, source registry, result actions, profiles and budgeted federation for ClawJS.",
+  "description": "Framework-wide Search contracts, source registry, result actions, source sets and budgeted federation for ClawJS.",
   "type": "module",
   "license": "MIT",
   "author": {

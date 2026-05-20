@@ -303,7 +303,7 @@ test("search keeps optional full sources out of scoped domain queries", async ()
       "Optional full source sentinel",
       "--domains",
       "sessions",
-      "--profile",
+      "--source-set",
       "full",
       "--file-root",
       fileRoot,
