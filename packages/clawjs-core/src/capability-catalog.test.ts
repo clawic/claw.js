@@ -77,6 +77,17 @@ test("available SDK surface bindings do not advertise future facades", () => {
   }
 });
 
+test("available surface refs are concrete rather than conditional placeholders", () => {
+  const conditionalRefPattern = /\b(when|unless|classified)\b/i;
+
+  for (const capability of listClawCapabilities()) {
+    for (const surface of capability.surfaces) {
+      if (surface.status !== "available") continue;
+      assert.equal(conditionalRefPattern.test(surface.ref), false, `${capability.id}:${surface.surface}`);
+    }
+  }
+});
+
 test("custom app authority is broad for ordinary reads and approval-gated for high risk", () => {
   const riskMap = buildCustomAppCapabilityRiskMap();
 
@@ -309,12 +320,40 @@ test("custom-app MCP coverage is metadata-only for contract projections", () => 
 
   assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
   assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("mcp.custom_app_sdk"), true);
-  for (const id of ["db.query", "jobs.list", "jobs.get", "jobs.events", "iot.device.action.invoke"]) {
+  for (const id of ["db.query", "jobs.list", "jobs.get", "jobs.events", "actions.invoke", "iot.device.action.invoke"]) {
     const capability = getClawCapability(id);
     const mcpSurface = capability?.surfaces.find((surface) => surface.surface === "mcp");
 
     assert.equal(mcpSurface?.status, "available", id);
     assert.equal(mcpSurface?.ref, "clawjs.custom_app_sdk metadata-only contract projection", id);
+  }
+});
+
+test("custom-app Relay coverage is metadata-only for local host execution", () => {
+  const payload = buildCustomAppSDKInspectionPayload();
+
+  assert.equal(payload.executionBoundary.executesCapabilityCalls, false);
+  assert.equal(payload.executionBoundary.nonExecutableSurfaces.includes("relay.remote.custom_app_sdk"), true);
+  for (const id of [
+    "resources.list",
+    "resources.read",
+    "system.telemetry.snapshot",
+    "system.telemetry.history",
+    "jobs.list",
+    "jobs.get",
+    "jobs.events",
+    "jobs.stream",
+    "jobs.start",
+    "jobs.cancel",
+    "actions.invoke",
+    "mac.action.plan",
+    "iot.device.action.invoke",
+  ]) {
+    const capability = getClawCapability(id);
+    const relaySurface = capability?.surfaces.find((surface) => surface.surface === "relay");
+
+    assert.equal(relaySurface?.status, "available", id);
+    assert.equal(relaySurface?.ref, "relay.remote.custom_app_sdk metadata-only contract projection", id);
   }
 });
 

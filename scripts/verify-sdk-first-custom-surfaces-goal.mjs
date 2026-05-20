@@ -75,7 +75,8 @@ function assertCompletionAudit() {
     "The Network Control Plane now provides a typed executable route-family example",
     "mirrors the ClawJS SDK facade shape for `capabilities.list`, `capabilities.get`",
     "complete resolved surface bindings across SDK, CLI, service API, MCP, Relay, and host bridge projections",
-    "no `pending` status, no future-facade SDK refs, no unknown dispatch modes",
+    "no `pending` status, no future-facade SDK refs, no unknown dispatch modes, no conditional placeholder refs",
+    "local-only/custom-app Relay coverage as `relay.remote.custom_app_sdk` metadata-only projection",
     "disabled-by-default rule suggestions",
     "sibling Clawix checkout now mirrors ClawJS `system.telemetry.snapshot` and `system.telemetry.history`",
     "`window.clawix.system.telemetry`",
@@ -218,6 +219,7 @@ function assertFrameworkArtifacts() {
       "Available capability surface binding requires a ref",
       "approvalRequired",
       "blocked",
+      "const customAppSDKRelayMetadataProjection = \"relay.remote.custom_app_sdk metadata-only contract projection\";",
       "@clawjs/claw:capabilities metadata + claw.search.query.v1 schema",
       "@clawjs/claw:capabilities metadata + claw.db.query.v1 schema",
       "@clawjs/claw:capabilities metadata + claw.actions.invoke.v1 schema",
@@ -294,6 +296,10 @@ function assertFrameworkArtifacts() {
     "future db facade",
     "future actions facade",
     "future mac facade",
+    "remote-safe when classified",
+    "remote-safe only when classified",
+    "local-only unless explicitly classified",
+    "MCP tools when policy grants allow",
   ]) {
     forbidSnippet("packages/clawjs-core/src/capability-catalog.ts", snippet);
   }
@@ -303,6 +309,8 @@ function assertTests() {
   for (const [relativePath, snippets] of Object.entries({
     "packages/clawjs-core/src/capability-catalog.test.ts": [
       "available SDK surface bindings do not advertise future facades",
+      "available surface refs are concrete rather than conditional placeholders",
+      "conditionalRefPattern",
       "registered custom-app dispatch modes are explicit",
       "assert.notEqual(capability.dispatch.mode, \"unknown\"",
       "custom-app SDK inspection payload has no missing schema refs",
@@ -321,6 +329,8 @@ function assertTests() {
       "jobs.cancel",
       "jobs read capabilities do not advertise removed runtime CLI sidecars",
       "approvalRequiredNoPlaintextBroker",
+      "custom-app Relay coverage is metadata-only for local host execution",
+      "relay.remote.custom_app_sdk metadata-only contract projection",
     ],
     "runtime/tests/e2e/runtime.e2e.test.ts": [
       "jobs start, events, detail, and cancel contracts round-trip through runtime API",
