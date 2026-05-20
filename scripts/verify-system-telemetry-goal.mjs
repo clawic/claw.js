@@ -9,6 +9,8 @@ const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const clawSourceRunner = path.join(rootDir, "scripts/claw-source-runner.mjs");
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require("better-sqlite3");
+const Ajv2020Module = require("ajv/dist/2020");
+const Ajv2020 = Ajv2020Module.default ?? Ajv2020Module;
 const errors = [];
 
 function fail(message) {
@@ -275,6 +277,13 @@ function assertExternalValidationManifest() {
     assert(manifest.externalEvidencePacketSchema?.externalPendingRowIds?.includes(rowId), `external validation manifest: external evidence schema missing ${rowId}`);
   }
   assert(manifest.externalEvidencePacketSchema?.closureRole?.includes("redacted receipt"), "external validation manifest: external evidence schema closure role must be explicit");
+  assert(manifest.externalEvidenceFixtures?.required === true, "external validation manifest: external evidence fixtures link must be required");
+  assert(manifest.externalEvidenceFixtures?.artifactId === "system-telemetry-external-evidence-fixtures", "external validation manifest: wrong external evidence fixtures artifact");
+  assert(manifest.externalEvidenceFixtures?.path === "docs/system-telemetry-external-evidence.fixtures.json", "external validation manifest: wrong external evidence fixtures path");
+  assert(manifest.externalEvidenceFixtures?.status === "synthetic_templates_not_evidence", "external validation manifest: external evidence fixtures must be marked synthetic");
+  assert(manifest.externalEvidenceFixtures?.validTemplateCount === 3, "external validation manifest: wrong valid fixture count");
+  assert(manifest.externalEvidenceFixtures?.invalidTemplateCount === 3, "external validation manifest: wrong invalid fixture count");
+  assert(manifest.externalEvidenceFixtures?.closureRole?.includes("without representing real external evidence"), "external validation manifest: external evidence fixtures closure role must be explicit");
   assert(Array.isArray(manifest.rows), "external validation manifest: rows must be an array");
 
   const rows = new Map(manifest.rows.map((row) => [row.id, row]));
@@ -312,6 +321,9 @@ function assertExternalValidationRunbook() {
     "Any accepted run must produce a redacted evidence packet conforming to",
     "`docs/system-telemetry-external-evidence.schema.json`",
     "lane-closing record",
+    "`docs/system-telemetry-external-evidence.fixtures.json`",
+    "templates for",
+    "must not be cited as real external evidence",
     "| Row | Safe preflight | Approval packet | Execution evidence | Update target | Fail rule |",
     "| SYS-TEL-EXT-001 | `claw system providers plan context.weather.live --json`",
     "Provider execution receipt, redacted audit event, Monitor sample IDs for `context.weather.temperature`",
@@ -341,6 +353,7 @@ function assertExternalEvidenceSchema() {
   assert(schema.$schema === "https://json-schema.org/draft/2020-12/schema", "external evidence schema: wrong JSON schema version");
   assert(schema.$id === "https://clawjs.dev/schemas/system-telemetry-external-evidence.schema.json", "external evidence schema: wrong id");
   assert(schema.title === "System Telemetry External Evidence Packet", "external evidence schema: wrong title");
+  assert(schema["x-fixturePath"] === "docs/system-telemetry-external-evidence.fixtures.json", "external evidence schema: wrong fixture path");
   assert(schema.properties?.schemaVersion?.const === 1, "external evidence schema: schemaVersion must be 1");
   assert(schema.properties?.conversationId?.const === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external evidence schema: wrong conversation id");
   assert(schema.properties?.planId?.const === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external evidence schema: wrong plan id");
@@ -404,6 +417,40 @@ function assertExternalEvidenceSchema() {
   assert(controlRule?.properties?.evidence?.properties?.rollbackOrContinuityRefs?.minItems === 1, "external evidence schema: control lane must require rollback or continuity evidence");
   assert(controlRule?.properties?.closureImpact?.properties?.completionAuditRows?.contains?.const === "STA-018", "external evidence schema: control lane must close STA-018");
   assert(!serialized.includes("/Users/"), "external evidence schema: must not publish private filesystem paths");
+}
+
+function assertExternalEvidenceFixtures() {
+  const fixtures = readJson("docs/system-telemetry-external-evidence.fixtures.json");
+  assert(fixtures.schemaVersion === 1, "external evidence fixtures: schemaVersion must be 1");
+  assert(fixtures.artifactId === "system-telemetry-external-evidence-fixtures", "external evidence fixtures: wrong artifact id");
+  assert(fixtures.status === "synthetic_templates_not_evidence", "external evidence fixtures: must be synthetic templates only");
+  assert(fixtures.conversationId === "019e359b-c0ab-7dc1-ba94-11a49d11dc76", "external evidence fixtures: wrong conversation id");
+  assert(fixtures.planId === "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan", "external evidence fixtures: wrong plan id");
+  assert(fixtures.schemaPath === "docs/system-telemetry-external-evidence.schema.json", "external evidence fixtures: wrong schema path");
+  assert(Array.isArray(fixtures.validSyntheticPackets) && fixtures.validSyntheticPackets.length === 3, "external evidence fixtures: must contain 3 valid synthetic packets");
+  assert(Array.isArray(fixtures.invalidSyntheticPackets) && fixtures.invalidSyntheticPackets.length === 3, "external evidence fixtures: must contain 3 invalid synthetic packets");
+  const schema = readJson("docs/system-telemetry-external-evidence.schema.json");
+  const ajv = new Ajv2020({ allErrors: true, validateFormats: false, strict: false });
+  const validate = ajv.compile(schema);
+  const validLaneIds = new Set();
+  for (const packet of fixtures.validSyntheticPackets) {
+    const ok = validate(packet);
+    assert(ok, `external evidence fixtures: valid packet ${packet.laneId} must validate: ${ajv.errorsText(validate.errors)}`);
+    validLaneIds.add(packet.laneId);
+    assert(packet.redaction?.containsSecrets === false, `external evidence fixtures: ${packet.laneId} must not contain secrets`);
+    assert(packet.redaction?.preciseLocationIncluded === false, `external evidence fixtures: ${packet.laneId} must not contain precise location`);
+    assert(packet.redaction?.privatePathsIncluded === false, `external evidence fixtures: ${packet.laneId} must not contain private paths`);
+  }
+  for (const rowId of ["SYS-TEL-EXT-001", "SYS-TEL-EXT-002", "SYS-TEL-EXT-003"]) {
+    assert(validLaneIds.has(rowId), `external evidence fixtures: missing valid template for ${rowId}`);
+  }
+  for (const fixture of fixtures.invalidSyntheticPackets) {
+    const ok = validate(fixture.packet);
+    assert(!ok, `external evidence fixtures: invalid packet ${fixture.id} must fail validation`);
+    assert(typeof fixture.mutation === "string" && fixture.mutation.length > 0, `external evidence fixtures: invalid packet ${fixture.id} must document mutation`);
+  }
+  const serialized = JSON.stringify(fixtures);
+  assert(!serialized.includes("/Users/"), "external evidence fixtures: must not publish private filesystem paths");
 }
 
 function assertSourceQaReview() {
@@ -532,6 +579,8 @@ function assertDecisionMatrix() {
     "external validation runbook",
     "docs/system-telemetry-external-evidence.schema.json",
     "evidence schema",
+    "docs/system-telemetry-external-evidence.fixtures.json",
+    "synthetic fixture templates",
     "docs/system-telemetry-external-validation.manifest.json",
     "external validation manifest",
     "docs/system-telemetry-source-qa-review.json",
@@ -596,6 +645,7 @@ function assertDocsAndRegistry() {
       "./system-telemetry-external-pending-validation.md",
       "./system-telemetry-external-validation-runbook.md",
       "docs/system-telemetry-external-evidence.schema.json",
+      "docs/system-telemetry-external-evidence.fixtures.json",
       "docs/system-telemetry-external-validation.manifest.json",
       "docs/system-telemetry-source-qa-review.json",
       "npm run test:system-telemetry-goal",
@@ -619,6 +669,9 @@ function assertDocsAndRegistry() {
       "\"id\": \"system-telemetry-external-evidence-schema\"",
       "\"canonicalSource\": \"docs/system-telemetry-external-evidence.schema.json\"",
       "\"query\": \"system telemetry external evidence schema\"",
+      "\"id\": \"system-telemetry-external-evidence-fixtures\"",
+      "\"canonicalSource\": \"docs/system-telemetry-external-evidence.fixtures.json\"",
+      "\"query\": \"system telemetry external evidence fixtures\"",
       "\"id\": \"system-telemetry-source-qa-review\"",
       "\"canonicalSource\": \"docs/system-telemetry-source-qa-review.json\"",
       "\"query\": \"system telemetry source Q/A review\"",
@@ -636,6 +689,8 @@ function assertDocsAndRegistry() {
       "[docs/system-telemetry-external-validation-runbook.md](/system-telemetry-external-validation-runbook)",
       "`system-telemetry-external-evidence-schema`",
       "[docs/system-telemetry-external-evidence.schema.json](/system-telemetry-external-evidence.schema.json)",
+      "`system-telemetry-external-evidence-fixtures`",
+      "[docs/system-telemetry-external-evidence.fixtures.json](/system-telemetry-external-evidence.fixtures.json)",
       "`system-telemetry-source-qa-review`",
       "[docs/system-telemetry-source-qa-review.json](/system-telemetry-source-qa-review.json)",
     ]],
@@ -1187,6 +1242,7 @@ function main() {
   assertExternalValidationManifest();
   assertExternalValidationRunbook();
   assertExternalEvidenceSchema();
+  assertExternalEvidenceFixtures();
   assertSourceQaReview();
   assertCompletionAudit();
   assertDecisionMatrix();

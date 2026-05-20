@@ -3,6 +3,7 @@
   "$id": "https://clawjs.dev/schemas/system-telemetry-external-evidence.schema.json",
   "title": "System Telemetry External Evidence Packet",
   "description": "Public-safe evidence packet required before replacing a system telemetry EXTERNAL PENDING lane.",
+  "x-fixturePath": "docs/system-telemetry-external-evidence.fixtures.json",
   "type": "object",
   "additionalProperties": false,
   "required": [
