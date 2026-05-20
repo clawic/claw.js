@@ -548,7 +548,7 @@ export class SearchStore {
     const requestedLimit = Math.max(1, queryInput.limit ?? 20);
     const outputLimit = effectiveResultLimit(requestedLimit, queryInput.agentBudget);
     const candidateLimit = Math.min(200, Math.max(requestedLimit * 4, requestedLimit));
-    const sourceSet = queryInput.sourceSet ?? "framework";
+    const sourceSet = queryInput.sourceSet ?? queryInput.profile ?? "framework";
     const strategy = queryInput.strategy ?? (queryInput.embedding ? "hybrid" : "lexical");
     const match = ftsQuery(queryInput.query);
     const omittedSources = this.omittedSourcesForInput(queryInput, sourceSet);
@@ -2338,7 +2338,7 @@ function searchRankingCacheKey(input: SearchQueryInput): string {
     domains: sortedStrings(input.domains),
     sources: sortedStrings(input.sources),
     shards: sortedStrings(input.shards),
-    sourceSet: input.sourceSet ?? "framework",
+    sourceSet: input.sourceSet ?? input.profile ?? "framework",
     actor: input.actor ?? "",
     surface: input.surface ?? "",
     limit: input.limit ?? 20,

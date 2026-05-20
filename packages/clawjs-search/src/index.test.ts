@@ -9,7 +9,9 @@ import {
   DEFAULT_SEARCH_ENGINE_ID,
   LOCAL_TEXT_EMBEDDING_DIMENSIONS,
   LOCAL_TEXT_EMBEDDING_MODEL,
+  SEARCH_PROFILES,
   SEARCH_SQLITE_ENGINE,
+  SEARCH_SOURCE_SETS,
   SearchStore,
   createLocalTextEmbedding,
   createFrameworkSearchSourceManifest,
@@ -264,6 +266,43 @@ test("full sourceSet sources are opt-in and may defer their fast path to externa
   assert.equal(manifest.permissions.default, "opt_in");
   assert.equal(manifest.capabilities.fastPath, false);
   assert.equal(manifest.capabilities.semantic, "optional");
+});
+
+test("Search profiles remain a public compatibility alias for source sets", () => {
+  assert.deepEqual(SEARCH_PROFILES, SEARCH_SOURCE_SETS);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-profile-alias-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.registerSource(createFullSearchSourceManifest({
+      id: "local.files",
+      domain: "files",
+      name: "Local files",
+      resultTypes: ["file"],
+    }));
+
+    const fullProfileQuery = store.query({ query: "settings", profile: "full", sources: ["local.files"] });
+    assert.equal(fullProfileQuery.sourceSet, "full");
+    assert.equal(fullProfileQuery.omittedSources[0]?.reason, "disabled");
+
+    const canonicalSourceSetQuery = store.query({
+      query: "settings",
+      profile: "full",
+      sourceSet: "framework",
+      sources: ["local.files"],
+    });
+    assert.equal(canonicalSourceSetQuery.sourceSet, "framework");
+    assert.equal(canonicalSourceSetQuery.omittedSources[0]?.reason, "sourceSet");
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("SearchStore does not mark default framework queries partial because full sources are disabled", () => {

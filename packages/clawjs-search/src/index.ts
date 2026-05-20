@@ -7,6 +7,7 @@ import {
 } from "@clawjs/core";
 
 export type SearchSourceSetId = "framework" | "full";
+export type SearchProfileId = SearchSourceSetId;
 
 export type SearchAclLevel = "domain" | "source" | "agent";
 
@@ -335,6 +336,7 @@ export interface SearchQueryInput {
   sources?: string[];
   shards?: string[];
   sourceSet?: SearchSourceSetId;
+  profile?: SearchProfileId;
   actor?: string;
   surface?: string;
   limit?: number;
@@ -409,6 +411,8 @@ export const SEARCH_SOURCE_SETS: Array<{ id: SearchSourceSetId; label: string; d
   { id: "framework", label: "Framework", defaultEnabled: true },
   { id: "full", label: "Full", defaultEnabled: false },
 ];
+
+export const SEARCH_PROFILES: Array<{ id: SearchProfileId; label: string; defaultEnabled: boolean }> = SEARCH_SOURCE_SETS;
 
 export const DEFAULT_SEARCH_BUDGETS: SearchBudgets = {
   hotMs: 50,
@@ -552,7 +556,7 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
     },
     async query(input) {
       const startedAt = Date.now();
-      const sourceSet = input.sourceSet ?? "framework";
+      const sourceSet = input.sourceSet ?? input.profile ?? "framework";
       const selected = [...sources.values()].filter((source) => {
         if (sourceSet !== "full" && source.manifest.sourceSet !== "framework") return false;
         if (input.sources?.length && !input.sources.includes(source.manifest.id)) return false;
