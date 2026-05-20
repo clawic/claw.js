@@ -26,17 +26,15 @@ canonical storage, domain APIs, the public `claw` CLI, SDK, services, MCP,
 Relay, skills, and reusable agent assets. Clawix is the sister native human
 interface and embedded signed host.
 
-Use the decision map for routing before changing framework and host ownership,
-storage, data placement, naming, source boundaries, testing, catalog schemas,
-stable surfaces, remote access, security, releases, open-standard trust, or
-OpenClaw host-dependent debugging.
+Use the decision map for routing before changing ownership, storage, naming,
+source boundaries, testing, catalog schemas, stable surfaces, remote access,
+security, releases, open-standard trust, or OpenClaw debugging.
 
 ## Agent Discovery
 
-For non-trivial questions or plans about framework behavior, contracts,
-storage, CLI, schemas, permissions, grants, approvals, audit, data placement,
-naming, package surfaces, routes, ports, protocols, or Clawix integration,
-start with a `claw` discovery pass when the CLI is available:
+For non-trivial framework, contract, storage, CLI, schema, permission, grant,
+approval, audit, naming, package, route, port, protocol, or Clawix work, start
+with a `claw` discovery pass when available:
 
 ```bash
 claw search <topic> --json
@@ -63,10 +61,8 @@ Read the relevant canon before changing its surface:
   `docs/adr/0003-source-file-boundaries.md`
 - Built-in collections and schemas: `docs/canonical-data-catalog.md`,
   `docs/adr/0005-canonical-data-catalog.md`
-- Stable surfaces and route graph:
-  `docs/adr/0004-persistent-surface-registry-and-inspection.md`,
-  `docs/adr/0009-dual-human-programmatic-surfaces.md`,
-  `docs/adr/0012-surface-route-graph.md`
+- Stable surfaces and route graph: `docs/adr/0004-persistent-surface-registry-and-inspection.md`,
+  `docs/adr/0009-dual-human-programmatic-surfaces.md`, `docs/adr/0012-surface-route-graph.md`
 - Open standard and official trust:
   `docs/adr/0033-open-standard-official-trust.md`,
   `docs/official-trust-and-compatibility.md`, `FORKS.md`, `TRADEMARKS.md`
@@ -113,11 +109,10 @@ npm run ci
 
 ## Public Hygiene And Commits
 
-Public repositories must not contain maintainer-private paths, signing
-identities, bundle IDs, Team IDs, SKUs, release credentials, local launchers,
-private automation, private Q&A indexes, logs, caches, or screenshots. Run
-`npm run privacy:check` and `npm run test:docs` before publication or broad
-review.
+Public repositories must not contain maintainer-private paths, signing identities,
+bundle IDs, Team IDs, SKUs, release credentials, local launchers, private automation,
+private Q&A indexes, logs, caches, or screenshots. Run `npm run privacy:check`
+and `npm run test:docs` before publication or broad review.
 
 Use Conventional Commits, keep commits scoped by intention, do not sweep
 unrelated edits, commit changesets with the behavior they document, and never
