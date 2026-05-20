@@ -4,3 +4,4 @@ export * from "./routes.ts";
 export * from "./client.ts";
 export * from "./catalog-loader.ts";
 export * from "./publishable.ts";
+export * from "./registry.ts";

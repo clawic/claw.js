@@ -151,6 +151,48 @@ export interface RegistryEntry {
   iconHint?: string;
 }
 
+export interface RegistryCategoryProjection {
+  id: RegistryCategory;
+  label: string;
+}
+
+export interface RegistryProjectionSource {
+  type: "clawjs.tracking-registry";
+  path: "tracking-registry.json";
+  schemaVersion: number;
+  generatedAt?: string;
+  checksum: string;
+}
+
+export interface RegistryProjectionService {
+  id: "signals";
+  port: number;
+  basePath: "/v1/signals";
+  verticalRouteTemplate: "/v1/signals/{verticalId}";
+}
+
+export interface RegistryProjectionEntry {
+  id: string;
+  label: string;
+  category: RegistryCategory;
+  description: string;
+  catalogSize: number;
+  hasSessions: boolean;
+  healthkitMapping: boolean;
+  sensitive: boolean;
+  status: RegistryStatus;
+  iconHint?: string;
+}
+
+export interface RegistryProjection {
+  schemaVersion: 1;
+  projectionVersion: "signals-registry.v1";
+  source: RegistryProjectionSource;
+  service: RegistryProjectionService;
+  categories: RegistryCategoryProjection[];
+  entries: RegistryProjectionEntry[];
+}
+
 export interface UpsertCatalogInput {
   id: string;
   label: string;

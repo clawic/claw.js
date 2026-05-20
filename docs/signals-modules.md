@@ -130,7 +130,7 @@ not independent npm packages or public service identities.
 service tests, or vertical-specific CLI wrappers. Runtime behavior belongs to
 `@clawjs/signals`, `@clawjs/signals-core`, and the core `signals_*` tables.
 
-The public CLI surface is `claw signals catalog|seed-catalog|observe|list|delete`.
+The public CLI surface is `claw signals registry|catalog|seed-catalog|observe|list|delete`.
 Per-vertical CLI commands are not added unless a later ADR promotes an
 aggregate or system with strong invariants.
 

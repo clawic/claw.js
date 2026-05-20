@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 
 import type Database from "better-sqlite3";
 import { DatabaseServiceStore } from "@clawjs/database";
+import { getSignalsRegistryProjection } from "@clawjs/signals";
 import { applyAppStateTransaction, appStateRequestFromOperations, readAppStateProjection } from "./app-state-service.ts";
 import type { ClawAppStateOperation } from "@clawjs/core";
 import { runProviderRoutingCommand, runSnippetsCommand } from "./v1-data-agent-config.ts";
@@ -89,6 +90,10 @@ export async function runV1DataCli(input: V1DataCliInput): Promise<number | null
       writeError(input, "data_error", error instanceof Error ? error.message : String(error));
       return V1_DATA_EXIT_FAILURE;
     }
+  }
+  if ((group === "signals" || group === "life") && command === "registry") {
+    writeSuccess(input, getSignalsRegistryProjection());
+    return V1_DATA_EXIT_OK;
   }
 
   let store: DatabaseServiceStore | null = null;
@@ -198,8 +203,8 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
   const commandsByGroup: Record<string, Set<string>> = {
     data: new Set(["doctor", "backup", "restore", "reset", "help"]),
     "app-state": new Set(["get", "set", "snapshot", "project", "pin", "title", "archive", "sidebar", "terminal", "help"]),
-    signals: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
-    life: new Set(["catalog", "seed-catalog", "observe", "list", "delete", "help"]),
+    signals: new Set(["registry", "catalog", "seed-catalog", "observe", "list", "delete", "help"]),
+    life: new Set(["registry", "catalog", "seed-catalog", "observe", "list", "delete", "help"]),
     knowledge: new Set(["entity", "fact", "list", "search", "promote", "delete", "help"]),
     notes: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "record-note", "help"]),
     wiki: new Set(["create", "list", "get", "update", "delete", "search", "export", "import", "link", "help"]),
