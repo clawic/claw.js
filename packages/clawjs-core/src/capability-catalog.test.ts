@@ -257,6 +257,22 @@ test("custom-app SDK inspection payload exposes dispatch availability and gaps",
   assert.equal(byId.get("jobs.cancel")?.dispatch?.mode, "blocked");
 });
 
+test("custom-app SDK inspection payload exposes complete resolved surfaces", () => {
+  const payload = buildCustomAppSDKInspectionPayload();
+
+  for (const capability of payload.capabilities) {
+    assert.deepEqual(capability.surfaces.map((surface) => surface.surface), CANONICAL_CAPABILITY_SURFACES, capability.id);
+    for (const surface of capability.surfaces) {
+      assert.notEqual(surface.status, "pending", `${capability.id}:${surface.surface}`);
+      if (surface.status === "available") {
+        assert.equal(Boolean(surface.ref), true, `${capability.id}:${surface.surface}`);
+      } else {
+        assert.equal(surface.ref, undefined, `${capability.id}:${surface.surface}`);
+      }
+    }
+  }
+});
+
 test("custom-app MCP coverage is metadata-only for contract projections", () => {
   const payload = buildCustomAppSDKInspectionPayload();
 

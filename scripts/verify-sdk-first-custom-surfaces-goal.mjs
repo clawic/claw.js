@@ -234,6 +234,9 @@ function assertTests() {
     "packages/clawjs-core/src/capability-catalog.test.ts": [
       "custom-app SDK inspection payload has no missing schema refs",
       "custom-app SDK inspection payload exposes dispatch availability and gaps",
+      "custom-app SDK inspection payload exposes complete resolved surfaces",
+      "assert.equal(Boolean(surface.ref), true",
+      "assert.equal(surface.ref, undefined",
       "payload.executionBoundary.executesCapabilityCalls",
       "custom-app DB query schema rejects collection creation",
       "resources.list",
