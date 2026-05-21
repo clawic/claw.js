@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 1,
+  "policy": "Classifies legitimate occurrences of governance-sensitive vocabulary without increasing docs/governance-vocabulary-baseline.json. Counts are exact: if a classified occurrence grows or shrinks, review and update this manifest rather than silently rebasing debt.",
+  "entries": [
+    {
+      "id": "agent-rules-governance-policy-owner-kind",
+      "path": "docs/agent-rules/index.md",
+      "pattern": "ownerKind",
+      "classification": "governancePolicyReference",
+      "rationale": "Policy text names prohibited legacy authority fields so agents know not to add them.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "agent-rules-governance-policy-owner-id",
+      "path": "docs/agent-rules/index.md",
+      "pattern": "ownerId",
+      "classification": "governancePolicyReference",
+      "rationale": "Policy text names prohibited legacy authority fields so agents know not to add them.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "agent-rules-governance-policy-ownership",
+      "path": "docs/agent-rules/index.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "Agent routing text points readers to host ownership canon; this is documentation routing, not authority vocabulary.",
+      "canonicalDoc": "docs/host-ownership.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "agent-rules-governance-policy-tenant-id",
+      "path": "docs/agent-rules/index.md",
+      "pattern": "tenantId",
+      "classification": "governancePolicyReference",
+      "rationale": "Policy text names prohibited legacy authority fields so agents know not to add them.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "inspect-cli-legacy-owner-kind-projection",
+      "path": "packages/clawjs/src/inspect-cli.ts",
+      "pattern": "ownerKind",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Agent inspect exposes legacy ownerKind only as compatibility projection while canonical steward/scope fields are present.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-agents"
+    },
+    {
+      "id": "inspect-cli-legacy-owner-id-projection",
+      "path": "packages/clawjs/src/inspect-cli.ts",
+      "pattern": "ownerId",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Agent inspect exposes legacy ownerId only as compatibility projection while canonical steward/scope fields are present.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-agents"
+    },
+    {
+      "id": "inspect-cli-agent-owner-output-compat",
+      "path": "packages/clawjs/src/inspect-cli.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Agent inspect keeps the pre-existing owner output label for legacy agent-store compatibility; route/surface ownership fields use steward.",
+      "canonicalDoc": "docs/governance/governance-workspace-project/source-audit.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-agents"
+    },
+    {
+      "id": "search-heavy-legacy-owner-id-read",
+      "path": "packages/clawjs/src/cli-search-heavy-command.ts",
+      "pattern": "ownerId",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Search reads legacy ownerId projections from existing tables for indexing; it does not grant authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "search-heavy-legacy-owner-id-sql-read",
+      "path": "packages/clawjs/src/cli-search-heavy-command.ts",
+      "pattern": "owner_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Search reads legacy owner_id columns from existing tables for indexing; it does not grant authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 8,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "debt-ledger-test-legacy-owner-fixture",
+      "path": "packages/clawjs-core/src/debt-ledger.test.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Tests cover legacy debt-ledger fixture input that maps owner to ownerArea, not authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "adr-coverage-repo-profile-option",
+      "path": "scripts/adr-operational-coverage-check.mjs",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "Script profile selects ClawJS versus Clawix repository behavior for docs coverage checks.",
+      "canonicalDoc": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "adr-coverage-owner-field-fixture",
+      "path": "scripts/adr-operational-coverage-check.mjs",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Self-test fixture covers legacy operational coverage records and does not model authority.",
+      "canonicalDoc": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "surface-narrative-owner-field-fixture",
+      "path": "scripts/surface-narrative-guard.mjs",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Self-test fixture preserves existing baseline schema compatibility; active baseline field is steward.",
+      "canonicalDoc": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-surfaces"
+    },
+    {
+      "id": "constitution-map-host-ownership-routing",
+      "path": "docs/constitution-map.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "The constitution router links to host ownership canon; it is a document title, not an authority field.",
+      "canonicalDoc": "docs/host-ownership.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "constitution-assertions-host-ownership-routing",
+      "path": "docs/constitution.assertions.json",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "Constitution assertions reference Host Ownership canon as a protected document.",
+      "canonicalDoc": "docs/host-ownership.md",
+      "maxOccurrences": 28,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "performance-governance-cleanup-ownership",
+      "path": "docs/governance/performance-governance.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "Performance governance uses cleanup ownership to mean operational responsibility, not access authority.",
+      "canonicalDoc": "docs/governance/performance-governance.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-performance"
+    },
+    {
+      "id": "compact-catalogs-ops-ownership-description",
+      "path": "packages/clawjs-core/src/compact-catalogs.ts",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "Compact catalog description uses ownership as a business-domain relation term, not framework authority.",
+      "canonicalDoc": "docs/canonical-data-catalog.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-catalog"
+    },
+    {
+      "id": "bridge-config-test-technical-tenant",
+      "path": "bridge/tests/config.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Bridge tests cover remote coordinator tenant configuration used for hosted technical isolation.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-bridge"
+    },
+    {
+      "id": "cli-legacy-relay-technical-tenant",
+      "path": "packages/clawjs/src/cli-legacy.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Legacy Relay browser command passes provider/relay tenant context as technical isolation, not public authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "cli-legacy-relay-technical-tenant-id",
+      "path": "packages/clawjs/src/cli-legacy.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Legacy Relay browser command passes provider/relay tenantId context as technical isolation, not public authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "capability-fiches-relay-technical-tenant",
+      "path": "packages/clawjs-core/src/capability-fiches.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Capability fiche names Relay tenant/workspace context as remote technical isolation.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "surface-contracts-technical-tenant",
+      "path": "packages/clawjs-core/src/surface-contracts.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Surface contracts describe multi-tenant gateway routes as technical hosted isolation.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-surfaces"
+    },
+    {
+      "id": "persistent-surface-generated-profile",
+      "path": "docs/persistent-surface.md",
+      "pattern": "profile",
+      "classification": "deterministicGeneratedArtifact",
+      "rationale": "Rendered persistent-surface docs are generated from the surface registry and include legitimate user/domain profile surfaces.",
+      "canonicalDoc": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "maxOccurrences": 9,
+      "steward": "clawjs-surfaces",
+      "generatedFrom": "packages/clawjs-core/src/surface-registry.ts",
+      "parityTest": "packages/clawjs/src/inspect-cli.test.ts"
+    },
+    {
+      "id": "surface-narrative-baseline-generated-profile",
+      "path": "docs/surface-narrative-baseline.json",
+      "pattern": "profile",
+      "classification": "deterministicGeneratedArtifact",
+      "rationale": "Surface narrative baseline contains generated surface ids such as executionProfiles; drift is guarded by surface-narrative-guard.",
+      "canonicalDoc": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-surfaces",
+      "generatedFrom": "scripts/surface-narrative-guard.mjs",
+      "parityTest": "scripts/surface-narrative-guard.mjs"
+    },
+    {
+      "id": "cli-router-generated-profile",
+      "path": "packages/clawjs/src/cli-router.generated.ts",
+      "pattern": "profile",
+      "classification": "deterministicGeneratedArtifact",
+      "rationale": "Generated CLI router reflects registered profile portal/domain commands from cli-command-registry.",
+      "canonicalDoc": "docs/cli.md",
+      "maxOccurrences": 21,
+      "steward": "clawjs-cli",
+      "generatedFrom": "scripts/generate-cli-router.mjs",
+      "parityTest": "scripts/verify-cli-registry-router-parity.mjs"
+    },
+    {
+      "id": "inspect-cli-test-support-profile-fixture",
+      "path": "packages/clawjs/src/inspect-cli-test-support.ts",
+      "pattern": "profile",
+      "classification": "humanUserProfile",
+      "rationale": "Inspect test support uses profile package fixture metadata for human user profile package installation.",
+      "canonicalDoc": "docs/vocabulary.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-tests"
+    },
+    {
+      "id": "compact-catalogs-domain-profile",
+      "path": "packages/clawjs-core/src/compact-catalogs.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "Compact catalogs include canonical domain profile collection names and aliases.",
+      "canonicalDoc": "docs/canonical-data-catalog.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-catalog"
+    },
+    {
+      "id": "surface-contracts-profile-surfaces",
+      "path": "packages/clawjs-core/src/surface-contracts.ts",
+      "pattern": "profile",
+      "classification": "humanUserProfile",
+      "rationale": "Surface contracts include the profile package, portal, projection table, and config route as explicit user/domain profile surfaces.",
+      "canonicalDoc": "docs/vocabulary.md",
+      "maxOccurrences": 5,
+      "steward": "clawjs-surfaces"
+    },
+    {
+      "id": "surface-registry-profile-surfaces",
+      "path": "packages/clawjs-core/src/surface-registry.ts",
+      "pattern": "profile",
+      "classification": "humanUserProfile",
+      "rationale": "Surface registry includes profile package, portal, projection table, and config route as explicit user/domain profile surfaces.",
+      "canonicalDoc": "docs/vocabulary.md",
+      "maxOccurrences":  6,
+      "steward": "clawjs-surfaces"
+    },
+    {
+      "id": "discoverability-repo-profile-option",
+      "path": "scripts/discoverability-check.mjs",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "Discoverability generation uses profile to select ClawJS versus Clawix repository behavior.",
+      "canonicalDoc": "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      "maxOccurrences": 16,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "generate-cli-router-profile-commands",
+      "path": "scripts/generate-cli-router.mjs",
+      "pattern": "profile",
+      "classification": "humanUserProfile",
+      "rationale": "Router generator preserves the public profile portal and human profile domain command family.",
+      "canonicalDoc": "docs/vocabulary.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "app-state-migration-profile-id-test",
+      "path": "packages/clawjs/src/index-data.test.ts",
+      "pattern": "profile_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Test fixture verifies migration from the legacy app_state profile_id column to state_scope_id.",
+      "canonicalDoc": "docs/data-storage-boundary.md",
+      "maxOccurrences": 7,
+      "steward": "clawjs-database"
+    },
+    {
+      "id": "v1-data-core-app-state-profile-id-migration",
+      "path": "packages/clawjs/src/v1-data-core.ts",
+      "pattern": "profile_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Schema migration reads legacy app_state profile_id columns only to move them into state_scope_id.",
+      "canonicalDoc": "docs/data-storage-boundary.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-database"
+    },
+    {
+      "id": "database-app-state-profile-id-migration",
+      "path": "packages/clawjs-database/src/app-state-service.ts",
+      "pattern": "profile_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Database app-state migration reads legacy profile_id columns only to move them into state_scope_id.",
+      "canonicalDoc": "docs/data-storage-boundary.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-database"
+    },
+    {
+      "id": "board-sidebar-company-id-route",
+      "path": "apps/board/src/app/api/companies/[companyId]/sidebar/route.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board routes use companyId as a business entity identifier, not an authority decision.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "board-summary-company-id-route",
+      "path": "apps/board/src/app/api/companies/[companyId]/summary/route.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board routes use companyId as a business entity identifier, not an authority decision.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "board-approval-card-company-id",
+      "path": "apps/board/src/components/ApprovalCard.tsx",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board approval UI uses companyId as a business entity identifier for routing and invalidation.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "board-query-company-id",
+      "path": "apps/board/src/lib/board-queries.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board query keys and fetch helpers use companyId as a business entity identifier, not authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 53,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "board-company-summary-test-company-id",
+      "path": "apps/board/src/lib/company-summary.test.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board summary tests use companyId as business-domain fixture identity.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 10,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "board-company-summary-company-id",
+      "path": "apps/board/src/lib/company-summary.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board summary builders use companyId as a business entity identifier, not authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 52,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "board-e2e-company-id",
+      "path": "apps/board/tests/e2e/app.spec.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board E2E tests use companyId as business-domain fixture identity.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-board"
+    }
+  ]
+}

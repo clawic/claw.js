@@ -1429,7 +1429,7 @@ export const clawPortContractCatalog = defineStableCatalogFromEntries(Object.ent
 
 const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
   maturity: {
-    concept: "Capability maturity governance inspection CLI for profile ceilings, activation policies, and leakage audit.",
+    concept: "Capability maturity governance inspection CLI for activation tier ceilings, activation policies, and leakage audit.",
     authorizingDecision: {
       ref: "ADR 0004: Stable surface registry and inspection",
       path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",

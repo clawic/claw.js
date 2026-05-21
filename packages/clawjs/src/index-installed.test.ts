@@ -16,6 +16,18 @@ import {
   useIsolatedClawDataRoot,
 } from "./index-test-utils.ts";
 
+function parseInstalledClawData<T>(binPath: string, cwd: string, args: string[]): T {
+  const payload = JSON.parse(runInstalledClaw(binPath, cwd, args)) as unknown;
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
+function cliItems<T>(payload: T[] | { items?: T[] }): T[] {
+  return Array.isArray(payload) ? payload : payload.items ?? [];
+}
+
 test("published CLI package does not depend on the retired Index package", () => {
   const cliPackageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs/package.json"), "utf8")) as {
     dependencies?: Record<string, string>;
@@ -62,13 +74,13 @@ test("published CLI base install runs safe commands without native local data pa
   }
 
   assert.match(runInstalledClaw(binPath, installRoot, ["--help"]), /Safe base commands/);
-  const modules = JSON.parse(runInstalledClaw(binPath, installRoot, ["modules", "list", "--available", "--json"])) as { data: { modules: Array<{ id: string; optionalPack?: string }> } };
-  assert.equal(modules.data.modules.some((module) => module.id === "local-data" && module.optionalPack === "@clawjs/local-data"), true);
-  const setup = JSON.parse(runInstalledClaw(binPath, installRoot, ["setup", "--details", "--json"])) as { data: { applied: boolean; mode: string } };
-  assert.equal(setup.data.applied, false);
-  assert.equal(setup.data.mode, "minimal");
-  const inspect = JSON.parse(runInstalledClaw(binPath, installRoot, ["inspect", "commands", "--json"])) as { data: Array<{ value: string }> };
-  assert.equal(inspect.data.some((entry) => entry.value === "modules"), true);
+  const modules = parseInstalledClawData<{ modules: Array<{ id: string; optionalPack?: string }> }>(binPath, installRoot, ["modules", "list", "--available", "--json"]);
+  assert.equal(modules.modules.some((module) => module.id === "local-data" && module.optionalPack === "@clawjs/local-data"), true);
+  const setup = parseInstalledClawData<{ applied: boolean; mode: string }>(binPath, installRoot, ["setup", "--details", "--json"]);
+  assert.equal(setup.applied, false);
+  assert.equal(setup.mode, "minimal");
+  const inspect = parseInstalledClawData<Array<{ value: string }>>(binPath, installRoot, ["inspect", "commands", "--json"]);
+  assert.equal(inspect.some((entry) => entry.value === "modules"), true);
 
   const missingLocalData = spawnSync(process.execPath, [binPath, "tasks", "create", "Thin task", "--json"], {
     cwd: installRoot,
@@ -154,12 +166,12 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(inactiveDenseCommand.status, 64);
   assert.equal(JSON.parse(inactiveDenseCommand.stdout).error.code, "module_not_enabled");
 
-  JSON.parse(runInstalledClaw(binPath, installRoot, [
+  parseInstalledClawData(binPath, installRoot, [
     "modules",
     "enable",
     "health",
     "--json",
-  ]));
+  ]);
   const missingDensePack = spawnSync(process.execPath, [binPath, "patient", "list", "--json"], {
     cwd: installRoot,
     encoding: "utf8",
@@ -187,7 +199,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.match(magicDbTask.stderr, /Using local database for this project/);
   assert.match(magicDbTask.stdout, /Created task \S+ "Magic fallback"/);
 
-  const magicDbLead = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const magicDbLead = parseInstalledClawData<{ title: string; metadata?: { website?: string } }>(binPath, installRoot, [
     "db",
     "leads",
     "--set",
@@ -197,33 +209,33 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--set",
     "companyId=company_ada",
     "--json",
-  ])) as { title: string; metadata?: { website?: string } };
+  ]);
   assert.equal(magicDbLead.title, "Ada");
   assert.equal(magicDbLead.metadata?.website, "https://ada.dev");
 
-  const magicAliasTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const magicAliasTask = parseInstalledClawData(binPath, installRoot, [
     "tasks",
     "create",
     "Alias task",
     "--json",
-  ])) as { id: string; title: string };
+  ]) as { id: string; title: string };
   assert.equal(magicAliasTask.title, "Alias task");
 
-  const listedTasks = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const listedTasks = parseInstalledClawData(binPath, installRoot, [
     "db",
     "tasks",
     "list",
     "--json",
-  ])) as Array<{ id: string; title?: string }>;
+  ]) as Array<{ id: string; title?: string }>;
   assert.equal(listedTasks.some((item) => item.title === "Alias task"), true);
   assert.equal(listedTasks.some((item) => item.title === "Magic fallback"), true);
 
-  const magicSchema = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const magicSchema = parseInstalledClawData(binPath, installRoot, [
     "db",
     "leads",
     "schema",
     "--json",
-  ])) as { exists: boolean; collection: { name: string } };
+  ]) as { exists: boolean; collection: { name: string } };
   assert.equal(magicSchema.exists, true);
   assert.equal(magicSchema.collection.name, "leads");
 
@@ -231,18 +243,18 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 
-  const area = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const area = parseInstalledClawData(binPath, installRoot, [
     "areas",
     "create",
     "Personal Ops",
     "--status",
     "active",
     "--json",
-  ])) as { id: string; status: string; name: string };
+  ]) as { id: string; status: string; name: string };
   assert.equal(area.status, "active");
   assert.equal(area.name, "Personal Ops");
 
-  const project = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const project = parseInstalledClawData(binPath, installRoot, [
     "projects",
     "create",
     "Ship CLI",
@@ -255,12 +267,12 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--review-at",
     "2026-04-20T09:00:00.000Z",
     "--json",
-  ])) as { id: string; areaId?: string; name: string; statusCategory?: string; reviewAt?: string };
+  ]) as { id: string; areaId?: string; name: string; statusCategory?: string; reviewAt?: string };
   assert.equal(project.areaId, area.id);
   assert.equal(project.statusCategory, "active");
   assert.equal(project.reviewAt, "2026-04-20T09:00:00.000Z");
 
-  const todayList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const todayList = parseInstalledClawData(binPath, installRoot, [
     "lists",
     "create",
     "Today",
@@ -269,20 +281,20 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--rank",
     "1",
     "--json",
-  ])) as { id: string; kind: string; title: string };
+  ]) as { id: string; kind: string; title: string };
   assert.equal(todayList.kind, "today");
 
-  const upcomingList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const upcomingList = parseInstalledClawData(binPath, installRoot, [
     "lists",
     "create",
     "Upcoming",
     "--kind",
     "upcoming",
     "--json",
-  ])) as { id: string; kind: string };
+  ]) as { id: string; kind: string };
   assert.equal(upcomingList.kind, "upcoming");
 
-  const section = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const section = parseInstalledClawData(binPath, installRoot, [
     "sections",
     "create",
     "Next",
@@ -293,12 +305,12 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--rank",
     "10",
     "--json",
-  ])) as { id: string; listId?: string; projectId?: string; rank?: number };
+  ]) as { id: string; listId?: string; projectId?: string; rank?: number };
   assert.equal(section.listId, todayList.id);
   assert.equal(section.projectId, project.id);
   assert.equal(section.rank, 10);
 
-  const savedView = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const savedView = parseInstalledClawData(binPath, installRoot, [
     "saved-views",
     "create",
     "Due today",
@@ -309,11 +321,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--favorite",
     "true",
     "--json",
-  ])) as { id: string; domain: string; favorite?: boolean };
+  ]) as { id: string; domain: string; favorite?: boolean };
   assert.equal(savedView.domain, "tasks");
   assert.equal(savedView.favorite, true);
 
-  const goal = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const goal = parseInstalledClawData(binPath, installRoot, [
     "goals",
     "create",
     "CLI daily workflow",
@@ -324,11 +336,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--review-cadence",
     "weekly",
     "--json",
-  ])) as { id: string; areaId?: string; projectId?: string };
+  ]) as { id: string; areaId?: string; projectId?: string };
   assert.equal(goal.areaId, area.id);
   assert.equal(goal.projectId, project.id);
 
-  const milestone = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const milestone = parseInstalledClawData(binPath, installRoot, [
     "milestones",
     "create",
     "Beta ready",
@@ -343,10 +355,10 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--target-date",
     "2026-04-18T17:00:00.000Z",
     "--json",
-  ])) as { id: string; projectId?: string };
+  ]) as { id: string; projectId?: string };
   assert.equal(milestone.projectId, project.id);
 
-  const task = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const task = parseInstalledClawData(binPath, installRoot, [
     "tasks",
     "create",
     "Ship CLI",
@@ -379,7 +391,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--checklist-json",
     '[{"text":"pack tarballs"},{"text":"publish npm"}]',
     "--json",
-  ])) as { id: string; areaId?: string; listId?: string; sectionId?: string; projectId?: string; goalId?: string; estimateMinutes?: number; storyPoints?: number; checklist?: Array<{ text: string }>; recurrenceRule?: string };
+  ]) as { id: string; areaId?: string; listId?: string; sectionId?: string; projectId?: string; goalId?: string; estimateMinutes?: number; storyPoints?: number; checklist?: Array<{ text: string }>; recurrenceRule?: string };
   assert.equal(task.areaId, area.id);
   assert.equal(task.listId, todayList.id);
   assert.equal(task.sectionId, section.id);
@@ -390,7 +402,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(task.recurrenceRule, "FREQ=WEEKLY;BYDAY=FR");
   assert.equal(task.checklist?.length, 2);
 
-  const recurrence = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const recurrence = parseInstalledClawData(binPath, installRoot, [
     "recurrences",
     "create",
     "Weekly CLI review",
@@ -403,10 +415,10 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--next-run-at",
     "2026-04-24T09:00:00.000Z",
     "--json",
-  ])) as { id: string; anchorId?: string; rule: string };
+  ]) as { id: string; anchorId?: string; rule: string };
   assert.equal(recurrence.anchorId, task.id);
 
-  const cycle = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const cycle = parseInstalledClawData(binPath, installRoot, [
     "cycles",
     "create",
     "Sprint 17",
@@ -421,11 +433,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--capacity-points",
     "20",
     "--json",
-  ])) as { id: string; status: string; projectId?: string; capacityPoints?: number };
+  ]) as { id: string; status: string; projectId?: string; capacityPoints?: number };
   assert.equal(cycle.status, "active");
   assert.equal(cycle.projectId, project.id);
 
-  const epic = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const epic = parseInstalledClawData(binPath, installRoot, [
     "epics",
     "create",
     "CLI productivity core",
@@ -436,10 +448,10 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--goal-id",
     goal.id,
     "--json",
-  ])) as { id: string; kind: string; projectId?: string };
+  ]) as { id: string; kind: string; projectId?: string };
   assert.equal(epic.kind, "initiative");
 
-  const typedTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const typedTask = parseInstalledClawData(binPath, installRoot, [
     "tasks",
     "update",
     task.id,
@@ -448,11 +460,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--epic-id",
     epic.id,
     "--json",
-  ])) as { id: string; cycleId?: string; epicId?: string };
+  ]) as { id: string; cycleId?: string; epicId?: string };
   assert.equal(typedTask.cycleId, cycle.id);
   assert.equal(typedTask.epicId, epic.id);
 
-  const comment = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const comment = parseInstalledClawData(binPath, installRoot, [
     "comments",
     "create",
     "Ready for review",
@@ -463,10 +475,10 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--visibility",
     "internal",
     "--json",
-  ])) as { id: string; entityId?: string; body?: string };
+  ]) as { id: string; entityId?: string; body?: string };
   assert.equal(comment.entityId, task.id);
 
-  const attachment = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const attachment = parseInstalledClawData(binPath, installRoot, [
     "attachments",
     "create",
     "CLI screenshot",
@@ -479,11 +491,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--uri",
     "file://cli.png",
     "--json",
-  ])) as { id: string; entityId?: string; mimeType?: string };
+  ]) as { id: string; entityId?: string; mimeType?: string };
   assert.equal(attachment.entityId, task.id);
   assert.equal(attachment.mimeType, "image/png");
 
-  const annotatedTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const annotatedTask = parseInstalledClawData(binPath, installRoot, [
     "tasks",
     "update",
     task.id,
@@ -492,11 +504,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--attachment-ids",
     attachment.id,
     "--json",
-  ])) as { id: string; commentIds?: string[]; attachmentIds?: string[] };
+  ]) as { id: string; commentIds?: string[]; attachmentIds?: string[] };
   assert.deepEqual(annotatedTask.commentIds, [comment.id]);
   assert.deepEqual(annotatedTask.attachmentIds, [attachment.id]);
 
-  const customField = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const customField = parseInstalledClawData(binPath, installRoot, [
     "custom-fields",
     "create",
     "Impact",
@@ -507,10 +519,10 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--data",
     '{"options":["low","high"]}',
     "--json",
-  ])) as { id: string; name: string; fieldType: string; options?: string[] };
+  ]) as { id: string; name: string; fieldType: string; options?: string[] };
   assert.equal(customField.fieldType, "select");
 
-  const fieldValue = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const fieldValue = parseInstalledClawData(binPath, installRoot, [
     "field-values",
     "create",
     customField.id,
@@ -521,12 +533,12 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--data",
     '{"value":"high"}',
     "--json",
-  ])) as { id: string; fieldId: string; entityId: string; value?: string };
+  ]) as { id: string; fieldId: string; entityId: string; value?: string };
   assert.equal(fieldValue.fieldId, customField.id);
   assert.equal(fieldValue.entityId, task.id);
   assert.equal(fieldValue.value, "high");
 
-  const reminder = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const reminder = parseInstalledClawData(binPath, installRoot, [
     "reminders",
     "create",
     "Follow up publish",
@@ -537,10 +549,10 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--anchor-id",
     task.id,
     "--json",
-  ])) as { id: string; anchorId?: string };
+  ]) as { id: string; anchorId?: string };
   assert.equal(reminder.anchorId, task.id);
 
-  const deadline = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const deadline = parseInstalledClawData(binPath, installRoot, [
     "deadlines",
     "create",
     "Release cutoff",
@@ -551,55 +563,55 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--anchor-id",
     project.id,
     "--json",
-  ])) as { id: string; anchorId?: string };
+  ]) as { id: string; anchorId?: string };
   assert.equal(deadline.anchorId, project.id);
 
-  const event = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const event = parseInstalledClawData(binPath, installRoot, [
     "events",
     "create",
     "Release review",
     "--starts-at",
     "2026-04-16T10:00:00.000Z",
     "--json",
-  ])) as { id: string };
+  ]) as { id: string };
   assert.ok(event.id);
 
-  const taskList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const taskList = parseInstalledClawData(binPath, installRoot, [
     "tasks",
     "list",
     "--section-id",
     section.id,
     "--json",
-  ])) as Array<{ id: string }>;
+  ]) as Array<{ id: string }>;
   assert.equal(taskList.some((item) => item.id === task.id), true);
 
-  const workspaceSearchPayload = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const workspaceSearchPayload = parseInstalledClawData(binPath, installRoot, [
     "search",
     "query",
     "CLI",
     "--domains",
     "tasks,attachments",
     "--json",
-  ])) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
+  ]) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
   const workspaceSearch = Array.isArray(workspaceSearchPayload)
     ? workspaceSearchPayload.map((item) => ({ domain: item.domain, sourceId: item.id }))
     : workspaceSearchPayload.global ?? [];
   assert.equal(workspaceSearch.some((item) => item.domain === "tasks" && item.sourceId === task.id), true);
 
-  const commentSearchPayload = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const commentSearchPayload = parseInstalledClawData(binPath, installRoot, [
     "search",
     "query",
     "review",
     "--domains",
     "comments",
     "--json",
-  ])) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
+  ]) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
   const commentSearch = Array.isArray(commentSearchPayload)
     ? commentSearchPayload.map((item) => ({ domain: item.domain, sourceId: item.id }))
     : commentSearchPayload.global ?? [];
   assert.equal(commentSearch.some((item) => item.domain === "comments" && item.sourceId === comment.id), true);
 
-  const timeline = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const timeline = parseInstalledClawData(binPath, installRoot, [
     "timeline",
     "week",
     "--start",
@@ -607,7 +619,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "--project-id",
     project.id,
     "--json",
-  ])) as {
+  ]) as {
     projects: Array<{ projectId?: string; tasks: unknown[]; milestones: unknown[]; deadlines: unknown[]; cycles: unknown[] }>;
     tasks: Array<{ id: string; dependencyState: { ready: boolean } }>;
     milestones: Array<{ id: string }>;
@@ -622,29 +634,29 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(timeline.cycles.some((item) => item.id === cycle.id), true);
   assert.equal(timeline.now.readyTasks.some((item) => item.id === task.id), true);
 
-  const completedTask = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const completedTask = parseInstalledClawData(binPath, installRoot, [
     "tasks",
     "complete",
     task.id,
     "--json",
-  ])) as { id: string; status: string };
+  ]) as { id: string; status: string };
   assert.equal(completedTask.status, "done");
 
-  const milestoneList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const milestoneList = parseInstalledClawData(binPath, installRoot, [
     "milestones",
     "list",
     "--json",
-  ])) as Array<{ id: string }>;
+  ]) as Array<{ id: string }>;
   assert.equal(milestoneList.some((item) => item.id === milestone.id), true);
 
-  const eventList = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const eventList = parseInstalledClawData(binPath, installRoot, [
     "events",
     "list",
     "--json",
-  ])) as Array<{ id: string }>;
+  ]) as Array<{ id: string }>;
   assert.equal(eventList.some((item) => item.id === event.id), true);
 
-  const agenda = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const agenda = parseInstalledClawData(binPath, installRoot, [
     "agenda",
     "--start",
     "2026-04-15T00:00:00.000Z",
@@ -652,16 +664,16 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "2026-04-19T00:00:00.000Z",
     "--include-completed",
     "--json",
-  ])) as { items: Array<{ domain: string; id: string }> };
+  ]) as { items: Array<{ domain: string; id: string }> };
   assert.equal(agenda.items.some((item) => item.domain === "tasks" && item.id === task.id), true);
   assert.equal(agenda.items.some((item) => item.domain === "deadlines" && item.id === deadline.id), true);
 
-  const exported = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const exported = parseInstalledClawData(binPath, installRoot, [
     "work",
     "export",
     "snapshot.json",
     "--json",
-  ])) as { path: string };
+  ]) as { path: string };
   assert.equal(fs.existsSync(exported.path), true);
   const snapshot = JSON.parse(fs.readFileSync(exported.path, "utf8")) as { collections?: Record<string, unknown[]> };
   assert.equal(Array.isArray(snapshot.collections?.lists), true);
@@ -676,30 +688,30 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(Array.isArray(snapshot.collections?.field_values), true);
   assert.equal(Array.isArray(snapshot.collections?.templates), true);
 
-  const backup = JSON.parse(runInstalledClaw(binPath, installRoot, [
+  const backup = parseInstalledClawData(binPath, installRoot, [
     "work",
     "backup",
     "backups",
     "--json",
-  ])) as { files: string[] };
+  ]) as { files: string[] };
   assert.equal(backup.files.some((filePath) => filePath.endsWith("core.sqlite")), true);
 
   const importRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-import-"));
-  const imported = JSON.parse(runInstalledClaw(binPath, importRoot, [
+  const imported = parseInstalledClawData(binPath, importRoot, [
     "work",
     "import",
     exported.path,
     "--replace",
     "--json",
-  ])) as { importedCollections?: Record<string, number> };
+  ]) as { importedCollections?: Record<string, number> };
   assert.equal(imported.importedCollections?.sections, 1);
   assert.equal(imported.importedCollections?.cycles, 1);
 
-  const importedSections = JSON.parse(runInstalledClaw(binPath, importRoot, [
+  const importedSections = parseInstalledClawData(binPath, importRoot, [
     "sections",
     "list",
     "--json",
-  ])) as Array<{ title?: string }>;
+  ]) as Array<{ title?: string }>;
   assert.equal(importedSections.some((item) => item.title === "Next"), true);
 
   const dbTask = runInstalledClawProcess(binPath, installRoot, [
