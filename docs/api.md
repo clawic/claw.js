@@ -261,6 +261,12 @@ intent/observed stores currently persisted in the workspace.
 
 ## Time
 
+`createClaw()` constructs an inert facade: it does not start a runtime,
+open SQLite, start schedulers, import or sync skills, run search, contact
+connectors, or prewarm sidecars during construction. DB-backed stores, runtime
+setup, skills import or sync, search, connectors, and schedulers activate only
+through explicit method calls or explicit options.
+
 Configure time explicitly through `CreateClawOptions.time` when you want
 calendar events, routines, reminders, deadlines, and conditional watches.
 If `time` is omitted, the temporal namespaces are present but unconfigured and

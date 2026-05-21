@@ -768,8 +768,9 @@ export async function createClaw(options: CreateClawOptions): Promise<ClawInstan
   });
   const skillsV2SyncEngine = new SkillsSyncEngine({ store: skillsV2Store, filesystem });
   const skillsV2Importer = new SkillsImporter({ store: skillsV2Store, filesystem });
-  // Auto-import external skills directories (silent on missing dirs).
-  if (options.skills?.autoImport !== false) {
+  // Auto-import scans external directories and may touch disk. Keep it behind
+  // an explicit opt-in so constructing the SDK facade stays inert.
+  if (options.skills?.autoImport === true) {
     void skillsV2Importer.importExternal().catch(() => undefined);
   }
   const userStore = createUserStore({

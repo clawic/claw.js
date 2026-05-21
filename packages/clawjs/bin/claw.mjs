@@ -48,6 +48,8 @@ function writeJsonOk(canonicalCommand, data, meta = {}) {
 }
 
 async function hasPackage(packageName) {
+  const forcedMissing = new Set((process.env.CLAWJS_CLI_FORCE_OPTIONAL_PACKS_MISSING || "").split(/[\s,]+/).filter(Boolean));
+  if (forcedMissing.has("*") || forcedMissing.has(packageName)) return false;
   try {
     await import(packageName);
     return true;

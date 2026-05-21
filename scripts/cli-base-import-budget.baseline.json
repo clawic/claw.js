@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "policy": "Safe base CLI commands and missing-pack rejection paths must not load Search, Database, Runtime, SQLite, dense packs, sidecar launchers, or full catalogs.",
+  "forbiddenSpecifiers": [
+    "better-sqlite3",
+    "@clawjs/claw",
+    "@clawjs/database",
+    "@clawjs/search",
+    "@clawjs/runtime",
+    "@clawjs/workspace",
+    "@clawjs/local-data",
+    "@clawjs/domain-pack-dense-data",
+    "@clawjs/core/catalogs"
+  ],
+  "forbiddenUrlFragments": [
+    "better-sqlite3",
+    "/@clawjs/database/",
+    "/@clawjs/search/",
+    "/@clawjs/runtime/",
+    "/@clawjs/claw/",
+    "/@clawjs/workspace/",
+    "/@clawjs/local-data/",
+    "/@clawjs/domain-pack-dense-data/",
+    "packages/clawjs-core/dist/catalogs",
+    "packages/clawjs-core/src/catalogs",
+    "packages/clawjs-core/dist/builtins",
+    "packages/clawjs-core/src/builtins",
+    "database-server-launcher.mjs",
+    "memory-server-launcher.mjs",
+    "drive-server-launcher.mjs",
+    "audio-server-launcher.mjs",
+    "index-server-launcher.mjs",
+    "sessions-server-launcher.mjs"
+  ],
+  "scenarios": [
+    { "id": "help", "args": ["--help"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "modules-list", "args": ["modules", "list", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "modules-status", "args": ["modules", "status", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "modules-install", "args": ["modules", "install", "local-data", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "setup", "args": ["setup", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "setup-details", "args": ["setup", "normal", "--details", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "inspect-commands", "args": ["inspect", "commands", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "collections-list", "args": ["collections", "list", "--json"], "expectedStatus": 0, "maxResolvedUrls": 8 },
+    { "id": "tasks-missing-pack", "args": ["tasks", "create", "Thin task", "--json"], "expectedStatus": 64, "maxResolvedUrls": 8 },
+    { "id": "search-missing-pack", "args": ["search", "query", "needle", "--json"], "expectedStatus": 64, "maxResolvedUrls": 8 },
+    { "id": "chat-missing-pack", "args": ["chat", "--json"], "expectedStatus": 64, "maxResolvedUrls": 8 },
+    { "id": "dense-domain-disabled", "args": ["health", "list", "--json"], "expectedStatus": 64, "maxResolvedUrls": 8 }
+  ]
+}

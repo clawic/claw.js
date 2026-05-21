@@ -46,8 +46,10 @@ const heavyDirectDependencies = new Set([
   "@clawjs/claw",
   "@clawjs/database",
   "@clawjs/search",
+  "@clawjs/runtime",
   "@clawjs/signals",
   "@clawjs/workspace",
+  "@clawjs/local-data",
   "@playwright/test",
   "playwright",
   "playwright-core",
@@ -107,6 +109,8 @@ requireText("packages/clawjs/src/cli-collections-command.ts", ["--available", "a
 requireText("packages/clawjs/bin/claw.mjs", ["DATA_GROUPS", "RUNTIME_GROUPS", "optional_pack_missing", "Safe base commands", "claw modules install"]);
 requireText("packages/clawjs/src/index.ts", ["GENERATED_CLI_ROUTE_GROUPS", "runGeneratedCliRoute", "import(\"./cli-legacy.ts\")", "writePublicPortalHelpOnly"]);
 requireText("packages/clawjs/src/index-installed.test.ts", ["base CLI dependency", "optional_pack_missing", "@clawjs/local-data"]);
+requireText("scripts/cli-base-import-budget.baseline.json", ["tasks-missing-pack", "search-missing-pack", "dense-domain-disabled", "@clawjs/runtime"]);
+requireText("scripts/verify-cli-base-imports.mjs", ["CLAWJS_CLI_FORCE_OPTIONAL_PACKS_MISSING", "maxResolvedUrls", "forbiddenSpecifiers"]);
 requireText("packages/clawjs-domain-pack-dense-data/package.json", ["@clawjs/domain-pack-dense-data", "Optional dense domain command pack"]);
 requireText("packages/clawjs-domain-pack-dense-data/src/index.ts", ["runProfessionalRecordsCli", "cli-dense-data-command.ts"]);
 requireText("packages/clawjs/src/cli-modules-command.test.ts", ["setup preview", "setup details allow reviewing and adjusting modules before apply", "setup interactive asks for mode", "modules list hides available niche modules", "collections list shows active safe catalog", "niche domain commands require explicit module enablement", "safe first-use productivity commands accept claw-home"]);

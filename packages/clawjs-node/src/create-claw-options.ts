@@ -155,8 +155,8 @@ export interface CreateClawOptions {
     env?: NodeJS.ProcessEnv;
   };
   /**
-   * Skills-v2 (unified SKILL.md) configuration. Defaults: ~/.claw as home,
-   * auto-import enabled. Overridable via `CLAW_HOME` env var.
+   * Skills-v2 (unified SKILL.md) configuration. Defaults: ~/.claw as home.
+   * External auto-import is opt-in because it scans disk outside the facade.
    */
   skills?: {
     homeDir?: string;

@@ -35,7 +35,7 @@ test("published CLI package does not depend on the retired Index package", () =>
   const indexLauncher = fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs/bin/index-server-launcher.mjs"), "utf8");
 
   assert.equal(cliPackageJson.dependencies?.["@clawjs/index"], undefined);
-  for (const heavyDependency of ["better-sqlite3", "@clawjs/claw", "@clawjs/database", "@clawjs/search", "@clawjs/signals", "@clawjs/workspace"]) {
+  for (const heavyDependency of ["better-sqlite3", "@clawjs/claw", "@clawjs/database", "@clawjs/search", "@clawjs/runtime", "@clawjs/signals", "@clawjs/workspace", "@clawjs/local-data", "@clawjs/domain-pack-dense-data"]) {
     assert.equal(cliPackageJson.dependencies?.[heavyDependency], undefined, `${heavyDependency} must not be a base CLI dependency`);
   }
   assert.equal(indexLauncher.includes('import("@clawjs/index")'), false);
@@ -69,7 +69,7 @@ test("published CLI base install runs safe commands without native local data pa
 
   const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "claw.mjs");
   assert.equal(fs.existsSync(path.join(installRoot, "node_modules", "better-sqlite3")), false);
-  for (const heavyPackage of ["claw", "database", "search", "workspace", "signals"]) {
+  for (const heavyPackage of ["claw", "database", "search", "runtime", "workspace", "signals", "local-data", "domain-pack-dense-data"]) {
     assert.equal(fs.existsSync(path.join(installRoot, "node_modules", "@clawjs", heavyPackage)), false, `${heavyPackage} must not install with base CLI`);
   }
 

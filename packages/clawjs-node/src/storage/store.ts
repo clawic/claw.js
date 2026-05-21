@@ -371,7 +371,7 @@ function keyMatchesGrant(key: string, prefix?: string): boolean {
 }
 
 export class LocalStorageStore {
-  private readonly sqlite: Database.Database;
+  private _sqlite?: Database.Database;
   private readonly filesystem: NodeFileSystemHost;
   private readonly rootBlobsDir: string;
   private readonly grants: StorageGrant[];
@@ -383,25 +383,34 @@ export class LocalStorageStore {
     this.options = options;
     this.filesystem = options.filesystem ?? new NodeFileSystemHost();
     this.rootBlobsDir = blobsDir(options.workspaceDir);
-    this.filesystem.ensureDir(dataRoot(options.workspaceDir));
-    this.filesystem.ensureDir(this.rootBlobsDir);
-    this.sqlite = new Database(storageDbPath(options.workspaceDir));
-    this.sqlite.pragma("journal_mode = WAL");
     this.grants = normalizeGrants([
       ...(options.grants ?? []),
       ...(options.includeDefaultGrants === false ? [] : defaultGrants(options.agentId)),
     ]);
     this.shareAdapter = options.shareAdapter;
     this.driveIndexAdapter = options.driveIndexAdapter;
-    this.init();
   }
 
   close(): void {
-    this.sqlite.close();
+    this._sqlite?.close();
+    this._sqlite = undefined;
+  }
+
+  private get sqlite(): Database.Database {
+    if (!this._sqlite) {
+      this.filesystem.ensureDir(dataRoot(this.options.workspaceDir));
+      this.filesystem.ensureDir(this.rootBlobsDir);
+      this._sqlite = new Database(storageDbPath(this.options.workspaceDir));
+      this._sqlite.pragma("journal_mode = WAL");
+      this.init();
+    }
+    return this._sqlite;
   }
 
   private init(): void {
-    this.sqlite.exec(STORAGE_STORE_SCHEMA_SQL);
+    const sqlite = this._sqlite;
+    if (!sqlite) throw new Error("storage sqlite was not opened");
+    sqlite.exec(STORAGE_STORE_SCHEMA_SQL);
     this.ensureColumn("storage_objects", "visibility", "TEXT NOT NULL DEFAULT 'internal'");
     this.ensureColumn("storage_tokens", "is_owner", "INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("storage_shares", "snapshot_blob_path", "TEXT NOT NULL DEFAULT ''");
@@ -414,9 +423,11 @@ export class LocalStorageStore {
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
-    const columns = this.sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    const sqlite = this._sqlite;
+    if (!sqlite) throw new Error("storage sqlite was not opened");
+    const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
     if (columns.some((entry) => entry.name === column)) return;
-    this.sqlite.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+    sqlite.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
   }
 
   private resolveKeyForWrite(key: string): string {
