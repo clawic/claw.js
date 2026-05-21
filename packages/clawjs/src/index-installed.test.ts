@@ -62,7 +62,7 @@ test("published CLI base install runs safe commands without native local data pa
   }
 
   assert.match(runInstalledClaw(binPath, installRoot, ["--help"]), /Safe base commands/);
-  const modules = JSON.parse(runInstalledClaw(binPath, installRoot, ["modules", "list", "--json"])) as { data: { modules: Array<{ id: string; optionalPack?: string }> } };
+  const modules = JSON.parse(runInstalledClaw(binPath, installRoot, ["modules", "list", "--available", "--json"])) as { data: { modules: Array<{ id: string; optionalPack?: string }> } };
   assert.equal(modules.data.modules.some((module) => module.id === "local-data" && module.optionalPack === "@clawjs/local-data"), true);
   const setup = JSON.parse(runInstalledClaw(binPath, installRoot, ["setup", "--details", "--json"])) as { data: { applied: boolean; mode: string } };
   assert.equal(setup.data.applied, false);
@@ -89,6 +89,9 @@ test("published CLI tarballs install with npm and manage local-first productivit
     workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
     database: path.resolve(process.cwd(), "packages/clawjs-database"),
     localData: path.resolve(process.cwd(), "packages/clawjs-local-data"),
+    search: path.resolve(process.cwd(), "packages/clawjs-search"),
+    signalsCore: path.resolve(process.cwd(), "packages/signals-core"),
+    signals: path.resolve(process.cwd(), "packages/signals"),
     marketplace: path.resolve(process.cwd(), "packages/marketplace"),
     profile: path.resolve(process.cwd(), "packages/clawjs-profile"),
     audio: path.resolve(process.cwd(), "packages/clawjs-audio"),
@@ -101,13 +104,22 @@ test("published CLI tarballs install with npm and manage local-first productivit
 
   let tarballs: string[];
   let professionalRecordsPackTarball = "";
+  let searchTarball = "";
+  let signalsCoreTarball = "";
+  let signalsTarball = "";
   try {
+    searchTarball = packWorkspacePackage(packageRoots.search, packDir);
+    signalsCoreTarball = packWorkspacePackage(packageRoots.signalsCore, packDir);
+    signalsTarball = packWorkspacePackage(packageRoots.signals, packDir);
     tarballs = [
       packWorkspacePackage(packageRoots.core, packDir),
       packWorkspacePackage(packageRoots.claw, packDir),
       packWorkspacePackage(packageRoots.workspace, packDir),
       packWorkspacePackage(packageRoots.database, packDir),
       packWorkspacePackage(packageRoots.localData, packDir),
+      searchTarball,
+      signalsCoreTarball,
+      signalsTarball,
       packWorkspacePackage(packageRoots.marketplace, packDir),
       packWorkspacePackage(packageRoots.profile, packDir),
       packWorkspacePackage(packageRoots.audio, packDir),
@@ -156,7 +168,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(missingDensePack.status, 64);
   assert.equal(JSON.parse(missingDensePack.stdout).error.code, "optional_pack_missing");
 
-  runCommand("npm", ["install", "--prefer-offline", professionalRecordsPackTarball], { cwd: installRoot });
+  runCommand("npm", ["install", "--prefer-offline", professionalRecordsPackTarball, searchTarball, signalsCoreTarball, signalsTarball], { cwd: installRoot });
   const densePackCommand = spawnSync(process.execPath, [binPath, "patient", "list", "--json"], {
     cwd: installRoot,
     encoding: "utf8",
