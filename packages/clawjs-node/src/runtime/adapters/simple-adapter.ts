@@ -98,7 +98,7 @@ interface SimpleRuntimeAdapterSpec {
 
 function resolveLocations(spec: SimpleRuntimeAdapterSpec, options: RuntimeAdapterOptions): RuntimeLocations {
   const homeDir = resolveHomeDir(options.homeDir);
-  const rootDir = path.join(homeDir, spec.homeDirName);
+  const rootDir = path.basename(homeDir) === spec.homeDirName ? homeDir : path.join(homeDir, spec.homeDirName);
   return {
     homeDir: rootDir,
     configPath: options.configPath?.trim() || (spec.configFileName ? path.join(rootDir, spec.configFileName) : undefined),

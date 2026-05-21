@@ -159,6 +159,28 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(conversation.sessionPath?.endsWith(path.join(".hermes", "sessions")), true);
 });
 
+test("hermes adapter does not duplicate an already resolved runtime home", async () => {
+  const parentHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-home-"));
+  const hermesHome = path.join(parentHome, ".hermes");
+  fs.mkdirSync(path.join(hermesHome, "memories"), { recursive: true });
+
+  const runner = new FakeRunner({
+    "which hermes": { fail: true, stderr: "missing" },
+  });
+
+  const status = await getRuntimeStatusReport(hermesAdapter, runner, {
+    adapter: "hermes",
+    homeDir: hermesHome,
+  });
+  assert.equal((status.diagnostics.locations as { homeDir?: string }).homeDir, hermesHome);
+
+  const resources = await getRuntimeResourceCatalogs(hermesAdapter, runner, {
+    adapter: "hermes",
+    homeDir: hermesHome,
+  });
+  assert.equal(resources.memory.memory[0]?.path?.includes(`${path.sep}.hermes${path.sep}.hermes`), false);
+});
+
 test("nanobot adapter exposes normalized channels, memory, and sandbox limitations", async () => {
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-nanobot-"));
   const runtimeHome = path.join(homeDir, ".nanobot");
