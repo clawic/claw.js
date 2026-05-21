@@ -12,6 +12,15 @@ export type GeneratedCliRouteGroup =
   | "domain-data"
   | "legacy";
 
+export type GeneratedCliSupportState =
+  | "supported"
+  | "unsupported"
+  | "partial"
+  | "external_pending"
+  | "host_required"
+  | "auth_required"
+  | "cost_risk";
+
 export interface GeneratedCliCommandEntry {
   name: string;
   kind: "canonical" | "portal" | "alias";
@@ -23,7 +32,7 @@ export interface GeneratedCliCommandEntry {
   family?: string;
   schemaVersion: number;
   jsonSchemaId: string;
-  support: { state: string; reason: string; scenario: string };
+  support: { state: GeneratedCliSupportState; reason: string; scenario: string };
   securityPolicy: string;
   docs: string[];
   adrs: string[];
@@ -5543,14 +5552,18 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   documents: "media-documents",
   files: "media-documents",
   images: "media-documents",
+  image: "media-documents",
   audio: "media-documents",
   video: "media-documents",
   slides: "media-documents",
   sheets: "media-documents",
   generations: "media-documents",
   templates: "media-documents",
+  template: "media-documents",
   styles: "media-documents",
+  style: "media-documents",
   references: "media-documents",
+  ref: "media-documents",
   drive: "media-documents",
   design: "media-documents",
   apps: "legacy",
@@ -5569,6 +5582,7 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   acct: "legacy",
   business: "legacy",
   social: "legacy",
+  "content/channels": "legacy",
   runtime: "runtime-workspace",
   monitor: "legacy",
   logs: "legacy",
@@ -5595,7 +5609,9 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   inference: "legacy",
   preview: "legacy",
   browser: "legacy",
-  compat: "legacy"
+  compat: "legacy",
+  chat: "runtime-workspace",
+  provider: "runtime-workspace"
 } as const satisfies Record<string, GeneratedCliRouteGroup>;
 export const GENERATED_STABLE_CLI_COMMANDS = [
   "accessibility",

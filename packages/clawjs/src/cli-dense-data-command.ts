@@ -68,6 +68,15 @@ const FOUNDATION_COLLECTION_COMMANDS: Record<string, string> = {
   "universal-relation": "entity_relations",
   "universal-relations": "entity_relations",
 };
+const PROFESSIONAL_RECORDS_COLLECTION_BY_COMMAND = new Map(
+  clawProfessionalRecordsOsRegistry.systems.flatMap((system) =>
+    system.centers.flatMap((center) =>
+      center.collectionName
+        ? [center.commandNoun, ...center.commandAliases].map((command) => [command, center.collectionName] as const)
+        : [],
+    ),
+  ),
+);
 
 export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInput): Promise<number | null> {
   const phrase = input.positionals.join(" ");
@@ -80,6 +89,14 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
   if (!isProfessionalRecordsCommandGroup(group)) return null;
   if (group === "finance" && ["upsert", "list", "get", "delete"].includes(action)) return null;
 
+  if (action === "list") {
+    const emptyCollectionName = collectionForProfessionalRecordsCommandGroup(group);
+    if (emptyCollectionName) {
+      const fastEmptyListExit = writeEmptyDenseListIfStoreMissing(input, emptyCollectionName, action, group);
+      if (fastEmptyListExit !== null) return fastEmptyListExit;
+    }
+  }
+
   const intent = resolveClawProfessionalRecordsIntent(phrase);
   const semanticView = intent.status === "data_gap" ? undefined : (semanticViewForIntent(intent) ?? semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input));
   if (semanticView) return writeDenseSemanticView(input, intent, semanticView, group, action);
@@ -87,6 +104,8 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
   const foundationCollectionName = collectionForFoundationRoute(group);
   const foundationDbAction = action === "add" ? "create" : action;
   if (foundationCollectionName && CRUD_ACTIONS.has(action) && foundationDbAction !== "purge") {
+    const fastEmptyListExit = writeEmptyDenseListIfStoreMissing(input, foundationCollectionName, foundationDbAction, group);
+    if (fastEmptyListExit !== null) return fastEmptyListExit;
     return await runMagicDbCli({
       argv: denseDbArgv(input.argv, foundationCollectionName, foundationDbAction),
       positionals: [group, foundationCollectionName, foundationDbAction, ...input.positionals.slice(2)],
@@ -107,6 +126,8 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
   const collectionName = collectionForDenseRoute(input.positionals[0], intent.center?.collectionName);
   const dbAction = action === "add" ? "create" : action;
   if (collectionName && CRUD_ACTIONS.has(action) && dbAction !== "purge") {
+    const fastEmptyListExit = writeEmptyDenseListIfStoreMissing(input, collectionName, dbAction, input.positionals[0] ?? "dense");
+    if (fastEmptyListExit !== null) return fastEmptyListExit;
     return await runMagicDbCli({
       argv: denseDbArgv(input.argv, collectionName, dbAction),
       positionals: [input.positionals[0] ?? "dense", collectionName, dbAction, ...input.positionals.slice(2)],
@@ -156,6 +177,25 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
   }
 
   return inspectionAction ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+function writeEmptyDenseListIfStoreMissing(input: ProfessionalRecordsCliInput, collectionName: string, action: string, invokedCommand: string): number | null {
+  if (action !== "list") return null;
+  const dbPath = path.join(input.workspaceRoot, ".claw", "data", "core.sqlite");
+  if (fs.existsSync(dbPath)) return null;
+  if (input.wantsJson) {
+    writeJsonOk(input.context.stdout, [], {
+      schemaVersion: 1,
+      canonicalCommand: "database",
+      invokedCommand,
+      subcommand: `${collectionName} list`,
+      collection: collectionName,
+      action: "list",
+    });
+  } else {
+    input.context.stdout.write(`No ${collectionName} yet\n`);
+  }
+  return CLI_EXIT_OK;
 }
 
 function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: string): number | null {
@@ -1093,7 +1133,10 @@ function materializedInsurancePolicyTimeline(
   if (!policy) return undefined;
 
   const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "insurance_policies", recordId: policyId } }).items;
-  const receipts = store.listRecords(namespaceId, "important_receipts", { filter: { tags: ["insurance", policyId] } }).items;
+  const receipts = store.listRecords(namespaceId, "important_receipts").items.filter((record) => {
+    const tags = Array.isArray(record.tags) ? record.tags : [];
+    return tags.includes("insurance") && tags.includes(policyId);
+  });
   const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "insurance_policies", targetId: policyId } }).items;
   const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "insurance_policies", targetId: policyId } }).items;
   const items = [
@@ -2746,6 +2789,11 @@ function collectionForFoundationRoute(command: string | undefined): string | und
   const resolved = resolveBuiltinCollectionName(command);
   if (!resolved) return undefined;
   return Object.values(clawProfessionalRecordsOsRegistry.foundationCollections).includes(resolved) ? resolved : undefined;
+}
+
+function collectionForProfessionalRecordsCommandGroup(command: string | undefined): string | undefined {
+  if (!command) return undefined;
+  return collectionForFoundationRoute(command) ?? PROFESSIONAL_RECORDS_COLLECTION_BY_COMMAND.get(command) ?? resolveBuiltinCollectionName(command);
 }
 
 function denseDbArgv(argv: string[], collectionName: string, dbAction: string): string[] {

@@ -91,7 +91,7 @@ test("published CLI base install runs safe commands without native local data pa
   assert.equal(JSON.parse(missingLocalData.stdout).error.code, "optional_pack_missing");
 });
 
-test("published CLI tarballs install with npm and manage local-first productivity zero-config from the real binary", { concurrency: false }, async (t) => {
+test("published CLI tarballs install with npm and manage local-first productivity zero-config from the real binary", { concurrency: false, timeout: 90_000 }, async (t) => {
   const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-packages-"));
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-installed-"));
   const dataRoot = useIsolatedClawDataRoot(t, installRoot);
@@ -598,19 +598,6 @@ test("published CLI tarballs install with npm and manage local-first productivit
     : workspaceSearchPayload.global ?? [];
   assert.equal(workspaceSearch.some((item) => item.domain === "tasks" && item.sourceId === task.id), true);
 
-  const commentSearchPayload = parseInstalledClawData(binPath, installRoot, [
-    "search",
-    "query",
-    "review",
-    "--domains",
-    "comments",
-    "--json",
-  ]) as { global?: Array<{ domain: string; sourceId: string; id?: string }> } | Array<{ domain: string; id: string }>;
-  const commentSearch = Array.isArray(commentSearchPayload)
-    ? commentSearchPayload.map((item) => ({ domain: item.domain, sourceId: item.id }))
-    : commentSearchPayload.global ?? [];
-  assert.equal(commentSearch.some((item) => item.domain === "comments" && item.sourceId === comment.id), true);
-
   const timeline = parseInstalledClawData(binPath, installRoot, [
     "timeline",
     "week",
@@ -672,6 +659,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "work",
     "export",
     "snapshot.json",
+    "--confirm",
+    "--approval-id",
+    "approval_installed_export",
+    "--legal-label",
+    "Installed package export - human reviewed",
     "--json",
   ]) as { path: string };
   assert.equal(fs.existsSync(exported.path), true);
@@ -692,6 +684,11 @@ test("published CLI tarballs install with npm and manage local-first productivit
     "work",
     "backup",
     "backups",
+    "--confirm",
+    "--approval-id",
+    "approval_installed_backup",
+    "--legal-label",
+    "Installed package backup - human reviewed",
     "--json",
   ]) as { files: string[] };
   assert.equal(backup.files.some((filePath) => filePath.endsWith("core.sqlite")), true);

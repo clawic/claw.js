@@ -42,6 +42,12 @@ export interface CliInvocation {
 export type CliRouteHandler = (invocation: CliInvocation) => Promise<number>;
 
 const REMOVED_CONTENT_PORTAL_COMMANDS = new Set(["posts", "campaigns", "publications"]);
+const CORE_CATALOGS_MODULE = ["@clawjs/core", "catalogs"].join("/");
+
+interface CoreCatalogsRuntime {
+  resolveBuiltinCollectionName?: (group: string) => string | undefined;
+  resolveClawCliCommandIntent?: (input: { phrase: string }) => { status: string; execute: boolean; intent?: unknown };
+}
 
 async function runCliUnsafe(argv: string[], context: CliContext): Promise<number> {
   const binName = context.binName?.trim() || DEFAULT_CLI_BIN;
@@ -89,8 +95,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const missingSubcommandJsonExit = writeMissingSubcommandJsonHelp({ group, command, wantsJson, context, binName, usage });
   if (missingSubcommandJsonExit !== null) return missingSubcommandJsonExit;
 
-  const portalHelpOnlyExit = writePublicPortalHelpOnly({ group, command, subcommand, wantsJson, context, binName, usage });
-  if (portalHelpOnlyExit !== null) return portalHelpOnlyExit;
+  if (!command) {
+    const portalHelpOnlyExit = writePublicPortalHelpOnly({ group, command, subcommand, wantsJson, context, binName, usage });
+    if (portalHelpOnlyExit !== null) return portalHelpOnlyExit;
+  }
 
   const baseSetupExit = await runBaseSetupOrModulesIfPossible({ group, positionals, flags, argv, context, wantsJson });
   if (baseSetupExit !== null) return baseSetupExit;
@@ -98,10 +106,29 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const baseInspectExit = writeBaseInspectIfPossible({ group, command, context, wantsJson });
   if (baseInspectExit !== null) return baseInspectExit;
 
+  const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
+  if (v1DataExit !== null) return v1DataExit;
+
   if (!hasGeneratedCliRoute(group) && !isGeneratedCollectionAlias(group)) {
+    if (command) {
+      const denseDataExit = await runDenseDataRouteIfPossible({ argv, positionals, flags, context, wantsJson, binName });
+      if (denseDataExit !== null) return denseDataExit;
+      return await runGeneratedCliRoute({
+        argv,
+        positionals,
+        flags,
+        context,
+        wantsJson,
+        binName,
+        group,
+        command,
+        subcommand,
+        routeGroup: "legacy",
+      });
+    }
     const phrase = positionals.length ? positionals.join(" ") : group;
     const commandIntent = await resolveCommandIntent(phrase);
-    if (commandIntent.status === "covered") {
+    if (commandIntent.status === "covered" || await isLegacyCollectionRoot(group)) {
       return await runGeneratedCliRoute({
         argv,
         positionals,
@@ -276,6 +303,56 @@ function writeBaseInspectIfPossible(input: {
   return CLI_EXIT_OK;
 }
 
+async function runV1DataRouteIfPossible(input: {
+  group: string;
+  positionals: string[];
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number | null> {
+  if (!isV1DataFastRoot(input.group)) return null;
+  const { runV1DataCli } = await import("./v1-data.ts");
+  return await runV1DataCli({
+    argv: input.argv,
+    positionals: input.positionals,
+    flags: input.flags,
+    stdout: input.context.stdout,
+    stderr: input.context.stderr,
+    wantsJson: input.wantsJson,
+    binName: input.binName,
+    cwd: input.context.cwd,
+  });
+}
+
+function isV1DataFastRoot(group: string): boolean {
+  return group === "calendar";
+}
+
+async function runDenseDataRouteIfPossible(input: {
+  argv: string[];
+  positionals: string[];
+  flags: Record<string, string>;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): Promise<number | null> {
+  const { runProfessionalRecordsCli } = await import("./cli-dense-data-command.ts");
+  return await runProfessionalRecordsCli({
+    argv: input.argv,
+    positionals: input.positionals,
+    flags: input.flags,
+    context: {
+      stdout: input.context.stdout,
+      stderr: input.context.stderr,
+    },
+    wantsJson: input.wantsJson,
+    binName: input.binName,
+    workspaceRoot: input.flags.workspace || input.context.cwd,
+  });
+}
+
 async function handleUnknownCliCommand(input: {
   group: string;
   positionals: string[];
@@ -310,7 +387,7 @@ async function handleUnknownCliCommand(input: {
 
 async function resolveCommandIntent(phrase: string): Promise<{ status: string; execute: boolean; intent?: unknown }> {
   try {
-    const core = await import("@clawjs/core/catalogs");
+    const core = await import(CORE_CATALOGS_MODULE) as CoreCatalogsRuntime;
     if (typeof core.resolveClawCliCommandIntent === "function") {
       return core.resolveClawCliCommandIntent({ phrase }) as { status: string; execute: boolean; intent?: unknown };
     }
@@ -318,4 +395,16 @@ async function resolveCommandIntent(phrase: string): Promise<{ status: string; e
     // Keep unknown-command handling usable even when optional built artifacts are absent.
   }
   return { status: "gap", execute: false };
+}
+
+async function isLegacyCollectionRoot(group: string): Promise<boolean> {
+  try {
+    const core = await import(CORE_CATALOGS_MODULE) as CoreCatalogsRuntime;
+    if (typeof core.resolveBuiltinCollectionName === "function") {
+      return Boolean(core.resolveBuiltinCollectionName(group));
+    }
+  } catch {
+    // Keep true unknown-command handling usable when optional built artifacts are absent.
+  }
+  return false;
 }

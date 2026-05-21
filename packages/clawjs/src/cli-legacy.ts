@@ -219,17 +219,18 @@ async function runOptionalProfessionalRecordsCli(input: {
 }): Promise<number | null> {
   const modulePath = [".", "cli-dense-data-command.ts"].join("/");
   try {
-    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runProfessionalRecordsCli?: (packInput: unknown) => Promise<number | null> };
-    if (typeof optionalPack.runProfessionalRecordsCli === "function") {
-      return await optionalPack.runProfessionalRecordsCli(input);
-    }
+    const { runProfessionalRecordsCli } = await import(modulePath) as typeof import("./cli-dense-data-command.ts");
+    return await runProfessionalRecordsCli(input);
   } catch (error) {
     const code = (error as NodeJS.ErrnoException & { code?: string }).code;
     if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;
   }
   try {
-    const { runProfessionalRecordsCli } = await import(modulePath) as typeof import("./cli-dense-data-command.ts");
-    return await runProfessionalRecordsCli(input);
+    const optionalPack = await import("@clawjs/domain-pack-dense-data") as { runProfessionalRecordsCli?: (packInput: unknown) => Promise<number | null> };
+    if (typeof optionalPack.runProfessionalRecordsCli === "function") {
+      return await optionalPack.runProfessionalRecordsCli(input);
+    }
+    return null;
   } catch (error) {
     const code = (error as NodeJS.ErrnoException & { code?: string }).code;
     if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") throw error;

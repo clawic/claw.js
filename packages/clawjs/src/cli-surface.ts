@@ -1,5 +1,6 @@
 import {
   GENERATED_CLI_COMMANDS,
+  GENERATED_COLLECTION_ALIASES,
   GENERATED_PUBLIC_PORTAL_HELP_ONLY,
   GENERATED_REMOVED_PUBLIC_COMMANDS,
   GENERATED_REMOVED_RUNTIME_COMMANDS,
@@ -175,6 +176,19 @@ export function searchCliDiscovery(query: string, options: { limit?: number } = 
     }
     const sourceScore = scoreText(query, entry.source.file);
     if (sourceScore > 0) results.push({ type: "source", name: entry.source.file, canonicalName: entry.name, score: sourceScore, summary: `Implementation source for ${entry.name}.`, command: entry, path: entry.source.file });
+  }
+  for (const [alias, canonicalName] of Object.entries(GENERATED_COLLECTION_ALIASES)) {
+    const aliasScore = Math.max(scoreText(query, alias), scoreText(query, canonicalName));
+    if (aliasScore > 0) {
+      results.push({
+        type: "alias",
+        name: alias,
+        canonicalName,
+        score: aliasScore + 4,
+        summary: `Collection alias for ${canonicalName}.`,
+        source: "collection",
+      });
+    }
   }
   return results
     .sort((a, b) => b.score - a.score || a.type.localeCompare(b.type) || a.name.localeCompare(b.name))

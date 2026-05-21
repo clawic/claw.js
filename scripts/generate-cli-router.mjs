@@ -82,6 +82,15 @@ const JSON_HELP_REQUIRED_COMMANDS = [
   "gateway",
 ];
 
+const SPECIAL_ROUTE_ALIASES = new Map([
+  ["chat", "runtime-workspace"],
+  ["provider", "runtime-workspace"],
+  ["image", "media-documents"],
+  ["style", "media-documents"],
+  ["template", "media-documents"],
+  ["ref", "media-documents"],
+]);
+
 function routeGroupForEntry(entry) {
   if (["inspect", "search", "governance", "debt", "safety", "evolution", "commands", "needs"].includes(entry.name)) return "inspect-search-governance";
   if (["database", "db", "collections", "records", "work", "tasks", "notes", "people", "projects", "goals", "inbox", "approvals", "blockers", "decisions", "assignments", "handoffs", "artifacts", "commitments"].includes(entry.name)) return "database-productivity";
@@ -122,7 +131,20 @@ function tsConst(value) {
 }
 
 const commands = clawCliCommandRegistry.commands.map(compactCommand);
-const routeGroups = Object.fromEntries(commands.map((entry) => [entry.name, entry.routeGroup]));
+const routeGroups = {};
+for (const entry of commands) {
+  const roots = [entry.name];
+  if (entry.target && !entry.target.includes(" ")) roots.push(entry.target);
+  for (const alias of entry.aliases ?? []) {
+    if (!alias.includes(" ")) roots.push(alias);
+  }
+  for (const root of roots) {
+    routeGroups[root] ??= entry.routeGroup;
+  }
+}
+for (const [alias, routeGroup] of SPECIAL_ROUTE_ALIASES) {
+  routeGroups[alias] = routeGroup;
+}
 const stableCommands = commands
   .filter((entry) => entry.kind !== "alias")
   .map((entry) => entry.name)
@@ -143,6 +165,15 @@ export type GeneratedCliRouteGroup =
   | "domain-data"
   | "legacy";
 
+export type GeneratedCliSupportState =
+  | "supported"
+  | "unsupported"
+  | "partial"
+  | "external_pending"
+  | "host_required"
+  | "auth_required"
+  | "cost_risk";
+
 export interface GeneratedCliCommandEntry {
   name: string;
   kind: "canonical" | "portal" | "alias";
@@ -154,7 +185,7 @@ export interface GeneratedCliCommandEntry {
   family?: string;
   schemaVersion: number;
   jsonSchemaId: string;
-  support: { state: string; reason: string; scenario: string };
+  support: { state: GeneratedCliSupportState; reason: string; scenario: string };
   securityPolicy: string;
   docs: string[];
   adrs: string[];
