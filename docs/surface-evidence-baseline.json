@@ -5,7 +5,7 @@
     {
       "id": "system-telemetry-contract-node-baseline",
       "classification": "lateral_debt",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "reason": "System telemetry routes already reference contract ids before the surface evidence guard made contract-node resolution explicit.",
       "risk": "Agents can inspect the routes, but individual telemetry contract ids do not yet have standalone node fiches.",
       "expires": "2026-08-20",

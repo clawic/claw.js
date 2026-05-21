@@ -878,7 +878,7 @@ function buildEvolutionStableSurfaceCoverage(stableSurfaces: ClawPersistentSurfa
 function classifyEvolutionStableSurfaceStrategy(surface: ClawPersistentSurfaceNode): typeof CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES[number] | null {
   if (surface.canonicality === "externalReadOnly"
     || surface.lifecycle === "external"
-    || (surface.owner === "external" && surface.storageClass === "external")
+    || (surface.steward === "external" && surface.storageClass === "external")
     || ["externalReadOnlySource", "externalDependency", "externalMapping"].includes(surface.kind)) {
     return "external_read_only";
   }
@@ -1164,7 +1164,7 @@ function hasRequiredFixtureKinds(fixtures: ClawEvolutionVersionFixture[]): boole
 function toEvolutionBaselineSurface(node: ClawPersistentSurfaceNode): ClawEvolutionBaselineSurface {
   return stripUndefined({
     id: node.id,
-    owner: node.owner,
+    owner: node.steward,
     kind: node.kind,
     parentId: node.parentId,
     path: node.path,

@@ -686,7 +686,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "maturity") {
-    const passthroughTarget = command === "show" ? subcommand : command && !["list", "audit", "profile"].includes(command) ? command : undefined;
+    const passthroughTarget = command === "show" ? subcommand : command && !["list", "audit", "tier"].includes(command) ? command : undefined;
     const delegatedPositionals = passthroughTarget ? ["inspect", "maturity", passthroughTarget] : ["inspect", "maturity"];
     return await runInspectCli({ argv: delegatedPositionals, positionals: delegatedPositionals, flags, context, wantsJson, binName });
   }
@@ -857,7 +857,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCliDiscoverySearch({ positionals, flags, context, wantsJson, binName, usage });
   }
   if (group === "search" && command === "query") {
-    return await runSearchQueryCli({ positionals, flags, context, wantsJson, binName });
+    return await runSearchQueryCli({ positionals, flags, argv, context, wantsJson, binName });
   }
   if (group === "search" && command === "rebuild") {
     return await runSearchRebuildCli({ flags, argv, context, wantsJson });

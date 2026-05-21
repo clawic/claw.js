@@ -181,10 +181,30 @@ function quotedRegistryContains(registryBody, value) {
   return new RegExp(`["'\`]${escaped}["'\`]`).test(registryBody);
 }
 
+function registeredRouteValues(registryBody) {
+  return [...registryBody.matchAll(/["'`]((?:\/v\d+|\/api)\/[^"'`]+)["'`]/g)]
+    .map((match) => match[1])
+    .filter((value) => !value.includes(" "))
+    .sort((left, right) => right.length - left.length);
+}
+
+function routePatternToRegex(route) {
+  const escaped = route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped
+    .replace(/\\\{[A-Za-z0-9_]+\\\}/g, "[^/]+")
+    .replace(/:[A-Za-z0-9_]+/g, "[^/]+")}$`);
+}
+
+function registeredRouteContains(registryBody, route) {
+  if (quotedRegistryContains(registryBody, route)) return true;
+  return registeredRouteValues(registryBody).some((registered) => routePatternToRegex(registered).test(route));
+}
+
 function registeredRuleValue(rule, match, body, registryBody) {
   if (!registryBody) return false;
   const matched = match[0];
-  const quoted = [...matched.matchAll(/["'`]([^"'`]+)["'`]/g)].map((item) => item[1]);
+  const matchContext = typeof match.index === "number" ? body.slice(match.index, match.index + 240) : matched;
+  const quoted = [...matchContext.matchAll(/["'`]([^"'`]+)["'`]/g)].map((item) => item[1]);
 
   if (rule.id.endsWith("direct-env-var")) {
     const env = matched.match(/(?:CLAW|CLAWIX)_[A-Z0-9_]+/)?.[0];
@@ -193,7 +213,7 @@ function registeredRuleValue(rule, match, body, registryBody) {
 
   if (rule.id.endsWith("direct-api-route") || rule.id.endsWith("direct-private-api-route")) {
     const route = quoted.find((value) => /^\/(?:v\d+|api)\//.test(value));
-    return Boolean(route && quotedRegistryContains(registryBody, route));
+    return Boolean(route && registeredRouteContains(registryBody, route));
   }
 
   if (rule.id === "ts.direct-event-topic") {
@@ -209,6 +229,10 @@ function registeredRuleValue(rule, match, body, registryBody) {
   if (rule.id === "ts.direct-claw-path") {
     const token = matched.match(/(?:\.claw(?:ix|js)?|~\/\.claw(?:ix)?|\.claw-[A-Za-z0-9_-]+)/)?.[0];
     return Boolean(token && quotedRegistryContains(registryBody, token));
+  }
+
+  if (rule.id === "ts.direct-database-path") {
+    return quoted.some((value) => /\.sqlite$/.test(value) && quotedRegistryContains(registryBody, value));
   }
 
   if (rule.id === "ts.ddl-literal") {
@@ -249,7 +273,7 @@ function guardExceptionValidationFindings(exceptions) {
   const seen = new Set();
   for (const [index, entry] of (exceptions.entries ?? []).entries()) {
     const label = entry?.id ?? `<entry ${index + 1}>`;
-    for (const field of ["id", "path", "rule", "objectKind", "objectName", "owner", "reason", "expiresOn"]) {
+    for (const field of ["id", "path", "rule", "objectKind", "objectName", "steward", "reason", "expiresOn"]) {
       if (!entry?.[field]) {
         findings.push({
           file: path.relative(rootDir, exceptionPath),
@@ -497,7 +521,7 @@ function runSelfTest() {
     rule: "ts.ddl-literal",
     objectKind: "table",
     objectName: "direct_table",
-    owner: "self-test",
+    steward: "self-test",
     reason: "self-test fixture",
     expiresOn: "2999-01-01",
     tests: ["self-test"],

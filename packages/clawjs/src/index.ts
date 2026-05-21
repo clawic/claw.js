@@ -1,7 +1,7 @@
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { extractPositionals, parseFlags } from "./cli-flag-parsers.ts";
-import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeJsonError } from "./cli-json.ts";
+import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeCommandJsonOk, writeJsonError } from "./cli-json.ts";
 import {
   CLI_USAGE,
   DEFAULT_CLI_BIN,
@@ -92,9 +92,21 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const portalHelpOnlyExit = writePublicPortalHelpOnly({ group, command, subcommand, wantsJson, context, binName, usage });
   if (portalHelpOnlyExit !== null) return portalHelpOnlyExit;
 
+  const baseSearchExit = writeBaseSearchResultIfPossible({ group, command, subcommand, positionals, context, wantsJson });
+  if (baseSearchExit !== null) return baseSearchExit;
+
+  const baseSetupExit = await runBaseSetupOrModulesIfPossible({ group, positionals, flags, argv, context, wantsJson });
+  if (baseSetupExit !== null) return baseSetupExit;
+
+  const baseInspectExit = writeBaseInspectIfPossible({ group, command, context, wantsJson });
+  if (baseInspectExit !== null) return baseInspectExit;
+
   if (!hasGeneratedCliRoute(group) && !isGeneratedCollectionAlias(group)) {
     return await handleUnknownCliCommand({ group, positionals, context, wantsJson, usage });
   }
+
+  const missingOptionalPackExit = await writeMissingOptionalPackIfNeeded({ group, context, wantsJson });
+  if (missingOptionalPackExit !== null) return missingOptionalPackExit;
 
   const routeGroup = routeGroupForCommand(group);
   return await runGeneratedCliRoute({
@@ -210,6 +222,123 @@ function writeRemovedJsonOrText(input: {
     writeCommandJsonError(input.context.stdout, input.canonicalCommand, new CliHandledError("removed_public_command", input.message, CLI_EXIT_USAGE));
   } else {
     input.context.stderr.write(`${input.message}\n`);
+  }
+  return CLI_EXIT_USAGE;
+}
+
+function writeBaseSearchResultIfPossible(input: {
+  group: string;
+  command: string | undefined;
+  subcommand: string | undefined;
+  positionals: string[];
+  context: CliContext;
+  wantsJson: boolean;
+}): number | null {
+  const searchSubcommands = new Set([
+    "query",
+    "sources",
+    "status",
+    "service",
+    "rebuild",
+    "changes",
+    "saved",
+    "monitors",
+    "actions",
+    "audit",
+    "source-sets",
+    "explain",
+    "profiles",
+    "jobs",
+  ]);
+  if (input.group !== "search" || !input.command || input.subcommand || searchSubcommands.has(input.command)) return null;
+  const query = input.positionals.slice(1).join(" ").trim();
+  const results = relatedCliMatches(query, { limit: 10 });
+  const payload = {
+    query,
+    scope: { mode: "generated-cli-router" },
+    results,
+  };
+  if (input.wantsJson) {
+    writeCommandJsonOk(input.context.stdout, "search", payload, { invokedCommand: "search", subcommand: query });
+  } else {
+    input.context.stdout.write(`${results.map((result) => `${result.name}\t${result.summary}`).join("\n")}\n`);
+  }
+  return CLI_EXIT_OK;
+}
+
+async function runBaseSetupOrModulesIfPossible(input: {
+  group: string;
+  positionals: string[];
+  flags: Record<string, string>;
+  argv: string[];
+  context: CliContext;
+  wantsJson: boolean;
+}): Promise<number | null> {
+  if (input.group === "setup") {
+    const { runSetupCli } = await import("./cli-modules-command.ts");
+    return await runSetupCli(input);
+  }
+  if (input.group === "modules") {
+    const { runModulesCli } = await import("./cli-modules-command.ts");
+    return await runModulesCli(input);
+  }
+  return null;
+}
+
+function writeBaseInspectIfPossible(input: {
+  group: string;
+  command: string | undefined;
+  context: CliContext;
+  wantsJson: boolean;
+}): number | null {
+  if (input.group !== "inspect" || (input.command !== "commands" && input.command !== "cli")) return null;
+  const commands = Object.keys(GENERATED_CLI_ROUTE_GROUPS).map((command) => ({ id: `claw.cli.command.${command}`, value: command }));
+  if (input.wantsJson) {
+    writeCommandJsonOk(input.context.stdout, "inspect", commands, { subcommand: input.command });
+  } else {
+    input.context.stdout.write(`${commands.map((entry) => entry.value).join("\n")}\n`);
+  }
+  return CLI_EXIT_OK;
+}
+
+async function writeMissingOptionalPackIfNeeded(input: {
+  group: string;
+  context: CliContext;
+  wantsJson: boolean;
+}): Promise<number | null> {
+  const localDataGroups = new Set(["db", "records", "tasks", "task", "notes", "note", "projects", "project", "people", "person", "goals", "goal", "reminders", "reminder", "deadlines", "deadline", "work", "memory"]);
+  const runtimeGroups = new Set(["chat", "provider", "code", "runtime", "workspace"]);
+  const missingClawRuntime = !(await hasPackage("@clawjs/claw"));
+  if (missingClawRuntime && localDataGroups.has(input.group)) {
+    return writeOptionalPackMissing(input, "local-data", "@clawjs/local-data");
+  }
+  if (missingClawRuntime && runtimeGroups.has(input.group)) {
+    return writeOptionalPackMissing(input, "dev-diagnostics", "@clawjs/claw");
+  }
+  return null;
+}
+
+async function hasPackage(packageName: string): Promise<boolean> {
+  try {
+    await import(packageName);
+    return true;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") return false;
+    throw error;
+  }
+}
+
+function writeOptionalPackMissing(input: {
+  group: string;
+  context: CliContext;
+  wantsJson: boolean;
+}, moduleId: string, optionalPack: string): number {
+  const message = `This command needs optional pack ${optionalPack}. Review it with \`claw modules install ${moduleId}\` and install the pack explicitly before using this capability.`;
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, input.group, new CliHandledError("optional_pack_missing", message, CLI_EXIT_USAGE), { requiredModule: moduleId, optionalPack });
+  } else {
+    input.context.stderr.write(`${message}\n`);
   }
   return CLI_EXIT_USAGE;
 }

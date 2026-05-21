@@ -54,7 +54,7 @@ export type ClawPersistentSurfaceKind =
   | "externalDependency"
   | "externalMapping";
 
-export type ClawPersistentSurfaceOwner = "claw" | "clawix" | "external";
+export type ClawPersistentSurfaceSteward = "claw" | "clawix" | "external";
 export type ClawPersistentSurfaceStorageClass =
   | "frameworkGlobal"
   | "workspace"
@@ -124,7 +124,7 @@ export interface ClawPersistentSurfaceSource {
 export interface ClawPersistentSurfaceNode {
   id: string;
   kind: ClawPersistentSurfaceKind;
-  owner: ClawPersistentSurfaceOwner;
+  steward: ClawPersistentSurfaceSteward;
   repo?: string;
   project?: string;
   provider?: string;
@@ -170,7 +170,7 @@ export interface ClawSurfaceEdge {
   type: ClawSurfaceEdgeType;
   fromId: string;
   toId: string;
-  owner: ClawPersistentSurfaceOwner;
+  steward: ClawPersistentSurfaceSteward;
   visibility: ClawSurfaceConnectionVisibility;
   contractId?: string;
   transport?: string;
@@ -185,7 +185,7 @@ export interface ClawSurfaceRouteStep {
   edgeType: ClawSurfaceEdgeType;
   edgeId?: string;
   contractId?: string;
-  owner?: ClawPersistentSurfaceOwner;
+  steward?: ClawPersistentSurfaceSteward;
   visibility?: ClawSurfaceConnectionVisibility;
   transport?: string;
   validation?: string;
@@ -198,7 +198,7 @@ export interface ClawSurfaceRoute {
   summary: string;
   fromId: string;
   toId: string;
-  owner: ClawPersistentSurfaceOwner;
+  steward: ClawPersistentSurfaceSteward;
   visibility: ClawSurfaceConnectionVisibility;
   transport?: string;
   validation: string;
@@ -225,7 +225,7 @@ export type ClawStableSurfaceRegistry = ClawPersistentSurfaceRegistry;
 
 type SurfaceDefaults = Pick<
   ClawPersistentSurfaceNode,
-  "owner" | "storageClass" | "canonicality" | "privacy" | "lifecycle"
+  "steward" | "storageClass" | "canonicality" | "privacy" | "lifecycle"
 >;
 
 type SurfaceBuilderInput<TKind extends ClawPersistentSurfaceKind> =
@@ -235,7 +235,7 @@ type SurfaceBuilderInput<TKind extends ClawPersistentSurfaceKind> =
 
 function surfaceNode(input: Omit<ClawPersistentSurfaceNode, keyof SurfaceDefaults> & Partial<SurfaceDefaults>): ClawPersistentSurfaceNode {
   return {
-    owner: input.owner ?? "claw",
+    steward: input.steward ?? "claw",
     storageClass: input.storageClass ?? "frameworkGlobal",
     canonicality: input.canonicality ?? "canonical",
     privacy: input.privacy ?? "userData",
@@ -376,7 +376,7 @@ export const clawHostApiRoutes = {
 } as const;
 
 export const clawStorageApiRoutes = {
-  ownerToken: "/v1/storage/owner-token",
+  ownerToken: "/v1/storage/steward-token",
   buckets: "/v1/storage/buckets",
   objects: "/v1/storage/objects",
   objectPrefix: "/v1/storage/objects/",
@@ -825,7 +825,7 @@ const corePublicRoutes = [
   ...corePublicRouteValues.map((route) => [`claw.api.${stableRouteSurfaceKey(route)}`, "GET", route, `${route} API route`] as const),
   ["claw.api.events", "GET", clawEventsPath, "Public framework event stream"],
   ["claw.api.host.commands", "POST", clawHostApiRoutes.commands, "Host command endpoint"],
-  ["claw.api.storage.ownerToken", "GET", clawStorageApiRoutes.ownerToken, "Storage owner token endpoint"],
+  ["claw.api.storage.ownerToken", "GET", clawStorageApiRoutes.ownerToken, "Storage steward token endpoint"],
   ["claw.api.storage.buckets", "GET", clawStorageApiRoutes.buckets, "Storage bucket list"],
   ["claw.api.storage.objects", "GET", clawStorageApiRoutes.objects, "Storage object list"],
   ["claw.api.storage.shares", "POST", clawStorageApiRoutes.shares, "Storage share creation"],

@@ -185,7 +185,7 @@ export async function revokeShare(token: string, id: string): Promise<boolean> {
 }
 
 export async function fetchOwnerToken(): Promise<string | null> {
-  const response = await fetch("/v1/storage/owner-token");
+  const response = await fetch("/v1/storage/steward-token");
   if (!response.ok) return null;
   const json = await response.json().catch(() => null);
   const token = (json as { token?: string } | null)?.token;

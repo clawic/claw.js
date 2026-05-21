@@ -2,7 +2,6 @@
 
 import path from "path";
 import { fileURLToPath } from "node:url";
-import { isStableClawCliCommandName, resolveBuiltinCollectionAlias } from "@clawjs/core/compact-catalogs";
 
 const invokedBinName = path.basename(process.argv[1] || "claw");
 const publicBinName = invokedBinName === "claw.mjs" ? "claw" : invokedBinName;
@@ -16,6 +15,7 @@ const second = args[1];
 
 const DATA_GROUPS = new Set(["db", "records", "tasks", "task", "notes", "note", "projects", "project", "people", "person", "goals", "goal", "reminders", "reminder", "deadlines", "deadline", "work", "memory"]);
 const RUNTIME_GROUPS = new Set(["chat", "provider", "code", "runtime", "workspace"]);
+const DENSE_GROUP_MODULES = new Map([["patient", "health"], ["patients", "health"], ["health", "health"], ["legal", "legal"], ["erp", "erp"], ["iot", "iot"], ["construction", "construction"], ["labs", "labs-pharma"], ["lab", "labs-pharma"], ["pharma", "labs-pharma"]]);
 
 function wantsJson() {
   return args.includes("--json");
@@ -63,6 +63,24 @@ function moduleDefinitions() {
   ];
 }
 
+async function readWorkspaceModules() {
+  const fs = await import("node:fs");
+  const filePath = path.join(process.cwd(), ".claw", "config", "modules.json");
+  if (!fs.existsSync(filePath)) return { schemaVersion: 1, mode: "minimal", enabledModules: [], disabledModules: [], updatedAt: new Date().toISOString() };
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return { schemaVersion: 1, mode: "minimal", enabledModules: [], disabledModules: [], updatedAt: new Date().toISOString() };
+  }
+}
+
+async function writeWorkspaceModules(config) {
+  const fs = await import("node:fs");
+  const configDir = path.join(process.cwd(), ".claw", "config");
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(path.join(configDir, "modules.json"), `${JSON.stringify({ ...config, updatedAt: new Date().toISOString() }, null, 2)}\n`);
+}
+
 function baseUsage() {
   return [
     "Usage: claw <command> [options]",
@@ -97,6 +115,28 @@ if (first === "modules") {
     const message = module.optionalPack ? `Module ${module.id} uses optional pack ${module.optionalPack}. Install it explicitly with \`${installCommand}\`, then enable the module.` : `Module ${module.id} has no automatic installer.`;
     if (wantsJson()) writeJsonOk("modules", { installed: false, module, optionalPack: module.optionalPack, installCommand, message, next: [installCommand, `claw modules enable ${module.id}`].filter(Boolean) }, { subcommand: "install" });
     else console.log(message);
+    process.exit(0);
+  }
+  if (command === "enable" || command === "disable") {
+    const module = modules.find((entry) => entry.id === args[2]);
+    if (!module) {
+      if (wantsJson()) writeJsonError("modules", "unknown_module", "Usage: claw modules enable|disable <module-id>");
+      else console.error("Usage: claw modules enable|disable <module-id>");
+      process.exit(64);
+    }
+    const config = await readWorkspaceModules();
+    const enabled = new Set(config.enabledModules ?? []);
+    const disabled = new Set(config.disabledModules ?? []);
+    if (command === "enable") {
+      enabled.add(module.id);
+      disabled.delete(module.id);
+    } else {
+      disabled.add(module.id);
+      enabled.delete(module.id);
+    }
+    await writeWorkspaceModules({ ...config, enabledModules: [...enabled].sort(), disabledModules: [...disabled].sort() });
+    if (wantsJson()) writeJsonOk("modules", { scope: "workspace", moduleId: module.id, state: command === "enable" ? "enabled" : "available" }, { subcommand: command });
+    else console.log(`${command === "enable" ? "enabled" : "disabled"} ${module.id}`);
     process.exit(0);
   }
 }
@@ -138,13 +178,27 @@ if (first === "catalog") {
   const { runCatalogCli } = await import("./catalog-commands.mjs");
   process.exit(await runCatalogCli(args));
 }
-if (first && first !== "domains" && first !== "memory" && first !== "user" && !isStableClawCliCommandName(first)) {
+if (first && !DENSE_GROUP_MODULES.has(first) && first !== "domains" && first !== "memory" && first !== "user") {
+  const { isStableClawCliCommandName, resolveBuiltinCollectionAlias } = await import("@clawjs/core/compact-catalogs");
+  if (!isStableClawCliCommandName(first)) {
   const canonical = resolveBuiltinCollectionAlias(first);
   if (canonical) {
     const verb = args[1] ?? "list";
     const rest = args.slice(2);
     args.splice(0, args.length, "db", canonical, verb, ...rest);
   }
+  }
+}
+if (DENSE_GROUP_MODULES.has(first)) {
+  const moduleId = DENSE_GROUP_MODULES.get(first);
+  const config = await readWorkspaceModules();
+  if (!new Set(config.enabledModules ?? []).has(moduleId)) {
+    const message = `\`claw ${first}\` is available but not enabled. Enable it with \`claw modules enable ${moduleId}\` before using this area.`;
+    if (wantsJson()) writeJsonError(first, "module_not_enabled", message, { requiredModule: moduleId });
+    else console.error(message);
+    process.exit(64);
+  }
+  if (!(await hasPackage("@clawjs/domain-pack-dense-data"))) missingPack(first, moduleId, "@clawjs/domain-pack-dense-data");
 }
 if (first === "open" && args[1] === "secrets") {
   const { runOpenSecrets } = await import("./secrets-server-launcher.mjs");

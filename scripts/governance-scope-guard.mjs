@@ -3,7 +3,9 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const baselinePath = path.join(rootDir, "docs/governance-vocabulary-baseline.json");
+const classificationsPath = path.join(rootDir, "docs/governance-vocabulary-classifications.json");
 const updateBaseline = process.argv.includes("--update-baseline");
+const selfTest = process.argv.includes("--self-test");
 const json = process.argv.includes("--json");
 
 const ignoredDirs = new Set([
@@ -26,6 +28,7 @@ const ignoredDirs = new Set([
 const ignoredPathParts = [
   "/docs/conceptual-vocabulary-baseline.json",
   "/docs/governance-vocabulary-baseline.json",
+  "/docs/governance-vocabulary-classifications.json",
   "/docs/vocabulary.registry.json",
   "/scripts/conceptual-vocabulary-guard.mjs",
   "/scripts/governance-scope-guard.mjs",
@@ -61,6 +64,20 @@ const trackedPatterns = [
   { id: "companyId", regex: /\bcompanyId\b/gu },
   { id: "company_id", regex: /\bcompany_id\b/gu },
 ];
+
+const allowedClassifications = new Set([
+  "businessEntityIdentifier",
+  "technicalIsolationIdentifier",
+  "humanUserProfile",
+  "domainProfile",
+  "providerProfile",
+  "behaviorProfile",
+  "profileProjection",
+  "legacySchemaReadOnly",
+  "deterministicGeneratedArtifact",
+  "governancePolicyReference",
+  "externalProviderSchema",
+]);
 
 const requiredSnippets = [
   {
@@ -187,6 +204,118 @@ function loadBaseline() {
   return JSON.parse(fs.readFileSync(baselinePath, "utf8"));
 }
 
+function loadClassifications() {
+  if (!fs.existsSync(classificationsPath)) return { schemaVersion: 1, entries: [] };
+  return JSON.parse(fs.readFileSync(classificationsPath, "utf8"));
+}
+
+function validateClassifications(classifications, counts) {
+  const errors = [];
+  if (classifications.schemaVersion !== 1) errors.push("docs/governance-vocabulary-classifications.json schemaVersion must be 1");
+  const seen = new Set();
+  for (const [index, entry] of (classifications.entries ?? []).entries()) {
+    const label = entry.id ?? `<entry ${index + 1}>`;
+    for (const field of ["id", "path", "pattern", "classification", "rationale", "canonicalDoc", "maxOccurrences", "steward"]) {
+      if (entry[field] === undefined || entry[field] === null || entry[field] === "") errors.push(`${label} is missing ${field}`);
+    }
+    if (entry.id && seen.has(entry.id)) errors.push(`${label} duplicates classification id ${entry.id}`);
+    if (entry.id) seen.add(entry.id);
+    if (!allowedClassifications.has(entry.classification)) errors.push(`${label} has invalid classification ${entry.classification}`);
+    if (!trackedPatterns.some((pattern) => pattern.id === entry.pattern)) errors.push(`${label} has unknown pattern ${entry.pattern}`);
+    if (!Number.isInteger(entry.maxOccurrences) || entry.maxOccurrences < 0) errors.push(`${label} maxOccurrences must be a non-negative integer`);
+    if (entry.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)) errors.push(`${label} expiresOn must use YYYY-MM-DD`);
+    if (entry.path && !fs.existsSync(path.join(rootDir, entry.path))) errors.push(`${label} path does not exist: ${entry.path}`);
+    if (entry.canonicalDoc && !fs.existsSync(path.join(rootDir, entry.canonicalDoc))) errors.push(`${label} canonicalDoc does not exist: ${entry.canonicalDoc}`);
+    if (entry.classification === "deterministicGeneratedArtifact") {
+      if (!entry.generatedFrom || !fs.existsSync(path.join(rootDir, entry.generatedFrom))) errors.push(`${label} deterministicGeneratedArtifact requires generatedFrom`);
+      if (!entry.parityTest || !fs.existsSync(path.join(rootDir, entry.parityTest))) errors.push(`${label} deterministicGeneratedArtifact requires parityTest`);
+    }
+    const actual = counts[entry.pattern]?.[entry.path] ?? 0;
+    if (Number.isInteger(entry.maxOccurrences) && actual !== entry.maxOccurrences) {
+      errors.push(`${label} expected ${entry.maxOccurrences} ${entry.pattern} occurrence(s) in ${entry.path}, found ${actual}`);
+    }
+  }
+  return errors;
+}
+
+function classificationAllowances(classifications) {
+  const allowances = Object.fromEntries(trackedPatterns.map((pattern) => [pattern.id, {}]));
+  for (const entry of classifications.entries ?? []) {
+    if (!entry.pattern || !entry.path || !Number.isInteger(entry.maxOccurrences)) continue;
+    allowances[entry.pattern][entry.path] = (allowances[entry.pattern][entry.path] ?? 0) + entry.maxOccurrences;
+  }
+  return allowances;
+}
+
+function subtractAllowances(counts, allowances) {
+  const adjusted = Object.fromEntries(trackedPatterns.map((pattern) => [pattern.id, {}]));
+  for (const pattern of trackedPatterns) {
+    for (const [relativePath, count] of Object.entries(counts[pattern.id] ?? {})) {
+      const remaining = count - (allowances[pattern.id]?.[relativePath] ?? 0);
+      if (remaining > 0) adjusted[pattern.id][relativePath] = remaining;
+    }
+  }
+  return adjusted;
+}
+
+function summaryFor(countsByPattern) {
+  return Object.fromEntries(
+    Object.entries(countsByPattern).map(([id, files]) => [id, { files: Object.keys(files).length, occurrences: totalFor(files) }]),
+  );
+}
+
+function shrinkBaseline(existingBaseline, adjustedCounts) {
+  const nextCounts = Object.fromEntries(trackedPatterns.map((pattern) => [pattern.id, {}]));
+  const increases = [];
+  for (const pattern of trackedPatterns) {
+    const currentFiles = adjustedCounts[pattern.id] ?? {};
+    const baselineFiles = existingBaseline.counts?.[pattern.id] ?? {};
+    for (const [relativePath, count] of Object.entries(currentFiles)) {
+      const allowed = baselineFiles[relativePath] ?? 0;
+      if (count > allowed) increases.push(`${relativePath} would increase ${pattern.id}: ${count} current, ${allowed} baselined`);
+      if (allowed > 0) nextCounts[pattern.id][relativePath] = Math.min(count, allowed);
+    }
+  }
+  return { increases, nextCounts };
+}
+
+function runSelfTest() {
+  const fixtureCounts = {
+    ownerId: { "src/a.ts": 1 },
+    tenantId: { "src/a.ts": 1 },
+    profile: { "generated.ts": 2 },
+    companyId: { "src/company.ts": 3 },
+  };
+  const ok = {
+    schemaVersion: 1,
+    entries: [
+      { id: "company", path: "package.json", pattern: "companyId", classification: "businessEntityIdentifier", rationale: "self-test", canonicalDoc: "docs/adr/0027-governance-identity-scope-model.md", maxOccurrences: 0, steward: "clawjs" },
+    ],
+  };
+  if (validateClassifications(ok, fixtureCounts).length !== 0) throw new Error("classification self-test expected valid fixture");
+  const bad = {
+    schemaVersion: 1,
+    entries: [
+      { id: "bad", path: "package.json", pattern: "ownerId", classification: "invalid", rationale: "self-test", canonicalDoc: "docs/adr/0027-governance-identity-scope-model.md", maxOccurrences: 0, steward: "clawjs" },
+    ],
+  };
+  if (!validateClassifications(bad, fixtureCounts).some((error) => error.includes("invalid classification"))) throw new Error("classification self-test expected invalid classification failure");
+  const allowances = classificationAllowances({
+    schemaVersion: 1,
+    entries: [{ id: "tenant", path: "src/a.ts", pattern: "tenantId", classification: "technicalIsolationIdentifier", rationale: "self-test", canonicalDoc: "docs/adr/0027-governance-identity-scope-model.md", maxOccurrences: 1, steward: "clawjs" }],
+  });
+  const adjusted = subtractAllowances(fixtureCounts, allowances);
+  if ((adjusted.tenantId?.["src/a.ts"] ?? 0) !== 0) throw new Error("classification self-test expected allowance subtraction");
+  const shrink = shrinkBaseline({ counts: { ownerId: {}, tenantId: {}, profile: {}, companyId: {} } }, fixtureCounts);
+  if (!shrink.increases.some((entry) => entry.includes("ownerId"))) throw new Error("baseline self-test expected increase rejection");
+}
+
+if (selfTest) {
+  runSelfTest();
+  if (!json) console.log("governance scope guard self-test passed");
+  process.exit(0);
+}
+
 const failures = [];
 
 for (const requirement of requiredSnippets) {
@@ -202,27 +331,38 @@ for (const requirement of requiredSnippets) {
 }
 
 const counts = collectCounts();
-const summary = Object.fromEntries(
-  Object.entries(counts).map(([id, files]) => [id, { files: Object.keys(files).length, occurrences: totalFor(files) }]),
-);
+const classifications = loadClassifications();
+failures.push(...validateClassifications(classifications, counts));
+const adjustedCounts = subtractAllowances(counts, classificationAllowances(classifications));
+const summary = summaryFor(counts);
+const adjustedSummary = summaryFor(adjustedCounts);
 
 if (updateBaseline) {
-  const baseline = {
-    schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
-    policy: "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
-    trackedPatterns: trackedPatterns.map((pattern) => pattern.id),
-    summary,
-    counts,
-  };
-  fs.writeFileSync(baselinePath, `${JSON.stringify(sortedObject(baseline), null, 2)}\n`);
+  const existingBaseline = loadBaseline();
+  if (!existingBaseline) {
+    failures.push("docs/governance-vocabulary-baseline.json is missing. Cannot shrink baseline.");
+  } else {
+    const { increases, nextCounts } = shrinkBaseline(existingBaseline, adjustedCounts);
+    failures.push(...increases.map((increase) => `baseline update cannot increase governance debt: ${increase}`));
+    if (failures.length === 0) {
+      const baseline = {
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        policy: "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or classified in docs/governance-vocabulary-classifications.json with exact counts and rationale.",
+        trackedPatterns: trackedPatterns.map((pattern) => pattern.id),
+        summary: summaryFor(nextCounts),
+        counts: nextCounts,
+      };
+      fs.writeFileSync(baselinePath, `${JSON.stringify(sortedObject(baseline), null, 2)}\n`);
+    }
+  }
 } else {
   const baseline = loadBaseline();
   if (!baseline) {
-    failures.push("docs/governance-vocabulary-baseline.json is missing. Run node ./scripts/governance-scope-guard.mjs --update-baseline after reviewing debt.");
+    failures.push("docs/governance-vocabulary-baseline.json is missing. Run node ./scripts/governance-scope-guard.mjs --update-baseline only after reviewing shrink-only debt.");
   } else {
     for (const pattern of trackedPatterns) {
-      const currentFiles = counts[pattern.id] ?? {};
+      const currentFiles = adjustedCounts[pattern.id] ?? {};
       const baselineFiles = baseline.counts?.[pattern.id] ?? {};
       for (const [relativePath, count] of Object.entries(currentFiles)) {
         const allowed = baselineFiles[relativePath] ?? 0;
@@ -234,11 +374,11 @@ if (updateBaseline) {
   }
 }
 
-const result = { failures, summary, baselineUpdated: updateBaseline };
+const result = { failures, summary, adjustedSummary, baselineUpdated: updateBaseline };
 if (json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
-  if (updateBaseline) console.log("governance scope baseline updated");
+  if (updateBaseline && failures.length === 0) console.log("governance scope baseline shrunk");
   if (failures.length) {
     console.error("governance scope guard failed:");
     for (const failure of failures) console.error(`- ${failure}`);

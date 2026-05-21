@@ -43,7 +43,7 @@ function validateBaseline(baseline) {
   const today = new Date().toISOString().slice(0, 10);
   if (baseline.version !== 1) errors.push("surface evidence baseline version must be 1");
   for (const entry of baseline.entries ?? []) {
-    for (const field of ["id", "classification", "owner", "reason", "risk", "expires", "nextPhase", "reentryCondition"]) {
+    for (const field of ["id", "classification", "steward", "reason", "risk", "expires", "nextPhase", "reentryCondition"]) {
       if (!entry[field]) errors.push(`baseline entry ${entry.id ?? "<missing>"} is missing ${field}`);
     }
     if (!Array.isArray(entry.nodeIds) || entry.nodeIds.length === 0) errors.push(`baseline entry ${entry.id ?? "<missing>"} must list nodeIds`);
@@ -127,7 +127,7 @@ function runSelfTest() {
     entries: [{
       id: "self-test",
       classification: "lateral_debt",
-      owner: "test",
+      steward: "test",
       reason: "self-test",
       risk: "self-test",
       expires: "2099-01-01",

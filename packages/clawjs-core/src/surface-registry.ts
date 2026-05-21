@@ -54,7 +54,7 @@ export type ClawPersistentSurfaceKind =
   | "externalDependency"
   | "externalMapping";
 
-export type ClawPersistentSurfaceOwner = "claw" | "clawix" | "external";
+export type ClawPersistentSurfaceSteward = "claw" | "clawix" | "external";
 export type ClawPersistentSurfaceStorageClass =
   | "frameworkGlobal"
   | "workspace"
@@ -124,7 +124,7 @@ export interface ClawPersistentSurfaceSource {
 export interface ClawPersistentSurfaceNode {
   id: string;
   kind: ClawPersistentSurfaceKind;
-  owner: ClawPersistentSurfaceOwner;
+  steward: ClawPersistentSurfaceSteward;
   repo?: string;
   project?: string;
   provider?: string;
@@ -170,7 +170,7 @@ export interface ClawSurfaceEdge {
   type: ClawSurfaceEdgeType;
   fromId: string;
   toId: string;
-  owner: ClawPersistentSurfaceOwner;
+  steward: ClawPersistentSurfaceSteward;
   visibility: ClawSurfaceConnectionVisibility;
   contractId?: string;
   transport?: string;
@@ -185,7 +185,7 @@ export interface ClawSurfaceRouteStep {
   edgeType: ClawSurfaceEdgeType;
   edgeId?: string;
   contractId?: string;
-  owner?: ClawPersistentSurfaceOwner;
+  steward?: ClawPersistentSurfaceSteward;
   visibility?: ClawSurfaceConnectionVisibility;
   transport?: string;
   validation?: string;
@@ -198,7 +198,7 @@ export interface ClawSurfaceRoute {
   summary: string;
   fromId: string;
   toId: string;
-  owner: ClawPersistentSurfaceOwner;
+  steward: ClawPersistentSurfaceSteward;
   visibility: ClawSurfaceConnectionVisibility;
   transport?: string;
   validation: string;
@@ -225,7 +225,7 @@ export type ClawStableSurfaceRegistry = ClawPersistentSurfaceRegistry;
 
 type SurfaceDefaults = Pick<
   ClawPersistentSurfaceNode,
-  "owner" | "storageClass" | "canonicality" | "privacy" | "lifecycle"
+  "steward" | "storageClass" | "canonicality" | "privacy" | "lifecycle"
 >;
 
 type SurfaceBuilderInput<TKind extends ClawPersistentSurfaceKind> =
@@ -235,7 +235,7 @@ type SurfaceBuilderInput<TKind extends ClawPersistentSurfaceKind> =
 
 function surfaceNode(input: Omit<ClawPersistentSurfaceNode, keyof SurfaceDefaults> & Partial<SurfaceDefaults>): ClawPersistentSurfaceNode {
   return {
-    owner: input.owner ?? "claw",
+    steward: input.steward ?? "claw",
     storageClass: input.storageClass ?? "frameworkGlobal",
     canonicality: input.canonicality ?? "canonical",
     privacy: input.privacy ?? "userData",
@@ -376,7 +376,7 @@ export const clawHostApiRoutes = {
 } as const;
 
 export const clawStorageApiRoutes = {
-  ownerToken: "/v1/storage/owner-token",
+  ownerToken: "/v1/storage/steward-token",
   buckets: "/v1/storage/buckets",
   objects: "/v1/storage/objects",
   objectPrefix: "/v1/storage/objects/",
@@ -922,7 +922,7 @@ const corePublicRoutes = [
   ...corePublicRouteValues.map((route) => [`claw.api.${stableRouteSurfaceKey(route)}`, "GET", route, `${route} API route`] as const),
   ["claw.api.events", "GET", clawEventsPath, "Public framework event stream"],
   ["claw.api.host.commands", "POST", clawHostApiRoutes.commands, "Host command endpoint"],
-  ["claw.api.storage.ownerToken", "GET", clawStorageApiRoutes.ownerToken, "Storage owner token endpoint"],
+  ["claw.api.storage.ownerToken", "GET", clawStorageApiRoutes.ownerToken, "Storage steward token endpoint"],
   ["claw.api.storage.buckets", "GET", clawStorageApiRoutes.buckets, "Storage bucket list"],
   ["claw.api.storage.objects", "GET", clawStorageApiRoutes.objects, "Storage object list"],
   ["claw.api.storage.shares", "POST", clawStorageApiRoutes.shares, "Storage share creation"],
@@ -1088,8 +1088,11 @@ function stableEnvVarId(value: string): string { return `claw.env.${value.replac
 function stableEnvVarName(value: string): string { return `${value.replace(/^CLAW_/, "").toLowerCase().replace(/_/g, " ")} environment variable`; }
 
 const stableEnvVarValues = "CLAW_ALLOWED_ORIGINS CLAW_AUDIO_BLOBS_DIR CLAW_AUDIO_DATA_DIR CLAW_AUDIO_HOST CLAW_AUDIO_PORT CLAW_AUDIO_SHARED_SECRET CLAW_BIN CLAW_CALENDAR_MOCK CLAW_CODEX_PATH CLAW_CODE_HOME CLAW_COMPANY_FAKE_AGENT_RUNS CLAW_COMPANY_OPENCLAW_AGENT_ID CLAW_COMPONENTS_SOURCE_DIR CLAW_CONNECTOR_CATALOG_PATH CLAW_CONNECTOR_SUBSCRIPTIONS_PATH CLAW_CONTENT_TOKEN CLAW_CONTENT_URL CLAW_DATABASE_ADMIN_EMAIL CLAW_DATABASE_ADMIN_PASSWORD CLAW_DATABASE_CORS_ORIGINS CLAW_DATABASE_DATA_DIR CLAW_DATABASE_DIR CLAW_DATABASE_FILES_DIR CLAW_DATABASE_HOST CLAW_DATABASE_JWT_SECRET CLAW_DATABASE_NAMESPACE CLAW_DATABASE_PORT CLAW_DATABASE_URL CLAW_DATA_DIR CLAW_DAY_ROOT CLAW_DB_PATH CLAW_DEBUG_CHAT_PERF CLAW_DEMO_DATA_DIR CLAW_DEVICE_TEST_COMMAND CLAW_DOMAINS_ACTIVE CLAW_DOMAIN_SHARE_URL CLAW_DRIVE_BACKEND CLAW_DRIVE_BASE CLAW_DRIVE_CLOUDFLARED CLAW_DRIVE_CONVERTER_MODE CLAW_DRIVE_CORS_ORIGINS CLAW_DRIVE_DATA_DIR CLAW_DRIVE_DB_PATH CLAW_DRIVE_EMAIL CLAW_DRIVE_EMBED_SIDECAR CLAW_DRIVE_HOST CLAW_DRIVE_JWT_SECRET CLAW_DRIVE_OCR_SIDECAR CLAW_DRIVE_PASSWORD CLAW_DRIVE_PORT CLAW_DRIVE_PUBLIC_BASE_URL CLAW_DRIVE_STATUS_FILE CLAW_DRIVE_TOKEN CLAW_DRIVE_UI_DIST_DIR CLAW_E2E CLAW_E2E_DISABLE_EXTERNAL_CALLS CLAW_E2E_FIXTURE_MODE CLAW_E2E_REUSE_SERVER CLAW_EMAIL_MOCK CLAW_ERP_DIR CLAW_FILES_DIR CLAW_FIND_COMMAND_STRICT_PATH CLAW_GUIDANCE_DIR CLAW_HOME CLAW_HOST_APP_BUNDLE CLAW_HOST_APP_SUPPORT_NAME CLAW_HOST_BIN_DIR CLAW_HOST_BUNDLE_ID CLAW_HOST_CLI_NAME CLAW_HOST_DAEMON_NAME CLAW_HOST_DISABLE_SOCKET_FALLBACK CLAW_HOST_DISPLAY_NAME CLAW_HOST_HOME CLAW_HOST_ID CLAW_HOST_LAUNCH_AGENTS_DIR CLAW_HOST_LAUNCH_AGENT_LABEL CLAW_HOST_LOG_SUBSYSTEM CLAW_HOST_MACH_SERVICE CLAW_HOST_OBSIDIAN_VAULT CLAW_HOST_PERMISSION_NAME CLAW_HOST_PERMISSION_REQUEST_DRY_RUN CLAW_HOST_PERMISSION_REQUEST_LOG CLAW_HOST_RUNTIME_TRANSPORT CLAW_HOST_SAFE CLAW_HOST_TEST_CALENDAR CLAW_HOST_TEST_COMMAND CLAW_HOST_TEST_MAILBOX CLAW_HOST_TEST_MODE CLAW_HOST_TEST_NOTES_FOLDER CLAW_HOST_TEST_REMINDERS_LIST CLAW_HOST_TEST_SAFARI_WINDOW CLAW_HOST_TEST_THINGS_PROJECT CLAW_HOST_VALIDATION_MODE CLAW_IMAGE_LIBRARY_DIR CLAW_IOT_BASE_URL CLAW_IOT_DIR CLAW_LIBRARY_DIR CLAW_LIVE_BROKER_COMMAND CLAW_LOCAL_ADMIN_BOOTSTRAP_STDIN CLAW_MEMORY_BASE CLAW_MEMORY_EDITOR CLAW_MEMORY_HOST CLAW_MEMORY_PORT CLAW_MEMORY_WORKSPACE CLAW_MONITOR_COLLECT_INTERVAL_MS CLAW_MONITOR_CORS_ORIGINS CLAW_MONITOR_HOST CLAW_MONITOR_LOCAL_DISCOVERY_INTERVAL_MS CLAW_MONITOR_LOCAL_SCAN_PORTS CLAW_MONITOR_MODE CLAW_MONITOR_PORT CLAW_MONITOR_RELAY_TOKEN CLAW_MONITOR_RELAY_URL CLAW_MONITOR_RETENTION_DAYS CLAW_NODE CLAW_OPENCLAW_PATH CLAW_OPEN_WORKSPACE CLAW_PREVIEW_CLOUDFLARE_URL CLAW_PUBLISHING_CORS_ORIGINS CLAW_PUBLISHING_DATA_DIR CLAW_PUBLISHING_DB_PATH CLAW_PUBLISHING_DIR CLAW_PUBLISHING_DRIVE_URL CLAW_PUBLISHING_HEALTH_PROBE_MS CLAW_PUBLISHING_HOST CLAW_PUBLISHING_LOG_LEVEL CLAW_PUBLISHING_PIPELINE_ENABLED CLAW_PUBLISHING_PORT CLAW_PUBLISHING_PRINT_TOKEN CLAW_PUBLISHING_PUBLIC_BASE_URL CLAW_PUBLISHING_RECURRENCE_TICK_MS CLAW_PUBLISHING_SCHEDULER_TICK_MS CLAW_PUBLISHING_STATUS_FILE CLAW_PUBLISHING_TOKEN CLAW_PUBLISHING_TOKEN_STORE CLAW_PUBLISHING_URL CLAW_PUBLISHING_VAULT_URL CLAW_PUBLISHING_WORKER_TICK_MS CLAW_PUBLISHING_WORKSPACE CLAW_RELAY_ACCESS_TOKEN CLAW_RELAY_AGENT_ID CLAW_RELAY_TENANT_ID CLAW_RELAY_URL CLAW_RELAY_WORKSPACE_ID CLAW_REPORT_GITHUB_TOKEN CLAW_RESOURCES_DIR CLAW_RULES_DIR CLAW_RUNTIME_HOME CLAW_RUNTIME_PORT CLAW_RUNTIME_SESSIONS_URL CLAW_SEARCH_ADMIN_TOKEN CLAW_SEARCH_BASE CLAW_SEARCH_CODEX_BINARY CLAW_SEARCH_CORS_ORIGINS CLAW_SEARCH_DATA_DIR CLAW_SEARCH_HOST CLAW_SEARCH_JWT_SECRET CLAW_SEARCH_PORT CLAW_SEARCH_RUN_TIMEOUT_MS CLAW_SEARCH_SCHEDULER_TICK_MS CLAW_SEARCH_TOKEN CLAW_SEARCH_WORKER_CONCURRENCY CLAW_SECRETS_ADMIN_TOKEN CLAW_SECRETS_BACKEND CLAW_SECRETS_BASE CLAW_SECRETS_BASE_URL CLAW_SECRETS_BOOTSTRAP_STDIN CLAW_SECRETS_CORS_ORIGINS CLAW_SECRETS_DATA_DIR CLAW_SECRETS_DB_PATH CLAW_SECRETS_ENABLE_UNSAFE_EXTERNAL_PLUGINS CLAW_SECRETS_HOST CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64 CLAW_SECRETS_JWT_SECRET CLAW_SECRETS_KEK_BASE64 CLAW_SECRETS_PLUGINS_DIR CLAW_SECRETS_PORT CLAW_SECRETS_PROXY_PATH CLAW_SECRETS_PUBLIC_BASE_URL CLAW_SECRETS_SIDECAR_PATH CLAW_SECRETS_SIGNED_HOST_TOKEN CLAW_SECRETS_TENANT CLAW_SECRETS_TENANT_ID CLAW_SECRETS_TOKEN CLAW_SECRETS_UI_DIST_DIR CLAW_SESSIONS_CODEX_DIR CLAW_SESSIONS_DATA_DIR CLAW_SESSIONS_DISABLE_CODEX CLAW_SESSIONS_DISABLE_HERMES CLAW_SESSIONS_HERMES_DB CLAW_SESSIONS_HOST CLAW_SESSIONS_PORT CLAW_SESSIONS_SHARED_SECRET CLAW_SKILLS_AUTO_IMPORT CLAW_SLIDES_DISABLE_BROWSER CLAW_TELEGRAM_BACKEND CLAW_TELEGRAM_DOMAIN_SHARE_URL CLAW_TELEGRAM_HOST CLAW_TELEGRAM_LOG_LEVEL CLAW_TELEGRAM_PORT CLAW_TELEGRAM_WORKSPACE CLAW_TEMPLATE_DISABLE_BROWSER CLAW_TEST_LIVE CLAW_TEST_LIVE_PACKAGE CLAW_TEST_WORKSPACE CLAW_TIME_DATA_DIR CLAW_TIME_DB_FILE CLAW_TIME_DEFAULT_TIMEZONE CLAW_TIME_HOST CLAW_TIME_NOTIFY_SOURCE_TOKEN CLAW_TIME_NOTIFY_URL CLAW_TIME_PORT CLAW_TIME_SCHEDULER_INTERVAL_MS CLAW_TIME_TOKEN CLAW_TIME_URL CLAW_WACLI_PATH CLAW_WORKSPACE".split(" ");
+const additionalStableEnvVarValues = "CLAW_ALLOW_PRE_V1_RELEASE CLAW_DATABASE_MAX_UPLOAD_BYTES CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES CLAW_DATABASE_REALTIME_MAX_CLIENTS CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS CLAW_DATABASE_REALTIME_QUEUE_LIMIT CLAW_HOST_APP_VARIANT CLAW_HOST_APP_VERSION CLAW_HOST_SIGNING_IDENTITY CLAW_HOST_TEAM_ID CLAW_MAC_CONTROL_SOURCE_SESSION CLAW_MCP_CONFIG_PATH CLAW_RELEASE_APPROVED_FOR CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS CLAW_SESSIONS_EVENTS_QUEUE_LIMIT CLAWIX_MACOS_PATH CLAWIX_SDK_FIRST_REQUIRE_CLAWIX CLAWIX_SDK_FIRST_ROOT".split(" ");
 
-const stableEnvVars = stableEnvVarValues.map((value) => [stableEnvVarId(value), value, stableEnvVarName(value)] as const);
+const stableEnvVars = [...new Set([...stableEnvVarValues, ...additionalStableEnvVarValues])]
+  .sort()
+  .map((value) => [stableEnvVarId(value), value, stableEnvVarName(value)] as const);
 
 const stableFileFormats = [
   ["claw.format.export", ".clawexport", "General Claw export archive"],
@@ -1112,8 +1115,10 @@ const stableNativeIdentities = [
 export const clawRegisteredDdlSources = [
   "packages/clawjs/src/cli-network-command.ts",
   "packages/clawjs/src/cli-search-command.ts",
+  "packages/clawjs/src/cli-search-heavy-command.ts",
   "packages/clawjs/src/cli-system-command.ts",
   "packages/clawjs/src/v1-data-core.ts",
+  "packages/clawjs-database/src/app-state-service.ts",
   "packages/clawjs-database/src/store.ts",
   "packages/clawjs-audio/src/store.ts",
   "packages/clawjs-channel-base/src/index.ts",
@@ -1149,8 +1154,10 @@ export const clawRegisteredDdlSources = [
 export const clawStrictDdlObjectSources = [
   "packages/clawjs/src/cli-network-command.ts",
   "packages/clawjs/src/cli-search-command.ts",
+  "packages/clawjs/src/cli-search-heavy-command.ts",
   "packages/clawjs/src/cli-system-command.ts",
   "packages/clawjs/src/v1-data-core.ts",
+  "packages/clawjs-database/src/app-state-service.ts",
   "packages/clawjs-search/src/store.ts",
 ] as const;
 
@@ -1499,7 +1506,7 @@ const stableSurfaceRoots = [
 const runtimeCriticalNodes = [
   {
     id: "claw.cli.public",
-    owner: "claw",
+    steward: "claw",
     name: "Public claw CLI",
     path: "claw",
     humanSurfaces: ["humanUi"],
@@ -1508,7 +1515,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.cli.commandIntentRegistry",
-    owner: "claw",
+    steward: "claw",
     name: "CLI command intent registry",
     path: "claw/commands",
     humanSurfaces: ["humanUi"],
@@ -1517,7 +1524,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.mcp.surface",
-    owner: "claw",
+    steward: "claw",
     name: "MCP model-native surface",
     path: "mcp",
     humanSurfaces: ["humanUi"],
@@ -1526,7 +1533,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.agents",
-    owner: "claw",
+    steward: "claw",
     name: "Agents V1 domain",
     path: "agents",
     humanSurfaces: ["humanUi"],
@@ -1535,7 +1542,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.agents.assignments",
-    owner: "claw",
+    steward: "claw",
     name: "Agent assignments",
     path: "agents/assignments",
     humanSurfaces: ["humanUi"],
@@ -1544,7 +1551,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.agents.resourceGrants",
-    owner: "claw",
+    steward: "claw",
     name: "Agent resource grants",
     path: "agents/resource-grants",
     humanSurfaces: ["humanUi"],
@@ -1553,7 +1560,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.agents.executionProfiles",
-    owner: "claw",
+    steward: "claw",
     name: "Agent execution profiles",
     path: "agents/execution-profiles",
     humanSurfaces: ["humanUi"],
@@ -1562,7 +1569,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.agents.memoryPolicies",
-    owner: "claw",
+    steward: "claw",
     name: "Agent memory policies",
     path: "agents/memory-policies",
     humanSurfaces: ["humanUi"],
@@ -1571,7 +1578,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.agents.runs",
-    owner: "claw",
+    steward: "claw",
     name: "Agent runs",
     path: "agents/runs",
     humanSurfaces: ["humanUi"],
@@ -1580,7 +1587,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.support.inbox",
-    owner: "claw",
+    steward: "claw",
     name: "Support inbox projection",
     path: "support/inbox",
     humanSurfaces: ["humanUi"],
@@ -1589,7 +1596,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.storage.canonical",
-    owner: "claw",
+    steward: "claw",
     name: "Canonical storage boundary",
     path: "storage",
     humanSurfaces: ["humanUi"],
@@ -1598,7 +1605,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.host.signed",
-    owner: "claw",
+    steward: "claw",
     name: "Active signed host",
     path: "host",
     humanSurfaces: ["humanUi"],
@@ -1607,7 +1614,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.host.permissions",
-    owner: "claw",
+    steward: "claw",
     name: "Host permissions",
     path: "host/permissions",
     humanSurfaces: ["humanUi"],
@@ -1616,7 +1623,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.host.grants",
-    owner: "claw",
+    steward: "claw",
     name: "Host grants",
     path: "host/grants",
     humanSurfaces: ["humanUi"],
@@ -1625,7 +1632,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.host.approvals",
-    owner: "claw",
+    steward: "claw",
     name: "Host approvals",
     path: "host/approvals",
     humanSurfaces: ["humanUi"],
@@ -1634,7 +1641,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.host.audit",
-    owner: "claw",
+    steward: "claw",
     name: "Host audit",
     path: "host/audit",
     humanSurfaces: ["humanUi"],
@@ -1643,7 +1650,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.systemTelemetry",
-    owner: "claw",
+    steward: "claw",
     name: "System telemetry",
     path: "system",
     humanSurfaces: ["humanUi"],
@@ -1652,7 +1659,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.systemTelemetry.contextProviders",
-    owner: "claw",
+    steward: "claw",
     name: "System context providers",
     path: "system/providers",
     humanSurfaces: ["humanUi"],
@@ -1661,7 +1668,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "clawix.menuBar.systemIndicators",
-    owner: "clawix",
+    steward: "clawix",
     name: "System menu bar indicators",
     path: "macos/menu-bar/system",
     humanSurfaces: ["humanUi"],
@@ -1670,7 +1677,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.mac.controlPlane",
-    owner: "claw",
+    steward: "claw",
     name: "Mac Control Plane",
     path: "mac",
     humanSurfaces: ["humanUi"],
@@ -1679,7 +1686,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.mac.capabilityAtlas",
-    owner: "claw",
+    steward: "claw",
     name: "Mac capability atlas",
     path: "mac/atlas",
     humanSurfaces: ["humanUi"],
@@ -1688,7 +1695,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.mac.permissionBroker",
-    owner: "claw",
+    steward: "claw",
     name: "Mac Permission Broker",
     path: "permissions",
     humanSurfaces: ["humanUi"],
@@ -1697,7 +1704,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.mac.actionBroker",
-    owner: "claw",
+    steward: "claw",
     name: "Mac Action Broker",
     path: "mac/action-broker",
     humanSurfaces: ["humanUi"],
@@ -1706,7 +1713,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "clawix.ui.chat",
-    owner: "clawix",
+    steward: "clawix",
     name: "Clawix agent chat UI",
     path: "Clawix/chat",
     humanSurfaces: ["humanUi"],
@@ -1715,7 +1722,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "clawix.companion.client",
-    owner: "clawix",
+    steward: "clawix",
     name: "Companion client",
     path: "Clawix/companion",
     humanSurfaces: ["humanUi"],
@@ -1724,25 +1731,25 @@ const runtimeCriticalNodes = [
   },
   {
     id: "clawix.bridge.local",
-    owner: "clawix",
+    steward: "clawix",
     name: "Clawix local bridge",
     path: "clawix-bridge",
     humanSurfaces: ["humanUi"],
     programmaticSurfaces: ["serviceApi"],
-    notes: "Signed-host bridge on port 24080. It brokers local and companion traffic to the daemon/runtime owner.",
+    notes: "Signed-host bridge on port 24080. It brokers local and companion traffic to the daemon/runtime steward.",
   },
   {
     id: "claw.daemon.local",
-    owner: "claw",
+    steward: "claw",
     name: "Claw daemon",
     path: "daemon",
     humanSurfaces: ["humanUi"],
     programmaticSurfaces: ["sdk", "serviceApi", "cli"],
-    notes: "Daemon-first owner of backend/runtime behavior when background bridge mode is active.",
+    notes: "Daemon-first steward of backend/runtime behavior when background bridge mode is active.",
   },
   {
     id: "claw.runtime.agent",
-    owner: "claw",
+    steward: "claw",
     name: "Agent runtime",
     path: "runtime/agent",
     humanSurfaces: ["humanUi"],
@@ -1751,7 +1758,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     name: "Sessions service",
     path: "sessions",
     humanSurfaces: ["humanUi"],
@@ -1760,7 +1767,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.remote.client",
-    owner: "external",
+    steward: "external",
     name: "Remote client",
     path: "remote-client",
     humanSurfaces: ["humanUi"],
@@ -1769,7 +1776,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.relay",
-    owner: "claw",
+    steward: "claw",
     name: "Relay control plane",
     path: "relay",
     humanSurfaces: ["humanUi"],
@@ -1778,7 +1785,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.relay.connector",
-    owner: "claw",
+    steward: "claw",
     name: "Relay workspace connector",
     path: "relay/connector",
     humanSurfaces: ["humanUi"],
@@ -1787,7 +1794,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.coordinator",
-    owner: "claw",
+    steward: "claw",
     name: "Coordinator",
     path: "remote/coordinator",
     humanSurfaces: ["humanUi"],
@@ -1796,7 +1803,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.gateway",
-    owner: "claw",
+    steward: "claw",
     name: "Gateway",
     path: "remote/gateway",
     humanSurfaces: ["humanUi"],
@@ -1805,7 +1812,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.connector",
-    owner: "claw",
+    steward: "claw",
     name: "Connector",
     path: "remote/connector",
     humanSurfaces: ["humanUi"],
@@ -1814,7 +1821,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.sync",
-    owner: "claw",
+    steward: "claw",
     name: "Sync",
     path: "sync",
     humanSurfaces: ["humanUi"],
@@ -1823,7 +1830,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.transport.iroh",
-    owner: "claw",
+    steward: "claw",
     name: "Iroh transport adapter",
     path: "remote/transports/iroh",
     humanSurfaces: ["humanUi"],
@@ -1832,7 +1839,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.headlessHost",
-    owner: "claw",
+    steward: "claw",
     name: "Headless host",
     path: "host/headless",
     humanSurfaces: ["humanUi"],
@@ -1841,7 +1848,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.remoteCache",
-    owner: "claw",
+    steward: "claw",
     name: "Encrypted remote client cache",
     path: "remote/cache",
     humanSurfaces: ["humanUi"],
@@ -1850,7 +1857,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.remote.classification",
-    owner: "claw",
+    steward: "claw",
     name: "Remote surface classification",
     path: "remote/classification",
     humanSurfaces: ["humanUi"],
@@ -1859,7 +1866,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.search",
-    owner: "claw",
+    steward: "claw",
     name: "Root Search",
     path: "search",
     humanSurfaces: ["humanUi"],
@@ -1868,7 +1875,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.secrets.broker",
-    owner: "claw",
+    steward: "claw",
     name: "Secrets broker",
     path: "secrets/broker",
     humanSurfaces: ["humanUi"],
@@ -1877,7 +1884,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.drive.files",
-    owner: "claw",
+    steward: "claw",
     name: "Drive and files",
     path: "drive/files",
     humanSurfaces: ["humanUi"],
@@ -1886,7 +1893,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.memory.userModel",
-    owner: "claw",
+    steward: "claw",
     name: "Memory and user model",
     path: "memory/user-model",
     humanSurfaces: ["humanUi"],
@@ -1895,7 +1902,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.skills.library",
-    owner: "claw",
+    steward: "claw",
     name: "Skills and library",
     path: "skills/library",
     humanSurfaces: ["humanUi"],
@@ -1904,7 +1911,7 @@ const runtimeCriticalNodes = [
   },
   {
     id: "claw.mesh.share",
-    owner: "claw",
+    steward: "claw",
     name: "Inter-mesh sharing primitives",
     path: "mesh/share",
     humanSurfaces: ["humanUi"],
@@ -1923,75 +1930,75 @@ function relayClassificationGap(programmaticSurfaces: readonly ClawSurfaceParity
 }
 
 export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
-  { id: "claw.edge.commands.consumes.intentSchema", type: "consumes", fromId: "claw.cli.command.commands", toId: "claw.schema.commandIntents.v1", owner: "claw", visibility: "public", contractId: "claw.schema.commandIntents.v1", transport: "local deterministic registry", validation: "CLI command-intent fixture tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.commands.owns.intentLedger", type: "owns", fromId: "claw.cli.command.commands", toId: "claw.workspace.command_intents.ledger", owner: "claw", visibility: "private", contractId: "claw.workspace.command_intents.ledger", transport: "workspace JSON ledger", validation: "CLI command-intent record/list tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.commands.brokers.needs", type: "brokers", fromId: "claw.cli.command.commands", toId: "claw.cli.command.needs", owner: "claw", visibility: "public", contractId: "claw.cli.command.needs", transport: "NeedOpportunity-compatible projection", validation: "CLI command-intent opportunities tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.commands.brokers.report", type: "brokers", fromId: "claw.cli.command.commands", toId: "claw.cli.command.report", owner: "claw", visibility: "public", contractId: "claw.cli.command.report", transport: "approval-gated report promotion packet", validation: "CLI command-intent promote tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.agents.cli.exposes.domain", type: "exposes", fromId: "claw.cli.command.agents", toId: "claw.agents", owner: "claw", visibility: "public", contractId: "claw.cli.agents.v1", transport: "local CLI + core.sqlite projection", validation: "Agents V1 CLI schema and access tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.agents.owns.assignments", type: "owns", fromId: "claw.agents", toId: "claw.agents.assignments", owner: "claw", visibility: "public", contractId: "claw.database.core.table.agent_assignments", transport: "core.sqlite", validation: "builtin schema + database projection tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.agents.owns.resourceGrants", type: "owns", fromId: "claw.agents", toId: "claw.agents.resourceGrants", owner: "claw", visibility: "public", contractId: "claw.database.core.table.agent_resource_grants", transport: "core.sqlite", validation: "effective access unit tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.agents.owns.executionProfiles", type: "owns", fromId: "claw.agents", toId: "claw.agents.executionProfiles", owner: "claw", visibility: "public", contractId: "claw.database.core.table.agent_execution_profiles", transport: "core.sqlite", validation: "schema registry tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.agents.owns.memoryPolicies", type: "owns", fromId: "claw.agents", toId: "claw.agents.memoryPolicies", owner: "claw", visibility: "public", contractId: "claw.database.core.table.agent_memory_policies", transport: "core.sqlite", validation: "schema registry tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.assignments.brokers.runtime", type: "brokers", fromId: "claw.agents.assignments", toId: "claw.runtime.agent", owner: "claw", visibility: "public", contractId: "claw.agent_assignment.runtime.v1", transport: "policy-gated runtime request", validation: "Agents V1 effective access + route graph tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.runtime.owns.agentRuns", type: "owns", fromId: "claw.runtime.agent", toId: "claw.agents.runs", owner: "claw", visibility: "internal", contractId: "claw.database.core.table.agent_runs", transport: "core.sqlite", validation: "runtime/run separation tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.assignments.exposes.supportInbox", type: "exposes", fromId: "claw.agents.assignments", toId: "claw.support.inbox", owner: "claw", visibility: "public", contractId: "claw.database.support", transport: "support/inbox projection", validation: "external support assignment fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mcp.consumes.assignments", type: "consumes", fromId: "claw.mcp.surface", toId: "claw.agents.assignments", owner: "claw", visibility: "public", contractId: "claw.mcp.agents.v1", transport: "MCP tool/resource policy gate", validation: "inspect route tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.cli.exposes.controlPlane", type: "exposes", fromId: "claw.cli.command.mac", toId: "claw.mac.controlPlane", owner: "claw", visibility: "public", contractId: "claw.mac.actionPlan.v1", transport: "local CLI plan/coverage/doctor portal", validation: "Mac CLI control-plane tests and inspect route tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.directWifi.exposes.controlPlane", type: "exposes", fromId: "claw.cli.command.wifi", toId: "claw.mac.controlPlane", owner: "claw", visibility: "public", contractId: "claw.mac.actionRequest.v1", transport: "direct intuitive CLI root", validation: "Mac CLI direct-root tests and inspect route tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.permissionsCli.exposes.permissionBroker", type: "exposes", fromId: "claw.cli.command.permissions", toId: "claw.mac.permissionBroker", owner: "claw", visibility: "public", contractId: "claw.mac.permissionState.v1", transport: "central permission CLI root", validation: "Mac permission CLI tests and inspect route tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.control.consumes.atlas", type: "consumes", fromId: "claw.mac.controlPlane", toId: "claw.mac.capabilityAtlas", owner: "claw", visibility: "public", contractId: "claw.mac.actionRequest.v1", transport: "typed capability registry lookup", validation: "Mac atlas completeness tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.control.brokers.permission", type: "brokers", fromId: "claw.mac.controlPlane", toId: "claw.mac.permissionBroker", owner: "claw", visibility: "public", contractId: "claw.mac.permissionState.v1", transport: "plan-first permission preflight", validation: "Mac permission broker schema tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.permission.brokers.hostPermissions", type: "brokers", fromId: "claw.mac.permissionBroker", toId: "claw.host.permissions", owner: "claw", visibility: "internal", contractId: "claw.mac.permissionState.v1", transport: "signed-host OS permission state check/request guidance", validation: "host permission contract guard and Mac permission tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.permission.owns.audit", type: "owns", fromId: "claw.mac.permissionBroker", toId: "claw.host.audit", owner: "claw", visibility: "internal", contractId: "claw.mac.permissionState.v1", transport: "redacted permission lifecycle audit", validation: "host permission contract guard and Mac permission tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.control.brokers.action", type: "brokers", fromId: "claw.mac.controlPlane", toId: "claw.mac.actionBroker", owner: "claw", visibility: "internal", contractId: "claw.mac.actionPlan.v1", transport: "policy-gated action plan handoff", validation: "Mac action plan schema tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.action.brokers.host", type: "brokers", fromId: "claw.mac.actionBroker", toId: "claw.host.signed", owner: "claw", visibility: "internal", contractId: "claw.mac.actionReceipt.v1", transport: "active signed-host native execution", validation: "host permission contract guard and Mac action broker tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.mac.action.owns.audit", type: "owns", fromId: "claw.mac.actionBroker", toId: "claw.host.audit", owner: "claw", visibility: "internal", contractId: "claw.mac.actionReceipt.v1", transport: "redacted action receipt and durable audit event", validation: "Mac receipt schema tests and host audit contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.system.cli.exposes.telemetry", type: "exposes", fromId: "claw.cli.command.system", toId: "claw.systemTelemetry", owner: "claw", visibility: "public", contractId: "claw.systemTelemetry.v1", transport: "local CLI portal with JSON envelopes", validation: "System telemetry CLI and inspect route tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.system.mcp.exposes.telemetry", type: "exposes", fromId: "claw.mcp.surface", toId: "claw.systemTelemetry", owner: "claw", visibility: "public", contractId: "claw.systemTelemetry.v1", transport: "MCP tools/resources policy gate", validation: "System telemetry MCP tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.system.telemetry.consumes.contextProviders", type: "consumes", fromId: "claw.systemTelemetry", toId: "claw.systemTelemetry.contextProviders", owner: "claw", visibility: "public", contractId: "claw.systemTelemetry.providers.v1", transport: "provider catalog, fail-closed provider plans with provided_redacted credential projection, and local env/file provider values", validation: "System telemetry provider catalog and credential redaction tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.system.telemetry.brokers.host", type: "brokers", fromId: "claw.systemTelemetry", toId: "claw.host.signed", owner: "claw", visibility: "internal", contractId: "claw.systemTelemetry.hostSnapshot.v1", transport: "signed-host snapshot/control command", validation: "Signed-host system telemetry tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.system.telemetry.owns.monitor", type: "owns", fromId: "claw.systemTelemetry", toId: "claw.database.monitor", owner: "claw", visibility: "public", contractId: "claw.database.monitor", transport: "Monitor metric_sources, metric_samples, metric_rollups and metric_incidents", validation: "Monitor metric history, retention and rule tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.system.telemetry.owns.audit", type: "owns", fromId: "claw.systemTelemetry", toId: "claw.host.audit", owner: "claw", visibility: "internal", contractId: "claw.systemTelemetry.audit.v1", transport: "portable auditPlan metadata plus local CLI and signed-host redacted audit events", validation: "System telemetry provider/control audit tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.clawix.menuBar.consumes.telemetry", type: "consumes", fromId: "clawix.menuBar.systemIndicators", toId: "claw.systemTelemetry", owner: "clawix", visibility: "public", contractId: "claw.systemTelemetry.widgets.v1", transport: "Clawix host bridge plus portable widget definitions", validation: "Clawix system telemetry bridge tests and UI validation", source: surfaceRouteGraphSource },
-  { id: "claw.edge.clawix.menuBar.owns.monitorWrites", type: "owns", fromId: "clawix.menuBar.systemIndicators", toId: "claw.database.monitor", owner: "clawix", visibility: "internal", contractId: "claw.database.monitor", transport: "throttled menu bar snapshot recording", validation: "Clawix monitor recorder tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.chat.ui.consumes.assignment", type: "consumes", fromId: "clawix.ui.chat", toId: "claw.agents.assignments", owner: "clawix", visibility: "internal", contractId: "claw.agent_assignment.internal_mac.v1", transport: "local assignment selection", validation: "internal Mac assignment fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.relay.brokers.assignments", type: "brokers", fromId: "claw.relay", toId: "claw.agents.assignments", owner: "claw", visibility: "external", contractId: "claw.agent_assignment.external.v1", transport: "remote-safe assignment selection", validation: "external support assignment fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.chat.ui.consumes.bridge", type: "consumes", fromId: "clawix.ui.chat", toId: "clawix.bridge.local", owner: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "macOS bridge daemon E2E fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.bridge.brokers.daemon", type: "brokers", fromId: "clawix.bridge.local", toId: "claw.daemon.local", owner: "clawix", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "localhost/process bridge", validation: "daemon bridge fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.daemon.brokers.runtime", type: "brokers", fromId: "claw.daemon.local", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "framework runtime adapter", validation: "runtime fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.runtime.owns.sessions", type: "owns", fromId: "claw.runtime.agent", toId: "claw.sessions", owner: "claw", visibility: "internal", contractId: "claw.database.sessions", transport: "sessions service/events", validation: "sessions fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sessions.exposes.bridge", type: "exposes", fromId: "claw.sessions", toId: "clawix.bridge.local", owner: "claw", visibility: "internal", contractId: "claw.event.sessions.message.appended", transport: "session event frames", validation: "bridge frame round-trip tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.bridge.exposes.ui", type: "exposes", fromId: "clawix.bridge.local", toId: "clawix.ui.chat", owner: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "Clawix chat workflow fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.companion.consumes.bridge", type: "consumes", fromId: "clawix.companion.client", toId: "clawix.bridge.local", owner: "clawix", visibility: "public", contractId: "clawix.protocol.bridge.v1", transport: "WebSocket localhost:24080", validation: "companion bridge fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.bridge.exposes.companion", type: "exposes", fromId: "clawix.bridge.local", toId: "clawix.companion.client", owner: "clawix", visibility: "public", contractId: "clawix.protocol.bridge.v1", transport: "WebSocket localhost:24080", validation: "companion bridge frame round-trip", source: surfaceRouteGraphSource },
-  { id: "claw.edge.remote.consumes.relay", type: "consumes", fromId: "claw.remote.client", toId: "claw.relay", owner: "claw", visibility: "external", contractId: "claw.api.relay.remote", transport: "HTTPS/WebSocket Relay", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.relay.brokers.connector", type: "brokers", fromId: "claw.relay", toId: "claw.relay.connector", owner: "claw", visibility: "external", contractId: "claw.api.relay.connector", transport: "connector WebSocket", validation: "relay connector E2E fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.workspace", type: "brokers", fromId: "claw.relay.connector", toId: "claw.workspace", owner: "claw", visibility: "internal", contractId: "claw.workspace.manifest", transport: "workspace materialization", validation: "relay workspace fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.runtime", type: "brokers", fromId: "claw.relay.connector", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "local runtime adapter", validation: "relay codex connector E2E", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sessions.exposes.relay", type: "exposes", fromId: "claw.sessions", toId: "claw.relay", owner: "claw", visibility: "external", contractId: "claw.event.sessions.message.appended", transport: "remote-safe session events", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.relay.exposes.remote", type: "exposes", fromId: "claw.relay", toId: "claw.remote.client", owner: "claw", visibility: "external", contractId: "claw.api.relay.remote", transport: "HTTPS/WebSocket Relay", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
-  { id: "claw.edge.remote.consumes.coordinator", type: "consumes", fromId: "claw.remote.client", toId: "claw.coordinator", owner: "claw", visibility: "external", contractId: "claw.api.nodes", transport: "HTTPS/WebSocket/Iroh rendezvous metadata", validation: "remote sync inspect tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.coordinator.brokers.gateway", type: "brokers", fromId: "claw.coordinator", toId: "claw.gateway", owner: "claw", visibility: "external", contractId: "claw.api.remote.conformance", transport: "governed gateway admission", validation: "remote conformance inspect tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.gateway.brokers.connector", type: "brokers", fromId: "claw.gateway", toId: "claw.connector", owner: "claw", visibility: "external", contractId: "claw.api.remote.classifications", transport: "projected registered API contract", validation: "gateway conformance inspect tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.runtime.hostAdapter", type: "brokers", fromId: "claw.connector", toId: "claw.runtime.agent", owner: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "host-side runtime adapter", validation: "connector runtime conformance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.search", type: "brokers", fromId: "claw.connector", toId: "claw.search", owner: "claw", visibility: "external", contractId: "claw.api.search.searches", transport: "remote-safe projected search route", validation: "remote search conformance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.secrets", type: "brokers", fromId: "claw.connector", toId: "claw.secrets.broker", owner: "claw", visibility: "external", contractId: "claw.api.secrets", transport: "secret refs plus brokered lease", validation: "secret lease rejection/acceptance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.connector.brokers.sync", type: "brokers", fromId: "claw.connector", toId: "claw.sync", owner: "claw", visibility: "external", contractId: "claw.api.sync.manifests", transport: "sync manifest/changelog/cursor route", validation: "sync manifest conformance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.skills", type: "owns", fromId: "claw.sync", toId: "claw.skills.library", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "skills sync driver", validation: "skills sync hermetic E2E", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.memory", type: "owns", fromId: "claw.sync", toId: "claw.memory.userModel", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "memory/user-model sync driver", validation: "memory sync hermetic E2E", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.sessions", type: "owns", fromId: "claw.sync", toId: "claw.sessions", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "sessions sync driver", validation: "sessions sync route contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.driveFiles", type: "owns", fromId: "claw.sync", toId: "claw.drive.files", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "drive/files sync driver", validation: "drive file sync hermetic E2E", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.blobs", type: "owns", fromId: "claw.sync", toId: "claw.drive.files", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "blob sync driver", validation: "blob sync route contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.searchIndex", type: "owns", fromId: "claw.sync", toId: "claw.search", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "search-index sync driver", validation: "search-index sync route contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.sqlite", type: "owns", fromId: "claw.sync", toId: "claw.database.core", owner: "claw", visibility: "public", contractId: "claw.api.sync.changes", transport: "SQLite full/partial table manifests", validation: "SQLite resource sync tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.sidecars", type: "owns", fromId: "claw.sync", toId: "claw.database.runtime", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "sidecar database manifests", validation: "sidecar sync route contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.agentConfig", type: "owns", fromId: "claw.sync", toId: "claw.agents", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "agent config sync driver", validation: "agent config sync route contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.workspaceState", type: "owns", fromId: "claw.sync", toId: "claw.workspace", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "workspace state sync driver", validation: "workspace state sync route contract tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.sync.owns.remoteCache", type: "owns", fromId: "claw.sync", toId: "claw.remoteCache", owner: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "encrypted TTL cache and outbound queue", validation: "client cache TTL tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.gateway.exposes.headlessHost", type: "exposes", fromId: "claw.gateway", toId: "claw.headlessHost", owner: "claw", visibility: "public", contractId: "claw.api.gateway.conformance", transport: "headless service projection", validation: "headless gateway conformance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.headlessHost.brokers.assignments", type: "brokers", fromId: "claw.headlessHost", toId: "claw.agents.assignments", owner: "claw", visibility: "public", contractId: "claw.api.gateway.agentServiceEvaluate", transport: "multi-tenant governed assignment routing", validation: "multi-tenant assignment isolation tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.coordinator.consumes.iroh", type: "consumes", fromId: "claw.coordinator", toId: "claw.transport.iroh", owner: "claw", visibility: "external", contractId: "claw.api.nodes", transport: "Iroh adapter for P2P/rendezvous/relay fallback", validation: "Iroh fallback conformance tests", source: surfaceRouteGraphSource },
-  { id: "claw.edge.meshShare.brokers.sync", type: "brokers", fromId: "claw.mesh.share", toId: "claw.sync", owner: "claw", visibility: "external", contractId: "claw.api.mesh.shares", transport: "invite/share/revoke primitives", validation: "inter-mesh sharing primitive tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.consumes.intentSchema", type: "consumes", fromId: "claw.cli.command.commands", toId: "claw.schema.commandIntents.v1", steward: "claw", visibility: "public", contractId: "claw.schema.commandIntents.v1", transport: "local deterministic registry", validation: "CLI command-intent fixture tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.owns.intentLedger", type: "owns", fromId: "claw.cli.command.commands", toId: "claw.workspace.command_intents.ledger", steward: "claw", visibility: "private", contractId: "claw.workspace.command_intents.ledger", transport: "workspace JSON ledger", validation: "CLI command-intent record/list tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.brokers.needs", type: "brokers", fromId: "claw.cli.command.commands", toId: "claw.cli.command.needs", steward: "claw", visibility: "public", contractId: "claw.cli.command.needs", transport: "NeedOpportunity-compatible projection", validation: "CLI command-intent opportunities tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.commands.brokers.report", type: "brokers", fromId: "claw.cli.command.commands", toId: "claw.cli.command.report", steward: "claw", visibility: "public", contractId: "claw.cli.command.report", transport: "approval-gated report promotion packet", validation: "CLI command-intent promote tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.agents.cli.exposes.domain", type: "exposes", fromId: "claw.cli.command.agents", toId: "claw.agents", steward: "claw", visibility: "public", contractId: "claw.cli.agents.v1", transport: "local CLI + core.sqlite projection", validation: "Agents V1 CLI schema and access tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.agents.owns.assignments", type: "owns", fromId: "claw.agents", toId: "claw.agents.assignments", steward: "claw", visibility: "public", contractId: "claw.database.core.table.agent_assignments", transport: "core.sqlite", validation: "builtin schema + database projection tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.agents.owns.resourceGrants", type: "owns", fromId: "claw.agents", toId: "claw.agents.resourceGrants", steward: "claw", visibility: "public", contractId: "claw.database.core.table.agent_resource_grants", transport: "core.sqlite", validation: "effective access unit tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.agents.owns.executionProfiles", type: "owns", fromId: "claw.agents", toId: "claw.agents.executionProfiles", steward: "claw", visibility: "public", contractId: "claw.database.core.table.agent_execution_profiles", transport: "core.sqlite", validation: "schema registry tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.agents.owns.memoryPolicies", type: "owns", fromId: "claw.agents", toId: "claw.agents.memoryPolicies", steward: "claw", visibility: "public", contractId: "claw.database.core.table.agent_memory_policies", transport: "core.sqlite", validation: "schema registry tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.assignments.brokers.runtime", type: "brokers", fromId: "claw.agents.assignments", toId: "claw.runtime.agent", steward: "claw", visibility: "public", contractId: "claw.agent_assignment.runtime.v1", transport: "policy-gated runtime request", validation: "Agents V1 effective access + route graph tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.runtime.owns.agentRuns", type: "owns", fromId: "claw.runtime.agent", toId: "claw.agents.runs", steward: "claw", visibility: "internal", contractId: "claw.database.core.table.agent_runs", transport: "core.sqlite", validation: "runtime/run separation tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.assignments.exposes.supportInbox", type: "exposes", fromId: "claw.agents.assignments", toId: "claw.support.inbox", steward: "claw", visibility: "public", contractId: "claw.database.support", transport: "support/inbox projection", validation: "external support assignment fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mcp.consumes.assignments", type: "consumes", fromId: "claw.mcp.surface", toId: "claw.agents.assignments", steward: "claw", visibility: "public", contractId: "claw.mcp.agents.v1", transport: "MCP tool/resource policy gate", validation: "inspect route tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.cli.exposes.controlPlane", type: "exposes", fromId: "claw.cli.command.mac", toId: "claw.mac.controlPlane", steward: "claw", visibility: "public", contractId: "claw.mac.actionPlan.v1", transport: "local CLI plan/coverage/doctor portal", validation: "Mac CLI control-plane tests and inspect route tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.directWifi.exposes.controlPlane", type: "exposes", fromId: "claw.cli.command.wifi", toId: "claw.mac.controlPlane", steward: "claw", visibility: "public", contractId: "claw.mac.actionRequest.v1", transport: "direct intuitive CLI root", validation: "Mac CLI direct-root tests and inspect route tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.permissionsCli.exposes.permissionBroker", type: "exposes", fromId: "claw.cli.command.permissions", toId: "claw.mac.permissionBroker", steward: "claw", visibility: "public", contractId: "claw.mac.permissionState.v1", transport: "central permission CLI root", validation: "Mac permission CLI tests and inspect route tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.control.consumes.atlas", type: "consumes", fromId: "claw.mac.controlPlane", toId: "claw.mac.capabilityAtlas", steward: "claw", visibility: "public", contractId: "claw.mac.actionRequest.v1", transport: "typed capability registry lookup", validation: "Mac atlas completeness tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.control.brokers.permission", type: "brokers", fromId: "claw.mac.controlPlane", toId: "claw.mac.permissionBroker", steward: "claw", visibility: "public", contractId: "claw.mac.permissionState.v1", transport: "plan-first permission preflight", validation: "Mac permission broker schema tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.permission.brokers.hostPermissions", type: "brokers", fromId: "claw.mac.permissionBroker", toId: "claw.host.permissions", steward: "claw", visibility: "internal", contractId: "claw.mac.permissionState.v1", transport: "signed-host OS permission state check/request guidance", validation: "host permission contract guard and Mac permission tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.permission.owns.audit", type: "owns", fromId: "claw.mac.permissionBroker", toId: "claw.host.audit", steward: "claw", visibility: "internal", contractId: "claw.mac.permissionState.v1", transport: "redacted permission lifecycle audit", validation: "host permission contract guard and Mac permission tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.control.brokers.action", type: "brokers", fromId: "claw.mac.controlPlane", toId: "claw.mac.actionBroker", steward: "claw", visibility: "internal", contractId: "claw.mac.actionPlan.v1", transport: "policy-gated action plan handoff", validation: "Mac action plan schema tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.action.brokers.host", type: "brokers", fromId: "claw.mac.actionBroker", toId: "claw.host.signed", steward: "claw", visibility: "internal", contractId: "claw.mac.actionReceipt.v1", transport: "active signed-host native execution", validation: "host permission contract guard and Mac action broker tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.mac.action.owns.audit", type: "owns", fromId: "claw.mac.actionBroker", toId: "claw.host.audit", steward: "claw", visibility: "internal", contractId: "claw.mac.actionReceipt.v1", transport: "redacted action receipt and durable audit event", validation: "Mac receipt schema tests and host audit contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.system.cli.exposes.telemetry", type: "exposes", fromId: "claw.cli.command.system", toId: "claw.systemTelemetry", steward: "claw", visibility: "public", contractId: "claw.systemTelemetry.v1", transport: "local CLI portal with JSON envelopes", validation: "System telemetry CLI and inspect route tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.system.mcp.exposes.telemetry", type: "exposes", fromId: "claw.mcp.surface", toId: "claw.systemTelemetry", steward: "claw", visibility: "public", contractId: "claw.systemTelemetry.v1", transport: "MCP tools/resources policy gate", validation: "System telemetry MCP tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.system.telemetry.consumes.contextProviders", type: "consumes", fromId: "claw.systemTelemetry", toId: "claw.systemTelemetry.contextProviders", steward: "claw", visibility: "public", contractId: "claw.systemTelemetry.providers.v1", transport: "provider catalog, fail-closed provider plans with provided_redacted credential projection, and local env/file provider values", validation: "System telemetry provider catalog and credential redaction tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.system.telemetry.brokers.host", type: "brokers", fromId: "claw.systemTelemetry", toId: "claw.host.signed", steward: "claw", visibility: "internal", contractId: "claw.systemTelemetry.hostSnapshot.v1", transport: "signed-host snapshot/control command", validation: "Signed-host system telemetry tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.system.telemetry.owns.monitor", type: "owns", fromId: "claw.systemTelemetry", toId: "claw.database.monitor", steward: "claw", visibility: "public", contractId: "claw.database.monitor", transport: "Monitor metric_sources, metric_samples, metric_rollups and metric_incidents", validation: "Monitor metric history, retention and rule tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.system.telemetry.owns.audit", type: "owns", fromId: "claw.systemTelemetry", toId: "claw.host.audit", steward: "claw", visibility: "internal", contractId: "claw.systemTelemetry.audit.v1", transport: "portable auditPlan metadata plus local CLI and signed-host redacted audit events", validation: "System telemetry provider/control audit tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.clawix.menuBar.consumes.telemetry", type: "consumes", fromId: "clawix.menuBar.systemIndicators", toId: "claw.systemTelemetry", steward: "clawix", visibility: "public", contractId: "claw.systemTelemetry.widgets.v1", transport: "Clawix host bridge plus portable widget definitions", validation: "Clawix system telemetry bridge tests and UI validation", source: surfaceRouteGraphSource },
+  { id: "claw.edge.clawix.menuBar.owns.monitorWrites", type: "owns", fromId: "clawix.menuBar.systemIndicators", toId: "claw.database.monitor", steward: "clawix", visibility: "internal", contractId: "claw.database.monitor", transport: "throttled menu bar snapshot recording", validation: "Clawix monitor recorder tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.chat.ui.consumes.assignment", type: "consumes", fromId: "clawix.ui.chat", toId: "claw.agents.assignments", steward: "clawix", visibility: "internal", contractId: "claw.agent_assignment.internal_mac.v1", transport: "local assignment selection", validation: "internal Mac assignment fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.relay.brokers.assignments", type: "brokers", fromId: "claw.relay", toId: "claw.agents.assignments", steward: "claw", visibility: "external", contractId: "claw.agent_assignment.external.v1", transport: "remote-safe assignment selection", validation: "external support assignment fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.chat.ui.consumes.bridge", type: "consumes", fromId: "clawix.ui.chat", toId: "clawix.bridge.local", steward: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "macOS bridge daemon E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.bridge.brokers.daemon", type: "brokers", fromId: "clawix.bridge.local", toId: "claw.daemon.local", steward: "clawix", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "localhost/process bridge", validation: "daemon bridge fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.daemon.brokers.runtime", type: "brokers", fromId: "claw.daemon.local", toId: "claw.runtime.agent", steward: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "framework runtime adapter", validation: "runtime fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.runtime.owns.sessions", type: "owns", fromId: "claw.runtime.agent", toId: "claw.sessions", steward: "claw", visibility: "internal", contractId: "claw.database.sessions", transport: "sessions service/events", validation: "sessions fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sessions.exposes.bridge", type: "exposes", fromId: "claw.sessions", toId: "clawix.bridge.local", steward: "claw", visibility: "internal", contractId: "claw.event.sessions.message.appended", transport: "session event frames", validation: "bridge frame round-trip tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.bridge.exposes.ui", type: "exposes", fromId: "clawix.bridge.local", toId: "clawix.ui.chat", steward: "clawix", visibility: "internal", contractId: "clawix.protocol.bridge.v1", transport: "local bridge RPC", validation: "Clawix chat workflow fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.companion.consumes.bridge", type: "consumes", fromId: "clawix.companion.client", toId: "clawix.bridge.local", steward: "clawix", visibility: "public", contractId: "clawix.protocol.bridge.v1", transport: "WebSocket localhost:24080", validation: "companion bridge fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.bridge.exposes.companion", type: "exposes", fromId: "clawix.bridge.local", toId: "clawix.companion.client", steward: "clawix", visibility: "public", contractId: "clawix.protocol.bridge.v1", transport: "WebSocket localhost:24080", validation: "companion bridge frame round-trip", source: surfaceRouteGraphSource },
+  { id: "claw.edge.remote.consumes.relay", type: "consumes", fromId: "claw.remote.client", toId: "claw.relay", steward: "claw", visibility: "external", contractId: "claw.api.relay.remote", transport: "HTTPS/WebSocket Relay", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.relay.brokers.connector", type: "brokers", fromId: "claw.relay", toId: "claw.relay.connector", steward: "claw", visibility: "external", contractId: "claw.api.relay.connector", transport: "connector WebSocket", validation: "relay connector E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.workspace", type: "brokers", fromId: "claw.relay.connector", toId: "claw.workspace", steward: "claw", visibility: "internal", contractId: "claw.workspace.manifest", transport: "workspace materialization", validation: "relay workspace fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.runtime", type: "brokers", fromId: "claw.relay.connector", toId: "claw.runtime.agent", steward: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "local runtime adapter", validation: "relay codex connector E2E", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sessions.exposes.relay", type: "exposes", fromId: "claw.sessions", toId: "claw.relay", steward: "claw", visibility: "external", contractId: "claw.event.sessions.message.appended", transport: "remote-safe session events", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.relay.exposes.remote", type: "exposes", fromId: "claw.relay", toId: "claw.remote.client", steward: "claw", visibility: "external", contractId: "claw.api.relay.remote", transport: "HTTPS/WebSocket Relay", validation: "relay E2E fixture", source: surfaceRouteGraphSource },
+  { id: "claw.edge.remote.consumes.coordinator", type: "consumes", fromId: "claw.remote.client", toId: "claw.coordinator", steward: "claw", visibility: "external", contractId: "claw.api.nodes", transport: "HTTPS/WebSocket/Iroh rendezvous metadata", validation: "remote sync inspect tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.coordinator.brokers.gateway", type: "brokers", fromId: "claw.coordinator", toId: "claw.gateway", steward: "claw", visibility: "external", contractId: "claw.api.remote.conformance", transport: "governed gateway admission", validation: "remote conformance inspect tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.gateway.brokers.connector", type: "brokers", fromId: "claw.gateway", toId: "claw.connector", steward: "claw", visibility: "external", contractId: "claw.api.remote.classifications", transport: "projected registered API contract", validation: "gateway conformance inspect tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.runtime.hostAdapter", type: "brokers", fromId: "claw.connector", toId: "claw.runtime.agent", steward: "claw", visibility: "internal", contractId: "claw.protocol.hostCommand.v1", transport: "host-side runtime adapter", validation: "connector runtime conformance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.search", type: "brokers", fromId: "claw.connector", toId: "claw.search", steward: "claw", visibility: "external", contractId: "claw.api.search.searches", transport: "remote-safe projected search route", validation: "remote search conformance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.secrets", type: "brokers", fromId: "claw.connector", toId: "claw.secrets.broker", steward: "claw", visibility: "external", contractId: "claw.api.secrets", transport: "secret refs plus brokered lease", validation: "secret lease rejection/acceptance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.connector.brokers.sync", type: "brokers", fromId: "claw.connector", toId: "claw.sync", steward: "claw", visibility: "external", contractId: "claw.api.sync.manifests", transport: "sync manifest/changelog/cursor route", validation: "sync manifest conformance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.skills", type: "owns", fromId: "claw.sync", toId: "claw.skills.library", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "skills sync driver", validation: "skills sync hermetic E2E", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.memory", type: "owns", fromId: "claw.sync", toId: "claw.memory.userModel", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "memory/user-model sync driver", validation: "memory sync hermetic E2E", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.sessions", type: "owns", fromId: "claw.sync", toId: "claw.sessions", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "sessions sync driver", validation: "sessions sync route contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.driveFiles", type: "owns", fromId: "claw.sync", toId: "claw.drive.files", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "drive/files sync driver", validation: "drive file sync hermetic E2E", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.blobs", type: "owns", fromId: "claw.sync", toId: "claw.drive.files", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "blob sync driver", validation: "blob sync route contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.searchIndex", type: "owns", fromId: "claw.sync", toId: "claw.search", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "search-index sync driver", validation: "search-index sync route contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.sqlite", type: "owns", fromId: "claw.sync", toId: "claw.database.core", steward: "claw", visibility: "public", contractId: "claw.api.sync.changes", transport: "SQLite full/partial table manifests", validation: "SQLite resource sync tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.sidecars", type: "owns", fromId: "claw.sync", toId: "claw.database.runtime", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "sidecar database manifests", validation: "sidecar sync route contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.agentConfig", type: "owns", fromId: "claw.sync", toId: "claw.agents", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "agent config sync driver", validation: "agent config sync route contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.workspaceState", type: "owns", fromId: "claw.sync", toId: "claw.workspace", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "workspace state sync driver", validation: "workspace state sync route contract tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.sync.owns.remoteCache", type: "owns", fromId: "claw.sync", toId: "claw.remoteCache", steward: "claw", visibility: "public", contractId: "claw.api.sync.manifests", transport: "encrypted TTL cache and outbound queue", validation: "client cache TTL tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.gateway.exposes.headlessHost", type: "exposes", fromId: "claw.gateway", toId: "claw.headlessHost", steward: "claw", visibility: "public", contractId: "claw.api.gateway.conformance", transport: "headless service projection", validation: "headless gateway conformance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.headlessHost.brokers.assignments", type: "brokers", fromId: "claw.headlessHost", toId: "claw.agents.assignments", steward: "claw", visibility: "public", contractId: "claw.api.gateway.agentServiceEvaluate", transport: "multi-tenant governed assignment routing", validation: "multi-tenant assignment isolation tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.coordinator.consumes.iroh", type: "consumes", fromId: "claw.coordinator", toId: "claw.transport.iroh", steward: "claw", visibility: "external", contractId: "claw.api.nodes", transport: "Iroh adapter for P2P/rendezvous/relay fallback", validation: "Iroh fallback conformance tests", source: surfaceRouteGraphSource },
+  { id: "claw.edge.meshShare.brokers.sync", type: "brokers", fromId: "claw.mesh.share", toId: "claw.sync", steward: "claw", visibility: "external", contractId: "claw.api.mesh.shares", transport: "invite/share/revoke primitives", validation: "inter-mesh sharing primitive tests", source: surfaceRouteGraphSource },
 ];
 
 function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {
@@ -2003,7 +2010,7 @@ function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {
     toId: edge.toId,
     edgeType: edge.type,
     contractId: edge.contractId,
-    owner: edge.owner,
+    steward: edge.steward,
     visibility: edge.visibility,
     transport: edge.transport,
     validation: edge.validation,
@@ -2018,7 +2025,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "The public CLI resolves arbitrary agent action phrases through a deterministic command-intent registry, optional workspace ledger, Need-compatible opportunities, and approval-gated report promotion packets without executing unknown phrases.",
     fromId: "claw.cli.command.commands",
     toId: "claw.cli.command.report",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "local CLI registry plus workspace JSON ledger",
     validation: "Fixture tests for resolve, record, list, opportunities, promote, unknown fallback metadata, and inspect command-intents.",
@@ -2039,7 +2046,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "An intuitive root such as `claw wifi connect` resolves through the Mac atlas, central permission broker, signed-host action broker, and redacted audit receipt instead of calling macOS directly.",
     fromId: "claw.cli.command.wifi",
     toId: "claw.host.audit",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "local CLI direct root plus signed-host broker",
     validation: "Mac CLI direct-root tests, atlas tests, host permission guard, and inspect route tests",
@@ -2063,7 +2070,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "`claw permissions` centralizes OS permission state, framework grants, just-in-time request plans, and lifecycle audit for every Mac capability family.",
     fromId: "claw.cli.command.permissions",
     toId: "claw.host.audit",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "central permission CLI root plus signed-host permission broker",
     validation: "Mac permission tests, host permission guard, and inspect route tests",
@@ -2083,7 +2090,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "`claw system` exposes safe system/context snapshots, provider catalogs, widgets, rules and Monitor-backed history for local agents without giving them direct native control.",
     fromId: "claw.cli.command.system",
     toId: "claw.database.monitor",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "local CLI/API/MCP contracts plus Monitor metric history",
     validation: "System telemetry CLI, MCP, Monitor and inspect route tests",
@@ -2104,7 +2111,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "System controls stay plan-first in the public surface and only execute through the signed host, with receipt and audit metadata.",
     fromId: "claw.cli.command.system",
     toId: "claw.host.audit",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "local CLI plan plus signed-host native broker",
     validation: "System telemetry signed-host control tests and audit receipt checks",
@@ -2124,7 +2131,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Clawix renders host-specific menu bar indicators from portable system telemetry widgets and records throttled snapshots into the shared Monitor history.",
     fromId: "clawix.menuBar.systemIndicators",
     toId: "claw.database.monitor",
-    owner: "clawix",
+    steward: "clawix",
     visibility: "public",
     transport: "AppKit NSStatusItem bridge plus Monitor recorder",
     validation: "Clawix system telemetry bridge tests and external UI validation",
@@ -2143,7 +2150,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Clawix macOS UI sends an agent turn through the local bridge/daemon into the framework runtime and sessions stream.",
     fromId: "clawix.ui.chat",
     toId: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     visibility: "internal",
     transport: "local bridge RPC plus framework runtime/session events",
     validation: "Fixture + hermetic E2E for local desktop chat",
@@ -2178,7 +2185,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "A Mac UI-visible agent is selected through an internal assignment, policy-checked, run through the runtime, and recorded as both an operational run and a conversational session.",
     fromId: "clawix.ui.chat",
     toId: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     visibility: "internal",
     transport: "local UI assignment plus runtime/session events",
     validation: "Fixture + hermetic E2E for internal Mac assignment",
@@ -2202,7 +2209,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "A web/chat/channel visitor reaches only an active external assignment; identity, grants, privacy, support projection, runtime run, and session trace stay scoped to that assignment.",
     fromId: "claw.remote.client",
     toId: "claw.support.inbox",
-    owner: "claw",
+    steward: "claw",
     visibility: "external",
     transport: "external channel/Relay to assignment policy gate",
     validation: "Fake external support assignment fixture",
@@ -2226,7 +2233,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "MCP and service API callers consume the same assignment and grant policy instead of receiving a separate privileged agent path.",
     fromId: "claw.mcp.surface",
     toId: "claw.runtime.agent",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "MCP/service API policy gate",
     validation: "Inspect route and Agents V1 policy tests",
@@ -2246,7 +2253,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Companion clients use pairing/auth and the bridge WebSocket on port 24080 before the same daemon/runtime/session path.",
     fromId: "clawix.companion.client",
     toId: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "WebSocket localhost:24080 plus framework runtime/session events",
     validation: "Fixture + hermetic E2E for companion bridge traffic",
@@ -2269,7 +2276,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Remote clients use Relay auth/project-agent assignment and a workspace connector before local runtime execution and remote-safe session responses.",
     fromId: "claw.remote.client",
     toId: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     visibility: "external",
     transport: "Relay HTTPS/WebSocket plus workspace connector",
     validation: "Fixture + hermetic Relay E2E without production services",
@@ -2293,7 +2300,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Remote clients enter through Coordinator/Gateway/Connector and reach the same assignment, runtime, and sessions path as local chat.",
     fromId: "claw.remote.client",
     toId: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     visibility: "external",
     transport: "Coordinator/Gateway/Connector over HTTPS/WebSocket or Iroh adapter",
     validation: "Remote conformance, inspect, and hermetic chat tests",
@@ -2315,7 +2322,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Remote-safe search projects the registered Search contract through Gateway and Connector without a separate mobile-only search API.",
     fromId: "claw.remote.client",
     toId: "claw.search",
-    owner: "claw",
+    steward: "claw",
     visibility: "external",
     transport: "Gateway projected service API",
     validation: "Remote search conformance tests",
@@ -2336,7 +2343,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Remote actors can use secret references and audited broker leases for approved operations, but never receive plaintext secret replication.",
     fromId: "claw.remote.client",
     toId: "claw.secrets.broker",
-    owner: "claw",
+    steward: "claw",
     visibility: "external",
     transport: "Gateway projected secret-reference operation",
     validation: "Secret ref rejection and broker lease acceptance tests",
@@ -2357,7 +2364,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Skills created or imported on one host synchronize to configured peer hosts through manifests, changelogs, cursors, and conflict elevation.",
     fromId: "claw.sync",
     toId: "claw.skills.library",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus skills driver",
     validation: "Skills two-host sync tests",
@@ -2373,7 +2380,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Shared memory and user-model state synchronize by resource authority and configured residency, not through ad hoc Relay storage.",
     fromId: "claw.sync",
     toId: "claw.memory.userModel",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus memory driver",
     validation: "Memory/user-model sync tests",
@@ -2389,7 +2396,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Session metadata, transcripts, and conversation state synchronize through Sync manifests instead of relying on the chat Gateway as storage.",
     fromId: "claw.sync",
     toId: "claw.sessions",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus sessions driver",
     validation: "Sessions sync route contract tests",
@@ -2405,7 +2412,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Drive, files, and documents use configured sync drivers with explicit authority, cache policy, and conflict policy.",
     fromId: "claw.sync",
     toId: "claw.drive.files",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus drive/file driver",
     validation: "Drive/file sync tests",
@@ -2421,7 +2428,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Blob resources synchronize through a dedicated Sync route with explicit authority, cache policy, and conflict policy.",
     fromId: "claw.sync",
     toId: "claw.drive.files",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus blob driver",
     validation: "Blob sync route contract tests",
@@ -2437,7 +2444,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Core database resources can synchronize as full database, table, or partial-resource manifests with no silent overwrite.",
     fromId: "claw.sync",
     toId: "claw.database.core",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "SQLite full/partial sync manifests",
     validation: "SQLite manifest and conflict tests",
@@ -2453,7 +2460,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Sidecar databases synchronize through dedicated manifests instead of being hidden inside SQLite table routes.",
     fromId: "claw.sync",
     toId: "claw.database.runtime",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus sidecar driver",
     validation: "Sidecar sync route contract tests",
@@ -2469,7 +2476,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Agent configuration state synchronizes through explicit manifests so remote/headless hosts use the same agent setup contract.",
     fromId: "claw.sync",
     toId: "claw.agents",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus agent-config driver",
     validation: "Agent config sync route contract tests",
@@ -2485,7 +2492,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Workspace state synchronizes through explicit manifests for headless and multi-node installs.",
     fromId: "claw.sync",
     toId: "claw.workspace",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus workspace-state driver",
     validation: "Workspace state sync route contract tests",
@@ -2501,7 +2508,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Search indexes and rebuild-state metadata synchronize through the Sync plane while query execution remains a Gateway-projected search contract.",
     fromId: "claw.sync",
     toId: "claw.search",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Sync manifest/changelog plus search-index driver",
     validation: "Search index sync route contract tests",
@@ -2517,7 +2524,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "A VPS or UI-less computer runs ClawJS as a full host with runtime, storage, policy, audit, CLI/API, and optional Gateway/Connector.",
     fromId: "claw.gateway",
     toId: "claw.headlessHost",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Gateway conformance API plus headless host runtime",
     validation: "Headless host conformance tests",
@@ -2533,7 +2540,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "A governed host can serve agents to multiple tenants through assignments, budgets, isolation, and audit with no hosted-only capabilities.",
     fromId: "claw.headlessHost",
     toId: "claw.agents.assignments",
-    owner: "claw",
+    steward: "claw",
     visibility: "public",
     transport: "Gateway assignment policy and conformance contract",
     validation: "Multi-tenant assignment isolation tests",
@@ -2554,7 +2561,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     summary: "Two meshes collaborate through invitation, scoped resource sharing, and revocation primitives while each mesh stays sovereign.",
     fromId: "claw.mesh.share",
     toId: "claw.sync",
-    owner: "claw",
+    steward: "claw",
     visibility: "external",
     transport: "Coordinator invitation plus Sync scoped share/revoke",
     validation: "Inter-mesh sharing primitive tests",
@@ -2594,7 +2601,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
           human: "Generated stable surface docs and inspect output for review",
           programmatic: "@clawjs/core surface registry plus claw inspect",
         },
-        nonInference: "Registering a surface here does not by itself authorize a feature, native permission, storage owner, or route beyond its explicit node, edge, route, and decision evidence.",
+        nonInference: "Registering a surface here does not by itself authorize a feature, native permission, storage steward, or route beyond its explicit node, edge, route, and decision evidence.",
       },
       source: registrySource,
       notes: "Root for names, fields, routes, protocols, CLI commands, IDs, and external mappings that must not drift after V1 without versioning.",
@@ -2617,15 +2624,15 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
     })),
     ...runtimeCriticalNodes.map((node) => clawPersistentSurface.root({
       id: node.id,
-      owner: node.owner as ClawPersistentSurfaceOwner,
+      steward: node.steward as ClawPersistentSurfaceSteward,
       name: node.name,
       path: node.path,
       storageClass: "external",
-      canonicality: node.owner === "clawix" ? "hostOnly" : node.owner === "external" ? "externalReadOnly" : "canonical",
-      privacy: node.owner === "external" ? "externalReadOnly" : "public",
-      lifecycle: node.owner === "external" ? "external" : "durable",
+      canonicality: node.steward === "clawix" ? "hostOnly" : node.steward === "external" ? "externalReadOnly" : "canonical",
+      privacy: node.steward === "external" ? "externalReadOnly" : "public",
+      lifecycle: node.steward === "external" ? "external" : "durable",
       surfaceClass: "protocol",
-      stability: node.owner === "external" ? "externalDependency" : "v1",
+      stability: node.steward === "external" ? "externalDependency" : "v1",
       humanSurfaces: [...node.humanSurfaces] as ClawSurfaceParitySurface[],
       programmaticSurfaces: [...node.programmaticSurfaces] as ClawSurfaceParitySurface[],
       surfaceGaps: relayClassificationGap(node.programmaticSurfaces),
@@ -2649,7 +2656,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       ...contractDefaults,
       id: "clawix.protocol.bridge.v1",
       kind: "protocol",
-      owner: "clawix",
+      steward: "clawix",
       name: "Clawix bridge protocol v1",
       parentId: "claw.contracts.protocol",
       value: "clawix-bridge-v1",
@@ -2674,7 +2681,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       ...contractDefaults,
       id: `claw.external.mapping.event.${name}`,
       kind: "externalMapping",
-      owner: "external",
+      steward: "external",
       name: event,
       value: event,
       parentId: "claw.contracts.external",
@@ -2755,7 +2762,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       ...contractDefaults,
       id: `claw.external.${provider}`,
       kind: "externalDependency",
-      owner: "external",
+      steward: "external",
       name: provider,
       value: provider,
       parentId: "claw.contracts.external",
@@ -2780,7 +2787,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
     }),
     clawPersistentSurface.root({
       id: "clawix.home",
-      owner: "clawix",
+      steward: "clawix",
       name: "Clawix host home",
       path: clawixHomeLayout.root,
       storageClass: "hostOperational",
@@ -2869,6 +2876,21 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       databaseId: "claw.database.core",
       source: registrySource,
     }),
+    ...appStateCoreTables.map((name) => clawPersistentSurface.table({
+      id: `claw.database.core.table.${name}`,
+      name,
+      parentId: "claw.database.core",
+      databaseId: "claw.database.core",
+      source: registrySource,
+      notes: "Framework app-state projection table stored in core.sqlite for host-owned UI state synchronization.",
+    })),
+    ...appStateCoreIndexes.map((name) => clawPersistentSurface.index({
+      id: `claw.database.core.index.${name}`,
+      name,
+      parentId: "claw.database.core",
+      databaseId: "claw.database.core",
+      source: registrySource,
+    })),
     clawPersistentSurface.database({
       id: "claw.database.runtime",
       kind: "sidecar",
@@ -3230,7 +3252,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       .map(([name, surfacePath]) => clawPersistentSurface.path({
         id: `clawix.home.${name}`,
         kind: name === "bridgeSocket" ? "socket" : "folder",
-        owner: "clawix",
+        steward: "clawix",
         name,
         path: surfacePath,
         parentId: "clawix.home",
@@ -3241,7 +3263,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
     clawPersistentSurface.path({
       id: "claw.external.codex",
       kind: "externalReadOnlySource",
-      owner: "external",
+      steward: "external",
       name: "Codex home",
       path: "~/.codex",
       storageClass: "external",

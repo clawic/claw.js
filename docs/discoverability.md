@@ -110,6 +110,7 @@ file; do not hand-maintain this table.
 | `guard-scripts-surface-route-graph-guard` | guardrail |  | `scripts/surface-route-graph-guard.mjs` | surface-route-graph-guard, Surface Route Graph Guard | `scripts/surface-route-graph-guard.mjs` |
 | `guard-scripts-tracked-ignored-check` | guardrail |  | `scripts/tracked-ignored-check.mjs` | tracked-ignored-check, Tracked Ignored Check | `scripts/tracked-ignored-check.mjs` |
 | `guard-scripts-v1-surface-closure-audit-check` | guardrail |  | `scripts/v1-surface-closure-audit-check.mjs` | v1-surface-closure-audit-check, V1 Surface Closure Audit Check | `scripts/v1-surface-closure-audit-check.mjs` |
+| `guard-scripts-verify-cli-base-imports` | guardrail |  | `scripts/verify-cli-base-imports.mjs` | verify-cli-base-imports, Verify Cli Base Imports | `scripts/verify-cli-base-imports.mjs` |
 | `guard-scripts-verify-cli-json-envelope-debt` | guardrail |  | `scripts/verify-cli-json-envelope-debt.mjs` | verify-cli-json-envelope-debt, Verify Cli Json Envelope Debt | `scripts/verify-cli-json-envelope-debt.mjs` |
 | `guard-scripts-verify-cli-registry-router-parity` | guardrail |  | `scripts/verify-cli-registry-router-parity.mjs` | verify-cli-registry-router-parity, Verify Cli Registry Router Parity | `scripts/verify-cli-registry-router-parity.mjs` |
 | `guard-scripts-verify-component-catalog` | guardrail |  | `scripts/verify-component-catalog.mjs` | verify-component-catalog, Verify Component Catalog | `scripts/verify-component-catalog.mjs` |

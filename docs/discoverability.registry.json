@@ -6,7 +6,7 @@
     {
       "id": "adr-docs-adr-0001-claw-framework-host-boundary",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0001-claw-framework-host-boundary.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -39,7 +39,7 @@
     {
       "id": "adr-docs-adr-0001-naming-and-stability-surfaces",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0001-naming-and-stability-surfaces.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -72,7 +72,7 @@
     {
       "id": "adr-docs-adr-0002-testing-architecture",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0002-testing-architecture.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -105,7 +105,7 @@
     {
       "id": "adr-docs-adr-0003-source-file-boundaries",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0003-source-file-boundaries.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -138,7 +138,7 @@
     {
       "id": "adr-docs-adr-0004-persistent-surface-registry-and-inspection",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -171,7 +171,7 @@
     {
       "id": "adr-docs-adr-0005-canonical-data-catalog",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0005-canonical-data-catalog.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -204,7 +204,7 @@
     {
       "id": "adr-docs-adr-0006-integration-qa-lab",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0006-integration-qa-lab.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -237,7 +237,7 @@
     {
       "id": "adr-docs-adr-0007-cli-agent-interface",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0007-cli-agent-interface.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -270,7 +270,7 @@
     {
       "id": "adr-docs-adr-0008-secrets-security-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0008-secrets-security-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -303,7 +303,7 @@
     {
       "id": "adr-docs-adr-0009-dual-human-programmatic-surfaces",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0009-dual-human-programmatic-surfaces.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -336,7 +336,7 @@
     {
       "id": "adr-docs-adr-0010-cli-jit-guidance-actor-assertions-resource-registry",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -369,7 +369,7 @@
     {
       "id": "adr-docs-adr-0011-report-governance-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0011-report-governance-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -402,7 +402,7 @@
     {
       "id": "adr-docs-adr-0012-domain-surface-registry-db-to-cli",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0012-domain-surface-registry-db-to-cli.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -435,7 +435,7 @@
     {
       "id": "adr-docs-adr-0013-agentic-naming-and-code-structure",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0013-agentic-naming-and-code-structure.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -468,7 +468,7 @@
     {
       "id": "adr-docs-adr-0014-need-route-lab-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0014-need-route-lab-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -501,7 +501,7 @@
     {
       "id": "adr-docs-adr-0015-connector-control-plane-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0015-connector-control-plane-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -534,7 +534,7 @@
     {
       "id": "adr-docs-adr-0016-code-hygiene-program",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0016-code-hygiene-program.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -567,7 +567,7 @@
     {
       "id": "discoverability-contract",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0017-discoverability-and-meta-code-routing.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -616,7 +616,7 @@
     {
       "id": "cli-action-intent-registry",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0018-cli-action-intent-registry.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -664,7 +664,7 @@
     {
       "id": "search-v1-1-architecture",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0019-search-v1-1-architecture.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -712,7 +712,7 @@
     {
       "id": "agents-v1-refactor",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0020-agents-v1-refactor.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -761,7 +761,7 @@
     {
       "id": "dense-data-operating-system",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0021-dense-data-operating-system.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -804,7 +804,7 @@
     {
       "id": "remote-gateway-sync-redesign",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0022-remote-gateway-sync-redesign.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -854,7 +854,7 @@
     {
       "id": "mac-control-plane-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0023-mac-control-plane-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -905,7 +905,7 @@
     {
       "id": "mac-permission-broker-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0024-mac-permission-broker-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -955,7 +955,7 @@
     {
       "id": "adr-docs-adr-0025-pre-v1-version-governance",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0025-pre-v1-version-governance.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -990,7 +990,7 @@
     {
       "id": "adr-docs-adr-0026-regulated-domain-safety-liability-boundary",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0026-regulated-domain-safety-liability-boundary.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1023,7 +1023,7 @@
     {
       "id": "adr-docs-adr-0027-governance-identity-scope-model",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0027-governance-identity-scope-model.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1056,7 +1056,7 @@
     {
       "id": "adr-docs-adr-0028-workspace-project-folder-manifest",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0028-workspace-project-folder-manifest.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1089,7 +1089,7 @@
     {
       "id": "adr-docs-adr-0029-connector-governed-context-v1",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0029-connector-governed-context-v1.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1122,7 +1122,7 @@
     {
       "id": "adr-docs-adr-0030-post-v1-evolution-rescue-backbone",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1155,7 +1155,7 @@
     {
       "id": "adr-docs-adr-0031-progressive-modularity-zero-surprise-install",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1197,7 +1197,7 @@
     {
       "id": "adr-docs-adr-0032-sdk-first-custom-surfaces-and-nonblocking-shell",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0032-sdk-first-custom-surfaces-and-nonblocking-shell.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1237,7 +1237,7 @@
     {
       "id": "adr-docs-adr-0033-open-standard-official-trust",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0033-open-standard-official-trust.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1270,7 +1270,7 @@
     {
       "id": "adr-docs-adr-0034-network-control-plane",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0034-network-control-plane.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1309,7 +1309,7 @@
     {
       "id": "adr-docs-adr-0035-decision-tension-rubric",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0035-decision-tension-rubric.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1344,7 +1344,7 @@
     {
       "id": "adr-docs-adr-0036-performance-governance",
       "kind": "adr",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0036-performance-governance.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1372,7 +1372,7 @@
     {
       "id": "surface-route-graph",
       "kind": "surface-route",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "docs/adr/0012-surface-route-graph.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1415,7 +1415,7 @@
     {
       "id": "skill-skills-adr-to-guardrail",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/adr-to-guardrail/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1439,7 +1439,7 @@
     {
       "id": "skill-skills-architecture-drift-repair",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/architecture-drift-repair/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1463,7 +1463,7 @@
     {
       "id": "skill-skills-brand-guidelines",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/brand-guidelines/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1487,7 +1487,7 @@
     {
       "id": "skill-skills-canonical-catalog-expansion",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/canonical-catalog-expansion/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1511,7 +1511,7 @@
     {
       "id": "skill-skills-canvas-design",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/canvas-design/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1535,7 +1535,7 @@
     {
       "id": "skill-skills-cli-agent-surface-work",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/cli-agent-surface-work/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1559,7 +1559,7 @@
     {
       "id": "skill-skills-code-hygiene-audit",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/code-hygiene-audit/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1583,7 +1583,7 @@
     {
       "id": "skill-skills-code-hygiene-cleanup",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/code-hygiene-cleanup/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1607,7 +1607,7 @@
     {
       "id": "skill-skills-code-review-risk",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/code-review-risk/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1631,7 +1631,7 @@
     {
       "id": "skill-skills-commit-hygiene-public",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/commit-hygiene-public/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1655,7 +1655,7 @@
     {
       "id": "skill-skills-compatibility-evolution-work",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/compatibility-evolution-work/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1679,7 +1679,7 @@
     {
       "id": "skill-skills-constitution-drift-audit",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/constitution-drift-audit/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1703,7 +1703,7 @@
     {
       "id": "skill-skills-data-storage-boundary-review",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/data-storage-boundary-review/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1727,7 +1727,7 @@
     {
       "id": "decision-map-maintenance",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/decision-map-maintenance/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1754,7 +1754,7 @@
     {
       "id": "skill-skills-host-boundary-review",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/host-boundary-review/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1778,7 +1778,7 @@
     {
       "id": "skill-skills-host-dependent-validation",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/host-dependent-validation/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1803,7 +1803,7 @@
     {
       "id": "skill-skills-integration-qa-lab",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/integration-qa-lab/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1827,7 +1827,7 @@
     {
       "id": "mac-control-plane-work",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/mac-control-plane-work/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1856,7 +1856,7 @@
     {
       "id": "skill-skills-naming-surface-audit",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/naming-surface-audit/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1880,7 +1880,7 @@
     {
       "id": "skill-skills-need-coverage-auditor",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/need-coverage-auditor/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1904,7 +1904,7 @@
     {
       "id": "skill-skills-need-opportunity-triager",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/need-opportunity-triager/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1928,7 +1928,7 @@
     {
       "id": "skill-skills-need-publication-preparer",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/need-publication-preparer/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1952,7 +1952,7 @@
     {
       "id": "skill-skills-need-scenario-generator",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/need-scenario-generator/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -1976,7 +1976,7 @@
     {
       "id": "skill-skills-performance-investigation",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/performance-investigation/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2000,7 +2000,7 @@
     {
       "id": "skill-skills-progressive-modularity-review",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/progressive-modularity-review/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2030,7 +2030,7 @@
     {
       "id": "skill-skills-public-hygiene-review",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/public-hygiene-review/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2054,7 +2054,7 @@
     {
       "id": "skill-skills-secrets-boundary-review",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/secrets-boundary-review/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2078,7 +2078,7 @@
     {
       "id": "skill-skills-source-file-boundary-refactor",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/source-file-boundary-refactor/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2102,7 +2102,7 @@
     {
       "id": "skill-skills-style-apply",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/style-apply/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2126,7 +2126,7 @@
     {
       "id": "skill-skills-style-extract",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/style-extract/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2150,7 +2150,7 @@
     {
       "id": "skill-skills-surface-registry-alignment",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/surface-registry-alignment/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2174,7 +2174,7 @@
     {
       "id": "skill-skills-surface-route-work",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/surface-route-work/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2198,7 +2198,7 @@
     {
       "id": "skill-skills-template-render",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/template-render/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2222,7 +2222,7 @@
     {
       "id": "skill-skills-theme-factory",
       "kind": "skill",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/theme-factory/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2246,7 +2246,6 @@
     {
       "id": "repository-discovery-helper",
       "kind": "guardrail",
-      "owner": "claw",
       "canonicalSource": "packages/clawjs-core/src/repository-discovery.ts",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2273,12 +2272,12 @@
       ],
       "guard": "packages/clawjs/src/cli-discovery.test.ts",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "governance-doctor-command",
       "kind": "guardrail",
-      "owner": "claw",
       "canonicalSource": "packages/clawjs/src/cli-governance-command.ts",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2313,12 +2312,13 @@
           "command": "claw inspect commands --json",
           "expectPath": "packages/clawjs/src/cli-governance-command.ts"
         }
-      ]
+      ],
+      "steward": "claw"
     },
     {
       "id": "guard-scripts-adr-operational-coverage-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/adr-operational-coverage-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2343,7 +2343,7 @@
     {
       "id": "guard-scripts-agent-instructions-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/agent-instructions-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2368,7 +2368,7 @@
     {
       "id": "guard-scripts-capability-maturity-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/capability-maturity-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2393,7 +2393,7 @@
     {
       "id": "guard-scripts-code-hygiene-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/code-hygiene-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2418,7 +2418,7 @@
     {
       "id": "guard-scripts-conceptual-vocabulary-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/conceptual-vocabulary-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2443,7 +2443,7 @@
     {
       "id": "guard-scripts-constitution-assertions-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/constitution-assertions-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2472,7 +2472,7 @@
     {
       "id": "guard-scripts-discoverability-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/discoverability-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2497,7 +2497,7 @@
     {
       "id": "guard-scripts-docs-alignment-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/docs-alignment-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2522,7 +2522,7 @@
     {
       "id": "guard-scripts-docs-rendered-link-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/docs-rendered-link-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2547,7 +2547,7 @@
     {
       "id": "guard-scripts-docs-surface-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/docs-surface-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2572,7 +2572,7 @@
     {
       "id": "guard-scripts-domain-surface-registry-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/domain-surface-registry-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2597,7 +2597,7 @@
     {
       "id": "guard-scripts-evolution-governance-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/evolution-governance-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2622,7 +2622,7 @@
     {
       "id": "guard-scripts-governance-scope-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/governance-scope-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2647,7 +2647,7 @@
     {
       "id": "guard-scripts-naming-shape-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/naming-shape-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2672,7 +2672,7 @@
     {
       "id": "guard-scripts-naming-surface-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/naming-surface-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2697,7 +2697,7 @@
     {
       "id": "guard-scripts-open-source-canonicity-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/open-source-canonicity-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2722,7 +2722,7 @@
     {
       "id": "guard-scripts-package-surface-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/package-surface-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2747,7 +2747,7 @@
     {
       "id": "guard-scripts-performance-governance-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/performance-governance-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2772,7 +2772,7 @@
     {
       "id": "guard-scripts-persistent-surface-doc-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/persistent-surface-doc-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2797,7 +2797,7 @@
     {
       "id": "guard-scripts-persistent-surface-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/persistent-surface-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2822,7 +2822,7 @@
     {
       "id": "guard-scripts-privacy-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/privacy-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2847,7 +2847,7 @@
     {
       "id": "guard-scripts-progressive-modularity-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/progressive-modularity-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2874,7 +2874,7 @@
     {
       "id": "guard-scripts-skills-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/skills-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2899,7 +2899,7 @@
     {
       "id": "guard-scripts-source-decision-audit-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/source-decision-audit-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2924,7 +2924,7 @@
     {
       "id": "guard-scripts-source-size-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/source-size-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2949,7 +2949,7 @@
     {
       "id": "guard-scripts-surface-evidence-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/surface-evidence-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2974,7 +2974,7 @@
     {
       "id": "guard-scripts-surface-narrative-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/surface-narrative-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -2999,7 +2999,7 @@
     {
       "id": "guard-scripts-surface-route-graph-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/surface-route-graph-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3024,7 +3024,7 @@
     {
       "id": "guard-scripts-tracked-ignored-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/tracked-ignored-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3049,7 +3049,7 @@
     {
       "id": "guard-scripts-v1-surface-closure-audit-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/v1-surface-closure-audit-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3072,9 +3072,34 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-cli-base-imports",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-cli-base-imports.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-cli-base-imports",
+        "Verify Cli Base Imports"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-cli-base-imports",
+          "expectPath": "scripts/verify-cli-base-imports.mjs"
+        }
+      ],
+      "guard": "scripts/verify-cli-base-imports.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-cli-json-envelope-debt",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-cli-json-envelope-debt.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3099,7 +3124,7 @@
     {
       "id": "guard-scripts-verify-cli-registry-router-parity",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-cli-registry-router-parity.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3124,7 +3149,7 @@
     {
       "id": "guard-scripts-verify-component-catalog",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-component-catalog.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3149,7 +3174,7 @@
     {
       "id": "guard-scripts-verify-connector-control-plane-guard",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-connector-control-plane-guard.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3174,7 +3199,7 @@
     {
       "id": "guard-scripts-verify-connector-governed-context-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-connector-governed-context-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3199,7 +3224,7 @@
     {
       "id": "guard-scripts-verify-connector-runtime-coverage",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-connector-runtime-coverage.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3224,7 +3249,7 @@
     {
       "id": "guard-scripts-verify-dense-data-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-dense-data-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3249,7 +3274,7 @@
     {
       "id": "guard-scripts-verify-domain-surface-decision-matrix",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-domain-surface-decision-matrix.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3274,7 +3299,7 @@
     {
       "id": "guard-scripts-verify-governance-workspace-project-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-governance-workspace-project-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3299,7 +3324,7 @@
     {
       "id": "guard-scripts-verify-host-permission-contract",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-host-permission-contract.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3324,7 +3349,7 @@
     {
       "id": "guard-scripts-verify-integration-qa-scenarios",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-integration-qa-scenarios.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3349,7 +3374,7 @@
     {
       "id": "guard-scripts-verify-mac-control-plane-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-mac-control-plane-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3374,7 +3399,7 @@
     {
       "id": "guard-scripts-verify-openapi-runtime-coverage",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-openapi-runtime-coverage.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3399,7 +3424,7 @@
     {
       "id": "guard-scripts-verify-regulated-domain-safety-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-regulated-domain-safety-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3424,7 +3449,7 @@
     {
       "id": "guard-scripts-verify-remote-sync-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-remote-sync-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3449,7 +3474,7 @@
     {
       "id": "guard-scripts-verify-remote-sync-source-session",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-remote-sync-source-session.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3474,7 +3499,7 @@
     {
       "id": "guard-scripts-verify-sdk-first-custom-surfaces-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3499,7 +3524,7 @@
     {
       "id": "guard-scripts-verify-search-v1-1-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-search-v1-1-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3524,7 +3549,7 @@
     {
       "id": "guard-scripts-verify-system-telemetry-goal",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-system-telemetry-goal.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3549,7 +3574,7 @@
     {
       "id": "guard-scripts-verify-testing-policy",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-testing-policy.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3574,7 +3599,7 @@
     {
       "id": "guard-scripts-version-governance-check",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/version-governance-check.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3599,7 +3624,7 @@
     {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "skills/docs-alignment-update/SKILL.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3628,7 +3653,7 @@
     {
       "id": "guard-scripts-privacy-check-test",
       "kind": "test-harness",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/privacy-check.test.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3653,7 +3678,7 @@
     {
       "id": "guard-scripts-search-scale-lab-test",
       "kind": "test-harness",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/search-scale-lab.test.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3678,7 +3703,7 @@
     {
       "id": "guard-scripts-verify-integration-package-live-harness",
       "kind": "test-harness",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-integration-package-live-harness.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3703,7 +3728,7 @@
     {
       "id": "guard-scripts-verify-integration-package-live-harness-test",
       "kind": "test-harness",
-      "owner": "claw",
+      "steward": "claw",
       "canonicalSource": "scripts/verify-integration-package-live-harness.test.mjs",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3728,7 +3753,6 @@
     {
       "id": "sdk-first-custom-surfaces-external-pending",
       "kind": "docs-page",
-      "owner": "clawix",
       "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-pending.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -3748,12 +3772,12 @@
       ],
       "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "clawix"
     },
     {
       "id": "sdk-first-custom-surfaces-external-validation-runbook",
       "kind": "docs-page",
-      "owner": "clawix",
       "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-validation-runbook.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -3773,12 +3797,12 @@
       ],
       "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "clawix"
     },
     {
       "id": "sdk-first-custom-surfaces-performance-closure-summary",
       "kind": "docs-page",
-      "owner": "clawix",
       "canonicalSource": "../Clawix/clawix/docs/sdk-first-custom-surfaces-performance-closure-summary.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -3798,12 +3822,12 @@
       ],
       "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "clawix"
     },
     {
       "id": "docs-agent-rules-index",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/agent-rules/index.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3828,12 +3852,12 @@
       ],
       "guard": "scripts/agent-instructions-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "constitution-operational-map",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/constitution-map.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3862,12 +3886,12 @@
       ],
       "guard": "scripts/docs-alignment-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "constitution-assertions-contract",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/constitution.assertions.json",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3897,12 +3921,12 @@
       "guard": "scripts/constitution-assertions-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18",
-      "canonicalName": "constitution-assertions"
+      "canonicalName": "constitution-assertions",
+      "steward": "claw"
     },
     {
       "id": "debt-ledger",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/debt-ledger.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -3922,12 +3946,12 @@
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "decision-tension-rubric-doc",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/decision-tension-rubric.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -3956,12 +3980,12 @@
       ],
       "guard": "scripts/docs-alignment-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "sdk-first-custom-surfaces-completion-audit",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/sdk-first-custom-surfaces/completion.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -3981,12 +4005,12 @@
       ],
       "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "source-decision-audit-governance",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/source-decision-audits.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -4015,12 +4039,12 @@
       ],
       "guard": "scripts/source-decision-audit-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-completion-audit",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/completion.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4040,12 +4064,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-decision-matrix",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/decision-matrix.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4064,12 +4088,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-pending-ledger",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-pending.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4088,12 +4112,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-validation-runbook",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-validation-runbook.md",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4114,12 +4138,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "docs-official-trust-and-compatibility",
       "kind": "docs-page",
-      "owner": "claw",
       "canonicalSource": "docs/official-trust-and-compatibility.md",
       "requiredEntrypoints": [
         "AGENTS.md",
@@ -4141,12 +4165,12 @@
       ],
       "guard": "scripts/open-source-canonicity-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-18"
+      "reviewDate": "2026-08-18",
+      "steward": "claw"
     },
     {
       "id": "sdk-first-custom-surfaces-external-evidence-fixtures",
       "kind": "validation-manifest",
-      "owner": "clawix",
       "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4166,12 +4190,12 @@
       ],
       "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "clawix"
     },
     {
       "id": "sdk-first-custom-surfaces-external-evidence-schema",
       "kind": "validation-manifest",
-      "owner": "clawix",
       "canonicalSource": "../Clawix/clawix/docs/governance/sdk-first-custom-surfaces/external-evidence.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4191,12 +4215,12 @@
       ],
       "guard": "scripts/verify-sdk-first-custom-surfaces-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "clawix"
     },
     {
       "id": "agent-discoverability-golden-queries",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/discoverability-golden-queries.json",
       "requiredEntrypoints": [
         "docs/discoverability.md"
@@ -4214,12 +4238,12 @@
       ],
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "source-decision-audit-registry",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/source-decision-audits.registry.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4239,12 +4263,12 @@
       ],
       "guard": "scripts/source-decision-audit-check.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-approval-fixtures",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-approval.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4267,12 +4291,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-approval-schema",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-approval.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4295,12 +4319,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-closure-fixtures",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-closure.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4322,12 +4346,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-evidence-fixtures",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-evidence.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4349,12 +4373,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-evidence-schema",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-evidence.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4377,12 +4401,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-validation-manifest-fixtures",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-validation.manifest.fixtures.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4405,12 +4429,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-validation-manifest",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-validation.manifest.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4429,12 +4453,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-validation-manifest-schema",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/external-validation.manifest.schema.json",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4456,12 +4480,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-source-qa-review",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "docs/governance/system-telemetry/source-review.json",
       "requiredEntrypoints": [
         "docs/decision-map.md",
@@ -4481,12 +4505,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-08-20"
+      "reviewDate": "2026-08-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-approval-validator",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "scripts/validate-system-telemetry-external-approval.mjs",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4510,12 +4534,12 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     },
     {
       "id": "system-telemetry-external-closure-validator",
       "kind": "validation-manifest",
-      "owner": "claw",
       "canonicalSource": "scripts/validate-system-telemetry-external-closure.mjs",
       "requiredEntrypoints": [
         "docs/discoverability.md",
@@ -4538,7 +4562,8 @@
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
       "status": "enforced",
-      "reviewDate": "2026-05-20"
+      "reviewDate": "2026-05-20",
+      "steward": "claw"
     }
   ]
 }

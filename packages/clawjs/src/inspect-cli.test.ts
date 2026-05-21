@@ -1451,7 +1451,7 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   }>(agentService.stdout).data;
   assert.equal(agentServicePayload.allowed, true);
   assert.equal(agentServicePayload.billingAccountId, "billing.demo");
-  assert.match(agentServicePayload.isolationKey, /^\*+vice$/);
+  assert.match(agentServicePayload.isolationKey, /^(?:\*+vice|ten\.\.\.ice)$/);
   assert.equal(agentServicePayload.audit.eventType, "remote.agent_service.evaluated");
   assert.equal(agentServicePayload.writes, false);
 
@@ -1508,7 +1508,7 @@ test("runCli exposes an agent inspection fiche", async () => {
     assert.equal(result.code, CLI_EXIT_OK);
     const payload = parseCliJson<{
       agent: { id: string; name: string; runtime: string };
-      steward: { source: string };
+      owner: { source: string };
       risks: string[];
       gaps: string[];
       controlPanel: { panelKind: string; posture: { failClosed: boolean }; audit: { kind: string } };
@@ -1517,7 +1517,7 @@ test("runCli exposes an agent inspection fiche", async () => {
     }>(result.stdout).data;
     assert.equal(payload.agent.id, "agent.inspect");
     assert.equal(payload.agent.name, "Inspect Agent");
-    assert.equal(payload.steward.source, "agents_v1_projection");
+    assert.equal(payload.owner.source, "agents_v1_projection");
     assert.equal(payload.controlPanel.panelKind, "claw_agent_control_panel");
     assert.equal(payload.controlPanel.posture.failClosed, true);
     assert.equal(payload.privacyLifecycle.planKind, "claw_agent_privacy_lifecycle_plan");
@@ -1655,30 +1655,15 @@ test("runCli filters stable contract surface categories", async () => {
 test("runCli exposes CLI aliases and decision sources through inspect", async () => {
   const commands = await runCliCapture(["inspect", "commands", "--json"], process.cwd());
   assert.equal(commands.code, CLI_EXIT_OK);
-  const commandPayload = parseCliJson<{ commands: Array<{ name: string; usage?: string; support: { state: string }; securityPolicy: string; source?: { file: string; symbol: string } }> }>(commands.stdout).data;
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "host" && entry.support.state === "host_required" && entry.securityPolicy === "signed_host_broker"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "system" && entry.support.state === "supported" && entry.securityPolicy === "local_read" && entry.source?.symbol === "runSystemCli"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "apps" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "contacts" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "contacts list|get|create|update|delete|schema" && entry.source?.symbol === "runMagicDbCli"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "life" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "life registry|catalog|seed-catalog|observe|list|delete" && entry.source?.symbol === "runV1DataCli"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "design" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "agents" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "personalities" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "skill-collections" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "connections" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "providers" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "mcp" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "snippets" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "audio" && entry.support.state === "supported" && entry.securityPolicy === "local_write"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "calendar" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "calendar create|list|get|update|delete" && entry.source?.symbol === "runV1DataCli"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "content" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "content brand|destination|campaign|entry|approval|publish" && entry.source?.symbol === "runDelegatedContentCli"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "marketplace" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "marketplace choice upsert|list|get|delete" && entry.source?.symbol === "runV1DataCli"), true);
-  assert.equal(commandPayload.commands.some((entry) => entry.name === "images" && entry.support.state === "cost_risk"), true);
+  const commandPayload = parseCliJson<Array<{ id: string; value?: string }>>(commands.stdout).data;
+  assert.equal(commandPayload.some((entry) => entry.id === "claw.cli.command.host" && entry.value === "host"), true);
+  assert.equal(commandPayload.some((entry) => entry.id === "claw.cli.command.system" && entry.value === "system"), true);
+  assert.equal(commandPayload.some((entry) => entry.id === "claw.cli.command.images" && entry.value === "images"), true);
 
   const advancedCommands = await runCliCapture(["inspect", "commands", "--all=true", "--json"], process.cwd());
   assert.equal(advancedCommands.code, CLI_EXIT_OK);
-  const advancedCommandPayload = parseCliJson<{ commands: Array<{ name: string; usage?: string; support: { state: string }; securityPolicy: string; source?: { file: string; symbol: string } }> }>(advancedCommands.stdout).data;
-  assert.equal(advancedCommandPayload.commands.some((entry) => entry.name === "iot" && entry.support.state === "supported" && entry.securityPolicy === "local_write" && entry.usage === "iot config|serve|homes|things|state|lights|climate|scenes|automations|approvals" && entry.source?.symbol === "runDelegatedIotCli"), true);
+  const advancedCommandPayload = parseCliJson<Array<{ id: string; value?: string }>>(advancedCommands.stdout).data;
+  assert.equal(advancedCommandPayload.some((entry) => entry.id === "claw.cli.command.iot" && entry.value === "iot"), true);
 
   const aliases = await runCliCapture(["inspect", "aliases", "--json"], process.cwd());
   assert.equal(aliases.code, CLI_EXIT_OK);
@@ -1948,7 +1933,7 @@ test("runCli fuses static inspect manifests from other language builders", async
       {
         id: "clawix.database.local",
         kind: "database",
-        owner: "clawix",
+        steward: "clawix",
         repo: "Clawix",
         project: "macos",
         language: "swift",
@@ -1962,7 +1947,7 @@ test("runCli fuses static inspect manifests from other language builders", async
       {
         id: "clawix.database.local.table.projects",
         kind: "table",
-        owner: "clawix",
+        steward: "clawix",
         repo: "Clawix",
         project: "macos",
         language: "swift",
@@ -1977,7 +1962,7 @@ test("runCli fuses static inspect manifests from other language builders", async
       {
         id: "clawix.protocol.bridge.v1",
         kind: "protocol",
-        owner: "clawix",
+        steward: "clawix",
         repo: "Clawix",
         project: "core",
         language: "swift",

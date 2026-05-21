@@ -117,7 +117,7 @@ flowchart TD
   claw_contracts_api --> claw_api_events
   claw_api_host_commands["Host command endpoint\napiRoute"]
   claw_contracts_api --> claw_api_host_commands
-  claw_api_storage_ownerToken["Storage owner token endpoint\napiRoute"]
+  claw_api_storage_ownerToken["Storage steward token endpoint\napiRoute"]
   claw_contracts_api --> claw_api_storage_ownerToken
   claw_api_storage_buckets["Storage bucket list\napiRoute"]
   claw_contracts_api --> claw_api_storage_buckets
@@ -183,6 +183,36 @@ flowchart TD
   claw_contracts_api --> claw_api_webhooks_providerEvent
   claw_api_integrations_callback["OAuth integration callback\napiRoute"]
   claw_contracts_api --> claw_api_integrations_callback
+  claw_api_agents_serviceApi["Agents V1 service API contract\napiRoute"]
+  claw_contracts_api --> claw_api_agents_serviceApi
+  claw_api_mac_plan["Mac control plan contract\napiRoute"]
+  claw_contracts_api --> claw_api_mac_plan
+  claw_api_mac_execute["Mac control execution contract\napiRoute"]
+  claw_contracts_api --> claw_api_mac_execute
+  claw_api_mac_revert["Mac control revert contract\napiRoute"]
+  claw_contracts_api --> claw_api_mac_revert
+  claw_api_mac_audit["Mac control audit contract\napiRoute"]
+  claw_contracts_api --> claw_api_mac_audit
+  claw_api_mac_permissions["Mac permission state contract\napiRoute"]
+  claw_contracts_api --> claw_api_mac_permissions
+  claw_api_mac_permissionsRequest["Mac permission request contract\napiRoute"]
+  claw_contracts_api --> claw_api_mac_permissionsRequest
+  claw_api_mcp_exposeRpc["MCP RPC exposure contract\napiRoute"]
+  claw_contracts_api --> claw_api_mcp_exposeRpc
+  claw_api_mcp_exposeCustomAppSdk["MCP custom app SDK exposure contract\napiRoute"]
+  claw_contracts_api --> claw_api_mcp_exposeCustomAppSdk
+  claw_api_mcp_toolsCall["MCP tool call contract\napiRoute"]
+  claw_contracts_api --> claw_api_mcp_toolsCall
+  claw_api_mcp_servers["MCP server catalog contract\napiRoute"]
+  claw_contracts_api --> claw_api_mcp_servers
+  claw_api_mcp_serversRefresh["MCP server refresh contract\napiRoute"]
+  claw_contracts_api --> claw_api_mcp_serversRefresh
+  claw_api_sessions["Sessions service list contract\napiRoute"]
+  claw_contracts_api --> claw_api_sessions
+  claw_api_sessions_importCodex["Codex session import contract\napiRoute"]
+  claw_contracts_api --> claw_api_sessions_importCodex
+  claw_api_signals_vertical["Signals vertical route template\napiRoute"]
+  claw_contracts_api --> claw_api_signals_vertical
   claw_api_relay_remote["Remote Relay client channel\napiRoute"]
   claw_contracts_api --> claw_api_relay_remote
   claw_api_relay_connector["Relay workspace connector channel\napiRoute"]
@@ -239,6 +269,8 @@ flowchart TD
   claw_contracts_api --> claw_api_remote_routeContracts
   claw_api_remote_providerDeviceE2EPlan["Remote provider/device E2E validation plan contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_providerDeviceE2EPlan
+  claw_api_remote_customAppSdk["Remote custom app SDK metadata projection contract\napiRoute"]
+  claw_contracts_api --> claw_api_remote_customAppSdk
   claw_api_remote_compatibilityAdapters["Remote compatibility adapter catalog contract\napiRoute"]
   claw_contracts_api --> claw_api_remote_compatibilityAdapters
   claw_api_remote_compatibilityAdaptersCreate["Remote compatibility adapter receipt dry-run contract\napiRoute"]
@@ -381,6 +413,8 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_savedViews
   claw_privateApi_search["/api/search private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_search
+  claw_privateApi_searchIndex["/api/search/index private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_searchIndex
   claw_privateApi_sections["/api/sections private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_sections
   claw_privateApi_seed["/api/seed private API route\nprivateApiRoute"]
@@ -577,6 +611,62 @@ flowchart TD
   claw_contracts_events --> claw_event_notify_summary_ready
   claw_event_notify_manual_triggered["manual.triggered\neventTopic"]
   claw_contracts_events --> claw_event_notify_manual_triggered
+  claw_event_connectorContext_context_upsert["context.upsert\neventTopic"]
+  claw_contracts_events --> claw_event_connectorContext_context_upsert
+  claw_event_connectorContext_context_state["context.state\neventTopic"]
+  claw_contracts_events --> claw_event_connectorContext_context_state
+  claw_event_connectorContext_context_link_secret["context.link_secret\neventTopic"]
+  claw_contracts_events --> claw_event_connectorContext_context_link_secret
+  claw_event_connectorContext_context_default["context.default\neventTopic"]
+  claw_contracts_events --> claw_event_connectorContext_context_default
+  claw_event_connectorContext_context_explain["context.explain\neventTopic"]
+  claw_contracts_events --> claw_event_connectorContext_context_explain
+  claw_event_connectorContext_context_export["context.export\neventTopic"]
+  claw_contracts_events --> claw_event_connectorContext_context_export
+  claw_event_routeGraph_sync_manifest_recorded["sync.manifest.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_sync_manifest_recorded
+  claw_event_routeGraph_sync_queue_enqueued["sync.queue.enqueued\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_sync_queue_enqueued
+  claw_event_routeGraph_sync_queue_reconciled["sync.queue.reconciled\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_sync_queue_reconciled
+  claw_event_routeGraph_sync_driver_application_recorded["sync.driver_application.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_sync_driver_application_recorded
+  claw_event_routeGraph_sync_authority_handoff_recorded["sync.authority_handoff.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_sync_authority_handoff_recorded
+  claw_event_routeGraph_sync_cache_recorded["sync.cache.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_sync_cache_recorded
+  claw_event_routeGraph_remote_classification_recorded["remote.classification.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_remote_classification_recorded
+  claw_event_routeGraph_remote_compat_recorded["remote.compat.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_remote_compat_recorded
+  claw_event_routeGraph_mesh_invitation_recorded["mesh.invitation.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_mesh_invitation_recorded
+  claw_event_routeGraph_mesh_invitation_accepted["mesh.invitation.accepted\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_mesh_invitation_accepted
+  claw_event_routeGraph_mesh_share_recorded["mesh.share.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_mesh_share_recorded
+  claw_event_routeGraph_mesh_revocation_recorded["mesh.revocation.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_mesh_revocation_recorded
+  claw_event_routeGraph_secret_lease_issued["secret.lease.issued\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_secret_lease_issued
+  claw_event_routeGraph_secret_provider_recorded["secret.provider.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_secret_provider_recorded
+  claw_event_routeGraph_transport_handshake_recorded["transport.handshake.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_transport_handshake_recorded
+  claw_event_routeGraph_node_trust_recorded["node.trust.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_node_trust_recorded
+  claw_event_routeGraph_gateway_deployment_recorded["gateway.deployment.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_gateway_deployment_recorded
+  claw_event_routeGraph_gateway_agent_service_recorded["gateway.agent_service.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_gateway_agent_service_recorded
+  claw_event_routeGraph_gateway_audit_recorded["gateway.audit.recorded\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_gateway_audit_recorded
+  claw_event_routeGraph_remote_agent_service_evaluated["remote.agent_service.evaluated\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_remote_agent_service_evaluated
+  claw_event_routeGraph_remote_access_evaluated["remote.access.evaluated\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_remote_access_evaluated
+  claw_event_routeGraph_clawjs_tracking_registry["clawjs.tracking-registry\neventTopic"]
+  claw_contracts_events --> claw_event_routeGraph_clawjs_tracking_registry
   claw_external_mapping_event_blueskyFeedPost["app.bsky.feed.post\nexternalMapping"]
   claw_contracts_external --> claw_external_mapping_event_blueskyFeedPost
   claw_external_mapping_event_notionPageContentUpdated["page.content_updated\nexternalMapping"]
@@ -631,8 +721,16 @@ flowchart TD
   claw_contracts_ids --> claw_id_record
   claw_id_resource["Opaque registered resource identifiers\nidNamespace"]
   claw_contracts_ids --> claw_id_resource
+  claw_env_clawixMacosPath["clawix macos path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_clawixMacosPath
+  claw_env_clawixSdkFirstRequireClawix["clawix sdk first require clawix environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_clawixSdkFirstRequireClawix
+  claw_env_clawixSdkFirstRoot["clawix sdk first root environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_clawixSdkFirstRoot
   claw_env_allowedOrigins["allowed origins environment variable\nenvVar"]
   claw_contracts_config --> claw_env_allowedOrigins
+  claw_env_allowPreV1Release["allow pre v1 release environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_allowPreV1Release
   claw_env_audioBlobsDir["audio blobs dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_audioBlobsDir
   claw_env_audioDataDir["audio data dir environment variable\nenvVar"]
@@ -681,10 +779,20 @@ flowchart TD
   claw_contracts_config --> claw_env_databaseHost
   claw_env_databaseJwtSecret["database jwt secret environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databaseJwtSecret
+  claw_env_databaseMaxUploadBytes["database max upload bytes environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseMaxUploadBytes
   claw_env_databaseNamespace["database namespace environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databaseNamespace
   claw_env_databasePort["database port environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databasePort
+  claw_env_databaseRealtimeMaxBufferedBytes["database realtime max buffered bytes environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseRealtimeMaxBufferedBytes
+  claw_env_databaseRealtimeMaxClients["database realtime max clients environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseRealtimeMaxClients
+  claw_env_databaseRealtimeMaxSubscriptions["database realtime max subscriptions environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseRealtimeMaxSubscriptions
+  claw_env_databaseRealtimeQueueLimit["database realtime queue limit environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseRealtimeQueueLimit
   claw_env_databaseUrl["database url environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databaseUrl
   claw_env_dataDir["data dir environment variable\nenvVar"]
@@ -763,6 +871,10 @@ flowchart TD
   claw_contracts_config --> claw_env_hostAppBundle
   claw_env_hostAppSupportName["host app support name environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostAppSupportName
+  claw_env_hostAppVariant["host app variant environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostAppVariant
+  claw_env_hostAppVersion["host app version environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostAppVersion
   claw_env_hostBinDir["host bin dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostBinDir
   claw_env_hostBundleId["host bundle id environment variable\nenvVar"]
@@ -799,6 +911,10 @@ flowchart TD
   claw_contracts_config --> claw_env_hostRuntimeTransport
   claw_env_hostSafe["host safe environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostSafe
+  claw_env_hostSigningIdentity["host signing identity environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostSigningIdentity
+  claw_env_hostTeamId["host team id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_hostTeamId
   claw_env_hostTestCalendar["host test calendar environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostTestCalendar
   claw_env_hostTestCommand["host test command environment variable\nenvVar"]
@@ -829,6 +945,10 @@ flowchart TD
   claw_contracts_config --> claw_env_liveBrokerCommand
   claw_env_localAdminBootstrapStdin["local admin bootstrap stdin environment variable\nenvVar"]
   claw_contracts_config --> claw_env_localAdminBootstrapStdin
+  claw_env_macControlSourceSession["mac control source session environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_macControlSourceSession
+  claw_env_mcpConfigPath["mcp config path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_mcpConfigPath
   claw_env_memoryBase["memory base environment variable\nenvVar"]
   claw_contracts_config --> claw_env_memoryBase
   claw_env_memoryEditor["memory editor environment variable\nenvVar"]
@@ -919,6 +1039,8 @@ flowchart TD
   claw_contracts_config --> claw_env_relayUrl
   claw_env_relayWorkspaceId["relay workspace id environment variable\nenvVar"]
   claw_contracts_config --> claw_env_relayWorkspaceId
+  claw_env_releaseApprovedFor["release approved for environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_releaseApprovedFor
   claw_env_reportGithubToken["report github token environment variable\nenvVar"]
   claw_contracts_config --> claw_env_reportGithubToken
   claw_env_resourcesDir["resources dir environment variable\nenvVar"]
@@ -1009,6 +1131,10 @@ flowchart TD
   claw_contracts_config --> claw_env_sessionsDisableCodex
   claw_env_sessionsDisableHermes["sessions disable hermes environment variable\nenvVar"]
   claw_contracts_config --> claw_env_sessionsDisableHermes
+  claw_env_sessionsEventsMaxSubscribers["sessions events max subscribers environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsEventsMaxSubscribers
+  claw_env_sessionsEventsQueueLimit["sessions events queue limit environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsEventsQueueLimit
   claw_env_sessionsHermesDb["sessions hermes db environment variable\nenvVar"]
   claw_contracts_config --> claw_env_sessionsHermesDb
   claw_env_sessionsHost["sessions host environment variable\nenvVar"]
@@ -1297,6 +1423,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_contacts
   claw_cli_command_inspect["inspect\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_inspect
+  claw_cli_command_maturity["maturity\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_maturity
   claw_cli_command_remote["remote\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_remote
   claw_cli_command_sync["sync\ncliCommand"]
@@ -1632,6 +1760,36 @@ flowchart TD
   claw_database_core --> claw_database_core_table_search_source_config
   claw_database_core_table_search_source_config_index_search_source_config_state_idx["search_source_config_state_idx\nindex"]
   claw_database_core_table_search_source_config --> claw_database_core_table_search_source_config_index_search_source_config_state_idx
+  claw_database_core_table_app_state["app_state\ntable"]
+  claw_database_core --> claw_database_core_table_app_state
+  claw_database_core_table_app_projects["app_projects\ntable"]
+  claw_database_core --> claw_database_core_table_app_projects
+  claw_database_core_table_app_pinned_threads["app_pinned_threads\ntable"]
+  claw_database_core --> claw_database_core_table_app_pinned_threads
+  claw_database_core_table_app_session_titles["app_session_titles\ntable"]
+  claw_database_core --> claw_database_core_table_app_session_titles
+  claw_database_core_table_app_archives["app_archives\ntable"]
+  claw_database_core --> claw_database_core_table_app_archives
+  claw_database_core_table_app_sidebar_snapshots["app_sidebar_snapshots\ntable"]
+  claw_database_core --> claw_database_core_table_app_sidebar_snapshots
+  claw_database_core_table_app_terminal_tabs["app_terminal_tabs\ntable"]
+  claw_database_core --> claw_database_core_table_app_terminal_tabs
+  claw_database_core_table_app_state_sync_receipts["app_state_sync_receipts\ntable"]
+  claw_database_core --> claw_database_core_table_app_state_sync_receipts
+  claw_database_core_table_app_state_projection_meta["app_state_projection_meta\ntable"]
+  claw_database_core --> claw_database_core_table_app_state_projection_meta
+  claw_database_core_index_app_projects_path_idx["app_projects_path_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_projects_path_idx
+  claw_database_core_index_app_projects_resource_id_idx["app_projects_resource_id_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_projects_resource_id_idx
+  claw_database_core_index_app_sidebar_snapshots_order_idx["app_sidebar_snapshots_order_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_sidebar_snapshots_order_idx
+  claw_database_core_index_app_sidebar_snapshots_project_id_idx["app_sidebar_snapshots_project_id_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_sidebar_snapshots_project_id_idx
+  claw_database_core_index_app_state_sync_receipts_request_idx["app_state_sync_receipts_request_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_state_sync_receipts_request_idx
+  claw_database_core_index_app_state_sync_receipts_status_idx["app_state_sync_receipts_status_idx\nindex"]
+  claw_database_core --> claw_database_core_index_app_state_sync_receipts_status_idx
   claw_database_runtime["Runtime sidecar database\nsidecar"]
   claw_global --> claw_database_runtime
   claw_database_sessions["Sessions sidecar database\nsidecar"]
@@ -1640,6 +1798,8 @@ flowchart TD
   claw_global --> claw_database_audio
   claw_database_search["Search sidecar database\nsidecar"]
   claw_global --> claw_database_search
+  claw_database_search_table_search_source_sets["search_source_sets\ntable"]
+  claw_database_search --> claw_database_search_table_search_source_sets
   claw_database_search_table_search_profiles["search_profiles\ntable"]
   claw_database_search --> claw_database_search_table_search_profiles
   claw_database_search_table_search_sources["search_sources\ntable"]
@@ -1672,6 +1832,8 @@ flowchart TD
   claw_database_search --> claw_database_search_table_search_vectors
   claw_database_search_table_search_ranking_cache["search_ranking_cache\ntable"]
   claw_database_search --> claw_database_search_table_search_ranking_cache
+  claw_database_search_table_search_ranking_cache_scopes["search_ranking_cache_scopes\ntable"]
+  claw_database_search --> claw_database_search_table_search_ranking_cache_scopes
   claw_database_search_index_search_sources_domain_idx["search_sources_domain_idx\nindex"]
   claw_database_search --> claw_database_search_index_search_sources_domain_idx
   claw_database_search_index_search_documents_source_idx["search_documents_source_idx\nindex"]
@@ -1706,6 +1868,14 @@ flowchart TD
   claw_database_search --> claw_database_search_index_search_interactions_document_idx
   claw_database_search_index_search_interactions_context_idx["search_interactions_context_idx\nindex"]
   claw_database_search --> claw_database_search_index_search_interactions_context_idx
+  claw_database_search_index_search_vectors_model_document_idx["search_vectors_model_document_idx\nindex"]
+  claw_database_search --> claw_database_search_index_search_vectors_model_document_idx
+  claw_database_search_index_search_ranking_cache_updated_idx["search_ranking_cache_updated_idx\nindex"]
+  claw_database_search --> claw_database_search_index_search_ranking_cache_updated_idx
+  claw_database_search_index_search_ranking_cache_bytes_idx["search_ranking_cache_bytes_idx\nindex"]
+  claw_database_search --> claw_database_search_index_search_ranking_cache_bytes_idx
+  claw_database_search_index_search_ranking_cache_scopes_lookup_idx["search_ranking_cache_scopes_lookup_idx\nindex"]
+  claw_database_search --> claw_database_search_index_search_ranking_cache_scopes_lookup_idx
   claw_database_notify["Notify sidecar database\nsidecar"]
   claw_global --> claw_database_notify
   claw_database_feed["Feed sidecar database\nsidecar"]
@@ -2373,7 +2543,7 @@ flowchart TD
 
 ## Nodes
 
-| ID | Kind | Surface | Owner | Human | Programmatic | Gaps | Narrative | Path / Key / Value |
+| ID | Kind | Surface | Steward | Human | Programmatic | Gaps | Narrative | Path / Key / Value |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `claw.contracts` | root | schema | claw | humanUi | cli, persistence | relay:local-only | Stable surface registry and inspection boundary for durable names, contract values, route graph references, and compatibility-sensitive identifiers. | `contracts` |
 | `claw.contracts.api` | root | api | claw |  | serviceApi | humanUi:optional<br>relay:local-only |  | `contracts/api` |
@@ -2453,7 +2623,7 @@ flowchart TD
 | `claw.api.workspaces` | apiRoute | api | claw |  |  |  |  | `/v1/workspaces` |
 | `claw.api.events` | apiRoute | api | claw |  |  |  |  | `/v1/events` |
 | `claw.api.host.commands` | apiRoute | api | claw |  |  |  |  | `/v1/commands` |
-| `claw.api.storage.ownerToken` | apiRoute | api | claw |  |  |  |  | `/v1/storage/owner-token` |
+| `claw.api.storage.ownerToken` | apiRoute | api | claw |  |  |  |  | `/v1/storage/steward-token` |
 | `claw.api.storage.buckets` | apiRoute | api | claw |  |  |  |  | `/v1/storage/buckets` |
 | `claw.api.storage.objects` | apiRoute | api | claw |  |  |  |  | `/v1/storage/objects` |
 | `claw.api.storage.shares` | apiRoute | api | claw |  |  |  |  | `/v1/storage/shares` |
@@ -2462,7 +2632,7 @@ flowchart TD
 | `claw.api.database.records` | apiRoute | api | claw |  |  |  |  | `/v1/namespaces/{namespace}/collections/{collection}/records` |
 | `claw.api.database.adminLogin` | apiRoute | api | claw |  |  |  |  | `/v1/auth/admin/login` |
 | `claw.api.database.realtime` | apiRoute | api | claw |  |  |  |  | `/v1/realtime` |
-| `claw.api.database.storageMetrics` | apiRoute | api | claw |  |  |  |  | `/v1/storage/metrics` |
+| `claw.api.database.storageMetrics` | apiRoute | api | claw |  |  |  | Read-only operational metrics endpoint for database and sessions storage worker queue depth and timings. | `/v1/storage/metrics` |
 | `claw.api.drive.health` | apiRoute | api | claw |  |  |  |  | `/v1/health` |
 | `claw.api.drive.login` | apiRoute | api | claw |  |  |  |  | `/v1/auth/admin/login` |
 | `claw.api.drive.items` | apiRoute | api | claw |  |  |  |  | `/v1/items` |
@@ -2486,6 +2656,21 @@ flowchart TD
 | `claw.api.notify.notifications` | apiRoute | api | claw |  |  |  |  | `/v1/notifications` |
 | `claw.api.webhooks.providerEvent` | apiRoute | api | claw |  |  |  |  | `/v1/webhooks/{provider}/{event}` |
 | `claw.api.integrations.callback` | apiRoute | api | claw |  |  |  |  | `/v1/integrations/{provider}/callback` |
+| `claw.api.agents.serviceApi` | apiRoute | api | claw |  |  |  |  | `/v1/agents/service-api` |
+| `claw.api.mac.plan` | apiRoute | api | claw |  |  |  |  | `/v1/mac/plan` |
+| `claw.api.mac.execute` | apiRoute | api | claw |  |  |  |  | `/v1/mac/execute` |
+| `claw.api.mac.revert` | apiRoute | api | claw |  |  |  |  | `/v1/mac/revert` |
+| `claw.api.mac.audit` | apiRoute | api | claw |  |  |  |  | `/v1/mac/audit` |
+| `claw.api.mac.permissions` | apiRoute | api | claw |  |  |  |  | `/v1/mac/permissions` |
+| `claw.api.mac.permissionsRequest` | apiRoute | api | claw |  |  |  |  | `/v1/mac/permissions/request` |
+| `claw.api.mcp.exposeRpc` | apiRoute | api | claw |  |  |  |  | `/v1/mcp/expose/rpc` |
+| `claw.api.mcp.exposeCustomAppSdk` | apiRoute | api | claw |  |  |  |  | `/v1/mcp/expose/custom-app-sdk` |
+| `claw.api.mcp.toolsCall` | apiRoute | api | claw |  |  |  |  | `/v1/mcp/tools/call` |
+| `claw.api.mcp.servers` | apiRoute | api | claw |  |  |  |  | `/v1/mcp/servers` |
+| `claw.api.mcp.serversRefresh` | apiRoute | api | claw |  |  |  |  | `/v1/mcp/servers/{serverId}/refresh` |
+| `claw.api.sessions` | apiRoute | api | claw |  |  |  |  | `/v1/sessions` |
+| `claw.api.sessions.importCodex` | apiRoute | api | claw |  |  |  |  | `/v1/sessions/import/codex` |
+| `claw.api.signals.vertical` | apiRoute | api | claw |  |  |  |  | `/v1/{verticalId}` |
 | `claw.api.relay.remote` | apiRoute | api | claw |  |  |  |  | `/v1/relay/remote` |
 | `claw.api.relay.connector` | apiRoute | api | claw |  |  |  |  | `/v1/relay/connectors` |
 | `claw.api.remote.classifications` | apiRoute | api | claw |  |  |  |  | `/v1/remote/classifications` |
@@ -2514,6 +2699,7 @@ flowchart TD
 | `claw.api.remote.closureGate` | apiRoute | api | claw |  |  |  |  | `/v1/remote/closure-gate` |
 | `claw.api.remote.routeContracts` | apiRoute | api | claw |  |  |  |  | `/v1/remote/route-contracts` |
 | `claw.api.remote.providerDeviceE2EPlan` | apiRoute | api | claw |  |  |  |  | `/v1/remote/provider-device-e2e-plan` |
+| `claw.api.remote.customAppSdk` | apiRoute | api | claw |  |  |  |  | `/v1/remote/custom-app-sdk` |
 | `claw.api.remote.compatibilityAdapters` | apiRoute | api | claw |  |  |  |  | `/v1/remote/compatibility/adapters` |
 | `claw.api.remote.compatibilityAdaptersCreate` | apiRoute | api | claw |  |  |  |  | `/v1/remote/compatibility/adapters` |
 | `claw.api.sync.drivers` | apiRoute | api | claw |  |  |  |  | `/v1/sync/drivers` |
@@ -2585,6 +2771,7 @@ flowchart TD
 | `claw.privateApi.row` | privateApiRoute | api | claw |  |  |  |  | `/api/row` |
 | `claw.privateApi.savedViews` | privateApiRoute | api | claw |  |  |  |  | `/api/saved-views` |
 | `claw.privateApi.search` | privateApiRoute | api | claw |  |  |  |  | `/api/search` |
+| `claw.privateApi.searchIndex` | privateApiRoute | api | claw |  |  |  |  | `/api/search/index` |
 | `claw.privateApi.sections` | privateApiRoute | api | claw |  |  |  |  | `/api/sections` |
 | `claw.privateApi.seed` | privateApiRoute | api | claw |  |  |  |  | `/api/seed` |
 | `claw.privateApi.sessions` | privateApiRoute | api | claw |  |  |  |  | `/api/sessions` |
@@ -2683,6 +2870,34 @@ flowchart TD
 | `claw.event.notify.deployment.recovered` | eventTopic | event | claw |  |  |  |  | `deployment.recovered` |
 | `claw.event.notify.summary.ready` | eventTopic | event | claw |  |  |  |  | `summary.ready` |
 | `claw.event.notify.manual.triggered` | eventTopic | event | claw |  |  |  |  | `manual.triggered` |
+| `claw.event.connectorContext.context.upsert` | eventTopic | event | claw |  |  |  |  | `context.upsert` |
+| `claw.event.connectorContext.context.state` | eventTopic | event | claw |  |  |  |  | `context.state` |
+| `claw.event.connectorContext.context.link.secret` | eventTopic | event | claw |  |  |  |  | `context.link_secret` |
+| `claw.event.connectorContext.context.default` | eventTopic | event | claw |  |  |  |  | `context.default` |
+| `claw.event.connectorContext.context.explain` | eventTopic | event | claw |  |  |  |  | `context.explain` |
+| `claw.event.connectorContext.context.export` | eventTopic | event | claw |  |  |  |  | `context.export` |
+| `claw.event.routeGraph.sync.manifest.recorded` | eventTopic | event | claw |  |  |  |  | `sync.manifest.recorded` |
+| `claw.event.routeGraph.sync.queue.enqueued` | eventTopic | event | claw |  |  |  |  | `sync.queue.enqueued` |
+| `claw.event.routeGraph.sync.queue.reconciled` | eventTopic | event | claw |  |  |  |  | `sync.queue.reconciled` |
+| `claw.event.routeGraph.sync.driver.application.recorded` | eventTopic | event | claw |  |  |  |  | `sync.driver_application.recorded` |
+| `claw.event.routeGraph.sync.authority.handoff.recorded` | eventTopic | event | claw |  |  |  |  | `sync.authority_handoff.recorded` |
+| `claw.event.routeGraph.sync.cache.recorded` | eventTopic | event | claw |  |  |  |  | `sync.cache.recorded` |
+| `claw.event.routeGraph.remote.classification.recorded` | eventTopic | event | claw |  |  |  |  | `remote.classification.recorded` |
+| `claw.event.routeGraph.remote.compat.recorded` | eventTopic | event | claw |  |  |  |  | `remote.compat.recorded` |
+| `claw.event.routeGraph.mesh.invitation.recorded` | eventTopic | event | claw |  |  |  |  | `mesh.invitation.recorded` |
+| `claw.event.routeGraph.mesh.invitation.accepted` | eventTopic | event | claw |  |  |  |  | `mesh.invitation.accepted` |
+| `claw.event.routeGraph.mesh.share.recorded` | eventTopic | event | claw |  |  |  |  | `mesh.share.recorded` |
+| `claw.event.routeGraph.mesh.revocation.recorded` | eventTopic | event | claw |  |  |  |  | `mesh.revocation.recorded` |
+| `claw.event.routeGraph.secret.lease.issued` | eventTopic | event | claw |  |  |  |  | `secret.lease.issued` |
+| `claw.event.routeGraph.secret.provider.recorded` | eventTopic | event | claw |  |  |  |  | `secret.provider.recorded` |
+| `claw.event.routeGraph.transport.handshake.recorded` | eventTopic | event | claw |  |  |  |  | `transport.handshake.recorded` |
+| `claw.event.routeGraph.node.trust.recorded` | eventTopic | event | claw |  |  |  |  | `node.trust.recorded` |
+| `claw.event.routeGraph.gateway.deployment.recorded` | eventTopic | event | claw |  |  |  |  | `gateway.deployment.recorded` |
+| `claw.event.routeGraph.gateway.agent.service.recorded` | eventTopic | event | claw |  |  |  |  | `gateway.agent_service.recorded` |
+| `claw.event.routeGraph.gateway.audit.recorded` | eventTopic | event | claw |  |  |  |  | `gateway.audit.recorded` |
+| `claw.event.routeGraph.remote.agent.service.evaluated` | eventTopic | event | claw |  |  |  |  | `remote.agent_service.evaluated` |
+| `claw.event.routeGraph.remote.access.evaluated` | eventTopic | event | claw |  |  |  |  | `remote.access.evaluated` |
+| `claw.event.routeGraph.clawjs.tracking.registry` | eventTopic | event | claw |  |  |  |  | `clawjs.tracking-registry` |
 | `claw.external.mapping.event.blueskyFeedPost` | externalMapping | external | external |  |  |  |  | `app.bsky.feed.post` |
 | `claw.external.mapping.event.notionPageContentUpdated` | externalMapping | external | external |  |  |  |  | `page.content_updated` |
 | `claw.external.mapping.event.stripeCheckoutSessionCompleted` | externalMapping | external | external |  |  |  |  | `checkout.session.completed` |
@@ -2710,7 +2925,11 @@ flowchart TD
 | `claw.id.installation` | idNamespace | id | claw |  |  |  |  | `installationId` |
 | `claw.id.record` | idNamespace | id | claw |  |  |  |  | `recordId` |
 | `claw.id.resource` | idNamespace | id | claw |  |  |  |  | `resourceId` |
+| `claw.env.clawixMacosPath` | envVar | config | claw |  |  |  |  | `CLAWIX_MACOS_PATH` |
+| `claw.env.clawixSdkFirstRequireClawix` | envVar | config | claw |  |  |  |  | `CLAWIX_SDK_FIRST_REQUIRE_CLAWIX` |
+| `claw.env.clawixSdkFirstRoot` | envVar | config | claw |  |  |  |  | `CLAWIX_SDK_FIRST_ROOT` |
 | `claw.env.allowedOrigins` | envVar | config | claw |  |  |  |  | `CLAW_ALLOWED_ORIGINS` |
+| `claw.env.allowPreV1Release` | envVar | config | claw |  |  |  |  | `CLAW_ALLOW_PRE_V1_RELEASE` |
 | `claw.env.audioBlobsDir` | envVar | config | claw |  |  |  |  | `CLAW_AUDIO_BLOBS_DIR` |
 | `claw.env.audioDataDir` | envVar | config | claw |  |  |  |  | `CLAW_AUDIO_DATA_DIR` |
 | `claw.env.audioHost` | envVar | config | claw |  |  |  |  | `CLAW_AUDIO_HOST` |
@@ -2735,8 +2954,13 @@ flowchart TD
 | `claw.env.databaseFilesDir` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_FILES_DIR` |
 | `claw.env.databaseHost` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_HOST` |
 | `claw.env.databaseJwtSecret` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_JWT_SECRET` |
+| `claw.env.databaseMaxUploadBytes` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_MAX_UPLOAD_BYTES` |
 | `claw.env.databaseNamespace` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_NAMESPACE` |
 | `claw.env.databasePort` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_PORT` |
+| `claw.env.databaseRealtimeMaxBufferedBytes` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES` |
+| `claw.env.databaseRealtimeMaxClients` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_REALTIME_MAX_CLIENTS` |
+| `claw.env.databaseRealtimeMaxSubscriptions` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS` |
+| `claw.env.databaseRealtimeQueueLimit` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_REALTIME_QUEUE_LIMIT` |
 | `claw.env.databaseUrl` | envVar | config | claw |  |  |  |  | `CLAW_DATABASE_URL` |
 | `claw.env.dataDir` | envVar | config | claw |  |  |  |  | `CLAW_DATA_DIR` |
 | `claw.env.dayRoot` | envVar | config | claw |  |  |  |  | `CLAW_DAY_ROOT` |
@@ -2776,6 +3000,8 @@ flowchart TD
 | `claw.env.home` | envVar | config | claw |  |  |  |  | `CLAW_HOME` |
 | `claw.env.hostAppBundle` | envVar | config | claw |  |  |  |  | `CLAW_HOST_APP_BUNDLE` |
 | `claw.env.hostAppSupportName` | envVar | config | claw |  |  |  |  | `CLAW_HOST_APP_SUPPORT_NAME` |
+| `claw.env.hostAppVariant` | envVar | config | claw |  |  |  |  | `CLAW_HOST_APP_VARIANT` |
+| `claw.env.hostAppVersion` | envVar | config | claw |  |  |  |  | `CLAW_HOST_APP_VERSION` |
 | `claw.env.hostBinDir` | envVar | config | claw |  |  |  |  | `CLAW_HOST_BIN_DIR` |
 | `claw.env.hostBundleId` | envVar | config | claw |  |  |  |  | `CLAW_HOST_BUNDLE_ID` |
 | `claw.env.hostCliName` | envVar | config | claw |  |  |  |  | `CLAW_HOST_CLI_NAME` |
@@ -2794,6 +3020,8 @@ flowchart TD
 | `claw.env.hostPermissionRequestLog` | envVar | config | claw |  |  |  |  | `CLAW_HOST_PERMISSION_REQUEST_LOG` |
 | `claw.env.hostRuntimeTransport` | envVar | config | claw |  |  |  |  | `CLAW_HOST_RUNTIME_TRANSPORT` |
 | `claw.env.hostSafe` | envVar | config | claw |  |  |  |  | `CLAW_HOST_SAFE` |
+| `claw.env.hostSigningIdentity` | envVar | config | claw |  |  |  |  | `CLAW_HOST_SIGNING_IDENTITY` |
+| `claw.env.hostTeamId` | envVar | config | claw |  |  |  |  | `CLAW_HOST_TEAM_ID` |
 | `claw.env.hostTestCalendar` | envVar | config | claw |  |  |  |  | `CLAW_HOST_TEST_CALENDAR` |
 | `claw.env.hostTestCommand` | envVar | config | claw |  |  |  |  | `CLAW_HOST_TEST_COMMAND` |
 | `claw.env.hostTestMailbox` | envVar | config | claw |  |  |  |  | `CLAW_HOST_TEST_MAILBOX` |
@@ -2809,6 +3037,8 @@ flowchart TD
 | `claw.env.libraryDir` | envVar | config | claw |  |  |  |  | `CLAW_LIBRARY_DIR` |
 | `claw.env.liveBrokerCommand` | envVar | config | claw |  |  |  |  | `CLAW_LIVE_BROKER_COMMAND` |
 | `claw.env.localAdminBootstrapStdin` | envVar | config | claw |  |  |  |  | `CLAW_LOCAL_ADMIN_BOOTSTRAP_STDIN` |
+| `claw.env.macControlSourceSession` | envVar | config | claw |  |  |  |  | `CLAW_MAC_CONTROL_SOURCE_SESSION` |
+| `claw.env.mcpConfigPath` | envVar | config | claw |  |  |  |  | `CLAW_MCP_CONFIG_PATH` |
 | `claw.env.memoryBase` | envVar | config | claw |  |  |  |  | `CLAW_MEMORY_BASE` |
 | `claw.env.memoryEditor` | envVar | config | claw |  |  |  |  | `CLAW_MEMORY_EDITOR` |
 | `claw.env.memoryHost` | envVar | config | claw |  |  |  |  | `CLAW_MEMORY_HOST` |
@@ -2854,6 +3084,7 @@ flowchart TD
 | `claw.env.relayTenantId` | envVar | config | claw |  |  |  |  | `CLAW_RELAY_TENANT_ID` |
 | `claw.env.relayUrl` | envVar | config | claw |  |  |  |  | `CLAW_RELAY_URL` |
 | `claw.env.relayWorkspaceId` | envVar | config | claw |  |  |  |  | `CLAW_RELAY_WORKSPACE_ID` |
+| `claw.env.releaseApprovedFor` | envVar | config | claw |  |  |  |  | `CLAW_RELEASE_APPROVED_FOR` |
 | `claw.env.reportGithubToken` | envVar | config | claw |  |  |  |  | `CLAW_REPORT_GITHUB_TOKEN` |
 | `claw.env.resourcesDir` | envVar | config | claw |  |  |  |  | `CLAW_RESOURCES_DIR` |
 | `claw.env.rulesDir` | envVar | config | claw |  |  |  |  | `CLAW_RULES_DIR` |
@@ -2899,6 +3130,8 @@ flowchart TD
 | `claw.env.sessionsDataDir` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_DATA_DIR` |
 | `claw.env.sessionsDisableCodex` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_DISABLE_CODEX` |
 | `claw.env.sessionsDisableHermes` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_DISABLE_HERMES` |
+| `claw.env.sessionsEventsMaxSubscribers` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS` |
+| `claw.env.sessionsEventsQueueLimit` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_EVENTS_QUEUE_LIMIT` |
 | `claw.env.sessionsHermesDb` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_HERMES_DB` |
 | `claw.env.sessionsHost` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_HOST` |
 | `claw.env.sessionsPort` | envVar | config | claw |  |  |  |  | `CLAW_SESSIONS_PORT` |
@@ -3043,6 +3276,7 @@ flowchart TD
 | `claw.cli.command.records` | cliCommand | cli | claw |  |  |  |  | `records` |
 | `claw.cli.command.contacts` | cliCommand | cli | claw |  |  |  |  | `contacts` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw |  |  |  |  | `inspect` |
+| `claw.cli.command.maturity` | cliCommand | cli | claw |  |  |  | Capability maturity governance inspection CLI for profile ceilings, activation policies, and leakage audit. | `maturity` |
 | `claw.cli.command.remote` | cliCommand | cli | claw |  |  |  |  | `remote` |
 | `claw.cli.command.sync` | cliCommand | cli | claw |  |  |  |  | `sync` |
 | `claw.cli.command.nodes` | cliCommand | cli | claw |  |  |  |  | `nodes` |
@@ -3212,10 +3446,26 @@ flowchart TD
 | `claw.database.core.table.workspace_meta.column.meta_value` | column | persistent | claw |  |  |  |  | `` |
 | `claw.database.core.table.search_source_config` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.core.table.search_source_config.index.search_source_config_state_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_state` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_projects` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_pinned_threads` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_session_titles` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_archives` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_sidebar_snapshots` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_terminal_tabs` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_state_sync_receipts` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.table.app_state_projection_meta` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.index.app_projects_path_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.index.app_projects_resource_id_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.index.app_sidebar_snapshots_order_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.index.app_sidebar_snapshots_project_id_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.index.app_state_sync_receipts_request_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.core.index.app_state_sync_receipts_status_idx` | index | persistent | claw |  |  |  |  | `` |
 | `claw.database.runtime` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/runtime.sqlite` |
 | `claw.database.sessions` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/sessions.sqlite` |
 | `claw.database.audio` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/audio.sqlite` |
 | `claw.database.search` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/search.sqlite` |
+| `claw.database.search.table.search_source_sets` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.table.search_profiles` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.table.search_sources` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.table.search_documents` | table | persistent | claw |  |  |  |  | `` |
@@ -3232,6 +3482,7 @@ flowchart TD
 | `claw.database.search.table.search_interactions` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.table.search_vectors` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.table.search_ranking_cache` | table | persistent | claw |  |  |  |  | `` |
+| `claw.database.search.table.search_ranking_cache_scopes` | table | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.index.search_sources_domain_idx` | index | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.index.search_documents_source_idx` | index | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.index.search_documents_shard_idx` | index | persistent | claw |  |  |  |  | `` |
@@ -3249,6 +3500,10 @@ flowchart TD
 | `claw.database.search.index.search_audit_events_actor_idx` | index | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.index.search_interactions_document_idx` | index | persistent | claw |  |  |  |  | `` |
 | `claw.database.search.index.search_interactions_context_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.search.index.search_vectors_model_document_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.search.index.search_ranking_cache_updated_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.search.index.search_ranking_cache_bytes_idx` | index | persistent | claw |  |  |  |  | `` |
+| `claw.database.search.index.search_ranking_cache_scopes_lookup_idx` | index | persistent | claw |  |  |  |  | `` |
 | `claw.database.notify` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/notify.sqlite` |
 | `claw.database.feed` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/feed.sqlite` |
 | `claw.database.monitor` | sidecar | persistent | claw |  |  |  |  | `~/.claw/data/monitor.sqlite` |

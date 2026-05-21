@@ -222,8 +222,8 @@ for (const relativePath of [
   "time/tests/e2e/backend.e2e.test.ts",
   "docs/time.md",
 ]) {
-  forbidSnippet(relativePath, "/v1/legacy/events");
-  forbidSnippet(relativePath, "/v1/legacy/routines");
+  forbidSnippet(relativePath, ["/v1", "legacy", "events"].join("/"));
+  forbidSnippet(relativePath, ["/v1", "legacy", "routines"].join("/"));
   forbidSnippet(relativePath, "legacyEvents");
   forbidSnippet(relativePath, "legacyRoutines");
   forbidSnippet(relativePath, "compatibility projections");

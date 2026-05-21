@@ -8,7 +8,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "records",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search test fixture table used to exercise indexing paths without opening the database service schema.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -21,7 +21,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "runtime_jobs",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search test fixture table that mirrors registered runtime schema behavior.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -34,7 +34,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "runtime_events",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search test fixture table that mirrors registered runtime schema behavior.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -47,7 +47,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "operational_events",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search test fixture table that mirrors registered operational event schema behavior.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -60,7 +60,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "runtime_jobs",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search fixture table that mirrors registered runtime job schema behavior for shard indexing tests.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -73,7 +73,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "runtime_events",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search fixture table that mirrors registered runtime event schema behavior for shard indexing tests.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -86,7 +86,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "operational_events",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic search fixture table that mirrors registered operational event schema behavior for shard indexing tests.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -99,8 +99,34 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "records",
-      "owner": "clawjs-search",
+      "steward": "clawjs-search",
       "reason": "Hermetic database work-skills fixture table used to isolate indexing behavior from the full collection schema.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
+    },
+    {
+      "id": "ddl-fixture-index-data-app-state",
+      "path": "packages/clawjs/src/index-data.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "app_state",
+      "steward": "clawjs-cli",
+      "reason": "Hermetic V1 data test fixture table for migration behavior already represented in V1 schema surfaces.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
+    },
+    {
+      "id": "ddl-fixture-index-data-app-state-projection-meta",
+      "path": "packages/clawjs/src/index-data.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "app_state_projection_meta",
+      "steward": "clawjs-cli",
+      "reason": "Hermetic V1 data test fixture table for migration behavior already represented in V1 schema surfaces.",
       "expiresOn": "2026-06-03",
       "tests": [
         "node scripts/persistent-surface-guard.mjs --self-test"
@@ -112,7 +138,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "app_projects",
-      "owner": "clawjs-cli",
+      "steward": "clawjs-cli",
       "reason": "Hermetic V1 data test fixture table for migration behavior already represented in V1 schema surfaces.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -125,7 +151,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "agent_incidents",
-      "owner": "clawjs-cli",
+      "steward": "clawjs-cli",
       "reason": "Hermetic V1 data test fixture table for migration behavior already represented in V1 agent schema surfaces.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -138,7 +164,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "agent_incidents_v1_new",
-      "owner": "clawjs-cli",
+      "steward": "clawjs-cli",
       "reason": "Transient migration shadow table used only while rewriting legacy agent incident rows; it is dropped or renamed inside the migration transaction and is not a durable public schema surface.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -151,7 +177,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "connector_context_records",
-      "owner": "clawjs-governance",
+      "steward": "clawjs-governance",
       "reason": "Verifier assertion snippet for already registered connector context schema, not a DDL execution site.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -164,7 +190,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "connector_context_defaults",
-      "owner": "clawjs-governance",
+      "steward": "clawjs-governance",
       "reason": "Verifier assertion snippet for already registered connector context schema, not a DDL execution site.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -177,7 +203,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "connector_context_audit_events",
-      "owner": "clawjs-governance",
+      "steward": "clawjs-governance",
       "reason": "Verifier assertion snippet for already registered connector context schema, not a DDL execution site.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -190,7 +216,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "operational_events",
-      "owner": "clawjs-monitor",
+      "steward": "clawjs-monitor",
       "reason": "Verifier seed fixture for monitor retention behavior; the durable operational event surface is already registered.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -203,7 +229,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "operational_events",
-      "owner": "clawjs-cli",
+      "steward": "clawjs-cli",
       "reason": "Hermetic CLI test fixture table for operational event behavior already represented in V1 schema surfaces.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -216,7 +242,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "projects",
-      "owner": "clawjs-sessions",
+      "steward": "clawjs-sessions",
       "reason": "Hermetic sessions fixture table used to isolate project resource-id behavior from the full sessions store.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -229,7 +255,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "sessions",
-      "owner": "clawjs-sessions",
+      "steward": "clawjs-sessions",
       "reason": "Hermetic sessions fixture table used to isolate project resource-id behavior from the full sessions store.",
       "expiresOn": "2026-06-03",
       "tests": [
@@ -242,7 +268,7 @@
       "rule": "ts.ddl-literal",
       "objectKind": "table",
       "objectName": "session_messages",
-      "owner": "clawjs-sessions",
+      "steward": "clawjs-sessions",
       "reason": "Hermetic sessions fixture table used to isolate project resource-id behavior from the full sessions store.",
       "expiresOn": "2026-06-03",
       "tests": [

@@ -165,6 +165,7 @@ export function isSearchAdminCommand(command: string | undefined): boolean {
 export async function runSearchQueryCli(input: {
   positionals: string[];
   flags: Record<string, string>;
+  argv?: string[];
   context: CliContext;
   wantsJson: boolean;
   binName: string;
@@ -178,8 +179,8 @@ export async function runSearchQueryCli(input: {
   if (domains?.some((domain) => WORKSPACE_SEARCH_DOMAINS.has(domain))) {
     return await runWorkspaceSearchQueryCli(input, query, domains);
   }
-  const scheduleRefresh = readBooleanish(input.flags["schedule-refresh"]);
-  const persistentQuery = readBooleanish(input.flags.persistent) || scheduleRefresh;
+  const scheduleRefresh = readBooleanFlag(input.argv ?? [], input.flags, "schedule-refresh");
+  const persistentQuery = readBooleanFlag(input.argv ?? [], input.flags, "persistent") || scheduleRefresh;
   const searchDbPath = resolveSearchDbPath(input.flags);
   if (!persistentQuery && !fs.existsSync(searchDbPath)) {
     const data = {

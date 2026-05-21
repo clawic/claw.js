@@ -8,6 +8,7 @@ const checks = [
     file: "packages/clawjs/bin/claw.mjs",
     forbidden: [
       "@clawjs/core",
+      "@clawjs/core/catalogs",
       "./secrets-commands.mjs",
       "./catalog-commands.mjs",
       "./database-server-launcher.mjs",

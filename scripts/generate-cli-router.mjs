@@ -117,6 +117,10 @@ function compactCommand(entry) {
   };
 }
 
+function tsConst(value) {
+  return JSON.stringify(value, null, 2).replace(/^(\s*)"([A-Za-z_$][A-Za-z0-9_$]*)":/gm, "$1$2:");
+}
+
 const commands = clawCliCommandRegistry.commands.map(compactCommand);
 const routeGroups = Object.fromEntries(commands.map((entry) => [entry.name, entry.routeGroup]));
 const stableCommands = commands
@@ -161,15 +165,15 @@ export interface GeneratedCliCommandEntry {
 }
 
 export const GENERATED_CLI_ROUTER_VERSION = ${JSON.stringify(clawCliCommandRegistry.version)} as const;
-export const GENERATED_CLI_COMMANDS = ${JSON.stringify(commands, null, 2)} as const satisfies readonly GeneratedCliCommandEntry[];
-export const GENERATED_CLI_ROUTE_GROUPS = ${JSON.stringify(routeGroups, null, 2)} as const satisfies Record<string, GeneratedCliRouteGroup>;
-export const GENERATED_STABLE_CLI_COMMANDS = ${JSON.stringify(stableCommands, null, 2)} as const;
-export const GENERATED_COLLECTION_ALIASES = ${JSON.stringify(collectionAliases, null, 2)} as const;
-export const GENERATED_REMOVED_PUBLIC_COMMANDS = ${JSON.stringify(Object.fromEntries(REMOVED_PUBLIC_COMMANDS), null, 2)} as const;
-export const GENERATED_REMOVED_RUNTIME_COMMANDS = ${JSON.stringify(["queue", "job", "event", "retention"], null, 2)} as const;
-export const GENERATED_REMOVED_V1_CRUD_COMMANDS = ${JSON.stringify(["upsert", "list", "get", "delete"], null, 2)} as const;
-export const GENERATED_PUBLIC_PORTAL_HELP_ONLY = ${JSON.stringify(PUBLIC_PORTAL_HELP_ONLY, null, 2)} as const;
-export const GENERATED_JSON_HELP_REQUIRED_COMMANDS = ${JSON.stringify(JSON_HELP_REQUIRED_COMMANDS, null, 2)} as const;
+export const GENERATED_CLI_COMMANDS = ${tsConst(commands)} as const satisfies readonly GeneratedCliCommandEntry[];
+export const GENERATED_CLI_ROUTE_GROUPS = ${tsConst(routeGroups)} as const satisfies Record<string, GeneratedCliRouteGroup>;
+export const GENERATED_STABLE_CLI_COMMANDS = ${tsConst(stableCommands)} as const;
+export const GENERATED_COLLECTION_ALIASES = ${tsConst(collectionAliases)} as const;
+export const GENERATED_REMOVED_PUBLIC_COMMANDS = ${tsConst(Object.fromEntries(REMOVED_PUBLIC_COMMANDS))} as const;
+export const GENERATED_REMOVED_RUNTIME_COMMANDS = ${tsConst(["queue", "job", "event", "retention"])} as const;
+export const GENERATED_REMOVED_V1_CRUD_COMMANDS = ${tsConst(["upsert", "list", "get", "delete"])} as const;
+export const GENERATED_PUBLIC_PORTAL_HELP_ONLY = ${tsConst(PUBLIC_PORTAL_HELP_ONLY)} as const;
+export const GENERATED_JSON_HELP_REQUIRED_COMMANDS = ${tsConst(JSON_HELP_REQUIRED_COMMANDS)} as const;
 `;
 
 if (check) {

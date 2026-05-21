@@ -55,6 +55,25 @@ function missingNarrativeIds(items) {
   return items.filter((item) => !item.surfaceNarrative).map((item) => item.id).sort();
 }
 
+function missingNarrativeSummary(ids) {
+  const sortedIds = [...ids].sort();
+  return { count: sortedIds.length, idsSha256: sha256Ids(sortedIds), ids: sortedIds };
+}
+
+function isSorted(ids) {
+  return ids.every((id, index) => index === 0 || ids[index - 1] <= id);
+}
+
+function idCounts(ids) {
+  const counts = new Map();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return counts;
+}
+
+function formatIdDelta(id, count) {
+  return count === 1 ? id : `${id} x${count}`;
+}
+
 function readBaseline() {
   if (!fs.existsSync(baselinePath)) return { version: 1, entries: [] };
   return JSON.parse(fs.readFileSync(baselinePath, "utf8"));
@@ -74,8 +93,19 @@ function validateBaselineEnvelope(baseline) {
     if (entry.expires && entry.expires < today) failures.push(`${label} expired on ${entry.expires}`);
     for (const key of ["nodes", "routes"]) {
       const summary = entry.missingNarrative?.[key];
-      if (!summary || typeof summary.count !== "number" || !hasText(summary.idsSha256)) {
-        failures.push(`${label}.missingNarrative.${key} must include count and idsSha256`);
+      if (!summary || typeof summary.count !== "number" || !hasText(summary.idsSha256) || !Array.isArray(summary.ids)) {
+        failures.push(`${label}.missingNarrative.${key} must include count, idsSha256, and ids`);
+        continue;
+      }
+      const invalidIds = summary.ids.filter((id) => !hasText(id));
+      if (invalidIds.length > 0) failures.push(`${label}.missingNarrative.${key}.ids must contain only non-empty strings`);
+      if (!isSorted(summary.ids)) failures.push(`${label}.missingNarrative.${key}.ids must be sorted`);
+      if (summary.count !== summary.ids.length) {
+        failures.push(`${label}.missingNarrative.${key}.count must match ids length: ${summary.count} !== ${summary.ids.length}`);
+      }
+      const baselineHash = sha256Ids(summary.ids);
+      if (summary.idsSha256 !== baselineHash) {
+        failures.push(`${label}.missingNarrative.${key}.idsSha256 must match ids: expected ${baselineHash}, got ${summary.idsSha256}`);
       }
     }
   }
@@ -93,8 +123,24 @@ function compareMissingToBaseline(kind, ids, entry, failures) {
     return;
   }
   const actualHash = sha256Ids(ids);
+  const expectedIds = Array.isArray(expected.ids) ? expected.ids : [];
   if (ids.length !== expected.count || actualHash !== expected.idsSha256) {
-    failures.push(`${kind} without surfaceNarrative baseline drift: expected ${expected.count}/${expected.idsSha256}, got ${ids.length}/${actualHash}`);
+    const actualCounts = idCounts(ids);
+    const expectedCounts = idCounts(expectedIds);
+    const allIds = [...new Set([...expectedIds, ...ids])].sort();
+    const added = allIds.flatMap((id) => {
+      const count = (actualCounts.get(id) ?? 0) - (expectedCounts.get(id) ?? 0);
+      return count > 0 ? [formatIdDelta(id, count)] : [];
+    });
+    const removed = allIds.flatMap((id) => {
+      const count = (expectedCounts.get(id) ?? 0) - (actualCounts.get(id) ?? 0);
+      return count > 0 ? [formatIdDelta(id, count)] : [];
+    });
+    const details = [
+      ...(added.length > 0 ? [`added ${kind}: ${added.join(", ")}`] : []),
+      ...(removed.length > 0 ? [`removed ${kind}: ${removed.join(", ")}`] : []),
+    ];
+    failures.push(`${kind} without surfaceNarrative baseline drift: expected ${expected.count}/${expected.idsSha256}, got ${ids.length}/${actualHash}${details.length > 0 ? ` (${details.join("; ")})` : ""}`);
   }
 }
 
@@ -143,8 +189,8 @@ function buildBaseline(registry = clawPersistentSurfaceRegistry) {
         risk: "Existing surfaces remain inspectable, but their conceptual authorization is not yet machine-checkable.",
         expires: "2026-08-18",
         missingNarrative: {
-          nodes: { count: missingNodes.length, idsSha256: sha256Ids(missingNodes) },
-          routes: { count: missingRoutes.length, idsSha256: sha256Ids(missingRoutes) },
+          nodes: missingNarrativeSummary(missingNodes),
+          routes: missingNarrativeSummary(missingRoutes),
         },
         nextPhase: "Backfill surfaceNarrative on high-change and runtime-critical surfaces, then reduce this baseline.",
         reentryCondition: "Any new API, UI, CLI, schema, storage key, route, permission, or feature flag must carry surfaceNarrative before landing.",
@@ -182,8 +228,8 @@ function runSelfTest() {
       {
         ...buildBaseline(registry).entries[0],
         missingNarrative: {
-          nodes: { count: 1, idsSha256: sha256Ids(["self.node.baselined"]) },
-          routes: { count: 1, idsSha256: sha256Ids(["self.route.baselined"]) },
+          nodes: missingNarrativeSummary(["self.node.baselined"]),
+          routes: missingNarrativeSummary(["self.route.baselined"]),
         },
       },
     ],
@@ -192,6 +238,7 @@ function runSelfTest() {
 
   const newNodeFailures = validateSurfaceNarratives({ ...registry, nodes: [...registry.nodes, { id: "self.node.new" }] }, baseline);
   assert.match(newNodeFailures.join("\n"), /nodes without surfaceNarrative baseline drift/);
+  assert.match(newNodeFailures.join("\n"), /self\.node\.new/);
 
   const invalidNarrativeFailures = validateSurfaceNarratives({
     ...registry,

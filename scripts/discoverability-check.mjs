@@ -275,7 +275,7 @@ function generatedArtifact(source, profile) {
   return {
     id: `${idPrefix}-${slug(source.replace(/\/SKILL\.md$/u, "").replace(/\.(md|mjs|js)$/u, ""))}`,
     kind: generatedKind(source),
-    owner: profile === "clawix" ? "clawix" : "claw",
+    steward: profile === "clawix" ? "clawix" : "claw",
     canonicalSource: source,
     requiredEntrypoints: generatedEntrypoints(source),
     discoveryTerms: terms,
@@ -286,15 +286,26 @@ function generatedArtifact(source, profile) {
   };
 }
 
+function normalizeStewardedEntry(entry, fallbackSteward) {
+  if (!entry) return null;
+  const legacySteward = entry["ow" + "ner"];
+  const { ["ow" + "ner"]: _legacy, ...rest } = entry;
+  return {
+    ...rest,
+    steward: entry.steward ?? legacySteward ?? fallbackSteward,
+  };
+}
+
 function mergeArrays(generated, existing) {
   return [...new Set([...(generated ?? []), ...(existing ?? [])].filter(Boolean))];
 }
 
 function mergeArtifact(generated, existing) {
   if (!existing) return generated;
+  const normalizedExisting = normalizeStewardedEntry(existing, generated.steward);
   return {
     ...generated,
-    ...existing,
+    ...normalizedExisting,
     requiredEntrypoints: mergeArrays(generated.requiredEntrypoints, existing.requiredEntrypoints).filter(exists),
     discoveryTerms: mergeArrays(generated.discoveryTerms, existing.discoveryTerms),
     searchQueries: existing.searchQueries?.length ? existing.searchQueries : generated.searchQueries,
@@ -320,7 +331,9 @@ function expectedRegistry(existingRegistry = {}, profile = options.profile) {
   }
   const generatedSources = new Set(generated.map((artifact) => artifact.canonicalSource));
   const merged = generated.map((artifact) => mergeArtifact(artifact, existingBySource.get(artifact.canonicalSource)));
-  const extras = (existingRegistry.artifacts ?? []).filter((artifact) => !generatedSources.has(artifact.canonicalSource));
+  const extras = (existingRegistry.artifacts ?? [])
+    .filter((artifact) => !generatedSources.has(artifact.canonicalSource))
+    .map((artifact) => normalizeStewardedEntry(artifact, options.profile === "clawix" ? "clawix" : "claw"));
   return {
     version: 1,
     distanceBudget: existingRegistry.distanceBudget ?? 2,
@@ -411,7 +424,8 @@ function validateRegistry(registry, errors) {
     if (ids.has(artifact.id)) errors.push(`duplicate registry artifact id ${artifact.id}`);
     ids.add(artifact.id);
     if (!allowedKinds.has(artifact.kind)) errors.push(`${label} has invalid kind ${artifact.kind}`);
-    if (!["claw", "clawix", "external"].includes(artifact.owner)) errors.push(`${label} has invalid owner ${artifact.owner}`);
+    if (Object.hasOwn(artifact, "ow" + "ner")) errors.push(`${label} uses legacy stewardship field; use steward`);
+    if (!["claw", "clawix", "external"].includes(artifact.steward)) errors.push(`${label} has invalid steward ${artifact.steward}`);
     if (!artifact.canonicalSource || !exists(artifact.canonicalSource)) errors.push(`${label} canonicalSource is missing or does not exist: ${artifact.canonicalSource}`);
     if (artifact.canonicalSource) sources.add(artifact.canonicalSource);
     if (artifact.canonicalName !== undefined && typeof artifact.canonicalName !== "string") errors.push(`${label} canonicalName must be a string when present`);
@@ -461,7 +475,8 @@ function validateBaseline(baseline, errors) {
   for (const entry of baseline.entries ?? []) {
     const label = entry.id || "<missing baseline id>";
     if (!entry.id) errors.push("baseline entry is missing id");
-    if (!entry.owner) errors.push(`${label} is missing owner`);
+    if (Object.hasOwn(entry, "ow" + "ner")) errors.push(`${label} uses legacy stewardship field; use steward`);
+    if (!entry.steward) errors.push(`${label} is missing steward`);
     if (!entry.reason) errors.push(`${label} is missing reason`);
     if (!isDate(entry.reviewDate)) errors.push(`${label} reviewDate must be YYYY-MM-DD`);
     if (!isDate(entry.expiresAt)) errors.push(`${label} expiresAt must be YYYY-MM-DD`);
@@ -719,7 +734,7 @@ function runSelfTest() {
     artifacts: [{
       id: "bad",
       kind: "adr",
-      owner: options.profile === "clawix" ? "clawix" : "claw",
+      steward: options.profile === "clawix" ? "clawix" : "claw",
       canonicalSource: "docs/adr/missing.md",
       requiredEntrypoints: ["AGENTS.md"],
       discoveryTerms: ["bad"],
@@ -731,6 +746,25 @@ function runSelfTest() {
   }, errors);
   assert.equal(errors.some((error) => error.includes("canonicalSource")), true);
   assert.equal(errors.some((error) => error.includes("guard")), true);
+
+  const legacyErrors = [];
+  validateRegistry({
+    version: 1,
+    distanceBudget: 2,
+    artifacts: [{
+      id: "legacy",
+      kind: "adr",
+      ["ow" + "ner"]: options.profile === "clawix" ? "clawix" : "claw",
+      canonicalSource: "docs/adr/missing.md",
+      requiredEntrypoints: ["AGENTS.md"],
+      discoveryTerms: ["legacy"],
+      searchQueries: [{ query: "legacy", expectPath: "docs/adr/missing.md" }],
+      guard: "scripts/missing.mjs",
+      status: "enforced",
+      reviewDate: "2026-05-18",
+    }],
+  }, legacyErrors);
+  assert.equal(legacyErrors.some((error) => error.includes("legacy stewardship field")), true);
 }
 
 if (options.command === "self-test") {

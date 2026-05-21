@@ -1,7 +1,7 @@
 export type ClawCapabilityMaturity = "incomplete" | "experimental" | "beta" | "stable" | "retired";
-export type ClawMaturityProfile = "stable" | "beta" | "experimental" | "dev";
+export type ClawMaturityActivationTier = "stable" | "beta" | "experimental" | "dev";
 export type ClawCapabilityActivationPolicy = "enabled" | "opt_in" | "dev_allowlist";
-export type ClawCapabilityMaturityOwner = "claw" | "clawix" | "signed_host" | "external";
+export type ClawCapabilityMaturitySteward = "claw" | "clawix" | "signed_host" | "external";
 
 export interface ClawCapabilityPromotionDecision {
   ref: string;
@@ -16,7 +16,7 @@ export interface ClawCapabilityMaturitySource {
 export interface ClawCapabilityMaturityEntry {
   id: string;
   parentId?: string;
-  owner: ClawCapabilityMaturityOwner;
+  steward: ClawCapabilityMaturitySteward;
   title: string;
   summary: string;
   maturity: ClawCapabilityMaturity;
@@ -35,7 +35,7 @@ export interface ClawCapabilityMaturityRegistry {
 }
 
 export interface ClawCapabilityMaturityContext {
-  profile?: ClawMaturityProfile;
+  activationTier?: ClawMaturityActivationTier;
   enabledCapabilityIds?: readonly string[];
   devAllowlistCapabilityIds?: readonly string[];
 }
@@ -43,7 +43,7 @@ export interface ClawCapabilityMaturityContext {
 export interface ClawCapabilityMaturityDecision {
   allowed: boolean;
   code: "allowed" | "maturity_blocked" | "opt_in_required" | "dev_allowlist_required" | "retired";
-  requiredProfile?: ClawMaturityProfile;
+  requiredActivationTier?: ClawMaturityActivationTier;
   reason: string;
 }
 
@@ -59,14 +59,14 @@ const maturityRank: Record<Exclude<ClawCapabilityMaturity, "retired">, number> =
   stable: 3,
 };
 
-const profileCeiling: Record<ClawMaturityProfile, Exclude<ClawCapabilityMaturity, "retired">> = {
+const activationTierCeiling: Record<ClawMaturityActivationTier, Exclude<ClawCapabilityMaturity, "retired">> = {
   stable: "stable",
   beta: "beta",
   experimental: "experimental",
   dev: "incomplete",
 };
 
-const maturityRequiredProfile: Record<Exclude<ClawCapabilityMaturity, "retired">, ClawMaturityProfile> = {
+const maturityRequiredActivationTier: Record<Exclude<ClawCapabilityMaturity, "retired">, ClawMaturityActivationTier> = {
   stable: "stable",
   beta: "beta",
   experimental: "experimental",
@@ -86,22 +86,22 @@ export function defineClawCapabilityMaturityEntry(
   };
 }
 
-export function resolveClawMaturityProfile(value?: string | null): ClawMaturityProfile {
+export function resolveClawMaturityActivationTier(value?: string | null): ClawMaturityActivationTier {
   if (value === "stable" || value === "beta" || value === "experimental" || value === "dev") return value;
   return "stable";
 }
 
-export function isMaturityAllowedInProfile(maturity: ClawCapabilityMaturity, profile: ClawMaturityProfile): boolean {
+export function isMaturityAllowedInActivationTier(maturity: ClawCapabilityMaturity, activationTier: ClawMaturityActivationTier): boolean {
   if (maturity === "retired") return false;
-  if (profile === "dev") return true;
-  return maturityRank[maturity] >= maturityRank[profileCeiling[profile]];
+  if (activationTier === "dev") return true;
+  return maturityRank[maturity] >= maturityRank[activationTierCeiling[activationTier]];
 }
 
 export function evaluateClawCapabilityMaturity(
   capability: ClawCapabilityMaturityEntry,
   context: ClawCapabilityMaturityContext = {},
 ): ClawCapabilityMaturityDecision {
-  const profile = context.profile ?? "stable";
+  const activationTier = context.activationTier ?? "stable";
   if (capability.maturity === "retired") {
     return {
       allowed: false,
@@ -110,22 +110,22 @@ export function evaluateClawCapabilityMaturity(
     };
   }
 
-  if (!isMaturityAllowedInProfile(capability.maturity, profile)) {
+  if (!isMaturityAllowedInActivationTier(capability.maturity, activationTier)) {
     return {
       allowed: false,
       code: "maturity_blocked",
-      requiredProfile: maturityRequiredProfile[capability.maturity],
-      reason: `${capability.id} requires ${maturityRequiredProfile[capability.maturity]} profile.`,
+      requiredActivationTier: maturityRequiredActivationTier[capability.maturity],
+      reason: `${capability.id} requires ${maturityRequiredActivationTier[capability.maturity]} activationTier.`,
     };
   }
 
   if (capability.maturity === "incomplete" || capability.activationPolicy === "dev_allowlist") {
-    if (profile !== "dev" || !context.devAllowlistCapabilityIds?.includes(capability.id)) {
+    if (activationTier !== "dev" || !context.devAllowlistCapabilityIds?.includes(capability.id)) {
       return {
         allowed: false,
         code: "dev_allowlist_required",
-        requiredProfile: "dev",
-        reason: `${capability.id} is incomplete and requires dev profile plus explicit dev allowlist.`,
+        requiredActivationTier: "dev",
+        reason: `${capability.id} is incomplete and requires dev activationTier plus explicit dev allowlist.`,
       };
     }
   }
@@ -134,14 +134,14 @@ export function evaluateClawCapabilityMaturity(
     return {
       allowed: false,
       code: "opt_in_required",
-      reason: `${capability.id} is eligible in ${profile} profile but requires explicit opt-in.`,
+      reason: `${capability.id} is eligible in ${activationTier} activationTier but requires explicit opt-in.`,
     };
   }
 
   return {
     allowed: true,
     code: "allowed",
-    reason: `${capability.id} is allowed in ${profile} profile.`,
+    reason: `${capability.id} is allowed in ${activationTier} activationTier.`,
   };
 }
 
@@ -167,7 +167,7 @@ export function auditClawCapabilityMaturityRegistry(
     if (!entry.id) failures.push("capability maturity entry is missing id");
     if (seenIds.has(entry.id)) failures.push(`${entry.id}: duplicate capability id`);
     seenIds.add(entry.id);
-    if (!entry.owner) failures.push(`${entry.id}: missing owner`);
+    if (!entry.steward) failures.push(`${entry.id}: missing steward`);
     if (!entry.maturity) failures.push(`${entry.id}: missing maturity`);
     if (entry.maturity === "stable" || entry.maturity === "beta") {
       if (!entry.promotionDecision?.ref || !entry.promotionDecision.path) {
@@ -193,7 +193,7 @@ export const clawCapabilityMaturityRegistry: ClawCapabilityMaturityRegistry = {
   entries: [
     defineClawCapabilityMaturityEntry({
       id: "claw.shell.core",
-      owner: "claw",
+      steward: "claw",
       title: "Core shell",
       summary: "Minimum stable shell: local chat, bridge/session core, basic settings, persistence, inspect registry, and diagnostics.",
       maturity: "stable",
@@ -208,7 +208,7 @@ export const clawCapabilityMaturityRegistry: ClawCapabilityMaturityRegistry = {
     }),
     defineClawCapabilityMaturityEntry({
       id: "system.telemetry",
-      owner: "claw",
+      steward: "claw",
       title: "System telemetry",
       summary: "Framework and host system telemetry capability family; experimental until granular promotion decisions are recorded.",
       maturity: "experimental",
@@ -220,7 +220,7 @@ export const clawCapabilityMaturityRegistry: ClawCapabilityMaturityRegistry = {
     defineClawCapabilityMaturityEntry({
       id: "system.telemetry.cpu.monitoring",
       parentId: "system.telemetry",
-      owner: "clawix",
+      steward: "clawix",
       title: "CPU monitoring",
       summary: "Host-side CPU telemetry monitoring and recording.",
       maturity: "experimental",
@@ -232,7 +232,7 @@ export const clawCapabilityMaturityRegistry: ClawCapabilityMaturityRegistry = {
     defineClawCapabilityMaturityEntry({
       id: "system.telemetry.cpu.graphs",
       parentId: "system.telemetry",
-      owner: "clawix",
+      steward: "clawix",
       title: "CPU graphs",
       summary: "Native CPU history graph rendering and related menu/widget visualizations.",
       maturity: "experimental",
@@ -243,7 +243,7 @@ export const clawCapabilityMaturityRegistry: ClawCapabilityMaturityRegistry = {
     }),
     defineClawCapabilityMaturityEntry({
       id: "claw.dev.incomplete-work",
-      owner: "claw",
+      steward: "claw",
       title: "Incomplete development work",
       summary: "Representative incomplete capability used to enforce that dirty or unfinished work can live on main only when registered and dev-allowlisted.",
       surfaces: ["claw.dev.harness"],

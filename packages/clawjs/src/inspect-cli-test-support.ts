@@ -81,6 +81,7 @@ export const expectedRemoteApiMethodRoutes = [
   "POST /v1/remote/closure-gate",
   "GET /v1/remote/route-contracts",
   "GET /v1/remote/provider-device-e2e-plan",
+  "GET /v1/remote/custom-app-sdk",
   "GET /v1/remote/compatibility/adapters",
   "POST /v1/remote/compatibility/adapters",
   "GET /v1/sync/drivers",

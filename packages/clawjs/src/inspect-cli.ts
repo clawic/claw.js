@@ -79,10 +79,10 @@ interface AgentInspectFiche {
     avatar: Agent["avatar"];
     isBuiltin: boolean;
   };
-  steward: {
+  owner: {
     source: "legacy_agent_store" | "agents_v1_projection";
-    stewardKind?: unknown;
-    stewardId?: unknown;
+    ownerKind?: unknown;
+    ownerId?: unknown;
     scopeType?: unknown;
     scopeId?: unknown;
     workspaceId?: unknown;
@@ -202,9 +202,9 @@ async function buildAgentInspectFiche(input: InspectCliInput, agentId: string, r
         avatar: agent.avatar,
         isBuiltin: agent.isBuiltin,
       },
-      steward: {
+      owner: {
         source: agentProjection ? "agents_v1_projection" : "legacy_agent_store",
-        ...(agentProjection ? pickDefined(agentProjection as JsonRecord, ["stewardKind", "stewardId", "scopeType", "scopeId", "workspaceId", "projectId"]) : {}),
+        ...(agentProjection ? pickDefined(agentProjection as JsonRecord, ["ownerKind", "ownerId", "scopeType", "scopeId", "workspaceId", "projectId"]) : {}),
         ...(agentProjection ? pickLegacyOwnerProjection(agentProjection as JsonRecord) : {}),
       },
       orgGraph: {
@@ -334,8 +334,8 @@ function inspectAgentText(fiche: AgentInspectFiche): string {
   return [
     `${fiche.agent.id}\t${fiche.agent.name}\t${fiche.agent.role || "-"}`,
     `runtime\t${fiche.agent.runtime}\tmodel\t${fiche.agent.model}\tautonomy\t${fiche.agent.autonomyLevel}`,
-    `steward\t${fiche.steward.stewardKind ?? "-"}\t${fiche.steward.stewardId ?? "-"}`,
-    `scope\t${fiche.steward.scopeType ?? "-"}\t${fiche.steward.scopeId ?? "-"}`,
+    `owner\t${fiche.owner.ownerKind ?? "-"}\t${fiche.owner.ownerId ?? "-"}`,
+    `scope\t${fiche.owner.scopeType ?? "-"}\t${fiche.owner.scopeId ?? "-"}`,
     `assignments\t${fiche.assignments.length}`,
     `resource_grants\t${fiche.resourceGrants.length}`,
     `memory_policies\t${fiche.memoryPolicies.length}`,
@@ -727,7 +727,7 @@ function inspectList(value: string | undefined, nodes = inspectNodes()): ClawPer
 function inspectText(nodes: ClawPersistentSurfaceNode[]): string {
   return nodes.map((node) => {
     const locator = node.path ?? node.route ?? node.key ?? node.value ?? node.name;
-    return `${node.id}\t${node.kind}\t${node.owner}\t${node.surfaceClass ?? "persistent"}\t${formatSurfaceParity(node)}\t${locator}`;
+    return `${node.id}\t${node.kind}\t${node.steward}\t${node.surfaceClass ?? "persistent"}\t${formatSurfaceParity(node)}\t${locator}`;
   }).join("\n");
 }
 
@@ -872,12 +872,12 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Nodes",
     "",
-    "| ID | Kind | Surface | Owner | Human | Programmatic | Gaps | Narrative | Path / Key / Value |",
+    "| ID | Kind | Surface | Steward | Human | Programmatic | Gaps | Narrative | Path / Key / Value |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const node of nodes) {
     const gaps = node.surfaceGaps?.map((gap) => `${gap.surface}:${gap.status}`).join("<br>") ?? "";
-    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.owner} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | ${node.surfaceNarrative?.concept ?? ""} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
+    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.steward} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | ${node.surfaceNarrative?.concept ?? ""} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -933,7 +933,7 @@ function buildRemoteInspectPayload(nodes: ClawPersistentSurfaceNode[], routes: C
       return {
         id: node.id,
         name: node.name,
-        owner: node.owner,
+        steward: node.steward,
         classification: node.programmaticSurfaces?.includes("relay")
           ? "remote-safe"
           : node.surfaceGaps?.find((gap) => gap.surface === "relay")?.status ?? "pending",
@@ -1099,7 +1099,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     const selected = target ? entries.filter((entry) => entry.id === target || entry.parentId === target || entry.maturity === target) : entries;
     const payload = {
       version: 1,
-      profileOrder: ["stable", "beta", "experimental", "dev"],
+      activationTierOrder: ["stable", "beta", "experimental", "dev"],
       maturityOrder: ["incomplete", "experimental", "beta", "stable"],
       defaultMaturity: "incomplete",
       blockedCode: "maturity_blocked",

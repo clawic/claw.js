@@ -1,4 +1,6 @@
-import { detectClawPublicRepositories, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
+import fs from "node:fs";
+import path from "node:path";
+import { clawCliCommandRegistry, detectClawPublicRepositories, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
 import { writeJsonOk } from "./cli-json.ts";
@@ -12,6 +14,7 @@ export function isSearchAdminCommand(command: string | undefined): boolean {
 export async function runSearchQueryCli(input: {
   positionals: string[];
   flags: Record<string, string>;
+  argv?: string[];
   context: CliContext;
   wantsJson: boolean;
   binName: string;
@@ -85,27 +88,47 @@ export async function runCliDiscoverySearch(input: {
 }
 
 function searchRegisteredRepositoryFiles(query: string, repositories: ClawRepositoryRoot[]): ClawCliSearchResult[] {
-  const normalized = normalizeSearchText(query);
-  if (!normalized) return [];
-  const results: ClawCliSearchResult[] = [];
-  for (const repository of repositories) {
-    for (const target of repository.searchTargets) {
-      const haystack = normalizeSearchText([
-        target.path,
-        target.canonicalName,
-        target.summary,
-        target.tags?.join(" "),
-      ].filter(Boolean).join(" "));
-      if (!haystack.includes(normalized)) continue;
-      results.push({
-        type: target.type,
-        name: target.path,
-        canonicalName: target.canonicalName,
-        summary: target.summary,
-        path: target.path,
-        repo: repository.repo,
-      });
+  return repositories.flatMap((repository) => searchRegisteredRepositoryLocalFiles(query, repository));
+}
+
+function searchRegisteredRepositoryLocalFiles(query: string, repository: Pick<ClawRepositoryRoot, "repo" | "rootDir">): ClawCliSearchResult[] {
+  const cwd = repository.rootDir;
+  const paths = new Map<string, { type: ClawCliSearchResult["type"]; canonicalName: string }>();
+  if (repository.repo === "clawjs") {
+    for (const entry of clawCliCommandRegistry.commands) {
+      for (const doc of entry.docs) paths.set(doc, { type: doc.includes("/adr/") ? "adr" : "doc", canonicalName: entry.target ?? entry.name });
+      for (const adr of entry.adrs) paths.set(adr, { type: "adr", canonicalName: entry.target ?? entry.name });
+      for (const test of entry.tests) paths.set(test, { type: "test", canonicalName: entry.target ?? entry.name });
+      paths.set(entry.source.file, { type: "source", canonicalName: entry.target ?? entry.name });
     }
+  }
+  for (const entry of discoverabilitySearchFiles(cwd)) {
+    paths.set(entry.path, { type: entry.type, canonicalName: entry.canonicalName });
+  }
+
+  const results: ClawCliSearchResult[] = [];
+  for (const [relativePath, meta] of paths) {
+    const absolutePath = path.resolve(cwd, relativePath);
+    if (!isSafeSearchFile(cwd, absolutePath)) continue;
+    let content = "";
+    try {
+      const stat = fs.statSync(absolutePath);
+      if (!stat.isFile() || stat.size > 512 * 1024) continue;
+      content = fs.readFileSync(absolutePath, "utf8");
+    } catch {
+      continue;
+    }
+    const match = scoreFileContent(query, `${meta.canonicalName}\n${relativePath}\n${content}`);
+    if (!match) continue;
+    results.push({
+      type: meta.type,
+      name: relativePath,
+      canonicalName: meta.canonicalName,
+      score: match.score,
+      summary: match.summary,
+      path: relativePath,
+      repo: repository.repo,
+    });
   }
   return results;
 }
@@ -126,4 +149,62 @@ function mergeSearchResults(results: ClawCliSearchResult[], limit: number): Claw
 
 function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function discoverabilitySearchFiles(cwd: string): Array<{ path: string; type: ClawCliSearchResult["type"]; canonicalName: string }> {
+  const registryPath = path.resolve(cwd, "docs/discoverability.registry.json");
+  try {
+    const registry = JSON.parse(fs.readFileSync(registryPath, "utf8")) as {
+      artifacts?: Array<{
+        id?: string;
+        kind?: string;
+        canonicalName?: string;
+        canonicalSource?: string;
+        searchQueries?: Array<{ expectPath?: string }>;
+      }>;
+    };
+    const entries: Array<{ path: string; type: ClawCliSearchResult["type"]; canonicalName: string }> = [];
+    for (const artifact of registry.artifacts ?? []) {
+      const type: ClawCliSearchResult["type"] = artifact.kind === "adr" || artifact.canonicalSource?.includes("/adr/") ? "adr"
+        : artifact.kind === "skill" || artifact.canonicalSource?.includes("/skills/") ? "doc"
+          : "doc";
+      const canonicalName = artifact.canonicalName ?? artifact.id ?? "discoverability";
+      if (artifact.canonicalSource) entries.push({ path: artifact.canonicalSource, type, canonicalName });
+      for (const query of artifact.searchQueries ?? []) {
+        if (query.expectPath) entries.push({ path: query.expectPath, type, canonicalName });
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
+function isSafeSearchFile(cwd: string, absolutePath: string): boolean {
+  const relativePath = path.relative(cwd, absolutePath);
+  return !!relativePath
+    && !relativePath.startsWith("..")
+    && !path.isAbsolute(relativePath)
+    && !relativePath.split(path.sep).some((segment) => ["node_modules", "dist", ".git", ".tmp", "build", ".next"].includes(segment));
+}
+
+function scoreFileContent(query: string, content: string): { score: number; summary: string } | null {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return null;
+  const lines = content.split(/\r?\n/);
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+  let best: { score: number; summary: string } | null = null;
+  for (const line of lines) {
+    const normalizedLine = line.toLowerCase();
+    let score = 0;
+    if (normalizedLine.includes(normalizedQuery)) score = 75;
+    else {
+      const hits = terms.filter((term) => normalizedLine.includes(term)).length;
+      if (hits > 0) score = 20 + hits * 8;
+    }
+    if (score === 0) continue;
+    const summary = line.trim().replace(/\s+/g, " ").slice(0, 180);
+    if (!best || score > best.score) best = { score, summary };
+  }
+  return best;
 }

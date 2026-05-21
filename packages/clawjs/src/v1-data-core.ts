@@ -305,7 +305,7 @@ export function ensureV1MainSchema(
   ensureColumn(sqlite, "agents", "workspace_id", "TEXT");
   ensureColumn(sqlite, "agents", "project_id", "TEXT");
   ensureColumn(sqlite, "agents", "autonomy_profile", "TEXT NOT NULL DEFAULT 'respond_only'");
-  ensureColumn(sqlite, "agents", "default_execution_state_scope_id", "TEXT");
+  ensureColumn(sqlite, "agents", "default_execution_profile_id", "TEXT");
   ensureColumn(sqlite, "agents", "default_memory_policy_id", "TEXT");
   ensureColumn(sqlite, "agents", "default_budget_id", "TEXT");
   ensureColumn(sqlite, "agents", "retired_at", "TEXT");
