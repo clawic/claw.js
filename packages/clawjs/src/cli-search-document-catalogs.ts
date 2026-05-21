@@ -27,11 +27,13 @@ import {
   firstTextValue,
   hasTable,
   isSensitiveRecord,
+  parseJsonArray,
   parseJsonRecord,
   safeSearchUrlHost,
   searchableRecordFields,
   sortedRecordKeys,
   stringArray,
+  stringValue,
   stringMetadata,
   stringifySearchValue,
 } from "./cli-search-document-utils.ts";

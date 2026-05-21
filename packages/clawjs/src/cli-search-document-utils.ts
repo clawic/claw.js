@@ -3,7 +3,8 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
 import { clawCliCommandRegistry, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
-import { createLocalTextEmbedding, type SearchQueryInput, type SearchQueryOutput, type SearchResult } from "@clawjs/search";
+import { createLocalTextEmbedding, LOCAL_TEXT_EMBEDDING_MODEL, type SearchQueryInput, type SearchQueryOutput, type SearchResult } from "@clawjs/search";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import type { BusinessRecordRow } from "./cli-search-command-constants.ts";
 import type { DatabaseRecordRow } from "./cli-search-document-rows.ts";
 
@@ -337,6 +338,11 @@ export function localTextEmbeddingForQuery(query: string, strategy: SearchQueryI
   const requested = model !== undefined || flags["local-embedding"] === "true";
   if (!requested || strategy === "lexical") return undefined;
   return createLocalTextEmbedding(query, { model: localSearchEmbeddingModel(model) });
+}
+
+function localSearchEmbeddingModel(model: string | undefined): string {
+  if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
+  throw new CliHandledError("SEARCH_EMBEDDING_PROVIDER_PENDING", `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`, CLI_EXIT_USAGE);
 }
 
 export function searchQueryRequiresAudit(query: string, results: SearchResult[], filters: Record<string, unknown> | undefined): boolean {

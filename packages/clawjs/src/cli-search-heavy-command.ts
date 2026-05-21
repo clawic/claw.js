@@ -3395,7 +3395,7 @@ function ensureCalendarEventsSourceIndexed(store: SearchStore, flags: Record<str
         ORDER BY starts_at ASC
       `).all() as SearchDocuments.CalendarEventRow[];
       for (const row of rows) {
-        store.upsertDocument(calendarEventSearchDocument(row));
+        store.upsertDocument(SearchDocuments.calendarEventSearchDocument(row));
         indexed += 1;
       }
     }
@@ -3440,7 +3440,7 @@ function ensureCalendarEventResourceIndexed(store: SearchStore, flags: Record<st
         LIMIT 1
       `).get(eventId) as SearchDocuments.CalendarEventRow | undefined;
       if (row) {
-        store.upsertDocument(calendarEventSearchDocument(row));
+        store.upsertDocument(SearchDocuments.calendarEventSearchDocument(row));
         store.setSourceState("calendar.events", "enabled", {
           backlog: 0,
           error: null,
@@ -3976,19 +3976,19 @@ function ensureAgentsCatalogSourceIndexed(store: SearchStore, flags: Record<stri
     `).all() as SearchDocuments.AgentCatalogConnectionRow[];
     let indexed = 0;
     for (const row of agents) {
-      store.upsertDocument(agentCatalogAgentSearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogAgentSearchDocument(row));
       indexed += 1;
     }
     for (const row of personalities) {
-      store.upsertDocument(agentCatalogPersonalitySearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogPersonalitySearchDocument(row));
       indexed += 1;
     }
     for (const row of collections) {
-      store.upsertDocument(agentCatalogSkillCollectionSearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogSkillCollectionSearchDocument(row));
       indexed += 1;
     }
     for (const row of connections) {
-      store.upsertDocument(agentCatalogConnectionSearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogConnectionSearchDocument(row));
       indexed += 1;
     }
     store.setCursor({
@@ -4031,7 +4031,7 @@ function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<st
         store.tombstone({ source: "agents.catalog", resourceId, reason: "agent missing during Search event refresh" });
         return 1;
       }
-      store.upsertDocument(agentCatalogAgentSearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogAgentSearchDocument(row));
       store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
       return 1;
     }
@@ -4047,7 +4047,7 @@ function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<st
         store.tombstone({ source: "agents.catalog", resourceId, reason: "personality missing during Search event refresh" });
         return 1;
       }
-      store.upsertDocument(agentCatalogPersonalitySearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogPersonalitySearchDocument(row));
       store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
       return 1;
     }
@@ -4063,7 +4063,7 @@ function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<st
         store.tombstone({ source: "agents.catalog", resourceId, reason: "skill collection missing during Search event refresh" });
         return 1;
       }
-      store.upsertDocument(agentCatalogSkillCollectionSearchDocument(row));
+      store.upsertDocument(SearchDocuments.agentCatalogSkillCollectionSearchDocument(row));
       store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
       return 1;
     }
@@ -4078,7 +4078,7 @@ function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<st
       store.tombstone({ source: "agents.catalog", resourceId, reason: "connection missing during Search event refresh" });
       return 1;
     }
-    store.upsertDocument(agentCatalogConnectionSearchDocument(row));
+    store.upsertDocument(SearchDocuments.agentCatalogConnectionSearchDocument(row));
     store.setSourceState("agents.catalog", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
     return 1;
   } finally {
@@ -4110,7 +4110,7 @@ function ensureMarketplaceChoicesSourceIndexed(store: SearchStore, flags: Record
       FROM marketplace_choices
       ORDER BY updated_at DESC
     `).all() as SearchDocuments.MarketplaceChoiceRow[];
-    for (const row of rows) store.upsertDocument(marketplaceChoiceSearchDocument(row));
+    for (const row of rows) store.upsertDocument(SearchDocuments.marketplaceChoiceSearchDocument(row));
     store.setCursor({
       source: "marketplace.choices",
       cursor: `marketplace:${rows.length}`,
@@ -4143,7 +4143,7 @@ function ensureMarketplaceChoiceResourceIndexed(store: SearchStore, flags: Recor
       store.tombstone({ source: "marketplace.choices", resourceId: choiceId, reason: "marketplace choice missing during Search event refresh" });
       return 1;
     }
-    store.upsertDocument(marketplaceChoiceSearchDocument(row));
+    store.upsertDocument(SearchDocuments.marketplaceChoiceSearchDocument(row));
     store.setSourceState("marketplace.choices", "enabled", {
       backlog: 0,
       error: null,
@@ -4176,7 +4176,7 @@ function ensureContentItemsSourceIndexed(store: SearchStore, flags: Record<strin
       FROM content_items
       ORDER BY updated_at DESC
     `).all() as SearchDocuments.ContentItemRow[];
-    for (const row of rows) store.upsertDocument(contentItemSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
+    for (const row of rows) store.upsertDocument(SearchDocuments.contentItemSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
     store.setCursor({
       source: "content.items",
       cursor: `content:${rows.length}`,
@@ -4205,7 +4205,7 @@ function ensureContentItemResourceIndexed(store: SearchStore, flags: Record<stri
       store.tombstone({ source: "content.items", resourceId: itemId, reason: "content item missing during Search event refresh" });
       return 1;
     }
-    store.upsertDocument(contentItemSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
+    store.upsertDocument(SearchDocuments.contentItemSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
     store.setSourceState("content.items", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
     return 1;
   } finally {
@@ -4234,7 +4234,7 @@ function ensureBusinessRecordsSourceIndexed(store: SearchStore, flags: Record<st
       FROM business_records
       ORDER BY updated_at DESC
     `).all() as BusinessRecordRow[];
-    for (const row of rows) store.upsertDocument(businessRecordSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
+    for (const row of rows) store.upsertDocument(SearchDocuments.businessRecordSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
     store.setCursor({
       source: "business.records",
       cursor: `business:${rows.length}`,
@@ -4263,7 +4263,7 @@ function ensureBusinessRecordResourceIndexed(store: SearchStore, flags: Record<s
       store.tombstone({ source: "business.records", resourceId: recordId, reason: "business record missing during Search event refresh" });
       return 1;
     }
-    store.upsertDocument(businessRecordSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
+    store.upsertDocument(SearchDocuments.businessRecordSearchDocument(row, SearchDocuments.pageBodyForSearch(db, row.page_id)));
     store.setSourceState("business.records", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
     return 1;
   } finally {
@@ -4350,7 +4350,7 @@ function ensureIotConfigSourceIndexed(store: SearchStore, flags: Record<string, 
       FROM iot_config
       ORDER BY kind, name
     `).all() as SearchDocuments.IotConfigRow[];
-    for (const row of rows) store.upsertDocument(iotConfigSearchDocument(row));
+    for (const row of rows) store.upsertDocument(SearchDocuments.iotConfigSearchDocument(row));
     store.setCursor({
       source: "iot.config",
       cursor: `iot:${rows.length}`,
@@ -4379,7 +4379,7 @@ function ensureIotConfigResourceIndexed(store: SearchStore, flags: Record<string
       store.tombstone({ source: "iot.config", resourceId: configId, reason: "IoT config missing during Search event refresh" });
       return 1;
     }
-    store.upsertDocument(iotConfigSearchDocument(row));
+    store.upsertDocument(SearchDocuments.iotConfigSearchDocument(row));
     store.setSourceState("iot.config", "enabled", { backlog: 0, error: null, lastIndexedAt: new Date().toISOString() });
     return 1;
   } finally {
@@ -4422,7 +4422,7 @@ function ensureConnectorsCatalogSourceIndexed(store: SearchStore, flags: Record<
     `).all() as SearchDocuments.ConnectorOperationRow[];
     let indexed = 0;
     for (const row of rows) {
-      const document = connectorCatalogSearchDocument(row, capabilities);
+      const document = SearchDocuments.connectorCatalogSearchDocument(row, capabilities);
       if (!document) continue;
       store.upsertDocument(document);
       indexed += 1;
@@ -4467,7 +4467,7 @@ function ensureConnectorCatalogResourceIndexed(store: SearchStore, flags: Record
       store.tombstone({ source: "connectors.catalog", resourceId: operationId, reason: "connector operation missing during Search event refresh" });
       return 1;
     }
-    const document = connectorCatalogSearchDocument(row, SearchDocuments.connectorCapabilitiesById(db));
+    const document = SearchDocuments.connectorCatalogSearchDocument(row, SearchDocuments.connectorCapabilitiesById(db));
     if (!document) {
       store.tombstone({ source: "connectors.catalog", resourceId: operationId, reason: "connector operation skipped during Search event refresh" });
       return 1;
@@ -4490,7 +4490,7 @@ function ensureMcpServersSourceIndexed(store: SearchStore, flags: Record<string,
   const servers = readMcpServers(configPath);
   let indexed = 0;
   for (const server of servers) {
-    store.upsertDocument(mcpServerSearchDocument(server, configPath, updatedAt));
+    store.upsertDocument(SearchDocuments.mcpServerSearchDocument(server, configPath, updatedAt));
     indexed += 1;
   }
   store.setCursor({
@@ -4514,7 +4514,7 @@ function ensureMcpServerResourceIndexed(store: SearchStore, flags: Record<string
     store.tombstone({ source: "mcp.servers", resourceId: serverId, reason: "MCP server missing during Search event refresh" });
     return 1;
   }
-  store.upsertDocument(mcpServerSearchDocument(server, configPath, updatedAt));
+  store.upsertDocument(SearchDocuments.mcpServerSearchDocument(server, configPath, updatedAt));
   store.setSourceState("mcp.servers", "enabled", {
     backlog: 0,
     error: null,
@@ -4534,7 +4534,7 @@ function ensureAppsCatalogSourceIndexed(store: SearchStore, flags: Record<string
       FROM apps
       ORDER BY pinned DESC, COALESCE(last_opened_at, updated_at) DESC
     `).all() as SearchDocuments.AppCatalogRow[];
-    for (const row of rows) store.upsertDocument(appCatalogSearchDocument(row));
+    for (const row of rows) store.upsertDocument(SearchDocuments.appCatalogSearchDocument(row));
     store.setCursor({
       source: "apps.catalog",
       cursor: `apps:${rows.length}`,
@@ -4567,7 +4567,7 @@ function ensureAppCatalogResourceIndexed(store: SearchStore, flags: Record<strin
       store.tombstone({ source: "apps.catalog", resourceId: appId, reason: "app missing during Search event refresh" });
       return 1;
     }
-    store.upsertDocument(appCatalogSearchDocument(row));
+    store.upsertDocument(SearchDocuments.appCatalogSearchDocument(row));
     store.setSourceState("apps.catalog", "enabled", {
       backlog: 0,
       error: null,
@@ -4616,7 +4616,7 @@ function ensureDesignResourcesSourceIndexed(store: SearchStore, flags: Record<st
       FROM design_resources
       ORDER BY kind, updated_at DESC
     `).all() as SearchDocuments.DesignResourceRow[];
-    for (const row of rows) store.upsertDocument(designResourceSearchDocument(row));
+    for (const row of rows) store.upsertDocument(SearchDocuments.designResourceSearchDocument(row));
     indexed += rows.length;
     store.setCursor({
       source: "design.resources",
@@ -4647,7 +4647,7 @@ function ensureDesignResourceIndexed(store: SearchStore, flags: Record<string, s
       LIMIT 1
     `).get(resourceId) as SearchDocuments.DesignResourceRow | undefined;
         if (row) {
-          store.upsertDocument(designResourceSearchDocument(row));
+          store.upsertDocument(SearchDocuments.designResourceSearchDocument(row));
           store.setSourceState("design.resources", "enabled", {
             backlog: 0,
             error: null,
@@ -4694,7 +4694,7 @@ function fileBackedDesignResourceSearchDocument(workspaceRoot: string, resourceI
   try {
     if (kind === "style") {
       const manifest = readStyle(workspaceRoot, id);
-      return designResourceSearchDocument({
+      return SearchDocuments.designResourceSearchDocument({
         id: `style:${manifest.id}`,
         kind: "style",
         name: manifest.name,
@@ -4707,7 +4707,7 @@ function fileBackedDesignResourceSearchDocument(workspaceRoot: string, resourceI
     }
     if (kind === "template") {
       const manifest = readTemplate(workspaceRoot, id);
-      return designResourceSearchDocument({
+      return SearchDocuments.designResourceSearchDocument({
         id: `template:${manifest.id}`,
         kind: "template",
         name: manifest.name,
@@ -4720,7 +4720,7 @@ function fileBackedDesignResourceSearchDocument(workspaceRoot: string, resourceI
     }
     if (kind === "reference") {
       const manifest = readReference(workspaceRoot, id);
-      return designResourceSearchDocument({
+      return SearchDocuments.designResourceSearchDocument({
         id: `reference:${manifest.id}`,
         kind: "reference",
         name: manifest.name,
