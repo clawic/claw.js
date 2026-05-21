@@ -77,9 +77,9 @@
       "path": "packages/clawjs/src/cli-search-heavy-command.ts",
       "pattern": "ownerId",
       "classification": "legacySchemaReadOnly",
-      "rationale": "Search reads legacy ownerId projections from existing tables for indexing; it does not grant authority.",
+      "rationale": "Search heavy command no longer owns this legacy ownerId read after document indexing extraction; kept as an exact zero-count regression check.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 1,
+      "maxOccurrences": 0,
       "steward": "clawjs-search"
     },
     {
@@ -87,9 +87,49 @@
       "path": "packages/clawjs/src/cli-search-heavy-command.ts",
       "pattern": "owner_id",
       "classification": "legacySchemaReadOnly",
-      "rationale": "Search reads legacy owner_id columns from existing tables for indexing; it does not grant authority.",
+      "rationale": "Search heavy command still reads legacy owner_id columns from existing tables for indexing; it does not grant authority.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 8,
+      "maxOccurrences": 4,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "search-document-core-legacy-owner-id-projection",
+      "path": "packages/clawjs/src/cli-search-document-core.ts",
+      "pattern": "ownerId",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Search document indexing projects a legacy ownerId field from existing owner_id rows for compatibility; it does not grant authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "search-document-core-legacy-owner-id-sql-read",
+      "path": "packages/clawjs/src/cli-search-document-core.ts",
+      "pattern": "owner_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Search document indexing reads legacy owner_id rows for compatibility; it does not grant authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "search-document-catalogs-legacy-owner-id-sql-read",
+      "path": "packages/clawjs/src/cli-search-document-catalogs.ts",
+      "pattern": "owner_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Search document catalog indexing forwards a legacy owner_id column from existing rows for compatibility; it does not grant authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "search-document-rows-legacy-owner-id-sql-read",
+      "path": "packages/clawjs/src/cli-search-document-rows.ts",
+      "pattern": "owner_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "Search document row typing preserves legacy owner_id columns from existing storage rows for compatibility; it does not grant authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
       "steward": "clawjs-search"
     },
     {
