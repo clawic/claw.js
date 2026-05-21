@@ -7,7 +7,11 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
-import { clawDriveApiRoutePatterns, clawDriveApiRoutes, clawPublicApiPrefix } from "@clawjs/core";
+import {
+  clawDriveApiRoutePatterns,
+  clawDriveApiRoutes,
+  clawPublicApiPrefix,
+} from "@clawjs/core";
 
 import { DriveAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { loadDriveConfig, type DriveServiceConfig } from "./config.ts";
@@ -15,6 +19,7 @@ import { DriveConverterService } from "./converters.ts";
 import { DriveConflictError, type DriveActor, DriveStore } from "./db.ts";
 import { DriveEventBus, registerRealtime } from "./realtime.ts";
 import { processItemImagePipeline } from "./image-pipeline.ts";
+import { createLazyResource, createLazyResourceProxy } from "./lazy-resource.ts";
 import { DriveSharingService } from "./sharing.ts";
 import type {
   DriveAuditEventKind,
@@ -290,7 +295,11 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
   const app = Fastify({ logger: false });
   const auth = new DriveAuthService(config.jwtSecret, ephemeralAdminToken);
   const converters = new DriveConverterService(config.converterMode);
-  const store = new DriveStore(config.dbPath, config.dataDir);
+  const lazyStore = createLazyResource(
+    () => new DriveStore(config.dbPath, config.dataDir),
+    (openedStore) => openedStore.close(),
+  );
+  const store = createLazyResourceProxy<DriveStore>(lazyStore);
   const bus = new DriveEventBus();
   const sharing = new DriveSharingService(store, bus, {
     cloudflaredPath: options.cloudflaredPath,
@@ -339,7 +348,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
   app.addHook("onClose", async () => {
     clearInterval(trashSweeper);
     sharing.shutdown();
-    store.close();
+    lazyStore.closeIfOpened();
   });
 
   app.register(cors, {

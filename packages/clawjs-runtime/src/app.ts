@@ -12,6 +12,7 @@ import {
   heuristicNudgeSynthesizer,
   heuristicUserModelSynthesizer,
 } from "./services/heuristics.ts";
+import { createLazyResource, createLazyResourceProxy } from "./lazy-resource.ts";
 import { runDistillation } from "./services/distiller.ts";
 import { runNudgeCycle } from "./services/nudge.ts";
 import { runUserModelRefresh } from "./services/user-model-updater.ts";
@@ -115,7 +116,11 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
   fs.mkdirSync(config.dataDir, { recursive: true });
 
   const app = Fastify({ logger: false, bodyLimit: 4 * 1024 * 1024 });
-  const store = new RuntimeServiceStore(config.dbPath);
+  const lazyStore = createLazyResource(
+    () => new RuntimeServiceStore(config.dbPath),
+    (openedStore) => openedStore.close(),
+  );
+  const store = createLazyResourceProxy<RuntimeServiceStore>(lazyStore);
 
   const sessionsClient = options.context?.sessionsClient ?? new SessionsApiClient({
     baseUrl: config.sessionsBaseUrl,
@@ -136,7 +141,7 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
   };
 
   app.addHook("onClose", async () => {
-    store.close();
+    lazyStore.closeIfOpened();
   });
 
   app.get(clawApiPath("health"), async () => ({

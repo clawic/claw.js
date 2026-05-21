@@ -9,7 +9,7 @@ import { clawStorageFiles, resolveClawPersistentSurfacePath } from "@clawjs/core
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
-import { ensureV1MainSchema, writeMcpServers } from "./v1-data-core.ts";
+import { ensureV1MainSchema, openMainDataStore, writeMcpServers } from "./v1-data-core.ts";
 import { captureStream, runInternalV1Cli, useIsolatedClawDataRoot, withPatchedEnv } from "./index-test-utils.ts";
 
 function parseCliJsonPayload<T>(output: string): T {
@@ -46,6 +46,17 @@ test("V2 main data paths default to the Claw home data namespace", () => {
     } as NodeJS.ProcessEnv),
     path.join(os.tmpdir(), "custom-core.sqlite"),
   );
+});
+
+test("openMainDataStore does not create sidecar databases until requested", () => {
+  const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-main-lazy-sidecars-"));
+  const store = openMainDataStore({ CLAW_DATA_DIR: dataRoot } as NodeJS.ProcessEnv);
+  store.close();
+
+  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+  for (const filename of ["sessions.sqlite", "drive.sqlite", "runtime.sqlite", "search.sqlite"]) {
+    assert.equal(fs.existsSync(path.join(dataRoot, filename)), false, filename);
+  }
 });
 
 test("mcp config writes refuse Codex-owned config paths", () => {

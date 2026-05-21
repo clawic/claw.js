@@ -61,6 +61,30 @@ async function boot() {
   return { baseUrl, authFetch, token: login.accessToken, tmpDir };
 }
 
+test("buildDriveApp and health do not open the drive database", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "drive-lazy-test-"));
+  const dbPath = path.join(tmpDir, "drive.sqlite");
+  const { app } = await buildDriveApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dbPath,
+      dataDir: tmpDir,
+      jwtSecret: "drive-test-secret",
+      converterMode: "mock",
+      uiDistDir: path.join(process.cwd(), "ui", "dist"),
+      publicBaseUrl: "http://127.0.0.1:0",
+    },
+  });
+
+  assert.equal(fs.existsSync(dbPath), false);
+  const health = await app.inject({ method: "GET", url: "/v1/health" });
+  assert.equal(health.statusCode, 200);
+  assert.equal(fs.existsSync(dbPath), false);
+  await app.close();
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
 test("health and login work", async () => {
   const { baseUrl } = await boot();
   const health = await fetch(`${baseUrl}/v1/health`);

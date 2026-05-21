@@ -148,6 +148,8 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_ke_task      ON kanban_events(task_id, recorded_at ASC);
   CREATE INDEX IF NOT EXISTS idx_ke_kind      ON kanban_events(kind, recorded_at DESC);
 `;
+const RUNTIME_SCHEMA_META_TABLE = "runtime_service_schema_meta";
+const RUNTIME_SCHEMA_VERSION = 1;
 
 interface KanbanTaskRow {
   id: string;
@@ -384,11 +386,33 @@ export class RuntimeServiceStore {
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
-    this.db.exec(SCHEMA_DDL);
+    this.ensureSchema();
   }
 
   close(): void {
     this.db.close();
+  }
+
+  private ensureSchema(): void {
+    if (this.schemaVersion() >= RUNTIME_SCHEMA_VERSION) return;
+    this.db.exec(SCHEMA_DDL);
+    this.markSchemaCurrent();
+  }
+
+  private schemaVersion(): number {
+    const table = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(RUNTIME_SCHEMA_META_TABLE);
+    if (!table) return 0;
+    const row = this.db.prepare(`SELECT version FROM ${RUNTIME_SCHEMA_META_TABLE} WHERE id = 'schema'`).get() as { version: number } | undefined;
+    return row?.version ?? 0;
+  }
+
+  private markSchemaCurrent(): void {
+    this.db.prepare(`CREATE TABLE IF NOT EXISTS ${RUNTIME_SCHEMA_META_TABLE} (id TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at INTEGER NOT NULL)`).run();
+    this.db.prepare(`
+      INSERT INTO ${RUNTIME_SCHEMA_META_TABLE} (id, version, updated_at)
+      VALUES ('schema', ?, ?)
+      ON CONFLICT(id) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at
+    `).run(RUNTIME_SCHEMA_VERSION, Date.now());
   }
 
   createJob(kind: RuntimeJobKind, payload: Record<string, unknown> | null = null): RuntimeJobRecord {

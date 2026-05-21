@@ -106,6 +106,10 @@ const USER_MODEL_DOMAIN_TABLES = ["user_profile_items", "user_profile_meta", "us
 const SIGNALS_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
 const TIME_RUNTIME_DOMAIN_TABLES = ["temporal_projections", "temporal_run_log", "temporal_executions", "temporal_items"];
 const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "feed.sqlite", "ops.sqlite"];
+const V1_MAIN_SCHEMA_META_TABLE = "claw_v1_main_schema_meta";
+const V1_MAIN_SCHEMA_VERSION = 1;
+const V1_SIDECAR_SCHEMA_META_TABLE = "claw_v1_sidecar_schema_meta";
+const V1_SIDECAR_SCHEMA_VERSION = 1;
 const KNOWLEDGE_DOMAIN_TABLES = [
   "knowledge_entities",
   "knowledge_facts",
@@ -260,13 +264,28 @@ export function resolveClawjsFilesDir(env: NodeJS.ProcessEnv = process.env): str
   return path.join(resolveClawjsDataRoot(env), "files");
 }
 
-export function openMainDataStore(env: NodeJS.ProcessEnv = process.env): DatabaseServiceStore {
+export interface V1MainSchemaOptions {
+  sidecars?: "none" | "all";
+}
+
+export function openMainDataStore(
+  env: NodeJS.ProcessEnv = process.env,
+  options: V1MainSchemaOptions = {},
+): DatabaseServiceStore {
   const store = new DatabaseServiceStore(resolveClawjsMainDbPath(env), resolveClawjsFilesDir(env));
-  ensureV1MainSchema(store.sqlite, env);
+  ensureV1MainSchema(store.sqlite, env, options);
   ensureV1Collections(store);
   return store;
 }
-export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.ProcessEnv = process.env): void {
+export function ensureV1MainSchema(
+  sqlite: Database.Database,
+  env: NodeJS.ProcessEnv = process.env,
+  options: V1MainSchemaOptions = {},
+): void {
+  if (schemaMetaVersion(sqlite, V1_MAIN_SCHEMA_META_TABLE) >= V1_MAIN_SCHEMA_VERSION) {
+    if (options.sidecars === "all") ensureV2Sidecars(env);
+    return;
+  }
   migrateAgentSessionsPreSchema(sqlite);
   if (tableExists(sqlite, "app_sidebar_snapshots")) ensureColumn(sqlite, "app_sidebar_snapshots", "project_id", "TEXT");
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
@@ -329,7 +348,8 @@ export function ensureV1MainSchema(sqlite: Database.Database, env: NodeJS.Proces
     VALUES (?, 'profile.id', ?, ?)
   `).run(PROFILE_ID, JSON.stringify(PROFILE_ID), nowIso());
   seedSidecarRegistry(sqlite);
-  ensureV2Sidecars(env);
+  markSchemaMetaVersion(sqlite, V1_MAIN_SCHEMA_META_TABLE, V1_MAIN_SCHEMA_VERSION);
+  if (options.sidecars === "all") ensureV2Sidecars(env);
 }
 
 function migrateAgentSessionsPreSchema(sqlite: Database.Database): void {
@@ -784,6 +804,21 @@ function ensureColumn(sqlite: Database.Database, table: string, column: string, 
   sqlite.prepare(`ALTER TABLE ${quoteIdent(table)} ADD COLUMN ${quoteIdent(column)} ${definition}`).run();
 }
 
+function schemaMetaVersion(sqlite: Database.Database, table: string): number {
+  if (!tableExists(sqlite, table)) return 0;
+  const row = sqlite.prepare(`SELECT version FROM ${quoteIdent(table)} WHERE id = 'schema'`).get() as { version: number } | undefined;
+  return row?.version ?? 0;
+}
+
+function markSchemaMetaVersion(sqlite: Database.Database, table: string, version: number): void {
+  sqlite.prepare(`CREATE TABLE IF NOT EXISTS ${quoteIdent(table)} (id TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at TEXT NOT NULL)`).run();
+  sqlite.prepare(`
+    INSERT INTO ${quoteIdent(table)} (id, version, updated_at)
+    VALUES ('schema', ?, ?)
+    ON CONFLICT(id) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at
+  `).run(version, nowIso());
+}
+
 export function openSidecar(filename: string, env: NodeJS.ProcessEnv = process.env): Database.Database {
   const dbPath = path.join(resolveClawjsDataRoot(env), filename);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -802,31 +837,39 @@ function ensureV2Sidecars(env: NodeJS.ProcessEnv = process.env): void {
 }
 
 function ensureSidecarSchema(filename: string, sqlite: Database.Database): void {
+  if (schemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE) >= V1_SIDECAR_SCHEMA_VERSION) return;
   if (filename === "vault.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["vault.sqlite"]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
   if (filename === "sessions.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["sessions.sqlite"]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
   if (filename === "audio.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["audio.sqlite"]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
   if (filename === "drive.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["drive.sqlite"]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
   if (filename === "search.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["search.sqlite"]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
   if (filename === "runtime.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["runtime.sqlite"]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
   sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE.default);
+  markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
 }
 
 function indexSessionSidecar(files: string[], source: string, indexedAt: string): void {

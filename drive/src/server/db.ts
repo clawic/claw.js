@@ -39,6 +39,8 @@ import type {
 } from "../shared/types.ts";
 
 const ROOT_FOLDER_ID = "root";
+const DRIVE_SCHEMA_META_TABLE = "drive_service_schema_meta";
+const DRIVE_SCHEMA_VERSION = 1;
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -293,12 +295,34 @@ export class DriveStore {
     this.sqlite = new Database(dbPath);
     this.sqlite.pragma("journal_mode = WAL");
     this.sqlite.pragma("foreign_keys = ON");
-    this.init();
+    this.ensureSchema();
     this.seed();
   }
 
   close(): void {
     this.sqlite.close();
+  }
+
+  private ensureSchema(): void {
+    if (this.schemaVersion() >= DRIVE_SCHEMA_VERSION) return;
+    this.init();
+    this.markSchemaCurrent();
+  }
+
+  private schemaVersion(): number {
+    const table = this.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(DRIVE_SCHEMA_META_TABLE);
+    if (!table) return 0;
+    const row = this.sqlite.prepare(`SELECT version FROM ${DRIVE_SCHEMA_META_TABLE} WHERE id = 'schema'`).get() as { version: number } | undefined;
+    return row?.version ?? 0;
+  }
+
+  private markSchemaCurrent(): void {
+    this.sqlite.prepare(`CREATE TABLE IF NOT EXISTS ${DRIVE_SCHEMA_META_TABLE} (id TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at INTEGER NOT NULL)`).run();
+    this.sqlite.prepare(`
+      INSERT INTO ${DRIVE_SCHEMA_META_TABLE} (id, version, updated_at)
+      VALUES ('schema', ?, ?)
+      ON CONFLICT(id) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at
+    `).run(DRIVE_SCHEMA_VERSION, Date.now());
   }
 
   private init(): void {
