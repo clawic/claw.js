@@ -29,7 +29,7 @@ import type {
   SkillDescriptor,
 } from "@clawjs/core";
 
-import type { ExecResult } from "../host/process.ts";
+import type { ExecResult, StreamOptions } from "../host/process.ts";
 
 export interface RuntimeProbeStatus extends RuntimeDescriptor {
   installed?: boolean;
@@ -58,6 +58,7 @@ export interface RuntimeDoctorReport {
 
 export interface CommandRunner {
   exec(command: string, args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }): Promise<ExecResult>;
+  stream?(command: string, args: string[], options?: StreamOptions): Promise<ExecResult>;
 }
 
 export interface DetachedAuthLauncher {
@@ -196,6 +197,7 @@ export interface SaveApiKeyResult {
 export interface SessionCliInvocation {
   command: string;
   args: string[];
+  cwd?: string;
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
   parser: "json-payloads" | "codex-jsonl" | "stdout-text";

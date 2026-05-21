@@ -23,6 +23,7 @@ export interface StreamSessionInput {
   transport?: "auto" | "gateway" | "cli";
   model?: string;
   chunkSize?: number;
+  coalesceMs?: number;
   gatewayRetries?: number;
   signal?: AbortSignal;
 }
@@ -49,6 +50,168 @@ export type SessionStreamEvent =
   | { type: "title"; sessionId: string; title: string; source: "session" }
   | { type: "error"; sessionId: string; error: Error; transport: "gateway" | "cli"; partialText?: string }
   | { type: "aborted"; sessionId: string; reason?: string; partialText?: string };
+
+export interface CompactStreamTraceDelta {
+  offset: number;
+  length: number;
+  text: string;
+  at: number;
+}
+
+export interface CompactAssistantStreamTrace {
+  kind: "assistant_stream_trace";
+  schemaVersion: 1;
+  coalesceMs: number;
+  finalLength: number;
+  deltas: CompactStreamTraceDelta[];
+}
+
+export function buildCompactAssistantStreamTrace(
+  deltas: Array<{ delta: string; at?: number }>,
+  coalesceMs = 16,
+): CompactAssistantStreamTrace {
+  let offset = 0;
+  return {
+    kind: "assistant_stream_trace",
+    schemaVersion: 1,
+    coalesceMs,
+    finalLength: deltas.reduce((total, entry) => total + entry.delta.length, 0),
+    deltas: deltas.map((entry) => {
+      const delta = {
+        offset,
+        length: entry.delta.length,
+        text: entry.delta,
+        at: entry.at ?? Date.now(),
+      };
+      offset += entry.delta.length;
+      return delta;
+    }),
+  };
+}
+
+class AsyncQueue<T> {
+  private readonly values: T[] = [];
+  private readonly waiters: Array<{
+    resolve: (result: IteratorResult<T>) => void;
+    reject: (error: Error) => void;
+  }> = [];
+  private closed = false;
+  private error: Error | null = null;
+
+  push(value: T): void {
+    if (this.closed || this.error) return;
+    const waiter = this.waiters.shift();
+    if (waiter) {
+      waiter.resolve({ value, done: false });
+      return;
+    }
+    this.values.push(value);
+  }
+
+  close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    for (const waiter of this.waiters.splice(0)) {
+      waiter.resolve({ value: undefined, done: true });
+    }
+  }
+
+  fail(error: Error): void {
+    if (this.error) return;
+    this.error = error;
+    for (const waiter of this.waiters.splice(0)) {
+      waiter.reject(error);
+    }
+  }
+
+  async next(): Promise<IteratorResult<T>> {
+    const value = this.values.shift();
+    if (value !== undefined) return { value, done: false };
+    if (this.error) throw this.error;
+    if (this.closed) return { value: undefined, done: true };
+    return await new Promise<IteratorResult<T>>((resolve, reject) => {
+      this.waiters.push({ resolve, reject });
+    });
+  }
+
+  async *iterate(): AsyncGenerator<T> {
+    while (true) {
+      const result = await this.next();
+      if (result.done) return;
+      yield result.value;
+    }
+  }
+}
+
+function appendChunkText(existing: StreamChunk, next: StreamChunk): StreamChunk {
+  return {
+    ...existing,
+    delta: `${existing.delta}${next.delta}`,
+    ...(existing.reasoningDelta || next.reasoningDelta ? { reasoningDelta: `${existing.reasoningDelta ?? ""}${next.reasoningDelta ?? ""}` } : {}),
+  };
+}
+
+export async function* coalesceStreamChunks(
+  source: AsyncIterable<StreamChunk>,
+  input: Pick<StreamSessionInput, "coalesceMs"> = {},
+): AsyncGenerator<StreamChunk> {
+  const coalesceMs = input.coalesceMs ?? 16;
+  if (coalesceMs <= 0) {
+    yield* source;
+    return;
+  }
+
+  const queue = new AsyncQueue<StreamChunk>();
+  let pending: StreamChunk | null = null;
+  let timer: NodeJS.Timeout | null = null;
+
+  const flush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (!pending) return;
+    queue.push(pending);
+    pending = null;
+  };
+
+  const schedule = () => {
+    if (timer) return;
+    timer = setTimeout(flush, coalesceMs);
+  };
+
+  void (async () => {
+    try {
+      for await (const chunk of source) {
+        if (chunk.done) {
+          flush();
+          queue.push(chunk);
+          queue.close();
+          return;
+        }
+        if (!chunk.delta || chunk.toolCalls?.length) {
+          flush();
+          queue.push(chunk);
+          continue;
+        }
+        pending = pending
+          && pending.sessionId === chunk.sessionId
+          && pending.messageId === chunk.messageId
+          && !pending.toolCalls?.length
+          ? appendChunkText(pending, chunk)
+          : (flush(), chunk);
+        schedule();
+      }
+      flush();
+      queue.close();
+    } catch (error) {
+      flush();
+      queue.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  })();
+
+  yield* queue.iterate();
+}
 
 function createAbortError(signal?: AbortSignal): Error {
   return new Error(signal?.reason ? `Session stream aborted: ${String(signal.reason)}` : "Session stream aborted");
@@ -164,6 +327,10 @@ function normalizeExtractedText(value: unknown): string {
 
 function normalizeOutputText(value: unknown): string {
   return typeof value === "string" && value.trim() ? value : "";
+}
+
+function outputString(value: unknown): string {
+  return typeof value === "string" ? value : "";
 }
 
 function collectCodexText(value: unknown, output: string[]): void {
@@ -291,10 +458,96 @@ function isCodexAppServerComplete(message: unknown): boolean {
   return false;
 }
 
-async function runCodexAppServerTurn(
+function extractContentText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((item) => {
+      const record = asRecord(item);
+      if (!record) return "";
+      return outputString(record.text) || outputString(record.delta);
+    })
+    .join("");
+}
+
+function isAgentMessageType(value: unknown): boolean {
+  const normalized = normalizeExtractedText(value).toLowerCase().replace(/[_-]/g, "");
+  return normalized === "agentmessage" || normalized === "assistantmessage";
+}
+
+function extractCodexLiveDeltas(message: unknown): string[] {
+  const record = asRecord(message);
+  if (!record) return [];
+
+  const method = normalizeExtractedText(record.method);
+  const type = normalizeExtractedText(record.type);
+  const params = asRecord(record.params);
+  if (method === "item/agentMessage/delta") {
+    const delta = outputString(params?.delta) || outputString(record.delta);
+    return delta.length > 0 ? [delta] : [];
+  }
+  if (method === "codex/event") {
+    const msg = asRecord(params?.msg);
+    const nested = extractCodexLiveDeltas(msg ?? params);
+    if (nested.length) return nested;
+  }
+  if (isAgentMessageType(type) || type === "agent_message") {
+    const delta = outputString(record.delta) || outputString(record.message);
+    return delta.length > 0 ? [delta] : [];
+  }
+  return [];
+}
+
+function extractCodexCompletedMessageText(message: unknown): string {
+  const record = asRecord(message);
+  if (!record) return "";
+
+  const method = normalizeExtractedText(record.method);
+  const type = normalizeExtractedText(record.type);
+  const params = asRecord(record.params);
+  const item = asRecord(params?.item) ?? asRecord(record.item);
+  const isCompleted = method === "item/completed" || type === "item.completed";
+  if (!isCompleted || !isAgentMessageType(item?.type)) return "";
+
+  return outputString(item?.text).trim()
+    || outputString(item?.message).trim()
+    || extractContentText(item?.content).trim();
+}
+
+function emitCompletionFallback(
+  queue: AsyncQueue<StreamChunk>,
+  input: StreamSessionInput,
+  messageId: string,
+  streamedText: string,
+  completedText: string,
+): string {
+  if (!completedText.trim()) return streamedText;
+  if (!streamedText) {
+    queue.push({
+      sessionId: input.sessionId,
+      messageId,
+      delta: completedText,
+      done: false,
+    });
+    return completedText;
+  }
+  if (completedText.startsWith(streamedText) && completedText.length > streamedText.length) {
+    const suffix = completedText.slice(streamedText.length);
+    queue.push({
+      sessionId: input.sessionId,
+      messageId,
+      delta: suffix,
+      done: false,
+    });
+    return completedText;
+  }
+  return streamedText;
+}
+
+async function* streamCodexAppServerChunks(
   input: StreamSessionInput,
   gatewayConfig: SessionGatewayDescriptor,
-): Promise<string> {
+): AsyncGenerator<StreamChunk> {
   const command = gatewayConfig.command ?? "codex";
   const args = gatewayConfig.args ?? ["app-server"];
   const prompt = buildOpenClawCliPrompt({
@@ -302,139 +555,147 @@ async function runCodexAppServerTurn(
     contextBlocks: input.contextBlocks,
     messages: input.messages,
   });
-
-  return await new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: gatewayConfig.cwd,
-      env: gatewayConfig.env,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    const chunks: string[] = [];
-    let buffer = "";
-    let stderr = "";
-    let settled = false;
-    let threadId: string | null = null;
-    let nextId = 0;
-
-    const finish = (error?: Error) => {
-      if (settled) return;
-      settled = true;
-      if (timeoutId) clearTimeout(timeoutId);
-      child.kill();
-      if (error) {
-        reject(error);
-        return;
-      }
-      const text = chunks.join("").trim();
-      if (!text) {
-        reject(new Error(stderr.trim() || "Codex app-server returned no text"));
-        return;
-      }
-      resolve(text);
-    };
-
-    const send = (message: unknown) => {
-      child.stdin.write(`${JSON.stringify(message)}\n`);
-    };
-
-    const startTurn = () => {
-      if (!threadId) return;
-      send({
-        method: "turn/start",
-        id: nextId++,
-        params: {
-          threadId,
-          input: [{ type: "text", text: prompt }],
-        },
-      });
-    };
-
-    const timeoutId = setTimeout(() => {
-      finish(new Error("Codex app-server timed out"));
-    }, 130_000);
-
-    child.on("error", (error) => finish(error instanceof Error ? error : new Error(String(error))));
-    child.stderr?.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-    child.stdout?.on("data", (chunk: Buffer | string) => {
-      buffer += chunk.toString();
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        let message: unknown;
-        try {
-          message = JSON.parse(trimmed);
-        } catch {
-          continue;
-        }
-
-        const extracted: string[] = [];
-        collectCodexText(message, extracted);
-        chunks.push(...extracted);
-
-        const record = asRecord(message);
-        const result = asRecord(record?.result);
-        const thread = asRecord(result?.thread);
-        const candidateThreadId = normalizeExtractedText(thread?.id) || normalizeExtractedText(result?.threadId);
-        if (!threadId && candidateThreadId) {
-          threadId = candidateThreadId;
-          startTurn();
-        }
-
-        if (isCodexAppServerComplete(message)) {
-          finish();
-        }
-      }
-    });
-    child.on("close", () => {
-      finish();
-    });
-
-    send({
-      method: "initialize",
-      id: nextId++,
-      params: {
-        clientInfo: {
-          name: "clawjs",
-          title: "ClawJS",
-          version: "0.1.0",
-        },
-      },
-    });
-    send({ method: "initialized", params: {} });
-    send({
-      method: "thread/start",
-      id: nextId++,
-      params: {
-        model: input.model || gatewayConfig.model || "gpt-5.4",
-      },
-    });
-  });
-}
-
-async function* streamCodexAppServerChunks(
-  input: StreamSessionInput,
-  gatewayConfig: SessionGatewayDescriptor,
-): AsyncGenerator<StreamChunk> {
-  const text = await runCodexAppServerTurn(input, gatewayConfig);
   const messageId = randomUUID();
-  for (const chunk of splitTextIntoChunks(text, input.chunkSize ?? 24)) {
-    yield {
-      sessionId: input.sessionId,
-      messageId,
-      delta: chunk,
-      done: false,
-    };
-  }
-  yield {
-    sessionId: input.sessionId,
-    messageId,
-    delta: "",
-    done: true,
+  const queue = new AsyncQueue<StreamChunk>();
+
+  const child = spawn(command, args, {
+    cwd: gatewayConfig.cwd,
+    env: gatewayConfig.env,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  let buffer = "";
+  let stderr = "";
+  let settled = false;
+  let threadId: string | null = null;
+  let nextId = 0;
+  let streamedText = "";
+  let completedText = "";
+
+  const cleanup = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    input.signal?.removeEventListener("abort", onAbort);
   };
+
+  const finish = (error?: Error) => {
+    if (settled) return;
+    settled = true;
+    cleanup();
+    if (!child.killed) child.kill();
+    if (error) {
+      queue.fail(error);
+      return;
+    }
+    streamedText = emitCompletionFallback(queue, input, messageId, streamedText, completedText.trim());
+    if (!streamedText.trim()) {
+      queue.fail(new Error(stderr.trim() || "Codex app-server returned no text"));
+      return;
+    }
+    queue.push({ sessionId: input.sessionId, messageId, delta: "", done: true });
+    queue.close();
+  };
+
+  const send = (message: unknown) => {
+    if (child.stdin.writable) child.stdin.write(`${JSON.stringify(message)}\n`);
+  };
+
+  const startTurn = () => {
+    if (!threadId) return;
+    send({
+      method: "turn/start",
+      id: nextId++,
+      params: {
+        threadId,
+        input: [{ type: "text", text: prompt }],
+      },
+    });
+  };
+
+  const handleMessage = (message: unknown) => {
+    const record = asRecord(message);
+    const result = asRecord(record?.result);
+    const thread = asRecord(result?.thread);
+    const candidateThreadId = normalizeExtractedText(thread?.id) || normalizeExtractedText(result?.threadId);
+    if (!threadId && candidateThreadId) {
+      threadId = candidateThreadId;
+      startTurn();
+    }
+
+    const completed = extractCodexCompletedMessageText(message);
+    if (completed) completedText = completed;
+
+    for (const delta of extractCodexLiveDeltas(message)) {
+      streamedText += delta;
+      queue.push({
+        sessionId: input.sessionId,
+        messageId,
+        delta,
+        done: false,
+      });
+    }
+
+    if (isCodexAppServerComplete(message)) {
+      finish();
+    }
+  };
+
+  const drainBuffer = () => {
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        handleMessage(JSON.parse(trimmed) as unknown);
+      } catch {
+        continue;
+      }
+    }
+  };
+
+  const onAbort = () => finish(createAbortError(input.signal));
+  const timeoutId = setTimeout(() => {
+    finish(new Error("Codex app-server timed out"));
+  }, 130_000);
+
+  child.on("error", (error) => finish(error instanceof Error ? error : new Error(String(error))));
+  child.stderr?.on("data", (chunk: Buffer | string) => {
+    stderr += chunk.toString();
+  });
+  child.stdout?.on("data", (chunk: Buffer | string) => {
+    buffer += chunk.toString();
+    drainBuffer();
+  });
+  child.on("close", () => {
+    if (buffer.trim()) {
+      buffer += "\n";
+      drainBuffer();
+    }
+    finish();
+  });
+  input.signal?.addEventListener("abort", onAbort, { once: true });
+
+  send({
+    method: "initialize",
+    id: nextId++,
+    params: {
+      clientInfo: {
+        name: "clawjs",
+        title: "ClawJS",
+        version: "0.1.0",
+      },
+    },
+  });
+  send({ method: "initialized", params: {} });
+  send({
+    method: "thread/start",
+    id: nextId++,
+    params: {
+      model: input.model || gatewayConfig.model || "gpt-5.4",
+    },
+  });
+
+  yield* queue.iterate();
 }
 
 function buildGatewayHeaders(
@@ -733,7 +994,13 @@ async function* streamCliChunks(
     prompt,
     ...(input.model ? { model: input.model } : {}),
   });
+  if (invocation.parser === "codex-jsonl" && runner.stream) {
+    yield* streamCodexJsonlCliChunks(input, runner, invocation);
+    return;
+  }
+
   const result = await runner.exec(invocation.command, invocation.args, {
+    cwd: invocation.cwd,
     env: invocation.env,
     timeoutMs: invocation.timeoutMs ?? 130_000,
   });
@@ -749,14 +1016,12 @@ async function* streamCliChunks(
   }
 
   const messageId = randomUUID();
-  for (const chunk of splitTextIntoChunks(text, input.chunkSize ?? 24)) {
-    yield {
-      sessionId: input.sessionId,
-      messageId,
-      delta: chunk,
-      done: false,
-    };
-  }
+  yield {
+    sessionId: input.sessionId,
+    messageId,
+    delta: text,
+    done: false,
+  };
 
   yield {
     sessionId: input.sessionId,
@@ -764,6 +1029,88 @@ async function* streamCliChunks(
     delta: "",
     done: true,
   };
+}
+
+async function* streamCodexJsonlCliChunks(
+  input: StreamSessionInput,
+  runner: CommandRunner,
+  invocation: ReturnType<RuntimeSessionAdapter["buildCliInvocation"]>,
+): AsyncGenerator<StreamChunk> {
+  const messageId = randomUUID();
+  const queue = new AsyncQueue<StreamChunk>();
+  let stdout = "";
+  let stderr = "";
+  let stdoutBuffer = "";
+  let streamedText = "";
+  let completedText = "";
+
+  const handleMessage = (message: unknown) => {
+    const completed = extractCodexCompletedMessageText(message);
+    if (completed) completedText = completed;
+    for (const delta of extractCodexLiveDeltas(message)) {
+      streamedText += delta;
+      queue.push({
+        sessionId: input.sessionId,
+        messageId,
+        delta,
+        done: false,
+      });
+    }
+  };
+
+  const drainStdout = () => {
+    const lines = stdoutBuffer.split(/\r?\n/);
+    stdoutBuffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        handleMessage(JSON.parse(trimmed) as unknown);
+      } catch {
+        continue;
+      }
+    }
+  };
+
+  void runner.stream!(invocation.command, invocation.args, {
+    cwd: invocation.cwd,
+    env: invocation.env,
+    timeoutMs: invocation.timeoutMs ?? 130_000,
+    onStdout(chunk) {
+      stdout += chunk;
+      stdoutBuffer += chunk;
+      drainStdout();
+    },
+    onStderr(chunk) {
+      stderr += chunk;
+    },
+  }).then((result) => {
+    stdout = stdout || result.stdout;
+    stderr = stderr || result.stderr;
+    if (stdoutBuffer.trim()) {
+      stdoutBuffer += "\n";
+      drainStdout();
+    }
+    let finalText = completedText.trim();
+    if (!finalText) {
+      try {
+        finalText = extractCodexJsonlText([stdout, stderr].filter((value) => value.trim()).join("\n"));
+      } catch {
+        finalText = streamedText;
+      }
+    }
+    streamedText = emitCompletionFallback(queue, input, messageId, streamedText, finalText);
+    if (!streamedText.trim()) {
+      queue.fail(new Error("Runtime CLI returned no text"));
+      return;
+    }
+    queue.push({ sessionId: input.sessionId, messageId, delta: "", done: true });
+    queue.close();
+  }).catch((error) => {
+    queue.fail(error instanceof Error ? error : new Error(String(error)));
+  });
+
+  yield* queue.iterate();
 }
 
 export async function* streamRuntimeSession(
@@ -779,12 +1126,12 @@ export async function* streamRuntimeSession(
 
   if ((transport === "gateway" || transport === "auto") && gatewayConfig && fetchImpl) {
     try {
-      yield* executeGatewayTransport(input, fetchImpl, gatewayConfig, dependencies);
+      yield* coalesceStreamChunks(executeGatewayTransport(input, fetchImpl, gatewayConfig, dependencies), input);
       return;
     } catch (error) {
       if (transport === "auto" && canUseGatewayTextFallback) {
         try {
-          yield* executeGatewayTransport(input, fetchImpl, fallbackGatewayConfig!, dependencies);
+          yield* coalesceStreamChunks(executeGatewayTransport(input, fetchImpl, fallbackGatewayConfig!, dependencies), input);
           return;
         } catch {
           // fall through to CLI
@@ -802,7 +1149,7 @@ export async function* streamRuntimeSession(
     throw new Error("sessionAdapter is required for CLI session fallback");
   }
 
-  yield* streamCliChunks(input, dependencies.runner, sessionAdapter);
+  yield* coalesceStreamChunks(streamCliChunks(input, dependencies.runner, sessionAdapter), input);
 }
 
 export async function* streamOpenClawSession(
@@ -876,7 +1223,7 @@ export async function* streamRuntimeSessionEvents(
         throw new Error("gatewayConfig is required for gateway session streaming");
       }
       yield { type: "transport", sessionId: input.sessionId, transport: "gateway", fallback: false };
-      for await (const chunk of executeGatewayTransport(input, fetchImpl!, gatewayConfig!, dependencies, (error, attempt, maxAttempts) => {
+      for await (const chunk of coalesceStreamChunks(executeGatewayTransport(input, fetchImpl!, gatewayConfig!, dependencies, (error, attempt, maxAttempts) => {
         retryEvents.push({
           type: "retry",
           sessionId: input.sessionId,
@@ -885,7 +1232,7 @@ export async function* streamRuntimeSessionEvents(
           maxAttempts,
           error,
         });
-      })) {
+      }), input)) {
         for (const retryEvent of flushRetries()) {
           yield retryEvent;
         }
@@ -909,7 +1256,7 @@ export async function* streamRuntimeSessionEvents(
         throw new Error("runner is required for CLI session fallback");
       }
       yield { type: "transport", sessionId: input.sessionId, transport: "cli", fallback: false };
-      for await (const chunk of streamCliChunks(input, dependencies.runner!, sessionAdapter!)) {
+      for await (const chunk of coalesceStreamChunks(streamCliChunks(input, dependencies.runner!, sessionAdapter!), input)) {
         if (!chunk.done) {
           streamedAssistantText += chunk.delta;
           yield { type: "chunk", chunk };
@@ -925,7 +1272,7 @@ export async function* streamRuntimeSessionEvents(
     if (canUseGateway) {
       yield { type: "transport", sessionId: input.sessionId, transport: "gateway", fallback: false };
       try {
-        for await (const chunk of executeGatewayTransport(input, fetchImpl!, gatewayConfig!, dependencies, (error, attempt, maxAttempts) => {
+        for await (const chunk of coalesceStreamChunks(executeGatewayTransport(input, fetchImpl!, gatewayConfig!, dependencies, (error, attempt, maxAttempts) => {
           retryEvents.push({
             type: "retry",
             sessionId: input.sessionId,
@@ -934,7 +1281,7 @@ export async function* streamRuntimeSessionEvents(
             maxAttempts,
             error,
           });
-        })) {
+        }), input)) {
           for (const retryEvent of flushRetries()) {
             yield retryEvent;
           }
@@ -961,7 +1308,7 @@ export async function* streamRuntimeSessionEvents(
         if (canUseGatewayTextFallback) {
           yield { type: "transport", sessionId: input.sessionId, transport: "gateway", fallback: true };
           try {
-            for await (const chunk of executeGatewayTransport(input, fetchImpl!, fallbackGatewayConfig!, dependencies, (fallbackError, attempt, maxAttempts) => {
+            for await (const chunk of coalesceStreamChunks(executeGatewayTransport(input, fetchImpl!, fallbackGatewayConfig!, dependencies, (fallbackError, attempt, maxAttempts) => {
               retryEvents.push({
                 type: "retry",
                 sessionId: input.sessionId,
@@ -970,7 +1317,7 @@ export async function* streamRuntimeSessionEvents(
                 maxAttempts,
                 error: fallbackError,
               });
-            })) {
+            }), input)) {
               for (const retryEvent of flushRetries()) {
                 yield retryEvent;
               }
@@ -1007,7 +1354,7 @@ export async function* streamRuntimeSessionEvents(
     }
 
     yield { type: "transport", sessionId: input.sessionId, transport: "cli", fallback: canUseGateway };
-    for await (const chunk of streamCliChunks(input, dependencies.runner!, sessionAdapter!)) {
+    for await (const chunk of coalesceStreamChunks(streamCliChunks(input, dependencies.runner!, sessionAdapter!), input)) {
       if (!chunk.done) {
         streamedAssistantText += chunk.delta;
         yield { type: "chunk", chunk };

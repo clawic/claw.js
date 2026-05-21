@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { buildCompactAssistantStreamTrace } from "./sessions/stream.ts";
+
 export function createClawSessionFacades(locals: Record<string, any>): Record<string, any> {
   const {
     sessionStore,
@@ -135,6 +137,7 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
         }
 
         let fullText = "";
+        const streamDeltas = [];
         let completed = false;
         let failed = false;
 
@@ -150,6 +153,7 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
           messages: session.messages,
           transport: input.transport,
           chunkSize: input.chunkSize,
+          coalesceMs: input.coalesceMs,
           gatewayRetries: input.gatewayRetries,
           signal: input.signal,
         }, {
@@ -159,6 +163,7 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
         })) {
           if (event.type === "chunk") {
             fullText += event.chunk.delta;
+            streamDeltas.push({ delta: event.chunk.delta, at: Date.now() });
           }
           if (event.type === "done") {
             completed = true;
@@ -186,6 +191,9 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
           sessionStore.appendMessage(input.sessionId, {
             role: "assistant",
             content: fullText.trim(),
+            metadata: {
+              streamTrace: buildCompactAssistantStreamTrace(streamDeltas, input.coalesceMs ?? 16),
+            },
           });
           appendAuditEvent("sessions.assistant_stream_persisted", "sessions", {
             sessionId: input.sessionId,
@@ -207,6 +215,7 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
         }
 
         let fullText = "";
+        const streamDeltas = [];
 
         for await (const chunk of streamRuntimeSession({
           sessionId: input.sessionId,
@@ -220,6 +229,7 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
           messages: session.messages,
           transport: input.transport,
           chunkSize: input.chunkSize,
+          coalesceMs: input.coalesceMs,
           gatewayRetries: input.gatewayRetries,
           signal: input.signal,
         }, {
@@ -229,6 +239,7 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
         })) {
           if (!chunk.done) {
             fullText += chunk.delta;
+            streamDeltas.push({ delta: chunk.delta, at: Date.now() });
           }
           yield chunk;
         }
@@ -237,6 +248,9 @@ export function createClawSessionFacades(locals: Record<string, any>): Record<st
           sessionStore.appendMessage(input.sessionId, {
             role: "assistant",
             content: fullText.trim(),
+            metadata: {
+              streamTrace: buildCompactAssistantStreamTrace(streamDeltas, input.coalesceMs ?? 16),
+            },
           });
           appendAuditEvent("sessions.assistant_stream_persisted", "sessions", {
             sessionId: input.sessionId,

@@ -1014,6 +1014,7 @@ export interface ClawInstance {
       ruleHints?: Omit<RulesCompileInput, "prompt">;
       transport?: "auto" | "gateway" | "cli";
       chunkSize?: number;
+      coalesceMs?: number;
       gatewayRetries?: number;
       signal?: AbortSignal;
     }) => AsyncGenerator<SessionStreamEvent>;
@@ -1024,6 +1025,7 @@ export interface ClawInstance {
       ruleHints?: Omit<RulesCompileInput, "prompt">;
       transport?: "auto" | "gateway" | "cli";
       chunkSize?: number;
+      coalesceMs?: number;
       gatewayRetries?: number;
       signal?: AbortSignal;
     }) => AsyncGenerator<{ sessionId: string; messageId?: string; delta: string; done: boolean }>;

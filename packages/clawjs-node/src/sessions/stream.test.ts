@@ -7,7 +7,7 @@ import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
-import { extractCodexJsonlText, extractOpenClawCliText, splitTextIntoChunks, streamOpenClawSession, streamOpenClawSessionEvents, type StreamSessionDependencies } from "./stream.ts";
+import { coalesceStreamChunks, extractCodexJsonlText, extractOpenClawCliText, splitTextIntoChunks, streamOpenClawSession, streamOpenClawSessionEvents, type StreamSessionDependencies } from "./stream.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -94,8 +94,10 @@ if (args[0] === "app-server") {
       process.stdout.write(JSON.stringify({ method: "turn/started", params: { input: message.params.input } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "item/started", params: { item: { type: "userMessage", content: message.params.input } } }) + "\\n");
       process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "userMessage", content: message.params.input } } }) + "\\n");
-      process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "agentMessage", content: [{ type: "text", text: "app server reply" }] } } }) + "\\n");
-      process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n");
+      setTimeout(() => process.stdout.write(JSON.stringify({ method: "item/agentMessage/delta", params: { delta: "app " } }) + "\\n"), 5);
+      setTimeout(() => process.stdout.write(JSON.stringify({ method: "item/agentMessage/delta", params: { delta: "server reply" } }) + "\\n"), 15);
+      setTimeout(() => process.stdout.write(JSON.stringify({ method: "item/completed", params: { item: { type: "agentMessage", content: [{ type: "text", text: "app server reply" }] } } }) + "\\n"), 30);
+      setTimeout(() => process.stdout.write(JSON.stringify({ method: "turn/completed", params: {} }) + "\\n"), 40);
     }
   });
   return;
@@ -133,23 +135,29 @@ process.exit(1);
   };
 
   const appServerChunks: string[] = [];
+  let firstChunkAt = 0;
+  let doneAt = 0;
   for await (const chunk of streamOpenClawSession({
     sessionId: "codex-app-server",
     messages: [{ role: "user", content: "hello" }],
-    chunkSize: 32,
+    coalesceMs: 0,
   }, {
     sessionAdapter: adapter,
   })) {
+    if (chunk.done) doneAt = Date.now();
+    if (!chunk.done && firstChunkAt === 0) firstChunkAt = Date.now();
     if (!chunk.done) appServerChunks.push(chunk.delta);
   }
-  assert.deepEqual(appServerChunks, ["app server reply"]);
+  assert.deepEqual(appServerChunks, ["app ", "server reply"]);
+  assert.ok(firstChunkAt > 0);
+  assert.ok(doneAt >= firstChunkAt);
 
   const execChunks: string[] = [];
   for await (const chunk of streamOpenClawSession({
     sessionId: "codex-exec",
     messages: [{ role: "user", content: "hello" }],
     transport: "cli",
-    chunkSize: 32,
+    coalesceMs: 0,
   }, {
     sessionAdapter: adapter,
     runner: {
@@ -162,6 +170,72 @@ process.exit(1);
     if (!chunk.done) execChunks.push(chunk.delta);
   }
   assert.deepEqual(execChunks, ["exec reply"]);
+});
+
+test("streamOpenClawSession streams Codex exec JSONL incrementally when runner supports stdout streaming", async () => {
+  const adapter: StreamSessionDependencies["sessionAdapter"] = {
+    transport: { kind: "cli", streaming: true },
+    gateway: null,
+    fallbackGateway: null,
+    buildCliInvocation() {
+      return {
+        command: "codex",
+        args: ["exec"],
+        parser: "codex-jsonl",
+      };
+    },
+    supportsGateway: false,
+  };
+  const chunks: string[] = [];
+  for await (const chunk of streamOpenClawSession({
+    sessionId: "codex-streaming-exec",
+    messages: [{ role: "user", content: "hello" }],
+    transport: "cli",
+    coalesceMs: 0,
+  }, {
+    sessionAdapter: adapter,
+    runner: {
+      exec: async () => {
+        throw new Error("exec should not be used");
+      },
+      stream: async (_command, _args, options) => {
+        options?.onStdout?.(`${JSON.stringify({ type: "agent_message", delta: "real " })}\n`);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        options?.onStdout?.(`${JSON.stringify({ type: "agent_message", delta: "stream" })}\n`);
+        options?.onStdout?.(`${JSON.stringify({ type: "turn_completed" })}\n`);
+        return {
+          stdout: [
+            JSON.stringify({ type: "agent_message", delta: "real " }),
+            JSON.stringify({ type: "agent_message", delta: "stream" }),
+            JSON.stringify({ type: "turn_completed" }),
+          ].join("\n"),
+          stderr: "",
+          exitCode: 0,
+        };
+      },
+    },
+  })) {
+    if (!chunk.done) chunks.push(chunk.delta);
+  }
+  assert.deepEqual(chunks, ["real ", "stream"]);
+});
+
+test("coalesceStreamChunks batches small deltas and flushes before done", async () => {
+  async function* source() {
+    yield { sessionId: "session-coalesce", messageId: "message-1", delta: "a", done: false };
+    yield { sessionId: "session-coalesce", messageId: "message-1", delta: "b", done: false };
+    yield { sessionId: "session-coalesce", messageId: "message-1", delta: "", done: true };
+  }
+
+  const chunks: string[] = [];
+  let done = false;
+  for await (const chunk of coalesceStreamChunks(source(), { coalesceMs: 16 })) {
+    if (chunk.done) done = true;
+    else chunks.push(chunk.delta);
+  }
+
+  assert.deepEqual(chunks, ["ab"]);
+  assert.equal(done, true);
 });
 
 test("streamOpenClawSession streams via OpenAI responses when available", async () => {
@@ -185,6 +259,7 @@ test("streamOpenClawSession streams via OpenAI responses when available", async 
   for await (const chunk of streamOpenClawSession({
     sessionId: "session-1",
     messages: [{ role: "user", content: "hello" }],
+    coalesceMs: 0,
   }, dependencies)) {
     if (!chunk.done) chunks.push(chunk.delta);
   }
@@ -199,6 +274,7 @@ test("streamOpenClawSession falls back to CLI when gateway is unavailable", asyn
     agentId: "agent-1",
     messages: [{ role: "user", content: "hello" }],
     chunkSize: 3,
+    coalesceMs: 0,
   }, {
     gatewayConfig: {
       url: "http://127.0.0.1:18789",
@@ -223,7 +299,7 @@ test("streamOpenClawSession falls back to CLI when gateway is unavailable", asyn
     if (!chunk.done) chunks.push(chunk.delta);
   }
 
-  assert.deepEqual(chunks, ["hel", "lo ", "wor", "ld"]);
+  assert.deepEqual(chunks, ["hello world"]);
 });
 
 test("streamOpenClawSession falls back from responses to chat completions for text-only payloads", async () => {
@@ -252,6 +328,7 @@ test("streamOpenClawSession falls back from responses to chat completions for te
   for await (const chunk of streamOpenClawSession({
     sessionId: "session-responses-fallback",
     messages: [{ role: "user", content: "hello" }],
+    coalesceMs: 0,
   }, {
     sessionAdapter: adapter,
     fetchImpl: async (_url, init) => {
@@ -286,6 +363,7 @@ test("streamOpenClawSession parses CLI fallback output with preamble logs", asyn
     messages: [{ role: "user", content: "hello" }],
     chunkSize: 6,
     transport: "cli",
+    coalesceMs: 0,
   }, {
     runner: {
       async exec() {
@@ -306,7 +384,7 @@ Gateway target: ws://127.0.0.1:18789
     if (!chunk.done) chunks.push(chunk.delta);
   }
 
-  assert.deepEqual(chunks, ["hello ", "world"]);
+  assert.deepEqual(chunks, ["hello world"]);
 });
 
 test("streamOpenClawSessionEvents emits chunk and title events", async () => {
@@ -329,6 +407,7 @@ test("streamOpenClawSessionEvents emits chunk and title events", async () => {
   for await (const event of streamOpenClawSessionEvents({
     sessionId: "session-2",
     messages: [{ role: "user", content: "Plan a launch checklist" }],
+    coalesceMs: 0,
   }, dependencies)) {
     if (event.type === "transport") {
       events.push({ type: event.type });
@@ -358,6 +437,7 @@ test("streamOpenClawSession retries gateway failures and emits aborted/error eve
     messages: [{ role: "user", content: "hello" }],
     transport: "gateway",
     gatewayRetries: 1,
+    coalesceMs: 0,
   }, {
     gatewayConfig: {
       url: "http://127.0.0.1:18789",
@@ -388,6 +468,7 @@ test("streamOpenClawSession retries gateway failures and emits aborted/error eve
     messages: [{ role: "user", content: "hello" }],
     transport: "gateway",
     gatewayRetries: 1,
+    coalesceMs: 0,
   }, {
     gatewayConfig: {
       url: "http://127.0.0.1:18789",
@@ -481,6 +562,7 @@ test("streamOpenClawSession resolves persisted documents for responses payloads"
   const chunks: string[] = [];
   for await (const chunk of streamOpenClawSession({
     sessionId: "session-docs",
+    coalesceMs: 0,
     messages: [{
       role: "user",
       content: "Review the budget",
@@ -507,6 +589,7 @@ test("streamOpenClawSessionEvents falls back from gateway to CLI with transport 
     agentId: "agent-1",
     messages: [{ role: "user", content: "hello" }],
     transport: "auto",
+    coalesceMs: 0,
   }, {
     gatewayConfig: {
       url: "http://127.0.0.1:18789",

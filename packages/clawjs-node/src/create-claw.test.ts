@@ -1817,6 +1817,7 @@ test("createClaw can stream and persist an assistant reply through gateway confi
       systemPrompt: "Be concise.",
       contextBlocks: [{ title: "Mode", content: "Friendly." }],
       transport: "gateway",
+      coalesceMs: 0,
     })) {
       if (!chunk.done) seen.push(chunk.delta);
     }
@@ -1885,6 +1886,7 @@ test("createClaw sends persisted documents through OpenClaw responses transport"
     for await (const chunk of claw.sessions.streamAssistantReply({
       sessionId: session.sessionId,
       transport: "gateway",
+      coalesceMs: 0,
     })) {
       if (!chunk.done) seen.push(chunk.delta);
     }
@@ -1989,12 +1991,16 @@ test("createClaw surfaces runtime progress and session events", async () => {
     for await (const event of streamingClaw.sessions.streamAssistantReplyEvents({
       sessionId: session.sessionId,
       transport: "gateway",
+      coalesceMs: 0,
     })) {
       events.push(event.type === "transport" ? `${event.type}:${event.transport}` : event.type);
     }
 
     assert.deepEqual(events, ["transport:gateway", "chunk", "chunk", "done", "title"]);
     assert.equal(streamingClaw.sessions.getSession(session.sessionId)?.title, "Plan a launch checklist");
+    const assistant = streamingClaw.sessions.getSession(session.sessionId)?.messages.at(-1);
+    assert.equal(assistant?.content, "Plan a launch checklist");
+    assert.deepEqual((assistant?.metadata?.streamTrace as { deltas?: Array<{ text: string }> } | undefined)?.deltas?.map((delta) => delta.text), ["Plan", " a launch checklist"]);
   } finally {
     globalThis.fetch = originalFetch;
   }
