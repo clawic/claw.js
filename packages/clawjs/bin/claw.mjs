@@ -14,6 +14,24 @@ const first = args[0];
 const second = args[1];
 
 const DATA_GROUPS = new Set(["db", "records", "tasks", "task", "notes", "note", "projects", "project", "people", "person", "goals", "goal", "reminders", "reminder", "deadlines", "deadline", "work", "memory"]);
+const LOCAL_DATA_LEGACY_GROUPS = new Set([
+  ...DATA_GROUPS,
+  "areas",
+  "lists",
+  "sections",
+  "saved-views",
+  "milestones",
+  "recurrences",
+  "cycles",
+  "epics",
+  "comments",
+  "attachments",
+  "custom-fields",
+  "field-values",
+  "events",
+  "agenda",
+  "timeline",
+]);
 const RUNTIME_GROUPS = new Set(["chat", "provider", "code", "runtime", "workspace"]);
 const DENSE_GROUP_MODULES = new Map([["patient", "health"], ["patients", "health"], ["health", "health"], ["legal", "legal"], ["erp", "erp"], ["iot", "iot"], ["construction", "construction"], ["labs", "labs-pharma"], ["lab", "labs-pharma"], ["pharma", "labs-pharma"]]);
 
@@ -165,7 +183,7 @@ if (first === "collections" && (!second || second === "list")) {
   else console.log(collections.map((collection) => `${collection.name}\t${collection.family}\t${collection.state}`).join("\n"));
   process.exit(0);
 }
-if ((first === "collections" && second && second !== "list") || first === "records" || DATA_GROUPS.has(first)) {
+if ((first === "collections" && second && second !== "list") || first === "records" || LOCAL_DATA_LEGACY_GROUPS.has(first)) {
   if (!(await hasPackage("@clawjs/local-data"))) missingPack(first === "db" ? "database" : first, "local-data", "@clawjs/local-data");
 }
 if (first === "search" && !(await hasPackage("@clawjs/search"))) missingPack("search", "light-search", "@clawjs/search");
@@ -199,6 +217,24 @@ if (DENSE_GROUP_MODULES.has(first)) {
     process.exit(64);
   }
   if (!(await hasPackage("@clawjs/domain-pack-dense-data"))) missingPack(first, moduleId, "@clawjs/domain-pack-dense-data");
+}
+if (LOCAL_DATA_LEGACY_GROUPS.has(args[0])) {
+  if (!(await hasPackage("@clawjs/local-data"))) missingPack(args[0] === "db" ? "database" : args[0], "local-data", "@clawjs/local-data");
+  const fs = await import("node:fs");
+  const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist");
+  const legacyChunk = fs.readdirSync(distDir).find((fileName) => fileName.startsWith("cli-legacy-") && fileName.endsWith(".js"));
+  if (!legacyChunk) {
+    console.error("[claw] CLI legacy local-data chunk not built");
+    process.exit(1);
+  }
+  const { runCli: runLegacyCli } = await import(path.join(distDir, legacyChunk));
+  process.exit(await runLegacyCli(args, {
+    stdout: process.stdout,
+    stderr: process.stderr,
+    stdin: process.stdin,
+    cwd: process.cwd(),
+    binName: publicBinName,
+  }));
 }
 if (first === "open" && args[1] === "secrets") {
   const { runOpenSecrets } = await import("./secrets-server-launcher.mjs");
