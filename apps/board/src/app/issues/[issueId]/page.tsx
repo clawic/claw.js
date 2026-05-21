@@ -23,7 +23,7 @@ import {
 import { usePropertiesPanel } from "@/components/PropertiesPanel";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
-import { invalidateCompanyData, useCompanyDetailQuery } from "@/lib/board-queries";
+import { invalidateCompanyQueries, useCompanyDetailQuery } from "@/lib/board-queries";
 import { cn, relativeTime } from "@/lib/utils";
 import type {
   CompanyAgent,
@@ -132,7 +132,7 @@ export default function IssuePage({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["issue", issueId] });
-      void invalidateCompanyData(queryClient, selectedCompanyId);
+      void invalidateCompanyQueries(queryClient, selectedCompanyId);
     },
   });
 

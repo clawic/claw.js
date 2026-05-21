@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
-import { invalidateCompanyData, useCompanyDetailQuery } from "@/lib/board-queries";
+import { invalidateCompanyQueries, useCompanyDetailQuery } from "@/lib/board-queries";
 import type { CompanyAgent, Issue, IssuePriority } from "@/lib/company-types";
 
 export function NewIssueDialog() {
@@ -59,7 +59,7 @@ export function NewIssueDialog() {
       return (await res.json()) as { issue: Issue };
     },
     onSuccess: async (data) => {
-      await invalidateCompanyData(queryClient, selectedCompanyId);
+      await invalidateCompanyQueries(queryClient, selectedCompanyId);
       setTitle("");
       setDescription("");
       setPriority("medium");

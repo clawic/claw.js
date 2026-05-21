@@ -116,7 +116,7 @@ export function useCompanySummaryQuery(companyId: string | null | undefined) {
   });
 }
 
-export function invalidateCompanyData(queryClient: QueryClient, companyId?: string | null): Promise<unknown[]> {
+export function invalidateCompanyQueries(queryClient: QueryClient, companyId?: string | null): Promise<unknown[]> {
   const keys = companyId
     ? [
         boardQueryKeys.companyDetail(companyId),
@@ -147,7 +147,7 @@ export function useCompanyFallbackInvalidation(companyId: string | null | undefi
     if (!companyId || typeof window === "undefined") return;
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      void invalidateCompanyData(queryClient, companyId);
+      void invalidateCompanyQueries(queryClient, companyId);
     }, BOARD_COMPANY_FALLBACK_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [companyId, queryClient]);

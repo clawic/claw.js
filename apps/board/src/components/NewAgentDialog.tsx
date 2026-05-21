@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
-import { invalidateCompanyData, useCompanyDetailQuery } from "@/lib/board-queries";
+import { invalidateCompanyQueries, useCompanyDetailQuery } from "@/lib/board-queries";
 import type { CompanyAgent } from "@/lib/company-types";
 
 const COMMON_ROLES = [
@@ -71,7 +71,7 @@ export function NewAgentDialog() {
       return res.json();
     },
     onSuccess: () => {
-      void invalidateCompanyData(queryClient, selectedCompanyId);
+      void invalidateCompanyQueries(queryClient, selectedCompanyId);
       setName("");
       setRole("");
       setTitle("");

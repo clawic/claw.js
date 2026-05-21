@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
-import { invalidateCompanyData } from "@/lib/board-queries";
+import { invalidateCompanyQueries } from "@/lib/board-queries";
 import { cn } from "@/lib/utils";
 
 interface Step {
@@ -56,7 +56,7 @@ export function OnboardingWizard() {
     onSuccess: (data) => {
       setSelectedCompanyId(data.company.id);
       void queryClient.invalidateQueries({ queryKey: ["companies"] });
-      void invalidateCompanyData(queryClient, data.company.id);
+      void invalidateCompanyQueries(queryClient, data.company.id);
       setStep(2);
     },
   });

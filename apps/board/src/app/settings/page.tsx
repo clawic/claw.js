@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
-import { boardQueryKeys, fetchCompanyImports, invalidateCompanyData } from "@/lib/board-queries";
+import { boardQueryKeys, fetchCompanyImports, invalidateCompanyQueries } from "@/lib/board-queries";
 import { relativeTime, formatDateTime } from "@/lib/utils";
 import type { ImportBatch } from "@/lib/company-types";
 
@@ -104,7 +104,7 @@ export default function SettingsPage() {
       setImportOpen(false);
       setImportPayload("");
       setImportSource("");
-      void invalidateCompanyData(queryClient, selectedCompanyId);
+      void invalidateCompanyQueries(queryClient, selectedCompanyId);
     },
   });
 
