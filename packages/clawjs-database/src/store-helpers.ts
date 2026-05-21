@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { PRODUCTIVITY_COLLECTION_DEFINITIONS, BUILTIN_COLLECTIONS } from "@clawjs/core";
+import { PRODUCTIVITY_COLLECTION_DEFINITIONS, BUILTIN_COLLECTIONS } from "@clawjs/core/catalogs";
 
 import type {
   CollectionDefinition,

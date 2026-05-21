@@ -27,7 +27,8 @@ ClawJS now exposes database behavior through three related surfaces:
 - schema-first custom collections with field validation and index metadata, created explicitly through the low-level database admin surface
 - scoped API tokens at `namespace + collection + operation` granularity
 - realtime record events over WebSocket
-- local file storage backed by SQLite metadata
+- local file storage backed by SQLite metadata; uploads stream multipart bodies
+  to managed temp files before an atomic move into the file store
 - a built-in admin console served from the same process
 
 Built-in collection growth follows the [Canonical Data Catalog](./canonical-data-catalog.md)
@@ -115,6 +116,10 @@ files.
 `GET /v1/storage/metrics` is an authenticated diagnostic route for the
 database and sessions services. It reports worker queue depth and per-operation
 count/error/p50/p95/p99/max timings without record payloads or secrets.
+
+File uploads default to a 100 MiB per-file limit. Override it with
+`CLAW_DATABASE_MAX_UPLOAD_BYTES` or `DatabaseServiceConfig.maxUploadFileBytes`
+when embedding `buildDatabaseApp()`.
 
 ## Migration Note
 

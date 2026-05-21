@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 import WebSocket from "ws";
 
+import type { AuthPrincipal } from "./auth.ts";
 import { AsyncDatabaseServiceStore } from "./async-store.ts";
 import { buildDatabaseApp } from "./app.ts";
+import { loadDatabaseConfig } from "./config.ts";
+import { RealtimeHub } from "./realtime.ts";
+import { DatabaseServiceStore } from "./store.ts";
+import type { RecordChangeEvent } from "./types.ts";
 
 function tempRoot(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -48,6 +54,151 @@ test("AsyncDatabaseServiceStore serializes worker calls, reports errors, and clo
     () => store.listNamespaces(),
     /closed/,
   );
+});
+
+test("AsyncDatabaseServiceStore saves file uploads from managed temp paths", async () => {
+  const rootDir = tempRoot("clawjs-database-worker-file-");
+  const filesDir = path.join(rootDir, "files");
+  const store = new AsyncDatabaseServiceStore(path.join(rootDir, "core.sqlite"), filesDir);
+  const tempDir = path.join(filesDir, ".tmp", "uploads");
+  const tempPath = path.join(tempDir, "worker-upload.tmp");
+  try {
+    await store.ensureNamespace({ id: "worker-files", displayName: "Worker Files" });
+    fs.mkdirSync(tempDir, { recursive: true });
+    fs.writeFileSync(tempPath, "worker file");
+
+    const asset = await store.saveFileFromPath({
+      namespaceId: "worker-files",
+      filename: "worker.txt",
+      contentType: "text/plain",
+      tempPath,
+      sizeBytes: Buffer.byteLength("worker file"),
+    });
+
+    assert.equal(asset.sizeBytes, Buffer.byteLength("worker file"));
+    assert.equal(fs.existsSync(tempPath), false);
+    const saved = await store.getFile(asset.id);
+    assert.ok(saved);
+    assert.equal(fs.readFileSync(saved.storagePath, "utf8"), "worker file");
+  } finally {
+    await store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("DatabaseApiClient uploadFile keeps file paths off readFileSync", () => {
+  const source = fs.readFileSync(new URL("./client.ts", import.meta.url), "utf8");
+  assert.equal(source.includes("fs.readFileSync(input.filePath)"), false);
+  assert.match(source, /fs\.createReadStream\(input\.filePath\)/);
+});
+
+test("loadDatabaseConfig reads realtime backpressure limits from env", () => {
+  const previousMaxClients = process.env.CLAW_DATABASE_REALTIME_MAX_CLIENTS;
+  const previousMaxSubscriptions = process.env.CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS;
+  const previousQueueLimit = process.env.CLAW_DATABASE_REALTIME_QUEUE_LIMIT;
+  const previousMaxBuffered = process.env.CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES;
+  try {
+    process.env.CLAW_DATABASE_REALTIME_MAX_CLIENTS = "7";
+    process.env.CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS = "11";
+    process.env.CLAW_DATABASE_REALTIME_QUEUE_LIMIT = "13";
+    process.env.CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES = "2048";
+    const config = loadDatabaseConfig();
+    assert.equal(config.realtimeMaxClients, 7);
+    assert.equal(config.realtimeMaxSubscriptionsPerClient, 11);
+    assert.equal(config.realtimeMaxQueuedMessagesPerClient, 13);
+    assert.equal(config.realtimeMaxBufferedBytesPerClient, 2048);
+  } finally {
+    if (previousMaxClients === undefined) delete process.env.CLAW_DATABASE_REALTIME_MAX_CLIENTS;
+    else process.env.CLAW_DATABASE_REALTIME_MAX_CLIENTS = previousMaxClients;
+    if (previousMaxSubscriptions === undefined) delete process.env.CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS;
+    else process.env.CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS = previousMaxSubscriptions;
+    if (previousQueueLimit === undefined) delete process.env.CLAW_DATABASE_REALTIME_QUEUE_LIMIT;
+    else process.env.CLAW_DATABASE_REALTIME_QUEUE_LIMIT = previousQueueLimit;
+    if (previousMaxBuffered === undefined) delete process.env.CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES;
+    else process.env.CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES = previousMaxBuffered;
+  }
+});
+
+test("DatabaseServiceStore materializes record indexes for list filters and unique constraints", () => {
+  const rootDir = tempRoot("clawjs-database-record-indexes-");
+  const store = new DatabaseServiceStore(path.join(rootDir, "core.sqlite"), path.join(rootDir, "files"));
+  try {
+    store.createCollection("main", {
+      name: "indexed_records",
+      displayName: "Indexed Records",
+      fields: [
+        { name: "status", type: "text" },
+        { name: "rank", type: "number" },
+      ],
+      indexes: [
+        { name: "indexed_records_status_rank_idx", fields: ["status", "rank"] },
+        { name: "indexed_records_rank_unique_idx", fields: ["rank"], unique: true },
+      ],
+    });
+
+    const indexRows = store.sqlite.prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'index' AND tbl_name = 'records' AND name LIKE 'claw_records_%indexed_records%'
+      ORDER BY name ASC
+    `).all() as Array<{ name: string }>;
+    assert.equal(indexRows.some((row) => row.name.includes("indexed_records_status_rank_idx")), true);
+    assert.equal(indexRows.some((row) => row.name.includes("indexed_records_rank_unique_idx")), true);
+
+    for (let index = 0; index < 6; index += 1) {
+      store.createRecord("main", "indexed_records", {
+        status: index % 2 === 0 ? "open" : "closed",
+        rank: index,
+      });
+    }
+
+    const filtered = store.listRecords("main", "indexed_records", {
+      filter: { status: "open" },
+      sort: "rank",
+      limit: 2,
+    });
+    assert.equal(filtered.total, 3);
+    assert.deepEqual(filtered.items.map((item) => item.rank), [0, 2]);
+
+    const queryPlan = store.sqlite.prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT id, data_json
+      FROM records
+      WHERE namespace_id = @namespaceId
+        AND collection_name = @collectionName
+        AND json_extract(data_json, '$.status') = @status
+      ORDER BY json_extract(data_json, '$.rank') ASC, id ASC
+      LIMIT 2
+    `).all({
+      namespaceId: "main",
+      collectionName: "indexed_records",
+      status: "open",
+    }) as Array<{ detail: string }>;
+    assert.equal(queryPlan.some((row) => row.detail.includes("indexed_records_status_rank_idx")), true);
+
+    assert.throws(
+      () => store.createRecord("main", "indexed_records", { status: "open", rank: 0 }),
+      /UNIQUE constraint failed/,
+    );
+
+    store.createCollection("main", {
+      name: "unique_later_records",
+      displayName: "Unique Later Records",
+      fields: [{ name: "code", type: "text" }],
+    });
+    store.createRecord("main", "unique_later_records", { code: "dup" });
+    store.createRecord("main", "unique_later_records", { code: "dup" });
+    assert.throws(
+      () => store.updateCollection("main", "unique_later_records", {
+        indexes: [{ name: "unique_later_code_unique_idx", fields: ["code"], unique: true }],
+      }),
+      /UNIQUE constraint failed/,
+    );
+    assert.deepEqual(store.getCollection("main", "unique_later_records")?.indexes, []);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });
 
 test("database HTTP listRecords is SQL-paged, rejects unsupported filters, and exposes metrics", async () => {
@@ -131,9 +282,131 @@ test("database HTTP listRecords is SQL-paged, rejects unsupported filters, and e
       headers: auth,
     });
     assert.equal(metrics.statusCode, 200);
-    assert.ok((metrics.json() as { storage: { operations: Record<string, { count: number }> } }).storage.operations.listRecords.count >= 2);
+    const metricsBody = metrics.json() as {
+      storage: { operations: Record<string, { count: number }> };
+      realtime: { clients: number };
+    };
+    assert.ok(metricsBody.storage.operations.listRecords.count >= 2);
+    assert.equal(typeof metricsBody.realtime.clients, "number");
   } finally {
     await app.close();
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
+});
+
+class FakeRealtimeSocket extends EventEmitter {
+  readyState = WebSocket.OPEN;
+  bufferedAmount = 0;
+  sent: string[] = [];
+  closeCode: number | null = null;
+  terminated = false;
+  autoCompleteSends = true;
+  private readonly callbacks: Array<(error?: Error) => void> = [];
+
+  send(payload: string, callback?: (error?: Error) => void): void {
+    this.sent.push(payload);
+    if (!callback) return;
+    if (this.autoCompleteSends) callback();
+    else this.callbacks.push(callback);
+  }
+
+  close(code?: number): void {
+    this.closeCode = code ?? null;
+    this.readyState = WebSocket.CLOSED;
+    this.emit("close");
+  }
+
+  terminate(): void {
+    this.terminated = true;
+    this.close();
+  }
+
+  ping(): void {}
+
+  receive(payload: unknown): void {
+    this.emit("message", Buffer.from(JSON.stringify(payload), "utf8"));
+  }
+}
+
+const adminPrincipal: AuthPrincipal = {
+  kind: "admin",
+  adminId: "admin",
+  email: "admin@test.local",
+};
+
+function recordEvent(recordId = "record-1"): RecordChangeEvent {
+  return {
+    type: "record.updated",
+    namespaceId: "main",
+    collectionName: "items",
+    recordId,
+    at: new Date().toISOString(),
+  };
+}
+
+function decoded(socket: FakeRealtimeSocket): Array<Record<string, unknown>> {
+  return socket.sent.map((payload) => JSON.parse(payload) as Record<string, unknown>);
+}
+
+test("RealtimeHub broadcasts only to authorized matching subscriptions", () => {
+  const hub = new RealtimeHub();
+  const socket = new FakeRealtimeSocket();
+  hub.attach(socket as unknown as WebSocket, adminPrincipal);
+
+  socket.receive({ type: "subscribe", namespaceId: "main", collectionName: "items" });
+  hub.broadcast(recordEvent());
+
+  assert.deepEqual(decoded(socket).map((item) => item.type), ["hello", "subscribed", "event"]);
+  assert.equal(hub.snapshotMetrics().subscriptions, 1);
+  socket.close();
+});
+
+test("RealtimeHub rejects excess clients with a bounded close code", () => {
+  const hub = new RealtimeHub({ maxClients: 1 });
+  const first = new FakeRealtimeSocket();
+  const second = new FakeRealtimeSocket();
+
+  hub.attach(first as unknown as WebSocket, adminPrincipal);
+  hub.attach(second as unknown as WebSocket, adminPrincipal);
+
+  assert.equal(first.closeCode, null);
+  assert.equal(second.closeCode, 4429);
+  assert.equal(hub.snapshotMetrics().clients, 1);
+  assert.equal(hub.snapshotMetrics().rejectedClients, 1);
+  first.close();
+});
+
+test("RealtimeHub rejects excess subscriptions without removing existing subscriptions", () => {
+  const hub = new RealtimeHub({ maxSubscriptionsPerClient: 1 });
+  const socket = new FakeRealtimeSocket();
+  hub.attach(socket as unknown as WebSocket, adminPrincipal);
+
+  socket.receive({ type: "subscribe", namespaceId: "main", collectionName: "items" });
+  socket.receive({ type: "subscribe", namespaceId: "main", collectionName: "other_items" });
+
+  assert.equal(hub.snapshotMetrics().subscriptions, 1);
+  assert.equal(hub.snapshotMetrics().rejectedSubscriptions, 1);
+  assert.equal(decoded(socket).at(-1)?.message, "Too many realtime subscriptions.");
+  socket.close();
+});
+
+test("RealtimeHub closes only slow clients on outbound queue overflow", () => {
+  const hub = new RealtimeHub({ maxQueuedMessagesPerClient: 2 });
+  const slow = new FakeRealtimeSocket();
+  slow.autoCompleteSends = false;
+  const fast = new FakeRealtimeSocket();
+
+  hub.attach(slow as unknown as WebSocket, adminPrincipal);
+  hub.attach(fast as unknown as WebSocket, adminPrincipal);
+  slow.receive({ type: "subscribe", namespaceId: "main", collectionName: "items" });
+  fast.receive({ type: "subscribe", namespaceId: "main", collectionName: "items" });
+
+  hub.broadcast(recordEvent("one"));
+  hub.broadcast(recordEvent("two"));
+
+  assert.equal(slow.closeCode, 4408);
+  assert.equal(fast.closeCode, null);
+  assert.equal(hub.snapshotMetrics().closedSlowClients, 1);
+  assert.equal(hub.snapshotMetrics().clients, 1);
+  fast.close();
 });

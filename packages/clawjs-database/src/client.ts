@@ -1,5 +1,7 @@
 import fs from "node:fs";
-import { clawDatabaseApiRoutes } from "@clawjs/core";
+import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
+import { clawDatabaseApiRoutes } from "@clawjs/core/catalogs";
 
 type JsonValue = Record<string, unknown> | unknown[] | string | number | boolean | null;
 
@@ -138,16 +140,61 @@ export class DatabaseApiClient {
     filePath: string;
     collectionName?: string;
     recordId?: string;
+    contentType?: string;
   }): Promise<JsonValue> {
-    const form = new FormData();
-    form.set("namespaceId", input.namespaceId);
-    if (input.collectionName) form.set("collectionName", input.collectionName);
-    if (input.recordId) form.set("recordId", input.recordId);
-    form.set("file", new Blob([fs.readFileSync(input.filePath)]), input.filePath.split("/").pop() || "upload.bin");
+    const stat = fs.statSync(input.filePath);
+    return await this.uploadFileStream({
+      namespaceId: input.namespaceId,
+      stream: fs.createReadStream(input.filePath),
+      filename: input.filePath.split("/").pop() || "upload.bin",
+      contentType: input.contentType ?? "application/octet-stream",
+      sizeBytes: stat.size,
+      collectionName: input.collectionName,
+      recordId: input.recordId,
+    });
+  }
+
+  async uploadFileStream(input: {
+    namespaceId: string;
+    stream: NodeJS.ReadableStream;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+    collectionName?: string;
+    recordId?: string;
+  }): Promise<JsonValue> {
+    const boundary = `----ClawDatabaseBoundary${randomUUID()}`;
+    const fields: Array<[string, string]> = [["namespaceId", input.namespaceId]];
+    if (input.collectionName) fields.push(["collectionName", input.collectionName]);
+    if (input.recordId) fields.push(["recordId", input.recordId]);
+    const prefix = [
+      ...fields.flatMap(([name, value]) => [
+        `--${boundary}\r\n`,
+        `Content-Disposition: form-data; name="${escapeMultipartValue(name)}"\r\n\r\n`,
+        `${value}\r\n`,
+      ]),
+      `--${boundary}\r\n`,
+      `Content-Disposition: form-data; name="file"; filename="${escapeMultipartValue(input.filename)}"\r\n`,
+      `Content-Type: ${input.contentType || "application/octet-stream"}\r\n\r\n`,
+    ].join("");
+    const suffix = `\r\n--${boundary}--\r\n`;
+    const contentLength = Buffer.byteLength(prefix) + input.sizeBytes + Buffer.byteLength(suffix);
+    const body = Readable.from((async function* () {
+      yield Buffer.from(prefix);
+      for await (const chunk of input.stream) {
+        yield Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Buffer | string);
+      }
+      yield Buffer.from(suffix);
+    })());
     return await this.request(clawDatabaseApiRoutes.files, {
       method: "POST",
-      body: form,
-    });
+      headers: {
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+        "content-length": String(contentLength),
+      },
+      body: body as unknown as BodyInit,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
   }
 
   async deleteFile(fileId: string): Promise<JsonValue> {
@@ -155,4 +202,8 @@ export class DatabaseApiClient {
       method: "DELETE",
     });
   }
+}
+
+function escapeMultipartValue(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r|\n/g, "_");
 }

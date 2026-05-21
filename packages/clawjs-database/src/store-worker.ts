@@ -42,6 +42,7 @@ const allowedOperations = new Set([
   "revokeScopedToken",
   "authenticateScopedToken",
   "saveFile",
+  "saveFileFromPath",
   "listFiles",
   "getFile",
   "deleteFile",

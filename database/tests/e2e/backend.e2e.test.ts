@@ -18,8 +18,8 @@ afterEach(async () => {
   }
 });
 
-async function boot() {
-  const server = await startDatabaseServer("database-backend");
+async function boot(configOverrides: Parameters<typeof startDatabaseServer>[1] = {}) {
+  const server = await startDatabaseServer("database-backend", configOverrides);
   servers.push(server);
   const login = await fetch(`${server.baseUrl}/v1/auth/admin/login`, {
     method: "POST",
@@ -38,6 +38,24 @@ function authHeaders(token: string) {
   return {
     authorization: `Bearer ${token}`,
   };
+}
+
+function listRegularFiles(root: string): string[] {
+  if (!fs.existsSync(root)) return [];
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const absolutePath = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listRegularFiles(absolutePath));
+    } else if (entry.isFile()) {
+      files.push(absolutePath);
+    }
+  }
+  return files;
+}
+
+function filesDirFor(server: Awaited<ReturnType<typeof boot>>): string {
+  return path.join(server.rootDir, ".data", "files");
 }
 
 test("shared brand assets and fonts are served from repo assets and referenced by the admin console html", async () => {
@@ -397,6 +415,7 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
   });
   assert.equal(uploaded.status, 201);
   const uploadedPayload = await uploaded.json() as { id: string; downloadPath: string };
+  assert.deepEqual(listRegularFiles(path.join(filesDirFor(server), ".tmp", "uploads")), []);
 
   const downloaded = await fetch(`${server.baseUrl}${uploadedPayload.downloadPath}`, {
     headers: scopedHeaders,
@@ -434,4 +453,37 @@ test("record CRUD, scoped tokens, files, and realtime work together", async () =
     headers: scopedHeaders,
   });
   assert.equal(deniedAfterRevoke.status, 401);
+});
+
+test("file upload rejects oversized payloads and cleans temp files", async () => {
+  const server = await boot({ maxUploadFileBytes: 4 });
+  const form = new FormData();
+  form.set("namespaceId", "main");
+  form.set("file", new Blob(["hello"]), "too-large.txt");
+
+  const uploaded = await fetch(`${server.baseUrl}/v1/files`, {
+    method: "POST",
+    headers: authHeaders(server.adminToken),
+    body: form,
+  });
+
+  assert.equal(uploaded.status, 413);
+  assert.deepEqual(listRegularFiles(filesDirFor(server)), []);
+});
+
+test("file upload cleans temp files when metadata validation fails", async () => {
+  const server = await boot();
+  const form = new FormData();
+  form.set("namespaceId", "main");
+  form.set("collectionName", "missing_collection");
+  form.set("file", new Blob(["hello file"]), "orphan.txt");
+
+  const uploaded = await fetch(`${server.baseUrl}/v1/files`, {
+    method: "POST",
+    headers: authHeaders(server.adminToken),
+    body: form,
+  });
+
+  assert.equal(uploaded.status, 400);
+  assert.deepEqual(listRegularFiles(filesDirFor(server)), []);
 });

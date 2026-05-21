@@ -6,7 +6,9 @@ import { expect, test as base } from "@playwright/test";
 
 import { buildDatabaseApp } from "../../src/server/app.ts";
 
-export async function startDatabaseServer(prefix = "database-e2e") {
+type DatabaseConfigOverrides = NonNullable<NonNullable<Parameters<typeof buildDatabaseApp>[0]>["config"]>;
+
+export async function startDatabaseServer(prefix = "database-e2e", configOverrides: Partial<DatabaseConfigOverrides> = {}) {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
   const { app } = buildDatabaseApp({
     config: {
@@ -16,6 +18,7 @@ export async function startDatabaseServer(prefix = "database-e2e") {
       dbPath: path.join(rootDir, ".data", "core.sqlite"),
       filesDir: path.join(rootDir, ".data", "files"),
       jwtSecret: "database-test-secret",
+      ...configOverrides,
     },
   });
   await app.listen({ host: "127.0.0.1", port: 0 });

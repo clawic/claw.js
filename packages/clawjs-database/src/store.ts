@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import Database from "better-sqlite3";
-import { BUILTIN_COLLECTIONS_BY_NAME } from "@clawjs/core";
+import { BUILTIN_COLLECTIONS_BY_NAME } from "@clawjs/core/catalogs";
 
 // @clawjs-persistent-surface-ddl-source
 
@@ -57,16 +57,17 @@ interface RecordListQuery {
   params: Record<string, unknown>;
 }
 
+interface RecordIndexSqlDefinition {
+  name: string;
+  sql: string;
+}
+
+const RECORD_INDEX_NAME_PREFIX = "claw_records_";
+
 function buildRecordListQuery(collection: CollectionDefinition, options: ListRecordsOptions): RecordListQuery {
   const where: string[] = [];
   const params: Record<string, unknown> = {};
-  const allowedFields = new Set([
-    "id",
-    "createdAt",
-    "updatedAt",
-    ...collection.fields.map((field) => field.name),
-    ...RECORD_PAGE_FIELDS,
-  ]);
+  const allowedFields = recordQueryFields(collection);
   if (options.filter !== undefined) {
     if (!isPlainObject(options.filter)) {
       throw new Error("listRecords filter must be an object with simple field values.");
@@ -99,6 +100,16 @@ function buildRecordListQuery(collection: CollectionDefinition, options: ListRec
   };
 }
 
+function recordQueryFields(collection: CollectionDefinition): Set<string> {
+  return new Set([
+    "id",
+    "createdAt",
+    "updatedAt",
+    ...collection.fields.map((field) => field.name),
+    ...RECORD_PAGE_FIELDS,
+  ]);
+}
+
 function assertRecordQueryField(field: string, allowedFields: Set<string>, collectionName: string): void {
   if (!allowedFields.has(field) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(field)) {
     throw new Error(`Unsupported listRecords field ${field} for collection ${collectionName}.`);
@@ -116,10 +127,64 @@ function isSimpleRecordFilterValue(value: unknown): value is string | number | b
   return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }
 
+function validateRecordIndex(collection: CollectionDefinition, index: IndexDefinition): void {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(index.name)) {
+    throw new Error(`Index ${index.name} must match ^[A-Za-z_][A-Za-z0-9_]*$.`);
+  }
+  const allowedFields = recordQueryFields(collection);
+  for (const field of index.fields) {
+    assertRecordQueryField(field, allowedFields, collection.name);
+  }
+}
+
+function recordIndexSqlDefinition(collection: CollectionDefinition, index: IndexDefinition): RecordIndexSqlDefinition {
+  validateRecordIndex(collection, index);
+  const fields = index.fields.map(recordFieldSqlExpression);
+  if (!index.unique && !index.fields.includes("id")) {
+    fields.push("id");
+  }
+  const name = recordIndexSqlName(collection.namespaceId, collection.name, index.name);
+  const unique = index.unique ? "UNIQUE " : "";
+  return {
+    name,
+    sql: `CREATE ${unique}INDEX ${quoteSqlIdentifier(name)} ON records (namespace_id, collection_name, ${fields.join(", ")}) WHERE ${recordIndexPredicate(collection.namespaceId, collection.name)}`,
+  };
+}
+
+function recordIndexSqlName(namespaceId: string, collectionName: string, indexName: string): string {
+  const digest = createHash("sha256").update(`${namespaceId}\0${collectionName}\0${indexName}`).digest("hex").slice(0, 16);
+  const stem = `${namespaceId}_${collectionName}_${indexName}`.replace(/[^A-Za-z0-9_]/g, "_").replace(/^_+/, "").slice(0, 96) || "record";
+  return `${RECORD_INDEX_NAME_PREFIX}${stem}_${digest}`;
+}
+
+function recordIndexPredicate(namespaceId: string, collectionName: string): string {
+  return `namespace_id = ${sqlStringLiteral(namespaceId)} AND collection_name = ${sqlStringLiteral(collectionName)}`;
+}
+
+function quoteSqlIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, "\"\"")}"`;
+}
+
+function sqlStringLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+function normalizeSqlForComparison(sql: string | null): string {
+  return (sql ?? "").replace(/\s+/g, " ").trim();
+}
+
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+function safeUnlink(filePath: string): void {
+  try {
+    fs.unlinkSync(filePath);
+  } catch {
+    // best-effort cleanup
+  }
 }
 
 export class DatabaseServiceStore {
@@ -182,6 +247,8 @@ export class DatabaseServiceStore {
         PRIMARY KEY (namespace_id, collection_name, id),
         FOREIGN KEY (namespace_id, collection_name) REFERENCES collections(namespace_id, name) ON DELETE CASCADE
       );
+      CREATE INDEX IF NOT EXISTS records_collection_created_idx ON records(namespace_id, collection_name, created_at DESC, id ASC);
+      CREATE INDEX IF NOT EXISTS records_collection_updated_idx ON records(namespace_id, collection_name, updated_at DESC, id ASC);
       CREATE TABLE IF NOT EXISTS scoped_tokens (
         id TEXT PRIMARY KEY,
         label TEXT NOT NULL,
@@ -308,7 +375,8 @@ export class DatabaseServiceStore {
       INSERT OR IGNORE INTO admins (id, email, password_hash, created_at)
       VALUES (?, ?, ?, ?)
     `).run("admin-main", "admin@database.local", hashSecret("database-admin"), now);
-    if (this.listNamespaces().length === 0) {
+    const existingNamespaces = this.listNamespaces();
+    if (existingNamespaces.length === 0) {
       this.createNamespace({ id: "main", displayName: "Main" });
     }
     // Ensure builtin collections exist on every namespace, so newly added
@@ -316,6 +384,9 @@ export class DatabaseServiceStore {
     // databases without requiring a manual reset.
     for (const namespace of this.listNamespaces()) {
       this.ensureBuiltinCollections(namespace.id);
+    }
+    if (existingNamespaces.length > 0) {
+      this.syncAllRecordIndexes();
     }
   }
 
@@ -348,7 +419,7 @@ export class DatabaseServiceStore {
       fields: FieldDefinition[];
       indexes: IndexDefinition[];
     },
-  ): void {
+  ): CollectionDefinition {
     const mergedFields = validateFields(mergeBuiltinFields(current.fields, builtIn.fields));
     const mergedIndexes = mergeBuiltinIndexes(current.indexes, builtIn.indexes).map(normalizeIndex);
     const mergedCoreFieldNames = [...new Set([...current.coreFieldNames, ...builtIn.coreFieldNames])];
@@ -361,22 +432,75 @@ export class DatabaseServiceStore {
       mergedIndexes.length !== current.indexes.length ||
       mergedCoreFieldNames.length !== current.coreFieldNames.length;
 
-    if (!needsUpdate) return;
+    if (!needsUpdate) return current;
 
     const now = nowIso();
-    this.sqlite.prepare(`
-      UPDATE collections
-      SET display_name = ?, fields_json = ?, indexes_json = ?, builtin = 1, protected = 1, core_fields_json = ?, updated_at = ?
-      WHERE namespace_id = ? AND name = ?
-    `).run(
-      builtIn.displayName,
-      JSON.stringify(mergedFields),
-      JSON.stringify(mergedIndexes),
-      JSON.stringify(mergedCoreFieldNames),
-      now,
-      namespaceId,
-      builtIn.name,
-    );
+    const update = this.sqlite.transaction((): CollectionDefinition => {
+      this.sqlite.prepare(`
+        UPDATE collections
+        SET display_name = ?, fields_json = ?, indexes_json = ?, builtin = 1, protected = 1, core_fields_json = ?, updated_at = ?
+        WHERE namespace_id = ? AND name = ?
+      `).run(
+        builtIn.displayName,
+        JSON.stringify(mergedFields),
+        JSON.stringify(mergedIndexes),
+        JSON.stringify(mergedCoreFieldNames),
+        now,
+        namespaceId,
+        builtIn.name,
+      );
+      const collection = this.getCollection(namespaceId, builtIn.name)!;
+      this.syncRecordIndexes(collection);
+      return collection;
+    });
+    return update();
+  }
+
+  private syncAllRecordIndexes(): void {
+    for (const namespace of this.listNamespaces()) {
+      for (const collection of this.listCollections(namespace.id)) {
+        this.syncRecordIndexes(collection);
+      }
+    }
+  }
+
+  private syncRecordIndexes(collection: CollectionDefinition): void {
+    const definitions = collection.indexes.map((index) => recordIndexSqlDefinition(collection, index));
+    const expectedNames = new Set(definitions.map((definition) => definition.name));
+    const existingRows = this.recordIndexRowsForCollection(collection.namespaceId, collection.name);
+    const existingByName = new Map(existingRows.map((row) => [row.name, row]));
+
+    for (const row of existingRows) {
+      if (!expectedNames.has(row.name)) {
+        this.sqlite.exec(`DROP INDEX IF EXISTS ${quoteSqlIdentifier(row.name)}`);
+      }
+    }
+    for (const definition of definitions) {
+      const existing = existingByName.get(definition.name);
+      if (existing && normalizeSqlForComparison(existing.sql) === normalizeSqlForComparison(definition.sql)) {
+        continue;
+      }
+      if (existing) {
+        this.sqlite.exec(`DROP INDEX IF EXISTS ${quoteSqlIdentifier(existing.name)}`);
+      }
+      this.sqlite.exec(definition.sql);
+    }
+  }
+
+  private dropRecordIndexes(namespaceId: string, collectionName: string): void {
+    for (const row of this.recordIndexRowsForCollection(namespaceId, collectionName)) {
+      this.sqlite.exec(`DROP INDEX IF EXISTS ${quoteSqlIdentifier(row.name)}`);
+    }
+  }
+
+  private recordIndexRowsForCollection(namespaceId: string, collectionName: string): Array<{ name: string; sql: string | null }> {
+    const predicate = `WHERE ${recordIndexPredicate(namespaceId, collectionName)}`;
+    return (this.sqlite.prepare(`
+      SELECT name, sql
+      FROM sqlite_master
+      WHERE type = 'index' AND tbl_name = 'records' AND name LIKE ?
+    `).all(`${RECORD_INDEX_NAME_PREFIX}%`) as Array<{ name: string; sql: string | null }>)
+      .filter((row) => row.sql?.includes(predicate));
   }
 
   verifyAdmin(email: string, password: string): { id: string; email: string } | null {
@@ -521,24 +645,29 @@ export class DatabaseServiceStore {
       }
     }
     const now = nowIso();
-    this.sqlite.prepare(`
-      INSERT INTO collections (
-        namespace_id, name, display_name, fields_json, indexes_json, builtin, protected, core_fields_json, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      namespaceId,
-      input.name,
-      input.displayName?.trim() || input.name,
-      JSON.stringify(fields),
-      JSON.stringify(indexes),
-      input.builtin ? 1 : 0,
-      input.protected ? 1 : 0,
-      JSON.stringify(coreFieldNames),
-      now,
-      now,
-    );
-    return this.getCollection(namespaceId, input.name)!;
+    const create = this.sqlite.transaction((): CollectionDefinition => {
+      this.sqlite.prepare(`
+        INSERT INTO collections (
+          namespace_id, name, display_name, fields_json, indexes_json, builtin, protected, core_fields_json, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        namespaceId,
+        input.name,
+        input.displayName?.trim() || input.name,
+        JSON.stringify(fields),
+        JSON.stringify(indexes),
+        input.builtin ? 1 : 0,
+        input.protected ? 1 : 0,
+        JSON.stringify(coreFieldNames),
+        now,
+        now,
+      );
+      const collection = this.getCollection(namespaceId, input.name)!;
+      this.syncRecordIndexes(collection);
+      return collection;
+    });
+    return create();
   }
 
   updateCollection(namespaceId: string, name: string, input: {
@@ -556,19 +685,24 @@ export class DatabaseServiceStore {
     }
     const indexes = input.indexes ? input.indexes.map(normalizeIndex) : current.indexes;
     const now = nowIso();
-    this.sqlite.prepare(`
-      UPDATE collections
-      SET display_name = ?, fields_json = ?, indexes_json = ?, updated_at = ?
-      WHERE namespace_id = ? AND name = ?
-    `).run(
-      input.displayName?.trim() || current.displayName,
-      JSON.stringify(fields),
-      JSON.stringify(indexes),
-      now,
-      namespaceId,
-      name,
-    );
-    return this.getCollection(namespaceId, name)!;
+    const update = this.sqlite.transaction((): CollectionDefinition => {
+      this.sqlite.prepare(`
+        UPDATE collections
+        SET display_name = ?, fields_json = ?, indexes_json = ?, updated_at = ?
+        WHERE namespace_id = ? AND name = ?
+      `).run(
+        input.displayName?.trim() || current.displayName,
+        JSON.stringify(fields),
+        JSON.stringify(indexes),
+        now,
+        namespaceId,
+        name,
+      );
+      const collection = this.getCollection(namespaceId, name)!;
+      this.syncRecordIndexes(collection);
+      return collection;
+    });
+    return update();
   }
 
   deleteCollection(namespaceId: string, name: string): boolean {
@@ -577,10 +711,17 @@ export class DatabaseServiceStore {
     if (current.protected) {
       throw new Error(`Collection ${name} is protected and cannot be deleted.`);
     }
-    return this.sqlite.prepare(`
-      DELETE FROM collections
-      WHERE namespace_id = ? AND name = ?
-    `).run(namespaceId, name).changes > 0;
+    const remove = this.sqlite.transaction((): boolean => {
+      const removed = this.sqlite.prepare(`
+        DELETE FROM collections
+        WHERE namespace_id = ? AND name = ?
+      `).run(namespaceId, name).changes > 0;
+      if (removed) {
+        this.dropRecordIndexes(namespaceId, name);
+      }
+      return removed;
+    });
+    return remove();
   }
 
   private validateRecordPayload(collection: CollectionDefinition, payload: Record<string, unknown>, mode: "create" | "update"): Record<string, unknown> {
@@ -971,39 +1112,90 @@ export class DatabaseServiceStore {
     collectionName?: string | null;
     recordId?: string | null;
   }): FileAsset {
-    if (!this.getNamespace(input.namespaceId)) {
-      throw new Error(`Namespace ${input.namespaceId} does not exist.`);
+    const tempPath = this.writeLegacyFileBytesToTemp(input.bytes);
+    return this.saveFileFromPath({
+      namespaceId: input.namespaceId,
+      filename: input.filename,
+      contentType: input.contentType,
+      tempPath,
+      sizeBytes: input.bytes.byteLength,
+      collectionName: input.collectionName,
+      recordId: input.recordId,
+    });
+  }
+
+  saveFileFromPath(input: {
+    namespaceId: string;
+    filename: string;
+    contentType: string;
+    tempPath: string;
+    sizeBytes: number;
+    collectionName?: string | null;
+    recordId?: string | null;
+  }): FileAsset {
+    let absolutePath: string | null = null;
+    try {
+      if (!Number.isSafeInteger(input.sizeBytes) || input.sizeBytes < 0) {
+        throw new Error("File size is invalid.");
+      }
+      this.assertManagedTempFile(input.tempPath);
+      if (!fs.existsSync(input.tempPath)) {
+        throw new Error("Uploaded temp file is missing.");
+      }
+      if (!this.getNamespace(input.namespaceId)) {
+        throw new Error(`Namespace ${input.namespaceId} does not exist.`);
+      }
+      if (input.collectionName && !this.getCollection(input.namespaceId, input.collectionName)) {
+        throw new Error(`Collection ${input.collectionName} does not exist.`);
+      }
+      if (input.collectionName && input.recordId && !this.getRecord(input.namespaceId, input.collectionName, input.recordId)) {
+        throw new Error(`Record ${input.recordId} does not exist.`);
+      }
+      const id = randomUUID();
+      const storedFileName = `${id}-${input.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const relativePath = path.join(input.namespaceId, storedFileName);
+      absolutePath = path.join(this.filesDir, relativePath);
+      fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+      fs.renameSync(input.tempPath, absolutePath);
+      const now = nowIso();
+      this.sqlite.prepare(`
+        INSERT INTO files (
+          id, namespace_id, collection_name, record_id, filename, content_type, size_bytes, storage_path, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id,
+        input.namespaceId,
+        input.collectionName ?? null,
+        input.recordId ?? null,
+        input.filename,
+        input.contentType || "application/octet-stream",
+        input.sizeBytes,
+        relativePath,
+        now,
+      );
+      return this.getFile(id)!;
+    } catch (error) {
+      safeUnlink(input.tempPath);
+      if (absolutePath) safeUnlink(absolutePath);
+      throw error;
     }
-    if (input.collectionName && !this.getCollection(input.namespaceId, input.collectionName)) {
-      throw new Error(`Collection ${input.collectionName} does not exist.`);
+  }
+
+  private writeLegacyFileBytesToTemp(bytes: Buffer): string {
+    const tempDir = path.join(this.filesDir, ".tmp", "uploads");
+    fs.mkdirSync(tempDir, { recursive: true });
+    const tempPath = path.join(tempDir, `${randomUUID()}.upload`);
+    fs.writeFileSync(tempPath, bytes);
+    return tempPath;
+  }
+
+  private assertManagedTempFile(tempPath: string): void {
+    const resolvedTempPath = path.resolve(tempPath);
+    const tempRoot = path.resolve(this.filesDir, ".tmp", "uploads");
+    if (resolvedTempPath !== tempRoot && !resolvedTempPath.startsWith(`${tempRoot}${path.sep}`)) {
+      throw new Error("Uploaded temp file is outside the managed upload directory.");
     }
-    if (input.collectionName && input.recordId && !this.getRecord(input.namespaceId, input.collectionName, input.recordId)) {
-      throw new Error(`Record ${input.recordId} does not exist.`);
-    }
-    const id = randomUUID();
-    const storedFileName = `${id}-${input.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const relativePath = path.join(input.namespaceId, storedFileName);
-    const absolutePath = path.join(this.filesDir, relativePath);
-    fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
-    fs.writeFileSync(absolutePath, input.bytes);
-    const now = nowIso();
-    this.sqlite.prepare(`
-      INSERT INTO files (
-        id, namespace_id, collection_name, record_id, filename, content_type, size_bytes, storage_path, created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      input.namespaceId,
-      input.collectionName ?? null,
-      input.recordId ?? null,
-      input.filename,
-      input.contentType || "application/octet-stream",
-      input.bytes.byteLength,
-      relativePath,
-      now,
-    );
-    return this.getFile(id)!;
   }
 
   listFiles(namespaceId: string): FileAsset[] {

@@ -1,4 +1,4 @@
-import type { clawDatabaseRecordEvents } from "@clawjs/core";
+import type { clawDatabaseRecordEvents } from "@clawjs/core/catalogs";
 
 export type DatabaseRecordChangeEventType =
   (typeof clawDatabaseRecordEvents)[keyof typeof clawDatabaseRecordEvents];

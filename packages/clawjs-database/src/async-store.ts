@@ -187,6 +187,18 @@ export class AsyncDatabaseServiceStore {
     return this.call("saveFile", input);
   }
 
+  saveFileFromPath(input: {
+    namespaceId: string;
+    filename: string;
+    contentType: string;
+    tempPath: string;
+    sizeBytes: number;
+    collectionName?: string | null;
+    recordId?: string | null;
+  }): Promise<FileAsset> {
+    return this.call("saveFileFromPath", input);
+  }
+
   listFiles(namespaceId: string): Promise<FileAsset[]> {
     return this.call("listFiles", namespaceId);
   }
@@ -258,5 +270,5 @@ function resolveWorkerUrl(): URL {
 }
 
 function workerExecArgv(): string[] {
-  return import.meta.url.endsWith(".ts") ? ["--import", "tsx"] : process.execArgv;
+  return import.meta.url.endsWith(".ts") ? ["--import", "tsx"] : [];
 }

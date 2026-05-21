@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
-import { clawDatabaseApiRoutePatterns, clawDatabaseRecordEvents } from "@clawjs/core";
+import { clawDatabaseApiRoutePatterns, clawDatabaseRecordEvents } from "@clawjs/core/catalogs";
 
 import { DatabaseAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
 import { AsyncDatabaseServiceStore } from "./async-store.ts";
@@ -134,48 +136,125 @@ async function requirePrincipal(
   }
 }
 
-async function readUpload(request: FastifyRequest): Promise<{
+class UploadTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`file exceeds maximum upload size of ${maxBytes} bytes`);
+    this.name = "UploadTooLargeError";
+  }
+}
+
+async function readUpload(request: FastifyRequest, options: {
+  filesDir: string;
+  maxUploadFileBytes: number;
+}): Promise<{
   namespaceId: string;
   collectionName?: string;
   recordId?: string;
   filename: string;
   contentType: string;
-  bytes: Buffer;
+  tempPath: string;
+  sizeBytes: number;
 }> {
   const parts = request.parts();
   let namespaceId = "";
   let collectionName = "";
   let recordId = "";
-  let bytes = Buffer.alloc(0);
+  let tempPath: string | null = null;
+  let sizeBytes = 0;
   let filename = "upload.bin";
   let contentType = "application/octet-stream";
 
-  for await (const part of parts) {
-    if (part.type === "file") {
-      const chunks: Buffer[] = [];
-      for await (const chunk of part.file) {
-        chunks.push(Buffer.from(chunk));
+  try {
+    for await (const part of parts) {
+      if (part.type === "file") {
+        if (tempPath) throw new Error("only one file is supported");
+        const stored = await writeUploadPartToTemp(part, options);
+        tempPath = stored.tempPath;
+        sizeBytes = stored.sizeBytes;
+        filename = part.filename || filename;
+        contentType = part.mimetype || contentType;
+        continue;
       }
-      bytes = Buffer.concat(chunks);
-      filename = part.filename || filename;
-      contentType = part.mimetype || contentType;
-      continue;
+      if (part.fieldname === "namespaceId") namespaceId = String(part.value ?? "");
+      if (part.fieldname === "collectionName") collectionName = String(part.value ?? "");
+      if (part.fieldname === "recordId") recordId = String(part.value ?? "");
     }
-    if (part.fieldname === "namespaceId") namespaceId = String(part.value ?? "");
-    if (part.fieldname === "collectionName") collectionName = String(part.value ?? "");
-    if (part.fieldname === "recordId") recordId = String(part.value ?? "");
+  } catch (error) {
+    if (tempPath) await cleanupUploadTemp(tempPath);
+    if (isMultipartUploadTooLarge(error)) throw new UploadTooLargeError(options.maxUploadFileBytes);
+    throw error;
   }
 
   if (!namespaceId) throw new Error("namespaceId is required");
-  if (bytes.length === 0) throw new Error("file is required");
+  if (!tempPath || sizeBytes === 0) throw new Error("file is required");
   return {
     namespaceId,
     ...(collectionName ? { collectionName } : {}),
     ...(recordId ? { recordId } : {}),
     filename,
     contentType,
-    bytes,
+    tempPath,
+    sizeBytes,
   };
+}
+
+async function writeUploadPartToTemp(part: {
+  file: AsyncIterable<Buffer | Uint8Array | string>;
+}, options: {
+  filesDir: string;
+  maxUploadFileBytes: number;
+}): Promise<{ tempPath: string; sizeBytes: number }> {
+  const tempDir = path.join(options.filesDir, ".tmp", "uploads");
+  await fs.promises.mkdir(tempDir, { recursive: true });
+  const tempPath = path.join(tempDir, `${randomUUID()}.upload`);
+  const output = fs.createWriteStream(tempPath, { flags: "wx" });
+  let sizeBytes = 0;
+
+  try {
+    for await (const chunk of part.file) {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      sizeBytes += buffer.byteLength;
+      if (sizeBytes > options.maxUploadFileBytes) {
+        throw new UploadTooLargeError(options.maxUploadFileBytes);
+      }
+      if (!output.write(buffer)) {
+        await waitForWritable(output, "drain");
+      }
+    }
+    output.end();
+    await waitForWritable(output, "finish");
+    return { tempPath, sizeBytes };
+  } catch (error) {
+    output.destroy();
+    await cleanupUploadTemp(tempPath);
+    throw error;
+  }
+}
+
+async function waitForWritable(stream: fs.WriteStream, event: "drain" | "finish"): Promise<void> {
+  await Promise.race([
+    once(stream, event),
+    once(stream, "error").then(([error]) => {
+      throw error instanceof Error ? error : new Error(String(error));
+    }),
+  ]);
+}
+
+async function cleanupUploadTemp(tempPath: string): Promise<void> {
+  try {
+    await fs.promises.unlink(tempPath);
+  } catch {
+    // best-effort cleanup
+  }
+}
+
+function isMultipartUploadTooLarge(error: unknown): boolean {
+  if (error instanceof UploadTooLargeError) return true;
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  if (code === "FST_REQ_FILE_TOO_LARGE") return true;
+  const message = "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  return message.toLowerCase().includes("file too large") || message.toLowerCase().includes("larger than");
 }
 
 export interface BuildDatabaseAppOptions {
@@ -196,7 +275,12 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   const app = Fastify({ logger: false });
   const auth = new DatabaseAuthService(config.jwtSecret, ephemeralAdminToken);
   const store = new AsyncDatabaseServiceStore(config.dbPath, config.filesDir);
-  const realtime = new RealtimeHub();
+  const realtime = new RealtimeHub({
+    maxClients: config.realtimeMaxClients,
+    maxSubscriptionsPerClient: config.realtimeMaxSubscriptionsPerClient,
+    maxQueuedMessagesPerClient: config.realtimeMaxQueuedMessagesPerClient,
+    maxBufferedBytesPerClient: config.realtimeMaxBufferedBytesPerClient,
+  });
 
   const emitChange = (event: RecordChangeEvent) => {
     realtime.broadcast(event);
@@ -209,7 +293,14 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   app.register(cors as any, {
     origin: config.corsOrigins.length > 0 ? config.corsOrigins : true,
   });
-  app.register(multipart as any);
+  app.register(multipart as any, {
+    limits: {
+      files: 1,
+      fileSize: config.maxUploadFileBytes,
+      fields: 8,
+      fieldSize: 64 * 1024,
+    },
+  });
   app.register(fastifyStatic as any, {
     root: publicRoot,
     prefix: "/static/",
@@ -259,6 +350,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     return {
       service: "database",
       storage: store.snapshotMetrics(),
+      realtime: realtime.snapshotMetrics(),
     };
   });
 
@@ -591,18 +683,29 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   });
 
   app.post(clawDatabaseApiRoutePatterns.files, async (request, reply) => {
+    let upload: Awaited<ReturnType<typeof readUpload>> | null = null;
     try {
-      const upload = await readUpload(request);
+      upload = await readUpload(request, {
+        filesDir: config.filesDir,
+        maxUploadFileBytes: config.maxUploadFileBytes,
+      });
       const principal = await requirePrincipal(request, reply, auth, store, {
         namespaceId: upload.namespaceId,
         collectionName: upload.collectionName,
         operation: "files:write",
       });
-      if (!principal) return null;
-      const asset = await store.saveFile(upload);
+      if (!principal) {
+        await cleanupUploadTemp(upload.tempPath);
+        upload = null;
+        return null;
+      }
+      const asset = await store.saveFileFromPath(upload);
+      upload = null;
       return await reply.code(201).send(asset);
     } catch (error) {
-      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+      if (upload) await cleanupUploadTemp(upload.tempPath);
+      const statusCode = isMultipartUploadTooLarge(error) ? 413 : 400;
+      return await reply.code(statusCode).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
