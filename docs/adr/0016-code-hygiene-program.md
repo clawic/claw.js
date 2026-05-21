@@ -16,6 +16,8 @@ The program fails only clear mechanical debt: local unused code, true orphan fil
 
 Public APIs, package entrypoints, CLI/router/registry/protocol surfaces, canonical docs, fixtures, stable registries, and compatibility names are retained as contract. Future intent must live in an issue, backlog entry, ADR, or canonical doc; dormant code alone is not enough.
 
+Generated and baseline material is not exempt by marker alone. Any large generated or baseline refresh must carry generated provenance with `generator`, `command`, `source`, `upstreamHash`, `regenerationMode`, `deltaSummary`, `debtImpact`, and `debtImpactReason` when debt is neutral or increasing. The delta summary must explain what changed, and the debt impact must state whether the refresh decreases, preserves, or increases cleanup debt.
+
 ## Performance Impact
 
 The hygiene program runs in validation and may invoke static analyzers, but it adds no product runtime cost. Removing dead code, stale dependencies, orphan assets, and invalid baselines can reduce install size, build time, and hidden startup/import work over time. Expensive semantic categories remain report-only until calibrated so the guard does not block useful work with noisy analysis.
@@ -34,3 +36,5 @@ The hygiene program runs in validation and may invoke static analyzers, but it a
 ## Consequences
 
 Cleanup happens in small validated batches. Autofix is suggestion-only by default. Baseline entries require reason, owner/area, reference, and 90-day expiry unless they are durable public/canonical contracts represented elsewhere. Duplicates, enum members, and Swift report-only findings must be reviewed without forcing premature abstraction or breaking dynamic runtime behavior.
+
+Large generated/baseline exceptions require reproducible provenance rather than only `@generated`, a generated path, or a baseline filename. Refreshes without generator, regeneration command, source, upstream hash, regeneration mode, delta, and debt impact are invalid hygiene exceptions.
