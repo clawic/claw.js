@@ -133,7 +133,7 @@ test("search command fallback is explicit and does not broaden section search by
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const scoped = await runCliCapture(["search", "query", "system capabilities", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const scoped = await runCliCapture(["search", "query", "system capabilities", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5", "--persistent"], workspaceRoot);
     assert.equal(scoped.code, CLI_EXIT_DEGRADED);
     const scopedPayload = JSON.parse(scoped.stdout) as {
       data: { results: Array<{ source: string }>; stale: boolean; staleSources: Array<{ source: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
@@ -188,7 +188,7 @@ test("search query reports stale sources and schedules refreshes without inline 
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const neverIndexed = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const neverIndexed = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5", "--schedule-refresh"], workspaceRoot);
     assert.equal(neverIndexed.code, CLI_EXIT_DEGRADED);
     const neverIndexedPayload = JSON.parse(neverIndexed.stdout) as {
       data: {
@@ -205,7 +205,7 @@ test("search query reports stale sources and schedules refreshes without inline 
       { id: "query-refresh:apps.catalog:default", source: "apps.catalog", operation: "backfill", status: "queued" },
     ]);
 
-    const repeated = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    const repeated = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5", "--schedule-refresh"], workspaceRoot);
     assert.equal(repeated.code, CLI_EXIT_DEGRADED);
     const repeatedPayload = JSON.parse(repeated.stdout) as {
       data: { staleSources: Array<{ source: string; reason: string }>; scheduledRefreshJobs?: unknown[] };

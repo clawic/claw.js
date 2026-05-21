@@ -367,6 +367,13 @@ export interface SearchQueryOutput {
     reason: "timeout" | "disabled" | "sourceSet" | "error";
     message?: string;
   }>;
+  stale: boolean;
+  staleSources: Array<{
+    source: string;
+    reason: "pending_jobs" | "never_indexed" | "backlog";
+    backlog: number;
+    lastIndexedAt?: string;
+  }>;
   elapsedMs: number;
 }
 
@@ -605,6 +612,8 @@ export function createRootSearchFederator(options: RootSearchFederatorOptions = 
         results,
         partial: omittedSources.length > 0,
         omittedSources,
+        stale: false,
+        staleSources: [],
         elapsedMs: Date.now() - startedAt,
       };
     },

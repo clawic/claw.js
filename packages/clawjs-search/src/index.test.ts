@@ -457,6 +457,8 @@ test("SearchStore keeps shard-scoped ranking cache through unrelated cold backfi
     });
     assert.equal(store.query({ query: "hotneedle42", domains: ["scale"], shards: ["hot"], limit: 5 }).results.length, 1);
     assert.equal(store.rankingCacheStats().entries, 1);
+    assert.equal(store.query({ query: "hotneedle42", limit: 5 }).results.length, 1);
+    assert.equal(store.rankingCacheStats().entries, 2);
 
     store.upsertDocuments(Array.from({ length: 10 }, (_, index) => ({
       id: `scale.items:cold:${index}`,
@@ -479,6 +481,39 @@ test("SearchStore keeps shard-scoped ranking cache through unrelated cold backfi
       body: "hotneedle42 updated",
     });
     assert.equal(store.rankingCacheStats().entries, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore ranking cache expires old entries and rehydrates current rows", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cache-ttl-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.upsertDocument({
+      id: "commands:ttl",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "old ttl command",
+      body: "ttlneedle",
+    });
+    assert.equal(store.query({ query: "ttlneedle", domains: ["commands"] }).results[0]?.title, "old ttl command");
+    const oldCacheTime = "2020-01-01T00:00:00.000Z";
+    store.db.prepare("UPDATE search_ranking_cache SET updated_at = ?").run(oldCacheTime);
+    store.db.prepare("UPDATE search_documents SET title = ?, updated_at = ? WHERE id = ?").run("new ttl command", "2026-01-01T00:00:00.000Z", "commands:ttl");
+
+    const output = store.query({ query: "ttlneedle", domains: ["commands"] });
+    assert.equal(output.results[0]?.title, "new ttl command");
+    const cacheRow = store.db.prepare("SELECT updated_at FROM search_ranking_cache").get() as { updated_at: string };
+    assert.notEqual(cacheRow.updated_at, oldCacheTime);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });
@@ -1555,6 +1590,9 @@ test("SearchStore caches ranked query output and invalidates on index changes", 
     const cached = store.query({ query: "search", domains: ["commands"], explain: true });
     assert.equal(cached.results[0]?.id, "commands:search");
     assert.equal(store.rankingCacheStats().entries, 1);
+    const cachePayload = store.db.prepare("SELECT payload_json FROM search_ranking_cache").get() as { payload_json: string };
+    assert.match(cachePayload.payload_json, /commands:search/);
+    assert.doesNotMatch(cachePayload.payload_json, /Search command/);
 
     store.upsertDocument({
       id: "commands:search-docs",
@@ -1570,6 +1608,103 @@ test("SearchStore caches ranked query output and invalidates on index changes", 
 
     store.setSourceState("commands", "paused");
     assert.equal(store.rankingCacheStats().entries, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore ranking cache is bounded by entry count and total bytes", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-cache-bounds-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    for (let index = 0; index < 260; index += 1) {
+      store.query({ query: `entryprune${index}`, domains: ["commands"] });
+    }
+    assert.equal(store.rankingCacheStats().entries, 256);
+    store.clearRankingCache();
+
+    const oversizedByteCount = 1024 * 1024;
+    const payload = JSON.stringify({
+      query: "manual",
+      sourceSet: "framework",
+      results: [],
+      partial: false,
+      omittedSources: [],
+    });
+    const insert = store.db.prepare(`
+      INSERT INTO search_ranking_cache (
+        cache_key, payload_json, byte_count, result_count,
+        source_count, domain_count, shard_count, updated_at
+      )
+      VALUES (?, ?, ?, 0, 0, 0, 0, ?)
+    `);
+    for (let index = 0; index < 20; index += 1) {
+      insert.run(`manual-byte-${index}`, payload, oversizedByteCount, new Date(Date.now() - index * 1000).toISOString());
+    }
+    store.query({ query: "byteprune", domains: ["commands"] });
+    const total = store.db.prepare("SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM search_ranking_cache").get() as { bytes: number };
+    assert.ok(total.bytes <= 16 * 1024 * 1024);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore skips oversized ranking cache entries", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-cache-oversized-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "large.items",
+      domain: "large",
+      name: "Large items",
+      resultTypes: ["item"],
+    }));
+    const longIdPart = "x".repeat(2200);
+    store.upsertDocuments(Array.from({ length: 160 }, (_, index) => ({
+      id: `large.items:${index}:${longIdPart}`,
+      source: "large.items",
+      domain: "large",
+      type: "item",
+      title: `Large result ${index}`,
+      body: "oversizedneedle",
+    })));
+
+    const output = store.query({ query: "oversizedneedle", domains: ["large"], limit: 200 });
+    assert.equal(output.results.length, 160);
+    assert.equal(store.rankingCacheStats().entries, 0);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore ranking cache rehydrates current rows and drops stale deleted rows", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-ranking-cache-rehydrate-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "notes.pages",
+      domain: "notes",
+      name: "Notes",
+      resultTypes: ["page"],
+    }));
+    store.upsertDocument({
+      id: "notes.pages:rehydrate",
+      source: "notes.pages",
+      domain: "notes",
+      type: "page",
+      title: "Original note",
+      body: "rehydrateneedle",
+    });
+    assert.equal(store.query({ query: "rehydrateneedle", domains: ["notes"] }).results[0]?.title, "Original note");
+    store.db.prepare("UPDATE search_documents SET title = ? WHERE id = ?").run("Current note", "notes.pages:rehydrate");
+    assert.equal(store.query({ query: "rehydrateneedle", domains: ["notes"] }).results[0]?.title, "Current note");
+
+    store.db.prepare("UPDATE search_documents SET deleted_at = ? WHERE id = ?").run("2026-01-01T00:00:00.000Z", "notes.pages:rehydrate");
+    assert.equal(store.query({ query: "rehydrateneedle", domains: ["notes"] }).results.length, 0);
+    assert.equal(store.rankingCacheStats().entries, 1);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

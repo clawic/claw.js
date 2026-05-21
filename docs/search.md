@@ -191,9 +191,16 @@ those jobs and applies the source or source/shard reset under worker budgets.
 
 Source controls are applied to `search.sqlite` and mirrored to canonical
 `core.sqlite` configuration in `search_source_config`. Disabled, paused, and
-excluded sources are skipped by `search query` lazy indexing and by
+excluded sources are skipped by `search query` refresh scheduling and by
 `search rebuild`, survive a rebuildable `search.sqlite` reset, and Root Search
 reports omitted sources as partial metadata instead of blocking fast paths.
+`search query` itself is a read path: it reads the current index and reports
+`stale`/`staleSources` when selected sources have pending work or no indexed
+snapshot. By default it does not create `search.sqlite`, enqueue compact
+backfill jobs, or write audit events; use `--schedule-refresh` for refresh-job
+scheduling or `--persistent` for query paths that are allowed to create/use
+persistent Search storage. It never writes Search documents, FTS rows,
+fragments, cursors, or vectors.
 
 Search documents and sync checkpoints are tracked per source and shard. Each
 checkpoint stores the adapter cursor, a separate high-watermark value, a

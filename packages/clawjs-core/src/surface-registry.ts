@@ -831,6 +831,7 @@ const agentCoreTables = [
 ] as const;
 
 const searchSidecarTables = [
+  "search_source_sets",
   "search_profiles",
   "search_sources",
   "search_documents",
@@ -847,6 +848,7 @@ const searchSidecarTables = [
   "search_interactions",
   "search_vectors",
   "search_ranking_cache",
+  "search_ranking_cache_scopes",
 ] as const;
 
 const searchSidecarIndexes = [
@@ -867,6 +869,31 @@ const searchSidecarIndexes = [
   "search_audit_events_actor_idx",
   "search_interactions_document_idx",
   "search_interactions_context_idx",
+  "search_vectors_model_document_idx",
+  "search_ranking_cache_updated_idx",
+  "search_ranking_cache_bytes_idx",
+  "search_ranking_cache_scopes_lookup_idx",
+] as const;
+
+const appStateCoreTables = [
+  "app_state",
+  "app_projects",
+  "app_pinned_threads",
+  "app_session_titles",
+  "app_archives",
+  "app_sidebar_snapshots",
+  "app_terminal_tabs",
+  "app_state_sync_receipts",
+  "app_state_projection_meta",
+] as const;
+
+const appStateCoreIndexes = [
+  "app_projects_path_idx",
+  "app_projects_resource_id_idx",
+  "app_sidebar_snapshots_order_idx",
+  "app_sidebar_snapshots_project_id_idx",
+  "app_state_sync_receipts_request_idx",
+  "app_state_sync_receipts_status_idx",
 ] as const;
 
 const monitorMetricIndexes = [
@@ -928,6 +955,21 @@ const corePublicRoutes = [
   ["claw.api.notify.notifications", "POST", clawNotifyApiRoutes.notifications, "Notification dispatch endpoint"],
   ["claw.api.webhooks.providerEvent", "POST", "/v1/webhooks/{provider}/{event}", "Provider webhook ingress"],
   ["claw.api.integrations.callback", "GET", "/v1/integrations/{provider}/callback", "OAuth integration callback"],
+  ["claw.api.agents.serviceApi", "POST", "/v1/agents/service-api", "Agents V1 service API contract"],
+  ["claw.api.mac.plan", "POST", "/v1/mac/plan", "Mac control plan contract"],
+  ["claw.api.mac.execute", "POST", "/v1/mac/execute", "Mac control execution contract"],
+  ["claw.api.mac.revert", "POST", "/v1/mac/revert", "Mac control revert contract"],
+  ["claw.api.mac.audit", "GET", "/v1/mac/audit", "Mac control audit contract"],
+  ["claw.api.mac.permissions", "GET", "/v1/mac/permissions", "Mac permission state contract"],
+  ["claw.api.mac.permissionsRequest", "POST", "/v1/mac/permissions/request", "Mac permission request contract"],
+  ["claw.api.mcp.exposeRpc", "POST", "/v1/mcp/expose/rpc", "MCP RPC exposure contract"],
+  ["claw.api.mcp.exposeCustomAppSdk", "POST", "/v1/mcp/expose/custom-app-sdk", "MCP custom app SDK exposure contract"],
+  ["claw.api.mcp.toolsCall", "POST", "/v1/mcp/tools/call", "MCP tool call contract"],
+  ["claw.api.mcp.servers", "GET", "/v1/mcp/servers", "MCP server catalog contract"],
+  ["claw.api.mcp.serversRefresh", "POST", "/v1/mcp/servers/{serverId}/refresh", "MCP server refresh contract"],
+  ["claw.api.sessions", "GET", "/v1/sessions", "Sessions service list contract"],
+  ["claw.api.sessions.importCodex", "POST", "/v1/sessions/import/codex", "Codex session import contract"],
+  ["claw.api.signals.vertical", "GET", "/v1/{verticalId}", "Signals vertical route template"],
   ["claw.api.relay.remote", "WS", "/v1/relay/remote", "Remote Relay client channel"],
   ["claw.api.relay.connector", "WS", "/v1/relay/connectors", "Relay workspace connector channel"],
   ["claw.api.remote.classifications", "GET", "/v1/remote/classifications", "Remote surface classification contract"],
@@ -956,6 +998,7 @@ const corePublicRoutes = [
   ["claw.api.remote.closureGate", "POST", "/v1/remote/closure-gate", "Remote goal closure gate contract"],
   ["claw.api.remote.routeContracts", "GET", "/v1/remote/route-contracts", "Remote route contract catalog contract"],
   ["claw.api.remote.providerDeviceE2EPlan", "GET", "/v1/remote/provider-device-e2e-plan", "Remote provider/device E2E validation plan contract"],
+  ["claw.api.remote.customAppSdk", "GET", "/v1/remote/custom-app-sdk", "Remote custom app SDK metadata projection contract"],
   ["claw.api.remote.compatibilityAdapters", "GET", "/v1/remote/compatibility/adapters", "Remote compatibility adapter catalog contract"],
   ["claw.api.remote.compatibilityAdaptersCreate", "POST", "/v1/remote/compatibility/adapters", "Remote compatibility adapter receipt dry-run contract"],
   ["claw.api.sync.drivers", "GET", "/v1/sync/drivers", "Sync driver catalog contract"],
@@ -980,7 +1023,7 @@ const corePublicRoutes = [
   ["claw.api.gateway.auditReceipts", "POST", "/v1/gateway/audit/receipts", "Gateway signed host audit receipt contract"],
 ] as const;
 
-const corePrivateRouteValues = "/api/attachments /api/auth/token /api/capture /api/captures /api/chat/feedback /api/comments /api/config/profile /api/config/reset /api/config/workspace-files /api/connectors/catalog /api/context /api/custom-fields /api/cycles /api/discover/local /api/e2e/seed /api/epics /api/export /api/field-values /api/goals /api/graph /api/hot-topics/seed /api/images /api/instances /api/integrations/auth /api/integrations/enable /api/integrations/gateway /api/integrations/install /api/integrations/install-stream /api/integrations/reveal /api/integrations/slack/connect /api/integrations/slack/test /api/integrations/telegram/connect /api/integrations/telegram/test /api/integrations/uninstall /api/integrations/whatsapp/cleanup /api/integrations/whatsapp/connect /api/lists /api/memory/person /api/milestones /api/monitors /api/notes/ /api/notify/actions /api/people /api/projects /api/promote /api/recurrences /api/row /api/saved-views /api/search /api/sections /api/seed /api/sessions /api/setup /api/skills/install /api/skills/remove /api/skills/sources /api/sources/refresh /api/stats /api/telegram/account /api/templates /api/timeline /api/tools/conclude /api/tools/get/ /api/tools/search /api/tools/status /api/tts /api/tts/providers /api/users /api/activity /api/apps/{appId}/dashboard /api/apps/{appId}/assets /api/auth.test /api/chat/sessions /api/claw/status /api/companies /api/config /api/config/local /api/connectors/subscriptions /api/contacts /api/data /api/dm /api/e2e/reset /api/e2e/status /api/events /api/health /api/images/backends /api/inbox /api/inspect/preview /api/integrations/setup /api/integrations/status /api/integrations/whatsapp/chats /api/memory /api/notes /api/notify/dashboard /api/personas /api/plugins /api/routines /api/rules /api/schema /api/skills/list /api/sources /api/spaces /api/summary /api/tasks /api/tools/save /api/ui /api/usage".split(" ");
+const corePrivateRouteValues = "/api/attachments /api/auth/token /api/capture /api/captures /api/chat/feedback /api/comments /api/config/profile /api/config/reset /api/config/workspace-files /api/connectors/catalog /api/context /api/custom-fields /api/cycles /api/discover/local /api/e2e/seed /api/epics /api/export /api/field-values /api/goals /api/graph /api/hot-topics/seed /api/images /api/instances /api/integrations/auth /api/integrations/enable /api/integrations/gateway /api/integrations/install /api/integrations/install-stream /api/integrations/reveal /api/integrations/slack/connect /api/integrations/slack/test /api/integrations/telegram/connect /api/integrations/telegram/test /api/integrations/uninstall /api/integrations/whatsapp/cleanup /api/integrations/whatsapp/connect /api/lists /api/memory/person /api/milestones /api/monitors /api/notes/ /api/notify/actions /api/people /api/projects /api/promote /api/recurrences /api/row /api/saved-views /api/search /api/search/index /api/sections /api/seed /api/sessions /api/setup /api/skills/install /api/skills/remove /api/skills/sources /api/sources/refresh /api/stats /api/telegram/account /api/templates /api/timeline /api/tools/conclude /api/tools/get/ /api/tools/search /api/tools/status /api/tts /api/tts/providers /api/users /api/activity /api/apps/{appId}/dashboard /api/apps/{appId}/assets /api/auth.test /api/chat/sessions /api/claw/status /api/companies /api/config /api/config/local /api/connectors/subscriptions /api/contacts /api/data /api/dm /api/e2e/reset /api/e2e/status /api/events /api/health /api/images/backends /api/inbox /api/inspect/preview /api/integrations/setup /api/integrations/status /api/integrations/whatsapp/chats /api/memory /api/notes /api/notify/dashboard /api/personas /api/plugins /api/routines /api/rules /api/schema /api/skills/list /api/sources /api/spaces /api/summary /api/tasks /api/tools/save /api/ui /api/usage".split(" ");
 
 const corePrivateRoutes = corePrivateRouteValues.map((route) => [`claw.privateApi.${stableRouteSurfaceKey(route)}`, "GET", route, `${route} private API route`] as const);
 
@@ -1176,23 +1219,56 @@ const stableEventTopics: ReadonlyArray<{
     direction: "inbound" as const,
     notes: "Notify event type accepted by source apps and dashboard actions.",
   })),
+  ..."context.upsert context.state context.link_secret context.default context.explain context.export".split(" ").map((event) => ({
+    id: `claw.event.connectorContext.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Connector governed context audit event emitted by the CLI context store.",
+  })),
+  ..."sync.manifest.recorded sync.queue.enqueued sync.queue.reconciled sync.driver_application.recorded sync.authority_handoff.recorded sync.cache.recorded remote.classification.recorded remote.compat.recorded mesh.invitation.recorded mesh.invitation.accepted mesh.share.recorded mesh.revocation.recorded secret.lease.issued secret.provider.recorded transport.handshake.recorded node.trust.recorded gateway.deployment.recorded gateway.agent_service.recorded gateway.audit.recorded remote.agent_service.evaluated remote.access.evaluated clawjs.tracking-registry".split(" ").map((event) => ({
+    id: `claw.event.routeGraph.${event.replace(/[^a-zA-Z0-9]+/g, ".")}`,
+    value: event,
+    name: event,
+    direction: "generated" as const,
+    notes: "Surface route, sync, remote, mesh, gateway, or signals event used by registered contract projections.",
+  })),
 ] as const;
 
 function cliFlagCatalogKey(flag: string): string {
   return flag.slice(2).replace(/-([a-z0-9])/g, (_, char: string) => char.toUpperCase());
 }
 
-export const clawPublicApiRouteContractCatalog = defineStableCatalogFromEntries(corePublicRoutes.map(([id, method, route, name]) => [id, clawStableContractCatalogEntry({
-  ...contractDefaults,
-  id,
-  kind: "apiRoute",
-  name,
-  route,
-  method,
-  value: `${method} ${route}`,
-  parentId: "claw.contracts.api",
-  direction: "inbound",
-})]));
+const publicApiRouteNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
+  "claw.api.database.storageMetrics": {
+    concept: "Read-only operational metrics endpoint for database and sessions storage worker queue depth and timings.",
+    authorizingDecision: {
+      ref: "ADR 0004: Stable surface registry and inspection",
+      path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+    },
+    completingSurface: {
+      human: "Database and storage observability documented in docs/database.md",
+      programmatic: "GET /v1/storage/metrics via clawDatabaseApiRoutes.storageMetrics and DatabaseClient.storageMetrics()",
+    },
+    nonInference: "This endpoint does not authorize record payload access, storage mutation, secret exposure, or background polling.",
+  },
+};
+
+export const clawPublicApiRouteContractCatalog = defineStableCatalogFromEntries(corePublicRoutes.map(([id, method, route, name]) => {
+  const surfaceNarrative = publicApiRouteNarratives[id];
+  return [id, clawStableContractCatalogEntry({
+    ...contractDefaults,
+    id,
+    kind: "apiRoute",
+    name,
+    route,
+    method,
+    value: `${method} ${route}`,
+    parentId: "claw.contracts.api",
+    direction: "inbound",
+    ...(surfaceNarrative ? { surfaceNarrative } : {}),
+  })];
+}));
 
 export const clawPrivateApiRouteContractCatalog = defineStableCatalogFromEntries(corePrivateRoutes.map(([id, method, route, name]) => [id, clawStableContractCatalogEntry({
   ...contractDefaults,
@@ -1344,16 +1420,35 @@ export const clawPortContractCatalog = defineStableCatalogFromEntries(Object.ent
   direction: "inbound",
 })]));
 
-export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliCommands.map((command) => [command, clawStableContractCatalogEntry({
-  ...contractDefaults,
-  id: `claw.cli.command.${command}`,
-  kind: "cliCommand",
-  name: command,
-  value: command,
-  parentId: "claw.contracts.cli",
-  surfaceClass: "cli",
-  direction: "inbound",
-})]));
+const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
+  maturity: {
+    concept: "Capability maturity governance inspection CLI for profile ceilings, activation policies, and leakage audit.",
+    authorizingDecision: {
+      ref: "ADR 0004: Stable surface registry and inspection",
+      path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+    },
+    completingSurface: {
+      human: "CLI help and docs for claw maturity and claw inspect maturity",
+      programmatic: "clawCapabilityMaturityRegistry plus JSON output from claw maturity and claw inspect maturity",
+    },
+    nonInference: "This command does not promote capabilities, enable experimental features, or override activation policy.",
+  },
+};
+
+export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliCommands.map((command) => {
+  const surfaceNarrative = cliCommandNarratives[command];
+  return [command, clawStableContractCatalogEntry({
+    ...contractDefaults,
+    id: `claw.cli.command.${command}`,
+    kind: "cliCommand",
+    name: command,
+    value: command,
+    parentId: "claw.contracts.cli",
+    surfaceClass: "cli",
+    direction: "inbound",
+    ...(surfaceNarrative ? { surfaceNarrative } : {}),
+  })];
+}));
 
 export const clawCliFlagContractCatalog = defineStableCatalogFromEntries(["--json", "--dry-run", "--workspace", "--runtime", "--help", "--guidance", "--actor-assertion"].map((flag) => [cliFlagCatalogKey(flag), clawStableContractCatalogEntry({
   ...contractDefaults,

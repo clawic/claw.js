@@ -147,13 +147,19 @@ Search can grow to many sources without one global query becoming the only
 execution path. Narrow views can query their source directly or pass domain/source
 filters. Slow sources are omitted with partial metadata instead of blocking fast
 sources. Disabled, paused, and excluded sources are persisted as source state and
-are skipped by query-time lazy indexing and rebuilds. Rebuilds can reset
+are skipped by query-time refresh scheduling and rebuilds. Rebuilds can reset
 `search.sqlite` because it is not canonical storage.
 
 The first complete acceptance slice is not "all possible sources"; it is a
 usable framework Root Search with multiple fast sources, CLI/admin controls,
 strict timeout behavior, saved searches, monitors, actions, and no regression to
 conversation-only Clawix search.
+
+`claw search query` is a read path over the current index. By default it does
+not create `search.sqlite`, enqueue refresh jobs, or write audit events while
+serving an interactive query. It may report `stale` metadata for the current
+index; compact refresh jobs and query audit writes require explicit persistent
+intent such as `--schedule-refresh` or `--persistent`.
 
 The showcase Search Index page is the first admin UI for source state and
 rebuild queue control. It includes explicit source onboarding: sources are
@@ -169,9 +175,10 @@ domain filters, and primes only the commands hot path so the entrypoint is
 usable before broader source backfills complete.
 
 The initial code source is bounded to an explicit project root, dependency/build
-directories are skipped, and query-time refresh happens only for code-scoped
-queries. This keeps project/code search available without putting file scanning
-on the hot path for chats, database records, commands, or other sections.
+directories are skipped, and query-scoped freshness checks only report stale
+index state and enqueue worker jobs. This keeps project/code search available
+without putting file scanning or extraction on the hot path for chats, database
+records, commands, or other sections.
 The initial docs source projects root public Markdown docs, Markdown docs under
 `docs/`, and ADRs under `docs/adr/`, including section fragments and docs-path
 metadata, with resource-scoped refresh jobs for changed repository docs files.
