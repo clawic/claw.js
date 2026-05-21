@@ -312,7 +312,8 @@ async function runV1DataRouteIfPossible(input: {
   wantsJson: boolean;
   binName: string;
 }): Promise<number | null> {
-  if (!isV1DataFastRoot(input.group)) return null;
+  if (!input.wantsJson || !isV1DataFastRoot(input.group)) return null;
+  if (input.flags["time-url"]) return null;
   const { runV1DataCli } = await import("./v1-data.ts");
   return await runV1DataCli({
     argv: input.argv,
@@ -338,19 +339,26 @@ async function runDenseDataRouteIfPossible(input: {
   wantsJson: boolean;
   binName: string;
 }): Promise<number | null> {
-  const { runProfessionalRecordsCli } = await import("./cli-dense-data-command.ts");
-  return await runProfessionalRecordsCli({
-    argv: input.argv,
-    positionals: input.positionals,
-    flags: input.flags,
-    context: {
-      stdout: input.context.stdout,
-      stderr: input.context.stderr,
-    },
-    wantsJson: input.wantsJson,
-    binName: input.binName,
-    workspaceRoot: input.flags.workspace || input.context.cwd,
-  });
+  const modulePath = [".", "cli-dense-data-command.ts"].join("/");
+  try {
+    const { runProfessionalRecordsCli } = await import(modulePath) as typeof import("./cli-dense-data-command.ts");
+    return await runProfessionalRecordsCli({
+      argv: input.argv,
+      positionals: input.positionals,
+      flags: input.flags,
+      context: {
+        stdout: input.context.stdout,
+        stderr: input.context.stderr,
+      },
+      wantsJson: input.wantsJson,
+      binName: input.binName,
+      workspaceRoot: input.flags.workspace || input.context.cwd,
+    });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException & { code?: string }).code;
+    if (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") return null;
+    throw error;
+  }
 }
 
 async function handleUnknownCliCommand(input: {

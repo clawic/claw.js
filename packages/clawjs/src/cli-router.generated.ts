@@ -5611,7 +5611,8 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   browser: "legacy",
   compat: "legacy",
   chat: "runtime-workspace",
-  provider: "runtime-workspace"
+  provider: "runtime-workspace",
+  info: "legacy"
 } as const satisfies Record<string, GeneratedCliRouteGroup>;
 export const GENERATED_STABLE_CLI_COMMANDS = [
   "accessibility",

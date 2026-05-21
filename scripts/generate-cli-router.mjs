@@ -86,6 +86,7 @@ const SPECIAL_ROUTE_ALIASES = new Map([
   ["chat", "runtime-workspace"],
   ["provider", "runtime-workspace"],
   ["image", "media-documents"],
+  ["info", "legacy"],
   ["style", "media-documents"],
   ["template", "media-documents"],
   ["ref", "media-documents"],
