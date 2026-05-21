@@ -43,7 +43,7 @@
     "providers:verify-runtime": "npm run build && node ../../scripts/verify-connector-runtime-coverage.mjs --catalog fixtures/started-provider-runtime-catalog.json --execute-offline",
     "openapi:verify-runtime": "npm run build && node ../../scripts/verify-openapi-runtime-coverage.mjs",
     "test": "vitest run --config vitest.config.ts",
-    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate && node ../../scripts/supply-chain-security-check.mjs --release"
   },
   "dependencies": {
     "@clawjs/agents": "0.1.2",

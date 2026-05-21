@@ -135,6 +135,9 @@ if (owner === "clawjs") {
       if (!script.includes("verify-regulated-domain-safety-goal.mjs")) {
         violations.push(`package.json ${scriptName} must run the regulated-domain legal release gate`);
       }
+      if (!script.includes("supply-chain-security-check.mjs --release")) {
+        violations.push(`package.json ${scriptName} must run the supply-chain release gate`);
+      }
       if (!fs.readFileSync(path.join(cwd, "RELEASING.md"), "utf8").includes(`CLAW_RELEASE_APPROVED_FOR=${approvalTarget}`)) {
         violations.push(`RELEASING.md must document exact release approval ${approvalTarget}`);
       }
@@ -169,6 +172,9 @@ if (owner === "clawjs") {
       }
       if (!prepublishOnly.includes("version-governance-check.mjs --release-gate")) {
         violations.push(`${relative(file)} public package must run exact release approval gate in prepublishOnly`);
+      }
+      if (!prepublishOnly.includes("supply-chain-security-check.mjs --release")) {
+        violations.push(`${relative(file)} public package must run supply-chain release gate in prepublishOnly`);
       }
     }
   }

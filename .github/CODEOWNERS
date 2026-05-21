@@ -3,3 +3,9 @@
 /packages/ @clawic
 /docs/ @clawic
 /.github/ @clawic
+package.json @clawic
+package-lock.json @clawic
+**/package.json @clawic
+**/package-lock.json @clawic
+docs/supply-chain-security* @clawic
+scripts/supply-chain-security-check.mjs @clawic

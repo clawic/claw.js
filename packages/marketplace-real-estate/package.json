@@ -37,7 +37,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20",
-    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate && node ../../scripts/supply-chain-security-check.mjs --release"
   },
   "dependencies": {
     "@clawjs/marketplace": "*"

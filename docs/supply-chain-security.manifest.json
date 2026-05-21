@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "mode": "baseline-plus-release-hard-fail",
+    "releaseHardFail": true,
+    "sbomFormat": "CycloneDX JSON",
+    "provenanceTarget": "SLSA Build L2 for CI-built official artifacts",
+    "vulnerabilitySla": {
+      "acknowledgeHours": 48,
+      "criticalPlanHours": 24,
+      "criticalFixHours": 72,
+      "highDays": 7,
+      "mediumDays": 30,
+      "lowDays": 90
+    }
+  },
+  "surfaces": [
+    {
+      "id": "clawjs.root-workspace",
+      "kind": "npm-workspace",
+      "path": "package.json",
+      "releaseCritical": true,
+      "dependencyScope": "runtime",
+      "lockfile": { "status": "pass", "evidence": "package-lock.json" },
+      "sbom": { "status": "pass", "evidence": "release evidence must include CycloneDX JSON for every npm tarball" },
+      "provenance": { "status": "pass", "evidence": "npm trusted publishing/provenance for official packages" },
+      "dependencyReview": { "status": "pass", "evidence": ".github/PULL_REQUEST_TEMPLATE.md and .github/CODEOWNERS dependency review routing" },
+      "vulnerabilityTriage": { "status": "pass", "evidence": "SECURITY.md and docs/supply-chain-security.md SLA" },
+      "artifactIntegrity": { "status": "pass", "evidence": "publish dry-run, package file list review, checksums in release evidence" },
+      "malwareReview": { "status": "pass", "evidence": "package lifecycle script and plugin/sub-app policy in docs/supply-chain-security.md" }
+    },
+    {
+      "id": "clawjs.public-packages",
+      "kind": "npm-workspace",
+      "path": "packages",
+      "releaseCritical": true,
+      "dependencyScope": "runtime",
+      "lockfile": { "status": "pass", "evidence": "root package-lock.json covers npm workspace packages" },
+      "sbom": { "status": "pass", "evidence": "release evidence must include CycloneDX JSON per package" },
+      "provenance": { "status": "pass", "evidence": "npm trusted publishing/provenance and package prepublish gates" },
+      "dependencyReview": { "status": "pass", "evidence": "package-surface guard plus supply-chain dependency review checklist" },
+      "vulnerabilityTriage": { "status": "pass", "evidence": "SECURITY.md SLA" },
+      "artifactIntegrity": { "status": "pass", "evidence": "scripts/pack-smoke.mjs and npm publish --dry-run" },
+      "malwareReview": { "status": "pass", "evidence": "no unreviewed lifecycle/native dependency growth without manifest review" }
+    },
+    {
+      "id": "clawjs.generated-templates",
+      "kind": "npm-template",
+      "path": "packages/clawjs/templates",
+      "releaseCritical": true,
+      "dependencyScope": "template",
+      "lockfile": { "status": "baseline_exception", "evidence": "templates intentionally omit lockfiles", "exception": "Generated projects create their own lockfile during installation." },
+      "sbom": { "status": "pass", "evidence": "template package dependencies are covered by release package SBOMs" },
+      "provenance": { "status": "pass", "evidence": "template contents ship inside npm packages with package provenance" },
+      "dependencyReview": { "status": "pass", "evidence": "template dependency changes require supply-chain review" },
+      "vulnerabilityTriage": { "status": "pass", "evidence": "template dependency vulnerabilities are triaged as package issues" },
+      "artifactIntegrity": { "status": "pass", "evidence": "pack smoke validates generated template output" },
+      "malwareReview": { "status": "pass", "evidence": "template scripts and plugin template are scanned by supply-chain guard" }
+    },
+    {
+      "id": "clawjs.service-apps",
+      "kind": "npm-app",
+      "path": "runtime",
+      "releaseCritical": true,
+      "dependencyScope": "runtime",
+      "lockfile": { "status": "pass", "evidence": "runtime/package-lock.json" },
+      "sbom": { "status": "pass", "evidence": "release evidence includes service SBOMs when shipped" },
+      "provenance": { "status": "pass", "evidence": "CI build provenance for service artifacts" },
+      "dependencyReview": { "status": "pass", "evidence": "dependency changes route through PR checklist" },
+      "vulnerabilityTriage": { "status": "pass", "evidence": "SECURITY.md SLA" },
+      "artifactIntegrity": { "status": "pass", "evidence": "test:release and build artifacts checks" },
+      "malwareReview": { "status": "pass", "evidence": "lifecycle/native dependency policy" }
+    },
+    {
+      "id": "clawjs.openclaw-plugins",
+      "kind": "plugin-package",
+      "path": "packages/openclaw-plugin",
+      "releaseCritical": true,
+      "dependencyScope": "runtime",
+      "lockfile": { "status": "pass", "evidence": "root package-lock.json covers workspace plugin package" },
+      "sbom": { "status": "pass", "evidence": "release evidence includes plugin SBOM" },
+      "provenance": { "status": "pass", "evidence": "npm package provenance plus plugin manifest verification" },
+      "dependencyReview": { "status": "pass", "evidence": "dependency review checklist and package surface guard" },
+      "vulnerabilityTriage": { "status": "pass", "evidence": "SECURITY.md SLA" },
+      "artifactIntegrity": { "status": "pass", "evidence": "npm tarball checksum and file list review" },
+      "malwareReview": { "status": "pass", "evidence": "claw verify plugin validates manifest, lifecycle scripts, provenance and signature metadata" }
+    },
+    {
+      "id": "clawjs.github-release",
+      "kind": "release-channel",
+      "path": "RELEASING.md",
+      "releaseCritical": true,
+      "dependencyScope": "release",
+      "lockfile": { "status": "pass", "evidence": "release checklist requires npm ci from lockfile" },
+      "sbom": { "status": "pass", "evidence": "release checklist requires SBOM references" },
+      "provenance": { "status": "pass", "evidence": "release checklist requires provenance/attestation references" },
+      "dependencyReview": { "status": "pass", "evidence": "PR checklist and CODEOWNERS dependency routes" },
+      "vulnerabilityTriage": { "status": "pass", "evidence": "release evidence includes vulnerability triage summary" },
+      "artifactIntegrity": { "status": "pass", "evidence": "signed checksums and package checksums before official release" },
+      "malwareReview": { "status": "pass", "evidence": "plugin/sub-app quarantine policy before release attachment" }
+    }
+  ]
+}

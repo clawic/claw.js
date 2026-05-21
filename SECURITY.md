@@ -10,6 +10,14 @@ Do not open public issues for suspected vulnerabilities that could expose creden
 
 Repository ownership and review routing live under [`@clawic`](https://github.com/clawic). The primary maintainer is Iván González Dávila ([`@ivangdavila`](https://github.com/ivangdavila)).
 
+## Incident response
+
+Operational incident response lives in [docs/incident-response.md](docs/incident-response.md). It defines severity, embargo, containment, patch release, user notification, key rotation, compromised connector, malicious plugin/sub-app, remote exploit, official artifact compromise, and data-loss handling.
+
+## Supply-chain security
+
+Supply-chain security policy lives in [docs/supply-chain-security.md](docs/supply-chain-security.md). Private vulnerability reports are acknowledged within 48 hours. Exploitable critical dependency, package, plugin, release, or artifact-integrity issues require a mitigation or release plan within 24 hours and fix or disablement within 72 hours; high issues target 7 days, medium 30 days, and low 90 days. Non-exploitable dependency findings use VEX-style triage notes.
+
 ## Secret handling expectations
 
 - ClawJS masks common secret fields in logs and CLI JSON output, but callers should still avoid printing raw credentials.

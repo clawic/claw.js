@@ -39,14 +39,24 @@ For preview builds from `next`, run prereleases with the npm dist-tag `next` ins
 7. Confirm official/source/community/compatible wording remains aligned with
    [ADR 0033](docs/adr/0033-open-standard-official-trust.md) and
    [official trust and compatibility](docs/official-trust-and-compatibility.md).
-8. Run `npm run publish:dry-run`.
-9. Verify adapter support/stability metadata and docs support matrix are current.
-10. Review the pending release PR created from changesets.
-11. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
-12. Merge the release PR into `main`.
-13. Publish packages manually only after confirming the dry run and authentication state.
-14. Tag the release as `v<semver>` manually after publishing.
-15. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+8. Run `node ./scripts/supply-chain-security-check.mjs --release`.
+9. Run `npm run publish:dry-run`.
+10. Verify adapter support/stability metadata and docs support matrix are current.
+11. Review the pending release PR created from changesets.
+12. Update [CHANGELOG.md](CHANGELOG.md) in that release PR if the top-level note needs curation.
+13. Merge the release PR into `main`.
+14. Publish packages manually only after confirming the dry run and authentication state.
+15. Tag the release as `v<semver>` manually after publishing.
+16. Copy the changelog entry into the GitHub release notes if you want a manually curated GitHub release body.
+
+## Supply-chain evidence
+
+Official release evidence must include CycloneDX JSON SBOM references, package
+or build provenance references, SHA-256 checksums, signature or signed-checksum
+references for binary artifacts, dependency-review status, and vulnerability
+triage status. Use `claw verify release --manifest <file> --json` to check the
+release evidence bundle before publishing, and use `claw verify plugin <dir|tgz>
+--json` before treating a plugin or sub-app package as safe to activate.
 
 ## Channel-Specific Release Checklists
 
@@ -60,14 +70,17 @@ validation must be recorded in `docs/governance/legal/external-pending.md` as
 ### npm Package Channel Checklist
 
 1. Run `node --import tsx ./scripts/verify-regulated-domain-safety-goal.mjs`.
-2. Run `npm run publish:dry-run` after the release PR/version bump targets an
+2. Run `node ./scripts/supply-chain-security-check.mjs --release` and confirm
+   the release evidence includes SBOM, provenance, checksum, vulnerability
+   triage, and dependency-review entries.
+3. Run `npm run publish:dry-run` after the release PR/version bump targets an
    unpublished package version, then review the package file lists. If the
    current version already exists in npm, record the lane as `EXTERNAL PENDING`
    rather than treating it as passed.
-3. Confirm every public package ships `README.md` with regulated-domain
+4. Confirm every public package ships `README.md` with regulated-domain
    disclaimers and links to Terms, Privacy, Disclaimer, Safety, Regulated
    Domains, and EULA where applicable.
-4. Publish with `npm run publish:packages` or `npm run release:publish` only
+5. Publish with `npm run publish:packages` or `npm run release:publish` only
    after explicit approval for that exact npm action.
 
 ### GitHub Release Channel Checklist

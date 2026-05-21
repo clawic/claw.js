@@ -16,6 +16,7 @@ import {
 export { CLI_USAGE, DEFAULT_CLI_BIN, buildCliUsage } from "./cli-surface.ts";
 import { writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { GENERATED_CLI_ROUTE_GROUPS, GENERATED_COLLECTION_ALIASES, type GeneratedCliRouteGroup } from "./cli-router.generated.ts";
+import { runVerifyCli } from "./cli-verify-command.ts";
 
 export interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -105,6 +106,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   const baseInspectExit = writeBaseInspectIfPossible({ group, command, context, wantsJson });
   if (baseInspectExit !== null) return baseInspectExit;
+
+  if (group === "verify") {
+    return await runVerifyCli({ argv, context, wantsJson });
+  }
 
   const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
   if (v1DataExit !== null) return v1DataExit;

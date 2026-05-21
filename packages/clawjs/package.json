@@ -42,7 +42,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20 --external better-sqlite3 --external playwright --external @clawjs/claw --external @clawjs/workspace --external @clawjs/database --external @clawjs/search --external @clawjs/signals --external @clawjs/agents --external @clawjs/audio --external @clawjs/integrations --external @clawjs/sessions --external @clawjs/domain-pack-dense-data --external @clawjs/local-data",
-    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate && node ../../scripts/supply-chain-security-check.mjs --release"
   },
   "dependencies": {
     "@clawjs/core": "0.1.2"

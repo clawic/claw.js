@@ -38,6 +38,6 @@
   ],
   "scripts": {
     "build": "node -e \"process.stdout.write('openclaw-plugin build: source package\\n')\"",
-    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
+    "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate && node ../../scripts/supply-chain-security-check.mjs --release"
   }
 }
