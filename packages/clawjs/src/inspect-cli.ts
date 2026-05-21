@@ -767,6 +767,7 @@ function surfaceEvidence(node: ClawPersistentSurfaceNode, edges: ClawSurfaceEdge
     "scripts/persistent-surface-guard.mjs",
     ...(relatedRoutes.length > 0 || relatedEdges.length > 0 ? ["scripts/surface-route-graph-guard.mjs"] : []),
     "scripts/surface-evidence-guard.mjs",
+    "scripts/surface-resource-contract-guard.mjs",
   ]);
   return {
     declaration: {
@@ -835,6 +836,19 @@ function inspectJsonMeta(subcommand: string, extra: CliJsonMeta = {}): CliJsonMe
   };
 }
 
+function readAdoptionCanonicityManifest(input: InspectCliInput): unknown {
+  const candidates = [
+    path.join(input.context.cwd, "docs/governance/adoption-canonicity.manifest.json"),
+    path.resolve("docs/governance/adoption-canonicity.manifest.json"),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return JSON.parse(fs.readFileSync(candidate, "utf8"));
+    }
+  }
+  throw new InspectCliError("inspect_not_found", "No adoption/canonicity manifest found for this workspace.", CLI_EXIT_USAGE);
+}
+
 function renderInspectMarkdown(nodes = inspectNodes()): string {
   const edges = clawPersistentSurfaceRegistry.edges ?? [];
   const routes = clawPersistentSurfaceRegistry.routes ?? [];
@@ -854,9 +868,9 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Routes",
     "",
-    "| ID | From | To | Visibility | Validation | Narrative |",
-    "| --- | --- | --- | --- | --- | --- |",
-    ...routes.map((route) => `| \`${route.id}\` | \`${route.fromId}\` | \`${route.toId}\` | ${route.visibility} | ${route.validation} | ${route.surfaceNarrative?.concept ?? ""} |`),
+    "| ID | From | To | Visibility | Validation | Narrative | Resource Contract |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...routes.map((route) => `| \`${route.id}\` | \`${route.fromId}\` | \`${route.toId}\` | ${route.visibility} | ${route.validation} | ${route.surfaceNarrative?.concept ?? ""} | ${route.resourceContract?.validation ?? ""} |`),
     "",
     "## Capability Fiches",
     "",
@@ -872,12 +886,12 @@ function renderInspectMarkdown(nodes = inspectNodes()): string {
     "",
     "## Nodes",
     "",
-    "| ID | Kind | Surface | Steward | Human | Programmatic | Gaps | Narrative | Path / Key / Value |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Kind | Surface | Steward | Human | Programmatic | Gaps | Narrative | Resource Contract | Path / Key / Value |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const node of nodes) {
     const gaps = node.surfaceGaps?.map((gap) => `${gap.surface}:${gap.status}`).join("<br>") ?? "";
-    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.steward} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | ${node.surfaceNarrative?.concept ?? ""} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
+    lines.push(`| \`${node.id}\` | ${node.kind} | ${node.surfaceClass ?? "persistent"} | ${node.steward} | ${node.humanSurfaces?.join(", ") ?? ""} | ${node.programmaticSurfaces?.join(", ") ?? ""} | ${gaps} | ${node.surfaceNarrative?.concept ?? ""} | ${node.resourceContract?.validation ?? ""} | \`${node.path ?? node.route ?? node.key ?? node.value ?? ""}\` |`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -1108,6 +1122,24 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     };
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
     else input.context.stdout.write(`${selected.map((entry) => `${entry.id}\t${entry.maturity}\t${entry.activationPolicy}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "canonicity") {
+    const manifest = readAdoptionCanonicityManifest(input) as {
+      packets?: Array<{ id: string; targetId: string; claimType: string; stage: string }>;
+    };
+    const packets = manifest.packets ?? [];
+    const selected = target ? packets.filter((packet) => packet.id === target || packet.targetId === target || packet.claimType === target || packet.stage === target) : packets;
+    const payload = {
+      ...(manifest as object),
+      packets: selected,
+      audit: {
+        validation: "scripts/adoption-canonicity-check.mjs",
+        telemetryDefault: "disabled",
+      },
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${selected.map((packet) => `${packet.id}\t${packet.targetId}\t${packet.claimType}\t${packet.stage}`).join("\n")}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "route") {
@@ -1546,7 +1578,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

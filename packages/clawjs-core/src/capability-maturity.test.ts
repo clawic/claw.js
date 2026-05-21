@@ -15,6 +15,33 @@ test("capability maturity registry satisfies the first governance invariants", (
   assert.equal(audit.ok, true, audit.failures.join("\n"));
 });
 
+test("promoted capabilities carry adoption and canonicity evidence", () => {
+  const shell = getClawCapabilityMaturityEntry("claw.shell.core");
+  assert.ok(shell);
+  assert.equal(shell.maturity, "stable");
+  assert.equal(shell.promotionDecision?.adoptionCanonicityPacketId, "claw-shell-core-stable-2026-05-21");
+
+  const promotedWithoutEvidence = defineClawCapabilityMaturityEntry({
+    id: "test.promoted.without.evidence",
+    steward: "claw",
+    title: "Promoted without evidence",
+    summary: "Fixture for adoption/canonicity promotion governance.",
+    maturity: "beta",
+    activationPolicy: "opt_in",
+    promotionDecision: {
+      ref: "adr:test",
+      path: "docs/adr/0000-test.md",
+    },
+    surfaces: ["fixture"],
+    tests: ["packages/clawjs-core/src/capability-maturity.test.ts"],
+    source: { file: "fixture.ts" },
+  });
+
+  const audit = auditClawCapabilityMaturityRegistry({ version: 1, entries: [promotedWithoutEvidence] });
+  assert.equal(audit.ok, false);
+  assert.ok(audit.failures.some((failure) => failure.includes("requires adoptionCanonicityPacketId")));
+});
+
 test("new capability maturity defaults to incomplete and dev allowlist", () => {
   const entry = defineClawCapabilityMaturityEntry({
     id: "test.future.work",

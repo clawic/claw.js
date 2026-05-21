@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Stable, canonical, any-human, PMF, and adoption claims require a public-safe adoption/canonicity packet. Telemetry is disabled by default; metric evidence must be explicit opt-in.",
+  "stages": ["unproven", "exploratory", "understandable", "adopted", "canonical"],
+  "claimTypes": ["stable_capability", "standard_canonicity", "ui_canon_promotion", "any_human_comprehension", "pmf_adoption"],
+  "privacyModes": ["hybrid_private", "manual_public", "explicit_opt_in_metrics"],
+  "privateEvidenceAliases": ["private-codex-research", "private-codex-ui-review", "private-codex-feedback"],
+  "requiredPromotionPacketFields": [
+    "id",
+    "targetType",
+    "targetId",
+    "claimType",
+    "stage",
+    "targetAudience",
+    "evidenceRefs",
+    "feedbackLoop",
+    "privacyMode",
+    "telemetryDefault",
+    "promotionDecision",
+    "reviewCadence",
+    "reviewedAt",
+    "expiresAt"
+  ],
+  "packets": [
+    {
+      "id": "claw-shell-core-stable-2026-05-21",
+      "targetType": "capability",
+      "targetId": "claw.shell.core",
+      "claimType": "stable_capability",
+      "stage": "understandable",
+      "targetAudience": "Humans using the local Clawix shell and agents inspecting the framework through claw.",
+      "evidenceRefs": [
+        {
+          "kind": "public_doc",
+          "ref": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+          "summary": "Stable surface registry and inspection decision."
+        },
+        {
+          "kind": "public_test",
+          "ref": "packages/clawjs/src/inspect-cli.test.ts",
+          "summary": "Inspect CLI exposes stable shell and maturity records."
+        },
+        {
+          "kind": "public_test",
+          "ref": "packages/clawjs-core/src/capability-maturity.test.ts",
+          "summary": "Capability maturity promotion requires adoption/canonicity packet evidence."
+        }
+      ],
+      "feedbackLoop": {
+        "mechanism": "Dogfooding reports, explicit user feedback, issue reports, and promotion reviews are recorded before any future adopted/canonical claim.",
+        "cadence": "monthly_until_adopted",
+        "evidenceRefs": ["docs/governance/adoption-canonicity.md"]
+      },
+      "privacyMode": "hybrid_private",
+      "telemetryDefault": "disabled",
+      "promotionDecision": {
+        "state": "approved",
+        "decidedBy": "maintainer",
+        "decidedAt": "2026-05-21",
+        "refs": ["docs/adr/0041-adoption-and-canonicity-governance.md"]
+      },
+      "reviewCadence": "monthly_until_adopted",
+      "reviewedAt": "2026-05-21",
+      "expiresAt": "2026-08-21"
+    }
+  ]
+}

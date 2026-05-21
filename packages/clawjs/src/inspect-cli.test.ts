@@ -74,6 +74,17 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.equal(maturityPayload.entries.some((entry) => entry.id === "claw.shell.core" && entry.maturity === "stable" && Boolean(entry.promotionDecision?.ref)), true);
   assert.equal(maturityPayload.entries.some((entry) => entry.id === "system.telemetry.cpu.monitoring" && entry.maturity === "experimental" && entry.activationPolicy === "opt_in"), true);
 
+  const canonicity = await runCliCapture(["inspect", "canonicity", "--json"], process.cwd());
+  assert.equal(canonicity.code, CLI_EXIT_OK);
+  const canonicityPayload = parseCliJson<{
+    telemetryDefault?: string;
+    packets: Array<{ id: string; targetId: string; claimType: string; stage: string; telemetryDefault: string }>;
+    audit: { validation: string; telemetryDefault: string };
+  }>(canonicity.stdout).data;
+  assert.equal(canonicityPayload.audit.validation, "scripts/adoption-canonicity-check.mjs");
+  assert.equal(canonicityPayload.audit.telemetryDefault, "disabled");
+  assert.equal(canonicityPayload.packets.some((packet) => packet.id === "claw-shell-core-stable-2026-05-21" && packet.targetId === "claw.shell.core" && packet.claimType === "stable_capability" && packet.stage === "understandable" && packet.telemetryDefault === "disabled"), true);
+
   const maturityCommand = await runCliCapture(["maturity", "show", "system.telemetry", "--json"], process.cwd());
   assert.equal(maturityCommand.code, CLI_EXIT_OK);
   const maturityCommandPayload = parseCliJson<{ entries: Array<{ id: string; parentId?: string; maturity: string }> }>(maturityCommand.stdout).data;
@@ -99,22 +110,28 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
       completingSurface: { human: string; programmatic: string };
       nonInference: string;
     };
+    resourceContract: { startup: string; idle: string; memory: string; streaming: string; storage: string; hotPath: string; scale: string; validation: string };
   }>(narrativeShow.stdout).data;
   assert.equal(narrativeSurface.id, "claw.contracts");
   assert.match(narrativeSurface.surfaceNarrative.concept, /Stable surface registry/);
   assert.equal(narrativeSurface.surfaceNarrative.authorizingDecision.path, "docs/adr/0004-persistent-surface-registry-and-inspection.md");
   assert.match(narrativeSurface.surfaceNarrative.completingSurface.programmatic, /claw inspect/);
   assert.match(narrativeSurface.surfaceNarrative.nonInference, /does not by itself authorize/);
+  assert.match(narrativeSurface.resourceContract.startup, /static registry/);
+  assert.match(narrativeSurface.resourceContract.validation, /surface-resource-contract-guard/);
 
   const narrativeRoute = await runCliCapture(["inspect", "route", "chat.localDesktop", "--json"], process.cwd());
   assert.equal(narrativeRoute.code, CLI_EXIT_OK);
   const narrativeRoutePayload = parseCliJson<{
     id: string;
     surfaceNarrative: { authorizingDecision: { path: string }; completingSurface: { human: string; programmatic: string } };
+    resourceContract: { streaming: string; hotPath: string; validation: string };
   }>(narrativeRoute.stdout).data;
   assert.equal(narrativeRoutePayload.id, "chat.localDesktop");
   assert.equal(narrativeRoutePayload.surfaceNarrative.authorizingDecision.path, "docs/adr/0012-surface-route-graph.md");
   assert.match(narrativeRoutePayload.surfaceNarrative.completingSurface.human, /Clawix macOS agent chat UI/);
+  assert.match(narrativeRoutePayload.resourceContract.streaming, /cancellation/);
+  assert.match(narrativeRoutePayload.resourceContract.hotPath, /UI body/);
 
   const markdown = await runCliCapture(["inspect", "render", "--format", "markdown"], process.cwd());
   assert.equal(markdown.code, CLI_EXIT_OK);

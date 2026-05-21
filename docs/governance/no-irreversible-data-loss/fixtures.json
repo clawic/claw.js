@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "valid": [
+    {
+      "id": "local-delete-to-trash",
+      "class": "recoverable",
+      "operation": "delete note",
+      "actor": "agent",
+      "approval": "scoped_delete_grant",
+      "auditReceipt": true,
+      "recoveryEvidence": ["trashEntryId", "recoverUntil"]
+    },
+    {
+      "id": "migration-with-snapshot",
+      "class": "snapshot_recoverable",
+      "operation": "migrate core.sqlite",
+      "actor": "framework_migrator",
+      "approval": "not_required_for_compatible_migration",
+      "auditReceipt": true,
+      "recoveryEvidence": ["preMigrationSnapshot", "dryRunPlan", "repairReceipt"]
+    },
+    {
+      "id": "provider-archive",
+      "class": "external_recoverable",
+      "operation": "archive provider project",
+      "actor": "connector_control_plane",
+      "approval": "host_approval",
+      "auditReceipt": true,
+      "recoveryEvidence": ["providerArchiveReceipt", "providerUnarchiveRoute"]
+    },
+    {
+      "id": "provider-hard-delete-human-approved",
+      "class": "irreversible_external_requires_exact_human_approval",
+      "operation": "delete provider project",
+      "actor": "human_confirmed_connector_request",
+      "approval": "exact_human_approval",
+      "auditReceipt": true,
+      "recoveryEvidence": ["providerReceipt", "localPreActionExportRef", "externalPendingLiveValidation"]
+    },
+    {
+      "id": "agent-self-modification-revertible",
+      "class": "recoverable",
+      "operation": "agent updates own instruction",
+      "actor": "agent",
+      "approval": "within_existing_scope",
+      "auditReceipt": true,
+      "recoveryEvidence": ["previousAgentSnapshot", "immutableAuditEvent"]
+    }
+  ],
+  "invalid": [
+    {
+      "id": "agent-hard-purge",
+      "class": "forbidden_for_agents",
+      "operation": "purge human note",
+      "actor": "agent",
+      "approval": "scoped_delete_grant",
+      "auditReceipt": true,
+      "recoveryEvidence": [],
+      "expectedReason": "agents cannot perform irreversible purge"
+    },
+    {
+      "id": "import-overwrite-without-snapshot",
+      "class": "snapshot_recoverable",
+      "operation": "import overwrite",
+      "actor": "human",
+      "approval": "exact_human_approval",
+      "auditReceipt": true,
+      "recoveryEvidence": ["conflictReport"],
+      "expectedReason": "snapshot recoverable operations require snapshot evidence"
+    },
+    {
+      "id": "provider-hard-delete-without-exact-approval",
+      "class": "irreversible_external_requires_exact_human_approval",
+      "operation": "delete provider file",
+      "actor": "connector_control_plane",
+      "approval": "host_approval",
+      "auditReceipt": true,
+      "recoveryEvidence": ["providerReceipt"],
+      "expectedReason": "irreversible external operations require exact human approval"
+    },
+    {
+      "id": "purge-without-audit",
+      "class": "forbidden_for_agents",
+      "operation": "purge cache and records",
+      "actor": "human",
+      "approval": "exact_human_approval",
+      "auditReceipt": false,
+      "recoveryEvidence": ["recoveryWindowExpired"],
+      "expectedReason": "destructive operations require audit receipt"
+    }
+  ]
+}

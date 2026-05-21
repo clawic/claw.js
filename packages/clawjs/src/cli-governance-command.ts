@@ -146,6 +146,7 @@ function buildReads(repositories: GovernanceDoctorRepo[]): GovernanceDoctorRead[
       addRead(reads, repo, "docs/cli.md", "Public CLI JSON and registry contract.", "required");
       addRead(reads, repo, "docs/debt-ledger.md", "Federated debt and pending source of truth.", "recommended");
       addRead(reads, repo, "docs/adr/0017-discoverability-and-meta-code-routing.md", "Discovery contract for durable meta-code.", "required");
+      addRead(reads, repo, "docs/governance/adoption-canonicity.md", "Adoption and canonicity promotion evidence standard.", "required");
       addRead(reads, repo, "docs/adr/0027-governance-identity-scope-model.md", "Governance identity, authority, scopes, and grants.", "recommended");
       addRead(reads, repo, "docs/adr/0028-workspace-project-folder-manifest.md", "Workspace/project/folder manifest boundary.", "recommended");
     }
@@ -171,6 +172,7 @@ function buildSkills(repositories: GovernanceDoctorRepo[]): GovernanceDoctorSkil
       ["cli-agent-surface-work", "Public CLI surface, JSON envelope, registry, help, docs, and tests.", "required"],
       ["decision-map-maintenance", "Decision-map rows and validation routing.", "required"],
       ["docs-alignment-update", "Docs routers, snippets, and stale-doc alignment.", "recommended"],
+      ["adoption-canonicity-review", "Stable, canonical, any-human, PMF, and adoption claim review.", "required"],
       ["adr-to-guardrail", "Durable decisions that need an enforcing guard.", "recommended"],
       ["surface-route-work", "Route graph or surface evidence changes.", "conditional"],
       ["public-hygiene-review", "Publication-safe docs and artifacts.", "recommended"],
@@ -204,6 +206,7 @@ function buildChecks(repositories: GovernanceDoctorRepo[], binName: string): Gov
   for (const repo of repositories) {
     if (repo.repo === "clawjs") {
       addCheck(checks, repo, "focused", `${binName} governance doctor --json`, "local_only", "Smoke the read-only governance router.");
+      addCheck(checks, repo, "focused", "node scripts/adoption-canonicity-check.mjs --self-test", "local_only", "Close adoption and canonicity promotion governance.");
       addCheck(checks, repo, "focused", "npm run test:governance", "local_only", "Close governance vocabulary and workspace/project goal guardrails.");
       addCheck(checks, repo, "docs", "npm run test:docs", "local_only", "Close docs, discoverability, registry, stale-doc, and public surface guards.");
       addCheck(checks, repo, "policy", "npm run test:policy", "local_only", "Close CLI registry/router parity and JSON envelope debt.");

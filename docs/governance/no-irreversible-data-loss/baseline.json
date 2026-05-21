@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "description": "Expiring baseline for no-irreversible-data-loss gaps that existed when ADR 0040 introduced baseline-plus-blocking rollout.",
+  "rolloutMode": "baseline_plus_blocking",
+  "entries": [
+    {
+      "id": "connector-provider-hard-delete-per-operation-classification",
+      "owner": "clawjs",
+      "severity": "blocks-new-growth",
+      "surface": "packages/clawjs-integrations generated provider operation catalog",
+      "reason": "Provider runtimes expose many delete/archive operations; this slice classifies the control-plane policy and blocks growth but does not backfill every provider operation with a provider-specific restore receipt.",
+      "expiresAt": "2026-08-21",
+      "repair": "Add per-provider recovery metadata for generated hard-delete operations and require provider receipt fixtures for supported live execution.",
+      "reference": "docs/adr/0040-no-irreversible-data-loss.md"
+    },
+    {
+      "id": "historical-import-export-coverage-audit",
+      "owner": "clawjs",
+      "severity": "blocks-new-growth",
+      "surface": "stable import/export and backup formats",
+      "reason": "ADR 0001 and evolution docs require versioned import/export/backup/snapshot formats, but this slice does not enumerate every existing format in one transaction.",
+      "expiresAt": "2026-08-21",
+      "repair": "Add a generated inventory of import/export/backup/snapshot formats and attach recovery policy refs to each stable format.",
+      "reference": "docs/governance/no-irreversible-data-loss/manifest.json"
+    },
+    {
+      "id": "historical-agent-delete-budget-inventory",
+      "owner": "clawjs",
+      "severity": "blocks-new-growth",
+      "surface": "agent actions, budgets, and self-modification",
+      "reason": "The Constitution defines budgets and reversible self-modification, but existing agent action registries are not fully backfilled with no-data-loss policy ids in this first guardrail slice.",
+      "expiresAt": "2026-08-21",
+      "repair": "Attach explicit recovery policy refs and irreversible-action budget fields to agent action registries and inspect output.",
+      "reference": "CONSTITUTION.md"
+    }
+  ],
+  "monitoredKeywordBaselines": [
+    {
+      "path": "docs/connector-control-plane.md",
+      "maxKeywordHits": 25
+    },
+    {
+      "path": "docs/evolution/README.md",
+      "maxKeywordHits": 44
+    },
+    {
+      "path": "packages/clawjs-integrations/src/catalog.ts",
+      "maxKeywordHits": 25
+    },
+    {
+      "path": "packages/clawjs-integrations/src/runtime-registry.ts",
+      "maxKeywordHits": 270
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "policyId": "no-irreversible-data-loss.v1",
+  "canonicalAdr": "docs/adr/0040-no-irreversible-data-loss.md",
+  "constitutionalRefs": [
+    "II.6",
+    "II.10",
+    "VII.5",
+    "VII.6",
+    "VII.11",
+    "red-line-4"
+  ],
+  "rollout": {
+    "mode": "baseline_plus_blocking",
+    "baselinePath": "docs/governance/no-irreversible-data-loss/baseline.json",
+    "newOrTouchedSurfacePolicy": "block_without_recovery_policy"
+  },
+  "recoveryClasses": [
+    "recoverable",
+    "snapshot_recoverable",
+    "rebuildable",
+    "external_recoverable",
+    "irreversible_external_requires_exact_human_approval",
+    "forbidden_for_agents"
+  ],
+  "coverageTargets": [
+    "local-delete",
+    "hard-purge",
+    "trash-archive",
+    "migration",
+    "import-overwrite",
+    "export",
+    "sync-apply",
+    "agent-action",
+    "agent-self-modification",
+    "external-provider-mutation",
+    "provider-hard-delete"
+  ],
+  "policies": [
+    {
+      "id": "local-delete-trash-archive",
+      "class": "recoverable",
+      "targets": ["local-delete", "trash-archive"],
+      "defaultBehavior": "delete routes to trash or archive with a recovery window",
+      "actorPolicy": "agents may delete only scoped agent-created material unless stronger approval exists",
+      "approvalPolicy": "ordinary scoped approval or existing delete permission; exact human approval for material not created by the acting agent",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "hard-purge-human-only",
+      "class": "forbidden_for_agents",
+      "targets": ["hard-purge"],
+      "defaultBehavior": "purge is never the default delete behavior",
+      "actorPolicy": "agents cannot perform irreversible purge",
+      "approvalPolicy": "exact human approval plus recovery-window expiry",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "migration-snapshot-repair",
+      "class": "snapshot_recoverable",
+      "targets": ["migration"],
+      "defaultBehavior": "migration plan and dry-run precede mutation",
+      "actorPolicy": "framework migrator with redacted receipts and repair package",
+      "approvalPolicy": "required for risky repair, deletion, movement, report submission, or large backup overrides",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/evolution/README.md", "docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "import-overwrite-stage-or-snapshot",
+      "class": "snapshot_recoverable",
+      "targets": ["import-overwrite"],
+      "defaultBehavior": "imports stage or merge; overwrite requires snapshot and conflict report",
+      "actorPolicy": "importers must emit a conflict report before replacing durable user data",
+      "approvalPolicy": "exact human approval for overwrite",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "export-portability",
+      "class": "recoverable",
+      "targets": ["export"],
+      "defaultBehavior": "export remains comprehensive, versioned, reproducible, and readable without the framework",
+      "actorPolicy": "export may be user or agent initiated under scoped read permission",
+      "approvalPolicy": "private envelope or external submission requires explicit approval",
+      "auditReceipt": "required",
+      "testEvidence": ["CONSTITUTION.md", "docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "sync-apply-plan-reconcile",
+      "class": "snapshot_recoverable",
+      "targets": ["sync-apply"],
+      "defaultBehavior": "sync apply requires plan, reconcile/conflict output, and authority handoff evidence",
+      "actorPolicy": "sync cannot launder authority through another node or agent",
+      "approvalPolicy": "exact human approval for destructive conflict resolution",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "agent-action-reversible-by-default",
+      "class": "recoverable",
+      "targets": ["agent-action", "agent-self-modification"],
+      "defaultBehavior": "agent actions and self-modifications are versioned, audited, and revertible",
+      "actorPolicy": "delegation preserves scope, provenance, budgets, audit, and revocation",
+      "approvalPolicy": "agents cannot expand their own permissions or purge irreversibly",
+      "auditReceipt": "required",
+      "testEvidence": ["CONSTITUTION.md", "docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "external-provider-recoverable-first",
+      "class": "external_recoverable",
+      "targets": ["external-provider-mutation"],
+      "defaultBehavior": "prefer provider trash, archive, restore, cancel, unarchive, or reversible mutation APIs",
+      "actorPolicy": "connector control plane evaluates policy, budget, network proof, approval, credential lease, redaction, and audit before runtime",
+      "approvalPolicy": "host approval required for destructive provider operations",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/connector-control-plane.md", "docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    },
+    {
+      "id": "provider-hard-delete-exact-approval",
+      "class": "irreversible_external_requires_exact_human_approval",
+      "targets": ["provider-hard-delete"],
+      "defaultBehavior": "hard-delete provider actions are never implied by ordinary delete vocabulary",
+      "actorPolicy": "agents cannot execute provider hard delete without exact human approval and eligible policy",
+      "approvalPolicy": "exact human approval, provider receipt, local snapshot/export evidence where possible, and live evidence marked EXTERNAL PENDING until proved",
+      "auditReceipt": "required",
+      "testEvidence": ["docs/connector-control-plane.md", "docs/governance/no-irreversible-data-loss/fixtures.json"],
+      "owner": "clawjs"
+    }
+  ],
+  "monitoredFiles": [
+    {
+      "path": "docs/connector-control-plane.md",
+      "reason": "external provider mutation and destructive connector policy",
+      "keywords": ["delete", "purge", "destructive", "approval", "audit"]
+    },
+    {
+      "path": "docs/evolution/README.md",
+      "reason": "migration, backup, rollback, repair, import/export, and receipts",
+      "keywords": ["migration", "backup", "rollback", "repair", "export", "snapshot"]
+    },
+    {
+      "path": "packages/clawjs-integrations/src/catalog.ts",
+      "reason": "destructive connector operation classification",
+      "keywords": ["destructive", "requiresHostApproval", "delete"]
+    },
+    {
+      "path": "packages/clawjs-integrations/src/runtime-registry.ts",
+      "reason": "generated provider operations include hard delete/archive/unarchive candidates",
+      "keywords": ["delete", "archive", "unarchive"]
+    }
+  ]
+}

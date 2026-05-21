@@ -6,6 +6,7 @@ export type ClawCapabilityMaturitySteward = "claw" | "clawix" | "signed_host" | 
 export interface ClawCapabilityPromotionDecision {
   ref: string;
   path: string;
+  adoptionCanonicityPacketId?: string;
 }
 
 export interface ClawCapabilityMaturitySource {
@@ -173,6 +174,9 @@ export function auditClawCapabilityMaturityRegistry(
       if (!entry.promotionDecision?.ref || !entry.promotionDecision.path) {
         failures.push(`${entry.id}: ${entry.maturity} capability requires promotionDecision`);
       }
+      if (!entry.promotionDecision?.adoptionCanonicityPacketId) {
+        failures.push(`${entry.id}: ${entry.maturity} capability requires adoptionCanonicityPacketId`);
+      }
     }
     if (entry.maturity === "incomplete" && entry.activationPolicy !== "dev_allowlist") {
       failures.push(`${entry.id}: incomplete capability must use dev_allowlist activation`);
@@ -201,6 +205,7 @@ export const clawCapabilityMaturityRegistry: ClawCapabilityMaturityRegistry = {
       promotionDecision: {
         ref: "adr:0004:stable-surface-registry",
         path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+        adoptionCanonicityPacketId: "claw-shell-core-stable-2026-05-21",
       },
       surfaces: ["claw inspect", "clawix.bridge.local", "clawix.ui.chat", "clawix.ui.settings"],
       tests: ["packages/clawjs-core/src/capability-maturity.test.ts"],

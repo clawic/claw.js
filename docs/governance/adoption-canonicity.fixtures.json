@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "validPacketId": "claw-shell-core-stable-2026-05-21",
+  "negativeFixtures": [
+    {
+      "id": "missing-feedback-loop",
+      "mutation": "delete feedbackLoop",
+      "expectedFailure": "feedbackLoop"
+    },
+    {
+      "id": "silent-telemetry",
+      "mutation": "set telemetryDefault to enabled",
+      "expectedFailure": "telemetryDefault must be disabled"
+    },
+    {
+      "id": "local-private-path",
+      "mutation": "set evidence ref to /Users/example/research.json",
+      "expectedFailure": "must not contain local paths"
+    }
+  ]
+}

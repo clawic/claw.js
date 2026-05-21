@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceConversationId": "current-thread-2026-05-21",
+  "sourcePlanId": "p0-adoption-and-canonicity-governance",
+  "rows": [
+    {
+      "decisionId": "CLJ-ADOPT-001",
+      "sourceConversationId": "current-thread-2026-05-21",
+      "sourceAnchor": "P0 Adoption And Canonicity Governance",
+      "architectureImpact": "ClawJS now owns adoption/canonicity governance for stable, canonical, any-human, PMF, and adoption claims.",
+      "state": "implemented",
+      "evidenceRefs": [
+        "docs/adr/0041-adoption-and-canonicity-governance.md",
+        "docs/governance/adoption-canonicity.md",
+        "docs/governance/adoption-canonicity.manifest.json",
+        "scripts/adoption-canonicity-check.mjs",
+        "packages/clawjs-core/src/capability-maturity.ts",
+        "packages/clawjs/src/inspect-cli.ts"
+      ],
+      "reviewedAt": "2026-05-21"
+    }
+  ]
+}

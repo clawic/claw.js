@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clawjs.dev/schemas/governance/adoption-canonicity.schema.json",
+  "title": "Adoption Canonicity Manifest",
+  "type": "object",
+  "required": ["schemaVersion", "status", "policy", "stages", "claimTypes", "privacyModes", "requiredPromotionPacketFields", "packets"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "enum": ["active"] },
+    "policy": { "type": "string", "minLength": 1 },
+    "stages": { "type": "array", "items": { "type": "string" }, "minItems": 5 },
+    "claimTypes": { "type": "array", "items": { "type": "string" }, "minItems": 5 },
+    "privacyModes": { "type": "array", "items": { "type": "string" }, "minItems": 3 },
+    "requiredPromotionPacketFields": { "type": "array", "items": { "type": "string" }, "minItems": 10 },
+    "packets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "targetType", "targetId", "claimType", "stage", "targetAudience", "evidenceRefs", "feedbackLoop", "privacyMode", "telemetryDefault", "promotionDecision", "reviewCadence", "reviewedAt", "expiresAt"]
+      }
+    }
+  }
+}
