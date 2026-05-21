@@ -1,3 +1,4 @@
+// @clawjs-persistent-surface-ddl-source
 import { randomUUID } from "node:crypto";
 
 import type Database from "better-sqlite3";
@@ -11,16 +12,17 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
-export const APP_STATE_PROFILE_ID = "local";
+export const APP_STATE_SCOPE_ID = "local";
 
 export function ensureAppStateSchema(sqlite: Database.Database): void {
+  migrateAppStateScopeColumns(sqlite);
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS app_state (
-      profile_id TEXT NOT NULL DEFAULT 'local',
+      state_scope_id TEXT NOT NULL DEFAULT 'local',
       key TEXT NOT NULL,
       value_json TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      PRIMARY KEY (profile_id, key)
+      PRIMARY KEY (state_scope_id, key)
     );
     CREATE TABLE IF NOT EXISTS app_projects (
       id TEXT PRIMARY KEY,
@@ -91,12 +93,78 @@ export function ensureAppStateSchema(sqlite: Database.Database): void {
     CREATE INDEX IF NOT EXISTS app_state_sync_receipts_status_idx
       ON app_state_sync_receipts(status, applied_at DESC);
     CREATE TABLE IF NOT EXISTS app_state_projection_meta (
-      profile_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
+      state_scope_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
       last_receipt_id TEXT,
       projected_at TEXT NOT NULL,
       metadata_json TEXT NOT NULL DEFAULT '{}'
     );
   `);
+}
+
+function migrateAppStateScopeColumns(sqlite: Database.Database): void {
+  migrateScopedTable(sqlite, {
+    table: "app_state",
+    legacyColumn: "profile_id",
+    scopeColumn: "state_scope_id",
+    createSql: `
+      CREATE TABLE app_state (
+        state_scope_id TEXT NOT NULL DEFAULT 'local',
+        key TEXT NOT NULL,
+        value_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (state_scope_id, key)
+      )
+    `,
+    insertSql: `
+      INSERT OR REPLACE INTO app_state (state_scope_id, key, value_json, updated_at)
+      SELECT profile_id, key, value_json, updated_at FROM app_state_legacy_scope
+    `,
+  });
+  migrateScopedTable(sqlite, {
+    table: "app_state_projection_meta",
+    legacyColumn: "profile_id",
+    scopeColumn: "state_scope_id",
+    createSql: `
+      CREATE TABLE app_state_projection_meta (
+        state_scope_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
+        last_receipt_id TEXT,
+        projected_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      )
+    `,
+    insertSql: `
+      INSERT OR REPLACE INTO app_state_projection_meta (state_scope_id, last_receipt_id, projected_at, metadata_json)
+      SELECT profile_id, last_receipt_id, projected_at, metadata_json FROM app_state_projection_meta_legacy_scope
+    `,
+  });
+}
+
+function migrateScopedTable(
+  sqlite: Database.Database,
+  input: { table: string; legacyColumn: string; scopeColumn: string; createSql: string; insertSql: string },
+): void {
+  const columns = tableColumns(sqlite, input.table);
+  if (columns.length === 0 || !columns.includes(input.legacyColumn) || columns.includes(input.scopeColumn)) return;
+  const legacyTable = `${input.table}_legacy_scope`;
+  sqlite.exec("BEGIN");
+  try {
+    sqlite.prepare(`ALTER TABLE ${quoteIdent(input.table)} RENAME TO ${quoteIdent(legacyTable)}`).run();
+    sqlite.prepare(input.createSql).run();
+    sqlite.prepare(input.insertSql).run();
+    sqlite.prepare(`DROP TABLE ${quoteIdent(legacyTable)}`).run();
+    sqlite.exec("COMMIT");
+  } catch (error) {
+    sqlite.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function tableColumns(sqlite: Database.Database, table: string): string[] {
+  return (sqlite.prepare(`PRAGMA table_info(${quoteIdent(table)})`).all() as Array<{ name: string }>).map((column) => column.name);
+}
+
+function quoteIdent(value: string): string {
+  return `"${value.replace(/"/g, "\"\"")}"`;
 }
 
 export function readAppStateProjection(
@@ -133,11 +201,11 @@ export function applyAppStateTransaction(
       const applied = appliedReceipt(request);
       recordReceipt(sqlite, applied);
       sqlite.prepare(`
-        INSERT INTO app_state_projection_meta (profile_id, last_receipt_id, projected_at, metadata_json)
+        INSERT INTO app_state_projection_meta (state_scope_id, last_receipt_id, projected_at, metadata_json)
         VALUES (?, ?, ?, ?)
-        ON CONFLICT(profile_id) DO UPDATE SET last_receipt_id = excluded.last_receipt_id,
+        ON CONFLICT(state_scope_id) DO UPDATE SET last_receipt_id = excluded.last_receipt_id,
           projected_at = excluded.projected_at, metadata_json = excluded.metadata_json
-      `).run(APP_STATE_PROFILE_ID, applied.receiptId, applied.appliedAt, JSON.stringify({ requestId: request.requestId, hostId: request.hostId }));
+      `).run(APP_STATE_SCOPE_ID, applied.receiptId, applied.appliedAt, JSON.stringify({ requestId: request.requestId, hostId: request.hostId }));
       return applied;
     })();
     return { receipt, projection: readAppStateProjection(sqlite) };
@@ -167,10 +235,10 @@ function applyOperation(sqlite: Database.Database, operation: ClawAppStateOperat
   switch (operation.kind) {
     case "state.set":
       sqlite.prepare(`
-        INSERT INTO app_state (profile_id, key, value_json, updated_at)
+        INSERT INTO app_state (state_scope_id, key, value_json, updated_at)
         VALUES (?, ?, ?, ?)
-        ON CONFLICT(profile_id, key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
-      `).run(APP_STATE_PROFILE_ID, operation.key, JSON.stringify(operation.value), now);
+        ON CONFLICT(state_scope_id, key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
+      `).run(APP_STATE_SCOPE_ID, operation.key, JSON.stringify(operation.value), now);
       return;
     case "project.upsert":
       sqlite.prepare(`

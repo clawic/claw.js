@@ -60,7 +60,7 @@ import {
   writeMcpServers,
   writeSuccess,
   writeUnredactedSuccess,
-  PROFILE_ID,
+  STATE_SCOPE_ID,
 } from "./v1-data-core.ts";
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts"; // Public storage surface: CLAW_DATA_DIR, CLAW_HOME, CLAW_DB_PATH, core.sqlite.
 
@@ -278,11 +278,11 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
   if (command === "get") {
     const key = input.flags.key || input.positionals[2];
     if (!key) {
-      const rows = store.sqlite.prepare("SELECT key, value_json, updated_at FROM app_state WHERE profile_id = ? ORDER BY key").all(PROFILE_ID) as Array<{ key: string; value_json: string; updated_at: string }>;
+      const rows = store.sqlite.prepare("SELECT key, value_json, updated_at FROM app_state WHERE state_scope_id = ? ORDER BY key").all(STATE_SCOPE_ID) as Array<{ key: string; value_json: string; updated_at: string }>;
       writeSuccess(input, { items: rows.map((row) => ({ key: row.key, value: parseJson(row.value_json, null), updatedAt: row.updated_at })) });
       return V1_DATA_EXIT_OK;
     }
-    const row = store.sqlite.prepare("SELECT value_json, updated_at FROM app_state WHERE profile_id = ? AND key = ?").get(PROFILE_ID, key) as { value_json: string; updated_at: string } | undefined;
+    const row = store.sqlite.prepare("SELECT value_json, updated_at FROM app_state WHERE state_scope_id = ? AND key = ?").get(STATE_SCOPE_ID, key) as { value_json: string; updated_at: string } | undefined;
     writeSuccess(input, row ? { key, value: parseJson(row.value_json, null), updatedAt: row.updated_at } : null);
     return row ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }

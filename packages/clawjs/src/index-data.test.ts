@@ -954,7 +954,8 @@ test("host app-state applies typed transactions and records sync receipts", asyn
     assert.equal(projection.titles[0]?.title, "Contract thread");
     assert.equal(projection.receipts[0]?.hostId, "clawix-test");
 
-    const sqlite = new Database(path.join(dataRoot, clawStorageFiles.mainDatabase));
+    const mainDatabasePath = path.join(dataRoot, clawStorageFiles.mainDatabase);
+    const sqlite = new Database(mainDatabasePath);
     try {
       assert.deepEqual(sqlite.prepare("SELECT request_id, status, operation_count FROM app_state_sync_receipts WHERE request_id = ?").get("req-contract-1"), {
         request_id: "req-contract-1",
@@ -976,6 +977,23 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
     const sqlite = new Database(":memory:");
     try {
       sqlite.exec(`
+        CREATE TABLE app_state (
+          profile_id TEXT NOT NULL DEFAULT 'local',
+          key TEXT NOT NULL,
+          value_json TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (profile_id, key)
+        );
+        INSERT INTO app_state (profile_id, key, value_json, updated_at)
+        VALUES ('local', 'legacy.key', '{"ok":true}', '2026-05-20T00:00:00.000Z');
+        CREATE TABLE app_state_projection_meta (
+          profile_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
+          last_receipt_id TEXT,
+          projected_at TEXT NOT NULL,
+          metadata_json TEXT NOT NULL DEFAULT '{}'
+        );
+        INSERT INTO app_state_projection_meta (profile_id, last_receipt_id, projected_at, metadata_json)
+        VALUES ('local', 'receipt.legacy', '2026-05-20T00:00:00.000Z', '{}');
         CREATE TABLE app_projects (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
@@ -999,7 +1017,17 @@ test("V2 main schema upgrades app project resource ids before indexing them", as
       const receiptColumns = sqlite.prepare("PRAGMA table_info(app_state_sync_receipts)").all() as Array<{ name: string }>;
       assert.equal(receiptColumns.some((column) => column.name === "receipt_id"), true);
       const projectionMetaColumns = sqlite.prepare("PRAGMA table_info(app_state_projection_meta)").all() as Array<{ name: string }>;
+      const appStateColumns = sqlite.prepare("PRAGMA table_info(app_state)").all() as Array<{ name: string }>;
+      assert.equal(appStateColumns.some((column) => column.name === "state_scope_id"), true);
+      assert.equal(appStateColumns.some((column) => column.name === "profile_id"), false);
       assert.equal(projectionMetaColumns.some((column) => column.name === "last_receipt_id"), true);
+      assert.equal(projectionMetaColumns.some((column) => column.name === "state_scope_id"), true);
+      assert.equal(projectionMetaColumns.some((column) => column.name === "profile_id"), false);
+      assert.deepEqual(sqlite.prepare("SELECT state_scope_id, key, value_json FROM app_state WHERE key = 'legacy.key'").get(), {
+        state_scope_id: "local",
+        key: "legacy.key",
+        value_json: '{"ok":true}',
+      });
       const incidentColumns = sqlite.prepare("PRAGMA table_info(agent_incidents)").all() as Array<{ name: string; dflt_value: string | null; notnull: number }>;
       assert.equal(incidentColumns.some((column) => column.name === "run_id"), true);
       assert.equal(incidentColumns.some((column) => column.name === "session_id"), true);

@@ -890,11 +890,11 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     CREATE INDEX IF NOT EXISTS data_registry_domain_idx ON data_registry(domain, kind);
 
     CREATE TABLE IF NOT EXISTS app_state (
-      profile_id TEXT NOT NULL DEFAULT 'local',
+      state_scope_id TEXT NOT NULL DEFAULT 'local',
       key TEXT NOT NULL,
       value_json TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      PRIMARY KEY (profile_id, key)
+      PRIMARY KEY (state_scope_id, key)
     );
     CREATE TABLE IF NOT EXISTS app_projects (
       id TEXT PRIMARY KEY,
@@ -964,7 +964,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     CREATE INDEX IF NOT EXISTS app_state_sync_receipts_status_idx
       ON app_state_sync_receipts(status, applied_at DESC);
     CREATE TABLE IF NOT EXISTS app_state_projection_meta (
-      profile_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
+      state_scope_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
       last_receipt_id TEXT,
       projected_at TEXT NOT NULL,
       metadata_json TEXT NOT NULL DEFAULT '{}'
@@ -1339,7 +1339,7 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
       runtime TEXT,
       model TEXT,
       autonomy_profile TEXT NOT NULL DEFAULT 'respond_only',
-      default_execution_profile_id TEXT,
+      default_execution_state_scope_id TEXT,
       default_memory_policy_id TEXT,
       default_budget_id TEXT,
       builtin INTEGER NOT NULL DEFAULT 0,
@@ -1498,16 +1498,16 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     CREATE TABLE IF NOT EXISTS connector_network_policies (
       id TEXT PRIMARY KEY,
       required INTEGER NOT NULL DEFAULT 0,
-      egress_profile_id TEXT,
-      vpn_profile_id TEXT,
-      proxy_profile_id TEXT,
+      egress_state_scope_id TEXT,
+      vpn_state_scope_id TEXT,
+      proxy_state_scope_id TEXT,
       allowed_hosts_json TEXT NOT NULL DEFAULT '[]',
       metadata_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS connector_network_policies_egress_idx
-      ON connector_network_policies(egress_profile_id, vpn_profile_id, proxy_profile_id);
+      ON connector_network_policies(egress_state_scope_id, vpn_state_scope_id, proxy_state_scope_id);
     CREATE TABLE IF NOT EXISTS connector_context_records (
       id TEXT PRIMARY KEY,
       provider_id TEXT NOT NULL,

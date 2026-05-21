@@ -41,7 +41,7 @@ type PageUpsertInput = {
   sourceRecordId?: string | null;
 };
 
-export const PROFILE_ID = "local";
+export const STATE_SCOPE_ID = "local";
 const APP_STATE_DOMAIN_TABLES = [
   "app_state",
   "app_projects",
@@ -275,6 +275,7 @@ export function ensureV1MainSchema(
   env: NodeJS.ProcessEnv = process.env,
   options: V1MainSchemaOptions = {},
 ): void {
+  migrateAppStateScopeColumns(sqlite);
   if (schemaMetaVersion(sqlite, V1_MAIN_SCHEMA_META_TABLE) >= V1_MAIN_SCHEMA_VERSION) {
     if (options.sidecars === "all") ensureV2Sidecars(env);
     return;
@@ -282,6 +283,7 @@ export function ensureV1MainSchema(
   migrateAgentSessionsPreSchema(sqlite);
   if (tableExists(sqlite, "app_sidebar_snapshots")) ensureColumn(sqlite, "app_sidebar_snapshots", "project_id", "TEXT");
   sqlite.exec(V1_MAIN_SCHEMA_SQL);
+  migrateAppStateScopeColumns(sqlite);
   migrateAgentIncidentsV1Schema(sqlite);
   ensureColumn(sqlite, "app_projects", "resource_id", "TEXT");
   sqlite.prepare("CREATE INDEX IF NOT EXISTS app_projects_resource_id_idx ON app_projects(resource_id) WHERE resource_id IS NOT NULL").run();
@@ -303,7 +305,7 @@ export function ensureV1MainSchema(
   ensureColumn(sqlite, "agents", "workspace_id", "TEXT");
   ensureColumn(sqlite, "agents", "project_id", "TEXT");
   ensureColumn(sqlite, "agents", "autonomy_profile", "TEXT NOT NULL DEFAULT 'respond_only'");
-  ensureColumn(sqlite, "agents", "default_execution_profile_id", "TEXT");
+  ensureColumn(sqlite, "agents", "default_execution_state_scope_id", "TEXT");
   ensureColumn(sqlite, "agents", "default_memory_policy_id", "TEXT");
   ensureColumn(sqlite, "agents", "default_budget_id", "TEXT");
   ensureColumn(sqlite, "agents", "retired_at", "TEXT");
@@ -337,9 +339,9 @@ export function ensureV1MainSchema(
   ensureColumn(sqlite, "iot_config", "secret_ref", "TEXT");
   ensureColumn(sqlite, "iot_config", "enabled", "INTEGER NOT NULL DEFAULT 1");
   sqlite.prepare(`
-    INSERT OR IGNORE INTO app_state (profile_id, key, value_json, updated_at)
-    VALUES (?, 'profile.id', ?, ?)
-  `).run(PROFILE_ID, JSON.stringify(PROFILE_ID), nowIso());
+    INSERT OR IGNORE INTO app_state (state_scope_id, key, value_json, updated_at)
+    VALUES (?, 'stateScope.id', ?, ?)
+  `).run(STATE_SCOPE_ID, JSON.stringify(STATE_SCOPE_ID), nowIso());
   seedSidecarRegistry(sqlite);
   markSchemaMetaVersion(sqlite, V1_MAIN_SCHEMA_META_TABLE, V1_MAIN_SCHEMA_VERSION);
   if (options.sidecars === "all") ensureV2Sidecars(env);
@@ -795,6 +797,65 @@ function ensureColumn(sqlite: Database.Database, table: string, column: string, 
   const columns = sqlite.prepare(`PRAGMA table_info(${quoteIdent(table)})`).all() as Array<{ name: string }>;
   if (columns.some((entry) => entry.name === column)) return;
   sqlite.prepare(`ALTER TABLE ${quoteIdent(table)} ADD COLUMN ${quoteIdent(column)} ${definition}`).run();
+}
+
+function migrateAppStateScopeColumns(sqlite: Database.Database): void {
+  migrateScopedTable(sqlite, {
+    table: "app_state",
+    legacyColumn: "profile_id",
+    scopeColumn: "state_scope_id",
+    createSql: `
+      CREATE TABLE app_state (
+        state_scope_id TEXT NOT NULL DEFAULT 'local',
+        key TEXT NOT NULL,
+        value_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (state_scope_id, key)
+      )
+    `,
+    insertSql: `
+      INSERT OR REPLACE INTO app_state (state_scope_id, key, value_json, updated_at)
+      SELECT profile_id, key, value_json, updated_at FROM app_state_legacy_scope
+    `,
+  });
+  migrateScopedTable(sqlite, {
+    table: "app_state_projection_meta",
+    legacyColumn: "profile_id",
+    scopeColumn: "state_scope_id",
+    createSql: `
+      CREATE TABLE app_state_projection_meta (
+        state_scope_id TEXT PRIMARY KEY NOT NULL DEFAULT 'local',
+        last_receipt_id TEXT,
+        projected_at TEXT NOT NULL,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      )
+    `,
+    insertSql: `
+      INSERT OR REPLACE INTO app_state_projection_meta (state_scope_id, last_receipt_id, projected_at, metadata_json)
+      SELECT profile_id, last_receipt_id, projected_at, metadata_json FROM app_state_projection_meta_legacy_scope
+    `,
+  });
+}
+
+function migrateScopedTable(
+  sqlite: Database.Database,
+  input: { table: string; legacyColumn: string; scopeColumn: string; createSql: string; insertSql: string },
+): void {
+  const columns = sqlite.prepare(`PRAGMA table_info(${quoteIdent(input.table)})`).all() as Array<{ name: string }>;
+  const names = columns.map((column) => column.name);
+  if (names.length === 0 || !names.includes(input.legacyColumn) || names.includes(input.scopeColumn)) return;
+  const legacyTable = `${input.table}_legacy_scope`;
+  sqlite.exec("BEGIN");
+  try {
+    sqlite.prepare(`ALTER TABLE ${quoteIdent(input.table)} RENAME TO ${quoteIdent(legacyTable)}`).run();
+    sqlite.prepare(input.createSql).run();
+    sqlite.prepare(input.insertSql).run();
+    sqlite.prepare(`DROP TABLE ${quoteIdent(legacyTable)}`).run();
+    sqlite.exec("COMMIT");
+  } catch (error) {
+    sqlite.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 function schemaMetaVersion(sqlite: Database.Database, table: string): number {
