@@ -68,6 +68,14 @@ class when tests and measurements prove compatibility. Performance debt is
 formal debt with surface, resource dimension, evidence, target, owner, review
 date, and release-blocking status.
 
+Performance investigations and fixes must separate report states: hypotheses,
+static guard, compile/build, measurement taken, confirmed cause, probable
+cause, and discarded causes. Static guards and code inspection identify risks;
+compile/build results prove code health; neither proves runtime performance
+validation. A confirmed cause requires cited measurement evidence. Without a
+real measurement taken and cited, the work can close only as partial
+validation, blocked, or `EXTERNAL PENDING`, never as performance validated.
+
 Enforcement is progressive:
 
 1. Block missing governance routes, missing performance impact classification

@@ -35,6 +35,14 @@ for (const [relativePath, snippets] of new Map([
     "Status: Accepted",
     "Performance means whole-computer resource behavior",
     "Windowing/Pagination by Default",
+    "hypotheses,",
+    "static guard",
+    "compile/build",
+    "measurement taken",
+    "confirmed cause",
+    "probable",
+    "discarded causes",
+    "never as performance validated",
     "Resource Contract is required for implementation closure",
     "docs/boundedness-baseline.json",
     "docs/surface-resource-contract-baseline.json",
@@ -61,6 +69,9 @@ for (const [relativePath, snippets] of new Map([
   ["docs/governance/performance-governance.md", [
     "whole-computer resource behavior",
     "## Required Impact Classification",
+    "## Required Report States",
+    "hypotheses, static guard, compile/build, measurement taken, confirmed cause",
+    "No measurement, no performance validated",
     "## Windowing/Pagination by Default",
     "load all -> filter/sort/render",
     "cursor/window/batch/limit",
@@ -78,6 +89,8 @@ for (const [relativePath, snippets] of new Map([
   ]],
   ["docs/decision-map.md", [
     "Performance Governance",
+    "hypotheses, static guard, compile/build, measurement taken, confirmed cause",
+    "never performance validated",
     "streaming, backpressure, and bounded queues",
     "launch and idle contract",
     "UI state invalidation and high-churn data boundary",
@@ -95,6 +108,8 @@ for (const [relativePath, snippets] of new Map([
   ["docs/agent-rules/index.md", [
     "Performance governance",
     "performance-governance.md",
+    "hypotheses, static guard, compile/build, measurement taken",
+    "no measurement means",
   ]],
   ["docs/governance/README.md", [
     "Performance Governance",
@@ -128,6 +143,15 @@ for (const [relativePath, snippets] of new Map([
   ["skills/performance-investigation/SKILL.md", [
     "CPU, RAM, GPU/Neural Engine",
     "disk, network, battery, thermals",
+    "## Required final report",
+    "Hypotheses",
+    "Static guard",
+    "Compile/build",
+    "Measurement taken",
+    "Confirmed cause",
+    "Probable cause",
+    "Discarded causes",
+    "No measurement, no performance validated",
   ]],
 ])) {
   for (const snippet of snippets) requireSnippet(relativePath, snippet);

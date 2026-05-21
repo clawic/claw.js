@@ -23,7 +23,10 @@ lanes. Do not duplicate long ADR rationale here.
   thermals, idle behavior, growth, resource contracts, streaming/backpressure,
   launch/idle, high-churn UI boundaries, P1 event-loop hot-path checks through
   `scripts/hot-path-guard.mjs`, and Idle Quiescence Contract P1 through
-  `scripts/idle-quiescence-check.mjs`.
+  `scripts/idle-quiescence-check.mjs`. Performance reports separate
+  hypotheses, static guard, compile/build, measurement taken, confirmed cause,
+  probable cause, and discarded causes; no measurement means no performance
+  validated closure.
 - Problem-to-Guardrail loop:
   [ADR 0046](../adr/0046-problem-to-guardrail-loop.md) requires detected
   problems to close as `guard/test añadido`, `ADR/regla añadida`, or
