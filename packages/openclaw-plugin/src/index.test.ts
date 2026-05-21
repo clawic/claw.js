@@ -1,12 +1,16 @@
 // @ts-nocheck
-import { test } from "vitest";
+import { afterEach, test, vi } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
 
 import plugin, { HOOKS, resetClawJsPluginStateForTests } from "./index.js";
 
-function createApi() {
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+function createApi(options = {}) {
   const gatewayMethods = new Map();
   const commands = [];
   const tools = [];
@@ -34,10 +38,12 @@ function createApi() {
       source: "/tmp/clawjs/index.js",
       config,
       pluginConfig: {
+        ...(options.pluginConfig || {}),
         observability: {
           enabled: true,
           bufferSize: 50,
           maxSessionMessages: 5,
+          ...(options.observability || {}),
         },
       },
       runtime: {
@@ -140,6 +146,81 @@ test("status and event RPC methods expose captured observability state", async (
   assert.equal(eventsPayload?.payload.items.length >= 2, true);
   assert.equal(inspectPayload?.payload.found, true);
   assert.equal(inspectPayload?.payload.session.lastModel, "gpt-5");
+});
+
+test("observability state limits retained sessions with LRU compaction", async () => {
+  resetClawJsPluginStateForTests();
+  const { api, gatewayMethods, hooks } = createApi({
+    observability: {
+      maxSessions: 2,
+    },
+  });
+  plugin.register(api);
+
+  const sessionStart = hooks.get("session_start");
+  assert.ok(sessionStart);
+
+  sessionStart({ sessionId: "s-1", sessionKey: "one" }, { sessionId: "s-1", sessionKey: "one" });
+  sessionStart({ sessionId: "s-2", sessionKey: "two" }, { sessionId: "s-2", sessionKey: "two" });
+  sessionStart({ sessionId: "s-1", sessionKey: "one" }, { sessionId: "s-1", sessionKey: "one" });
+  sessionStart({ sessionId: "s-3", sessionKey: "three" }, { sessionId: "s-3", sessionKey: "three" });
+
+  const statusHandler = gatewayMethods.get("clawjs.status");
+  const inspectHandler = gatewayMethods.get("clawjs.sessions.inspect");
+  let statusPayload = null;
+  let onePayload = null;
+  let twoPayload = null;
+
+  statusHandler({ params: {}, respond(ok, payload) { statusPayload = { ok, payload }; } });
+  inspectHandler({ params: { sessionKey: "one" }, respond(ok, payload) { onePayload = { ok, payload }; } });
+  inspectHandler({ params: { sessionKey: "two" }, respond(ok, payload) { twoPayload = { ok, payload }; } });
+
+  assert.equal(statusPayload?.payload.health.sessionCount, 2);
+  assert.equal(statusPayload?.payload.health.maxSessions, 2);
+  assert.equal(statusPayload?.payload.health.compactedSessionCount, 1);
+  assert.equal(statusPayload?.payload.health.compactedSessions.eventCount, 1);
+  assert.equal(onePayload?.payload.found, true);
+  assert.equal(twoPayload?.payload.found, false);
+});
+
+test("observability state expires ended sessions from endedAt and keeps aggregate counters", async () => {
+  resetClawJsPluginStateForTests();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+  const { api, gatewayMethods, hooks } = createApi({
+    observability: {
+      endedSessionTtlMs: 1000,
+      maxSessions: 10,
+    },
+  });
+  plugin.register(api);
+
+  const sessionStart = hooks.get("session_start");
+  const sessionEnd = hooks.get("session_end");
+  assert.ok(sessionStart);
+  assert.ok(sessionEnd);
+
+  sessionStart({ sessionId: "old", sessionKey: "old" }, { sessionId: "old", sessionKey: "old" });
+  sessionEnd({ sessionId: "old", sessionKey: "old", messageCount: 7 }, { sessionId: "old", sessionKey: "old" });
+
+  vi.setSystemTime(new Date("2026-01-01T00:00:01.001Z"));
+  sessionStart({ sessionId: "fresh", sessionKey: "fresh" }, { sessionId: "fresh", sessionKey: "fresh" });
+
+  const statusHandler = gatewayMethods.get("clawjs.status");
+  const inspectHandler = gatewayMethods.get("clawjs.sessions.inspect");
+  let statusPayload = null;
+  let oldPayload = null;
+
+  statusHandler({ params: {}, respond(ok, payload) { statusPayload = { ok, payload }; } });
+  inspectHandler({ params: { sessionKey: "old" }, respond(ok, payload) { oldPayload = { ok, payload }; } });
+
+  assert.equal(oldPayload?.payload.found, false);
+  assert.equal(statusPayload?.payload.health.sessionCount, 1);
+  assert.equal(statusPayload?.payload.health.compactedSessionCount, 1);
+  assert.equal(statusPayload?.payload.health.compactedSessions.eventCount, 2);
+  assert.equal(statusPayload?.payload.health.compactedSessions.messageCount, 7);
+  assert.equal(statusPayload?.payload.health.compactedSessions.endedCount, 1);
 });
 
 test("subagent gateway methods delegate to runtime wrappers", async () => {

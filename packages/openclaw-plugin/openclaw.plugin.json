@@ -13,7 +13,9 @@
         "properties": {
           "enabled": { "type": "boolean" },
           "bufferSize": { "type": "integer", "minimum": 10, "maximum": 2000 },
-          "maxSessionMessages": { "type": "integer", "minimum": 1, "maximum": 200 }
+          "maxSessions": { "type": "integer", "minimum": 1, "maximum": 10000 },
+          "maxSessionMessages": { "type": "integer", "minimum": 1, "maximum": 200 },
+          "endedSessionTtlMs": { "type": "integer", "minimum": 1000, "maximum": 604800000 }
         }
       },
       "promptMutation": {
@@ -52,6 +54,12 @@
     },
     "observability.maxSessionMessages": {
       "label": "Max Session Messages"
+    },
+    "observability.maxSessions": {
+      "label": "Max Sessions"
+    },
+    "observability.endedSessionTtlMs": {
+      "label": "Ended Session TTL"
     },
     "promptMutation.enabled": {
       "label": "Enable Prompt Mutation",

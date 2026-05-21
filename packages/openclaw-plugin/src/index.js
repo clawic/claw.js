@@ -409,7 +409,9 @@ const clawJsPlugin = {
     const pluginConfig = readPluginConfig(api);
     configureState({
       maxEvents: pluginConfig?.observability?.bufferSize,
+      maxSessions: pluginConfig?.observability?.maxSessions,
       maxSessionMessages: pluginConfig?.observability?.maxSessionMessages,
+      endedSessionTtlMs: pluginConfig?.observability?.endedSessionTtlMs,
     });
 
     api.registerService({
