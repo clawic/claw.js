@@ -165,7 +165,7 @@ function selfTest() {
   writeFixture(root, "scripts/reader.mjs", "const body = fs.readFileSync('rollout.jsonl', 'utf8');\n");
   result = run(root);
   if (result.status === 0 || !result.stderr.includes("full-jsonl-read")) throw new Error("self-test missed JSONL full read");
-  writeFixture(root, "scripts/reader.mjs", "const MAX_ROLLOUT_BYTES = 1024;\nconst body = fs.readFileSync('rollout.jsonl', 'utf8');\n");
+  writeFixture(root, "scripts/reader.mjs", "const limit = 1024;\nconst body = fs.readFileSync('rollout.jsonl', 'utf8');\n");
   writeFixture(root, "macos/View.swift", "let messages = store.messages\nForEach(messages) { message in Text(message.text) }\n");
   result = run(root);
   if (result.status === 0 || !result.stderr.includes("ui-foreach-over-unbounded-source")) throw new Error("self-test missed unbounded ForEach");
