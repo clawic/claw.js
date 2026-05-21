@@ -229,7 +229,7 @@
       "classification": "deterministicGeneratedArtifact",
       "rationale": "Rendered persistent-surface docs are generated from the surface registry and include legitimate user/domain profile surfaces.",
       "canonicalDoc": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
-      "maxOccurrences": 9,
+      "maxOccurrences": 8,
       "steward": "clawjs-surfaces",
       "generatedFrom": "packages/clawjs-core/src/surface-registry.ts",
       "parityTest": "packages/clawjs/src/inspect-cli.test.ts"

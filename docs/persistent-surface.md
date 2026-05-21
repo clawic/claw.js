@@ -3276,7 +3276,7 @@ flowchart TD
 | `claw.cli.command.records` | cliCommand | cli | claw |  |  |  |  | `records` |
 | `claw.cli.command.contacts` | cliCommand | cli | claw |  |  |  |  | `contacts` |
 | `claw.cli.command.inspect` | cliCommand | cli | claw |  |  |  |  | `inspect` |
-| `claw.cli.command.maturity` | cliCommand | cli | claw |  |  |  | Capability maturity governance inspection CLI for profile ceilings, activation policies, and leakage audit. | `maturity` |
+| `claw.cli.command.maturity` | cliCommand | cli | claw |  |  |  | Capability maturity governance inspection CLI for activation tier ceilings, activation policies, and leakage audit. | `maturity` |
 | `claw.cli.command.remote` | cliCommand | cli | claw |  |  |  |  | `remote` |
 | `claw.cli.command.sync` | cliCommand | cli | claw |  |  |  |  | `sync` |
 | `claw.cli.command.nodes` | cliCommand | cli | claw |  |  |  |  | `nodes` |

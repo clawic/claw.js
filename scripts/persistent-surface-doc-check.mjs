@@ -4,6 +4,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const docPath = path.join(rootDir, "docs", "persistent-surface.md");
+const write = process.argv.includes("--write");
 execFileSync("npm", ["--prefix", "packages/clawjs-core", "run", "build"], {
   cwd: rootDir,
   stdio: "inherit",
@@ -33,6 +34,11 @@ const generated = execFileSync(
 
 const current = fs.readFileSync(docPath, "utf8");
 if (current !== generated) {
+  if (write) {
+    fs.writeFileSync(docPath, generated);
+    console.log("persistent surface docs regenerated");
+    process.exit(0);
+  }
   console.error("docs/persistent-surface.md is stale. Regenerate it with `claw inspect render --format markdown`.");
   process.exit(1);
 }
