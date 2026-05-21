@@ -1,5 +1,4 @@
 import {
-  compactBuiltinCollectionsByName,
   compactBuiltinFamilies,
   resolveBuiltinCollectionAlias,
 } from "@clawjs/core/compact-catalogs";

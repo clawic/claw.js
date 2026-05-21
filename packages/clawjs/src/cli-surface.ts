@@ -24,7 +24,7 @@ export interface ClawCliSearchResult {
   shadowedByCommand?: string;
 }
 
-const PUBLIC_CLI_SURFACE = [...GENERATED_CLI_COMMANDS];
+const PUBLIC_CLI_SURFACE: ClawCliCommandRegistryEntry[] = [...GENERATED_CLI_COMMANDS as readonly ClawCliCommandRegistryEntry[]];
 const PUBLIC_CLI_SURFACE_BY_NAME = new Map(PUBLIC_CLI_SURFACE.map((entry) => [entry.name, entry]));
 
 function surfaceRows(entries: ClawCliCommandRegistryEntry[]): string[] {

@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { clawCliCommandRegistry, listClawCliAliases } from "../packages/clawjs-core/src/cli-command-registry.ts";
 import { CLI_EXIT_OK, runCli } from "../packages/clawjs/src/index.ts";
+import {
+  GENERATED_CLI_COMMANDS,
+  GENERATED_CLI_ROUTE_GROUPS,
+} from "../packages/clawjs/src/cli-router.generated.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -101,6 +105,23 @@ function checkRegistryShape(failures) {
   }
 }
 
+function checkGeneratedRouter(failures) {
+  const registryNames = clawCliCommandRegistry.commands.map((entry) => entry.name).sort();
+  const generatedNames = GENERATED_CLI_COMMANDS.map((entry) => entry.name).sort();
+  if (JSON.stringify(registryNames) !== JSON.stringify(generatedNames)) {
+    failures.push("generated CLI command metadata is stale relative to clawCliCommandRegistry");
+  }
+  const generatedByName = new Map(GENERATED_CLI_COMMANDS.map((entry) => [entry.name, entry]));
+  for (const entry of clawCliCommandRegistry.commands) {
+    const generated = generatedByName.get(entry.name);
+    if (!generated) continue;
+    if (generated.summary !== entry.summary) failures.push(`${entry.name}: generated summary is stale`);
+    if (generated.schemaVersion !== entry.schemaVersion) failures.push(`${entry.name}: generated schemaVersion is stale`);
+    if (GENERATED_CLI_ROUTE_GROUPS[entry.name] !== generated.routeGroup) failures.push(`${entry.name}: generated route group map is inconsistent`);
+    if (!generated.routeGroup) failures.push(`${entry.name}: missing generated route group`);
+  }
+}
+
 function checkAliasRecords(failures) {
   const seen = new Map();
   for (const record of listClawCliAliases()) {
@@ -171,6 +192,7 @@ async function checkHelpParity(failures) {
 
 const failures = [];
 checkRegistryShape(failures);
+checkGeneratedRouter(failures);
 checkAliasRecords(failures);
 checkReferences(failures);
 await checkHelpParity(failures);

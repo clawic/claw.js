@@ -113,6 +113,18 @@ if (first === "inspect" && (second === "commands" || second === "cli")) {
   else console.log(commands.join("\n"));
   process.exit(0);
 }
+if (first === "collections" && (!second || second === "list")) {
+  const includeAvailable = args.includes("--available") || args.includes("--all");
+  const collections = [
+    { name: "tasks", displayName: "Tasks", family: "productivity", state: "enabled", moduleId: null, aliases: ["task"], fieldCount: 0 },
+    ...(includeAvailable ? [
+      { name: "patients", displayName: "Patients", family: "health", state: "available", moduleId: null, aliases: [], fieldCount: 0 },
+    ] : []),
+  ];
+  if (wantsJson()) writeJsonOk("collections", { collections, total: collections.length, returned: collections.length, visibility: includeAvailable ? "available" : "active" }, { invokedCommand: "collections", subcommand: "list" });
+  else console.log(collections.map((collection) => `${collection.name}\t${collection.family}\t${collection.state}`).join("\n"));
+  process.exit(0);
+}
 if ((first === "collections" && second && second !== "list") || first === "records" || DATA_GROUPS.has(first)) {
   if (!(await hasPackage("@clawjs/local-data"))) missingPack(first === "db" ? "database" : first, "local-data", "@clawjs/local-data");
 }

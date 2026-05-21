@@ -20,9 +20,9 @@ permission prompts unless they ask for those capabilities.
 ## Decision
 
 - The base `claw` CLI is a zero-surprise entrypoint. Installation and safe
-  commands do not open apps, start hosts or daemons, request OS permissions,
-  download models/browsers/assets, call network/provider APIs, or activate
-  niche domains.
+  commands do not install native SQLite, open apps, start hosts or daemons,
+  request OS permissions, download models/browsers/assets, call network/provider
+  APIs, or activate niche domains.
 - Configuration has two independent axes:
   - **Capabilities**: technical/system capabilities such as local data,
     search, host, OS permissions, audio/voice, agents/runtime, integrations,
@@ -56,7 +56,11 @@ permission prompts unless they ask for those capabilities.
 ## Consequences
 
 - `@clawjs/cli` must remain thin. It must not use install lifecycle hooks and
-  must not depend directly on heavy optional capabilities.
+  must not depend directly on heavy optional capabilities such as
+  `better-sqlite3`, `@clawjs/database`, `@clawjs/search`, `@clawjs/claw`,
+  `@clawjs/workspace`, or `@clawjs/signals`.
+- SQLite-backed local data commands are restored by the explicit
+  `@clawjs/local-data` capability pack.
 - Host, permissions, processes, launchers, audio/TTS/STT, browsers, models,
   network connectors, provider APIs, sync/remote, and other surprising
   capabilities are activated only by explicit user action.

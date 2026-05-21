@@ -1,4 +1,4 @@
-import type { ActorContext, GuidanceHint, GuidanceMatchInput, GuidanceRecord, RuntimeAdapterId } from "@clawjs/core";
+import type { ActorContext, ActorKind, GuidanceHint, GuidanceMatchInput, GuidanceRecord, RuntimeAdapterId } from "@clawjs/core";
 
 import type { CliJsonMeta } from "./cli-json.ts";
 import { setCliJsonMetaProvider } from "./cli-json.ts";
@@ -32,15 +32,24 @@ async function resolveCliActor(flags: Record<string, string>, env: NodeJS.Proces
   }
   if (flags["actor-kind"] || env.CLAW_ACTOR_KIND) {
     return {
-      actorKind: flags["actor-kind"] || env.CLAW_ACTOR_KIND,
+      actorKind: parseActorKind(flags["actor-kind"] || env.CLAW_ACTOR_KIND),
       actorId: flags["actor-id"] || env.CLAW_ACTOR_ID,
       sessionId: flags["actor-session-id"] || env.CLAW_ACTOR_SESSION_ID,
       runId: flags["actor-run-id"] || env.CLAW_ACTOR_RUN_ID,
       hostId: flags["actor-host-id"] || env.CLAW_ACTOR_HOST_ID,
-      trustLevel: "untrusted",
-    } as ActorContext;
+      scope: [],
+      trustSource: "untrusted",
+      verified: false,
+      reason: "untrusted_actor_hint",
+    };
   }
-  return { actorKind: "unknown", trustLevel: "unknown" } as ActorContext;
+  return {
+    actorKind: "unknown",
+    scope: [],
+    trustSource: "unknown",
+    verified: false,
+    reason: "missing_assertion",
+  };
 }
 
 function resolveGuidanceMode(flags: Record<string, string>): GuidanceMode {
@@ -154,6 +163,10 @@ function parseTrustedKeys(value: string | undefined): TrustedActorAssertionKey[]
   } catch {
     return [];
   }
+}
+
+function parseActorKind(value: string | undefined): ActorKind {
+  return value === "human" || value === "agent" || value === "automation" ? value : "unknown";
 }
 
 function splitCsv(value: string | undefined): string[] {
