@@ -201,14 +201,14 @@ for (const relativePath of [
 
 for (const relativePath of [
   "docs/persistent-surface.md",
-  "packages/clawjs-core/src/surface-registry.ts",
+  "packages/clawjs-core/src/surface-registry-graph.ts",
 ]) {
   forbidSnippet(relativePath, "`clawix.protocol.bridge`");
   forbidSnippet(relativePath, '"clawix.protocol.bridge"');
   requireSnippet(relativePath, "clawix.protocol.bridge.v1");
 }
-forbidSnippet("packages/clawjs/src/inspect-cli.test.ts", '"clawix.protocol.bridge"');
-requireSnippet("packages/clawjs/src/inspect-cli.test.ts", "clawix.protocol.bridge.v1");
+forbidSnippet("packages/clawjs/src/inspect-cli-agent-codebase.test.ts", '"clawix.protocol.bridge"');
+requireSnippet("packages/clawjs/src/inspect-cli-agent-codebase.test.ts", "clawix.protocol.bridge.v1");
 requireSnippet("docs/interface-matrix.md", "| Apps and openable surfaces | Clawix Apps catalog and app surface | app/resource registry APIs | `claw apps list|upsert|delete` |");
 requireSnippet("docs/interface-matrix.md", "| Design resources | Clawix Design styles, templates, references, and editor | design/resource registry APIs | `claw design list|upsert|delete` |");
 requireSnippet("docs/interface-matrix.md", "| Provider routing set / list / delete | framework provider routing config | `claw providers routing list|set|delete` |");
@@ -639,7 +639,7 @@ for (const [relativePath, snippets] of Object.entries({
   "packages/clawjs-core/src/host-contract-fixtures.ts": [
     ".clawix/run/clawix-bridge.sock",
   ],
-	  "packages/clawjs-core/src/surface-registry.ts": [
+	  "packages/clawjs-core/src/surface-registry-contracts.ts": [
     "runtime: 24100",
     "sessions: 24101",
     "database: 24102",

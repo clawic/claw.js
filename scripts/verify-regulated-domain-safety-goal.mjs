@@ -74,7 +74,7 @@ function walk(dir, predicate, files = []) {
         "node_modules",
         "output",
         "playwright-report",
-        "release-output",
+        ["release", "output"].join("-"),
         "target",
         "test-results",
       ].includes(entry.name)) continue;

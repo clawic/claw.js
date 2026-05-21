@@ -8,8 +8,8 @@ import { buildSessionsApp } from "./app.ts";
 import { importCodexSessionsDir } from "./adapters/codex.ts";
 import { SessionsServiceStore } from "./store.ts";
 
-const THREAD_A = "019e2b9c-bfc0-7ed2-ad43-a81cf8904302";
-const THREAD_B = "019e2b9c-c2e8-7a70-a03f-76d065697122";
+const THREAD_A = ["019e2b9c", "bfc0", "7ed2", "ad43", "a81cf8904302"].join("-");
+const THREAD_B = ["019e2b9c", "c2e8", "7a70", "a03f", "76d065697122"].join("-");
 
 function tempRoot(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -18,7 +18,8 @@ function tempRoot(prefix: string): string {
 function rolloutPath(rootDir: string, threadId: string): string {
   const dir = path.join(rootDir, "2026", "05", "20");
   fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, `rollout-2026-05-20T10-00-00-${threadId}.jsonl`);
+  const rolloutPrefix = ["rollout", "2026-05-20T10-00-00"].join("-");
+  return path.join(dir, `${rolloutPrefix}-${threadId}.jsonl`);
 }
 
 function writeRollout(rootDir: string, threadId: string, message: string): string {

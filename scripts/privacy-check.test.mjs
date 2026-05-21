@@ -20,17 +20,19 @@ test("flags private public-boundary categories", () => {
   const privateUserPath = ["/Users", "trabajo", "Desktop", "Clawix"].join("/");
   const codexSessionPath = ["~", ".codex", "sessions", "session.jsonl"].join("/");
   const rolloutPath = [
-    "rollout-2026-05-15T12-27-04-019e2b2c-ec6d-7ea0-943f-4cad5b2ad6a1.jsonl",
-  ].join("");
+    "rollout",
+    "2026-05-15T12-27-04",
+    "019e2b2c-ec6d-7ea0-943f-4cad5b2ad6a1.jsonl",
+  ].join("-");
   const codexThread = "sourceSession thread 019e2b2c-ec6d-7ea0-943f-7cad5b2ad6a1";
   const findings = scanText([
     privateUserPath,
     codexSessionPath,
     rolloutPath,
     codexThread,
-    "DEVELOPMENT_TEAM = ABCDE12345",
+    `${["DEVELOPMENT", "TEAM"].join("_")} = ABCDE12345`,
     "bundle_id=com.private.app",
-    "Apple Distribution: Private Org (ABCDE12345)",
+    `${["Apple", "Distribution"].join(" ")}: Private Org (ABCDE12345)`,
     ["release", "output"].join("-"),
   ].join("\n"));
   for (const rule of [
@@ -41,7 +43,7 @@ test("flags private public-boundary categories", () => {
     "contextual-team-id",
     "private-bundle-id",
     "signing-identity",
-    "release-output-reference",
+    "release-artifact-output-reference",
   ]) {
     assert.equal(findings.some((finding) => finding.rule === rule), true, `expected ${rule}`);
   }

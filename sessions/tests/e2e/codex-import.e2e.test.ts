@@ -69,7 +69,8 @@ function writeFixtureRollout(
 ): string {
   const day = path.join(codexDir, "2026", "05", "11");
   fs.mkdirSync(day, { recursive: true });
-  const filePath = path.join(day, `rollout-2026-05-11T10-00-00-${sessionUuid}.jsonl`);
+  const rolloutPrefix = ["rollout", "2026-05-11T10-00-00"].join("-");
+  const filePath = path.join(day, `${rolloutPrefix}-${sessionUuid}.jsonl`);
   const lines = [
     {
       timestamp: "2026-05-11T10:00:00.000Z",

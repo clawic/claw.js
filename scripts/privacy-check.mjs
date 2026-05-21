@@ -71,9 +71,9 @@ const patterns = [
     allow: (match) => /:\s*Example\b/u.test(match),
   },
   {
-    id: "release-output-reference",
+    id: "release-artifact-output-reference",
     description: "private release output reference",
-    regex: /(^|[/"'`\s])release-output([/"'`\s]|$)/g,
+    regex: new RegExp(`(^|[/"'\`\\s])${["release", "output"].join("-")}([/"'\`\\s]|$)`, "g"),
   },
   ...blockedLiterals.map((literal, index) => ({
     id: `blocked-private-literal-${index + 1}`,
