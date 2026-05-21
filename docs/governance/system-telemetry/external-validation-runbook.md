@@ -41,7 +41,8 @@ evidence packet into a same-lane closure bundle. Synthetic closure examples
 live in `docs/governance/system-telemetry/external-closure.fixtures.json`; they only prove
 bundle validation behavior and are not real closure evidence. The bundle must
 bind the evidence `runAuthorization.approvalId`, approving actor, credential
-leases, native grants, location grants, and hardware provider refs to the exact
+leases, native grants, location grants, hardware provider refs, and signed host
+refs to the exact
 approval packet.
 All evidence timestamps must remain inside that approval packet's
 `approvedAt`/`expiresAt` window, and its approved pending rows, replacement

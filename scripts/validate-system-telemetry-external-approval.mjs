@@ -88,6 +88,9 @@ function mutateTemplate(packet, mutation) {
     case "authorization.nativeGrantRefs=[]":
       mutated.authorization.nativeGrantRefs = [];
       break;
+    case "authorization.signedHostRefs=[]":
+      mutated.authorization.signedHostRefs = [];
+      break;
     case "approval.expiresAt=beforeApprovedAt":
       mutated.approval.expiresAt = "2026-05-19T23:59:59Z";
       break;

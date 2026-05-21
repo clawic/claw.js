@@ -28,6 +28,9 @@
           "location_grant_template"
         ],
         "hardwareProviderRefs": [],
+        "signedHostRefs": [
+          "signed_host_template"
+        ],
         "networkAccessApproved": true
       },
       "preflight": {
@@ -110,6 +113,9 @@
         "hardwareProviderRefs": [
           "compatible_hardware_template"
         ],
+        "signedHostRefs": [
+          "signed_host_template"
+        ],
         "networkAccessApproved": false
       },
       "preflight": {
@@ -190,6 +196,9 @@
         ],
         "locationGrantRefs": [],
         "hardwareProviderRefs": [],
+        "signedHostRefs": [
+          "signed_host_template"
+        ],
         "networkAccessApproved": false
       },
       "preflight": {
@@ -276,6 +285,9 @@
             "location_grant_template"
           ],
           "hardwareProviderRefs": [],
+          "signedHostRefs": [
+            "signed_host_template"
+          ],
           "networkAccessApproved": true
         },
         "preflight": {
@@ -383,7 +395,10 @@
           "hardwareProviderRefs": [
             "compatible_hardware_template"
           ],
-          "networkAccessApproved": false
+          "networkAccessApproved": false,
+          "signedHostRefs": [
+            "signed_host_template"
+          ]
         },
         "preflight": {
           "command": "claw system providers plan system.sensors.signed --json",
@@ -466,7 +481,10 @@
           ],
           "locationGrantRefs": [],
           "hardwareProviderRefs": [],
-          "networkAccessApproved": false
+          "networkAccessApproved": false,
+          "signedHostRefs": [
+            "signed_host_template"
+          ]
         },
         "preflight": {
           "command": "claw system controls plan system.fan.set_speed --json",
@@ -561,6 +579,11 @@
       "id": "extra_rows_to_replace",
       "baseLaneId": "SYS-TEL-EXT-001",
       "mutation": "closureImpact.rowsToReplace=extra"
+    },
+    {
+      "id": "missing_signed_host_ref",
+      "baseLaneId": "SYS-TEL-EXT-002",
+      "mutation": "runAuthorization.signedHostRefs is empty"
     }
   ]
 }

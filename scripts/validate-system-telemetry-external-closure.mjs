@@ -191,6 +191,11 @@ function assertAuthorizationBindings(bundle, label) {
     bundle.approvalPacket.authorization?.hardwareProviderRefs ?? [],
     `${label}.evidencePacket.runAuthorization.hardwareProviderRefs`,
   );
+  assertSameStringSet(
+    bundle.evidencePacket.runAuthorization?.signedHostRefs,
+    bundle.approvalPacket.authorization?.signedHostRefs ?? [],
+    `${label}.evidencePacket.runAuthorization.signedHostRefs`,
+  );
   const approvedActions = bundle.approvalPacket.approval?.approvedActions ?? [];
   assertSameStringSet(
     approvedActions,
@@ -315,6 +320,9 @@ function mutateBundle(bundle, mutation) {
       break;
     case "evidencePacket.runAuthorization.hardwareProviderRefs=wrong":
       mutated.evidencePacket.runAuthorization.hardwareProviderRefs = ["wrong_hardware_provider_template"];
+      break;
+    case "evidencePacket.runAuthorization.signedHostRefs=wrong":
+      mutated.evidencePacket.runAuthorization.signedHostRefs = ["wrong_signed_host_template"];
       break;
     case "evidencePacket.runAuthorization.grants=extra":
       mutated.evidencePacket.runAuthorization.grants = [

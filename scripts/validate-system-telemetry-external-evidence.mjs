@@ -118,6 +118,9 @@ function mutateTemplate(packet, mutation) {
     case "runAuthorization.hardwareProviderRefs is empty":
       mutated.runAuthorization.hardwareProviderRefs = [];
       break;
+    case "runAuthorization.signedHostRefs is empty":
+      mutated.runAuthorization.signedHostRefs = [];
+      break;
     case "reviewer.reviewedAt before execution.completedAt":
       mutated.reviewer.reviewedAt = "2026-05-19T23:59:59Z";
       break;

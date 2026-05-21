@@ -69,6 +69,7 @@
         "nativeGrantRefs",
         "locationGrantRefs",
         "hardwareProviderRefs",
+        "signedHostRefs",
         "networkAccessApproved"
       ],
       "properties": {
@@ -81,6 +82,7 @@
         "nativeGrantRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
         "locationGrantRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
         "hardwareProviderRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
+        "signedHostRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
         "networkAccessApproved": { "type": "boolean" }
       }
     },
@@ -200,6 +202,7 @@
               "grants": { "contains": { "const": "context.weather.read" }, "maxItems": 1 },
               "credentialLeaseRefs": { "minItems": 1, "maxItems": 1 },
               "locationGrantRefs": { "minItems": 1, "maxItems": 1 },
+              "signedHostRefs": { "minItems": 1, "maxItems": 1 },
               "networkAccessApproved": { "const": true }
             }
           },
@@ -231,7 +234,8 @@
             "properties": {
               "grants": { "contains": { "const": "system.sensor.read" }, "maxItems": 1 },
               "nativeGrantRefs": { "minItems": 1, "maxItems": 1 },
-              "hardwareProviderRefs": { "minItems": 1, "maxItems": 1 }
+              "hardwareProviderRefs": { "minItems": 1, "maxItems": 1 },
+              "signedHostRefs": { "minItems": 1, "maxItems": 1 }
             }
           },
           "evidence": {
@@ -261,7 +265,8 @@
           "runAuthorization": {
             "properties": {
               "grants": { "contains": { "const": "system.control.execute" }, "maxItems": 1 },
-              "nativeGrantRefs": { "minItems": 1, "maxItems": 1 }
+              "nativeGrantRefs": { "minItems": 1, "maxItems": 1 },
+              "signedHostRefs": { "minItems": 1, "maxItems": 1 }
             }
           },
           "evidence": {

@@ -70,13 +70,14 @@
     "authorization": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["credentialLeaseRefs", "nativeGrantRefs", "networkAccessApproved", "locationGrantRefs", "hardwareProviderRefs"],
+      "required": ["credentialLeaseRefs", "nativeGrantRefs", "networkAccessApproved", "locationGrantRefs", "hardwareProviderRefs", "signedHostRefs"],
       "properties": {
         "credentialLeaseRefs": { "type": "array", "maxItems": 1, "items": { "$ref": "#/$defs/publicCredentialLeaseRef" } },
         "nativeGrantRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
         "networkAccessApproved": { "type": "boolean" },
         "locationGrantRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
-        "hardwareProviderRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } }
+        "hardwareProviderRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } },
+        "signedHostRefs": { "type": "array", "maxItems": 1, "items": { "type": "string" } }
       }
     },
     "risk": {
@@ -121,7 +122,8 @@
             "properties": {
               "credentialLeaseRefs": { "minItems": 1, "maxItems": 1 },
               "networkAccessApproved": { "const": true },
-              "locationGrantRefs": { "minItems": 1, "maxItems": 1 }
+              "locationGrantRefs": { "minItems": 1, "maxItems": 1 },
+              "signedHostRefs": { "minItems": 1, "maxItems": 1 }
             }
           },
           "risk": { "properties": { "tier": { "const": "provider-live" } } },
@@ -137,7 +139,8 @@
           "authorization": {
             "properties": {
               "nativeGrantRefs": { "minItems": 1, "maxItems": 1 },
-              "hardwareProviderRefs": { "minItems": 1, "maxItems": 1 }
+              "hardwareProviderRefs": { "minItems": 1, "maxItems": 1 },
+              "signedHostRefs": { "minItems": 1, "maxItems": 1 }
             }
           },
           "risk": { "properties": { "tier": { "const": "sensor-read" } } },
@@ -150,7 +153,12 @@
       "then": {
         "properties": {
           "approval": { "properties": { "approvedActions": { "contains": { "const": "dangerous_control_execute" } } } },
-          "authorization": { "properties": { "nativeGrantRefs": { "minItems": 1, "maxItems": 1 } } },
+          "authorization": {
+            "properties": {
+              "nativeGrantRefs": { "minItems": 1, "maxItems": 1 },
+              "signedHostRefs": { "minItems": 1, "maxItems": 1 }
+            }
+          },
           "risk": {
             "properties": {
               "tier": { "const": "dangerous-control" },

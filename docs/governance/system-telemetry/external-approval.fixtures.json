@@ -21,7 +21,9 @@
         "approvedBy": "user",
         "approvedAt": "2026-05-20T00:00:00Z",
         "expiresAt": "2026-05-21T00:00:00Z",
-        "approvedActions": ["provider_connection"],
+        "approvedActions": [
+          "provider_connection"
+        ],
         "reason": "template only"
       },
       "preflight": {
@@ -29,11 +31,18 @@
         "mustFailClosedBeforeApproval": true
       },
       "authorization": {
-        "credentialLeaseRefs": ["lease_weather_template"],
+        "credentialLeaseRefs": [
+          "lease_weather_template"
+        ],
         "nativeGrantRefs": [],
         "networkAccessApproved": true,
-        "locationGrantRefs": ["location_grant_template"],
-        "hardwareProviderRefs": []
+        "locationGrantRefs": [
+          "location_grant_template"
+        ],
+        "hardwareProviderRefs": [],
+        "signedHostRefs": [
+          "signed_host_template"
+        ]
       },
       "risk": {
         "tier": "provider-live",
@@ -46,7 +55,9 @@
         "privatePathsIncluded": false
       },
       "closureImpact": {
-        "externalPendingRows": ["SYS-TEL-EXT-001"],
+        "externalPendingRows": [
+          "SYS-TEL-EXT-001"
+        ],
         "requiresEvidencePacket": true,
         "requiresFinalSourceReread": true,
         "requiresForbiddenNameScan": true
@@ -66,7 +77,9 @@
         "approvedBy": "user",
         "approvedAt": "2026-05-20T00:00:00Z",
         "expiresAt": "2026-05-21T00:00:00Z",
-        "approvedActions": ["physical_sensor_read"],
+        "approvedActions": [
+          "physical_sensor_read"
+        ],
         "reason": "template only"
       },
       "preflight": {
@@ -75,10 +88,17 @@
       },
       "authorization": {
         "credentialLeaseRefs": [],
-        "nativeGrantRefs": ["grant_sensor_template"],
+        "nativeGrantRefs": [
+          "grant_sensor_template"
+        ],
         "networkAccessApproved": false,
         "locationGrantRefs": [],
-        "hardwareProviderRefs": ["compatible_hardware_template"]
+        "hardwareProviderRefs": [
+          "compatible_hardware_template"
+        ],
+        "signedHostRefs": [
+          "signed_host_template"
+        ]
       },
       "risk": {
         "tier": "sensor-read",
@@ -91,7 +111,9 @@
         "privatePathsIncluded": false
       },
       "closureImpact": {
-        "externalPendingRows": ["SYS-TEL-EXT-002"],
+        "externalPendingRows": [
+          "SYS-TEL-EXT-002"
+        ],
         "requiresEvidencePacket": true,
         "requiresFinalSourceReread": true,
         "requiresForbiddenNameScan": true
@@ -111,7 +133,9 @@
         "approvedBy": "user",
         "approvedAt": "2026-05-20T00:00:00Z",
         "expiresAt": "2026-05-21T00:00:00Z",
-        "approvedActions": ["dangerous_control_execute"],
+        "approvedActions": [
+          "dangerous_control_execute"
+        ],
         "reason": "template only"
       },
       "preflight": {
@@ -120,10 +144,15 @@
       },
       "authorization": {
         "credentialLeaseRefs": [],
-        "nativeGrantRefs": ["grant_control_template"],
+        "nativeGrantRefs": [
+          "grant_control_template"
+        ],
         "networkAccessApproved": false,
         "locationGrantRefs": [],
-        "hardwareProviderRefs": []
+        "hardwareProviderRefs": [],
+        "signedHostRefs": [
+          "signed_host_template"
+        ]
       },
       "risk": {
         "tier": "dangerous-control",
@@ -136,7 +165,9 @@
         "privatePathsIncluded": false
       },
       "closureImpact": {
-        "externalPendingRows": ["SYS-TEL-EXT-003"],
+        "externalPendingRows": [
+          "SYS-TEL-EXT-003"
+        ],
         "requiresEvidencePacket": true,
         "requiresFinalSourceReread": true,
         "requiresForbiddenNameScan": true
@@ -158,6 +189,11 @@
       "id": "missing_native_grant",
       "mutation": "authorization.nativeGrantRefs=[]",
       "packetRef": "SYS-TEL-EXT-003"
+    },
+    {
+      "id": "missing_signed_host_ref",
+      "mutation": "authorization.signedHostRefs=[]",
+      "packetRef": "SYS-TEL-EXT-002"
     },
     {
       "id": "approval_expiry_before_approval",
