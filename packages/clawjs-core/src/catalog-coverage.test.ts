@@ -13,7 +13,7 @@ import {
   listCatalogAuditedNeeds,
   listCatalogCoverageNeeds,
   summarizeCatalogAuditedBatch,
-} from "./index.ts";
+} from "./catalogs.ts";
 import type {
   BuiltinCatalogEvidenceTag,
   BuiltinRelationKind,

@@ -12,7 +12,7 @@ import {
   clawV1ClosureMinimumContractDomains,
   findClawDomainSurfaceEntry,
   listClawDomainSurfaceEntries,
-} from "./index.ts";
+} from "./catalogs.ts";
 
 test("domain surface registry maps database, services, modules and CLI ownership", () => {
   assert.equal(clawDomainSurfaceRegistry.version, clawDomainSurfaceRegistryVersion);

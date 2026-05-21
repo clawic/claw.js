@@ -6,7 +6,7 @@ import {
   commandIntentToNeedOpportunity,
   listClawCliCommandIntentRegistry,
   resolveClawCliCommandIntent,
-} from "./index.ts";
+} from "./catalogs.ts";
 
 test("CLI command intents expose the compact V1 status model", () => {
   assert.deepEqual(CLAW_CLI_COMMAND_INTENT_STATUSES, [

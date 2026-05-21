@@ -43,11 +43,10 @@ async function resolveCliActor(flags: Record<string, string>, env: NodeJS.Proces
   return { actorKind: "unknown", trustLevel: "unknown" } as ActorContext;
 }
 
-function resolveGuidanceMode(flags: Record<string, string>, actor: ActorContext): GuidanceMode {
+function resolveGuidanceMode(flags: Record<string, string>): GuidanceMode {
   const explicit = flags.guidance as GuidanceMode | undefined;
   if (explicit === "off" || explicit === "compact" || explicit === "full" || explicit === "minimal") return explicit;
-  if (actor.actorKind === "human") return "minimal";
-  return "compact";
+  return "off";
 }
 
 function buildCliRuntimeMeta(input: {
@@ -77,7 +76,7 @@ export async function installCliRuntimeMetaProvider(input: {
   runtimeAdapterId: RuntimeAdapterId;
 }): Promise<void> {
   const actor = await resolveCliActor(input.flags);
-  const guidanceMode = resolveGuidanceMode(input.flags, actor);
+  const guidanceMode = resolveGuidanceMode(input.flags);
   let hints: GuidanceHint[] = [];
   let fullRecords: GuidanceRecord[] = [];
   if (guidanceMode !== "off") {

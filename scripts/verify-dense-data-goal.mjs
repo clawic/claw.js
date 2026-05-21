@@ -16,7 +16,7 @@ import {
   resolveBuiltinCollectionName,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
   resolveClawCliCommand,
-} from "../packages/clawjs-core/src/index.ts";
+} from "../packages/clawjs-core/src/catalogs.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

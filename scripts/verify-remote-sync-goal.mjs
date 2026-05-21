@@ -66,7 +66,7 @@ import {
   syncAuthorityHandoffReceiptSchema,
   syncDriverApplicationReceiptSchema,
   syncDriverSchema,
-} from "../packages/clawjs-core/src/index.ts";
+} from "../packages/clawjs-core/src/catalogs.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";

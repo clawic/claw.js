@@ -25,6 +25,7 @@ const workspaces = [
   "@clawjs/signals",
   "@clawjs/workspace",
   "@clawjs/database",
+  "@clawjs/local-data",
   "@clawjs/agents",
   "@clawjs/integrations",
   "@clawjs/domain-pack-dense-data",

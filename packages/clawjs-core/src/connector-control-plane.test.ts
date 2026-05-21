@@ -13,7 +13,7 @@ import {
   type ConnectorProvider,
   type ConnectorExecutionRequest,
   type ConnectorPolicy,
-} from "./index.ts";
+} from "./catalogs.ts";
 
 const basePolicy: ConnectorPolicy = {
   id: "default",

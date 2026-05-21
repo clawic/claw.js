@@ -1,7 +1,7 @@
 {
-  "name": "@clawjs/cli",
+  "name": "@clawjs/local-data",
   "version": "0.1.2",
-  "description": "Official CLI for Claw.",
+  "description": "Optional local data capability pack for Claw CLI.",
   "type": "module",
   "license": "MIT",
   "author": {
@@ -22,9 +22,6 @@
   "engines": {
     "node": ">=20"
   },
-  "bin": {
-    "claw": "bin/claw.mjs"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -34,17 +31,19 @@
     }
   },
   "files": [
-    "bin",
     "dist",
-    "templates",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20 --external better-sqlite3 --external playwright --external @clawjs/claw --external @clawjs/workspace --external @clawjs/database --external @clawjs/search --external @clawjs/signals --external @clawjs/agents --external @clawjs/audio --external @clawjs/integrations --external @clawjs/sessions --external @clawjs/domain-pack-dense-data --external @clawjs/local-data",
+    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --target node20 --external better-sqlite3",
     "prepublishOnly": "node --import tsx ../../scripts/verify-regulated-domain-safety-goal.mjs && node ../../scripts/version-governance-check.mjs --release-gate"
   },
   "dependencies": {
-    "@clawjs/core": "0.1.2"
+    "@clawjs/claw": "0.1.2",
+    "@clawjs/core": "0.1.2",
+    "@clawjs/database": "0.1.2",
+    "@clawjs/workspace": "0.1.2",
+    "better-sqlite3": "^12.9.0"
   }
 }

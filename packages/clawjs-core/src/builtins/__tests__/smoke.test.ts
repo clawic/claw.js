@@ -9,7 +9,7 @@ import { DatabaseServiceStore } from "@clawjs/database";
 import {
   BUILTIN_COLLECTIONS,
   BUILTIN_FAMILY_BY_COLLECTION,
-} from "../../index.ts";
+} from "../../catalogs.ts";
 import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "../_types.ts";
 
 function syntheticValue(field: BuiltinFieldDefinition): unknown {

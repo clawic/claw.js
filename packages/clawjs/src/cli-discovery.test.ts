@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { clawProfessionalRecordsOsRegistry } from "@clawjs/core";
+import { clawProfessionalRecordsOsRegistry } from "@clawjs/core/catalogs";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";

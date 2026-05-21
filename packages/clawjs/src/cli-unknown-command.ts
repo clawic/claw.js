@@ -1,5 +1,5 @@
 import type { CliContext } from "./index.ts";
-import { resolveClawCliCommandIntent } from "@clawjs/core";
+import { resolveClawCliCommandIntent } from "@clawjs/core/catalogs";
 
 import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeJsonError } from "./cli-json.ts";

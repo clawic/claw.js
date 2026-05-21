@@ -15,7 +15,7 @@ import {
   networkRuleSchema,
   redactNetworkEvent,
   resolveClawCliCommand,
-} from "./index.ts";
+} from "./catalogs.ts";
 
 test("Network control plane registry preserves privacy and authority defaults", () => {
   assert.equal(clawNetworkControlPlaneRegistry.version, 1);

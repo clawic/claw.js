@@ -11,7 +11,7 @@ import {
   findClawPersistentSurfaceNode,
   findClawSurfaceRoute,
   resolveClawCliCommand,
-} from "../packages/clawjs-core/src/index.ts";
+} from "../packages/clawjs-core/src/catalogs.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceConversationId = "019e366f-8e14-7e51-8817-9820d2914dc4";

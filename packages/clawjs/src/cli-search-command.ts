@@ -1,4 +1,4 @@
-import { detectClawPublicRepositories, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core";
+import { detectClawPublicRepositories, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
 import { writeJsonOk } from "./cli-json.ts";

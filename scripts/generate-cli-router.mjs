@@ -3,8 +3,10 @@ import path from "node:path";
 
 import {
   BUILTIN_COLLECTIONS_BY_ALIAS,
+} from "../packages/clawjs-core/src/builtins/index.ts";
+import {
   clawCliCommandRegistry,
-} from "../packages/clawjs-core/src/catalogs.ts";
+} from "../packages/clawjs-core/src/cli-command-registry.ts";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const outputPath = path.join(rootDir, "packages", "clawjs", "src", "cli-router.generated.ts");

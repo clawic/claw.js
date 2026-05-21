@@ -23,8 +23,60 @@ test("published CLI package does not depend on the retired Index package", () =>
   const indexLauncher = fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs/bin/index-server-launcher.mjs"), "utf8");
 
   assert.equal(cliPackageJson.dependencies?.["@clawjs/index"], undefined);
-  assert.equal(cliPackageJson.dependencies?.["@clawjs/search"], "0.1.2");
+  for (const heavyDependency of ["better-sqlite3", "@clawjs/claw", "@clawjs/database", "@clawjs/search", "@clawjs/signals", "@clawjs/workspace"]) {
+    assert.equal(cliPackageJson.dependencies?.[heavyDependency], undefined, `${heavyDependency} must not be a base CLI dependency`);
+  }
   assert.equal(indexLauncher.includes('import("@clawjs/index")'), false);
+});
+
+test("published CLI base install runs safe commands without native local data packs", { concurrency: false }, async (t) => {
+  const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-thin-packages-"));
+  const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-thin-installed-"));
+  const packageRoots = {
+    core: path.resolve(process.cwd(), "packages/clawjs-core"),
+    cli: path.resolve(process.cwd(), "packages/clawjs"),
+  };
+
+  let tarballs: string[];
+  try {
+    tarballs = [
+      packWorkspacePackage(packageRoots.core, packDir),
+      packWorkspacePackage(packageRoots.cli, packDir),
+    ];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      assertCliPackageBinSurface(packageRoots.cli);
+      t.diagnostic("External npm process is unavailable in this Node test environment; verified CLI package bin surface directly.");
+      return;
+    }
+    throw error;
+  }
+
+  runCommand("npm", ["init", "-y"], { cwd: installRoot });
+  runCommand("npm", ["install", "--prefer-offline", ...tarballs], { cwd: installRoot });
+
+  const binPath = path.join(installRoot, "node_modules", "@clawjs", "cli", "bin", "claw.mjs");
+  assert.equal(fs.existsSync(path.join(installRoot, "node_modules", "better-sqlite3")), false);
+  for (const heavyPackage of ["claw", "database", "search", "workspace", "signals"]) {
+    assert.equal(fs.existsSync(path.join(installRoot, "node_modules", "@clawjs", heavyPackage)), false, `${heavyPackage} must not install with base CLI`);
+  }
+
+  assert.match(runInstalledClaw(binPath, installRoot, ["--help"]), /Safe base commands/);
+  const modules = JSON.parse(runInstalledClaw(binPath, installRoot, ["modules", "list", "--json"])) as { data: { modules: Array<{ id: string; optionalPack?: string }> } };
+  assert.equal(modules.data.modules.some((module) => module.id === "local-data" && module.optionalPack === "@clawjs/local-data"), true);
+  const setup = JSON.parse(runInstalledClaw(binPath, installRoot, ["setup", "--details", "--json"])) as { data: { applied: boolean; mode: string } };
+  assert.equal(setup.data.applied, false);
+  assert.equal(setup.data.mode, "minimal");
+  const inspect = JSON.parse(runInstalledClaw(binPath, installRoot, ["inspect", "commands", "--json"])) as { data: Array<{ value: string }> };
+  assert.equal(inspect.data.some((entry) => entry.value === "modules"), true);
+
+  const missingLocalData = spawnSync(process.execPath, [binPath, "tasks", "create", "Thin task", "--json"], {
+    cwd: installRoot,
+    encoding: "utf8",
+    env: process.env,
+  });
+  assert.equal(missingLocalData.status, 64);
+  assert.equal(JSON.parse(missingLocalData.stdout).error.code, "optional_pack_missing");
 });
 
 test("published CLI tarballs install with npm and manage local-first productivity zero-config from the real binary", { concurrency: false }, async (t) => {
@@ -35,7 +87,8 @@ test("published CLI tarballs install with npm and manage local-first productivit
     core: path.resolve(process.cwd(), "packages/clawjs-core"),
     claw: path.resolve(process.cwd(), "packages/clawjs-node"),
     workspace: path.resolve(process.cwd(), "packages/clawjs-workspace"),
-    database: path.resolve(process.cwd(), "packages/claw-database"),
+    database: path.resolve(process.cwd(), "packages/clawjs-database"),
+    localData: path.resolve(process.cwd(), "packages/clawjs-local-data"),
     marketplace: path.resolve(process.cwd(), "packages/marketplace"),
     profile: path.resolve(process.cwd(), "packages/clawjs-profile"),
     audio: path.resolve(process.cwd(), "packages/clawjs-audio"),
@@ -54,6 +107,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
       packWorkspacePackage(packageRoots.claw, packDir),
       packWorkspacePackage(packageRoots.workspace, packDir),
       packWorkspacePackage(packageRoots.database, packDir),
+      packWorkspacePackage(packageRoots.localData, packDir),
       packWorkspacePackage(packageRoots.marketplace, packDir),
       packWorkspacePackage(packageRoots.profile, packDir),
       packWorkspacePackage(packageRoots.audio, packDir),

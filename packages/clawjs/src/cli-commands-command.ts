@@ -1,5 +1,5 @@
-import { createHash } from "crypto"; import fs from "fs"; import path from "path";  import {   CLAW_CLI_COMMAND_INTENT_STATUSES, dedupeNeedOpportunities, resolveClawPersistentSurfacePath } from "@clawjs/core";
-import { commandIntentToNeedOpportunity, mergeClawCliCommandIntentEntries, normalizeClawCliCommandIntentPhrase, normalizeCommandIntentEntry, resolveClawCliCommandIntent } from "@clawjs/core/catalogs";
+import { createHash } from "crypto"; import fs from "fs"; import path from "path";  import { dedupeNeedOpportunities, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, commandIntentToNeedOpportunity, mergeClawCliCommandIntentEntries, normalizeClawCliCommandIntentPhrase, normalizeCommandIntentEntry, resolveClawCliCommandIntent } from "@clawjs/core/catalogs";
 import type { NeedOpportunity } from "@clawjs/core";
 import type { ClawCliCommandIntentEntry, ClawCliCommandIntentSource, ClawCliCommandIntentStatus } from "@clawjs/core/catalogs";
 

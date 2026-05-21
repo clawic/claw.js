@@ -14,7 +14,7 @@ import {
   listClawProfessionalRecordsSemanticViewEntries,
   listClawProfessionalRecordsSystems,
   resolveClawProfessionalRecordsIntent,
-} from "./index.ts";
+} from "./catalogs.ts";
 import { evaluateRegulatedAction } from "./regulated-domain-safety.ts";
 
 test("dense data OS keeps the source conversation and plan as binding metadata", () => {

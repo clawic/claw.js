@@ -103,6 +103,25 @@ run("node", ["--input-type=module", "-e", `
   if (typeof cli.runCli !== "function") {
     throw new Error("@clawjs/cli helpers are missing");
   }
+  const core = await import("@clawjs/core");
+  if ("BUILTIN_COLLECTIONS" in core) {
+    throw new Error("@clawjs/core root must not expose dense built-in catalogs");
+  }
+  if (typeof core.clawApiPath !== "function" || typeof core.resolveClawPersistentSurfacePath !== "function") {
+    throw new Error("@clawjs/core root contract helpers are missing");
+  }
+  const coreCatalogs = await import("@clawjs/core/catalogs");
+  if (!Array.isArray(coreCatalogs.BUILTIN_COLLECTIONS) || !Array.isArray(coreCatalogs.clawProfessionalRecordsOsRegistry.systems)) {
+    throw new Error("@clawjs/core/catalogs dense catalog exports are missing");
+  }
+  const compactCatalogs = await import("@clawjs/core/compact-catalogs");
+  if (
+    !Array.isArray(compactCatalogs.compactBuiltinCollectionAliases)
+    || typeof compactCatalogs.resolveBuiltinCollectionAlias !== "function"
+    || typeof compactCatalogs.isStableClawCliCommandName !== "function"
+  ) {
+    throw new Error("@clawjs/core/compact-catalogs exports are missing");
+  }
   const densePack = await import("@clawjs/domain-pack-dense-data");
   if (typeof densePack.runProfessionalRecordsCli !== "function") {
     throw new Error("@clawjs/domain-pack-dense-data helpers are missing");

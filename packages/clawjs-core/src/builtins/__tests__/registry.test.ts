@@ -8,7 +8,7 @@ import {
   BUILTIN_FAMILIES,
   BUILTIN_FAMILY_BY_COLLECTION,
   PRODUCTIVITY_COLLECTION_DEFINITIONS,
-} from "../../index.ts";
+} from "../../catalogs.ts";
 
 const SYSTEM_FIELDS = new Set(["id", "createdAt", "updatedAt"]);
 const ENRICHED_TYPES = new Set([

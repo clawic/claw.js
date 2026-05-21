@@ -25,7 +25,7 @@ import {
   macPolicyGrantSchema,
   macRoleAssignmentSchema,
   resolveClawCliCommand,
-} from "./index.ts";
+} from "./catalogs.ts";
 
 function renderSafeCli(text: string): string {
   return text.replaceAll("<", "&lt;").replaceAll(">", "&gt;");

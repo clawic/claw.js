@@ -2,8 +2,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto"; import Database from "better-sqlite3"; import { clawCliCommandRegistry } from "@clawjs/core";
-import { detectClawPublicRepositories, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
+import { createHash } from "node:crypto"; import Database from "better-sqlite3";
+import { clawCliCommandRegistry, detectClawPublicRepositories, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import {
   DEFAULT_SEARCH_BUDGETS,
   LOCAL_TEXT_EMBEDDING_MODEL,
@@ -182,7 +182,6 @@ export async function runSearchQueryCli(input: {
   const persistentQuery = readBooleanish(input.flags.persistent) || scheduleRefresh;
   const searchDbPath = resolveSearchDbPath(input.flags);
   if (!persistentQuery && !fs.existsSync(searchDbPath)) {
-    const limit = input.flags.limit ? boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
     const data = {
       query,
       sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
@@ -204,7 +203,7 @@ export async function runSearchQueryCli(input: {
     } else {
       input.context.stdout.write("");
     }
-    return (limit ?? 20) > 0 ? CLI_EXIT_DEGRADED : CLI_EXIT_DEGRADED;
+    return CLI_EXIT_DEGRADED;
   }
   const store = openCliSearchStore(input.flags);
   try {

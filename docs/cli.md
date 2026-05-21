@@ -69,7 +69,9 @@ claw modules list
 claw modules status --available
 claw modules enable basic-productivity
 claw modules disable erp
+claw modules install local-data
 claw modules install health
+npm install @clawjs/local-data
 npm install @clawjs/domain-pack-dense-data
 claw collections list
 claw collections list --available
@@ -84,7 +86,9 @@ enables basic mainstream productivity plus light local capabilities, and
 `advanced` exposes general system/API/diagnostic/developer surfaces on demand
 without activating all domain areas. `claw modules install` is reserved for
 explicit optional packs, assets, browsers, models, or other heavy materials; it
-does not silently install them. Deep niche domains such as health, legal, ERP,
+does not silently install them. SQLite-backed local data commands such as
+`claw tasks create` and `claw db ...` require the explicit
+`@clawjs/local-data` pack. Deep niche domains such as health, legal, ERP,
 labs/pharma, construction, and IoT use the optional
 `@clawjs/domain-pack-dense-data` pack for deep commands.
 
@@ -152,10 +156,11 @@ CLI responses can also include compact just-in-time guidance:
 ```
 
 `--guidance compact|full|minimal|off` controls how much guidance metadata is
-returned. Humans default to minimal guidance; agents and automation default to
-compact guidance. Actor hints from flags or environment are treated as
-`untrusted`; verified actor assertions require a locally trusted host/runtime
-key.
+returned. Guidance matching is off by default so safe JSON commands do not
+instantiate a full Claw runtime just to build metadata. Use
+`--guidance minimal`, `--guidance compact`, or `--guidance full` to opt in to runtime
+matching. Actor hints from flags or environment are treated as `untrusted`;
+verified actor assertions require a locally trusted host/runtime key.
 
 ## Mac Control Plane
 

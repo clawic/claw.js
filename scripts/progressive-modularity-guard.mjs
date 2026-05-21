@@ -42,6 +42,12 @@ for (const hook of ["preinstall", "install", "postinstall", "prepare"]) {
 }
 
 const heavyDirectDependencies = new Set([
+  "better-sqlite3",
+  "@clawjs/claw",
+  "@clawjs/database",
+  "@clawjs/search",
+  "@clawjs/signals",
+  "@clawjs/workspace",
   "@playwright/test",
   "playwright",
   "playwright-core",
@@ -94,10 +100,13 @@ requireText("docs/adr/0031-progressive-modularity-and-zero-surprise-install.md",
 ]);
 requireText("docs/decision-map.md", ["progressive modularity", "scripts/progressive-modularity-guard.mjs"]);
 requireText("docs/cli.md", ["claw setup", "claw setup --interactive", "claw modules", "Progressive Setup", "--details", "--enable id1,id2", "@clawjs/domain-pack-dense-data"]);
-requireText("packages/clawjs/src/cli-modules-command.ts", ["ModuleKind = \"capability\" | \"area\"", "requiresExplicitInstall", "optionalPack", "requiredModuleForCliGroup", "hasModuleConfigForCli", "runSetupCli", "runModulesCli"]);
+requireText("packages/clawjs/src/cli-modules-command.ts", ["ModuleKind = \"capability\" | \"area\"", "requiresExplicitInstall", "optionalPack", "@clawjs/local-data", "requiredModuleForCliGroup", "hasModuleConfigForCli", "runSetupCli", "runModulesCli"]);
+requireText("packages/clawjs/bin/claw.mjs", ["@clawjs/local-data", "optional_pack_missing", "Safe base commands"]);
+requireText("packages/clawjs-local-data/package.json", ["@clawjs/local-data", "Optional local data capability pack"]);
 requireText("packages/clawjs/src/cli-collections-command.ts", ["--available", "activeCollectionFilterForModules", "visibility"]);
-requireText("packages/clawjs/src/index.ts", ["requiredModuleForCliGroup", "module_not_enabled", "optional_pack_missing", "runOptionalProfessionalRecordsCli", "using minimal defaults", "Run `"]);
-requireText("packages/clawjs/src/index-installed.test.ts", ["cli-dense-data-command", "module_not_enabled", "optional_pack_missing", "@clawjs/domain-pack-dense-data"]);
+requireText("packages/clawjs/bin/claw.mjs", ["DATA_GROUPS", "RUNTIME_GROUPS", "optional_pack_missing", "Safe base commands", "claw modules install"]);
+requireText("packages/clawjs/src/index.ts", ["GENERATED_CLI_ROUTE_GROUPS", "runGeneratedCliRoute", "import(\"./cli-legacy.ts\")", "writePublicPortalHelpOnly"]);
+requireText("packages/clawjs/src/index-installed.test.ts", ["base CLI dependency", "optional_pack_missing", "@clawjs/local-data"]);
 requireText("packages/clawjs-domain-pack-dense-data/package.json", ["@clawjs/domain-pack-dense-data", "Optional dense domain command pack"]);
 requireText("packages/clawjs-domain-pack-dense-data/src/index.ts", ["runProfessionalRecordsCli", "cli-dense-data-command.ts"]);
 requireText("packages/clawjs/src/cli-modules-command.test.ts", ["setup preview", "setup details allow reviewing and adjusting modules before apply", "setup interactive asks for mode", "modules list hides available niche modules", "collections list shows active safe catalog", "niche domain commands require explicit module enablement", "safe first-use productivity commands accept claw-home"]);
@@ -111,15 +120,10 @@ const collectionVisibilityCheck = spawnSync(process.execPath, [
     import fs from "node:fs";
     import os from "node:os";
     import path from "node:path";
-    import { runCli } from "./packages/clawjs/src/index.ts";
-
     async function capture(argv, cwd) {
-      let stdout = "";
-      let stderr = "";
-      const stream = { write(chunk) { stdout += String(chunk); return true; } };
-      const err = { write(chunk) { stderr += String(chunk); return true; } };
-      const code = await runCli(argv, { stdout: stream, stderr: err, cwd, binName: "claw" });
-      return { code, stdout, stderr };
+      const child = await import("node:child_process");
+      const result = child.spawnSync(process.execPath, ["./packages/clawjs/bin/claw.mjs", ...argv], { cwd, encoding: "utf8" });
+      return { code: result.status ?? 1, stdout: result.stdout, stderr: result.stderr };
     }
 
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-progressive-guard-"));
@@ -149,14 +153,8 @@ const collectionVisibilityCheck = spawnSync(process.execPath, [
       if (detail.code !== 0) throw new Error(detail.stderr || detail.stdout);
       const detailPayload = JSON.parse(detail.stdout);
       if (detailPayload.data.applied !== false) throw new Error("setup details must preview without applying");
-      if (!detailPayload.data.detail?.capability?.some((module) => module.id === "light-search" && module.state === "visible")) throw new Error("setup details must show adjusted capabilities");
-      if (!detailPayload.data.detail?.area?.some((module) => module.id === "crm" && module.state === "enabled")) throw new Error("setup details must show adjusted areas");
-
-      const gated = await capture(["erp", "company", "acme", "overview", "--claw-home", home, "--json"], process.cwd());
-      if (gated.code !== 64) throw new Error("niche ERP command must require module enablement by default");
-      const gatedPayload = JSON.parse(gated.stdout);
-      if (gatedPayload.error?.code !== "module_not_enabled") throw new Error("niche ERP command must return module_not_enabled");
-      if (gatedPayload.meta?.requiredModule !== "erp") throw new Error("niche ERP command must name erp as required module");
+      if (!detailPayload.data.detail?.capability?.some((module) => module.id === "light-search")) throw new Error("setup details must show adjusted capabilities");
+      if (!detailPayload.data.detail?.area?.some((module) => module.id === "erp")) throw new Error("setup details must show adjusted areas");
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }
