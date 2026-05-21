@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/index.ts";
+import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
 import { createBuiltinSearchSourceManifests } from "../packages/clawjs-search/src/index.ts";
 
 const requiredSearchSourceIds = new Set(["surfaces.routes", "surfaces.registry"]);

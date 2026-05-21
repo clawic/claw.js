@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/index.ts";
+import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
 
 const requiredNodeIds = [
   "claw.cli.public",

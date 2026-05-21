@@ -1,4 +1,4 @@
-import { clawCliCommandRegistry, type ClawCliCommandRegistryEntry } from "@clawjs/core";
+import { clawCliCommandRegistry, type ClawCliCommandRegistryEntry } from "@clawjs/core/catalogs";
 import {
   SearchStore,
   type SearchDocumentInput,
@@ -87,10 +87,21 @@ export function commandFallbackForSearchQuery(store: SearchStore, input: {
       results: [...input.baseResults.results, ...addedResults].slice(0, input.limit),
       partial: input.baseResults.partial || commandOutput.partial,
       omittedSources: [...input.baseResults.omittedSources, ...commandOutput.omittedSources],
+      stale: input.baseResults.stale || commandOutput.stale,
+      staleSources: mergeSearchStaleSources(input.baseResults.staleSources, commandOutput.staleSources),
       elapsedMs: input.baseResults.elapsedMs + commandOutput.elapsedMs,
     },
     report: { policy: input.policy, applied: true, reason: "queried", added: addedResults.length },
   };
+}
+
+function mergeSearchStaleSources(
+  base: SearchQueryOutput["staleSources"],
+  extra: SearchQueryOutput["staleSources"],
+): SearchQueryOutput["staleSources"] {
+  const merged = new Map<string, SearchQueryOutput["staleSources"][number]>();
+  for (const staleSource of [...base, ...extra]) merged.set(staleSource.source, staleSource);
+  return [...merged.values()];
 }
 
 export function ensureCommandSourceIndexed(store: SearchStore): number {

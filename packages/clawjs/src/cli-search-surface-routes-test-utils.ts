@@ -43,17 +43,22 @@ export async function runSearchSurfaceRouteGraphContractsScenario(): Promise<voi
     assert.equal(rebuildPayload.data.sources.includes("surfaces.routes"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("surfaces.routes"), false);
     assert.ok(rebuildPayload.data.indexedBySource["surfaces.routes"] > 0);
+    const registryRebuild = await runCliCapture(["search", "rebuild", "--source", "surfaces.registry", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(registryRebuild.code, CLI_EXIT_OK);
+    const registryRebuildPayload = JSON.parse(registryRebuild.stdout) as {
+      data: { sources: string[]; indexedBySource: { "surfaces.registry": number }; pendingSources: string[] };
+    };
+    assert.equal(registryRebuildPayload.data.sources.includes("surfaces.registry"), true);
+    assert.equal(registryRebuildPayload.data.pendingSources.includes("surfaces.registry"), false);
+    assert.ok(registryRebuildPayload.data.indexedBySource["surfaces.registry"] > 0);
 
     const query = await runCliCapture(["search", "query", "Search index sync", "--domains", "surfaces", "--data-dir", dataRoot, "--json", "--limit", "5", "--explain", "true"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "surfaces.routes": number; "surfaces.registry": number };
         results: Array<{ source: string; domain: string; type: string; title: string; subtitle?: string; metadata?: { fromId?: string; toId?: string; stepCount?: number }; fragments?: Array<unknown>; actions?: Array<{ id: string; kind: string }> }>;
       };
     };
-    assert.ok(queryPayload.data.indexedFastPaths["surfaces.routes"] > 0);
-    assert.ok(queryPayload.data.indexedFastPaths["surfaces.registry"] > 0);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Search index sync");
     assert.equal(result?.source, "surfaces.routes");
     assert.equal(result?.domain, "surfaces");

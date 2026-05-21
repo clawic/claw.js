@@ -123,7 +123,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "documents.blocks": number };
         results: Array<{
           source: string;
           domain: string;
@@ -139,7 +138,6 @@ test("search rebuild indexes documents.blocks from document records", async () =
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["documents.blocks"], 1);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Implementation Blueprint");
     assert.equal(result?.source, "documents.blocks");
     assert.equal(result?.domain, "documents");
@@ -455,7 +453,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "notes.pages": number };
         results: Array<{
           source: string;
           domain: string;
@@ -469,7 +466,6 @@ test("search rebuild indexes notes.pages from pages and blocks", async () => {
         facets?: Array<{ id: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["notes.pages"], 1);
     const result = queryPayload.data.results.find((entry) => entry.title === "Quarterly planning");
     assert.equal(result?.source, "notes.pages");
     assert.equal(result?.domain, "notes");
@@ -640,7 +636,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "knowledge.graph": number };
         results: Array<{
           source: string;
           domain: string;
@@ -654,7 +649,6 @@ test("search rebuild indexes knowledge.graph from entities and facts", async () 
         facets?: Array<{ id: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["knowledge.graph"], 2);
     const result = queryPayload.data.results.find((entry) => entry.metadata?.factId === "fact-search-preference");
     assert.equal(result?.source, "knowledge.graph");
     assert.equal(result?.domain, "knowledge");

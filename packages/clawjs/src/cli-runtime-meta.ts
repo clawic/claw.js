@@ -1,13 +1,17 @@
-import type { ActorContext, GuidanceHint, GuidanceMatchInput, GuidanceRecord } from "@clawjs/core";
-import { unknownActor, untrustedActor, verifyActorAssertion, type TrustedActorAssertionKey } from "@clawjs/claw";
+import type { ActorContext, GuidanceHint, GuidanceMatchInput, GuidanceRecord, RuntimeAdapterId } from "@clawjs/core";
 
 import type { CliJsonMeta } from "./cli-json.ts";
 import { setCliJsonMetaProvider } from "./cli-json.ts";
-import { createCliClaw } from "./cli-claw-factory.ts";
 
 type GuidanceMode = "off" | "compact" | "full" | "minimal";
+type TrustedActorAssertionKey = {
+  keyId: string;
+  publicKeyPem: string;
+  trustSource: "signed-host" | "agent-runtime";
+  issuer?: string;
+};
 
-function resolveCliActor(flags: Record<string, string>, env: NodeJS.ProcessEnv = process.env): ActorContext {
+async function resolveCliActor(flags: Record<string, string>, env: NodeJS.ProcessEnv = process.env): Promise<ActorContext> {
   const trustedKeys = parseTrustedKeys(flags["actor-trusted-keys"] || env.CLAW_ACTOR_TRUSTED_KEYS);
   if (flags["actor-trusted-key"]) {
     trustedKeys.push({
@@ -19,6 +23,7 @@ function resolveCliActor(flags: Record<string, string>, env: NodeJS.ProcessEnv =
   }
   const assertion = flags["actor-assertion"] || env.CLAW_ACTOR_ASSERTION;
   if (assertion) {
+    const { verifyActorAssertion } = await import("@clawjs/claw");
     return verifyActorAssertion({
       assertion,
       trustedKeys,
@@ -26,15 +31,16 @@ function resolveCliActor(flags: Record<string, string>, env: NodeJS.ProcessEnv =
     }).actor;
   }
   if (flags["actor-kind"] || env.CLAW_ACTOR_KIND) {
-    return untrustedActor({
+    return {
       actorKind: flags["actor-kind"] || env.CLAW_ACTOR_KIND,
       actorId: flags["actor-id"] || env.CLAW_ACTOR_ID,
       sessionId: flags["actor-session-id"] || env.CLAW_ACTOR_SESSION_ID,
       runId: flags["actor-run-id"] || env.CLAW_ACTOR_RUN_ID,
       hostId: flags["actor-host-id"] || env.CLAW_ACTOR_HOST_ID,
-    });
+      trustLevel: "untrusted",
+    } as ActorContext;
   }
-  return unknownActor();
+  return { actorKind: "unknown", trustLevel: "unknown" } as ActorContext;
 }
 
 function resolveGuidanceMode(flags: Record<string, string>, actor: ActorContext): GuidanceMode {
@@ -68,14 +74,15 @@ export async function installCliRuntimeMetaProvider(input: {
   appId: string;
   workspaceId: string;
   agentId: string;
-  runtimeAdapterId: Parameters<typeof createCliClaw>[0];
+  runtimeAdapterId: RuntimeAdapterId;
 }): Promise<void> {
-  const actor = resolveCliActor(input.flags);
+  const actor = await resolveCliActor(input.flags);
   const guidanceMode = resolveGuidanceMode(input.flags, actor);
   let hints: GuidanceHint[] = [];
   let fullRecords: GuidanceRecord[] = [];
   if (guidanceMode !== "off") {
     try {
+      const { createCliClaw } = await import("./cli-claw-factory.ts");
       const claw = await createCliClaw(input.runtimeAdapterId, input.flags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId, input.argv);
       const match = claw.guidance.match({
         ...guidanceMatchInputForCli({

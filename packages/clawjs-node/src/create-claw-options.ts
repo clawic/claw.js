@@ -68,6 +68,40 @@ import type { ContentClient, ContentApprovalRequest, ContentAssetRef, ContentBra
 
 import type { ClawInstance } from "./create-claw-instance.ts";
 
+export type CreateClawTimeOptions =
+  | { mode: "disabled" }
+  | {
+      mode: "client";
+      baseUrl: string;
+      token?: string;
+    }
+  | {
+      mode: "embedded-on-demand";
+      dbPath?: string;
+      defaultTimeZone?: string;
+      schedulerIntervalMs?: number;
+      maxCatchUpPerCycle?: number;
+      missedJobStaggerMs?: number;
+      runLogLimit?: number;
+      notifyBaseUrl?: string;
+      notifySourceToken?: string;
+      heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
+      heartbeatAgent?: TemporalHeartbeatAgentRunner;
+    }
+  | {
+      mode: "scheduler";
+      dbPath?: string;
+      defaultTimeZone?: string;
+      schedulerIntervalMs?: number;
+      maxCatchUpPerCycle?: number;
+      missedJobStaggerMs?: number;
+      runLogLimit?: number;
+      notifyBaseUrl?: string;
+      notifySourceToken?: string;
+      heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
+      heartbeatAgent?: TemporalHeartbeatAgentRunner;
+    };
+
 export interface CreateClawOptions {
   runtime: {
     adapter: RuntimeAdapterId;
@@ -156,17 +190,7 @@ export interface CreateClawOptions {
     sourceToken?: string;
     clientToken?: string;
   };
-  time?: {
-    baseUrl?: string;
-    token?: string;
-    dbPath?: string;
-    defaultTimeZone?: string;
-    schedulerIntervalMs?: number;
-    notifyBaseUrl?: string;
-    notifySourceToken?: string;
-    heartbeatChecks?: Record<string, TemporalHeartbeatCheckProvider>;
-    heartbeatAgent?: TemporalHeartbeatAgentRunner;
-  };
+  time?: CreateClawTimeOptions;
   content?: {
     baseUrl: string;
     token?: string;

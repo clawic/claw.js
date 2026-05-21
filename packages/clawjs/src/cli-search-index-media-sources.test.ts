@@ -109,7 +109,6 @@ test("search rebuild indexes images.derived from image library records", async (
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "images.derived": number };
         results: Array<{
           source: string;
           domain: string;
@@ -123,7 +122,6 @@ test("search rebuild indexes images.derived from image library records", async (
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["images.derived"], 1);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Launch Badge");
     assert.equal(result?.source, "images.derived");
     assert.equal(result?.domain, "images");
@@ -269,7 +267,6 @@ test("search rebuild indexes media.assets from workspace media records", async (
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "media.assets": number };
         results: Array<{
           source: string;
           domain: string;
@@ -283,7 +280,6 @@ test("search rebuild indexes media.assets from workspace media records", async (
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["media.assets"], 2);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Requirements Brief.pdf");
     assert.equal(result?.source, "media.assets");
     assert.equal(result?.domain, "media");

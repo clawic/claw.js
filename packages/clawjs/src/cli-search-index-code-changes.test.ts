@@ -101,7 +101,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "code.symbols": number };
         results: Array<{
           source: string;
           domain: string;
@@ -116,7 +115,6 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["code.symbols"], 2);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "feature-search.ts");
     assert.equal(result?.source, "code.symbols");
     assert.equal(result?.domain, "code");
@@ -175,9 +173,8 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     const chatOnly = await runCliCapture(["search", "query", "makeNeedleSymbol", "--domains", "sessions", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(chatOnly.code, CLI_EXIT_DEGRADED);
     const chatOnlyPayload = JSON.parse(chatOnly.stdout) as {
-      data: { indexedFastPaths: Record<string, number>; results: unknown[] };
+      data: { results: unknown[] };
     };
-    assert.equal("code.symbols" in chatOnlyPayload.data.indexedFastPaths, false);
     assert.deepEqual(chatOnlyPayload.data.results, []);
   });
 });

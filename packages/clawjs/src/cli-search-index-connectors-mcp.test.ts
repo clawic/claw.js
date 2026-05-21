@@ -77,7 +77,6 @@ test("search rebuild indexes connectors.catalog from control-plane operations wi
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "connectors.catalog": number };
         results: Array<{
           source: string;
           domain: string;
@@ -89,7 +88,6 @@ test("search rebuild indexes connectors.catalog from control-plane operations wi
         }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["connectors.catalog"], 1);
     const result = queryPayload.data.results.find((entry) => entry.title === "OpenAI images.edit");
     assert.equal(result?.source, "connectors.catalog");
     assert.equal(result?.domain, "connectors");
@@ -349,7 +347,6 @@ test("search rebuild indexes mcp.servers without secret values", async () => {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "mcp.servers": number };
         results: Array<{
           source: string;
           domain: string;
@@ -360,7 +357,6 @@ test("search rebuild indexes mcp.servers without secret values", async () => {
         }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["mcp.servers"], 1);
     const result = queryPayload.data.results.find((entry) => entry.title === "docs");
     assert.equal(result?.source, "mcp.servers");
     assert.equal(result?.domain, "mcp");

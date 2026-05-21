@@ -1,6 +1,7 @@
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { PUBLIC_PORTAL_HELP_ONLY, buildCommandHelp } from "./cli-surface.ts";
+import { GENERATED_JSON_HELP_REQUIRED_COMMANDS } from "./cli-router.generated.ts";
 
 type CliContext = {
   stdout: NodeJS.WritableStream;
@@ -23,42 +24,7 @@ const MEDIA_PORTAL_CHILDREN = new Set([
   "styles",
   "references",
 ]);
-const JSON_HELP_REQUIRED_COMMANDS = new Set([
-  "audio",
-  "code",
-  "commitments",
-  "context",
-  "content",
-  "database",
-  "erp",
-  "handoffs",
-  "iot",
-  "judgment",
-  "knowledge",
-  "learning",
-  "library",
-  "mcp",
-  "notes",
-  "notify",
-  "outcomes",
-  "plan",
-  "profile",
-  "references",
-  "remote",
-  "rules",
-  "runtime",
-  "search",
-  "sessions",
-  "signals",
-  "skills",
-  "slides",
-  "soul",
-  "styles",
-  "sync",
-  "templates",
-  "nodes",
-  "gateway",
-]);
+const JSON_HELP_REQUIRED_COMMANDS = new Set<string>(GENERATED_JSON_HELP_REQUIRED_COMMANDS);
 const JSON_HELP_CANONICAL = new Map([
   ["ref", "references"],
   ["style", "styles"],

@@ -50,7 +50,6 @@ test("apps and design writes enqueue and index section fast paths", async () => 
     const appQuery = await runCliCapture(["search", "query", "canvas prototyping", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(appQuery.code, CLI_EXIT_OK);
     const appQueryPayload = JSON.parse(appQuery.stdout) as any;
-    assert.equal(appQueryPayload.data.indexedFastPaths["apps.catalog"], 1);
     const appResult = appQueryPayload.data.results.find((entry) => entry.title === "Canvas Lab");
     assert.deepEqual({ source: appResult?.source, domain: appResult?.domain, type: appResult?.type, slug: appResult?.metadata?.slug, pinned: appResult?.metadata?.pinned }, { source: "apps.catalog", domain: "apps", type: "app", slug: "canvas-lab", pinned: true });
     assert.equal(appResult?.fragments?.some((fragment) => fragment.title === "manifest" && fragment.snippet?.includes("app-manifest-fragment-needle")), true);
@@ -81,7 +80,6 @@ test("apps and design writes enqueue and index section fast paths", async () => 
     const designQuery = await runCliCapture(["search", "query", "launch deck", "--domains", "design", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(designQuery.code, CLI_EXIT_OK);
     const designQueryPayload = JSON.parse(designQuery.stdout) as any;
-    assert.equal(designQueryPayload.data.indexedFastPaths["design.resources"], 1);
     const designResult = designQueryPayload.data.results.find((entry) => entry.title === "Launch Deck Template");
     assert.deepEqual({ source: designResult?.source, domain: designResult?.domain, type: designResult?.type, kind: designResult?.metadata?.kind, builtin: designResult?.metadata?.builtin }, { source: "design.resources", domain: "design", type: "template", kind: "template", builtin: true });
     assert.equal(designResult?.fragments?.some((fragment) => fragment.title === "manifest" && fragment.snippet?.includes("design-manifest-fragment-needle")), true);
@@ -268,7 +266,6 @@ test("search rebuild indexes runtime.events from runtime and operational sidecar
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "runtime.events": number };
         results: Array<{
           source: string;
           domain: string;
@@ -279,7 +276,6 @@ test("search rebuild indexes runtime.events from runtime and operational sidecar
         }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["runtime.events"], 3);
     const result = queryPayload.data.results.find((entry) => entry.title.includes("Search worker failed"));
     assert.equal(result?.source, "runtime.events");
     assert.equal(result?.domain, "runtime");

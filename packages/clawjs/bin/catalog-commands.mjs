@@ -1,9 +1,8 @@
 import {
-  BUILTIN_FAMILIES,
-  BUILTIN_COLLECTIONS_BY_NAME,
-  BUILTIN_FAMILY_BY_COLLECTION,
-  resolveBuiltinCollectionName,
-} from "@clawjs/core";
+  compactBuiltinCollectionsByName,
+  compactBuiltinFamilies,
+  resolveBuiltinCollectionAlias,
+} from "@clawjs/core/compact-catalogs";
 
 export const CATALOG_GROUPS = new Set(["catalog"]);
 
@@ -18,23 +17,23 @@ function writeJson(value) {
 function listFamilies(json) {
   if (json) {
     writeJson(
-      BUILTIN_FAMILIES.map((family) => ({
+      compactBuiltinFamilies.map((family) => ({
         name: family.name,
         displayName: family.displayName,
         description: family.description,
-        collectionCount: family.collections.length,
+        collectionCount: family.collectionCount,
       })),
     );
     return 0;
   }
-  if (BUILTIN_FAMILIES.length === 0) {
+  if (compactBuiltinFamilies.length === 0) {
     process.stdout.write("No built-in B2C families registered yet.\n");
     return 0;
   }
-  const rows = BUILTIN_FAMILIES.map((family) => ({
+  const rows = compactBuiltinFamilies.map((family) => ({
     name: family.name,
     display: family.displayName,
-    count: String(family.collections.length),
+    count: String(family.collectionCount),
     description: family.description,
   }));
   const widths = {
@@ -58,7 +57,7 @@ function listFamilies(json) {
 }
 
 function listFamilyCollections(familyName, json) {
-  const family = BUILTIN_FAMILIES.find((entry) => entry.name === familyName);
+  const family = compactBuiltinFamilies.find((entry) => entry.name === familyName);
   if (!family) {
     process.stderr.write(`Unknown family "${familyName}". Run \`claw catalog\` to list families.\n`);
     return 1;
@@ -72,7 +71,7 @@ function listFamilyCollections(familyName, json) {
         name: collection.name,
         displayName: collection.displayName,
         aliases: collection.aliases,
-        fieldCount: collection.fields.length,
+        fieldCount: collection.fieldCount,
       })),
     });
     return 0;
@@ -106,9 +105,18 @@ function listFamilyCollections(familyName, json) {
 }
 
 function describeCollection(target, json) {
+  return describeCollectionAsync(target, json);
+}
+
+async function describeCollectionAsync(target, json) {
+  const {
+    BUILTIN_COLLECTIONS_BY_NAME,
+    BUILTIN_FAMILY_BY_COLLECTION,
+    resolveBuiltinCollectionName,
+  } = await import("@clawjs/core/catalogs");
   const canonical = BUILTIN_COLLECTIONS_BY_NAME.has(target)
     ? target
-    : resolveBuiltinCollectionName(target);
+    : resolveBuiltinCollectionName(target) ?? resolveBuiltinCollectionAlias(target);
   if (!canonical) return null;
   const collection = BUILTIN_COLLECTIONS_BY_NAME.get(canonical);
   if (!collection) return null;
@@ -146,9 +154,9 @@ export async function runCatalogCli(args) {
   const subject = args.slice(1).find((arg) => !arg.startsWith("--"));
   const json = wantsJson(args);
   if (!subject) return listFamilies(json);
-  const familyMatch = BUILTIN_FAMILIES.find((family) => family.name === subject);
+  const familyMatch = compactBuiltinFamilies.find((family) => family.name === subject);
   if (familyMatch) return listFamilyCollections(subject, json);
-  const describeResult = describeCollection(subject, json);
+  const describeResult = await describeCollection(subject, json);
   if (describeResult !== null) return describeResult;
   process.stderr.write(`Unknown family or collection "${subject}".\n`);
   process.stderr.write("Run `claw catalog` to list available families.\n");

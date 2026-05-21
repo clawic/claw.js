@@ -1,4 +1,5 @@
-import { BUILTIN_COLLECTIONS, PRODUCTIVITY_COLLECTION_DEFINITIONS } from "@clawjs/core";
+import { PRODUCTIVITY_COLLECTION_DEFINITIONS } from "@clawjs/core";
+import { BUILTIN_COLLECTIONS } from "@clawjs/core/catalogs";
 
 import type { CliContext } from "./index.ts";
 import { CORE_PRODUCTIVITY_DB_COLLECTIONS } from "./cli-constants.ts";

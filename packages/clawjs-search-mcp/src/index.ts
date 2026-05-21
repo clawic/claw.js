@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
-import { clawCliCommandRegistry, listClawCliAliases } from "@clawjs/core";
+import { clawCliCommandRegistry, listClawCliAliases } from "@clawjs/core/catalogs";
 import {
   DEFAULT_SEARCH_BUDGETS,
   LOCAL_TEXT_EMBEDDING_DIMENSIONS,

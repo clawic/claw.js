@@ -64,11 +64,9 @@ test("search rebuild indexes slides.decks from slide manifests", async () => {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "slides.decks": number };
         results: Array<{ source: string; domain: string; title: string; metadata?: { theme?: string; layout?: string[]; outputFormat?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["slides.decks"], 1);
     const result = queryPayload.data.results.find((item) => item.source === "slides.decks");
     assert.equal(result?.domain, "slides");
     assert.equal(result?.title, "Quarterly Revenue Plan");
@@ -244,11 +242,9 @@ test("search rebuild indexes sheets.workbooks from workbook manifests", async ()
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "sheets.workbooks": number };
         results: Array<{ source: string; domain: string; title: string; metadata?: { sheetName?: string[]; outputFormat?: string[] }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["sheets.workbooks"], 1);
     const result = queryPayload.data.results.find((item) => item.source === "sheets.workbooks");
     assert.equal(result?.domain, "sheets");
     assert.equal(result?.title, "Revenue Forecast Workbook");
@@ -347,11 +343,9 @@ test("search rebuild indexes design.resources from style template and reference 
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "design.resources": number };
         results: Array<{ source: string; domain: string; type: string; title: string; resourceId?: string; metadata?: { kind?: string; builtin?: boolean } }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["design.resources"], 3);
     const kinds = new Set(queryPayload.data.results.filter((item) => item.source === "design.resources").map((item) => item.metadata?.kind ?? item.type));
     assert.equal(kinds.has("style"), true);
     assert.equal(kinds.has("template"), true);

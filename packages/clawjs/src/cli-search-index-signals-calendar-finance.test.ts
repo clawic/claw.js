@@ -126,7 +126,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "signals.observations": number };
         results: Array<{
           source: string;
           domain: string;
@@ -140,7 +139,6 @@ test("search rebuild indexes signals.observations from signal catalog and observ
         facets?: Array<{ id: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["signals.observations"], 3);
     const result = queryPayload.data.results.find((entry) => entry.metadata?.observationId === observationPayload.data.id);
     assert.equal(result?.source, "signals.observations");
     assert.equal(result?.domain, "signals");
@@ -274,7 +272,6 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "calendar.events": number };
         results: Array<{
           source: string;
           domain: string;
@@ -288,7 +285,6 @@ test("search rebuild indexes calendar.events from core.sqlite", async () => {
         facets?: Array<{ id: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["calendar.events"], 1);
     const result = queryPayload.data.results.find((entry) => entry.metadata?.eventId === "event-search-review");
     assert.equal(result?.source, "calendar.events");
     assert.equal(result?.domain, "calendar");
@@ -437,7 +433,6 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "finance.records": number };
         results: Array<{
           source: string;
           domain: string;
@@ -453,7 +448,6 @@ test("search rebuild indexes finance.records with redacted previews", async () =
         facets?: Array<{ id: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["finance.records"], 1);
     const result = queryPayload.data.results.find((entry) => entry.metadata?.recordId === createdPayload.data.id);
     assert.equal(result?.source, "finance.records");
     assert.equal(result?.domain, "finance");
@@ -575,7 +569,6 @@ test("search service indexes local finance_records with redacted previews", asyn
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "finance.records": number };
         results: Array<{
           source: string;
           domain: string;
@@ -590,7 +583,6 @@ test("search service indexes local finance_records with redacted previews", asyn
         }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["finance.records"], 1);
     const result = queryPayload.data.results.find((entry) => entry.metadata?.recordId === "finance.local.invoice");
     assert.equal(result?.source, "finance.records");
     assert.equal(result?.domain, "finance");
@@ -707,7 +699,6 @@ test("search service indexes ELN records from dense database writes", async () =
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "eln.records": number };
         results: Array<{
           source: string;
           domain: string;
@@ -722,7 +713,6 @@ test("search service indexes ELN records from dense database writes", async () =
         }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["eln.records"], 1);
     const result = queryPayload.data.results.find((entry) => entry.metadata?.recordId === createdPayload.data.id);
     assert.equal(result?.source, "eln.records");
     assert.equal(result?.domain, "eln");

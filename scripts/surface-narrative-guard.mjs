@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/index.ts";
+import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
 import { v1MainSchemaSurfaceNodes } from "../packages/clawjs/src/v1-data-surface.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

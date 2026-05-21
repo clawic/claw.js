@@ -1,10 +1,5 @@
 // @ts-nocheck
-import {
-  buildCustomAppCapabilityRiskMap,
-  getClawCapability,
-  listClawCapabilities,
-  sdkFirstCapabilityCatalogSource,
-} from "@clawjs/core";
+import { buildCustomAppCapabilityRiskMap, getClawCapability, listClawCapabilities, sdkFirstCapabilityCatalogSource } from "@clawjs/core/catalogs";
 
 export function createClawCapabilityFacades(locals: Record<string, any>): Record<string, any> {
   const {

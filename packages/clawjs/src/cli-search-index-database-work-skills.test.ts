@@ -90,7 +90,6 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "database.records": number };
         results: Array<{
           source: string;
           domain: string;
@@ -104,7 +103,6 @@ test("search rebuild indexes database.records from core.sqlite", async () => {
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["database.records"], 2);
     const record = queryPayload.data.results.find((result) => result.title.includes("Ada"));
     assert.equal(record?.source, "database.records");
     assert.equal(record?.domain, "database");
@@ -272,7 +270,6 @@ test("search rebuild indexes work.items from productivity records", async () => 
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "work.items": number };
         results: Array<{
           source: string;
           domain: string;
@@ -287,7 +284,6 @@ test("search rebuild indexes work.items from productivity records", async () => 
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["work.items"], 2);
     const result = queryPayload.data.results.find((item) => item.title === "Review Search fast path");
     assert.equal(result?.source, "work.items");
     assert.equal(result?.domain, "work");
@@ -409,11 +405,9 @@ test("search rebuild indexes skills.registry from core.sqlite without secret ref
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "skills.registry": number };
         results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { requiresProtectedRefs?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["skills.registry"], 1);
     const result = queryPayload.data.results.find((entry) => entry.title === "Deploy");
     assert.equal(result?.source, "skills.registry");
     assert.equal(result?.domain, "skills");

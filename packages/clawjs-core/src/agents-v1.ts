@@ -1,8 +1,8 @@
 import type { AgentToolDescriptor, AgentToolRiskLevel } from "./agent_tools.ts";
-import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "./builtins/index.ts";
+import type { BuiltinCollectionDefinition, BuiltinFieldDefinition } from "./builtins/_types.ts";
 import type { RegulatedDecisionEffect, RegulatedDomain, SensitiveRecordClass } from "./regulated-domain-safety.ts";
 import { evaluateRegulatedAction } from "./regulated-domain-safety.ts";
-import { AGENTS_FAMILY } from "./builtins/index.ts";
+import { AGENTS_FAMILY } from "./builtins/agents/index.ts";
 
 export const AGENT_ASSIGNMENT_STATUSES = [
   "draft",

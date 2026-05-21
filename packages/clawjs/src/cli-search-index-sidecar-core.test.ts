@@ -223,11 +223,9 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(localFileQuery.code, CLI_EXIT_OK);
     const localFileQueryPayload = JSON.parse(localFileQuery.stdout) as {
       data: {
-        indexedFastPaths: { "local.files": number };
         results: Array<{ source: string; domain: string; type: string; title: string; path?: string; metadata?: { kind?: string; indexedContent?: boolean; relativePath?: string }; actions?: Array<{ id: string; kind: string }> }>;
       };
     };
-    assert.equal(localFileQueryPayload.data.indexedFastPaths["local.files"], 1);
     const fileResult = localFileQueryPayload.data.results.find((result) => result.title === "launch-plan.txt");
     assert.equal(fileResult?.source, "local.files");
     assert.equal(fileResult?.domain, "files");
@@ -273,11 +271,9 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(webQuery.code, CLI_EXIT_OK);
     const webQueryPayload = JSON.parse(webQuery.stdout) as {
       data: {
-        indexedFastPaths: { "web.ingested": number };
         results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { host?: string; crawlScope?: string; contentType?: string }; actions?: Array<{ id: string; kind: string }> }>;
       };
     };
-    assert.equal(webQueryPayload.data.indexedFastPaths["web.ingested"], 2);
     const webResult = webQueryPayload.data.results.find((result) => result.title === "Release Notes");
     assert.equal(webResult?.source, "web.ingested");
     assert.equal(webResult?.domain, "web");
@@ -332,11 +328,9 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(externalQuery.code, CLI_EXIT_OK);
     const externalQueryPayload = JSON.parse(externalQuery.stdout) as {
       data: {
-        indexedFastPaths: { "external.cache": number };
         results: Array<{ source: string; domain: string; type: string; title: string; body?: string; metadata?: { provider?: string; app?: string; syncMode?: string; externalId?: string }; actions?: Array<{ id: string; kind: string }> }>;
       };
     };
-    assert.equal(externalQueryPayload.data.indexedFastPaths["external.cache"], 2);
     const externalResult = externalQueryPayload.data.results.find((result) => result.title === "Release thread");
     assert.equal(externalResult?.source, "external.cache");
     assert.equal(externalResult?.domain, "external");

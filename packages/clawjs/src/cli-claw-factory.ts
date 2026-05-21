@@ -99,6 +99,7 @@ export async function createCliClaw(
       : undefined,
     time: flags["time-url"] || process.env.CLAW_TIME_URL
       ? {
+        mode: "client",
         baseUrl: flags["time-url"] || process.env.CLAW_TIME_URL || "",
         token: flags["time-token"] || process.env.CLAW_TIME_TOKEN,
       }
@@ -148,6 +149,7 @@ export async function createCliWorkspaceClaw(
     },
     time: flags["time-url"] || process.env.CLAW_TIME_URL
       ? {
+        mode: "client",
         baseUrl: flags["time-url"] || process.env.CLAW_TIME_URL || "",
         token: flags["time-token"] || process.env.CLAW_TIME_TOKEN,
       }

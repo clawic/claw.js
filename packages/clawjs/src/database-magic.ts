@@ -1,15 +1,5 @@
-import {
-  DatabaseApiClient,
-  DatabaseServiceStore,
-  type CollectionDefinition,
-  type FieldDefinition,
-  type IndexDefinition,
-  type RecordEnvelope,
-} from "@clawjs/database";
-import {
-  BUILTIN_COLLECTIONS_BY_ALIAS,
-  BUILTIN_COLLECTIONS_BY_NAME,
-} from "@clawjs/core";
+import { DatabaseApiClient, DatabaseServiceStore, type CollectionDefinition, type FieldDefinition, type IndexDefinition, type RecordEnvelope, } from "@clawjs/database"; import {   BUILTIN_COLLECTIONS_BY_ALIAS } from "@clawjs/core";
+import { BUILTIN_COLLECTIONS_BY_NAME } from "@clawjs/core/catalogs";
 import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";

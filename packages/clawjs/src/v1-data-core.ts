@@ -2,15 +2,8 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { randomUUID } from "crypto";
-
-import BetterSqlite3 from "better-sqlite3";
-import type Database from "better-sqlite3";
-import { DatabaseServiceStore } from "@clawjs/database";
-import type { FieldDefinition, IndexDefinition } from "@clawjs/database";
-import { redactSecrets } from "@clawjs/claw";
-import { V1_MAIN_SCHEMA_SQL, V1_SIDECAR_SCHEMA_SQL_BY_FILE } from "./v1-data-surface.ts";
-import { assertCodexReadOnlyPath, resolveClawCliCommand, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { randomUUID } from "crypto";  import BetterSqlite3 from "better-sqlite3"; import type Database from "better-sqlite3"; import { DatabaseServiceStore } from "@clawjs/database"; import type { FieldDefinition, IndexDefinition } from "@clawjs/database"; import { redactSecrets } from "@clawjs/claw"; import { V1_MAIN_SCHEMA_SQL, V1_SIDECAR_SCHEMA_SQL_BY_FILE } from "./v1-data-surface.ts"; import { assertCodexReadOnlyPath, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { resolveClawCliCommand } from "@clawjs/core/catalogs";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 export const V1_DATA_EXIT_OK = 0;

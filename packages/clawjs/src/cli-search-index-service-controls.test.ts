@@ -136,10 +136,14 @@ test("search command fallback is explicit and does not broaden section search by
     const scoped = await runCliCapture(["search", "query", "system capabilities", "--domains", "database", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(scoped.code, CLI_EXIT_DEGRADED);
     const scopedPayload = JSON.parse(scoped.stdout) as {
-      data: { results: Array<{ source: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
+      data: { results: Array<{ source: string }>; stale: boolean; staleSources: Array<{ source: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
     };
     assert.deepEqual(scopedPayload.data.results, []);
+    assert.equal(scopedPayload.data.stale, true);
+    assert.equal(scopedPayload.data.staleSources.some((source) => source.source === "database.records"), true);
     assert.deepEqual(scopedPayload.data.commandFallback, { policy: "off", applied: false, reason: "disabled", added: 0 });
+    const rebuildCommands = await runCliCapture(["search", "rebuild", "--source", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rebuildCommands.code, CLI_EXIT_OK);
     const fallback = await runCliCapture([
       "search",
       "query",
@@ -160,14 +164,77 @@ test("search command fallback is explicit and does not broaden section search by
     ], workspaceRoot);
     assert.equal(fallback.code, CLI_EXIT_OK);
     const fallbackPayload = JSON.parse(fallback.stdout) as {
-      data: { results: Array<{ source: string; domain: string; title: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
+      data: { results: Array<{ source: string; domain: string; title: string }>; stale: boolean; staleSources: Array<{ source: string }>; commandFallback: { policy: string; applied: boolean; reason: string; added: number } };
     };
     assert.equal(fallbackPayload.data.results.some((result) => result.source === "commands" && result.domain === "commands" && result.title === "system"), true);
+    assert.equal(fallbackPayload.data.stale, true);
+    assert.equal(fallbackPayload.data.staleSources.some((source) => source.source === "database.records"), true);
     assert.equal(fallbackPayload.data.commandFallback.policy, "empty");
     assert.equal(fallbackPayload.data.commandFallback.applied, true);
     assert.equal(fallbackPayload.data.commandFallback.reason, "queried");
     assert.equal(fallbackPayload.data.commandFallback.added, fallbackPayload.data.results.filter((result) => result.source === "commands").length);
     assert.ok(fallbackPayload.data.commandFallback.added >= 1);
     assert.ok(fallbackPayload.data.commandFallback.added <= 2);
+  });
+});
+
+test("search query reports stale sources and schedules refreshes without inline indexing", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-query-stale-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const neverIndexed = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(neverIndexed.code, CLI_EXIT_DEGRADED);
+    const neverIndexedPayload = JSON.parse(neverIndexed.stdout) as {
+      data: {
+        results: unknown[];
+        stale: boolean;
+        staleSources: Array<{ source: string; reason: string; backlog: number }>;
+        scheduledRefreshJobs?: Array<{ id: string; source: string; operation: string; status: string }>;
+      };
+    };
+    assert.deepEqual(neverIndexedPayload.data.results, []);
+    assert.equal(neverIndexedPayload.data.stale, true);
+    assert.deepEqual(neverIndexedPayload.data.staleSources, [{ source: "apps.catalog", reason: "never_indexed", backlog: 0 }]);
+    assert.deepEqual(neverIndexedPayload.data.scheduledRefreshJobs?.map((job) => ({ id: job.id, source: job.source, operation: job.operation, status: job.status })), [
+      { id: "query-refresh:apps.catalog:default", source: "apps.catalog", operation: "backfill", status: "queued" },
+    ]);
+
+    const repeated = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(repeated.code, CLI_EXIT_DEGRADED);
+    const repeatedPayload = JSON.parse(repeated.stdout) as {
+      data: { staleSources: Array<{ source: string; reason: string }>; scheduledRefreshJobs?: unknown[] };
+    };
+    assert.deepEqual(repeatedPayload.data.staleSources, [{ source: "apps.catalog", reason: "pending_jobs", backlog: 0 }]);
+    assert.equal(repeatedPayload.data.scheduledRefreshJobs, undefined);
+    const jobs = await runCliCapture(["search", "jobs", "--source", "apps.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as { data: { items: Array<{ id: string; status: string }> } };
+    assert.equal(jobsPayload.data.items.filter((job) => job.id === "query-refresh:apps.catalog:default" && job.status === "queued").length, 1);
+
+    const unscoped = await runCliCapture(["search", "query", "unscoped no backfill", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(unscoped.code, CLI_EXIT_DEGRADED);
+    const unscopedPayload = JSON.parse(unscoped.stdout) as {
+      data: { stale: boolean; staleSources: unknown[]; scheduledRefreshJobs?: unknown[] };
+    };
+    assert.equal(unscopedPayload.data.stale, false);
+    assert.deepEqual(unscopedPayload.data.staleSources, []);
+    assert.equal(unscopedPayload.data.scheduledRefreshJobs, undefined);
+
+    const paused = await runCliCapture(["search", "sources", "pause", "apps.catalog", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(paused.code, CLI_EXIT_OK);
+    const pausedQuery = await runCliCapture(["search", "query", "canvas prototype", "--domains", "apps", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(pausedQuery.code, CLI_EXIT_DEGRADED);
+    const pausedPayload = JSON.parse(pausedQuery.stdout) as {
+      data: { stale: boolean; staleSources: unknown[]; omittedSources: Array<{ source: string; reason: string; message?: string }> };
+    };
+    assert.equal(pausedPayload.data.stale, false);
+    assert.deepEqual(pausedPayload.data.staleSources, []);
+    assert.equal(pausedPayload.data.omittedSources.some((source) => source.source === "apps.catalog" && source.reason === "disabled" && source.message?.includes("paused")), true);
   });
 });

@@ -5,6 +5,7 @@ import os from "os";
 import path from "path";
 import { Claw, createClaw } from "./create-claw.ts";
 import { resolveClawWorkspaceSurfacePath } from "./surface-paths.ts";
+import { EmbeddedTimeEngine } from "./time/index.ts";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 
 import { createExplicitOpenClawToolchain, createFakeGenerationCommand, createFakeOpenClawChannelsToolchain, createFakeOpenClawImageSkillEnv, createFakeOpenClawMemoryToolchain, createFakeOpenClawPluginToolchain, createFakeSecretsProxy, createFakeSkillSourceToolchain, createOpenClawAuthReadyToolchain, withPatchedEnv } from "./create-claw-test-utils.ts";
@@ -662,7 +663,7 @@ test("createClaw exposes the time namespace when configured", async () => {
         agentId: "agent-time-sdk",
         rootDir: workspaceDir,
       },
-      time: { baseUrl: address },
+      time: { mode: "client", baseUrl: address },
     });
 
     assert.equal(claw.time.configured, true);
@@ -730,8 +731,8 @@ test("createClaw exposes the time namespace when configured", async () => {
   }
 });
 
-test("createClaw embeds the time engine by default", async () => {
-  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-embedded-"));
+test("createClaw disables time by default", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-disabled-"));
   const dataRoot = path.join(workspaceDir, "clawjs-data");
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
@@ -740,13 +741,151 @@ test("createClaw embeds the time engine by default", async () => {
       runtime: { adapter: "demo" },
       workspace: {
         appId: "demo",
-        workspaceId: "workspace-time-embedded",
-        agentId: "agent-time-embedded",
+        workspaceId: "workspace-time-disabled",
+        agentId: "agent-time-disabled",
         rootDir: workspaceDir,
       },
     });
 
-    assert.equal(claw.time.configured, true);
+    assert.equal(claw.time.configured, false);
+    assert.equal(claw.calendar.configured, false);
+    assert.equal(claw.routines.configured, false);
+    assert.equal(claw.watch.configured, false);
+    await assert.rejects(
+      () => claw.time.create({
+        kind: "reminder",
+        title: "Check release",
+        startsAt: "2026-04-15T09:00:00.000Z",
+      }),
+      /time client is not configured/,
+    );
+    assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), false);
+    claw.close();
+  });
+});
+
+test("createClaw rejects legacy time options without an explicit mode", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-legacy-"));
+
+  await assert.rejects(
+    () => createClaw({
+      runtime: { adapter: "demo" },
+      workspace: {
+        appId: "demo",
+        workspaceId: "workspace-time-legacy",
+        agentId: "agent-time-legacy",
+        rootDir: workspaceDir,
+      },
+      time: { dbPath: path.join(workspaceDir, "core.sqlite") } as any,
+    }),
+    /requires an explicit mode/,
+  );
+});
+
+test("createClaw embeds the time engine on demand without starting the scheduler", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-embedded-"));
+  const dataRoot = path.join(workspaceDir, "clawjs-data");
+  const originalStartScheduler = EmbeddedTimeEngine.prototype.startScheduler;
+  let schedulerStarts = 0;
+  EmbeddedTimeEngine.prototype.startScheduler = function patchedStartScheduler(this: EmbeddedTimeEngine) {
+    schedulerStarts += 1;
+    return originalStartScheduler.call(this);
+  };
+
+  try {
+    await withPatchedEnv({
+      CLAW_DATA_DIR: dataRoot,
+    }, async () => {
+      const claw = await createClaw({
+        runtime: { adapter: "demo" },
+        workspace: {
+          appId: "demo",
+          workspaceId: "workspace-time-embedded",
+          agentId: "agent-time-embedded",
+          rootDir: workspaceDir,
+        },
+        time: { mode: "embedded-on-demand" },
+      });
+
+      assert.equal(claw.time.configured, true);
+      assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), false);
+
+      const created = await claw.time.create({
+        kind: "reminder",
+        title: "Check release",
+        startsAt: "2026-04-15T09:00:00.000Z",
+        schedule: { mode: "one_off", timezone: "UTC", startsAt: "2026-04-15T09:00:00.000Z" },
+        anchorType: "task",
+        anchorId: "task-123",
+      });
+      assert.equal(created.item.anchorType, "task");
+      assert.equal(created.item.nextRunAt, "2026-04-15T09:00:00.000Z");
+
+      const signalled = await claw.time.signalAnchor({ anchorId: "task-123", signal: "task_completed" });
+      assert.equal(signalled.items[0]?.id, created.item.id);
+      assert.equal(signalled.items[0]?.status, "cancelled");
+
+      assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+      assert.equal(schedulerStarts, 0);
+      claw.close();
+    });
+  } finally {
+    EmbeddedTimeEngine.prototype.startScheduler = originalStartScheduler;
+  }
+});
+
+test("createClaw starts the embedded scheduler only when scheduler mode is explicit", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-scheduler-"));
+  const dataRoot = path.join(workspaceDir, "clawjs-data");
+  const originalStartScheduler = EmbeddedTimeEngine.prototype.startScheduler;
+  let schedulerStarts = 0;
+  EmbeddedTimeEngine.prototype.startScheduler = function patchedStartScheduler(this: EmbeddedTimeEngine) {
+    schedulerStarts += 1;
+    return originalStartScheduler.call(this);
+  };
+
+  try {
+    await withPatchedEnv({
+      CLAW_DATA_DIR: dataRoot,
+    }, async () => {
+      const claw = await createClaw({
+        runtime: { adapter: "demo" },
+        workspace: {
+          appId: "demo",
+          workspaceId: "workspace-time-scheduler",
+          agentId: "agent-time-scheduler",
+          rootDir: workspaceDir,
+        },
+        time: { mode: "scheduler", schedulerIntervalMs: 60_000 },
+      });
+
+      assert.equal(claw.time.configured, true);
+      assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+      assert.equal(schedulerStarts, 1);
+      claw.close();
+    });
+  } finally {
+    EmbeddedTimeEngine.prototype.startScheduler = originalStartScheduler;
+  }
+});
+
+test("createClaw accepts explicit scheduler time options", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-sdk-scheduler-create-"));
+  const dataRoot = path.join(workspaceDir, "clawjs-data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+  }, async () => {
+    const claw = await createClaw({
+      runtime: { adapter: "demo" },
+      workspace: {
+        appId: "demo",
+        workspaceId: "workspace-time-scheduler-create",
+        agentId: "agent-time-scheduler-create",
+        rootDir: workspaceDir,
+      },
+      time: { mode: "scheduler", schedulerIntervalMs: 60_000 },
+    });
+
     const created = await claw.time.create({
       kind: "reminder",
       title: "Check release",
@@ -763,6 +902,7 @@ test("createClaw embeds the time engine by default", async () => {
     assert.equal(signalled.items[0]?.status, "cancelled");
 
     assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+    claw.close();
   });
 });
 

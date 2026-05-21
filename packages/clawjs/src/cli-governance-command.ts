@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { buildClawDebtLedger, detectClawPublicRepositories, type ClawDebtLedgerEntry, type ClawRepositoryRoot } from "@clawjs/core";
+import { buildClawDebtLedger, detectClawPublicRepositories, type ClawDebtLedgerEntry, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";

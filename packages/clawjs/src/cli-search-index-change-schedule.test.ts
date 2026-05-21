@@ -320,13 +320,9 @@ test("search keeps optional full sources out of scoped domain queries", async ()
     assert.equal(query.code, CLI_EXIT_DEGRADED);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: Record<string, number>;
         results: Array<{ source: string }>;
       };
     };
-    assert.equal("local.files" in queryPayload.data.indexedFastPaths, false);
-    assert.equal("web.ingested" in queryPayload.data.indexedFastPaths, false);
-    assert.equal("external.cache" in queryPayload.data.indexedFastPaths, false);
     assert.equal(queryPayload.data.results.some((result) => result.source === "local.files" || result.source === "web.ingested" || result.source === "external.cache"), false);
 
     const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));

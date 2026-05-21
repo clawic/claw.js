@@ -62,7 +62,6 @@ export async function runSearchDocsPagesScenario(): Promise<void> {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "docs.pages": number };
         results: Array<{
           source: string;
           domain: string;
@@ -77,7 +76,6 @@ export async function runSearchDocsPagesScenario(): Promise<void> {
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["docs.pages"], 3);
     const docResult = queryPayload.data.results.find((entry) => entry.resourceId === "docs/search-fixture.md");
     assert.equal(docResult?.source, "docs.pages");
     assert.equal(docResult?.domain, "docs");

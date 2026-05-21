@@ -1,4 +1,5 @@
-import { buildCustomAppSDKInspectionPayload, clawApiPath } from "@clawjs/core";
+import { clawApiPath } from "@clawjs/core";
+import { buildCustomAppSDKInspectionPayload } from "@clawjs/core/catalogs";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";

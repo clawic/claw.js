@@ -1,14 +1,4 @@
-import {
-  CLAW_DEBT_LEDGER_CLASSIFICATIONS,
-  CLAW_DEBT_LEDGER_SOURCE_TYPES,
-  CLAW_DEBT_LEDGER_STATUSES,
-  buildClawDebtLedger,
-  type ClawDebtLedger,
-  type ClawDebtLedgerClassification,
-  type ClawDebtLedgerEntry,
-  type ClawDebtLedgerSourceType,
-  type ClawDebtLedgerStatus,
-} from "@clawjs/core";
+import { CLAW_DEBT_LEDGER_CLASSIFICATIONS, CLAW_DEBT_LEDGER_SOURCE_TYPES, CLAW_DEBT_LEDGER_STATUSES, buildClawDebtLedger, type ClawDebtLedger, type ClawDebtLedgerClassification, type ClawDebtLedgerEntry, type ClawDebtLedgerSourceType, type ClawDebtLedgerStatus } from "@clawjs/core/catalogs";
 
 import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";

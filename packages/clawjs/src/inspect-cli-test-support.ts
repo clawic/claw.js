@@ -1,4 +1,4 @@
-import { clawPersistentSurfaceRegistry } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry } from "@clawjs/core/catalogs";
 import { runCli } from "./index.ts";
 
 function captureStream() {

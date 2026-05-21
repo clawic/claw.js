@@ -1,22 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-import {
-  clawCliCommandRegistry,
-  clawEvolutionLedgerSchema,
-  clawEvolutionPolicy,
-  clawEvolutionPublicSurfaceBaselineSchema,
-  clawEvolutionVersionFixtureSchema,
-  clawPersistentSurfaceRegistry,
-  createEvolutionOperatorPlan,
-  createEvolutionPublicSurfaceBaseline,
-  createEvolutionRepairReport,
-  createEvolutionReceipt,
-  createEvolutionRollbackReport,
-  diffEvolutionPublicSurfaceBaseline,
-  runEvolutionMigratorLab,
-  summarizeEvolutionLedger,
-} from "@clawjs/core";
+import { clawEvolutionLedgerSchema, clawEvolutionPolicy, clawEvolutionPublicSurfaceBaselineSchema, clawEvolutionVersionFixtureSchema, createEvolutionOperatorPlan, createEvolutionPublicSurfaceBaseline, createEvolutionRepairReport, createEvolutionReceipt, createEvolutionRollbackReport, diffEvolutionPublicSurfaceBaseline, runEvolutionMigratorLab, summarizeEvolutionLedger } from "@clawjs/core";
+import { clawCliCommandRegistry, clawPersistentSurfaceRegistry } from "@clawjs/core/catalogs";
 import type { ClawEvolutionLedger, ClawEvolutionOperatorAction, ClawEvolutionPublicSurfaceBaseline, ClawEvolutionVersionFixture } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";

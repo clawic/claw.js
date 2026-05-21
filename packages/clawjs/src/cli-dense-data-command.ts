@@ -1,11 +1,4 @@
-import {
-  clawProfessionalRecordsAcceptanceFixture,
-  clawProfessionalRecordsOsRegistry,
-  findClawProfessionalRecordsSystem,
-  listClawProfessionalRecordsSemanticViewEntries,
-  resolveBuiltinCollectionName,
-  resolveClawProfessionalRecordsIntent,
-} from "@clawjs/core";
+import { clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, findClawProfessionalRecordsSystem, listClawProfessionalRecordsSemanticViewEntries, resolveBuiltinCollectionName, resolveClawProfessionalRecordsIntent } from "@clawjs/core/catalogs";
 import fs from "fs";
 import path from "path";
 

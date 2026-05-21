@@ -1,7 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { BUILTIN_COLLECTIONS } from "../../index.ts";
+import { BUILTIN_COLLECTIONS } from "../../catalogs.ts";
 
 // This ledger must stay empty in the final no-grandfathering state.
 const CATALOG_METADATA_DEBT_BASELINE = new Set<string>([]);

@@ -1,12 +1,5 @@
-import {
-  MAC_PERMISSION_CATALOG,
-  MAC_PERMISSION_PACKS,
-  buildMacActionPlan,
-  buildCustomAppSDKInspectionPayload,
-  clawMacControlPlaneRegistry,
-  listMacAtlasCapabilities,
-  macActionRequestSchema,
-} from "@clawjs/core";
+import { MAC_PERMISSION_CATALOG, MAC_PERMISSION_PACKS, buildMacActionPlan, clawMacControlPlaneRegistry, listMacAtlasCapabilities, macActionRequestSchema } from "@clawjs/core";
+import { buildCustomAppSDKInspectionPayload } from "@clawjs/core/catalogs";
 
 import type { MCPExposedTool } from "./types.ts";
 import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";

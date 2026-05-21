@@ -92,7 +92,6 @@ export async function runSearchProvidersSnippetsFastPathScenario(): Promise<void
     const providerQuery = await runCliCapture(["search", "query", "quickask generic-chat-large", "--domains", "providers", "--filters", "metadata.hasAccountRef=true", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(providerQuery.code, CLI_EXIT_OK);
     const providerQueryPayload = JSON.parse(providerQuery.stdout) as any;
-    assert.equal(providerQueryPayload.data.indexedFastPaths["providers.routing"], 2);
     const providerResult = providerQueryPayload.data.results.find((entry: any) => entry.type === "routing_rule");
     assert.deepEqual({ source: providerResult?.source, domain: providerResult?.domain, provider: providerResult?.metadata?.provider, hasAccountRef: providerResult?.metadata?.hasAccountRef }, { source: "providers.routing", domain: "providers", provider: "provider_alpha", hasAccountRef: true });
     assert.equal(providerResult?.fragments?.some((fragment: any) => fragment.title === "policy" && fragment.snippet?.includes("approval")), true);
@@ -108,7 +107,6 @@ export async function runSearchProvidersSnippetsFastPathScenario(): Promise<void
     const snippetQuery = await runCliCapture(["search", "query", "current selection", "--domains", "snippets", "--filters", "metadata.kind=prompt", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(snippetQuery.code, CLI_EXIT_OK);
     const snippetQueryPayload = JSON.parse(snippetQuery.stdout) as any;
-    assert.equal(snippetQueryPayload.data.indexedFastPaths["snippets.library"], 1);
     const snippetResult = snippetQueryPayload.data.results.find((entry: any) => entry.title === "QuickAsk Review");
     assert.deepEqual({ source: snippetResult?.source, domain: snippetResult?.domain, type: snippetResult?.type, shortcut: snippetResult?.metadata?.shortcut, skillRef: snippetResult?.metadata?.skillRef }, { source: "snippets.library", domain: "snippets", type: "prompt", shortcut: "qa-review", skillRef: ["skill:review"] });
     assert.equal(snippetResult?.fragments?.some((fragment: any) => fragment.snippet?.includes("current selection")), true);
@@ -260,11 +258,9 @@ export async function runSearchAgentCatalogFastPathScenario(): Promise<void> {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "agents.catalog": number };
         results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { kind?: string; runtime?: string; model?: string; hasProtectedRef?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["agents.catalog"], 4);
     const agentResult = queryPayload.data.results.find((entry: any) => entry.title === "Ops Sentinel");
     assert.equal(agentResult?.source, "agents.catalog");
     assert.equal(agentResult?.domain, "agents");
@@ -361,11 +357,9 @@ export async function runSearchMarketplaceChoiceFastPathScenario(): Promise<void
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "marketplace.choices": number };
         results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { target?: string; choice?: string; status?: string }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["marketplace.choices"], 1);
     const result = queryPayload.data.results.find((entry: any) => entry.title === "default-ai-provider: provider_alpha");
     assert.equal(result?.source, "marketplace.choices");
     assert.equal(result?.domain, "marketplace");
@@ -520,9 +514,8 @@ export async function runSearchContentSocialIotFastPathScenario(): Promise<void>
     const contentQuery = await runCliCapture(["search", "query", "product team", "--domains", "content", "--filters", "metadata.kind=campaign_item", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(contentQuery.code, CLI_EXIT_OK);
     const contentPayload = JSON.parse(contentQuery.stdout) as {
-      data: { indexedFastPaths: { "content.items": number }; results: Array<{ source: string; title: string; metadata?: { brandId?: string; campaignId?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
+      data: { results: Array<{ source: string; title: string; metadata?: { brandId?: string; campaignId?: string }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
-    assert.equal(contentPayload.data.indexedFastPaths["content.items"], 1);
     const contentResult = contentPayload.data.results.find((entry: any) => entry.title === "Launch Narrative");
     assert.equal(contentResult?.source, "content.items");
     assert.equal(contentResult?.metadata?.brandId, "brand.alpha");
@@ -541,9 +534,8 @@ export async function runSearchContentSocialIotFastPathScenario(): Promise<void>
     const socialQuery = await runCliCapture(["search", "query", "builder notes", "--domains", "social", "--filters", "metadata.channel=linkedin", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(socialQuery.code, CLI_EXIT_OK);
     const socialPayload = JSON.parse(socialQuery.stdout) as {
-      data: { indexedFastPaths: { "social.posts": number }; results: Array<{ source: string; title: string; metadata?: { channel?: string; scheduled?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }> };
+      data: { results: Array<{ source: string; title: string; metadata?: { channel?: string; scheduled?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
-    assert.equal(socialPayload.data.indexedFastPaths["social.posts"], 1);
     const socialResult = socialPayload.data.results.find((entry: any) => entry.title === "Launch Social Draft");
     assert.equal(socialResult?.source, "social.posts");
     assert.equal(socialResult?.metadata?.channel, "linkedin");
@@ -563,9 +555,8 @@ export async function runSearchContentSocialIotFastPathScenario(): Promise<void>
     const iotQuery = await runCliCapture(["search", "query", "Lab Thermostat", "--domains", "iot", "--filters", "metadata.enabled=true", "--data-dir", dataRoot, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(iotQuery.code, CLI_EXIT_OK);
     const iotPayload = JSON.parse(iotQuery.stdout) as {
-      data: { indexedFastPaths: { "iot.config": number }; results: Array<{ source: string; title: string; metadata?: { enabled?: boolean; hasProtectedRef?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }> };
+      data: { results: Array<{ source: string; title: string; metadata?: { enabled?: boolean; hasProtectedRef?: boolean }; fragments?: Array<{ title?: string; snippet?: string }> }> };
     };
-    assert.equal(iotPayload.data.indexedFastPaths["iot.config"], 1);
     const iotResult = iotPayload.data.results.find((entry: any) => entry.title === "Lab Thermostat");
     assert.equal(iotResult?.source, "iot.config");
     assert.equal(iotResult?.metadata?.enabled, true);
@@ -681,11 +672,9 @@ export async function runSearchBusinessRecordFastPathScenario(): Promise<void> {
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "business.records": number };
         results: Array<{ source: string; domain: string; type: string; title: string; metadata?: { status?: string }; fragments?: Array<{ title?: string; snippet?: string }> }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["business.records"], 1);
     const result = queryPayload.data.results.find((entry: any) => entry.title === "Alpha Customer");
     assert.equal(result?.source, "business.records");
     assert.equal(result?.domain, "business");

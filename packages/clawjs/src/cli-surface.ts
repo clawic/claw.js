@@ -1,14 +1,31 @@
 import {
-  clawCliCommandRegistry,
-  resolveClawCliCommand,
-  searchClawCliRegistry,
-  type ClawCliCommandRegistryEntry,
-  type ClawCliSearchResult,
-} from "@clawjs/core";
+  GENERATED_CLI_COMMANDS,
+  GENERATED_PUBLIC_PORTAL_HELP_ONLY,
+  GENERATED_REMOVED_PUBLIC_COMMANDS,
+  GENERATED_REMOVED_RUNTIME_COMMANDS,
+  GENERATED_REMOVED_V1_CRUD_COMMANDS,
+  type GeneratedCliCommandEntry,
+} from "./cli-router.generated.ts";
 
 export const DEFAULT_CLI_BIN = "claw";
 
-const PUBLIC_CLI_SURFACE = clawCliCommandRegistry.commands;
+export type ClawCliCommandRegistryEntry = GeneratedCliCommandEntry;
+
+export interface ClawCliSearchResult {
+  type: "command" | "alias" | "collection" | "doc" | "adr" | "test" | "source";
+  name: string;
+  canonicalName?: string;
+  score: number;
+  summary: string;
+  command?: ClawCliCommandRegistryEntry;
+  path?: string;
+  repo?: string;
+  source?: "command" | "collection";
+  shadowedByCommand?: string;
+}
+
+const PUBLIC_CLI_SURFACE = [...GENERATED_CLI_COMMANDS];
+const PUBLIC_CLI_SURFACE_BY_NAME = new Map(PUBLIC_CLI_SURFACE.map((entry) => [entry.name, entry]));
 
 function surfaceRows(entries: ClawCliCommandRegistryEntry[]): string[] {
   return entries.map((entry) => {
@@ -42,25 +59,10 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN, options: { all?: boolea
 
 export const CLI_USAGE = buildCliUsage();
 
-const REMOVED_PUBLIC_COMMANDS = new Map<string, string>([
-  ["data", "Use `claw database ...` for technical database operations or `claw work export|import|backup ...` for productivity snapshots."],
-  ["app-state", "App state is internal. Use `claw host ...`, `claw doctor`, or diagnostics surfaces instead."],
-  ["memory", "Use `claw knowledge ...` or `claw knowledge memories ...`."],
-  ["user", "Use `claw profile ...` or the profile domain portals such as `health`, `travel`, `career`, `family`, `legal`, `finance`, `location`, and `accounts`."],
-  ["ops", "Use `claw logs`, `claw doctor`, `claw monitor`, or `claw host ...`."],
-  ["infra", "`infra` is not a public Claw namespace. Use `claw host`, `claw monitor`, or `claw logs`."],
-  ["workspace-search", "Use `claw search query ...`."],
-  ["workspace-index", "Use `claw search rebuild`."],
-  ["export", "Use `claw work export ...`."],
-  ["import", "Use `claw work import ...`."],
-  ["backup", "Use `claw work backup ...` or `claw database ...` for technical database backups."],
-  ["posts", "Use `claw content entry ...`."],
-  ["campaigns", "Use `claw content campaign ...`."],
-  ["publications", "Use `claw content publish ...`."],
-]);
+const REMOVED_PUBLIC_COMMANDS = new Map(Object.entries(GENERATED_REMOVED_PUBLIC_COMMANDS));
 
-export const REMOVED_RUNTIME_COMMANDS = new Set(["queue", "job", "event", "retention"]);
-export const REMOVED_V1_CRUD_COMMANDS = new Set(["upsert", "list", "get", "delete"]);
+export const REMOVED_RUNTIME_COMMANDS = new Set<string>(GENERATED_REMOVED_RUNTIME_COMMANDS);
+export const REMOVED_V1_CRUD_COMMANDS = new Set<string>(GENERATED_REMOVED_V1_CRUD_COMMANDS);
 
 const PLURAL_MEDIA_COMMAND_ALIASES = new Map(
   PUBLIC_CLI_SURFACE
@@ -72,24 +74,11 @@ const SINGULAR_MEDIA_COMMAND_ALIASES = new Map(
   PUBLIC_CLI_SURFACE.flatMap((entry) => (entry.aliases ?? []).map((alias) => [alias, entry.name] as const)),
 );
 
-export const PUBLIC_PORTAL_HELP_ONLY = new Set([
-  "drive",
-  "business",
-  "social",
-  "monitor",
-  "logs",
-  "diagnostics",
-  "health",
-  "travel",
-  "career",
-  "family",
-  "legal",
-  "location",
-  "accounts",
-]);
+export const PUBLIC_PORTAL_HELP_ONLY = new Set<string>(GENERATED_PUBLIC_PORTAL_HELP_ONLY);
 
 function cliSurfaceEntry(name: string | undefined): ClawCliCommandRegistryEntry | undefined {
-  return resolveClawCliCommand(name);
+  if (!name) return undefined;
+  return PUBLIC_CLI_SURFACE_BY_NAME.get(name);
 }
 
 export function buildCommandHelp(binName: string, group: string): string | null {
@@ -156,7 +145,40 @@ export function normalizePublicCliArgv(argv: string[], stderr: NodeJS.WritableSt
 }
 
 export function searchCliDiscovery(query: string, options: { limit?: number } = {}): ClawCliSearchResult[] {
-  return searchClawCliRegistry(query, options);
+  const results: ClawCliSearchResult[] = [];
+  for (const entry of PUBLIC_CLI_SURFACE) {
+    const commandScore = Math.max(scoreText(query, entry.name), scoreText(query, entry.summary), scoreText(query, entry.family ?? ""));
+    if (commandScore > 0) {
+      results.push({ type: "command", name: entry.name, canonicalName: entry.target ?? entry.name, score: commandScore, summary: entry.summary, command: entry });
+    }
+    for (const alias of entry.aliases ?? []) {
+      const aliasScore = scoreText(query, alias);
+      if (aliasScore > 0) {
+        results.push({ type: "alias", name: alias, canonicalName: entry.name, score: aliasScore + 5, summary: `Alias for ${entry.name}.`, command: entry });
+      }
+    }
+    for (const doc of entry.docs) {
+      const docScore = scoreText(query, doc);
+      if (docScore > 0) results.push({ type: "doc", name: doc, canonicalName: entry.name, score: docScore, summary: `Documentation for ${entry.name}.`, command: entry, path: doc });
+    }
+    for (const adr of entry.adrs) {
+      const adrScore = scoreText(query, adr);
+      if (adrScore > 0) results.push({ type: "adr", name: adr, canonicalName: entry.name, score: adrScore, summary: `Decision source for ${entry.name}.`, command: entry, path: adr });
+    }
+    for (const test of entry.tests) {
+      const testScore = scoreText(query, test);
+      if (testScore > 0) results.push({ type: "test", name: test, canonicalName: entry.name, score: testScore, summary: `Validation for ${entry.name}.`, command: entry, path: test });
+    }
+    for (const relatedSurface of entry.relatedSurfaces ?? []) {
+      const relatedScore = scoreText(query, relatedSurface);
+      if (relatedScore > 0) results.push({ type: "alias", name: relatedSurface, canonicalName: entry.name, score: relatedScore + 6, summary: `Related surface for ${entry.name}.`, command: entry });
+    }
+    const sourceScore = scoreText(query, entry.source.file);
+    if (sourceScore > 0) results.push({ type: "source", name: entry.source.file, canonicalName: entry.name, score: sourceScore, summary: `Implementation source for ${entry.name}.`, command: entry, path: entry.source.file });
+  }
+  return results
+    .sort((a, b) => b.score - a.score || a.type.localeCompare(b.type) || a.name.localeCompare(b.name))
+    .slice(0, options.limit ?? 10);
 }
 
 export function relatedCliMatches(query: string, options: { limit?: number } = {}): Array<{
@@ -175,4 +197,42 @@ export function relatedCliMatches(query: string, options: { limit?: number } = {
     summary: result.summary,
     path: result.path,
   }));
+}
+
+export function resolveGeneratedCliCommand(name: string | undefined): ClawCliCommandRegistryEntry | undefined {
+  return cliSurfaceEntry(name);
+}
+
+function scoreText(query: string, text: string): number {
+  const q = query.trim().toLowerCase();
+  const value = text.toLowerCase();
+  if (!q) return 0;
+  if (value === q) return 100;
+  if (value.startsWith(q)) return 80;
+  if (value.includes(q)) return 50;
+  const distance = editDistance(q, value);
+  if (distance <= 1) return 45;
+  if (distance <= 2 && Math.max(q.length, value.length) >= 5) return 35;
+  const parts = q.split(/[\s._/-]+/).filter(Boolean);
+  return parts.reduce((score, part) => score + (value.includes(part) ? 10 : 0), 0);
+}
+
+function editDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (!left) return right.length;
+  if (!right) return left.length;
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const current = new Array<number>(right.length + 1);
+  for (let i = 1; i <= left.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      current[j] = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length] ?? Number.POSITIVE_INFINITY;
 }

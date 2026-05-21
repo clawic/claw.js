@@ -179,7 +179,7 @@ import {
   temporalItemSchema,
   workspaceSearchQuerySchema,
   withSurfaceChildren,
-} from "./index.ts";
+} from "./catalogs.ts";
 
 const expectedRemoteRegistryMethodRoutes = [
   "GET /v1/remote/classifications",

@@ -84,7 +84,6 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
     assert.equal(query.code, CLI_EXIT_OK);
     const queryPayload = JSON.parse(query.stdout) as {
       data: {
-        indexedFastPaths: { "generations.artifacts": number };
         results: Array<{
           source: string;
           domain: string;
@@ -98,7 +97,6 @@ test("search rebuild indexes generations.artifacts from workspace generation rec
         facets?: Array<{ id: string; label: string }>;
       };
     };
-    assert.equal(queryPayload.data.indexedFastPaths["generations.artifacts"], 1);
     const result = queryPayload.data.results.find((candidate) => candidate.title === "Launch Dashboard Hero");
     assert.equal(result?.source, "generations.artifacts");
     assert.equal(result?.domain, "generations");

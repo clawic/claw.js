@@ -1,4 +1,5 @@
-import { clawPersistentSurfaceRegistry, listClawSurfaceRoutes, type ClawPersistentSurfaceNode, type ClawSurfaceRoute } from "@clawjs/core";
+import type { ClawPersistentSurfaceNode, ClawSurfaceRoute } from "@clawjs/core";
+import { clawPersistentSurfaceRegistry, listClawSurfaceRoutes } from "@clawjs/core/catalogs";
 import type { SearchDocumentInput, SearchStore } from "@clawjs/search";
 
 export function ensureSurfacesRoutesSourceIndexed(store: SearchStore): number {

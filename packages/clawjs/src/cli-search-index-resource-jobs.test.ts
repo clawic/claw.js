@@ -203,11 +203,130 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
     const statusPayload = JSON.parse(status.stdout) as {
-      data: { sources: Array<{ source: string; state: string; lastIndexedAt?: string }> };
+      data: {
+        sources: Array<{ source: string; state: string; lastIndexedAt?: string }>;
+        cursors: Array<{ source: string; shard: string; cursor: string; watermark: string; metadata: Record<string, unknown> }>;
+      };
     };
     const sessionsStatus = statusPayload.data.sources.find((source) => source.source === "sessions.chats");
     assert.equal(sessionsStatus?.state, "enabled");
     assert.ok(sessionsStatus?.lastIndexedAt);
+    const sessionsCursor = statusPayload.data.cursors.find((cursor) => cursor.source === "sessions.chats" && cursor.shard === "default");
+    assert.equal(sessionsCursor?.metadata.version, 2);
+    assert.equal(sessionsCursor?.metadata.sidecar, "sessions.sqlite");
+    assert.equal(sessionsCursor?.metadata.sessionId, sessionId);
+    assert.equal(typeof sessionsCursor?.metadata.updatedAt, "string");
+    assert.equal(sessionsCursor?.watermark, sessionsCursor?.metadata.updatedAt);
+  });
+});
+test("sessions.chats rebuild paginates ties by updated_at and session_id", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sessions-ties-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsRoot = path.join(workspaceRoot, "codex-sessions");
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+    fs.mkdirSync(sessionsRoot, { recursive: true });
+    const equalUpdatedAt = new Date("2026-05-12T10:00:00.000Z");
+    const sessions = [
+      { id: "11111111-2222-4333-8444-555555555551", needle: "tie-batch-alpha-needle" },
+      { id: "11111111-2222-4333-8444-555555555552", needle: "tie-batch-beta-needle" },
+      { id: "11111111-2222-4333-8444-555555555553", needle: "tie-batch-gamma-needle" },
+    ];
+    for (const session of sessions) {
+      const artifact = path.join(sessionsRoot, `rollout-${session.id}.jsonl`);
+      fs.writeFileSync(artifact, [
+        JSON.stringify({ type: "session_meta", payload: { id: session.id, cwd: workspaceRoot, timestamp: "2026-05-12T09:00:00.000Z" } }),
+        JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: session.needle } }),
+        "",
+      ].join("\n"));
+      fs.utimesSync(artifact, equalUpdatedAt, equalUpdatedAt);
+    }
+    const index = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(index.code, CLI_EXIT_OK);
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--sessions-index-batch-size", "1", "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as { data: { indexedBySource: { "sessions.chats": number } } };
+    assert.equal(rebuildPayload.data.indexedBySource["sessions.chats"], 3);
+    for (const session of sessions) {
+      const query = await runCliCapture(["search", "query", session.needle, "--domains", "sessions", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+      assert.equal(query.code, CLI_EXIT_OK);
+      const queryPayload = JSON.parse(query.stdout) as { data: { results: Array<{ resourceId?: string; source: string }> } };
+      assert.equal(queryPayload.data.results.some((result) => result.source === "sessions.chats" && result.resourceId === session.id), true);
+    }
+  });
+});
+test("sessions.chats backfill only indexes rows after the v2 cursor", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sessions-incremental-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsRoot = path.join(workspaceRoot, "codex-sessions");
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+    fs.mkdirSync(sessionsRoot, { recursive: true });
+    const firstSessionId = "12121212-2323-4444-8585-565656565656";
+    const secondSessionId = "23232323-3434-4555-9696-676767676767";
+    const writeSession = (sessionId: string, needle: string, updatedAt: string): void => {
+      const artifact = path.join(sessionsRoot, `rollout-${sessionId}.jsonl`);
+      fs.writeFileSync(artifact, [
+        JSON.stringify({ type: "session_meta", payload: { id: sessionId, cwd: workspaceRoot, timestamp: "2026-05-12T09:00:00.000Z" } }),
+        JSON.stringify({ type: "event_msg", payload: { type: "user_message", message: needle } }),
+        "",
+      ].join("\n"));
+      const date = new Date(updatedAt);
+      fs.utimesSync(artifact, date, date);
+    };
+    writeSession(firstSessionId, "incremental-first-session-needle", "2026-05-12T10:00:00.000Z");
+    const firstIndex = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(firstIndex.code, CLI_EXIT_OK);
+    const firstRebuild = await runCliCapture(["search", "rebuild", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--sessions-index-batch-size", "1", "--json"], workspaceRoot);
+    assert.equal(firstRebuild.code, CLI_EXIT_OK);
+    const firstRebuildPayload = JSON.parse(firstRebuild.stdout) as { data: { indexedBySource: { "sessions.chats": number } } };
+    assert.equal(firstRebuildPayload.data.indexedBySource["sessions.chats"], 1);
+
+    writeSession(secondSessionId, "incremental-second-session-needle", "2026-05-12T11:00:00.000Z");
+    const secondIndex = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(secondIndex.code, CLI_EXIT_OK);
+    const searchDb = new Database(path.join(dataRoot, "search.sqlite"));
+    try {
+      searchDb.prepare("DELETE FROM search_index_jobs WHERE source = ?").run("sessions.chats");
+    } finally {
+      searchDb.close();
+    }
+    const backfillJob = await runCliCapture(["search", "jobs", "enqueue", "backfill", "--source", "sessions.chats", "--id", "job:sessions-incremental", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(backfillJob.code, CLI_EXIT_OK);
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--sessions-index-batch-size", "1", "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ id: string; source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.deepEqual(serviceRunPayload.data.worker?.items[0], {
+      id: "job:sessions-incremental",
+      source: "sessions.chats",
+      operation: "backfill",
+      status: "done",
+      indexed: 1,
+    });
+    const firstQuery = await runCliCapture(["search", "query", "incremental-first-session-needle", "--domains", "sessions", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(firstQuery.code, CLI_EXIT_OK);
+    const secondQuery = await runCliCapture(["search", "query", "incremental-second-session-needle", "--domains", "sessions", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(secondQuery.code, CLI_EXIT_OK);
+    const firstQueryPayload = JSON.parse(firstQuery.stdout) as { data: { results: Array<{ resourceId?: string }> } };
+    const secondQueryPayload = JSON.parse(secondQuery.stdout) as { data: { results: Array<{ resourceId?: string }> } };
+    assert.equal(firstQueryPayload.data.results.some((result) => result.resourceId === firstSessionId), true);
+    assert.equal(secondQueryPayload.data.results.some((result) => result.resourceId === secondSessionId), true);
   });
 });
 test("sessions index enqueues sessions.chats search refresh jobs", async () => {
