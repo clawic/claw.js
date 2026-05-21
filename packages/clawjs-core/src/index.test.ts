@@ -52,6 +52,7 @@ import {
   clawEvolutionRollbackReportSchema,
   clawEvolutionMigratorLabResultSchema,
   clawEvolutionVersionFixtureSchema,
+  clawEnvVarContractCatalog,
   classifyEvolutionBackupPolicy,
   createEvolutionOperatorPlan,
   createEvolutionPublicSurfaceBaseline,
@@ -1004,6 +1005,28 @@ test("stable contract catalogs feed the persistent surface registry", () => {
 
   assert.equal(clawEventTopicContractCatalog["claw.event.sessions.message.appended"]?.value, "message.appended");
   assert.equal(findClawPersistentSurfaceNode("claw.event.sessions.message.appended")?.value, "message.appended");
+
+  for (const envVar of [
+    "CLAW_DATABASE_MAX_UPLOAD_BYTES",
+    "CLAW_DATABASE_REALTIME_MAX_CLIENTS",
+    "CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS",
+    "CLAW_DATABASE_REALTIME_QUEUE_LIMIT",
+    "CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES",
+    "CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS",
+    "CLAW_SESSIONS_EVENTS_QUEUE_LIMIT",
+    "CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES",
+    "CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES",
+    "CLAW_REMOTE_MAX_SESSIONS",
+    "CLAW_REMOTE_MAX_QUEUE_FRAMES",
+    "CLAW_REMOTE_MAX_BUFFERED_BYTES",
+  ]) {
+    assert.equal(clawEnvVarContractCatalog[envVar]?.value, envVar, `${envVar} must be in the env var catalog`);
+    assert.equal(
+      clawPersistentSurfaceRegistry.nodes.find((node) => node.kind === "envVar" && node.value === envVar)?.kind,
+      "envVar",
+      `${envVar} must be inspectable as an envVar surface`,
+    );
+  }
 });
 
 test("surface graph registers critical chat routes and Relay", () => {

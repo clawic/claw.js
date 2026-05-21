@@ -415,6 +415,8 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_projects
   claw_privateApi_promote["/api/promote private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_promote
+  claw_privateApi_realtimeToken["/api/realtime-token private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_realtimeToken
   claw_privateApi_recurrences["/api/recurrences private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_recurrences
   claw_privateApi_row["/api/row private API route\nprivateApiRoute"]
@@ -733,10 +735,28 @@ flowchart TD
   claw_contracts_ids --> claw_id_resource
   claw_env_clawixMacosPath["clawix macos path environment variable\nenvVar"]
   claw_contracts_config --> claw_env_clawixMacosPath
+  claw_env_clawixRoot["clawix root environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_clawixRoot
   claw_env_clawixSdkFirstRequireClawix["clawix sdk first require clawix environment variable\nenvVar"]
   claw_contracts_config --> claw_env_clawixSdkFirstRequireClawix
   claw_env_clawixSdkFirstRoot["clawix sdk first root environment variable\nenvVar"]
   claw_contracts_config --> claw_env_clawixSdkFirstRoot
+  claw_env_actorAssertion["actor assertion environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorAssertion
+  claw_env_actorHostId["actor host id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorHostId
+  claw_env_actorId["actor id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorId
+  claw_env_actorKind["actor kind environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorKind
+  claw_env_actorRunId["actor run id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorRunId
+  claw_env_actorSessionId["actor session id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorSessionId
+  claw_env_actorTrustedKeys["actor trusted keys environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_actorTrustedKeys
+  claw_env_adoptionCanonicitySelfTest["adoption canonicity self test environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_adoptionCanonicitySelfTest
   claw_env_allowedOrigins["allowed origins environment variable\nenvVar"]
   claw_contracts_config --> claw_env_allowedOrigins
   claw_env_allowPreV1Release["allow pre v1 release environment variable\nenvVar"]
@@ -755,6 +775,8 @@ flowchart TD
   claw_contracts_config --> claw_env_bin
   claw_env_calendarMock["calendar mock environment variable\nenvVar"]
   claw_contracts_config --> claw_env_calendarMock
+  claw_env_channelProcessorId["channel processor id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_channelProcessorId
   claw_env_codexPath["codex path environment variable\nenvVar"]
   claw_contracts_config --> claw_env_codexPath
   claw_env_codeHome["code home environment variable\nenvVar"]
@@ -773,6 +795,16 @@ flowchart TD
   claw_contracts_config --> claw_env_contentToken
   claw_env_contentUrl["content url environment variable\nenvVar"]
   claw_contracts_config --> claw_env_contentUrl
+  claw_env_contextAgentRunsActive["context agent runs active environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contextAgentRunsActive
+  claw_env_contextBuildStatus["context build status environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contextBuildStatus
+  claw_env_contextCustomMetric["context custom metric environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contextCustomMetric
+  claw_env_contextServiceHealth["context service health environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contextServiceHealth
+  claw_env_contextWeatherFile["context weather file environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_contextWeatherFile
   claw_env_databaseAdminEmail["database admin email environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databaseAdminEmail
   claw_env_databaseAdminPassword["database admin password environment variable\nenvVar"]
@@ -781,6 +813,8 @@ flowchart TD
   claw_contracts_config --> claw_env_databaseCorsOrigins
   claw_env_databaseDataDir["database data dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databaseDataDir
+  claw_env_databaseDbPath["database db path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_databaseDbPath
   claw_env_databaseDir["database dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_databaseDir
   claw_env_databaseFilesDir["database files dir environment variable\nenvVar"]
@@ -815,6 +849,8 @@ flowchart TD
   claw_contracts_config --> claw_env_debugChatPerf
   claw_env_demoDataDir["demo data dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_demoDataDir
+  claw_env_demoScenario["demo scenario environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_demoScenario
   claw_env_deviceTestCommand["device test command environment variable\nenvVar"]
   claw_contracts_config --> claw_env_deviceTestCommand
   claw_env_domainsActive["domains active environment variable\nenvVar"]
@@ -943,6 +979,8 @@ flowchart TD
   claw_contracts_config --> claw_env_hostTestThingsProject
   claw_env_hostValidationMode["host validation mode environment variable\nenvVar"]
   claw_contracts_config --> claw_env_hostValidationMode
+  claw_env_imageAllowEnvCredentials["image allow env credentials environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_imageAllowEnvCredentials
   claw_env_imageLibraryDir["image library dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_imageLibraryDir
   claw_env_iotBaseUrl["iot base url environment variable\nenvVar"]
@@ -991,6 +1029,10 @@ flowchart TD
   claw_contracts_config --> claw_env_monitorRetentionDays
   claw_env_node["node environment variable\nenvVar"]
   claw_contracts_config --> claw_env_node
+  claw_env_openaiImageBaseUrl["openai image base url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_openaiImageBaseUrl
+  claw_env_openaiImageSecretRef["openai image secret ref environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_openaiImageSecretRef
   claw_env_openclawPath["openclaw path environment variable\nenvVar"]
   claw_contracts_config --> claw_env_openclawPath
   claw_env_openWorkspace["open workspace environment variable\nenvVar"]
@@ -1035,6 +1077,12 @@ flowchart TD
   claw_contracts_config --> claw_env_publishingUrl
   claw_env_publishingVaultUrl["publishing vault url environment variable\nenvVar"]
   claw_contracts_config --> claw_env_publishingVaultUrl
+  claw_env_publishingWorkerBudget["publishing worker budget environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingWorkerBudget
+  claw_env_publishingWorkerIdleMaxMs["publishing worker idle max ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingWorkerIdleMaxMs
+  claw_env_publishingWorkerIdleMinMs["publishing worker idle min ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_publishingWorkerIdleMinMs
   claw_env_publishingWorkerTickMs["publishing worker tick ms environment variable\nenvVar"]
   claw_contracts_config --> claw_env_publishingWorkerTickMs
   claw_env_publishingWorkspace["publishing workspace environment variable\nenvVar"]
@@ -1051,6 +1099,50 @@ flowchart TD
   claw_contracts_config --> claw_env_relayWorkspaceId
   claw_env_releaseApprovedFor["release approved for environment variable\nenvVar"]
   claw_contracts_config --> claw_env_releaseApprovedFor
+  claw_env_remoteBind["remote bind environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteBind
+  claw_env_remoteCoordinatorDeviceId["remote coordinator device id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteCoordinatorDeviceId
+  claw_env_remoteCoordinatorHeartbeatMs["remote coordinator heartbeat ms environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteCoordinatorHeartbeatMs
+  claw_env_remoteCoordinatorTenantId["remote coordinator tenant id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteCoordinatorTenantId
+  claw_env_remoteCoordinatorToken["remote coordinator token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteCoordinatorToken
+  claw_env_remoteCoordinatorUrl["remote coordinator url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteCoordinatorUrl
+  claw_env_remoteDb["remote db environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteDb
+  claw_env_remoteDisableBonjour["remote disable bonjour environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteDisableBonjour
+  claw_env_remoteEnableBonjour["remote enable bonjour environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteEnableBonjour
+  claw_env_remoteEnableCoordinator["remote enable coordinator environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteEnableCoordinator
+  claw_env_remoteEnableIroh["remote enable iroh environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteEnableIroh
+  claw_env_remoteExposure["remote exposure environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteExposure
+  claw_env_remoteHttpPort["remote http port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteHttpPort
+  claw_env_remoteIrohDisable["remote iroh disable environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteIrohDisable
+  claw_env_remoteIrohRelayUrl["remote iroh relay url environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteIrohRelayUrl
+  claw_env_remoteMaxBufferedBytes["remote max buffered bytes environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteMaxBufferedBytes
+  claw_env_remoteMaxQueueFrames["remote max queue frames environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteMaxQueueFrames
+  claw_env_remoteMaxSessions["remote max sessions environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteMaxSessions
+  claw_env_remoteName["remote name environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteName
+  claw_env_remotePort["remote port environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remotePort
+  claw_env_remoteStatus["remote status environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteStatus
+  claw_env_remoteVersion["remote version environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_remoteVersion
   claw_env_reportGithubToken["report github token environment variable\nenvVar"]
   claw_contracts_config --> claw_env_reportGithubToken
   claw_env_resourcesDir["resources dir environment variable\nenvVar"]
@@ -1137,10 +1229,16 @@ flowchart TD
   claw_contracts_config --> claw_env_sessionsCodexDir
   claw_env_sessionsDataDir["sessions data dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_sessionsDataDir
+  claw_env_sessionsDbPath["sessions db path environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsDbPath
   claw_env_sessionsDisableCodex["sessions disable codex environment variable\nenvVar"]
   claw_contracts_config --> claw_env_sessionsDisableCodex
   claw_env_sessionsDisableHermes["sessions disable hermes environment variable\nenvVar"]
   claw_contracts_config --> claw_env_sessionsDisableHermes
+  claw_env_sessionsEventsMaxFrameBytes["sessions events max frame bytes environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsEventsMaxFrameBytes
+  claw_env_sessionsEventsMaxQueuedBytes["sessions events max queued bytes environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_sessionsEventsMaxQueuedBytes
   claw_env_sessionsEventsMaxSubscribers["sessions events max subscribers environment variable\nenvVar"]
   claw_contracts_config --> claw_env_sessionsEventsMaxSubscribers
   claw_env_sessionsEventsQueueLimit["sessions events queue limit environment variable\nenvVar"]
@@ -1201,6 +1299,8 @@ flowchart TD
   claw_contracts_config --> claw_env_wacliPath
   claw_env_workspace["workspace environment variable\nenvVar"]
   claw_contracts_config --> claw_env_workspace
+  claw_env_zeroWorkReport["zero work report environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_zeroWorkReport
   claw_package_core["ClawJS core package\npackageName"]
   claw_contracts_packages --> claw_package_core
   claw_package_cli["Claw CLI package\npackageName"]
@@ -1695,15 +1795,15 @@ flowchart TD
   claw_contracts_versionGovernance --> claw_versionGovernance_preV1
   claw_schema_evolutionRecord_v1["Evolution ledger record schema v1\njsonSchema"]
   claw_contracts_evolution --> claw_schema_evolutionRecord_v1
-  claw_schema_portableArchive_manifest_v1["Portable archive manifest schema v1\njsonSchema"]
+  claw_schema_portableArchive_manifest_v1["Portable archive backup manifest schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_portableArchive_manifest_v1
-  claw_schema_portableArchive_plan_v1["Portable archive plan schema v1\njsonSchema"]
+  claw_schema_portableArchive_plan_v1["Portable archive backup export plan schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_portableArchive_plan_v1
-  claw_schema_portableArchive_verificationReport_v1["Portable archive verification report schema v1\njsonSchema"]
+  claw_schema_portableArchive_verificationReport_v1["Portable archive backup verification report schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_portableArchive_verificationReport_v1
-  claw_schema_portableArchive_importPreview_v1["Portable archive import preview schema v1\njsonSchema"]
+  claw_schema_portableArchive_importPreview_v1["Portable archive backup import preview schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_portableArchive_importPreview_v1
-  claw_schema_portableArchive_restoreReport_v1["Portable archive restore report schema v1\njsonSchema"]
+  claw_schema_portableArchive_restoreReport_v1["Portable archive backup restore report schema v1\njsonSchema"]
   claw_contracts_schemas --> claw_schema_portableArchive_restoreReport_v1
   claw_cli_flag_json["--json\ncliFlag"]
   claw_contracts_cli --> claw_cli_flag_json
@@ -2796,6 +2896,7 @@ flowchart TD
 | `claw.privateApi.people` | privateApiRoute | api | claw |  |  |  |  |  | `/api/people` |
 | `claw.privateApi.projects` | privateApiRoute | api | claw |  |  |  |  |  | `/api/projects` |
 | `claw.privateApi.promote` | privateApiRoute | api | claw |  |  |  |  |  | `/api/promote` |
+| `claw.privateApi.realtimeToken` | privateApiRoute | api | claw |  |  |  |  |  | `/api/realtime-token` |
 | `claw.privateApi.recurrences` | privateApiRoute | api | claw |  |  |  |  |  | `/api/recurrences` |
 | `claw.privateApi.row` | privateApiRoute | api | claw |  |  |  |  |  | `/api/row` |
 | `claw.privateApi.savedViews` | privateApiRoute | api | claw |  |  |  |  |  | `/api/saved-views` |
@@ -2955,8 +3056,17 @@ flowchart TD
 | `claw.id.record` | idNamespace | id | claw |  |  |  |  |  | `recordId` |
 | `claw.id.resource` | idNamespace | id | claw |  |  |  |  |  | `resourceId` |
 | `claw.env.clawixMacosPath` | envVar | config | claw |  |  |  |  |  | `CLAWIX_MACOS_PATH` |
+| `claw.env.clawixRoot` | envVar | config | claw |  |  |  |  |  | `CLAWIX_ROOT` |
 | `claw.env.clawixSdkFirstRequireClawix` | envVar | config | claw |  |  |  |  |  | `CLAWIX_SDK_FIRST_REQUIRE_CLAWIX` |
 | `claw.env.clawixSdkFirstRoot` | envVar | config | claw |  |  |  |  |  | `CLAWIX_SDK_FIRST_ROOT` |
+| `claw.env.actorAssertion` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_ASSERTION` |
+| `claw.env.actorHostId` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_HOST_ID` |
+| `claw.env.actorId` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_ID` |
+| `claw.env.actorKind` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_KIND` |
+| `claw.env.actorRunId` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_RUN_ID` |
+| `claw.env.actorSessionId` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_SESSION_ID` |
+| `claw.env.actorTrustedKeys` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_TRUSTED_KEYS` |
+| `claw.env.adoptionCanonicitySelfTest` | envVar | config | claw |  |  |  |  |  | `CLAW_ADOPTION_CANONICITY_SELF_TEST` |
 | `claw.env.allowedOrigins` | envVar | config | claw |  |  |  |  |  | `CLAW_ALLOWED_ORIGINS` |
 | `claw.env.allowPreV1Release` | envVar | config | claw |  |  |  |  |  | `CLAW_ALLOW_PRE_V1_RELEASE` |
 | `claw.env.audioBlobsDir` | envVar | config | claw |  |  |  |  |  | `CLAW_AUDIO_BLOBS_DIR` |
@@ -2966,6 +3076,7 @@ flowchart TD
 | `claw.env.audioSharedSecret` | envVar | config | claw |  |  |  |  |  | `CLAW_AUDIO_SHARED_SECRET` |
 | `claw.env.bin` | envVar | config | claw |  |  |  |  |  | `CLAW_BIN` |
 | `claw.env.calendarMock` | envVar | config | claw |  |  |  |  |  | `CLAW_CALENDAR_MOCK` |
+| `claw.env.channelProcessorId` | envVar | config | claw |  |  |  |  |  | `CLAW_CHANNEL_PROCESSOR_ID` |
 | `claw.env.codexPath` | envVar | config | claw |  |  |  |  |  | `CLAW_CODEX_PATH` |
 | `claw.env.codeHome` | envVar | config | claw |  |  |  |  |  | `CLAW_CODE_HOME` |
 | `claw.env.companyFakeAgentRuns` | envVar | config | claw |  |  |  |  |  | `CLAW_COMPANY_FAKE_AGENT_RUNS` |
@@ -2975,10 +3086,16 @@ flowchart TD
 | `claw.env.connectorSubscriptionsPath` | envVar | config | claw |  |  |  |  |  | `CLAW_CONNECTOR_SUBSCRIPTIONS_PATH` |
 | `claw.env.contentToken` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTENT_TOKEN` |
 | `claw.env.contentUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTENT_URL` |
+| `claw.env.contextAgentRunsActive` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTEXT_AGENT_RUNS_ACTIVE` |
+| `claw.env.contextBuildStatus` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTEXT_BUILD_STATUS` |
+| `claw.env.contextCustomMetric` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTEXT_CUSTOM_METRIC` |
+| `claw.env.contextServiceHealth` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTEXT_SERVICE_HEALTH` |
+| `claw.env.contextWeatherFile` | envVar | config | claw |  |  |  |  |  | `CLAW_CONTEXT_WEATHER_FILE` |
 | `claw.env.databaseAdminEmail` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_ADMIN_EMAIL` |
 | `claw.env.databaseAdminPassword` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_ADMIN_PASSWORD` |
 | `claw.env.databaseCorsOrigins` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_CORS_ORIGINS` |
 | `claw.env.databaseDataDir` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_DATA_DIR` |
+| `claw.env.databaseDbPath` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_DB_PATH` |
 | `claw.env.databaseDir` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_DIR` |
 | `claw.env.databaseFilesDir` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_FILES_DIR` |
 | `claw.env.databaseHost` | envVar | config | claw |  |  |  |  |  | `CLAW_DATABASE_HOST` |
@@ -2996,6 +3113,7 @@ flowchart TD
 | `claw.env.dbPath` | envVar | config | claw |  |  |  |  |  | `CLAW_DB_PATH` |
 | `claw.env.debugChatPerf` | envVar | config | claw |  |  |  |  |  | `CLAW_DEBUG_CHAT_PERF` |
 | `claw.env.demoDataDir` | envVar | config | claw |  |  |  |  |  | `CLAW_DEMO_DATA_DIR` |
+| `claw.env.demoScenario` | envVar | config | claw |  |  |  |  |  | `CLAW_DEMO_SCENARIO` |
 | `claw.env.deviceTestCommand` | envVar | config | claw |  |  |  |  |  | `CLAW_DEVICE_TEST_COMMAND` |
 | `claw.env.domainsActive` | envVar | config | claw |  |  |  |  |  | `CLAW_DOMAINS_ACTIVE` |
 | `claw.env.domainShareUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_DOMAIN_SHARE_URL` |
@@ -3060,6 +3178,7 @@ flowchart TD
 | `claw.env.hostTestSafariWindow` | envVar | config | claw |  |  |  |  |  | `CLAW_HOST_TEST_SAFARI_WINDOW` |
 | `claw.env.hostTestThingsProject` | envVar | config | claw |  |  |  |  |  | `CLAW_HOST_TEST_THINGS_PROJECT` |
 | `claw.env.hostValidationMode` | envVar | config | claw |  |  |  |  |  | `CLAW_HOST_VALIDATION_MODE` |
+| `claw.env.imageAllowEnvCredentials` | envVar | config | claw |  |  |  |  |  | `CLAW_IMAGE_ALLOW_ENV_CREDENTIALS` |
 | `claw.env.imageLibraryDir` | envVar | config | claw |  |  |  |  |  | `CLAW_IMAGE_LIBRARY_DIR` |
 | `claw.env.iotBaseUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_IOT_BASE_URL` |
 | `claw.env.iotDir` | envVar | config | claw |  |  |  |  |  | `CLAW_IOT_DIR` |
@@ -3084,6 +3203,8 @@ flowchart TD
 | `claw.env.monitorRelayUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_MONITOR_RELAY_URL` |
 | `claw.env.monitorRetentionDays` | envVar | config | claw |  |  |  |  |  | `CLAW_MONITOR_RETENTION_DAYS` |
 | `claw.env.node` | envVar | config | claw |  |  |  |  |  | `CLAW_NODE` |
+| `claw.env.openaiImageBaseUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_OPENAI_IMAGE_BASE_URL` |
+| `claw.env.openaiImageSecretRef` | envVar | config | claw |  |  |  |  |  | `CLAW_OPENAI_IMAGE_SECRET_REF` |
 | `claw.env.openclawPath` | envVar | config | claw |  |  |  |  |  | `CLAW_OPENCLAW_PATH` |
 | `claw.env.openWorkspace` | envVar | config | claw |  |  |  |  |  | `CLAW_OPEN_WORKSPACE` |
 | `claw.env.previewCloudflareUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_PREVIEW_CLOUDFLARE_URL` |
@@ -3106,6 +3227,9 @@ flowchart TD
 | `claw.env.publishingTokenStore` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_TOKEN_STORE` |
 | `claw.env.publishingUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_URL` |
 | `claw.env.publishingVaultUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_VAULT_URL` |
+| `claw.env.publishingWorkerBudget` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_WORKER_BUDGET` |
+| `claw.env.publishingWorkerIdleMaxMs` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_WORKER_IDLE_MAX_MS` |
+| `claw.env.publishingWorkerIdleMinMs` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_WORKER_IDLE_MIN_MS` |
 | `claw.env.publishingWorkerTickMs` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_WORKER_TICK_MS` |
 | `claw.env.publishingWorkspace` | envVar | config | claw |  |  |  |  |  | `CLAW_PUBLISHING_WORKSPACE` |
 | `claw.env.relayAccessToken` | envVar | config | claw |  |  |  |  |  | `CLAW_RELAY_ACCESS_TOKEN` |
@@ -3114,6 +3238,28 @@ flowchart TD
 | `claw.env.relayUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_RELAY_URL` |
 | `claw.env.relayWorkspaceId` | envVar | config | claw |  |  |  |  |  | `CLAW_RELAY_WORKSPACE_ID` |
 | `claw.env.releaseApprovedFor` | envVar | config | claw |  |  |  |  |  | `CLAW_RELEASE_APPROVED_FOR` |
+| `claw.env.remoteBind` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_BIND` |
+| `claw.env.remoteCoordinatorDeviceId` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_COORDINATOR_DEVICE_ID` |
+| `claw.env.remoteCoordinatorHeartbeatMs` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS` |
+| `claw.env.remoteCoordinatorTenantId` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_COORDINATOR_TENANT_ID` |
+| `claw.env.remoteCoordinatorToken` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_COORDINATOR_TOKEN` |
+| `claw.env.remoteCoordinatorUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_COORDINATOR_URL` |
+| `claw.env.remoteDb` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_DB` |
+| `claw.env.remoteDisableBonjour` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_DISABLE_BONJOUR` |
+| `claw.env.remoteEnableBonjour` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_ENABLE_BONJOUR` |
+| `claw.env.remoteEnableCoordinator` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_ENABLE_COORDINATOR` |
+| `claw.env.remoteEnableIroh` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_ENABLE_IROH` |
+| `claw.env.remoteExposure` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_EXPOSURE` |
+| `claw.env.remoteHttpPort` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_HTTP_PORT` |
+| `claw.env.remoteIrohDisable` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_IROH_DISABLE` |
+| `claw.env.remoteIrohRelayUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_IROH_RELAY_URL` |
+| `claw.env.remoteMaxBufferedBytes` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_MAX_BUFFERED_BYTES` |
+| `claw.env.remoteMaxQueueFrames` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_MAX_QUEUE_FRAMES` |
+| `claw.env.remoteMaxSessions` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_MAX_SESSIONS` |
+| `claw.env.remoteName` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_NAME` |
+| `claw.env.remotePort` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_PORT` |
+| `claw.env.remoteStatus` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_STATUS` |
+| `claw.env.remoteVersion` | envVar | config | claw |  |  |  |  |  | `CLAW_REMOTE_VERSION` |
 | `claw.env.reportGithubToken` | envVar | config | claw |  |  |  |  |  | `CLAW_REPORT_GITHUB_TOKEN` |
 | `claw.env.resourcesDir` | envVar | config | claw |  |  |  |  |  | `CLAW_RESOURCES_DIR` |
 | `claw.env.rulesDir` | envVar | config | claw |  |  |  |  |  | `CLAW_RULES_DIR` |
@@ -3157,8 +3303,11 @@ flowchart TD
 | `claw.env.secretsUiDistDir` | envVar | config | claw |  |  |  |  |  | `CLAW_SECRETS_UI_DIST_DIR` |
 | `claw.env.sessionsCodexDir` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_CODEX_DIR` |
 | `claw.env.sessionsDataDir` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_DATA_DIR` |
+| `claw.env.sessionsDbPath` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_DB_PATH` |
 | `claw.env.sessionsDisableCodex` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_DISABLE_CODEX` |
 | `claw.env.sessionsDisableHermes` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_DISABLE_HERMES` |
+| `claw.env.sessionsEventsMaxFrameBytes` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES` |
+| `claw.env.sessionsEventsMaxQueuedBytes` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES` |
 | `claw.env.sessionsEventsMaxSubscribers` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS` |
 | `claw.env.sessionsEventsQueueLimit` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_EVENTS_QUEUE_LIMIT` |
 | `claw.env.sessionsHermesDb` | envVar | config | claw |  |  |  |  |  | `CLAW_SESSIONS_HERMES_DB` |
@@ -3189,6 +3338,7 @@ flowchart TD
 | `claw.env.timeUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_TIME_URL` |
 | `claw.env.wacliPath` | envVar | config | claw |  |  |  |  |  | `CLAW_WACLI_PATH` |
 | `claw.env.workspace` | envVar | config | claw |  |  |  |  |  | `CLAW_WORKSPACE` |
+| `claw.env.zeroWorkReport` | envVar | config | claw |  |  |  |  |  | `CLAW_ZERO_WORK_REPORT` |
 | `claw.package.core` | packageName | package | claw |  |  |  |  |  | `@clawjs/core` |
 | `claw.package.cli` | packageName | package | claw |  |  |  |  |  | `@clawjs/cli` |
 | `claw.package.claw` | packageName | package | claw |  |  |  |  |  | `@clawjs/claw` |

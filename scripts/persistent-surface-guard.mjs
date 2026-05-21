@@ -21,7 +21,7 @@ const rules = [
   {
     id: "ts.direct-env-var",
     extensions: [".ts", ".tsx", ".js", ".mjs"],
-    pattern: /process\.env\.(?:CLAW|CLAWIX)_[A-Z0-9_]+|process\.env\[\s*(["'`])(?:CLAW|CLAWIX)_[A-Z0-9_]+\1\s*\]/,
+    pattern: /(?:process\.env\.|env\.)(?:CLAW|CLAWIX)_[A-Z0-9_]+|process\.env\[\s*(["'`])(?:CLAW|CLAWIX)_[A-Z0-9_]+\1\s*\]|^\s*(?:readonly\s+)?(?:CLAW|CLAWIX)_[A-Z0-9_]+\??\s*:/m,
     message: "owned environment variables must be registered as envVar surfaces",
   },
   {
@@ -374,8 +374,11 @@ function swiftRegisteredKeyFindings(filePath, body, registryBody) {
   return findings;
 }
 
-function registryCatalogFindings(registryBody) {
-  if (!registryBody) return [];
+function registryCatalogFindings(registrySources) {
+  const contractsBody = typeof registrySources === "string" ? registrySources : registrySources.contractsBody;
+  const graphBody = typeof registrySources === "string" ? registrySources : registrySources.graphBody;
+  const aggregateBody = typeof registrySources === "string" ? registrySources : registrySources.aggregateBody;
+  if (!contractsBody && !graphBody && !aggregateBody) return [];
   const requiredCatalogs = [
     "clawPublicApiRouteContractCatalog",
     "clawPrivateApiRouteContractCatalog",
@@ -397,17 +400,17 @@ function registryCatalogFindings(registryBody) {
   const findings = [];
 
   for (const catalog of requiredCatalogs) {
-    if (!registryBody.includes(`export const ${catalog} = defineStableCatalogFromEntries`)) {
+    if (!contractsBody.includes(`export const ${catalog} = defineStableCatalogFromEntries`)) {
       findings.push({
-        file: "packages/clawjs-core/src/surface-registry.ts",
+        file: "packages/clawjs-core/src/surface-registry-contracts.ts",
         line: 1,
         rule: "ts.registry-contract-catalog",
         message: `${catalog} must be declared from the typed stable contract catalog builder`,
       });
     }
-    if (!registryBody.includes(`...${catalog}.nodes`)) {
+    if (!graphBody.includes(`...${catalog}.nodes`)) {
       findings.push({
-        file: "packages/clawjs-core/src/surface-registry.ts",
+        file: "packages/clawjs-core/src/surface-registry-graph.ts",
         line: 1,
         rule: "ts.registry-contract-catalog",
         message: `${catalog} nodes must be consumed by the persistent surface registry`,
@@ -415,9 +418,9 @@ function registryCatalogFindings(registryBody) {
     }
   }
 
-  if (!registryBody.includes("export const clawStableContractCatalogs = Object.freeze({")) {
+  if (!contractsBody.includes("export const clawStableContractCatalogs = Object.freeze({")) {
     findings.push({
-      file: "packages/clawjs-core/src/surface-registry.ts",
+      file: "packages/clawjs-core/src/surface-registry-contracts.ts",
       line: 1,
       rule: "ts.registry-contract-catalog",
       message: "stable contract catalogs must be exposed through a frozen aggregate",
@@ -425,6 +428,36 @@ function registryCatalogFindings(registryBody) {
   }
 
   return findings;
+}
+
+function readRegistrySources(filePaths) {
+  const uniqueFiles = [...new Set(filePaths)].filter((filePath) => fs.existsSync(filePath));
+  const read = (suffix) => uniqueFiles
+    .filter((filePath) => filePath.endsWith(suffix))
+    .map((filePath) => fs.readFileSync(filePath, "utf8"))
+    .join("\n");
+  const contractsBody = read("surface-registry-contracts.ts");
+  const graphBody = read("surface-registry-graph.ts");
+  const aggregateBody = read("surface-registry.ts");
+  const swiftBody = uniqueFiles
+    .filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift"))
+    .map((filePath) => fs.readFileSync(filePath, "utf8"))
+    .join("\n");
+  const otherBody = uniqueFiles
+    .filter((filePath) =>
+      !filePath.endsWith("surface-registry-contracts.ts")
+      && !filePath.endsWith("surface-registry-graph.ts")
+      && !filePath.endsWith("surface-registry.ts")
+      && !filePath.endsWith("PersistentSurfaceRegistry.swift")
+    )
+    .map((filePath) => fs.readFileSync(filePath, "utf8"))
+    .join("\n");
+  return {
+    contractsBody,
+    graphBody,
+    aggregateBody,
+    registryBody: [contractsBody, graphBody, aggregateBody, swiftBody, otherBody].filter(Boolean).join("\n"),
+  };
 }
 
 function scanFile(filePath, registryBody = "", exceptions = { entries: [] }) {
@@ -478,6 +511,8 @@ function runSelfTest() {
     "const route = '/v1/namespaces/{namespace}/collections';",
     "const privateRoute = '/api/apps/{appId}/dashboard';",
     "const home = process.env.CLAW_HOME;",
+    "const maxSessions = env.CLAW_UNREGISTERED_SELF_TEST;",
+    "interface Env { CLAW_UNREGISTERED_TYPED_SELF_TEST?: string; }",
     "const payload = { event: 'workspace.initialized' };",
     "const record = { 'schemaVersion': 1 };",
     "localStorage.setItem('clawix.panel', 'open');",
@@ -533,8 +568,16 @@ function runSelfTest() {
   if (!expiredExceptionFindings.some((finding) => finding.rule === "guard.exception-expired")) {
     throw new Error("self-test did not reject expired DDL exception");
   }
-  const registryPath = path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts");
-  const registryFindings = registryCatalogFindings(fs.readFileSync(registryPath, "utf8"));
+  const registrySources = readRegistrySources([
+    path.join(rootDir, "packages/clawjs-core/src/surface-registry-contracts.ts"),
+    path.join(rootDir, "packages/clawjs-core/src/surface-registry-graph.ts"),
+    path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts"),
+  ]);
+  const registeredEnv = "const home = process.env.CLAW_HOME;\nconst bridgePort = env.CLAW_REMOTE_MAX_SESSIONS;\ninterface Env { CLAW_REMOTE_MAX_QUEUE_FRAMES?: string; }\n";
+  if (scanFile(writeTempFile(tempRoot, "registered-env.ts", registeredEnv), registrySources.registryBody).some((finding) => finding.rule === "ts.direct-env-var")) {
+    throw new Error("self-test incorrectly flagged registered env vars");
+  }
+  const registryFindings = registryCatalogFindings(registrySources);
   if (registryFindings.length) {
     throw new Error(`self-test found missing registry catalog source: ${registryFindings.map((finding) => finding.message).join("; ")}`);
   }
@@ -543,6 +586,12 @@ function runSelfTest() {
     throw new Error("self-test summary did not count expected findings");
   }
   console.log("persistent surface guard self-test passed");
+}
+
+function writeTempFile(directory, name, body) {
+  const filePath = path.join(directory, name);
+  fs.writeFileSync(filePath, body);
+  return filePath;
 }
 
 function summarizeFindings(findings) {
@@ -574,21 +623,24 @@ if (targets.length === 0) {
 
 const allFiles = targets.flatMap((target) => listFiles(path.resolve(rootDir, target)));
 const canonicalRegistryFiles = [
+  path.join(rootDir, "packages/clawjs-core/src/surface-registry-contracts.ts"),
+  path.join(rootDir, "packages/clawjs-core/src/surface-registry-graph.ts"),
   path.join(rootDir, "packages/clawjs-core/src/surface-registry.ts"),
   path.join(rootDir, "packages/clawjs/src/v1-data-surface.ts"),
   path.join(rootDir, "packages/clawjs/src/v1-data-agent-surfaces.ts"),
   path.join(rootDir, "../Clawix/clawix/macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift"),
   path.join(rootDir, "../Clawix/clawix/ios/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift"),
 ].filter((filePath) => fs.existsSync(filePath));
-const registryBody = [...allFiles, ...canonicalRegistryFiles]
-  .filter((filePath) => canonicalRegistryFiles.includes(filePath) || filePath.endsWith("PersistentSurfaceRegistry.swift") || filePath.endsWith("surface-registry.ts"))
-  .map((filePath) => fs.readFileSync(filePath, "utf8"))
-  .join("\n");
+const registrySources = readRegistrySources([
+  ...allFiles.filter((filePath) => filePath.endsWith("PersistentSurfaceRegistry.swift")),
+  ...canonicalRegistryFiles,
+]);
+const registryBody = registrySources.registryBody;
 const guardExceptions = readGuardExceptions();
 const findings = [
   ...guardExceptionValidationFindings(guardExceptions),
   ...allFiles.flatMap((filePath) => scanFile(filePath, registryBody, guardExceptions)),
-  ...registryCatalogFindings(registryBody),
+  ...registryCatalogFindings(registrySources),
 ];
 if (wantsJson) {
   console.log(JSON.stringify({ ok: findings.length === 0, summary: summarizeFindings(findings), findings }, null, 2));

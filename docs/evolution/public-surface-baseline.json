@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1058,
+    "surfaces": 1108,
     "cliCommands": 164
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:afc5fa63",
-    "cliCommands": "fnv1a32:b6ff32ad",
-    "combined": "fnv1a32:c55c1f64"
+    "surfaces": "fnv1a32:9d70948b",
+    "cliCommands": "fnv1a32:da176093",
+    "combined": "fnv1a32:c94f0cf9"
   },
   "surfaces": [
     {
@@ -3604,6 +3604,70 @@
       "stability": "v1"
     },
     {
+      "id": "claw.env.actorAssertion",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_ASSERTION",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.actorHostId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_HOST_ID",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.actorId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_ID",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.actorKind",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_KIND",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.actorRunId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_RUN_ID",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.actorSessionId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_SESSION_ID",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.actorTrustedKeys",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ACTOR_TRUSTED_KEYS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.adoptionCanonicitySelfTest",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ADOPTION_CANONICITY_SELF_TEST",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.allowedOrigins",
       "owner": "claw",
       "kind": "envVar",
@@ -3676,11 +3740,27 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.channelProcessorId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CHANNEL_PROCESSOR_ID",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.clawixMacosPath",
       "owner": "claw",
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAWIX_MACOS_PATH",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.clawixRoot",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAWIX_ROOT",
       "surfaceClass": "config"
     },
     {
@@ -3772,6 +3852,46 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.contextAgentRunsActive",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CONTEXT_AGENT_RUNS_ACTIVE",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.contextBuildStatus",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CONTEXT_BUILD_STATUS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.contextCustomMetric",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CONTEXT_CUSTOM_METRIC",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.contextServiceHealth",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CONTEXT_SERVICE_HEALTH",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.contextWeatherFile",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CONTEXT_WEATHER_FILE",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.databaseAdminEmail",
       "owner": "claw",
       "kind": "envVar",
@@ -3801,6 +3921,14 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_DATABASE_DATA_DIR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.databaseDbPath",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_DATABASE_DB_PATH",
       "surfaceClass": "config"
     },
     {
@@ -3937,6 +4065,14 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_DEMO_DATA_DIR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.demoScenario",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_DEMO_SCENARIO",
       "surfaceClass": "config"
     },
     {
@@ -4452,6 +4588,14 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.imageAllowEnvCredentials",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_IMAGE_ALLOW_ENV_CREDENTIALS",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.imageLibraryDir",
       "owner": "claw",
       "kind": "envVar",
@@ -4644,6 +4788,22 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.openaiImageBaseUrl",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_OPENAI_IMAGE_BASE_URL",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.openaiImageSecretRef",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_OPENAI_IMAGE_SECRET_REF",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.openclawPath",
       "owner": "claw",
       "kind": "envVar",
@@ -4820,6 +4980,30 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.publishingWorkerBudget",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_PUBLISHING_WORKER_BUDGET",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.publishingWorkerIdleMaxMs",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_PUBLISHING_WORKER_IDLE_MAX_MS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.publishingWorkerIdleMinMs",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_PUBLISHING_WORKER_IDLE_MIN_MS",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.publishingWorkerTickMs",
       "owner": "claw",
       "kind": "envVar",
@@ -4881,6 +5065,182 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_RELEASE_APPROVED_FOR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteBind",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_BIND",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteCoordinatorDeviceId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_COORDINATOR_DEVICE_ID",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteCoordinatorHeartbeatMs",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteCoordinatorTenantId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_COORDINATOR_TENANT_ID",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteCoordinatorToken",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_COORDINATOR_TOKEN",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteCoordinatorUrl",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_COORDINATOR_URL",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteDb",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_DB",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteDisableBonjour",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_DISABLE_BONJOUR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteEnableBonjour",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_ENABLE_BONJOUR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteEnableCoordinator",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_ENABLE_COORDINATOR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteEnableIroh",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_ENABLE_IROH",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteExposure",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_EXPOSURE",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteHttpPort",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_HTTP_PORT",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteIrohDisable",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_IROH_DISABLE",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteIrohRelayUrl",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_IROH_RELAY_URL",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteMaxBufferedBytes",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_MAX_BUFFERED_BYTES",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteMaxQueueFrames",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_MAX_QUEUE_FRAMES",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteMaxSessions",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_MAX_SESSIONS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteName",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_NAME",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remotePort",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_PORT",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteStatus",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_STATUS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.remoteVersion",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_REMOTE_VERSION",
       "surfaceClass": "config"
     },
     {
@@ -5228,6 +5588,14 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.sessionsDbPath",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_SESSIONS_DB_PATH",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.sessionsDisableCodex",
       "owner": "claw",
       "kind": "envVar",
@@ -5241,6 +5609,22 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_SESSIONS_DISABLE_HERMES",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.sessionsEventsMaxFrameBytes",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.sessionsEventsMaxQueuedBytes",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES",
       "surfaceClass": "config"
     },
     {
@@ -5481,6 +5865,14 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_WORKSPACE",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.zeroWorkReport",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_ZERO_WORK_REPORT",
       "surfaceClass": "config"
     },
     {
@@ -7747,6 +8139,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.privateApi.realtimeToken",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/realtime-token",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.privateApi.recurrences",
       "owner": "claw",
       "kind": "privateApiRoute",
@@ -9106,7 +9507,7 @@
     {
       "name": "debt",
       "kind": "canonical",
-      "usage": "debt list|show|audit|sources",
+      "usage": "debt list|show|audit|sources [--strict] [--severity P0|P1|P2|P3] [--release-effect blocks_release|blocks_growth|report_only]",
       "family": "diagnostics",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.debt.v1"
