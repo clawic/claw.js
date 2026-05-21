@@ -349,7 +349,8 @@ function collectExternalValidationManifest(repository: ClawDebtLedgerRepositoryR
   ];
   const rows = arrayOfRecords(json.rows);
   for (const rowId of [...new Set(rowIds)]) {
-    const row = rows.find((candidate) => stringField(candidate.id) === rowId);
+    const row = rows.find((candidate) => stringField(candidate.id) === rowId)
+      ?? rows.find((candidate) => stringArray(candidate.linkedPromiseIds).includes(rowId));
     addEntry(state, repository, {
       id: stableId(repository.repo, sourcePath, rowId),
       sourceType: "external_validation",

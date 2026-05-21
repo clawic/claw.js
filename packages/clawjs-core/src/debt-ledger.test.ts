@@ -46,10 +46,11 @@ test("debt ledger normalizes baselines, external pending rows, and dedupes finge
   fs.writeFileSync(path.join(root, "docs", "governance", "system-telemetry", "external-validation.manifest.json"), JSON.stringify({
     schemaVersion: 1,
     completionAudit: { statusSummary: { externalPendingRowIds: ["STA-001"] } },
-    externalValidationRunbook: { externalPendingRowIds: ["STA-001"] },
+    externalValidationRunbook: { externalPendingRowIds: ["EXT-001"] },
     rows: [{
-      id: "STA-001",
+      id: "EXT-001",
       status: "EXTERNAL PENDING",
+      linkedPromiseIds: ["STA-001"],
       reentryCommand: "claw system providers plan context.weather.live --json",
     }],
   }));
@@ -59,6 +60,7 @@ test("debt ledger normalizes baselines, external pending rows, and dedupes finge
   assert.equal(ledger.mode, "report_only");
   assert.equal(ledger.entries.some((entry) => entry.id === "baseline-one" && entry.classification === "baseline_exception"), true);
   assert.equal(ledger.entries.some((entry) => entry.classification === "external_pending" && entry.summary.includes("STA-001") && entry.reentryCommand === "claw system providers plan context.weather.live --json"), true);
+  assert.equal(ledger.entries.some((entry) => entry.classification === "external_pending" && entry.summary.includes("EXT-001") && entry.reentryCommand === "claw system providers plan context.weather.live --json"), true);
   assert.equal(ledger.entries.some((entry) => entry.classification === "lateral_debt"), true);
   assert.equal(ledger.audit.missingActionability.some((entry) => entry.missing.includes("reviewBy_or_expires")), true);
   assert.equal(ledger.audit.aliasHits.some((entry) => entry.term === "EXTERNAL PENDING" && entry.normalizedClassification === "external_pending"), true);
