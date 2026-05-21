@@ -1127,6 +1127,7 @@ els.recordsSort.addEventListener("change", () => {
 els.recordsTable.addEventListener("click", openRecordFromTableEvent);
 els.recordsTable.addEventListener("keydown", (event) => {
   if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
     openRecordFromTableEvent(event);
   }
 });
