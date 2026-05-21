@@ -188,7 +188,11 @@ function extractExports(filePath) {
     throw new Error(`Missing export block in ${filePath}`);
   }
   const tail = raw.slice(start + "export {".length);
-  const end = tail.indexOf("};");
+  const semicolon = tail.indexOf(";");
+  if (semicolon === -1) {
+    throw new Error(`Unterminated export block in ${filePath}`);
+  }
+  const end = tail.lastIndexOf("}", semicolon);
   if (end === -1) {
     throw new Error(`Unterminated export block in ${filePath}`);
   }

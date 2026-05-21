@@ -92,9 +92,6 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const portalHelpOnlyExit = writePublicPortalHelpOnly({ group, command, subcommand, wantsJson, context, binName, usage });
   if (portalHelpOnlyExit !== null) return portalHelpOnlyExit;
 
-  const baseSearchExit = writeBaseSearchResultIfPossible({ group, command, subcommand, positionals, context, wantsJson });
-  if (baseSearchExit !== null) return baseSearchExit;
-
   const baseSetupExit = await runBaseSetupOrModulesIfPossible({ group, positionals, flags, argv, context, wantsJson });
   if (baseSetupExit !== null) return baseSetupExit;
 
@@ -102,11 +99,24 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (baseInspectExit !== null) return baseInspectExit;
 
   if (!hasGeneratedCliRoute(group) && !isGeneratedCollectionAlias(group)) {
-    return await handleUnknownCliCommand({ group, positionals, context, wantsJson, usage });
+    const phrase = positionals.length ? positionals.join(" ") : group;
+    const commandIntent = await resolveCommandIntent(phrase);
+    if (commandIntent.status === "covered") {
+      return await runGeneratedCliRoute({
+        argv,
+        positionals,
+        flags,
+        context,
+        wantsJson,
+        binName,
+        group,
+        command,
+        subcommand,
+        routeGroup: "legacy",
+      });
+    }
+    return await handleUnknownCliCommand({ group, positionals, context, wantsJson, usage, commandIntent });
   }
-
-  const missingOptionalPackExit = await writeMissingOptionalPackIfNeeded({ group, context, wantsJson });
-  if (missingOptionalPackExit !== null) return missingOptionalPackExit;
 
   const routeGroup = routeGroupForCommand(group);
   return await runGeneratedCliRoute({
@@ -198,72 +208,37 @@ function writeRemovedSubcommandIfNeeded(input: {
     const detail = group === "runtime"
       ? "Runtime is limited to adapters and setup."
       : "Monitor is limited to health, uptime, incidents, metrics and dashboards.";
-    return writeRemovedJsonOrText({ wantsJson, context, canonicalCommand, message: `\`${binName} ${group} ${command}\` is not part of the public Claw CLI surface. ${detail}` });
+    return writeRemovedJsonOrText({ group, command, wantsJson, context, canonicalCommand, message: `\`${binName} ${group} ${command}\` is not part of the public Claw CLI surface. ${detail}` });
   }
   if ((group === "business" || group === "social") && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
-    return writeRemovedJsonOrText({ wantsJson, context, canonicalCommand, message: `\`${binName} ${group} ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.` });
+    return writeRemovedJsonOrText({ group, command, wantsJson, context, canonicalCommand, message: `\`${binName} ${group} ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use the ${group} portal help to pick a supported route.` });
   }
   if (group === "content" && command && REMOVED_V1_CRUD_COMMANDS.has(command)) {
-    return writeRemovedJsonOrText({ wantsJson, context, canonicalCommand, message: `\`${binName} content ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.` });
+    return writeRemovedJsonOrText({ group, command, wantsJson, context, canonicalCommand, message: `\`${binName} content ${command}\` is removed pre-v1 CRUD and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.` });
   }
   if (group === "content" && command && REMOVED_CONTENT_PORTAL_COMMANDS.has(command)) {
-    return writeRemovedJsonOrText({ wantsJson, context, canonicalCommand, message: `\`${binName} content ${command}\` is removed pre-v1 portal shorthand and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.` });
+    return writeRemovedJsonOrText({ group, command, wantsJson, context, canonicalCommand, message: `\`${binName} content ${command}\` is removed pre-v1 portal shorthand and is not part of the public Claw CLI surface. Use content brand, destination, campaign, entry, approval, or publish commands.` });
   }
   return null;
 }
 
 function writeRemovedJsonOrText(input: {
+  group: string | undefined;
+  command: string | undefined;
   wantsJson: boolean;
   context: CliContext;
   canonicalCommand: string;
   message: string;
 }): number {
   if (input.wantsJson) {
-    writeCommandJsonError(input.context.stdout, input.canonicalCommand, new CliHandledError("removed_public_command", input.message, CLI_EXIT_USAGE));
+    writeCommandJsonError(input.context.stdout, input.canonicalCommand, new CliHandledError("removed_public_command", input.message, CLI_EXIT_USAGE), {
+      invokedCommand: input.group ?? input.canonicalCommand,
+      subcommand: input.command ?? null,
+    });
   } else {
     input.context.stderr.write(`${input.message}\n`);
   }
   return CLI_EXIT_USAGE;
-}
-
-function writeBaseSearchResultIfPossible(input: {
-  group: string;
-  command: string | undefined;
-  subcommand: string | undefined;
-  positionals: string[];
-  context: CliContext;
-  wantsJson: boolean;
-}): number | null {
-  const searchSubcommands = new Set([
-    "query",
-    "sources",
-    "status",
-    "service",
-    "rebuild",
-    "changes",
-    "saved",
-    "monitors",
-    "actions",
-    "audit",
-    "source-sets",
-    "explain",
-    "profiles",
-    "jobs",
-  ]);
-  if (input.group !== "search" || !input.command || input.subcommand || searchSubcommands.has(input.command)) return null;
-  const query = input.positionals.slice(1).join(" ").trim();
-  const results = relatedCliMatches(query, { limit: 10 });
-  const payload = {
-    query,
-    scope: { mode: "generated-cli-router" },
-    results,
-  };
-  if (input.wantsJson) {
-    writeCommandJsonOk(input.context.stdout, "search", payload, { invokedCommand: "search", subcommand: query });
-  } else {
-    input.context.stdout.write(`${results.map((result) => `${result.name}\t${result.summary}`).join("\n")}\n`);
-  }
-  return CLI_EXIT_OK;
 }
 
 async function runBaseSetupOrModulesIfPossible(input: {
@@ -301,58 +276,17 @@ function writeBaseInspectIfPossible(input: {
   return CLI_EXIT_OK;
 }
 
-async function writeMissingOptionalPackIfNeeded(input: {
-  group: string;
-  context: CliContext;
-  wantsJson: boolean;
-}): Promise<number | null> {
-  const localDataGroups = new Set(["db", "records", "tasks", "task", "notes", "note", "projects", "project", "people", "person", "goals", "goal", "reminders", "reminder", "deadlines", "deadline", "work", "memory"]);
-  const runtimeGroups = new Set(["chat", "provider", "code", "runtime", "workspace"]);
-  const missingClawRuntime = !(await hasPackage("@clawjs/claw"));
-  if (missingClawRuntime && localDataGroups.has(input.group)) {
-    return writeOptionalPackMissing(input, "local-data", "@clawjs/local-data");
-  }
-  if (missingClawRuntime && runtimeGroups.has(input.group)) {
-    return writeOptionalPackMissing(input, "dev-diagnostics", "@clawjs/claw");
-  }
-  return null;
-}
-
-async function hasPackage(packageName: string): Promise<boolean> {
-  try {
-    await import(packageName);
-    return true;
-  } catch (error) {
-    const code = (error as { code?: string }).code;
-    if (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") return false;
-    throw error;
-  }
-}
-
-function writeOptionalPackMissing(input: {
-  group: string;
-  context: CliContext;
-  wantsJson: boolean;
-}, moduleId: string, optionalPack: string): number {
-  const message = `This command needs optional pack ${optionalPack}. Review it with \`claw modules install ${moduleId}\` and install the pack explicitly before using this capability.`;
-  if (input.wantsJson) {
-    writeCommandJsonError(input.context.stdout, input.group, new CliHandledError("optional_pack_missing", message, CLI_EXIT_USAGE), { requiredModule: moduleId, optionalPack });
-  } else {
-    input.context.stderr.write(`${message}\n`);
-  }
-  return CLI_EXIT_USAGE;
-}
-
 async function handleUnknownCliCommand(input: {
   group: string;
   positionals: string[];
   context: CliContext;
   wantsJson: boolean;
   usage: string;
+  commandIntent?: { status: string; execute: boolean; intent?: unknown };
 }): Promise<number> {
   const phrase = input.positionals.length ? input.positionals.join(" ") : input.group;
   const related = relatedCliMatches(phrase, { limit: 5 });
-  const commandIntent = await resolveCommandIntent(phrase);
+  const commandIntent = input.commandIntent ?? await resolveCommandIntent(phrase);
   if (input.wantsJson) {
     writeJsonError(
       input.context.stdout,
