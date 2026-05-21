@@ -1,4 +1,5 @@
-import { WebSocket, type RawData } from "ws";
+import { WebSocket } from "ws";
+import type * as WebSocketTypes from "ws";
 
 import type { AuthPrincipal } from "./auth.ts";
 import type { DatabaseOperation, RecordChangeEvent } from "./types.ts";
@@ -128,7 +129,7 @@ export class RealtimeHub {
 
     socket.on("pong", () => { alive = true; });
 
-    socket.on("message", (buffer: RawData) => {
+    socket.on("message", (buffer: WebSocketTypes.RawData) => {
       try {
         const payload = JSON.parse(buffer.toString()) as {
           type?: string;
