@@ -71,7 +71,7 @@ fixture tests. It does not add background telemetry or real-provider calls.
 ## Decision Tensions
 
 - **Prioritized axes**: performance and nonblocking behavior; reliability;
-  observable failure; user data ownership; agent and UI experience.
+  observable failure; user data stewardship; agent and UI experience.
 - **Constrained axes**: transport-specific tuning remains minimal until
   measurements justify separate policies.
 - **Tradeoffs accepted**: some slow clients are closed earlier, but the

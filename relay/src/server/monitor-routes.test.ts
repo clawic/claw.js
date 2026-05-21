@@ -11,7 +11,7 @@ import { splitMonitorPayload } from "./monitor-routes.ts";
 test("monitor stream splits large session deltas below the streaming frame limit", () => {
   const delta = "relay-monitor-delta-".repeat(5_000);
   const frames = splitMonitorPayload("monitor.session.delta", {
-    tenantId: "tenant-1",
+    scopeId: "scope-1",
     sessionId: "session-1",
     delta,
   });
