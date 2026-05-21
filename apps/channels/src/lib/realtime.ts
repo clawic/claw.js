@@ -148,11 +148,6 @@ export class RealtimeClient {
       ws.onopen = () => {
         this.acknowledgedSubscriptions.clear();
         this.publishStatus("open");
-        for (const collection of this.subscriptions) {
-          this.sendSubscribe(collection);
-        }
-        this.sendPing();
-        this.startHeartbeat();
       };
 
       ws.onmessage = (e) => {
@@ -211,6 +206,11 @@ export class RealtimeClient {
     }
 
     if (payload.type === "hello") {
+      for (const collection of this.subscriptions) {
+        this.sendSubscribe(collection);
+      }
+      this.sendPing();
+      this.startHeartbeat();
       this.publishStatus(this.status.state);
       return;
     }

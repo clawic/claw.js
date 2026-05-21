@@ -110,8 +110,6 @@ export class RealtimeHub {
     };
     this.clients.add(client);
 
-    this.enqueue(client, JSON.stringify({ type: "hello", at: new Date().toISOString() }));
-
     // Heartbeat: ping every 30s. Clients reply with pong; if no pong for
     // ~70s we drop the socket so a half-open TCP connection doesn't keep
     // a ghost subscription alive forever.
@@ -183,6 +181,8 @@ export class RealtimeHub {
       clearInterval(heartbeat);
       this.removeClient(client);
     });
+
+    this.enqueue(client, JSON.stringify({ type: "hello", at: new Date().toISOString() }));
   }
 
   broadcast(event: RecordChangeEvent): void {
