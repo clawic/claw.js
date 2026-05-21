@@ -27,6 +27,17 @@ reason, expiry, and reentry condition.
 For English closure templates, `punctual problem` means the same concrete
 problem instance.
 
+Anti-loop limit: if an agent adds `2 ciclos seguidos` of ADRs, ledgers,
+manifests, guards, or baselines `sin reducir blockers reales`, it must stop.
+`2 ciclos seguidos` means two consecutive closures in the same agent/task based
+on governance documents or checks. `sin reducir blockers reales` means the work
+did not resolve, narrow with evidence, or move a concrete blocker to external
+pending. The closure must classify the remaining state as `blocker directo`,
+`deuda lateral`, or `pendiente externo`; `pendiente externo` is equivalent to
+`EXTERNAL PENDING` when closure depends on a provider, permission, hardware,
+credential, physical evidence, or external approval. No más gobernanza para
+arreglar exceso de gobernanza.
+
 ## Threat Model Impact
 
 This decision does not add a runtime trust boundary. It strengthens safety by
@@ -44,7 +55,8 @@ being fixed only locally.
 - **Prioritized axes**: cumulative learning, repeatable review, and durable
   guardrails.
 - **Constrained axes**: quick one-off repairs are constrained when the defect
-  class would recur.
+  class would recur, but governance work is also constrained when it does not
+  reduce real blockers.
 - **Tradeoffs accepted**: closure work can be slightly larger because it must
   leave protection.
 - **Debt or pending evidence**: manual closure notes are allowed only with
@@ -85,3 +97,5 @@ ADR, the `adr-to-guardrail` and review skill updates, decision-map routing, and
 
 Review closure now has a durable shape. “Fixed” alone is incomplete for defects
 that reveal a missing class-level protection.
+Governance closure is also incomplete when it only adds more governance after
+two consecutive governance cycles without reducing a concrete blocker.

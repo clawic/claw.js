@@ -30,7 +30,10 @@ lanes. Do not duplicate long ADR rationale here.
 - Problem-to-Guardrail loop:
   [ADR 0046](../adr/0046-problem-to-guardrail-loop.md) requires detected
   problems to close as `guard/test añadido`, `ADR/regla añadida`, or
-  `deuda explícita con expiry`.
+  `deuda explícita con expiry`. Anti-loop rule: after `2 ciclos seguidos` of
+  ADRs, ledgers, manifests, guards, or baselines `sin reducir blockers reales`,
+  stop and classify the closure as `blocker directo`, `deuda lateral`, or
+  `pendiente externo`; no más gobernanza para arreglar exceso de gobernanza.
 - Adoption/canonicity governance:
   [Adoption And Canonicity Governance](../governance/adoption-canonicity.md)
   and [ADR 0041](../adr/0041-adoption-and-canonicity-governance.md) for
@@ -125,6 +128,9 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   behavior, unless they are pre-existing expiring baseline debt.
 - Every problem detected by an agent or review closes with one durable output:
   `guard/test añadido`, `ADR/regla añadida`, or `deuda explícita con expiry`.
+- If an agent adds `2 ciclos seguidos` of ADRs, ledgers, manifests, guards, or
+  baselines `sin reducir blockers reales`, it must stop and close as
+  `blocker directo`, `deuda lateral`, or `pendiente externo`.
 - Runtime-critical work starts from `claw inspect show|neighbors|routes`.
 - Performance-sensitive work classifies whole-computer resource impact before
   durable acceptance: speed, CPU, RAM, GPU/Neural Engine, disk, network,
