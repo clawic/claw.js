@@ -11,6 +11,10 @@ import { coalesceStreamChunks, extractCodexJsonlText, extractOpenClawCliText, sp
 
 const execFileAsync = promisify(execFile);
 
+function responseDeltaSse(delta: string): Uint8Array {
+  return new TextEncoder().encode(`event: response.output_text.delta\ndata: ${JSON.stringify({ delta })}\n\n`);
+}
+
 test("extractOpenClawCliText and splitTextIntoChunks normalize CLI output", () => {
   const text = extractOpenClawCliText(JSON.stringify({
     result: {
@@ -427,6 +431,100 @@ test("streamOpenClawSessionEvents emits chunk and title events", async () => {
     { type: "done" },
     { type: "title", value: "Plan a launch checklist" },
   ]);
+});
+
+test("streamOpenClawSessionEvents uses bounded assistant text for titles and partial events", async () => {
+  const longAssistantText = `Session title from assistant ${"x".repeat(9_000)}`;
+  const dependencies: StreamSessionDependencies = {
+    gatewayConfig: {
+      url: "http://127.0.0.1:18789",
+      port: 18789,
+      source: "explicit",
+    },
+    fetchImpl: async () => new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(responseDeltaSse(" \n "));
+        controller.enqueue(responseDeltaSse(longAssistantText));
+        controller.close();
+      },
+    }), { status: 200 }),
+  };
+
+  let streamedText = "";
+  let title = "";
+  for await (const event of streamOpenClawSessionEvents({
+    sessionId: "session-long-title",
+    messages: [{ role: "system", content: "No user title candidate." }],
+    coalesceMs: 0,
+  }, dependencies)) {
+    if (event.type === "chunk") streamedText += event.chunk.delta;
+    if (event.type === "title") title = event.title;
+  }
+
+  assert.equal(streamedText, ` \n ${longAssistantText}`);
+  assert.equal(title, `${longAssistantText.slice(0, 48).trim()}...`);
+
+  const erroredText = "e".repeat(9_000);
+  const errorEvents: Array<{ type: string; partialText?: string }> = [];
+  for await (const event of streamOpenClawSessionEvents({
+    sessionId: "session-long-error",
+    messages: [{ role: "user", content: "hello" }],
+    transport: "gateway",
+    coalesceMs: 0,
+  }, {
+    gatewayConfig: {
+      url: "http://127.0.0.1:18789",
+      port: 18789,
+      source: "explicit",
+    },
+    fetchImpl: async () => new Response(new ReadableStream({
+      async start(controller) {
+        controller.enqueue(responseDeltaSse(erroredText));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        controller.error(new Error("provider stream failed"));
+      },
+    }), { status: 200 }),
+  })) {
+    errorEvents.push({
+      type: event.type,
+      ...("partialText" in event ? { partialText: event.partialText } : {}),
+    });
+  }
+  const errorPartial = errorEvents.find((event) => event.type === "error")?.partialText;
+  assert.equal(errorPartial?.length, 8_192);
+  assert.equal(errorPartial, erroredText.slice(-8_192));
+
+  const abortedText = "a".repeat(9_000);
+  const abortController = new AbortController();
+  const abortedEvents: Array<{ type: string; partialText?: string }> = [];
+  for await (const event of streamOpenClawSessionEvents({
+    sessionId: "session-long-abort",
+    messages: [{ role: "user", content: "hello" }],
+    transport: "gateway",
+    signal: abortController.signal,
+    coalesceMs: 0,
+  }, {
+    gatewayConfig: {
+      url: "http://127.0.0.1:18789",
+      port: 18789,
+      source: "explicit",
+    },
+    fetchImpl: async () => new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(responseDeltaSse(abortedText));
+      },
+      cancel() {},
+    }), { status: 200 }),
+  })) {
+    if (event.type === "chunk") abortController.abort("user_cancelled");
+    abortedEvents.push({
+      type: event.type,
+      ...("partialText" in event ? { partialText: event.partialText } : {}),
+    });
+  }
+  const abortPartial = abortedEvents.find((event) => event.type === "aborted")?.partialText;
+  assert.equal(abortPartial?.length, 8_192);
+  assert.equal(abortPartial, abortedText.slice(-8_192));
 });
 
 test("streamOpenClawSession retries gateway failures and emits aborted/error events", async () => {

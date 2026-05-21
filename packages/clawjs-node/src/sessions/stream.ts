@@ -66,6 +66,9 @@ export interface CompactAssistantStreamTrace {
   deltas: CompactStreamTraceDelta[];
 }
 
+const SESSION_EVENT_TITLE_EXCERPT_MAX_CHARS = 2_048;
+const SESSION_EVENT_PARTIAL_TAIL_MAX_CHARS = 8_192;
+
 export function buildCompactAssistantStreamTrace(
   deltas: Array<{ delta: string; at?: number }>,
   coalesceMs = 16,
@@ -1167,7 +1170,8 @@ export async function* streamRuntimeSessionEvents(
     role: message.role,
     content: message.content,
   }));
-  let streamedAssistantText = "";
+  let titleExcerpt = "";
+  let partialTail = "";
   const requestedTransport = input.transport ?? "auto";
   const fetchImpl = dependencies.fetchImpl ?? globalThis.fetch;
   const sessionAdapter = dependencies.sessionAdapter ?? createFallbackOpenClawConversationAdapter(input, dependencies);
@@ -1193,16 +1197,33 @@ export async function* streamRuntimeSessionEvents(
     return events;
   }
 
+  function appendAssistantDelta(delta: string): void {
+    if (!delta) return;
+    if (titleExcerpt.length < SESSION_EVENT_TITLE_EXCERPT_MAX_CHARS) {
+      const titleDelta = titleExcerpt ? delta : delta.trimStart();
+      titleExcerpt += titleDelta.slice(0, SESSION_EVENT_TITLE_EXCERPT_MAX_CHARS - titleExcerpt.length);
+    }
+    partialTail = `${partialTail}${delta}`;
+    if (partialTail.length > SESSION_EVENT_PARTIAL_TAIL_MAX_CHARS) {
+      partialTail = partialTail.slice(-SESSION_EVENT_PARTIAL_TAIL_MAX_CHARS);
+    }
+  }
+
+  function partialText(): string | undefined {
+    const trimmed = partialTail.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
   function buildCompletionEvents(chunk: StreamChunk): SessionStreamEvent[] {
     const events: SessionStreamEvent[] = [
       { type: "done", sessionId: chunk.sessionId, ...(chunk.messageId ? { messageId: chunk.messageId } : {}) },
     ];
     const title = suggestSessionTitle([
       ...assistantMessages,
-      ...(streamedAssistantText.trim()
+      ...(titleExcerpt.trim()
         ? [{
             role: "assistant" as const,
-            content: streamedAssistantText.trim(),
+            content: titleExcerpt.trim(),
           }]
         : []),
     ]);
@@ -1237,7 +1258,7 @@ export async function* streamRuntimeSessionEvents(
           yield retryEvent;
         }
         if (!chunk.done) {
-          streamedAssistantText += chunk.delta;
+          appendAssistantDelta(chunk.delta);
           yield { type: "chunk", chunk };
           continue;
         }
@@ -1258,7 +1279,7 @@ export async function* streamRuntimeSessionEvents(
       yield { type: "transport", sessionId: input.sessionId, transport: "cli", fallback: false };
       for await (const chunk of coalesceStreamChunks(streamCliChunks(input, dependencies.runner!, sessionAdapter!), input)) {
         if (!chunk.done) {
-          streamedAssistantText += chunk.delta;
+          appendAssistantDelta(chunk.delta);
           yield { type: "chunk", chunk };
           continue;
         }
@@ -1286,7 +1307,7 @@ export async function* streamRuntimeSessionEvents(
             yield retryEvent;
           }
           if (!chunk.done) {
-            streamedAssistantText += chunk.delta;
+            appendAssistantDelta(chunk.delta);
             yield { type: "chunk", chunk };
             continue;
           }
@@ -1322,7 +1343,7 @@ export async function* streamRuntimeSessionEvents(
                 yield retryEvent;
               }
               if (!chunk.done) {
-                streamedAssistantText += chunk.delta;
+                appendAssistantDelta(chunk.delta);
                 yield { type: "chunk", chunk };
                 continue;
               }
@@ -1356,7 +1377,7 @@ export async function* streamRuntimeSessionEvents(
     yield { type: "transport", sessionId: input.sessionId, transport: "cli", fallback: canUseGateway };
     for await (const chunk of coalesceStreamChunks(streamCliChunks(input, dependencies.runner!, sessionAdapter!), input)) {
       if (!chunk.done) {
-        streamedAssistantText += chunk.delta;
+        appendAssistantDelta(chunk.delta);
         yield { type: "chunk", chunk };
         continue;
       }
@@ -1368,12 +1389,13 @@ export async function* streamRuntimeSessionEvents(
     for (const retryEvent of flushRetries()) {
       yield retryEvent;
     }
+    const boundedPartialText = partialText();
     if (input.signal?.aborted) {
       yield {
         type: "aborted",
         sessionId: input.sessionId,
         ...(input.signal.reason ? { reason: String(input.signal.reason) } : {}),
-        ...(streamedAssistantText.trim() ? { partialText: streamedAssistantText } : {}),
+        ...(boundedPartialText ? { partialText: boundedPartialText } : {}),
       };
       return;
     }
@@ -1384,7 +1406,7 @@ export async function* streamRuntimeSessionEvents(
       sessionId: input.sessionId,
       error: normalized,
       transport: requestedTransport === "cli" ? "cli" : canUseGateway ? "gateway" : "cli",
-      ...(streamedAssistantText.trim() ? { partialText: streamedAssistantText } : {}),
+      ...(boundedPartialText ? { partialText: boundedPartialText } : {}),
     };
   }
 }

@@ -333,7 +333,7 @@ export class ClawRuntimeAppServer {
     }
 
     if (failure) {
-      const partialText = (failure.partialText ?? assistantText).trim();
+      const partialText = assistantText.trim() || (failure.partialText ?? "").trim();
       if (partialText) {
         sessionStore.appendMessage(thread.id, {
           role: "assistant",

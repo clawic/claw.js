@@ -71,11 +71,13 @@ function createFetchImpl(chunks: Array<{ delta: string; delayMs?: number }>): ty
   }));
 }
 
-function createFailingFetchImpl(): typeof fetch {
+function createFailingFetchImpl(chunks: string[] = ["partial reply"]): typeof fetch {
   const encoder = new TextEncoder();
   return async () => new Response(new ReadableStream({
     async start(controller) {
-      controller.enqueue(encoder.encode(ssePayload("partial reply")));
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(ssePayload(chunk)));
+      }
       await delay(5);
       controller.error(new Error("provider stream failed"));
     },
@@ -243,5 +245,25 @@ test("turn/start emits failure and persists a partial assistant once", async () 
   assert.equal(session?.messages.length, 2);
   assert.equal(session?.messages[1]?.role, "assistant");
   assert.equal(session?.messages[1]?.content, "partial reply");
+  assert.equal(session?.messages[1]?.metadata?.partial, true);
+});
+
+test("turn/start persists complete local partial text when event partialText is bounded", async () => {
+  const workspaceDir = tempWorkspace();
+  const longPartial = "p".repeat(9_000);
+  const server = createServer(workspaceDir, createFailingFetchImpl([longPartial]));
+  const threadId = await startThread(server, workspaceDir);
+
+  await server.handle({
+    id: 7,
+    method: "turn/start",
+    params: { threadId, input: [{ type: "text", text: "fail after long partial" }] },
+  });
+
+  const session = new SessionStore(workspaceDir).getSession(threadId);
+  assert.equal(session?.messages.length, 2);
+  assert.equal(session?.messages[1]?.role, "assistant");
+  assert.equal(session?.messages[1]?.content.length, 9_000);
+  assert.equal(session?.messages[1]?.content, longPartial);
   assert.equal(session?.messages[1]?.metadata?.partial, true);
 });
