@@ -13,6 +13,7 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:4510";
 const DEFAULT_NAMESPACE = "main";
 const DEFAULT_ADMIN_EMAIL = "admin@database.local";
 const DEFAULT_ADMIN_PASSWORD = "database-admin";
+const REALTIME_CONNECTION_TTL_MS = 60 * 60 * 1000;
 
 export interface DatabaseRecord {
   id: string;
@@ -30,6 +31,11 @@ interface ListOptions {
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 let inflightLogin: Promise<string> | null = null;
+let cachedRealtimeConnection: {
+  url: string;
+  namespaceId: string;
+  createdAt: number;
+} | null = null;
 
 function baseUrl(): string {
   return process.env.CLAW_DATABASE_URL?.trim() || DEFAULT_BASE_URL;
@@ -95,6 +101,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return (await res.json()) as T;
 }
 
+function websocketUrl(path: string, token: string): string {
+  const url = new URL(path, baseUrl());
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.searchParams.set("token", token);
+  return url.toString();
+}
+
 function recordsPath(collection: string): string {
   return `/v1/namespaces/${databaseNamespace()}/collections/${collection}/records`;
 }
@@ -143,4 +156,33 @@ export async function updateRecord<T extends DatabaseRecord = DatabaseRecord>(
 
 export async function deleteRecord(collection: string, id: string): Promise<void> {
   await request<{ ok: boolean }>("DELETE", `${recordsPath(collection)}/${id}`);
+}
+
+export async function getRealtimeConnection(opts?: { refresh?: boolean }): Promise<{
+  url: string;
+  namespaceId: string;
+}> {
+  if (
+    cachedRealtimeConnection &&
+    !opts?.refresh &&
+    Date.now() - cachedRealtimeConnection.createdAt < REALTIME_CONNECTION_TTL_MS
+  ) {
+    return cachedRealtimeConnection;
+  }
+
+  const namespaceId = databaseNamespace();
+  const issued = await request<{
+    record: DatabaseRecord;
+    token: string;
+  }>("POST", `/v1/namespaces/${namespaceId}/tokens`, {
+    label: "channels realtime",
+    operations: ["realtime:subscribe"],
+  });
+
+  cachedRealtimeConnection = {
+    url: websocketUrl("/v1/realtime", issued.token),
+    namespaceId,
+    createdAt: Date.now(),
+  };
+  return cachedRealtimeConnection;
 }

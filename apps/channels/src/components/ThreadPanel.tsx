@@ -4,6 +4,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useHub } from "@/context/HubContext";
+import { useThreadMessages } from "@/hooks/useMessages";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 import { isSameDay, formatDate } from "@/lib/utils";
@@ -28,13 +29,7 @@ export function ThreadPanel() {
     enabled: !!threadMessageId,
   });
 
-  const { data: replies = [] } = useQuery<Message[]>({
-    queryKey: ["hub_messages", "thread", threadMessageId],
-    queryFn: () =>
-      fetch(`/api/messages/${threadMessageId}/thread`).then((r) => r.json()),
-    enabled: !!threadMessageId,
-    refetchInterval: 3000,
-  });
+  const { data: replies = [] } = useThreadMessages(threadMessageId);
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });

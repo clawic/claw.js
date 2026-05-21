@@ -6,6 +6,7 @@ import { ChannelHeader } from "./ChannelHeader";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 import { useHub } from "@/context/HubContext";
+import { useMessages } from "@/hooks/useMessages";
 import { isSameDay, formatDate } from "@/lib/utils";
 import type { Channel, Message } from "@/lib/hub-types";
 
@@ -41,13 +42,7 @@ export function ChatArea() {
     enabled: !!selectedChannelId,
   });
 
-  const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: ["hub_messages", selectedChannelId],
-    queryFn: () =>
-      fetch(`/api/channels/${selectedChannelId}/messages`).then((r) => r.json()),
-    enabled: !!selectedChannelId,
-    refetchInterval: 3000,
-  });
+  const { data: messages = [] } = useMessages(selectedChannelId);
 
   // Only show top-level messages (no thread replies)
   const topLevel = messages.filter((m) => !m.threadId);
