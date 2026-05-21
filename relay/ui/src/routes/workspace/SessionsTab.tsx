@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Plus, Send } from "lucide-react";
 import { api, streamSSE } from "../../lib/api";
 import { relativeTime } from "../../lib/format";
@@ -22,7 +23,7 @@ type SessionDetail = {
   messages?: RawMessage[];
   transcript?: RawMessage[];
 };
-type TranscriptLine = { role: "user" | "assistant"; text: string; streaming?: boolean };
+type TranscriptLine = { id: string; role: "user" | "assistant"; text: string; streaming?: boolean };
 
 function normalizeMessages(data: SessionDetail): TranscriptLine[] {
   const raw =
@@ -31,13 +32,19 @@ function normalizeMessages(data: SessionDetail): TranscriptLine[] {
     data.messages ??
     data.transcript ??
     [];
-  return raw.map((m) => {
+  return raw.map((m, index) => {
     const role = (m.role ?? (m.type === "user" ? "user" : "assistant")) as
       | "user"
       | "assistant";
     const text = m.content ?? m.text ?? m.message ?? "";
-    return { role, text };
+    return { id: `history-${index}`, role, text };
   });
+}
+
+const BOTTOM_STICKY_PX = 48;
+
+function isNearBottom(element: HTMLElement): boolean {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_STICKY_PX;
 }
 
 export function SessionsTab({ prefix }: { prefix: string }) {
@@ -83,6 +90,41 @@ export function SessionsTab({ prefix }: { prefix: string }) {
   const [sending, setSending] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const lineIdRef = useRef(0);
+  const streamTextRef = useRef("");
+  const streamLineIdRef = useRef<string | null>(null);
+  const streamRafRef = useRef<number | null>(null);
+  const stickToBottomRef = useRef(true);
+
+  const nextLineId = (prefix: string) => `${prefix}-${Date.now()}-${lineIdRef.current++}`;
+
+  const updateStreamingLine = (text: string, streaming: boolean) => {
+    const id = streamLineIdRef.current;
+    if (!id) return;
+    setTranscript((prev) =>
+      prev.map((line) => (line.id === id ? { ...line, text, streaming } : line)),
+    );
+  };
+
+  const cancelStreamingCommit = () => {
+    if (streamRafRef.current != null) {
+      cancelAnimationFrame(streamRafRef.current);
+      streamRafRef.current = null;
+    }
+  };
+
+  const scheduleStreamingCommit = () => {
+    if (streamRafRef.current != null) return;
+    streamRafRef.current = requestAnimationFrame(() => {
+      streamRafRef.current = null;
+      updateStreamingLine(streamTextRef.current, true);
+    });
+  };
+
+  const flushStreamingCommit = (streaming: boolean) => {
+    cancelStreamingCommit();
+    updateStreamingLine(streamTextRef.current, streaming);
+  };
 
   useEffect(() => {
     if (detailQuery.data) setTranscript(detailQuery.data);
@@ -91,11 +133,17 @@ export function SessionsTab({ prefix }: { prefix: string }) {
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
+      cancelStreamingCommit();
     };
   }, [activeId, prefix]);
 
   useEffect(() => {
-    if (scrollerRef.current) scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    if (!stickToBottomRef.current || !scrollerRef.current) return;
+    requestAnimationFrame(() => {
+      if (stickToBottomRef.current && scrollerRef.current) {
+        scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+      }
+    });
   }, [transcript]);
 
   const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
@@ -103,12 +151,17 @@ export function SessionsTab({ prefix }: { prefix: string }) {
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || !activeId || sending) return;
+    const userLineId = nextLineId("user");
+    const assistantLineId = nextLineId("assistant");
     setInput("");
     setSending(true);
+    streamTextRef.current = "";
+    streamLineIdRef.current = assistantLineId;
+    stickToBottomRef.current = true;
     setTranscript((prev) => [
       ...prev,
-      { role: "user", text },
-      { role: "assistant", text: "", streaming: true },
+      { id: userLineId, role: "user", text },
+      { id: assistantLineId, role: "assistant", text: "", streaming: true },
     ]);
 
     abortRef.current?.abort();
@@ -118,45 +171,33 @@ export function SessionsTab({ prefix }: { prefix: string }) {
     try {
       const url = `${prefix}/sessions/${activeId}/stream?message=${encodeURIComponent(text)}`;
       let full = "";
+      let finalText: string | null = null;
       for await (const evt of streamSSE(url, { method: "GET", signal: ctrl.signal })) {
         const data = evt.data as { delta?: string; error?: string };
         if (evt.event === "error" && data?.error) {
-          setTranscript((prev) => {
-            const next = [...prev];
-            next[next.length - 1] = { role: "assistant", text: `Error: ${data.error}` };
-            return next;
-          });
+          finalText = `Error: ${data.error}`;
           break;
         }
         if (data?.delta) {
           full += data.delta;
-          setTranscript((prev) => {
-            const next = [...prev];
-            next[next.length - 1] = { role: "assistant", text: full, streaming: true };
-            return next;
-          });
+          streamTextRef.current = full;
+          scheduleStreamingCommit();
         }
       }
-      setTranscript((prev) => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last?.role === "assistant") {
-          next[next.length - 1] = { role: "assistant", text: full || "(no response)" };
-        }
-        return next;
-      });
+      streamTextRef.current = finalText ?? (full || "(no response)");
+      flushStreamingCommit(false);
     } catch (err) {
-      if ((err as Error).name !== "AbortError") {
+      if ((err as Error).name === "AbortError") {
+        flushStreamingCommit(false);
+      } else {
         const message = (err as Error).message;
-        setTranscript((prev) => {
-          const next = [...prev];
-          next[next.length - 1] = { role: "assistant", text: `Error: ${message}` };
-          return next;
-        });
+        streamTextRef.current = `Error: ${message}`;
+        flushStreamingCommit(false);
       }
     } finally {
       setSending(false);
       abortRef.current = null;
+      streamLineIdRef.current = null;
     }
   };
 
@@ -225,7 +266,10 @@ export function SessionsTab({ prefix }: { prefix: string }) {
           <>
             <div
               ref={scrollerRef}
-              className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 p-4"
+              onScroll={(event) => {
+                stickToBottomRef.current = isNearBottom(event.currentTarget);
+              }}
+              className="flex-1 min-h-0 overflow-y-auto p-4"
             >
               {detailQuery.isLoading && transcript.length === 0 ? (
                 <div className="text-xs text-text-muted">Loading messages...</div>
@@ -234,20 +278,7 @@ export function SessionsTab({ prefix }: { prefix: string }) {
                   No messages yet. Start chatting below.
                 </div>
               ) : (
-                transcript.map((m, i) => (
-                  <div
-                    key={i}
-                    className={[
-                      "max-w-[80%] px-3 py-2 rounded text-[13px] leading-relaxed whitespace-pre-wrap break-words",
-                      m.role === "user"
-                        ? "self-end bg-text text-bg"
-                        : "self-start bg-bg-hover text-text border border-border",
-                    ].join(" ")}
-                  >
-                    {m.text}
-                    {m.streaming ? <span className="opacity-50">&nbsp;▍</span> : null}
-                  </div>
-                ))
+                <VirtualizedTranscript lines={transcript} scrollerRef={scrollerRef} />
               )}
             </div>
             <div className="border-t border-border p-3 flex items-end gap-2">
@@ -272,6 +303,62 @@ export function SessionsTab({ prefix }: { prefix: string }) {
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function VirtualizedTranscript({
+  lines,
+  scrollerRef,
+}: {
+  lines: TranscriptLine[];
+  scrollerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const virtualizer = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => scrollerRef.current,
+    estimateSize: () => 64,
+    getItemKey: (index) => lines[index]?.id ?? index,
+    overscan: 8,
+  });
+  const virtualItems = virtualizer.getVirtualItems();
+
+  return (
+    <div
+      style={{
+        height: `${virtualizer.getTotalSize()}px`,
+        position: "relative",
+      }}
+    >
+      {virtualItems.map((item) => {
+        const line = lines[item.index];
+        if (!line) return null;
+        return (
+          <div
+            key={item.key}
+            ref={virtualizer.measureElement}
+            data-index={item.index}
+            data-testid="relay-session-message"
+            className={[
+              "absolute left-0 top-0 w-full pb-2 flex",
+              line.role === "user" ? "justify-end" : "justify-start",
+            ].join(" ")}
+            style={{ transform: `translateY(${item.start}px)` }}
+          >
+            <div
+              className={[
+                "max-w-[80%] px-3 py-2 rounded text-[13px] leading-relaxed whitespace-pre-wrap break-words",
+                line.role === "user"
+                  ? "bg-text text-bg"
+                  : "bg-bg-hover text-text border border-border",
+              ].join(" ")}
+            >
+              {line.text}
+              {line.streaming ? <span className="opacity-50">&nbsp;▍</span> : null}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

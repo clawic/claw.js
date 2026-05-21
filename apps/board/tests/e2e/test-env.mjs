@@ -43,12 +43,12 @@ async function waitFor(url, label) {
 }
 
 const database = start("npx", ["tsx", "../../database/src/bin/server.ts"], {
-  DATABASE_HOST: "127.0.0.1",
-  DATABASE_PORT: databasePort,
-  DATABASE_DATA_DIR: databaseDataDir,
-  DATABASE_DB_PATH: path.join(databaseDataDir, "core.sqlite"),
-  DATABASE_FILES_DIR: path.join(databaseDataDir, "files"),
-  DATABASE_JWT_SECRET: "company-e2e-database-secret",
+  CLAW_DATABASE_HOST: "127.0.0.1",
+  CLAW_DATABASE_PORT: databasePort,
+  CLAW_DATABASE_DATA_DIR: databaseDataDir,
+  CLAW_DATABASE_DB_PATH: path.join(databaseDataDir, "core.sqlite"),
+  CLAW_DATABASE_FILES_DIR: path.join(databaseDataDir, "files"),
+  CLAW_DATABASE_JWT_SECRET: "company-e2e-database-secret",
 });
 
 await waitFor(`http://127.0.0.1:${databasePort}/v1/health`, "database");

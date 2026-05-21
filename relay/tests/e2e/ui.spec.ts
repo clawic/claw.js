@@ -274,6 +274,10 @@ test("relay shared browser opens in an immersive standalone view", async ({ page
 });
 
 test("relay monitor renders a live session transcript", async ({ page }) => {
+  const transcriptLines = Array.from(
+    { length: 240 },
+    (_, index) => `Live monitor transcript line ${index + 1}`,
+  );
   await page.route("**/v1/tenants/demo-tenant/monitor/stream**", async (route) => {
     const now = Date.now();
     await route.fulfill({
@@ -298,7 +302,7 @@ test("relay monitor renders a live session transcript", async ({ page }) => {
         `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", startedAt: now, snippet: "audit this flow" })}`,
         "",
         "event: monitor.session.delta",
-        `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", delta: "Live monitor transcript" })}`,
+        `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", delta: transcriptLines.join("\n") })}`,
         "",
         "event: monitor.session.end",
         `data: ${JSON.stringify({ tenantId: "demo-tenant", agentId: "codex-monitor", workspaceId: "main", sessionId: "mon-session", reason: "complete", durationMs: 42 })}`,
@@ -314,7 +318,8 @@ test("relay monitor renders a live session transcript", async ({ page }) => {
   await page.getByRole("link", { name: /Monitor/ }).click();
   await expect(page.getByRole("heading", { name: "Monitor" })).toBeVisible();
   await expect(page.getByText("codex-monitor", { exact: true })).toBeVisible();
-  await expect(page.getByText("Live monitor transcript", { exact: true })).toBeVisible();
+  await expect(page.getByText("Live monitor transcript line 240", { exact: true })).toBeVisible();
+  await expect.poll(async () => page.getByTestId("relay-monitor-transcript-line").count()).toBeLessThan(80);
   await expect(page.getByText("stream started").first()).toBeVisible();
 
   const outputDir = path.join(process.cwd(), "output", "playwright");

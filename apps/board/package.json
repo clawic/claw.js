@@ -18,6 +18,7 @@
     "@clawjs/claw": "file:../../packages/clawjs-node",
     "@clawjs/core": "file:../../packages/clawjs-core",
     "@tanstack/react-query": "^5.96.2",
+    "@tanstack/react-virtual": "^3.13.25",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

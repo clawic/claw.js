@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Bot, Loader2, Play, Send, User } from "lucide-react";
 import { StatusIcon } from "@/components/StatusIcon";
 import { PriorityIcon } from "@/components/PriorityIcon";
@@ -36,6 +37,13 @@ interface IssueDetailPayload {
   comments: IssueComment[];
 }
 
+const BOTTOM_STICKY_PX = 48;
+const EMPTY_AGENTS: CompanyAgent[] = [];
+
+function isNearBottom(element: HTMLElement): boolean {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_STICKY_PX;
+}
+
 export default function IssuePage({
   params,
 }: {
@@ -50,6 +58,29 @@ export default function IssuePage({
   const [streamBuffer, setStreamBuffer] = useState("");
   const [running, setRunning] = useState(false);
   const mainScroll = useRef<HTMLDivElement>(null);
+  const streamBufferRef = useRef("");
+  const streamRafRef = useRef<number | null>(null);
+  const stickToBottomRef = useRef(true);
+
+  const cancelStreamCommit = () => {
+    if (streamRafRef.current != null) {
+      cancelAnimationFrame(streamRafRef.current);
+      streamRafRef.current = null;
+    }
+  };
+
+  const flushStreamCommit = () => {
+    cancelStreamCommit();
+    setStreamBuffer(streamBufferRef.current);
+  };
+
+  const scheduleStreamCommit = () => {
+    if (streamRafRef.current != null) return;
+    streamRafRef.current = requestAnimationFrame(() => {
+      streamRafRef.current = null;
+      setStreamBuffer(streamBufferRef.current);
+    });
+  };
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["issue", issueId],
@@ -71,7 +102,7 @@ export default function IssuePage({
     enabled: !!selectedCompanyId,
   });
 
-  const agents = companyDetail?.agents ?? [];
+  const agents = companyDetail?.agents ?? EMPTY_AGENTS;
   const agentById = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
 
   useEffect(() => {
@@ -84,10 +115,17 @@ export default function IssuePage({
   }, [data?.issue, setBreadcrumbs]);
 
   useEffect(() => {
-    if (mainScroll.current) {
-      mainScroll.current.scrollTop = mainScroll.current.scrollHeight;
-    }
+    if (!stickToBottomRef.current || !mainScroll.current) return;
+    requestAnimationFrame(() => {
+      if (stickToBottomRef.current && mainScroll.current) {
+        mainScroll.current.scrollTop = mainScroll.current.scrollHeight;
+      }
+    });
   }, [streamBuffer, data?.comments?.length]);
+
+  useEffect(() => {
+    return () => cancelStreamCommit();
+  }, []);
 
   // ── Mutations ──
   const updateIssue = useMutation({
@@ -119,6 +157,7 @@ export default function IssuePage({
     },
     onSuccess: () => {
       setReply("");
+      stickToBottomRef.current = true;
       queryClient.invalidateQueries({ queryKey: ["issue", issueId] });
     },
   });
@@ -126,7 +165,9 @@ export default function IssuePage({
   const runWithAgent = useCallback(async () => {
     if (running) return;
     setRunning(true);
+    streamBufferRef.current = "";
     setStreamBuffer("");
+    stickToBottomRef.current = true;
     try {
       const res = await fetch(`/api/issues/${issueId}/run`, { method: "POST" });
       if (!res.body) throw new Error("no stream body");
@@ -145,10 +186,13 @@ export default function IssuePage({
           try {
             const payload = JSON.parse(line);
             if (typeof payload.delta === "string") {
-              setStreamBuffer((prev) => prev + payload.delta);
+              streamBufferRef.current += payload.delta;
+              scheduleStreamCommit();
             }
             if (payload.done) {
+              flushStreamCommit();
               await refetch();
+              streamBufferRef.current = "";
               setStreamBuffer("");
             }
           } catch {
@@ -252,7 +296,7 @@ export default function IssuePage({
         </Field>
       </div>
     );
-  }, [data?.issue, agents, agentById, updateIssue]);
+  }, [data?.issue, agents, agentById]);
 
   usePropertiesPanel(
     propertiesContent ? { title: "Properties", content: propertiesContent } : null,
@@ -281,7 +325,13 @@ export default function IssuePage({
         )}
       </header>
 
-      <main ref={mainScroll} className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+      <main
+        ref={mainScroll}
+        onScroll={(event) => {
+          stickToBottomRef.current = isNearBottom(event.currentTarget);
+        }}
+        className="flex-1 min-h-0 overflow-y-auto px-6 py-6"
+      >
         {issue.description && (
           <section className="mb-6 rounded-lg border border-border bg-card/50 p-4">
             <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -291,7 +341,7 @@ export default function IssuePage({
           </section>
         )}
 
-        <section className="space-y-3">
+        <section>
           {data.comments.length === 0 && !streamBuffer && (
             <EmptyState
               icon={Bot}
@@ -302,18 +352,14 @@ export default function IssuePage({
               }
             />
           )}
-          {data.comments.map((comment) => (
-            <CommentCard key={comment.id} comment={comment} agent={comment.authorAgentId ? agentById.get(comment.authorAgentId) : null} />
-          ))}
-          {streamBuffer && (
-            <div className="rounded-lg border border-amber-400/30 bg-amber-500/5 p-4">
-              <div className="mb-1 flex items-center gap-2 text-[10px] text-amber-400">
-                <Bot className="h-3 w-3" />
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {assignee?.title ?? "Agent"} is thinking…
-              </div>
-              <div className="whitespace-pre-wrap text-[13px] text-foreground">{streamBuffer}</div>
-            </div>
+          {(data.comments.length > 0 || streamBuffer) && (
+            <VirtualizedIssueComments
+              comments={data.comments}
+              streamBuffer={streamBuffer}
+              streamAuthor={assignee?.title ?? "Agent"}
+              agentById={agentById}
+              scrollerRef={mainScroll}
+            />
           )}
         </section>
       </main>
@@ -365,6 +411,88 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function labelize(v: string): string {
   return v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+type IssueCommentListItem =
+  | { kind: "comment"; comment: IssueComment }
+  | { kind: "stream"; body: string; author: string };
+
+function VirtualizedIssueComments({
+  comments,
+  streamBuffer,
+  streamAuthor,
+  agentById,
+  scrollerRef,
+}: {
+  comments: IssueComment[];
+  streamBuffer: string;
+  streamAuthor: string;
+  agentById: Map<string, CompanyAgent>;
+  scrollerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const items = useMemo<IssueCommentListItem[]>(
+    () => [
+      ...comments.map((comment) => ({ kind: "comment" as const, comment })),
+      ...(streamBuffer ? [{ kind: "stream" as const, body: streamBuffer, author: streamAuthor }] : []),
+    ],
+    [comments, streamBuffer, streamAuthor],
+  );
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollerRef.current,
+    estimateSize: () => 108,
+    getItemKey: (index) => {
+      const item = items[index];
+      return item?.kind === "comment" ? item.comment.id : "stream-buffer";
+    },
+    overscan: 8,
+  });
+
+  return (
+    <div
+      style={{
+        height: `${virtualizer.getTotalSize()}px`,
+        position: "relative",
+      }}
+    >
+      {virtualizer.getVirtualItems().map((virtualItem) => {
+        const item = items[virtualItem.index];
+        if (!item) return null;
+        return (
+          <div
+            key={virtualItem.key}
+            ref={virtualizer.measureElement}
+            data-index={virtualItem.index}
+            data-testid="board-comment-row"
+            className="absolute left-0 top-0 w-full pb-3"
+            style={{ transform: `translateY(${virtualItem.start}px)` }}
+          >
+            {item.kind === "comment" ? (
+              <CommentCard
+                comment={item.comment}
+                agent={item.comment.authorAgentId ? agentById.get(item.comment.authorAgentId) : null}
+              />
+            ) : (
+              <StreamingCommentCard body={item.body} author={item.author} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function StreamingCommentCard({ body, author }: { body: string; author: string }) {
+  return (
+    <div className="rounded-lg border border-amber-400/30 bg-amber-500/5 p-4">
+      <div className="mb-1 flex items-center gap-2 text-[10px] text-amber-400">
+        <Bot className="h-3 w-3" />
+        <Loader2 className="h-3 w-3 animate-spin" />
+        {author} is thinking…
+      </div>
+      <div className="whitespace-pre-wrap text-[13px] text-foreground">{body}</div>
+    </div>
+  );
 }
 
 function CommentCard({

@@ -321,6 +321,53 @@ export function useMonitorStream(tenantId: string) {
   );
   const selectedRef = useRef<string | null>(null);
   const reconnectKeyRef = useRef(0);
+  const deltaBatchRef = useRef<Map<string, { payload: Record<string, unknown>; delta: string }>>(
+    new Map(),
+  );
+  const deltaRafRef = useRef<number | null>(null);
+
+  const flushSessionDeltas = useCallback((sessionId?: string) => {
+    const pending = deltaBatchRef.current;
+    const entries = sessionId
+      ? pending.has(sessionId)
+        ? [[sessionId, pending.get(sessionId)!] as const]
+        : []
+      : Array.from(pending.entries());
+    if (sessionId) {
+      pending.delete(sessionId);
+    } else {
+      pending.clear();
+    }
+    for (const [, batch] of entries) {
+      dispatch({
+        type: STABLE_EVENT_TYPES.sessionDelta,
+        payload: { ...batch.payload, delta: batch.delta },
+      });
+    }
+  }, []);
+
+  const cancelSessionDeltaFlush = useCallback(() => {
+    if (deltaRafRef.current != null) {
+      cancelAnimationFrame(deltaRafRef.current);
+      deltaRafRef.current = null;
+    }
+  }, []);
+
+  const scheduleSessionDelta = useCallback((payload: Record<string, unknown>) => {
+    const sessionId = typeof payload.sessionId === "string" ? payload.sessionId : null;
+    const delta = typeof payload.delta === "string" ? payload.delta : "";
+    if (!sessionId || !delta) return;
+    const prev = deltaBatchRef.current.get(sessionId);
+    deltaBatchRef.current.set(sessionId, {
+      payload,
+      delta: `${prev?.delta ?? ""}${delta}`,
+    });
+    if (deltaRafRef.current != null) return;
+    deltaRafRef.current = requestAnimationFrame(() => {
+      deltaRafRef.current = null;
+      flushSessionDeltas();
+    });
+  }, [flushSessionDeltas]);
 
   const selectSession = useCallback((sessionId: string | null) => {
     selectedRef.current = sessionId;
@@ -345,19 +392,23 @@ export function useMonitorStream(tenantId: string) {
           const data = (evt.data ?? {}) as Record<string, unknown>;
           switch (evt.event) {
             case "monitor.snapshot":
+              flushSessionDeltas();
               dispatch({ type: "snapshot", payload: data });
               dispatch({ type: "connected", clientId: typeof data.clientId === "string" ? data.clientId : clientIdRef.current });
               break;
             case "monitor.session.start":
+              flushSessionDeltas(typeof data.sessionId === "string" ? data.sessionId : undefined);
               dispatch({ type: STABLE_EVENT_TYPES.sessionStart, payload: data });
               break;
             case "monitor.session.delta":
-              dispatch({ type: STABLE_EVENT_TYPES.sessionDelta, payload: data });
+              scheduleSessionDelta(data);
               break;
             case "monitor.session.end":
+              flushSessionDeltas(typeof data.sessionId === "string" ? data.sessionId : undefined);
               dispatch({ type: STABLE_EVENT_TYPES.sessionEnd, payload: data });
               break;
             case "monitor.session.touch":
+              flushSessionDeltas(typeof data.sessionId === "string" ? data.sessionId : undefined);
               dispatch({ type: STABLE_EVENT_TYPES.sessionTouch, payload: data });
               break;
             case "monitor.agent.presence":
@@ -392,6 +443,8 @@ export function useMonitorStream(tenantId: string) {
     return () => {
       cancelled = true;
       ctrl.abort();
+      cancelSessionDeltaFlush();
+      flushSessionDeltas();
     };
   }, [tenantId, reconnectKeyRef.current]);
 

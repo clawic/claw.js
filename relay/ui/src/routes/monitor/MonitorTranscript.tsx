@@ -1,13 +1,32 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ActiveSession } from "./useMonitorStream";
+
+const BOTTOM_STICKY_PX = 48;
+
+function isNearBottom(element: HTMLElement): boolean {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_STICKY_PX;
+}
 
 export function MonitorTranscript({ session }: { session: ActiveSession | null }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
+  const lines = useMemo(() => splitTranscriptLines(session?.fullText ?? ""), [session?.fullText]);
+  const virtualizer = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => scrollerRef.current,
+    estimateSize: () => 22,
+    getItemKey: (index) => index,
+    overscan: 16,
+  });
 
   useEffect(() => {
-    if (scrollerRef.current) {
-      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
-    }
+    if (!stickToBottomRef.current || !scrollerRef.current) return;
+    requestAnimationFrame(() => {
+      if (stickToBottomRef.current && scrollerRef.current) {
+        scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+      }
+    });
   }, [session?.fullText]);
 
   if (!session) {
@@ -45,14 +64,37 @@ export function MonitorTranscript({ session }: { session: ActiveSession | null }
       </header>
       <div
         ref={scrollerRef}
+        onScroll={(event) => {
+          stickToBottomRef.current = isNearBottom(event.currentTarget);
+        }}
         className="flex-1 min-h-0 overflow-y-auto p-4 whitespace-pre-wrap break-words font-mono text-[12.5px] leading-relaxed text-text"
       >
-        {session.fullText
+        {lines.length > 0
           ? (
-            <>
-              {session.fullText}
-              {session.isStreaming ? <span className="opacity-50">&nbsp;▍</span> : null}
-            </>
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((item) => {
+                const line = lines[item.index] ?? "";
+                const isLast = item.index === lines.length - 1;
+                return (
+                  <div
+                    key={item.key}
+                    ref={virtualizer.measureElement}
+                    data-index={item.index}
+                    data-testid="relay-monitor-transcript-line"
+                    className="absolute left-0 top-0 w-full min-h-[1.5em]"
+                    style={{ transform: `translateY(${item.start}px)` }}
+                  >
+                    {line}
+                    {isLast && session.isStreaming ? <span className="opacity-50">&nbsp;▍</span> : null}
+                  </div>
+                );
+              })}
+            </div>
           )
           : session.isStreaming
             ? <span className="text-text-muted">waiting for tokens…</span>
@@ -60,4 +102,9 @@ export function MonitorTranscript({ session }: { session: ActiveSession | null }
       </div>
     </section>
   );
+}
+
+function splitTranscriptLines(text: string): string[] {
+  if (!text) return [];
+  return text.split("\n");
 }

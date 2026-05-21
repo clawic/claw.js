@@ -169,6 +169,66 @@ test("organization cockpit backend flows work end-to-end", async ({ page }) => {
   expect(path.basename(screenshotPath)).toBe("company-cockpit-dashboard.png");
 });
 
+test("issue detail virtualizes long comment lists", async ({ page }) => {
+  const now = new Date().toISOString();
+  const comments = Array.from({ length: 160 }, (_, index) => ({
+    id: `comment-${index + 1}`,
+    companyId: "company-virtual",
+    issueId: "issue-virtual",
+    body: `Virtualized board comment ${index + 1}`,
+    authorUserId: "board",
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  await page.route(/\/api\/companies$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        companies: [{ id: "company-virtual", name: "Virtual Company", issuePrefix: "VIR" }],
+      }),
+    });
+  });
+  await page.route("**/api/companies/company-virtual", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        company: { id: "company-virtual", name: "Virtual Company", issuePrefix: "VIR" },
+        agents: [],
+        issues: [],
+        approvals: [],
+        feedbackItems: [],
+      }),
+    });
+  });
+  await page.route("**/api/issues/issue-virtual", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        issue: {
+          id: "issue-virtual",
+          companyId: "company-virtual",
+          identifier: "VIR-1",
+          title: "Long comment thread",
+          description: "Fixture issue with many comments.",
+          status: "in_progress",
+          priority: "high",
+          createdAt: now,
+          updatedAt: now,
+        },
+        comments,
+      }),
+    });
+  });
+
+  await page.goto("/issues/issue-virtual");
+  await expect(page.getByText("Virtualized board comment 160")).toBeVisible();
+  await expect.poll(async () => page.getByTestId("board-comment-row").count()).toBeLessThan(80);
+});
+
 test("rules tree, approval queue, and compile preview work end-to-end", async ({ page }) => {
   const companyResponse = await page.request.post("/api/companies", {
     data: {
