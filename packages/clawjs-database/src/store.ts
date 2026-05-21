@@ -15,6 +15,7 @@ import type {
   FieldDefinition,
   FileAsset,
   IndexDefinition,
+  ListRecordsOptions,
   NamespaceRecord,
   RecordEnvelope,
   ScopedTokenRecord,
@@ -50,13 +51,86 @@ import {
   type TokenRow,
 } from "./store-helpers.ts";
 
+interface RecordListQuery {
+  where: string;
+  orderBy: string;
+  params: Record<string, unknown>;
+}
+
+function buildRecordListQuery(collection: CollectionDefinition, options: ListRecordsOptions): RecordListQuery {
+  const where: string[] = [];
+  const params: Record<string, unknown> = {};
+  const allowedFields = new Set([
+    "id",
+    "createdAt",
+    "updatedAt",
+    ...collection.fields.map((field) => field.name),
+    ...RECORD_PAGE_FIELDS,
+  ]);
+  if (options.filter !== undefined) {
+    if (!isPlainObject(options.filter)) {
+      throw new Error("listRecords filter must be an object with simple field values.");
+    }
+    let index = 0;
+    for (const [field, value] of Object.entries(options.filter)) {
+      assertRecordQueryField(field, allowedFields, collection.name);
+      if (!isSimpleRecordFilterValue(value)) {
+        throw new Error(`Unsupported listRecords filter for ${field}; only string, number, boolean, or null values are supported.`);
+      }
+      const expression = recordFieldSqlExpression(field);
+      const paramName = `filter_${index++}`;
+      if (value === null) {
+        where.push(`${expression} IS NULL`);
+      } else {
+        where.push(`${expression} = @${paramName}`);
+        params[paramName] = typeof value === "boolean" ? (value ? 1 : 0) : value;
+      }
+    }
+  }
+  const sort = options.sort?.trim();
+  const desc = sort?.startsWith("-") ?? false;
+  const sortField = sort ? (desc ? sort.slice(1) : sort) : "createdAt";
+  assertRecordQueryField(sortField, allowedFields, collection.name);
+  const direction = desc || !sort ? "DESC" : "ASC";
+  return {
+    where: where.length ? ` AND ${where.join(" AND ")}` : "",
+    orderBy: `${recordFieldSqlExpression(sortField)} ${direction}, id ASC`,
+    params,
+  };
+}
+
+function assertRecordQueryField(field: string, allowedFields: Set<string>, collectionName: string): void {
+  if (!allowedFields.has(field) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(field)) {
+    throw new Error(`Unsupported listRecords field ${field} for collection ${collectionName}.`);
+  }
+}
+
+function recordFieldSqlExpression(field: string): string {
+  if (field === "id") return "id";
+  if (field === "createdAt") return "created_at";
+  if (field === "updatedAt") return "updated_at";
+  return `json_extract(data_json, '$.${field}')`;
+}
+
+function isSimpleRecordFilterValue(value: unknown): value is string | number | boolean | null {
+  return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
 export class DatabaseServiceStore {
   readonly sqlite: Database.Database;
+  private readonly filesDir: string;
 
   constructor(
     dbPath: string,
-    private readonly filesDir: string,
+    filesDir: string,
   ) {
+    this.filesDir = filesDir;
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     fs.mkdirSync(filesDir, { recursive: true });
     this.sqlite = new Database(dbPath);
@@ -652,44 +726,30 @@ export class DatabaseServiceStore {
     `).run(input.pageId, title, input.body);
   }
 
-  listRecords(namespaceId: string, collectionName: string, options: {
-    filter?: Record<string, unknown>;
-    sort?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): { total: number; items: RecordEnvelope[] } {
+  listRecords(namespaceId: string, collectionName: string, options: ListRecordsOptions = {}): { total: number; items: RecordEnvelope[] } {
     const collection = this.getCollection(namespaceId, collectionName);
     if (!collection) throw new Error(`Collection ${collectionName} does not exist.`);
-    let items = (this.sqlite.prepare(`
+    const query = buildRecordListQuery(collection, options);
+    const params = {
+      namespaceId,
+      collectionName,
+      ...query.params,
+      limit: clampInt(options.limit, 1, options.maxLimit ?? 10_000, 50),
+      offset: clampInt(options.offset, 0, Number.MAX_SAFE_INTEGER, 0),
+    };
+    const total = (this.sqlite.prepare(`
+      SELECT COUNT(*) AS n
+      FROM records
+      WHERE namespace_id = @namespaceId AND collection_name = @collectionName${query.where}
+    `).get(params) as { n: number }).n;
+    const rows = this.sqlite.prepare(`
       SELECT id, data_json, created_at, updated_at
       FROM records
-      WHERE namespace_id = ? AND collection_name = ?
-    `).all(namespaceId, collectionName) as RecordRow[]).map(serializeRecord);
-
-    if (options.filter && isPlainObject(options.filter)) {
-      items = items.filter((item) => Object.entries(options.filter ?? {}).every(([key, value]) => item[key] === value));
-    }
-
-    if (options.sort) {
-      const desc = options.sort.startsWith("-");
-      const key = desc ? options.sort.slice(1) : options.sort;
-      items.sort((left, right) => {
-        const a = left[key];
-        const b = right[key];
-        if (a === b) return 0;
-        if (a === undefined) return 1;
-        if (b === undefined) return -1;
-        return `${a}`.localeCompare(`${b}`) * (desc ? -1 : 1);
-      });
-    } else {
-      items.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-    }
-
-    const total = items.length;
-    const offset = options.offset ?? 0;
-    const limit = options.limit ?? 50;
-    items = items.slice(offset, offset + limit);
-    return { total, items };
+      WHERE namespace_id = @namespaceId AND collection_name = @collectionName${query.where}
+      ORDER BY ${query.orderBy}
+      LIMIT @limit OFFSET @offset
+    `).all(params) as RecordRow[];
+    return { total, items: rows.map(serializeRecord) };
   }
 
   getRecord(namespaceId: string, collectionName: string, id: string): RecordEnvelope | null {

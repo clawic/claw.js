@@ -5,6 +5,8 @@
 
 const CLAW_DB_API_PREFIX = "/v" + "1";
 const CLAW_DB_THEME_STORAGE_KEY = "claw-db-theme";
+const RECORDS_PAGE_SIZE_OPTIONS = [25, 50, 100];
+const MAX_EVENT_LOG_ITEMS = 200;
 function apiPath(path = "") {
   const suffix = String(path).replace(/^\/+/, "");
   return suffix ? `${CLAW_DB_API_PREFIX}/${suffix}` : CLAW_DB_API_PREFIX;
@@ -18,6 +20,13 @@ const state = {
   currentNamespace: null,
   currentCollection: null,
   records: [],
+  recordsPaging: {
+    limit: 50,
+    offset: 0,
+    total: 0,
+    requestSeq: 0,
+    refreshTimer: null,
+  },
   tokens: [],
   files: [],
   websocket: null,
@@ -59,6 +68,10 @@ const els = {
   recordsSort: $("records-sort"),
   recordsRefresh: $("records-refresh"),
   recordsTable: $("records-table"),
+  recordsRange: $("records-range"),
+  recordsPageSize: $("records-page-size"),
+  recordsPrev: $("records-prev"),
+  recordsNext: $("records-next"),
 
   recordDrawer: $("record-drawer"),
   drawerTitle: $("drawer-title"),
@@ -585,20 +598,17 @@ function renderCell(field, value) {
   return escapeHtml(String(value));
 }
 
-function renderRecords(items = []) {
-  state.records = items;
-  const collection = state.currentCollection;
-  if (!collection) {
-    els.recordsTable.innerHTML = `<div class="empty-state">Select a collection to browse records.</div>`;
-    return;
-  }
-  const columns = [
+function getRecordColumns(collection = state.currentCollection) {
+  if (!collection) return [];
+  return [
     { name: "id", type: "id" },
     ...collection.fields.map((f) => ({ name: f.name, type: f.type, def: f })),
     { name: "createdAt", type: "createdAt" },
   ];
-  const thead = `<thead><tr>${columns.map((c) => `<th class="col-sort col-type-${escapeHtml(c.type)} col-field-${escapeHtml(c.name)}"><span class="col-header-content"><i class="${iconClassForField(c.name, c.type)}"></i><span class="txt">${escapeHtml(c.name)}</span></span></th>`).join("")}<th class="col-type-action min-width"></th></tr></thead>`;
-  const rows = items.map((item) => `
+}
+
+function renderRecordRow(item, columns) {
+  return `
     <tr tabindex="0" class="row-handle" data-id="${escapeHtml(item.id)}">
       ${columns.map((c, i) => {
         if (i === 0) {
@@ -608,16 +618,152 @@ function renderRecords(items = []) {
       }).join("")}
       <td class="col-type-action min-width"><i class="ri-arrow-right-line"></i></td>
     </tr>
-  `).join("");
+  `;
+}
+
+function renderRecordsPagination() {
+  const total = state.recordsPaging.total;
+  const limit = state.recordsPaging.limit;
+  const offset = state.recordsPaging.offset;
+  const count = state.records.length;
+  const start = total > 0 && count > 0 ? offset + 1 : 0;
+  const end = total > 0 && count > 0 ? Math.min(offset + count, total) : 0;
+  if (els.recordsRange) {
+    els.recordsRange.textContent = state.currentCollection
+      ? `${start}-${end} of ${total}`
+      : "0-0 of 0";
+  }
+  if (els.recordsPageSize) {
+    els.recordsPageSize.value = String(limit);
+    els.recordsPageSize.disabled = !state.currentCollection;
+  }
+  if (els.recordsPrev) {
+    els.recordsPrev.disabled = !state.currentCollection || offset <= 0;
+  }
+  if (els.recordsNext) {
+    els.recordsNext.disabled = !state.currentCollection || offset + limit >= total;
+  }
+}
+
+function resetRecordsPage() {
+  state.recordsPaging.offset = 0;
+}
+
+function hasActiveRecordQuery() {
+  return Boolean(els.recordsFilter.value.trim() || els.recordsSort.value.trim());
+}
+
+function scheduleRecordsRefresh() {
+  if (state.recordsPaging.refreshTimer) clearTimeout(state.recordsPaging.refreshTimer);
+  state.recordsPaging.refreshTimer = setTimeout(() => {
+    state.recordsPaging.refreshTimer = null;
+    refreshRecords().catch(() => {});
+  }, 200);
+}
+
+function setRecordsPageSize(value) {
+  const next = Number(value);
+  state.recordsPaging.limit = RECORDS_PAGE_SIZE_OPTIONS.includes(next) ? next : 50;
+  resetRecordsPage();
+  refreshRecords().catch(() => {});
+}
+
+function renderRecords(items = [], total = state.recordsPaging.total) {
+  state.records = items;
+  state.recordsPaging.total = Number.isFinite(Number(total)) ? Number(total) : items.length;
+  const collection = state.currentCollection;
+  if (!collection) {
+    state.recordsPaging.total = 0;
+    els.recordsTable.innerHTML = `<div class="empty-state">Select a collection to browse records.</div>`;
+    renderRecordsPagination();
+    return;
+  }
+  const columns = getRecordColumns(collection);
+  const thead = `<thead><tr>${columns.map((c) => `<th class="col-sort col-type-${escapeHtml(c.type)} col-field-${escapeHtml(c.name)}"><span class="col-header-content"><i class="${iconClassForField(c.name, c.type)}"></i><span class="txt">${escapeHtml(c.name)}</span></span></th>`).join("")}<th class="col-type-action min-width"></th></tr></thead>`;
+  const rows = items.map((item) => renderRecordRow(item, columns)).join("");
   const body = rows || `<tr><td colspan="${columns.length + 1}" class="txt-center txt-hint"><h6>No records found.</h6><button type="button" class="btn btn-secondary btn-expanded m-t-sm" onclick="document.getElementById('new-record-btn').click()">New record</button></td></tr>`;
   els.recordsTable.innerHTML = `<table>${thead}<tbody>${body}</tbody></table>`;
-  els.recordsTable.querySelectorAll("tbody tr[data-id]").forEach((tr) => {
-    tr.addEventListener("click", (event) => {
-      if (event.target.closest(".row-delete")) return;
-      const record = state.records.find((r) => r.id === tr.dataset.id);
-      if (record) openRecordDrawer(record);
-    });
-  });
+  renderRecordsPagination();
+}
+
+function openRecordFromTableEvent(event) {
+  if (event.target.closest(".row-delete")) return;
+  const tr = event.target.closest("tbody tr[data-id]");
+  if (!tr || !els.recordsTable.contains(tr)) return;
+  const record = state.records.find((r) => r.id === tr.dataset.id);
+  if (record) openRecordDrawer(record);
+}
+
+function patchVisibleRecordRow(record) {
+  if (!record?.id || !state.currentCollection) return false;
+  const index = state.records.findIndex((item) => item.id === record.id);
+  if (index === -1) return false;
+  state.records[index] = record;
+  const tr = els.recordsTable.querySelector(`tbody tr[data-id="${CSS.escape(record.id)}"]`);
+  if (tr) tr.outerHTML = renderRecordRow(record, getRecordColumns());
+  return true;
+}
+
+function removeVisibleRecordRow(recordId) {
+  const index = state.records.findIndex((item) => item.id === recordId);
+  if (index === -1) return false;
+  state.records.splice(index, 1);
+  const tr = els.recordsTable.querySelector(`tbody tr[data-id="${CSS.escape(recordId)}"]`);
+  if (tr) tr.remove();
+  state.recordsPaging.total = Math.max(0, state.recordsPaging.total - 1);
+  if (state.records.length === 0) {
+    renderRecords(state.records, state.recordsPaging.total);
+  } else {
+    renderRecordsPagination();
+  }
+  return true;
+}
+
+function upsertCreatedRecord(record) {
+  if (!record?.id) return false;
+  const existingIndex = state.records.findIndex((item) => item.id === record.id);
+  if (existingIndex !== -1) state.records.splice(existingIndex, 1);
+  state.records.unshift(record);
+  state.records = state.records.slice(0, state.recordsPaging.limit);
+  if (existingIndex === -1) state.recordsPaging.total += 1;
+  renderRecords(state.records, state.recordsPaging.total);
+  return true;
+}
+
+function applyRealtimeRecordEvent(event) {
+  if (!event || event.namespaceId !== state.currentNamespace?.id || event.collectionName !== state.currentCollection?.name) return;
+  const type = event.type || "";
+  const hasQuery = hasActiveRecordQuery();
+  if (hasQuery) {
+    scheduleRecordsRefresh();
+    return;
+  }
+  if (type.includes("created")) {
+    if (state.recordsPaging.offset === 0 && event.record) {
+      upsertCreatedRecord(event.record);
+    } else {
+      state.recordsPaging.total += 1;
+      renderRecordsPagination();
+      scheduleRecordsRefresh();
+    }
+    return;
+  }
+  if (type.includes("updated")) {
+    if (!event.record || !patchVisibleRecordRow(event.record)) {
+      scheduleRecordsRefresh();
+    }
+    return;
+  }
+  if (type.includes("deleted")) {
+    const removed = removeVisibleRecordRow(event.recordId);
+    if (!removed && state.recordsPaging.offset > 0) {
+      state.recordsPaging.total = Math.max(0, state.recordsPaging.total - 1);
+      renderRecordsPagination();
+      scheduleRecordsRefresh();
+    } else if (removed && state.recordsPaging.offset + state.records.length < state.recordsPaging.total) {
+      scheduleRecordsRefresh();
+    }
+  }
 }
 
 /* ---------- Tokens ---------- */
@@ -685,6 +831,10 @@ function pushEvent(event) {
     <span class="log-time">${escapeHtml(event.at || "")}</span>
   `;
   els.eventList.prepend(node);
+  const items = els.eventList.querySelectorAll(".log-item");
+  items.forEach((item, index) => {
+    if (index >= MAX_EVENT_LOG_ITEMS) item.remove();
+  });
 }
 
 const logsClearBtn = $("logs-clear");
@@ -716,7 +866,7 @@ function connectRealtime() {
     const payload = JSON.parse(message.data);
     if (payload.type === "event") {
       pushEvent(payload.event);
-      refreshRecords().catch(() => {});
+      applyRealtimeRecordEvent(payload.event);
     }
     if (payload.type === "subscribed") {
       els.liveStatus.textContent = `watching ${payload.collectionName}`;
@@ -743,6 +893,7 @@ async function refreshNamespaces() {
 }
 
 async function refreshNamespace() {
+  resetRecordsPage();
   renderNamespaces();
   els.activeNamespaceName.textContent = state.currentNamespace?.displayName || "No database";
   if (!state.currentNamespace) return;
@@ -758,6 +909,7 @@ async function refreshNamespace() {
 }
 
 async function refreshCollection() {
+  resetRecordsPage();
   renderCollections();
   const collection = state.currentCollection;
   els.activeCollectionName.textContent = collection?.displayName || "Select one";
@@ -776,14 +928,24 @@ async function refreshCollection() {
 
 async function refreshRecords() {
   if (!state.currentNamespace || !state.currentCollection) return;
+  const seq = ++state.recordsPaging.requestSeq;
   const params = new URLSearchParams();
   if (els.recordsFilter.value.trim()) params.set("filter", els.recordsFilter.value.trim());
   if (els.recordsSort.value.trim()) params.set("sort", els.recordsSort.value.trim());
+  params.set("limit", String(state.recordsPaging.limit));
+  params.set("offset", String(state.recordsPaging.offset));
   const qs = params.toString();
   const payload = await request(
     apiPath(`namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records${qs ? `?${qs}` : ""}`)
   );
-  renderRecords(payload.items);
+  if (seq !== state.recordsPaging.requestSeq) return;
+  const total = Number(payload.total ?? payload.items?.length ?? 0);
+  if (total > 0 && state.recordsPaging.offset >= total) {
+    state.recordsPaging.offset = Math.max(0, Math.floor((total - 1) / state.recordsPaging.limit) * state.recordsPaging.limit);
+    await refreshRecords();
+    return;
+  }
+  renderRecords(payload.items, total);
 }
 
 async function refreshTokens() {

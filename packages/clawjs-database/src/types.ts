@@ -96,6 +96,30 @@ export interface RecordEnvelope {
   [key: string]: unknown;
 }
 
+export interface ListRecordsOptions {
+  filter?: Record<string, unknown>;
+  sort?: string;
+  limit?: number;
+  offset?: number;
+  maxLimit?: number;
+}
+
+export interface DatabaseStorageOperationMetric {
+  count: number;
+  errors: number;
+  slowCount: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms: number;
+  maxMs: number;
+  lastMs: number;
+}
+
+export interface DatabaseStorageMetrics {
+  queueDepth: number;
+  operations: Record<string, DatabaseStorageOperationMetric>;
+}
+
 export interface NamespaceRecord {
   id: string;
   displayName: string;

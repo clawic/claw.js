@@ -388,6 +388,7 @@ export const clawStorageApiRoutes = {
 export const clawDatabaseApiRoutes = {
   realtime: "/v1/realtime",
   health: "/v1/health",
+  storageMetrics: "/v1/storage/metrics",
   adminLogin: "/v1/auth/admin/login",
   namespaces: "/v1/namespaces",
   namespaceCollections(namespaceId: string): string {
@@ -420,6 +421,7 @@ export const clawDatabaseApiRoutes = {
 export const clawDatabaseApiRoutePatterns = {
   realtime: clawDatabaseApiRoutes.realtime,
   health: clawDatabaseApiRoutes.health,
+  storageMetrics: clawDatabaseApiRoutes.storageMetrics,
   adminLogin: clawDatabaseApiRoutes.adminLogin,
   adminBootstrap: "/v1/auth/admin/bootstrap",
   me: "/v1/auth/me",
@@ -902,6 +904,7 @@ const corePublicRoutes = [
   ["claw.api.database.records", "GET", "/v1/namespaces/{namespace}/collections/{collection}/records", "Database record list"],
   ["claw.api.database.adminLogin", "POST", clawDatabaseApiRoutes.adminLogin, "Database admin login"],
   ["claw.api.database.realtime", "GET", clawDatabaseApiRoutes.realtime, "Database realtime websocket"],
+  ["claw.api.database.storageMetrics", "GET", clawDatabaseApiRoutes.storageMetrics, "Database and sessions storage worker metrics"],
   ["claw.api.drive.health", "GET", clawDriveApiRoutes.health, "Drive health endpoint"],
   ["claw.api.drive.login", "POST", clawDriveApiRoutes.adminLogin, "Drive admin login"],
   ["claw.api.drive.items", "GET", clawDriveApiRoutes.items, "Drive item list"],

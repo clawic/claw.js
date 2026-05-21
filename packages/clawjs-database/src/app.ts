@@ -10,8 +10,8 @@ import websocket from "@fastify/websocket";
 import { clawDatabaseApiRoutePatterns, clawDatabaseRecordEvents } from "@clawjs/core";
 
 import { DatabaseAuthService, loadEphemeralAdminToken, type AuthPrincipal } from "./auth.ts";
+import { AsyncDatabaseServiceStore } from "./async-store.ts";
 import { loadDatabaseConfig, type DatabaseServiceConfig } from "./config.ts";
-import { DatabaseServiceStore } from "./store.ts";
 import { RealtimeHub } from "./realtime.ts";
 import type { DatabaseOperation, RecordChangeEvent } from "./types.ts";
 
@@ -85,7 +85,7 @@ function ensureAllowed(principal: AuthPrincipal, input: {
 async function resolvePrincipal(
   request: FastifyRequest,
   auth: DatabaseAuthService,
-  store: DatabaseServiceStore,
+  store: AsyncDatabaseServiceStore,
 ): Promise<AuthPrincipal | null> {
   const token = parseBearerToken(request);
   if (!token) return null;
@@ -93,7 +93,7 @@ async function resolvePrincipal(
   if (ephemeralAdmin) return ephemeralAdmin;
   const admin = await auth.verifyAdminToken(token);
   if (admin) return admin;
-  const scopedToken = store.authenticateScopedToken(token);
+  const scopedToken = await store.authenticateScopedToken(token);
   if (!scopedToken) return null;
   return {
     kind: "token",
@@ -108,7 +108,7 @@ async function requirePrincipal(
   request: FastifyRequest,
   reply: FastifyReply,
   auth: DatabaseAuthService,
-  store: DatabaseServiceStore,
+  store: AsyncDatabaseServiceStore,
   requirement?: {
     namespaceId?: string;
     collectionName?: string;
@@ -195,7 +195,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
 
   const app = Fastify({ logger: false });
   const auth = new DatabaseAuthService(config.jwtSecret, ephemeralAdminToken);
-  const store = new DatabaseServiceStore(config.dbPath, config.filesDir);
+  const store = new AsyncDatabaseServiceStore(config.dbPath, config.filesDir);
   const realtime = new RealtimeHub();
 
   const emitChange = (event: RecordChangeEvent) => {
@@ -203,7 +203,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
   };
 
   app.addHook("onClose", async () => {
-    store.close();
+    await store.close();
   });
 
   app.register(cors as any, {
@@ -253,11 +253,20 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     port: config.port,
   }));
 
+  app.get(clawDatabaseApiRoutePatterns.storageMetrics, async (request, reply) => {
+    const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
+    if (!principal) return null;
+    return {
+      service: "database",
+      storage: store.snapshotMetrics(),
+    };
+  });
+
   app.post(clawDatabaseApiRoutePatterns.adminLogin, async (request, reply) => {
     const body = readBody(request);
     const email = typeof body.email === "string" ? body.email : "";
     const password = typeof body.password === "string" ? body.password : "";
-    const admin = store.verifyAdmin(email, password);
+    const admin = await store.verifyAdmin(email, password);
     if (!admin) {
       return await reply.code(401).send({ error: "Invalid email or password." });
     }
@@ -290,12 +299,12 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     if (!email || !password) {
       return await reply.code(400).send({ error: "email and password are required" });
     }
-    const existing = store.findAdminByEmail(email);
+    const existing = await store.findAdminByEmail(email);
     let admin: { id: string; email: string } | null;
     if (!existing) {
-      admin = store.createAdmin({ email, password });
+      admin = await store.createAdmin({ email, password });
     } else {
-      admin = store.verifyAdmin(email, password);
+      admin = await store.verifyAdmin(email, password);
       if (!admin) {
         return await reply.code(401).send({ error: "Admin already exists with a different password." });
       }
@@ -338,7 +347,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     const principal = await requirePrincipal(request, reply, auth, store, { adminOnly: true });
     if (!principal) return null;
     return {
-      items: store.listNamespaces(),
+      items: await store.listNamespaces(),
     };
   });
 
@@ -348,7 +357,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     try {
       const body = readBody(request);
       const displayName = typeof body.displayName === "string" ? body.displayName : "";
-      const namespace = store.createNamespace({
+      const namespace = await store.createNamespace({
         id: typeof body.id === "string" ? body.id : undefined,
         displayName,
       });
@@ -369,11 +378,11 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
       const displayName = typeof body.displayName === "string" && body.displayName.trim()
         ? body.displayName
         : params.namespaceId;
-      const namespace = store.ensureNamespace({
+      const namespace = await store.ensureNamespace({
         id: params.namespaceId,
         displayName,
       });
-      store.ensureBuiltinCollections(namespace.id);
+      await store.ensureBuiltinCollections(namespace.id);
       return namespace;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -388,7 +397,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     return {
-      items: store.listCollections(params.namespaceId),
+      items: await store.listCollections(params.namespaceId),
     };
   });
 
@@ -401,7 +410,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     if (!principal) return null;
     try {
       const body = readBody(request);
-      const collection = store.createCollection(params.namespaceId, {
+      const collection = await store.createCollection(params.namespaceId, {
         name: String(body.name ?? ""),
         displayName: typeof body.displayName === "string" ? body.displayName : undefined,
         fields: Array.isArray(body.fields) ? body.fields as never[] : [],
@@ -421,7 +430,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
       operation: "schema:read",
     });
     if (!principal) return null;
-    const collection = store.getCollection(params.namespaceId, params.collectionName);
+    const collection = await store.getCollection(params.namespaceId, params.collectionName);
     if (!collection) {
       return await reply.code(404).send({ error: "collection_not_found" });
     }
@@ -438,7 +447,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     if (!principal) return null;
     try {
       const body = readBody(request);
-      return store.updateCollection(params.namespaceId, params.collectionName, {
+      return await store.updateCollection(params.namespaceId, params.collectionName, {
         displayName: typeof body.displayName === "string" ? body.displayName : undefined,
         fields: Array.isArray(body.fields) ? body.fields as never[] : undefined,
         indexes: Array.isArray(body.indexes) ? body.indexes as never[] : undefined,
@@ -457,7 +466,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     try {
-      const removed = store.deleteCollection(params.namespaceId, params.collectionName);
+      const removed = await store.deleteCollection(params.namespaceId, params.collectionName);
       return { ok: removed };
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -473,11 +482,12 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     try {
-      return store.listRecords(params.namespaceId, params.collectionName, {
+      return await store.listRecords(params.namespaceId, params.collectionName, {
         filter: parseOptionalJson(typeof request.query === "object" && request.query && "filter" in request.query ? String((request.query as { filter?: string }).filter) : undefined),
         sort: typeof request.query === "object" && request.query && "sort" in request.query ? String((request.query as { sort?: string }).sort) : undefined,
         limit: typeof request.query === "object" && request.query && "limit" in request.query ? Number((request.query as { limit?: string }).limit) : undefined,
         offset: typeof request.query === "object" && request.query && "offset" in request.query ? Number((request.query as { offset?: string }).offset) : undefined,
+        maxLimit: 500,
       });
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -493,7 +503,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     try {
-      const record = store.createRecord(params.namespaceId, params.collectionName, readBody(request));
+      const record = await store.createRecord(params.namespaceId, params.collectionName, readBody(request));
       emitChange({
         type: clawDatabaseRecordEvents.created,
         namespaceId: params.namespaceId,
@@ -516,7 +526,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
       operation: "records:read",
     });
     if (!principal) return null;
-    const record = store.getRecord(params.namespaceId, params.collectionName, params.recordId);
+    const record = await store.getRecord(params.namespaceId, params.collectionName, params.recordId);
     if (!record) {
       return await reply.code(404).send({ error: "record_not_found" });
     }
@@ -532,7 +542,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     try {
-      const record = store.updateRecord(params.namespaceId, params.collectionName, params.recordId, readBody(request));
+      const record = await store.updateRecord(params.namespaceId, params.collectionName, params.recordId, readBody(request));
       emitChange({
         type: clawDatabaseRecordEvents.updated,
         namespaceId: params.namespaceId,
@@ -555,7 +565,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
       operation: "records:delete",
     });
     if (!principal) return null;
-    const ok = store.deleteRecord(params.namespaceId, params.collectionName, params.recordId);
+    const ok = await store.deleteRecord(params.namespaceId, params.collectionName, params.recordId);
     if (ok) {
       emitChange({
         type: clawDatabaseRecordEvents.deleted,
@@ -576,7 +586,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     return {
-      items: store.listFiles(params.namespaceId),
+      items: await store.listFiles(params.namespaceId),
     };
   });
 
@@ -589,7 +599,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
         operation: "files:write",
       });
       if (!principal) return null;
-      const asset = store.saveFile(upload);
+      const asset = await store.saveFile(upload);
       return await reply.code(201).send(asset);
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
@@ -598,7 +608,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
 
   app.get(clawDatabaseApiRoutePatterns.file, async (request, reply) => {
     const params = request.params as { fileId: string };
-    const file = store.getFile(params.fileId);
+    const file = await store.getFile(params.fileId);
     if (!file) {
       return await reply.code(404).send({ error: "file_not_found" });
     }
@@ -615,7 +625,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
 
   app.delete(clawDatabaseApiRoutePatterns.file, async (request, reply) => {
     const params = request.params as { fileId: string };
-    const file = store.getFile(params.fileId);
+    const file = await store.getFile(params.fileId);
     if (!file) {
       return await reply.code(404).send({ error: "file_not_found" });
     }
@@ -626,7 +636,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     return {
-      ok: store.deleteFile(params.fileId),
+      ok: await store.deleteFile(params.fileId),
     };
   });
 
@@ -638,7 +648,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     return {
-      items: store.listScopedTokens(params.namespaceId),
+      items: await store.listScopedTokens(params.namespaceId),
     };
   });
 
@@ -651,7 +661,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     if (!principal) return null;
     try {
       const body = readBody(request);
-      const created = store.createScopedToken({
+      const created = await store.createScopedToken({
         label: String(body.label ?? "token"),
         namespaceId: params.namespaceId,
         collectionName: typeof body.collectionName === "string" && body.collectionName ? body.collectionName : undefined,
@@ -671,7 +681,7 @@ export function buildDatabaseApp(options: BuildDatabaseAppOptions = {}) {
     });
     if (!principal) return null;
     return {
-      ok: store.revokeScopedToken(params.namespaceId, params.tokenId),
+      ok: await store.revokeScopedToken(params.namespaceId, params.tokenId),
     };
   });
 

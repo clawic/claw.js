@@ -9,7 +9,11 @@ export interface DatabaseCliOptions {
 }
 
 export class DatabaseApiClient {
-  constructor(private readonly options: DatabaseCliOptions) {}
+  private readonly options: DatabaseCliOptions;
+
+  constructor(options: DatabaseCliOptions) {
+    this.options = options;
+  }
 
   private async request(path: string, init: RequestInit = {}): Promise<JsonValue> {
     const headers = new Headers(init.headers);
@@ -71,11 +75,17 @@ export class DatabaseApiClient {
     });
   }
 
-  async listRecords(namespaceId: string, collectionName: string, options: { filter?: string; sort?: string } = {}): Promise<JsonValue> {
+  async listRecords(namespaceId: string, collectionName: string, options: { filter?: string; sort?: string; limit?: number; offset?: number } = {}): Promise<JsonValue> {
     const url = new URL(clawDatabaseApiRoutes.records(namespaceId, collectionName), this.options.baseUrl);
     if (options.filter) url.searchParams.set("filter", options.filter);
     if (options.sort) url.searchParams.set("sort", options.sort);
+    if (options.limit !== undefined) url.searchParams.set("limit", String(options.limit));
+    if (options.offset !== undefined) url.searchParams.set("offset", String(options.offset));
     return await this.request(url.pathname + url.search);
+  }
+
+  async storageMetrics(): Promise<JsonValue> {
+    return await this.request(clawDatabaseApiRoutes.storageMetrics);
   }
 
   async createRecord(namespaceId: string, collectionName: string, payload: Record<string, unknown>): Promise<JsonValue> {
