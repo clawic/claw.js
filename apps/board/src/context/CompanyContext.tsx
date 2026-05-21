@@ -1,12 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
 import type { Company } from "@/lib/company-types";
-
-interface CompaniesApiResponse {
-  companies: Company[];
-}
+import { useCompaniesQuery, useCompanyFallbackInvalidation } from "@/lib/board-queries";
 
 interface CompanyContextValue {
   companies: Company[];
@@ -47,17 +43,10 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     setSelectedCompanyIdState(readStoredId());
   }, []);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["companies"],
-    queryFn: async () => {
-      const res = await fetch("/api/companies");
-      if (!res.ok) throw new Error(`failed to load companies: ${res.status}`);
-      return (await res.json()) as CompaniesApiResponse;
-    },
-    refetchInterval: 15_000,
-  });
+  const { data, isLoading, refetch } = useCompaniesQuery();
 
   const companies = data?.companies ?? [];
+  useCompanyFallbackInvalidation(selectedCompanyId);
 
   // If the selected id disappears, fall back to the first one.
   React.useEffect(() => {

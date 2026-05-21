@@ -9,6 +9,7 @@ import { Identity } from "@/components/Identity";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { boardQueryKeys, fetchCompanyAgents } from "@/lib/board-queries";
 import { cn } from "@/lib/utils";
 import type { CompanyAgent } from "@/lib/company-types";
 
@@ -70,12 +71,8 @@ export default function OrgPage() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["agents", selectedCompanyId],
-    queryFn: async (): Promise<{ agents: CompanyAgent[] }> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/agents`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.companyAgents(selectedCompanyId),
+    queryFn: () => fetchCompanyAgents(selectedCompanyId!),
     enabled: !!selectedCompanyId,
   });
 

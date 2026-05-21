@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { CircleDot, Filter } from "lucide-react";
 import { IssueRow } from "@/components/IssueRow";
 import { EmptyState } from "@/components/EmptyState";
@@ -18,12 +17,8 @@ import {
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { useDialog } from "@/context/DialogContext";
+import { useCompanyDetailQuery } from "@/lib/board-queries";
 import type { CompanyAgent, Issue, IssueStatus } from "@/lib/company-types";
-
-interface PagePayload {
-  agents: CompanyAgent[];
-  issues: Issue[];
-}
 
 export default function IssuesPage() {
   const { selectedCompanyId } = useCompany();
@@ -37,16 +32,7 @@ export default function IssuesPage() {
     setBreadcrumbs([{ label: "Issues" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["issues", selectedCompanyId],
-    queryFn: async (): Promise<PagePayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
-    enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
-  });
+  const { data, isLoading } = useCompanyDetailQuery(selectedCompanyId);
 
   const agentById = useMemo(() => {
     const m = new Map<string, CompanyAgent>();

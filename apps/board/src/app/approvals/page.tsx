@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageTabBar } from "@/components/PageTabBar";
@@ -11,6 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ApprovalCard } from "@/components/ApprovalCard";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { useCompanyDetailQuery } from "@/lib/board-queries";
 import { relativeTime, formatDateTime } from "@/lib/utils";
 import type { Approval } from "@/lib/company-types";
 
@@ -25,16 +25,7 @@ export default function ApprovalsPage() {
     setBreadcrumbs([{ label: "Approvals" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId],
-    queryFn: async () => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return (await res.json()) as { approvals: Approval[] };
-    },
-    enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
-  });
+  const { data, isLoading, isError, refetch } = useCompanyDetailQuery(selectedCompanyId);
 
   const all = data?.approvals ?? [];
   const pending = all.filter((a) => a.status === "pending");

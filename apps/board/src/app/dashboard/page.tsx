@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Bot,
   CircleDot,
@@ -23,9 +22,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { useDialog } from "@/context/DialogContext";
+import { useCompanySummaryQuery } from "@/lib/board-queries";
 import { cn, relativeTime } from "@/lib/utils";
 import { Link } from "@/lib/router";
-import type { CompanyDetailPayload, SummaryMetric } from "@/lib/company-types";
+import type { SummaryMetric } from "@/lib/company-types";
 
 const toneColor: Record<string, string> = {
   neutral: "border-border",
@@ -78,16 +78,7 @@ export default function DashboardPage() {
     setBreadcrumbs([{ label: "Overview" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId],
-    queryFn: async (): Promise<CompanyDetailPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
-    enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
-  });
+  const { data, isLoading, isError, refetch } = useCompanySummaryQuery(selectedCompanyId);
 
   if (loading) return <PageSkeleton variant="dashboard" />;
 
@@ -125,9 +116,8 @@ export default function DashboardPage() {
     return <PageSkeleton variant="dashboard" />;
   }
 
-  const { company, summary, approvals, agents } = data;
+  const { company, summary, pendingApprovals, agents, recentIssues } = data;
   const activeAgents = agents.filter((a) => a.status === "active" && a.adapterType !== "human");
-  const pendingApprovals = approvals.filter((a) => a.status === "pending");
 
   return (
     <div className="space-y-6 p-6" data-testid="dashboard-page">
@@ -181,14 +171,11 @@ export default function DashboardPage() {
             <h2 className="mb-2 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
               Recent issues
             </h2>
-            {data.issues.length === 0 ? (
+            {recentIssues.length === 0 ? (
               <EmptyState icon={CircleDot} message="No issues yet." />
             ) : (
               <div className="space-y-0.5 rounded-lg border border-border bg-card/30 py-2" data-testid="recent-issues-list">
-                {[...data.issues]
-                  .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-                  .slice(0, 8)
-                  .map((issue) => {
+                {recentIssues.map((issue) => {
                     const assignee = issue.assigneeAgentId
                       ? agents.find((a) => a.id === issue.assigneeAgentId)
                       : null;

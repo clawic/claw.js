@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { boardQueryKeys, fetchCompanyImports, invalidateCompanyData } from "@/lib/board-queries";
 import { relativeTime, formatDateTime } from "@/lib/utils";
 import type { ImportBatch } from "@/lib/company-types";
 
@@ -71,14 +72,9 @@ export default function SettingsPage() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["imports", selectedCompanyId],
-    queryFn: async (): Promise<{ imports: ImportBatch[] }> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/metrics/imports`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.companyImports(selectedCompanyId),
+    queryFn: () => fetchCompanyImports(selectedCompanyId!),
     enabled: !!selectedCompanyId,
-    refetchInterval: 15_000,
   });
 
   const createImport = useMutation({
@@ -108,7 +104,7 @@ export default function SettingsPage() {
       setImportOpen(false);
       setImportPayload("");
       setImportSource("");
-      queryClient.invalidateQueries({ queryKey: ["imports"] });
+      void invalidateCompanyData(queryClient, selectedCompanyId);
     },
   });
 

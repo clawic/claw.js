@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { boardQueryKeys, fetchCompanyFixtures } from "@/lib/board-queries";
 import { relativeTime } from "@/lib/utils";
 import type {
   FeedbackQueue,
@@ -61,14 +62,9 @@ export default function FeedbackPage() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["fixtures", selectedCompanyId],
-    queryFn: async (): Promise<FixturesPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/fixtures`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.companyFixtures(selectedCompanyId),
+    queryFn: () => fetchCompanyFixtures<FixturesPayload>(selectedCompanyId!),
     enabled: !!selectedCompanyId,
-    refetchInterval: 15_000,
   });
 
   const queue = data?.feedbackQueue;

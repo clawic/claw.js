@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Inbox as InboxIcon, ShieldCheck } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageTabBar } from "@/components/PageTabBar";
@@ -11,17 +10,12 @@ import { EmptyState } from "@/components/EmptyState";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { useCompanyDetailQuery } from "@/lib/board-queries";
 import type {
   Approval,
   CompanyAgent,
   Issue,
 } from "@/lib/company-types";
-
-interface CompanyDetailPayload {
-  agents: CompanyAgent[];
-  issues: Issue[];
-  approvals: Approval[];
-}
 
 type Tab = "mine" | "recent" | "unread" | "all";
 
@@ -34,16 +28,7 @@ export default function InboxPage() {
     setBreadcrumbs([{ label: "Inbox" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["inbox", selectedCompanyId],
-    queryFn: async (): Promise<CompanyDetailPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
-    enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
-  });
+  const { data, isLoading } = useCompanyDetailQuery(selectedCompanyId);
 
   const agentById = useMemo(() => {
     const m = new Map<string, CompanyAgent>();

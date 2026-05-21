@@ -446,4 +446,18 @@ export interface CompanyDetailPayload {
   summary: ExecutiveSummary;
 }
 
+export interface CompanySidebarPayload {
+  company: Pick<Company, "id" | "name" | "brandColor">;
+  pendingApprovalsCount: number;
+  untriagedFeedbackCount: number;
+}
+
+export interface CompanyDashboardPayload {
+  company: Company;
+  summary: ExecutiveSummary;
+  recentIssues: Issue[];
+  pendingApprovals: Approval[];
+  agents: CompanyAgent[];
+}
+
 export const LOCAL_BOARD_USER_ID = "local-board";

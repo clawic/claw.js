@@ -13,6 +13,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { useDialog } from "@/context/DialogContext";
+import { boardQueryKeys, fetchCompanyAgents } from "@/lib/board-queries";
 import type { CompanyAgent, CompanyAgentStatus } from "@/lib/company-types";
 
 type Tab = "all" | "active" | "paused" | "pending_approval";
@@ -28,14 +29,9 @@ export default function AgentsPage() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["agents", selectedCompanyId],
-    queryFn: async (): Promise<{ agents: CompanyAgent[] }> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/agents`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.companyAgents(selectedCompanyId),
+    queryFn: () => fetchCompanyAgents(selectedCompanyId!),
     enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
   });
 
   const agents = data?.agents ?? [];

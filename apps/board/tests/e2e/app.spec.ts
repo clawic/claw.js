@@ -229,6 +229,94 @@ test("issue detail virtualizes long comment lists", async ({ page }) => {
   await expect.poll(async () => page.getByTestId("board-comment-row").count()).toBeLessThan(80);
 });
 
+test("dashboard and sidebar do not duplicate the full company detail payload", async ({ page }) => {
+  const now = new Date().toISOString();
+  let fullDetailRequests = 0;
+
+  const metric = (label: string, value: number, href: string, tone = "neutral") => ({
+    label,
+    value,
+    href,
+    tone,
+  });
+
+  await page.route(/\/api\/companies$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        companies: [{
+          id: "company-virtual",
+          name: "Virtual Company",
+          issuePrefix: "VIR",
+          status: "active",
+          issueCounter: 1,
+          createdAt: now,
+          updatedAt: now,
+        }],
+      }),
+    });
+  });
+  await page.route("**/api/companies/company-virtual/sidebar", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        company: { id: "company-virtual", name: "Virtual Company", brandColor: "#0ea5e9" },
+        pendingApprovalsCount: 1,
+        untriagedFeedbackCount: 1,
+      }),
+    });
+  });
+  await page.route("**/api/companies/company-virtual/summary", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        company: {
+          id: "company-virtual",
+          name: "Virtual Company",
+          issuePrefix: "VIR",
+          issueCounter: 1,
+          status: "active",
+          createdAt: now,
+          updatedAt: now,
+        },
+        summary: {
+          activeGoals: metric("Active goals", 1, "/goals"),
+          projectsInProgress: metric("Projects in progress", 1, "/work"),
+          pendingApprovals: metric("Pending approvals", 1, "/approvals", "warning"),
+          runningRuns: metric("Running runs", 0, "/agents"),
+          openIncidents: metric("Open incidents", 0, "/operations", "positive"),
+          untriagedFeedback: metric("Untriaged feedback", 1, "/feedback", "warning"),
+          plannedReleases: metric("Planned releases", 0, "/work"),
+          itemsAtRisk: metric("Items at risk", 0, "/portfolio", "positive"),
+          healthByItem: [],
+          goalProgress: [],
+          recentActivity: [],
+        },
+        recentIssues: [],
+        pendingApprovals: [{ id: "approval-1", companyId: "company-virtual", type: "hire_agent", status: "pending", createdAt: now, updatedAt: now }],
+        agents: [{ id: "agent-1", companyId: "company-virtual", name: "Board", role: "ceo", title: "CEO", status: "active", adapterType: "human", createdAt: now, updatedAt: now }],
+      }),
+    });
+  });
+  await page.route("**/api/companies/company-virtual", async (route) => {
+    fullDetailRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ company: { id: "company-virtual", name: "Virtual Company" } }),
+    });
+  });
+
+  await page.goto("/dashboard");
+  await expect(page.getByTestId("dashboard-page")).toBeVisible();
+  await expect(page.getByTestId("sidebar")).toBeVisible();
+
+  expect(fullDetailRequests).toBe(0);
+});
+
 test("rules tree, approval queue, and compile preview work end-to-end", async ({ page }) => {
   const companyResponse = await page.request.post("/api/companies", {
     data: {

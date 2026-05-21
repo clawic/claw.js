@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/command";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
-import type { Issue } from "@/lib/company-types";
+import { boardQueryKeys, fetchCompanyIssues } from "@/lib/board-queries";
 
 export function CommandPalette() {
   const router = useRouter();
@@ -53,12 +53,8 @@ export function CommandPalette() {
   }, [toggleCommandPalette]);
 
   const { data: issues } = useQuery({
-    queryKey: ["command-palette-issues", selectedCompanyId],
-    queryFn: async (): Promise<{ issues: Issue[] }> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/issues`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.commandPaletteIssues(selectedCompanyId),
+    queryFn: () => fetchCompanyIssues(selectedCompanyId!),
     enabled: !!selectedCompanyId && commandPaletteOpen,
   });
 

@@ -17,37 +17,21 @@ import {
   SquarePen,
   FileSliders,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
 import { SidebarNavItem } from "./SidebarNavItem";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
 import { Button } from "@/components/ui/button";
-
-interface CompanyPayload {
-  agents: Array<{ id: string; status: string }>;
-  issues: Array<{ id: string; status: string; assigneeAgentId?: string }>;
-  approvals: Array<{ id: string; status: string }>;
-  feedbackItems: Array<{ id: string; status: string }>;
-}
+import { useCompanySidebarQuery } from "@/lib/board-queries";
 
 export function Sidebar() {
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { openNewIssue, openCommandPalette } = useDialog();
 
-  const { data } = useQuery({
-    queryKey: ["company-sidebar", selectedCompanyId],
-    queryFn: async (): Promise<CompanyPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("sidebar load failed");
-      return (await res.json()) as CompanyPayload;
-    },
-    enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
-  });
+  const { data } = useCompanySidebarQuery(selectedCompanyId);
 
-  const pendingApprovals = data?.approvals.filter((a) => a.status === "pending").length ?? 0;
-  const untriagedFeedback = data?.feedbackItems?.filter((f) => f.status === "new").length ?? 0;
+  const pendingApprovals = data?.pendingApprovalsCount ?? 0;
+  const untriagedFeedback = data?.untriagedFeedbackCount ?? 0;
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-background" data-testid="sidebar">

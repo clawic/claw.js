@@ -1,6 +1,8 @@
 import type {
   AvailableAction,
+  CompanyDashboardPayload,
   CompanyDetailPayload,
+  CompanySidebarPayload,
   ExecutiveSummary,
   FeedbackQueue,
   Goal,
@@ -19,6 +21,7 @@ import type {
 } from "./company-types";
 import type {
   Approval,
+  CompanyAgent,
   FeedbackItem,
   MetricSnapshot,
   Issue,
@@ -240,6 +243,46 @@ export function buildReleaseBoard(input: {
   };
 }
 
+export function buildCompanySidebarPayload(input: {
+  company: CompanyDetailPayload["company"];
+  approvals: Approval[];
+  feedbackItems: FeedbackItem[];
+}): CompanySidebarPayload {
+  return {
+    company: {
+      id: input.company.id,
+      name: input.company.name,
+      brandColor: input.company.brandColor,
+    },
+    pendingApprovalsCount: input.approvals.filter((approval) => approval.status === "pending").length,
+    untriagedFeedbackCount: input.feedbackItems.filter((item) => item.status === "new").length,
+  };
+}
+
+export function buildCompanyDashboardPayload(input: {
+  company: CompanyDetailPayload["company"];
+  goals: Goal[];
+  projects: Project[];
+  portfolioItems: PortfolioItem[];
+  incidents: OperationalIncident[];
+  approvals: Approval[];
+  feedbackItems: FeedbackItem[];
+  runs: Run[];
+  releases: Release[];
+  issues: Issue[];
+  agents: CompanyAgent[];
+}): CompanyDashboardPayload {
+  return {
+    company: input.company,
+    summary: buildExecutiveSummary(input),
+    recentIssues: [...input.issues]
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, 8),
+    pendingApprovals: input.approvals.filter((approval) => approval.status === "pending"),
+    agents: input.agents,
+  };
+}
+
 export async function buildCompanyDetail(companyId: string): Promise<CompanyDetailPayload> {
   const company = await getCompany(companyId);
   if (!company) {
@@ -302,6 +345,62 @@ export async function buildCompanyDetail(companyId: string): Promise<CompanyDeta
       issues,
     }),
   };
+}
+
+export async function buildCompanySidebar(companyId: string): Promise<CompanySidebarPayload> {
+  const company = await getCompany(companyId);
+  if (!company) {
+    throw new Error(`Company ${companyId} not found`);
+  }
+  const [approvals, feedbackItems] = await Promise.all([
+    listApprovals(companyId),
+    listFeedbackItems(companyId),
+  ]);
+  return buildCompanySidebarPayload({ company, approvals, feedbackItems });
+}
+
+export async function buildCompanyDashboard(companyId: string): Promise<CompanyDashboardPayload> {
+  const company = await getCompany(companyId);
+  if (!company) {
+    throw new Error(`Company ${companyId} not found`);
+  }
+  const [
+    goals,
+    projects,
+    portfolioItems,
+    issues,
+    releases,
+    operationalIncidents,
+    feedbackItems,
+    agents,
+    approvals,
+    runs,
+  ] = await Promise.all([
+    listGoals(companyId),
+    listProjects(companyId),
+    listPortfolioItems(companyId),
+    listIssues(companyId),
+    listReleases(companyId),
+    listOperationalIncidents(companyId),
+    listFeedbackItems(companyId),
+    listAgents(companyId),
+    listApprovals(companyId),
+    listRuns(companyId),
+  ]);
+
+  return buildCompanyDashboardPayload({
+    company,
+    goals,
+    projects,
+    portfolioItems,
+    incidents: operationalIncidents,
+    approvals,
+    feedbackItems,
+    runs,
+    releases,
+    issues,
+    agents,
+  });
 }
 
 export async function buildPortfolioItemOverviewById(itemId: string): Promise<PortfolioItemOverview> {

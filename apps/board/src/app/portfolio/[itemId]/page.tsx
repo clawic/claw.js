@@ -21,6 +21,7 @@ import { PageTabBar } from "@/components/PageTabBar";
 import { Button } from "@/components/ui/button";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { boardQueryKeys, fetchCompanyFixtures } from "@/lib/board-queries";
 import { useParams, Link } from "@/lib/router";
 import { cn, relativeTime, formatDate } from "@/lib/utils";
 import type {
@@ -62,14 +63,9 @@ export default function PortfolioItemDetailPage() {
   const [tab, setTab] = useState<Tab>("projects");
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["fixtures", selectedCompanyId],
-    queryFn: async (): Promise<FixturesPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/fixtures`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.companyFixtures(selectedCompanyId),
+    queryFn: () => fetchCompanyFixtures<FixturesPayload>(selectedCompanyId!),
     enabled: !!selectedCompanyId,
-    refetchInterval: 15_000,
   });
 
   const overview = data?.portfolioItemOverview ?? null;

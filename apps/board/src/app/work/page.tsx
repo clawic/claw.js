@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   FolderKanban,
   Target,
@@ -26,10 +25,10 @@ import {
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { useDialog } from "@/context/DialogContext";
+import { useCompanyDetailQuery } from "@/lib/board-queries";
 import { cn, relativeTime, formatDate } from "@/lib/utils";
 import { Link } from "@/lib/router";
 import type {
-  CompanyDetailPayload,
   HealthStatus,
 } from "@/lib/company-types";
 
@@ -51,16 +50,7 @@ export default function WorkPage() {
     setBreadcrumbs([{ label: "Work" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId],
-    queryFn: async (): Promise<CompanyDetailPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
-    enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
-  });
+  const { data, isLoading, isError, refetch } = useCompanyDetailQuery(selectedCompanyId);
 
   const goals = data?.goals ?? [];
   const projects = data?.projects ?? [];

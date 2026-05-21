@@ -23,6 +23,7 @@ import {
 import { usePropertiesPanel } from "@/components/PropertiesPanel";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { invalidateCompanyData, useCompanyDetailQuery } from "@/lib/board-queries";
 import { cn, relativeTime } from "@/lib/utils";
 import type {
   CompanyAgent,
@@ -89,18 +90,9 @@ export default function IssuePage({
       if (!res.ok) throw new Error("load failed");
       return res.json();
     },
-    refetchInterval: 15_000,
   });
 
-  const { data: companyDetail } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId],
-    queryFn: async () => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("company load failed");
-      return (await res.json()) as { agents: CompanyAgent[] };
-    },
-    enabled: !!selectedCompanyId,
-  });
+  const { data: companyDetail } = useCompanyDetailQuery(selectedCompanyId);
 
   const agents = companyDetail?.agents ?? EMPTY_AGENTS;
   const agentById = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
@@ -140,8 +132,7 @@ export default function IssuePage({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["issue", issueId] });
-      queryClient.invalidateQueries({ queryKey: ["issues"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      void invalidateCompanyData(queryClient, selectedCompanyId);
     },
   });
 

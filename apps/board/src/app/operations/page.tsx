@@ -13,6 +13,7 @@ import { PageSkeleton } from "@/components/PageSkeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { boardQueryKeys, fetchCompanyFixtures } from "@/lib/board-queries";
 import { cn, relativeTime, formatDateTime } from "@/lib/utils";
 import type {
   OperationsBoard,
@@ -48,14 +49,9 @@ export default function OperationsPage() {
   }, [setBreadcrumbs]);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["fixtures", selectedCompanyId],
-    queryFn: async (): Promise<FixturesPayload> => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}/fixtures`);
-      if (!res.ok) throw new Error("load failed");
-      return res.json();
-    },
+    queryKey: boardQueryKeys.companyFixtures(selectedCompanyId),
+    queryFn: () => fetchCompanyFixtures<FixturesPayload>(selectedCompanyId!),
     enabled: !!selectedCompanyId,
-    refetchInterval: 10_000,
   });
 
   if (isLoading) return <PageSkeleton />;

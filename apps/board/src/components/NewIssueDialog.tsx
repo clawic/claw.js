@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, SquarePen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
+import { invalidateCompanyData, useCompanyDetailQuery } from "@/lib/board-queries";
 import type { CompanyAgent, Issue, IssuePriority } from "@/lib/company-types";
 
 export function NewIssueDialog() {
@@ -37,15 +38,7 @@ export function NewIssueDialog() {
   const [priority, setPriority] = React.useState<IssuePriority>("medium");
   const [assigneeId, setAssigneeId] = React.useState<string>("");
 
-  const { data: company } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId],
-    queryFn: async () => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return (await res.json()) as { agents: CompanyAgent[] };
-    },
-    enabled: !!selectedCompanyId && newIssueOpen,
-  });
+  const { data: company } = useCompanyDetailQuery(selectedCompanyId, { enabled: newIssueOpen });
 
   const create = useMutation({
     mutationFn: async (): Promise<{ issue: Issue }> => {
@@ -66,10 +59,7 @@ export function NewIssueDialog() {
       return (await res.json()) as { issue: Issue };
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({ queryKey: ["company-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["company-sidebar"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox"] });
-      queryClient.invalidateQueries({ queryKey: ["issues"] });
+      await invalidateCompanyData(queryClient, selectedCompanyId);
       setTitle("");
       setDescription("");
       setPriority("medium");

@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Target } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
-import type { Goal } from "@/lib/company-types";
+import { useCompanyDetailQuery } from "@/lib/board-queries";
 
 export default function GoalsPage() {
   const { selectedCompanyId } = useCompany();
@@ -18,15 +17,7 @@ export default function GoalsPage() {
     setBreadcrumbs([{ label: "Goals" }]);
   }, [setBreadcrumbs]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId],
-    queryFn: async () => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return (await res.json()) as { goals: Goal[] };
-    },
-    enabled: !!selectedCompanyId,
-  });
+  const { data, isLoading } = useCompanyDetailQuery(selectedCompanyId);
 
   if (isLoading) return <PageSkeleton />;
 

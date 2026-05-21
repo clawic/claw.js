@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, UserPlus } from "lucide-react";
 import {
   Dialog,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useCompany } from "@/context/CompanyContext";
 import { useDialog } from "@/context/DialogContext";
+import { invalidateCompanyData, useCompanyDetailQuery } from "@/lib/board-queries";
 import type { CompanyAgent } from "@/lib/company-types";
 
 const COMMON_ROLES = [
@@ -48,15 +49,7 @@ export function NewAgentDialog() {
   const [capabilities, setCapabilities] = React.useState("");
   const [reportsTo, setReportsTo] = React.useState("");
 
-  const { data } = useQuery({
-    queryKey: ["company-detail", selectedCompanyId, "new-agent"],
-    queryFn: async () => {
-      const res = await fetch(`/api/companies/${selectedCompanyId}`);
-      if (!res.ok) throw new Error("load failed");
-      return (await res.json()) as { agents: CompanyAgent[] };
-    },
-    enabled: !!selectedCompanyId && newAgentOpen,
-  });
+  const { data } = useCompanyDetailQuery(selectedCompanyId, { enabled: newAgentOpen });
 
   const hire = useMutation({
     mutationFn: async () => {
@@ -78,9 +71,7 @@ export function NewAgentDialog() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["company-sidebar"] });
-      queryClient.invalidateQueries({ queryKey: ["agents"] });
+      void invalidateCompanyData(queryClient, selectedCompanyId);
       setName("");
       setRole("");
       setTitle("");

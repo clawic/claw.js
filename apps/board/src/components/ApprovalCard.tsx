@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, ShieldCheck, Loader2 } from "lucide-react";
+import { invalidateCompanyData } from "@/lib/board-queries";
 import { cn, relativeTime } from "@/lib/utils";
 import type { Approval } from "@/lib/company-types";
 import { Button } from "@/components/ui/button";
@@ -47,9 +48,7 @@ export function ApprovalCard({ approval, compact = false }: ApprovalCardProps) {
     },
     onSettled: () => {
       setPending(null);
-      queryClient.invalidateQueries({ queryKey: ["company-sidebar"] });
-      queryClient.invalidateQueries({ queryKey: ["company-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      void invalidateCompanyData(queryClient, approval.companyId);
     },
   });
 
