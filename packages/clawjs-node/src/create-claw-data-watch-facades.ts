@@ -173,7 +173,7 @@ export function createClawDataWatchFacades(locals: Record<string, any>): Record<
         watchOptions,
       ),
       events: (type, listener) => eventBus.on(type, listener),
-      eventsIterator: (type = "*") => eventBus.iterate(type),
+      eventsIterator: (type = "*", watchOptions) => eventBus.iterate(type, watchOptions),
     },
   };
 }

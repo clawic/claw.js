@@ -17,7 +17,7 @@ import type { buildCompatDriftReport } from "./compat/drift.ts";
 import type { readCapabilityReport, readChannelsStateSnapshot, readMemoryStateSnapshot, readProviderStateSnapshot, readSchedulerStateSnapshot, readSkillsStateSnapshot, readSlackStateSnapshot, readTelegramStateSnapshot, readWhatsAppStateSnapshot, readWorkspaceStateSnapshot, resolveCapabilityReportPath, resolveChannelsStatePath, resolveMemoryStatePath, resolveProviderStatePath, resolveSchedulerStatePath, resolveSkillsStatePath, resolveTelegramStatePath, resolveWorkspaceStatePath, writeCapabilityReport, writeChannelsStateSnapshot, writeMemoryStateSnapshot, writeProviderStateSnapshot, writeSchedulerStateSnapshot, writeSkillsStateSnapshot, writeWorkspaceStateSnapshot, } from "./state/store.ts";
 import type { watchWorkspaceFile } from "./watch/index.ts";
 import type { watchSessionTranscript } from "./watch/transcript.ts";
-import type { ClawEventBus, ClawEvent, EventListener } from "./watch/events.ts";
+import type { ClawEventBus, ClawEvent, ClawEventIteratorOptions, EventListener } from "./watch/events.ts";
 import type { watchProviderStatus, watchRuntimeStatus, PollWatchOptions } from "./watch/status.ts";
 import type { SessionStore } from "./sessions/store.ts";
 import type { createSoulStore } from "./soul/store.ts";
@@ -1139,6 +1139,6 @@ export interface ClawInstance {
       options?: PollWatchOptions,
     ) => ReturnType<typeof watchProviderStatus>;
     events: (type: string, listener: EventListener) => () => void;
-    eventsIterator: (type?: string) => AsyncIterable<ClawEvent>;
+    eventsIterator: (type?: string, options?: ClawEventIteratorOptions) => AsyncIterable<ClawEvent>;
   };
 }

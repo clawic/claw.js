@@ -2115,12 +2115,23 @@ test("createClaw exposes runtime/provider watchers and async event iteration", a
   const nextEvent = await iterator.next();
   await iterator.return?.();
 
+  const abortController = new AbortController();
+  abortController.abort();
+  const abortedIterator = claw.watch.eventsIterator("*", { signal: abortController.signal })[Symbol.asyncIterator]();
+  const abortedEvent = await Promise.race([
+    abortedIterator.next(),
+    new Promise<IteratorResult<unknown>>((_, reject) => {
+      setTimeout(() => reject(new Error("timed out waiting for aborted event iterator")), 1_000);
+    }),
+  ]);
+
   await new Promise((resolve) => setTimeout(resolve, 80));
   stopRuntime();
   stopProviders();
 
   assert.equal(nextEvent.done, false);
   assert.equal(nextEvent.value?.type, "auth.api_key_saved");
+  assert.equal(abortedEvent.done, true);
   assert.equal(runtimeSnapshots.every((value) => typeof value === "boolean"), true);
   assert.equal(providerSnapshots.every((value) => typeof value === "boolean"), true);
 });

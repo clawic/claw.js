@@ -61,6 +61,11 @@ async function exercise(instance: ClawInstance) {
     void event.type;
     break;
   }
+  const controller = new AbortController();
+  for await (const event of instance.watch.eventsIterator("*", { signal: controller.signal, queueLimit: 8, consumerTimeoutMs: 1_000 })) {
+    void event.timestamp;
+    break;
+  }
 }
 
 void exercise;

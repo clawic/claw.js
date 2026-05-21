@@ -19,7 +19,7 @@ The watcher surface has two layers:
 | `runtimeStatus(callback, options?)` | Polls `claw.runtime.status()` and emits changed values. |
 | `providerStatus(callback, options?)` | Polls provider auth summaries and emits changed values. |
 | `events(type, listener)` | Subscribes to the internal event bus for one event type or `*`. |
-| `eventsIterator(type?)` | Returns an async iterator over the internal event bus. |
+| `eventsIterator(type?, options?)` | Returns a bounded async iterator over the internal event bus. |
 
 ## File and Transcript Watchers
 
@@ -105,6 +105,16 @@ for await (const event of claw.watch.eventsIterator("*")) {
   break;
 }
 
+const controller = new AbortController();
+for await (const event of claw.watch.eventsIterator("*", {
+  signal: controller.signal,
+  queueLimit: 64,
+  consumerTimeoutMs: 30_000,
+})) {
+  console.log(event.type, event.payload);
+  break;
+}
+
 stop();
 stopAll();
 ```
@@ -184,8 +194,23 @@ for await (const event of bus.iterate("*")) {
   break;
 }
 
+const metrics = bus.snapshotMetrics();
+console.log(metrics.queuedEvents, metrics.overflowCount);
+
 stop();
 ```
+
+Event iterators are bounded by default. Each iterator keeps at most 256 queued
+events unless the bus is constructed with `iteratorQueueLimit` or an individual
+iterator passes `queueLimit`. When a slow consumer reaches the limit, the bus
+first coalesces queued events with the same event type. If no queued event can
+be coalesced, it drops the oldest queued event and keeps the newest event.
+`snapshotMetrics()` reports queue depth, coalescing, drops, overflows, aborts,
+and consumer timeouts.
+
+`consumerTimeoutMs` is opt-in so long-lived consumers can wait for rare events.
+Use `AbortSignal` for lifecycle cleanup when the caller already owns a request
+or process cancellation signal.
 ## Cleanup
 
 Every watcher returns a cleanup function. Always call it when the

@@ -883,7 +883,19 @@ for await (const event of claw.watch.eventsIterator("*")) {
   console.log(event.type, event.payload);
   break;
 }
+
+const controller = new AbortController();
+for await (const event of claw.watch.eventsIterator("*", {
+  signal: controller.signal,
+  queueLimit: 64,
+  consumerTimeoutMs: 30_000,
+})) {
+  console.log(event.type, event.payload);
+  break;
+}
 ```
+Custom `ClawEventBus` instances expose `snapshotMetrics()` for queued events,
+coalescing, drops, overflows, aborts, and consumer timeouts.
 ## Contracts
 
 The main runtime contracts come from `@clawjs/core`. The most important
