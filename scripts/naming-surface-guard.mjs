@@ -190,7 +190,7 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
-  "docs/adr/0001-naming-and-stability-surfaces.md",
+  "docs/adr/0048-naming-and-stability-surfaces.md",
   "docs/naming-style-guide.md",
 ]) {
   forbidSnippet(relativePath, "clawix://pair/<token>");
@@ -407,7 +407,7 @@ for (const relativePath of [
 
 for (const relativePath of [
   "docs/getting-started.md",
-  "docs/adr/0001-naming-and-stability-surfaces.md",
+  "docs/adr/0048-naming-and-stability-surfaces.md",
 ]) {
   forbidSnippet(relativePath, "Experimental adapters");
   forbidSnippet(relativePath, "experimental adapters");
@@ -601,7 +601,7 @@ for (const root of implementationRoots) {
 }
 
 for (const [relativePath, snippets] of Object.entries({
-	  "docs/adr/0001-naming-and-stability-surfaces.md": [
+	  "docs/adr/0048-naming-and-stability-surfaces.md": [
 	    "Framework/product name: `ClawJS`",
 	    "CLI/workspace brand: `claw`",
 	    "Global ClawJS home: `~/.claw`",
@@ -697,7 +697,7 @@ for (const snippet of [
   ], snippet, "packages/clawjs/src/v1-data.ts or packages/clawjs/src/v1-data-core.ts");
 }
 
-forbidSnippet("docs/adr/0001-naming-and-stability-surfaces.md", "\n- `signals`\n");
+forbidSnippet("docs/adr/0048-naming-and-stability-surfaces.md", "\n- `signals`\n");
 forbidSnippet("docs/naming-style-guide.md", "or `signals` surfaces");
 forbidSnippet("docs/workspace.md", "CLI beta");
 forbidSnippet("packages/clawjs-core/src/index.test.ts", "CLI beta");

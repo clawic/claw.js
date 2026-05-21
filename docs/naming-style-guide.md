@@ -6,7 +6,7 @@ database objects, files, directories, environment variables, package names,
 services, logs, audit events, tests, examples, or fixtures.
 
 If a public or persistent name is not covered here, stop and update
-`docs/adr/0001-naming-and-stability-surfaces.md` before inventing it.
+`docs/adr/0048-naming-and-stability-surfaces.md` before inventing it.
 For files, Markdown, JSON/YAML role suffixes, internal classes/functions, source
 shape, and agent-oriented rename workflow, also read
 `docs/agentic-naming-guide.md`, `docs/vocabulary.md`, and

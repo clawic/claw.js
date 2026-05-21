@@ -40,7 +40,7 @@ lanes. Do not duplicate long ADR rationale here.
 - Storage and data placement: [Data Storage Boundary](../data-storage-boundary.md).
 - Naming and source shape: [Naming Style Guide](../naming-style-guide.md),
   [Agentic Naming Guide](../agentic-naming-guide.md),
-  [Vocabulary](../vocabulary.md), [ADR 0001](../adr/0001-naming-and-stability-surfaces.md),
+  [Vocabulary](../vocabulary.md), [ADR 0001](../adr/0048-naming-and-stability-surfaces.md),
   and [ADR 0013](../adr/0013-agentic-naming-and-code-structure.md).
 - Source file boundaries: [ADR 0003](../adr/0003-source-file-boundaries.md).
 - Built-in collections: [Canonical Data Catalog](../canonical-data-catalog.md)
@@ -49,7 +49,7 @@ lanes. Do not duplicate long ADR rationale here.
   [ADR 0006](../adr/0006-integration-qa-lab.md), and `tests/e2e/README.md`.
 - Stable surfaces: [ADR 0004](../adr/0004-persistent-surface-registry-and-inspection.md),
   [ADR 0009](../adr/0009-dual-human-programmatic-surfaces.md), and
-  [ADR 0012](../adr/0012-surface-route-graph.md).
+  [ADR 0012](../adr/0049-surface-route-graph.md).
 - Remote access: [Relay](../relay.md), [Interface Matrix](../interface-matrix.md),
   and [ADR 0022](../adr/0022-remote-gateway-sync-redesign.md).
 - CLI and agent discovery: [ADR 0007](../adr/0007-cli-agent-interface.md),

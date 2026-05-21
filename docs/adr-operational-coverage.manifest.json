@@ -112,7 +112,7 @@
       ]
     },
     {
-      "adr": "docs/adr/0041-zero-accidental-work.md",
+      "adr": "docs/adr/0050-zero-accidental-work.md",
       "decisionMap": "docs/decision-map.md",
       "guardrails": [
         "scripts/zero-accidental-work-guard.mjs",

@@ -588,7 +588,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "scripts/verify-host-permission-contract.mjs"],
     docs: ["docs/mac-control-plane.md", "docs/adr/0023-mac-control-plane-v1.md", "docs/adr/0024-mac-permission-broker-v1.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md", "docs/adr/0023-mac-control-plane-v1.md", "docs/adr/0024-mac-permission-broker-v1.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md", "docs/adr/0023-mac-control-plane-v1.md", "docs/adr/0024-mac-permission-broker-v1.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -608,7 +608,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "scripts/verify-host-permission-contract.mjs"],
     docs: ["docs/mac-control-plane.md", "docs/adr/0024-mac-permission-broker-v1.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md", "docs/adr/0024-mac-permission-broker-v1.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md", "docs/adr/0024-mac-permission-broker-v1.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -629,7 +629,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/system-telemetry.test.ts", "packages/clawjs/src/index.test.ts", "packages/clawjs-mcp/src/control-plane.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/cli.md", "docs/api.md", "docs/surface.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -649,7 +649,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs/src/index.test.ts", "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/cli.md", "docs/api.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -668,7 +668,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["macos/Tests/ClawixMeshTests/SystemTelemetryBridgeTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/cli.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -690,13 +690,13 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
       routeStep("claw.edge.bridge.exposes.ui"),
     ],
     tests: ["packages/clawjs/src/inspect-cli.test.ts", "macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"],
-    docs: ["docs/adr/0012-surface-route-graph.md", "docs/host-ownership.md"],
-    adrs: ["docs/adr/0004-persistent-surface-registry-and-inspection.md", "docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    docs: ["docs/adr/0049-surface-route-graph.md", "docs/host-ownership.md"],
+    adrs: ["docs/adr/0004-persistent-surface-registry-and-inspection.md", "docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0049-surface-route-graph.md"],
     surfaceNarrative: {
       concept: "Local desktop chat route from the Clawix human agent surface into the framework runtime and sessions service.",
       authorizingDecision: {
-        ref: "ADR 0012: Surface route graph",
-        path: "docs/adr/0012-surface-route-graph.md",
+        ref: "ADR 0049: Surface route graph",
+        path: "docs/adr/0049-surface-route-graph.md",
       },
       completingSurface: {
         human: "Clawix macOS agent chat UI",
@@ -737,7 +737,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/agents-v1.test.ts", "packages/clawjs/src/index-data.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/cli.md", "docs/adr/0020-agents-v1-refactor.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md", "docs/adr/0020-agents-v1-refactor.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md", "docs/adr/0020-agents-v1-refactor.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -761,7 +761,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/agents-v1.test.ts", "packages/clawjs/src/index-data.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/cli.md", "docs/adr/0020-agents-v1-refactor.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md", "docs/adr/0020-agents-v1-refactor.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md", "docs/adr/0020-agents-v1-refactor.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -781,7 +781,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/agents-v1.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/adr/0020-agents-v1-refactor.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md", "docs/adr/0020-agents-v1-refactor.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md", "docs/adr/0020-agents-v1-refactor.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -803,8 +803,8 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
       routeStep("claw.edge.bridge.exposes.companion"),
     ],
     tests: ["packages/clawjs/src/inspect-cli.test.ts", "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"],
-    docs: ["docs/adr/0012-surface-route-graph.md", "docs/relay.md"],
-    adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    docs: ["docs/adr/0049-surface-route-graph.md", "docs/relay.md"],
+    adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0049-surface-route-graph.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -827,8 +827,8 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
       routeStep("claw.edge.relay.exposes.remote"),
     ],
     tests: ["packages/clawjs/src/inspect-cli.test.ts", "relay/tests/e2e/relay.e2e.test.ts", "relay/tests/e2e/codex-connector.e2e.test.ts"],
-    docs: ["docs/adr/0012-surface-route-graph.md", "docs/relay.md"],
-    adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0012-surface-route-graph.md"],
+    docs: ["docs/adr/0049-surface-route-graph.md", "docs/relay.md"],
+    adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0049-surface-route-graph.md"],
     source: surfaceRouteGraphSource,
   },
   {
@@ -850,7 +850,7 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     ],
     tests: ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
     docs: ["docs/relay.md", "docs/adr/0022-remote-gateway-sync-redesign.md"],
-    adrs: ["docs/adr/0012-surface-route-graph.md", "docs/adr/0022-remote-gateway-sync-redesign.md"],
+    adrs: ["docs/adr/0049-surface-route-graph.md", "docs/adr/0022-remote-gateway-sync-redesign.md"],
     source: surfaceRouteGraphSource,
   },
   {

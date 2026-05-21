@@ -1,4 +1,4 @@
-# ADR 0042: Supply-chain security governance
+# ADR 0051: Supply-chain security governance
 
 Status: Accepted
 

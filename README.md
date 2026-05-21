@@ -41,7 +41,7 @@ flowchart LR
 
 Build once, expose everything through the SDK, the CLI, the API, or the
 relay. Naming and stability rules live in
-[ADR 0001](docs/adr/0001-naming-and-stability-surfaces.md).
+[ADR 0001](docs/adr/0048-naming-and-stability-surfaces.md).
 Long-lived architecture, storage, validation, release, privacy, and naming
 decisions are indexed in [docs/decision-map.md](docs/decision-map.md).
 Official trust and compatibility labels are explained in

@@ -749,7 +749,7 @@ function surfaceEvidence(node: ClawPersistentSurfaceNode, edges: ClawSurfaceEdge
   const docs = uniqueStrings([
     ...(node.kind === "cliCommand" ? ["docs/cli.md"] : []),
     ...(node.surfaceClass || relatedRoutes.length > 0 ? ["docs/persistent-surface.md", "docs/adr/0004-persistent-surface-registry-and-inspection.md"] : []),
-    ...(relatedRoutes.length > 0 ? ["docs/adr/0012-surface-route-graph.md"] : []),
+    ...(relatedRoutes.length > 0 ? ["docs/adr/0049-surface-route-graph.md"] : []),
     ...relatedRoutes.flatMap((route) => route.docs ?? []),
   ]);
   const tests = uniqueStrings([
@@ -759,7 +759,7 @@ function surfaceEvidence(node: ClawPersistentSurfaceNode, edges: ClawSurfaceEdge
   ]);
   const adrs = uniqueStrings([
     ...(node.surfaceClass || relatedRoutes.length > 0 ? ["docs/adr/0004-persistent-surface-registry-and-inspection.md"] : []),
-    ...(relatedRoutes.length > 0 ? ["docs/adr/0012-surface-route-graph.md"] : []),
+    ...(relatedRoutes.length > 0 ? ["docs/adr/0049-surface-route-graph.md"] : []),
     ...relatedRoutes.flatMap((route) => route.adrs ?? []),
   ]);
   const routeIds = relatedRoutes.map((route) => route.id);

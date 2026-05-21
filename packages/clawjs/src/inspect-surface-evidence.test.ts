@@ -47,7 +47,7 @@ test("inspect show returns surface evidence for route-connected nodes", async ()
   }>(show.stdout).data;
   assert.equal(showPayload.id, "claw.relay");
   assert.equal(showPayload.evidence.declaration.file, "packages/clawjs-core/src/surface-registry.ts");
-  assert.equal(showPayload.evidence.docs.includes("docs/adr/0012-surface-route-graph.md"), true);
+  assert.equal(showPayload.evidence.docs.includes("docs/adr/0049-surface-route-graph.md"), true);
   assert.equal(showPayload.evidence.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
   assert.equal(showPayload.evidence.inspectCommands.some((command) => command.includes("inspect show claw.relay --json")), true);
   assert.equal(showPayload.evidence.searchCommands.some((command) => command.includes("search query \"claw.relay\" --domains surfaces --json")), true);

@@ -291,10 +291,10 @@ for (const snippet of [
 for (const snippet of [
   "clawixBridgePort = 24080",
   "authCallback: \"auth/callback\"",
-  "WebSocket localhost:24080",
 ]) {
-  requireSnippet("packages/clawjs-core/src/surface-registry.ts", snippet);
+  requireSnippet("packages/clawjs-core/src/surface-registry-contracts.ts", snippet);
 }
+requireSnippet("packages/clawjs-core/src/surface-registry-graph.ts", "WebSocket localhost:24080");
 requireSnippet("packages/mesh/src/pairing.ts", "hostDisplayName");
 
 if (errors.length > 0) {

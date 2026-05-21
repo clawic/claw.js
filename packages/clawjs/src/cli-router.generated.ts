@@ -62,7 +62,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md"
@@ -94,7 +94,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md"
@@ -125,7 +125,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -169,7 +169,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -206,7 +206,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/network-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0034-network-control-plane.md"
@@ -248,7 +248,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -283,7 +283,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -322,7 +322,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -360,7 +360,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -395,7 +395,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -430,7 +430,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -468,7 +468,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -503,7 +503,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -541,7 +541,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -579,7 +579,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -617,7 +617,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -652,7 +652,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -687,7 +687,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -722,7 +722,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -757,7 +757,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -792,7 +792,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -827,7 +827,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -862,7 +862,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -897,7 +897,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -932,7 +932,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -970,7 +970,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1005,7 +1005,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1040,7 +1040,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1075,7 +1075,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1114,7 +1114,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1153,7 +1153,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1188,7 +1188,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1223,7 +1223,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1258,7 +1258,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1293,7 +1293,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1328,7 +1328,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1363,7 +1363,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1398,7 +1398,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1433,7 +1433,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1468,7 +1468,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/mac-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0023-mac-control-plane-v1.md",
@@ -1501,7 +1501,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -1533,7 +1533,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -1565,7 +1565,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -1597,7 +1597,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -1630,7 +1630,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -1665,10 +1665,10 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
-      "docs/adr/0012-surface-route-graph.md",
+      "docs/adr/0049-surface-route-graph.md",
       "docs/adr/0041-adoption-and-canonicity-governance.md",
       "docs/adr/0017-discoverability-and-meta-code-routing.md"
     ],
@@ -1700,7 +1700,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md"
@@ -1734,7 +1734,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/relay.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0022-remote-gateway-sync-redesign.md"
@@ -1767,7 +1767,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/relay.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0022-remote-gateway-sync-redesign.md"
@@ -1800,7 +1800,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/relay.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0022-remote-gateway-sync-redesign.md"
@@ -1833,7 +1833,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/relay.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0022-remote-gateway-sync-redesign.md"
@@ -1866,7 +1866,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/governance/dense-data/decision-matrix.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0021-dense-data-operating-system.md"
@@ -1900,7 +1900,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/governance/dense-data/decision-matrix.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0021-dense-data-operating-system.md"
@@ -1934,7 +1934,7 @@ export const GENERATED_CLI_COMMANDS = [
       "skills/adr-to-guardrail/SKILL.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0017-discoverability-and-meta-code-routing.md"
@@ -1967,7 +1967,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2000,7 +2000,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2033,7 +2033,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/agent-rules/reporting.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0011-report-governance-v1.md"
@@ -2066,7 +2066,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/need-route-lab.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0014-need-route-lab-v1.md"
@@ -2099,7 +2099,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0017-discoverability-and-meta-code-routing.md",
@@ -2136,10 +2136,10 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/supply-chain-security.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
-      "docs/adr/0042-supply-chain-security-governance.md"
+      "docs/adr/0051-supply-chain-security-governance.md"
     ],
     tests: [
       "packages/clawjs/src/cli-verify-command.test.ts",
@@ -2170,7 +2170,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/debt-ledger.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0017-discoverability-and-meta-code-routing.md",
@@ -2207,7 +2207,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/debt-ledger.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0017-discoverability-and-meta-code-routing.md",
@@ -2242,7 +2242,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/evolution/README.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0030-post-v1-evolution-rescue-backbone.md"
@@ -2277,7 +2277,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/portable-archive-contract.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0008-secrets-security-v1.md",
@@ -2318,7 +2318,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/regulated-domain-safety.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0026-regulated-domain-safety-liability-boundary.md"
@@ -2350,7 +2350,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2383,7 +2383,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/workspace.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0027-governance-identity-scope-model.md",
@@ -2415,7 +2415,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2446,7 +2446,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2477,7 +2477,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2508,7 +2508,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2539,7 +2539,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2570,7 +2570,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2601,7 +2601,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2632,7 +2632,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2663,7 +2663,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2694,7 +2694,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2725,7 +2725,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2756,7 +2756,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2787,7 +2787,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2818,7 +2818,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2850,7 +2850,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2883,7 +2883,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2914,7 +2914,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2946,7 +2946,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -2978,7 +2978,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3010,7 +3010,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3041,7 +3041,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3073,7 +3073,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3105,7 +3105,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3135,7 +3135,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3167,7 +3167,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3201,7 +3201,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3235,7 +3235,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3266,7 +3266,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3297,7 +3297,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3328,7 +3328,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3359,7 +3359,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3390,7 +3390,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3421,7 +3421,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3452,7 +3452,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3484,7 +3484,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/integration-qa-lab.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3516,7 +3516,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3550,7 +3550,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3583,7 +3583,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/connector-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0015-connector-control-plane-v1.md",
@@ -3620,7 +3620,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/connector-control-plane.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0015-connector-control-plane-v1.md"
@@ -3652,7 +3652,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3685,7 +3685,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/search.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3715,7 +3715,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3746,7 +3746,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3784,7 +3784,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3816,7 +3816,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3850,7 +3850,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3881,7 +3881,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3914,7 +3914,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/search.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3944,7 +3944,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -3979,7 +3979,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4014,7 +4014,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4049,7 +4049,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4080,7 +4080,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4112,7 +4112,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4144,7 +4144,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4179,7 +4179,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4211,7 +4211,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4243,7 +4243,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4274,7 +4274,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4305,7 +4305,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4336,7 +4336,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4367,7 +4367,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4398,7 +4398,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4429,7 +4429,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4460,7 +4460,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4491,7 +4491,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4527,7 +4527,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/connector-governed-context.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0029-connector-governed-context-v1.md"
@@ -4562,7 +4562,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/connector-governed-context.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0029-connector-governed-context-v1.md"
@@ -4593,7 +4593,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4625,7 +4625,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4656,7 +4656,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4688,7 +4688,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4719,7 +4719,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4750,7 +4750,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4782,7 +4782,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4814,7 +4814,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4845,7 +4845,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4877,7 +4877,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4909,7 +4909,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4941,7 +4941,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -4973,7 +4973,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5005,7 +5005,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5037,7 +5037,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5069,7 +5069,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5101,7 +5101,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md"
@@ -5134,7 +5134,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md"
@@ -5167,7 +5167,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5199,7 +5199,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5231,7 +5231,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5264,7 +5264,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5297,7 +5297,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5333,7 +5333,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5369,7 +5369,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5405,7 +5405,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5438,7 +5438,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5471,7 +5471,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],
@@ -5503,7 +5503,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/cli.md"
     ],
     adrs: [
-      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md"
     ],

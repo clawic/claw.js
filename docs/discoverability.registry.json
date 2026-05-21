@@ -37,10 +37,10 @@
       "canonicalName": "adr:claw-framework-host-boundary"
     },
     {
-      "id": "adr-docs-adr-0001-naming-and-stability-surfaces",
+      "id": "adr-docs-adr-0048-naming-and-stability-surfaces",
       "kind": "adr",
       "steward": "claw",
-      "canonicalSource": "docs/adr/0001-naming-and-stability-surfaces.md",
+      "canonicalSource": "docs/adr/0048-naming-and-stability-surfaces.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -49,19 +49,19 @@
         "docs/decision-map.md"
       ],
       "discoveryTerms": [
-        "ADR 0001: Naming and stability surfaces",
-        "0001-naming-and-stability-surfaces",
+        "ADR 0048: Naming and stability surfaces",
+        "0048-naming-and-stability-surfaces",
         "ADR 0001",
         "adr:naming-stability"
       ],
       "searchQueries": [
         {
-          "query": "ADR 0001: Naming and stability surfaces",
-          "expectPath": "docs/adr/0001-naming-and-stability-surfaces.md"
+          "query": "ADR 0048: Naming and stability surfaces",
+          "expectPath": "docs/adr/0048-naming-and-stability-surfaces.md"
         },
         {
           "query": "adr:naming-stability",
-          "expectPath": "docs/adr/0001-naming-and-stability-surfaces.md"
+          "expectPath": "docs/adr/0048-naming-and-stability-surfaces.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
@@ -1562,10 +1562,10 @@
       "canonicalName": "adr:adoption-canonicity-governance"
     },
     {
-      "id": "adr-docs-adr-0041-zero-accidental-work",
+      "id": "adr-docs-adr-0050-zero-accidental-work",
       "kind": "adr",
       "steward": "claw",
-      "canonicalSource": "docs/adr/0041-zero-accidental-work.md",
+      "canonicalSource": "docs/adr/0050-zero-accidental-work.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -1574,8 +1574,8 @@
         "docs/decision-map.md"
       ],
       "discoveryTerms": [
-        "ADR 0041: Zero Accidental Work",
-        "0041-zero-accidental-work",
+        "ADR 0050: Zero Accidental Work",
+        "0050-zero-accidental-work",
         "ADR 0041",
         "zero accidental work",
         "inert createClaw",
@@ -1585,15 +1585,15 @@
       "searchQueries": [
         {
           "query": "zero accidental work",
-          "expectPath": "docs/adr/0041-zero-accidental-work.md"
+          "expectPath": "docs/adr/0050-zero-accidental-work.md"
         },
         {
           "query": "inert createClaw",
-          "expectPath": "docs/adr/0041-zero-accidental-work.md"
+          "expectPath": "docs/adr/0050-zero-accidental-work.md"
         },
         {
           "query": "adr:zero-accidental-work",
-          "expectPath": "docs/adr/0041-zero-accidental-work.md"
+          "expectPath": "docs/adr/0050-zero-accidental-work.md"
         }
       ],
       "guard": "scripts/zero-accidental-work-guard.mjs",
@@ -1642,10 +1642,10 @@
       "canonicalName": "adr:streaming-backpressure-contract"
     },
     {
-      "id": "adr-docs-adr-0042-supply-chain-security-governance",
+      "id": "adr-docs-adr-0051-supply-chain-security-governance",
       "kind": "adr",
       "steward": "claw",
-      "canonicalSource": "docs/adr/0042-supply-chain-security-governance.md",
+      "canonicalSource": "docs/adr/0051-supply-chain-security-governance.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -1654,14 +1654,14 @@
         "docs/decision-map.md"
       ],
       "discoveryTerms": [
-        "ADR 0042: Supply-chain security governance",
-        "0042-supply-chain-security-governance",
+        "ADR 0051: Supply-chain security governance",
+        "0051-supply-chain-security-governance",
         "ADR 0042"
       ],
       "searchQueries": [
         {
-          "query": "ADR 0042: Supply-chain security governance",
-          "expectPath": "docs/adr/0042-supply-chain-security-governance.md"
+          "query": "ADR 0051: Supply-chain security governance",
+          "expectPath": "docs/adr/0051-supply-chain-security-governance.md"
         }
       ],
       "guard": "scripts/discoverability-check.mjs",
@@ -1819,7 +1819,7 @@
       "id": "surface-route-graph",
       "kind": "surface-route",
       "steward": "claw",
-      "canonicalSource": "docs/adr/0012-surface-route-graph.md",
+      "canonicalSource": "docs/adr/0049-surface-route-graph.md",
       "requiredEntrypoints": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -1829,8 +1829,8 @@
         "skills/surface-route-work/SKILL.md"
       ],
       "discoveryTerms": [
-        "ADR 0012: Surface route graph",
-        "0012-surface-route-graph",
+        "ADR 0049: Surface route graph",
+        "0049-surface-route-graph",
         "ADR 0012",
         "surface route graph",
         "route-first",
@@ -1840,11 +1840,11 @@
       "searchQueries": [
         {
           "query": "surface route graph",
-          "expectPath": "docs/adr/0012-surface-route-graph.md"
+          "expectPath": "docs/adr/0049-surface-route-graph.md"
         },
         {
           "query": "adr:surface-route-graph",
-          "expectPath": "docs/adr/0012-surface-route-graph.md"
+          "expectPath": "docs/adr/0049-surface-route-graph.md"
         }
       ],
       "guard": "scripts/surface-route-graph-guard.mjs",

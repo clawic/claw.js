@@ -398,7 +398,7 @@
       "content/docs/frontend-checklist.md": 1,
       "content/tests/e2e/ui.spec.ts": 1,
       "content/ui/src/components/Shell.tsx": 2,
-      "docs/adr/0001-naming-and-stability-surfaces.md": 3,
+      "docs/adr/0048-naming-and-stability-surfaces.md": 3,
       "docs/adr/0006-integration-qa-lab.md": 2,
       "docs/adr/0019-search-v1-1-architecture.md": 4,
       "docs/adr/0020-agents-v1-refactor.md": 1,

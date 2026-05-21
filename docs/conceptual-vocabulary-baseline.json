@@ -46,7 +46,7 @@
         "docs/adr/0004-persistent-surface-registry-and-inspection.md": 2,
         "docs/adr/0005-canonical-data-catalog.md": 2,
         "docs/adr/0012-domain-surface-registry-db-to-cli.md": 7,
-        "docs/adr/0012-surface-route-graph.md": 2,
+        "docs/adr/0049-surface-route-graph.md": 2,
         "docs/adr/0016-code-hygiene-program.md": 1,
         "docs/adr/0017-discoverability-and-meta-code-routing.md": 2,
         "docs/adr/0020-agents-v1-refactor.md": 4,

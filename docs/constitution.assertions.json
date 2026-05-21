@@ -907,7 +907,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -938,7 +938,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -969,7 +969,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1000,7 +1000,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1031,7 +1031,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1062,7 +1062,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1093,7 +1093,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1124,7 +1124,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1155,7 +1155,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1186,7 +1186,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1217,7 +1217,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1248,7 +1248,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [
@@ -1279,7 +1279,7 @@
         "docs/host-ownership.md",
         "docs/adr/0001-claw-framework-host-boundary.md",
         "docs/adr/0017-discoverability-and-meta-code-routing.md",
-        "docs/adr/0012-surface-route-graph.md",
+        "docs/adr/0049-surface-route-graph.md",
         "docs/evolution/README.md"
       ],
       "protectorScripts": [

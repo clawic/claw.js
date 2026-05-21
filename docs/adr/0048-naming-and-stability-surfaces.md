@@ -1,4 +1,4 @@
-# ADR 0001: Naming and stability surfaces
+# ADR 0048: Naming and stability surfaces
 
 Status: accepted
 Date: 2026-05-13

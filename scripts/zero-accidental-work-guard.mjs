@@ -150,12 +150,12 @@ runProbe("create-claw", ["--import", "tsx", "--eval", `
 });
 
 const requiredSnippets = new Map([
-  ["docs/adr/0041-zero-accidental-work.md", ["ADR 0041", "createClaw()", "Bridge transport and runtime startup are separate contracts"]],
+  ["docs/adr/0050-zero-accidental-work.md", ["ADR 0041", "createClaw()", "Bridge transport and runtime startup are separate contracts"]],
   ["docs/decision-map.md", ["Zero Accidental Work", "scripts/zero-accidental-work-guard.mjs"]],
   ["docs/api.md", ["`createClaw()` constructs an inert facade", "skills import or sync"]],
-  ["docs/discoverability.md", ["adr-docs-adr-0041-zero-accidental-work", "guard-scripts-zero-accidental-work-guard"]],
-  ["docs/discoverability.registry.json", ["adr-docs-adr-0041-zero-accidental-work", "guard-scripts-zero-accidental-work-guard"]],
-  ["docs/adr-operational-coverage.manifest.json", ["docs/adr/0041-zero-accidental-work.md", "scripts/zero-accidental-work-guard.mjs"]],
+  ["docs/discoverability.md", ["adr-docs-adr-0050-zero-accidental-work", "guard-scripts-zero-accidental-work-guard"]],
+  ["docs/discoverability.registry.json", ["adr-docs-adr-0050-zero-accidental-work", "guard-scripts-zero-accidental-work-guard"]],
+  ["docs/adr-operational-coverage.manifest.json", ["docs/adr/0050-zero-accidental-work.md", "scripts/zero-accidental-work-guard.mjs"]],
   ["package.json", ["scripts/zero-accidental-work-guard.mjs"]],
 ]);
 

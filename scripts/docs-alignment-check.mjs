@@ -44,7 +44,7 @@ const agentDocs = [
   "docs/vocabulary.registry.json",
   "docs/naming-shape-audit.md",
   "docs/adr/0001-claw-framework-host-boundary.md",
-  "docs/adr/0001-naming-and-stability-surfaces.md",
+  "docs/adr/0048-naming-and-stability-surfaces.md",
   "docs/adr/0003-source-file-boundaries.md",
   "docs/adr/0013-agentic-naming-and-code-structure.md",
   "docs/adr/0005-canonical-data-catalog.md",
@@ -326,7 +326,7 @@ for (const snippet of [
   "`protocolVersion` is the version field",
   "Do not expose public abbreviations such as `/mp` or `/ws`.",
 ]) {
-  requireSnippet("docs/adr/0001-naming-and-stability-surfaces.md", snippet);
+  requireSnippet("docs/adr/0048-naming-and-stability-surfaces.md", snippet);
 }
 
 if (fs.existsSync(path.join(rootDir, "scripts", "v1-surface-closure-audit-check.mjs"))) {

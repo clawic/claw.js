@@ -21,7 +21,7 @@ permissions, grants, approvals, audit, or agent chat routes.
    - `claw inspect route <route-id> --json`
 3. Read the ADRs, docs, tests, and source files named by the inspection output.
    For the route graph contract itself, start from
-   `docs/adr/0012-surface-route-graph.md`. For remote, Relay, Gateway,
+   `docs/adr/0049-surface-route-graph.md`. For remote, Relay, Gateway,
    Coordinator, Connector, Sync, Iroh, node trust, or sync-resource route work,
    also read `docs/adr/0022-remote-gateway-sync-redesign.md`. The Clawix
    projection uses `docs/adr/0011-surface-route-graph.md`.

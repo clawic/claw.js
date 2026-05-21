@@ -62,13 +62,13 @@ Read the relevant canon before changing its surface:
 - Storage/data placement: `docs/data-storage-boundary.md`
 - Naming/stability/source shape: `docs/naming-style-guide.md`,
   `docs/agentic-naming-guide.md`, `docs/vocabulary.md`,
-  `docs/adr/0001-naming-and-stability-surfaces.md`,
+  `docs/adr/0048-naming-and-stability-surfaces.md`,
   `docs/adr/0013-agentic-naming-and-code-structure.md`,
   `docs/adr/0003-source-file-boundaries.md`
 - Built-in collections and schemas: `docs/canonical-data-catalog.md`,
   `docs/adr/0005-canonical-data-catalog.md`
 - Stable surfaces and route graph: `docs/adr/0004-persistent-surface-registry-and-inspection.md`,
-  `docs/adr/0009-dual-human-programmatic-surfaces.md`, `docs/adr/0012-surface-route-graph.md`
+  `docs/adr/0009-dual-human-programmatic-surfaces.md`, `docs/adr/0049-surface-route-graph.md`
 - Open standard and official trust:
   `docs/adr/0033-open-standard-official-trust.md`,
   `docs/official-trust-and-compatibility.md`, `FORKS.md`, `TRADEMARKS.md`

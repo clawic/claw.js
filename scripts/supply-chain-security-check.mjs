@@ -193,7 +193,7 @@ function validateReleaseScripts() {
 function validateDocs() {
   for (const [file, snippets] of [
     ["docs/supply-chain-security.md", ["CycloneDX JSON", "SLSA", "trusted publishing", "claw verify release", "claw verify plugin", "72 hours"]],
-    ["docs/adr/0042-supply-chain-security-governance.md", ["baseline", "release-critical", "claw verify"]],
+    ["docs/adr/0051-supply-chain-security-governance.md", ["baseline", "release-critical", "claw verify"]],
     ["SECURITY.md", ["Supply-chain security"]],
     ["RELEASING.md", ["Supply-chain evidence"]],
     [".github/PULL_REQUEST_TEMPLATE.md", ["Dependency and supply-chain review"]],

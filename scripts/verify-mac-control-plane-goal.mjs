@@ -28,7 +28,7 @@ const requiredDocs = [
   "docs/adr/0023-mac-control-plane-v1.md",
   "docs/adr/0024-mac-permission-broker-v1.md",
   "docs/decision-map.md",
-  "docs/adr/0012-surface-route-graph.md",
+  "docs/adr/0049-surface-route-graph.md",
   "skills/mac-control-plane-work/SKILL.md",
 ];
 

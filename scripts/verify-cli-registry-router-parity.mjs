@@ -30,7 +30,7 @@ const removedPublicCommands = new Set([
 
 const requiredDocRefs = new Set([
   "docs/cli.md",
-  "docs/adr/0001-naming-and-stability-surfaces.md",
+  "docs/adr/0048-naming-and-stability-surfaces.md",
   "docs/adr/0004-persistent-surface-registry-and-inspection.md",
   "docs/adr/0007-cli-agent-interface.md",
 ]);
