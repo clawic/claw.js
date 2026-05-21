@@ -690,6 +690,12 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runInspectCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
+  if (group === "maturity") {
+    const passthroughTarget = command === "show" ? subcommand : command && !["list", "audit", "profile"].includes(command) ? command : undefined;
+    const delegatedPositionals = passthroughTarget ? ["inspect", "maturity", passthroughTarget] : ["inspect", "maturity"];
+    return await runInspectCli({ argv: delegatedPositionals, positionals: delegatedPositionals, flags, context, wantsJson, binName });
+  }
+
   if (group === "domains") {
     return await runDomainsCli({ argv, positionals, flags, context, wantsJson, binName, invokedCommand: "domains", ensureDomainSurfaceRunning });
   }

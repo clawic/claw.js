@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildClawDebtLedger, buildCustomAppSDKInspectionPayload, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawProfessionalRecordsGapRegistryEntries, listClawProfessionalRecordsIntentEntries, listClawProfessionalRecordsSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, auditClawCapabilityMaturityRegistry, buildClawDebtLedger, buildCustomAppSDKInspectionPayload, buildRemoteConformanceReport, buildRemoteDecisionReview, buildRemoteExternalPendingRegister, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteOfflineCommandResult, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteRouteContractCatalog, buildRemoteSourceQaReviewTemplate, buildSyncDriverCatalog, clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, clawEvolutionPolicy, clawPersistentSurfaceRegistry, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCapabilityMaturityEntries, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawProfessionalRecordsGapRegistryEntries, listClawProfessionalRecordsIntentEntries, listClawProfessionalRecordsSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, remoteSyncRequiredRouteIds, resolveClawCliCommand, resolveClawPersistentSurfacePath, searchClawCliRegistry, summarizeGovernanceBindings, syncDriverSchema, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core";
 import type { AgentAuditEvent, ClawCapabilityFiche, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import type { Agent } from "@clawjs/agents";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
@@ -1092,6 +1092,22 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     else input.context.stdout.write(`${inspectCapabilityFicheText([fiche])}\n`);
     return CLI_EXIT_OK;
   }
+  if (command === "maturity") {
+    const entries = listClawCapabilityMaturityEntries();
+    const selected = target ? entries.filter((entry) => entry.id === target || entry.parentId === target || entry.maturity === target) : entries;
+    const payload = {
+      version: 1,
+      profileOrder: ["stable", "beta", "experimental", "dev"],
+      maturityOrder: ["incomplete", "experimental", "beta", "stable"],
+      defaultMaturity: "incomplete",
+      blockedCode: "maturity_blocked",
+      audit: auditClawCapabilityMaturityRegistry(),
+      entries: selected,
+    };
+    if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    else input.context.stdout.write(`${selected.map((entry) => `${entry.id}\t${entry.maturity}\t${entry.activationPolicy}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
   if (command === "route") {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect route <route-id> [--json]`, CLI_EXIT_USAGE);
     const route = routes.find((candidate) => candidate.id === target);
@@ -1528,7 +1544,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

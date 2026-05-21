@@ -60,6 +60,26 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.database.monitor.table.metric_incidents"), true);
   assert.equal(treePayload.nodes.some((node: { id: string }) => node.id === "claw.contracts"), true);
 
+  const maturity = await runCliCapture(["inspect", "maturity", "--json"], process.cwd());
+  assert.equal(maturity.code, CLI_EXIT_OK);
+  const maturityPayload = parseCliJson<{
+    defaultMaturity: string;
+    blockedCode: string;
+    audit: { ok: boolean };
+    entries: Array<{ id: string; maturity: string; activationPolicy: string; promotionDecision?: { ref: string } }>;
+  }>(maturity.stdout).data;
+  assert.equal(maturityPayload.defaultMaturity, "incomplete");
+  assert.equal(maturityPayload.blockedCode, "maturity_blocked");
+  assert.equal(maturityPayload.audit.ok, true);
+  assert.equal(maturityPayload.entries.some((entry) => entry.id === "claw.shell.core" && entry.maturity === "stable" && Boolean(entry.promotionDecision?.ref)), true);
+  assert.equal(maturityPayload.entries.some((entry) => entry.id === "system.telemetry.cpu.monitoring" && entry.maturity === "experimental" && entry.activationPolicy === "opt_in"), true);
+
+  const maturityCommand = await runCliCapture(["maturity", "show", "system.telemetry", "--json"], process.cwd());
+  assert.equal(maturityCommand.code, CLI_EXIT_OK);
+  const maturityCommandPayload = parseCliJson<{ entries: Array<{ id: string; parentId?: string; maturity: string }> }>(maturityCommand.stdout).data;
+  assert.equal(maturityCommandPayload.entries.some((entry) => entry.id === "system.telemetry" && entry.maturity === "experimental"), true);
+  assert.equal(maturityCommandPayload.entries.some((entry) => entry.parentId === "system.telemetry"), true);
+
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());
   assert.equal(show.code, CLI_EXIT_OK);
   const coreDatabase = parseCliJson<{ id: string; path: string; incomingEdges?: unknown[]; outgoingEdges?: unknown[]; routes?: unknown[] }>(show.stdout).data;
