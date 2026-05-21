@@ -23,7 +23,9 @@ checkRequiredSource(
   "packages/clawjs-mcp/src/client.ts",
   [
     "controlPlane: MCPConnectorControlPlaneInput",
-    "{ prefixedName, args, controlPlane }",
+    "prefixedName,",
+    "args,",
+    "controlPlane,",
   ],
 );
 checkRequiredSource(
