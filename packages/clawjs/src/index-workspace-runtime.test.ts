@@ -906,6 +906,56 @@ test("runCli supports runtime install, uninstall, and repair dry-run", async () 
   assert.match(setupStdout.getOutput(), /agents/);
 });
 
+test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-runtime-portal-"));
+
+  const adaptersStdout = captureStream();
+  assert.equal(await runCli(["runtime", "adapters", "--json"], {
+    stdout: adaptersStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const adaptersPayload = JSON.parse(adaptersStdout.getOutput()) as { data: { adapters: Array<{ id: string; targetedForFullIntegration: boolean }> } };
+  assert.deepEqual(
+    adaptersPayload.data.adapters
+      .filter((adapter) => adapter.targetedForFullIntegration)
+      .map((adapter) => adapter.id)
+      .sort(),
+    ["codex", "hermes", "openclaw"],
+  );
+
+  const commandsStdout = captureStream();
+  assert.equal(await runCli(["runtime", "codex", "commands", "--workspace", workspaceRoot, "--json"], {
+    stdout: commandsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const commandsPayload = JSON.parse(commandsStdout.getOutput()) as { data: { runtimeId: string; executableByClawCli: Array<{ command: string }> } };
+  assert.equal(commandsPayload.data.runtimeId, "codex");
+  assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex status"), true);
+
+  const hermesDomainsStdout = captureStream();
+  const hermesExit = await runCli(["runtime", "hermes", "domains", "--workspace", workspaceRoot, "--json"], {
+    stdout: hermesDomainsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesExit), true);
+  const hermesPayload = JSON.parse(hermesDomainsStdout.getOutput()) as { data: { runtimeId: string; domains: Array<{ domain: string }> } };
+  assert.equal(hermesPayload.data.runtimeId, "hermes");
+  assert.equal(hermesPayload.data.domains.some((entry) => entry.domain === "channels"), true);
+  assert.equal(hermesPayload.data.domains.some((entry) => entry.domain === "skills"), true);
+
+  const openclawSessionStdout = captureStream();
+  assert.equal(await runCli(["runtime", "openclaw", "session", "--workspace", workspaceRoot, "--json"], {
+    stdout: openclawSessionStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const openclawPayload = JSON.parse(openclawSessionStdout.getOutput()) as { data: { session: { supportsGateway?: boolean } } };
+  assert.equal(openclawPayload.data.session.supportsGateway, true);
+});
+
 test("runCli smokes the required command surface in dry-run or headless mode", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-smoke-"));
   const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-smoke-agent-"));
