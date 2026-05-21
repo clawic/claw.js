@@ -170,16 +170,19 @@ export async function sendMessage(input: {
   replyToId?: string;
   attachments?: Message["attachments"];
 }): Promise<Message> {
-  const message = await createRecord<Message>("hub_messages", {
+  const payload: Record<string, unknown> = {
     channelId: input.channelId,
     authorId: input.authorId,
     authorKind: input.authorKind,
     content: input.content,
     contentType: input.contentType ?? "text",
-    threadId: input.threadId ?? "",
-    replyToId: input.replyToId ?? "",
     pinned: false,
-  });
+  };
+  if (input.threadId) payload.threadId = input.threadId;
+  if (input.replyToId) payload.replyToId = input.replyToId;
+  if (input.attachments) payload.attachments = input.attachments;
+
+  const message = await createRecord<Message>("hub_messages", payload);
 
   await updateRecord("hub_channels", input.channelId, {
     lastMessageAt: message.createdAt,
