@@ -18,6 +18,9 @@ export interface CodexImportResult {
 export interface CodexScanResult {
   scanned: number;
   imported: CodexImportResult[];
+  skipped: number;
+  budgetExhausted: boolean;
+  changedFiles: number;
 }
 
 interface RolloutLine {
@@ -77,8 +80,7 @@ function rolloutBasename(filePath: string): string {
   return path.basename(filePath);
 }
 
-function sha1OfFile(filePath: string): string {
-  const buf = fs.readFileSync(filePath);
+function sha1OfBuffer(buf: Buffer): string {
   return createHash("sha1").update(buf).digest("hex");
 }
 
@@ -98,6 +100,33 @@ function classifyResponseMessage(role: string | undefined): MessageRole | null {
 export interface ImportCodexFileOptions {
   forceReimport?: boolean;
   machine?: string;
+  mode?: "incremental" | "full";
+}
+
+interface CodexFileFingerprint {
+  sourceMtimeMs: number;
+  sourceSize: number;
+  sourceIno: number;
+  sourceDev: number;
+}
+
+function fingerprintFromStat(stat: fs.Stats): CodexFileFingerprint {
+  return {
+    sourceMtimeMs: stat.mtimeMs,
+    sourceSize: stat.size,
+    sourceIno: stat.ino,
+    sourceDev: stat.dev,
+  };
+}
+
+function fingerprintsMatch(
+  existing: ReturnType<SessionsServiceStore["findOriginByPath"]>,
+  current: CodexFileFingerprint,
+): boolean {
+  return existing?.sourceMtimeMs === current.sourceMtimeMs
+    && existing.sourceSize === current.sourceSize
+    && existing.sourceIno === current.sourceIno
+    && existing.sourceDev === current.sourceDev;
 }
 
 export function importCodexRolloutFile(
@@ -105,17 +134,36 @@ export function importCodexRolloutFile(
   filePath: string,
   options: ImportCodexFileOptions = {},
 ): CodexImportResult {
-  if (!fs.existsSync(filePath)) {
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(filePath);
+  } catch {
     return { filePath, sessionId: null, messagesImported: 0, skipped: true, reason: "file_not_found" };
   }
+  if (!stat.isFile()) {
+    return { filePath, sessionId: null, messagesImported: 0, skipped: true, reason: "not_file" };
+  }
 
+  const fingerprint = fingerprintFromStat(stat);
   const existingOrigin = store.findOriginByPath(filePath);
-  const currentHash = sha1OfFile(filePath);
+  if (!options.forceReimport && (options.mode ?? "incremental") === "incremental" && fingerprintsMatch(existingOrigin, fingerprint)) {
+    return { filePath, sessionId: existingOrigin?.sessionId ?? null, messagesImported: 0, skipped: true, reason: "unchanged_fingerprint" };
+  }
+
+  const buf = fs.readFileSync(filePath);
+  const currentHash = sha1OfBuffer(buf);
   if (!options.forceReimport && existingOrigin && existingOrigin.mirrorHash === currentHash) {
+    store.upsertOrigin({
+      sessionId: existingOrigin.sessionId,
+      nativePath: filePath,
+      nativeFormat: NATIVE_FORMAT,
+      mirrorHash: currentHash,
+      ...fingerprint,
+    });
     return { filePath, sessionId: existingOrigin.sessionId, messagesImported: 0, skipped: true, reason: "unchanged" };
   }
 
-  const text = fs.readFileSync(filePath, "utf8");
+  const text = buf.toString("utf8");
   const lines = text.split("\n").filter((line) => line.trim().length > 0);
 
   let sessionId: string | null = existingOrigin?.sessionId ?? rolloutSessionIdFromName(filePath);
@@ -209,9 +257,9 @@ export function importCodexRolloutFile(
           timestamp: lineTimestamp,
           sourceNativeId: `${rolloutBasename(filePath)}::line:${index}`,
         };
-        store.appendMessage(input);
-        messagesImported += 1;
-          continue;
+        const outcome = store.appendMessageResult(input);
+        if (outcome.inserted) messagesImported += 1;
+        continue;
       }
     }
   }
@@ -222,6 +270,7 @@ export function importCodexRolloutFile(
       nativePath: filePath,
       nativeFormat: NATIVE_FORMAT,
       mirrorHash: currentHash,
+      ...fingerprint,
     });
   }
 
@@ -235,6 +284,8 @@ export function importCodexRolloutFile(
 
 export interface ImportCodexDirOptions extends ImportCodexFileOptions {
   pattern?: RegExp;
+  budgetMs?: number;
+  maxFiles?: number;
 }
 
 export function importCodexSessionsDir(
@@ -243,12 +294,25 @@ export function importCodexSessionsDir(
   options: ImportCodexDirOptions = {},
 ): CodexScanResult {
   if (!fs.existsSync(rootDir)) {
-    return { scanned: 0, imported: [] };
+    return { scanned: 0, imported: [], skipped: 0, budgetExhausted: false, changedFiles: 0 };
   }
   const pattern = options.pattern ?? /^rollout-.*\.jsonl$/;
+  const start = performance.now();
+  const budgetMs = options.budgetMs && options.budgetMs > 0 ? options.budgetMs : null;
+  const maxFiles = options.maxFiles && options.maxFiles > 0 ? Math.floor(options.maxFiles) : null;
   const stack: string[] = [rootDir];
-  const filePaths: string[] = [];
+  const imported: CodexImportResult[] = [];
+  let scanned = 0;
+  let budgetExhausted = false;
   while (stack.length > 0) {
+    if (maxFiles !== null && imported.length >= maxFiles) {
+      budgetExhausted = true;
+      break;
+    }
+    if (budgetMs !== null && performance.now() - start >= budgetMs) {
+      budgetExhausted = true;
+      break;
+    }
     const dir = stack.pop();
     if (!dir) continue;
     let entries: fs.Dirent[];
@@ -257,23 +321,36 @@ export function importCodexSessionsDir(
     } catch {
       continue;
     }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(full);
-        continue;
+    const dirs = entries.filter((entry) => entry.isDirectory()).sort((a, b) => a.name.localeCompare(b.name));
+    const files = entries.filter((entry) => entry.isFile()).sort((a, b) => b.name.localeCompare(a.name));
+    for (const entry of dirs) {
+      stack.push(path.join(dir, entry.name));
+    }
+    for (const entry of files) {
+      if (maxFiles !== null && imported.length >= maxFiles) {
+        budgetExhausted = true;
+        break;
       }
-      if (entry.isFile() && pattern.test(entry.name)) {
-        filePaths.push(full);
+      if (budgetMs !== null && performance.now() - start >= budgetMs) {
+        budgetExhausted = true;
+        break;
+      }
+      const full = path.join(dir, entry.name);
+      if (pattern.test(entry.name)) {
+        scanned += 1;
+        imported.push(importCodexRolloutFile(store, full, {
+          forceReimport: options.forceReimport,
+          machine: options.machine,
+          mode: options.mode,
+        }));
       }
     }
   }
-  filePaths.sort();
-  const imported = filePaths.map((file) =>
-    importCodexRolloutFile(store, file, {
-      forceReimport: options.forceReimport,
-      machine: options.machine,
-    }),
-  );
-  return { scanned: filePaths.length, imported };
+  return {
+    scanned,
+    imported,
+    skipped: imported.filter((item) => item.skipped).length,
+    budgetExhausted,
+    changedFiles: imported.filter((item) => !item.skipped).length,
+  };
 }

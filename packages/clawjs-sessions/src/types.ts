@@ -64,6 +64,10 @@ export interface SessionOriginRecord {
   nativeFormat: string;
   lastSyncedAt: number;
   mirrorHash: string | null;
+  sourceMtimeMs: number | null;
+  sourceSize: number | null;
+  sourceIno: number | null;
+  sourceDev: number | null;
 }
 
 export interface ListSessionsFilter {
@@ -86,6 +90,13 @@ export interface ListSessionsFilter {
 export interface ListSessionsResult {
   items: SessionRecord[];
   total: number;
+}
+
+export interface SidebarBootstrapResult {
+  projects: ProjectRecord[];
+  pinned: SessionRecord[];
+  recent: SessionRecord[];
+  totalActiveVisible: number;
 }
 
 export interface SearchSessionsInput {
@@ -189,6 +200,24 @@ export type SessionEventType =
   | "project.updated"
   | "error";
 
+export type SessionMessageUpdatedDelta = Partial<Pick<SessionMessageRecord,
+  | "contentText"
+  | "contentBlocks"
+  | "toolCalls"
+  | "timeline"
+  | "workSummary"
+  | "streamingState"
+  | "attachments"
+>>;
+
+export interface SessionMessageUpdatedPayload {
+  id: string;
+  sessionId: string;
+  messageId: string;
+  delta: SessionMessageUpdatedDelta;
+  full: false;
+}
+
 export interface SessionEvent {
   type: SessionEventType;
   sessionId?: string;
@@ -203,6 +232,10 @@ export interface UpsertOriginInput {
   nativePath: string;
   nativeFormat: string;
   mirrorHash?: string | null;
+  sourceMtimeMs?: number | null;
+  sourceSize?: number | null;
+  sourceIno?: number | null;
+  sourceDev?: number | null;
 }
 
 export interface SessionWithMessages {
@@ -213,8 +246,12 @@ export interface SessionWithMessages {
 export interface ExportTrajectoryOptions {
   agent?: SessionAgent;
   since?: number;
+  sinceCreatedAt?: number;
   includeFailed?: boolean;
   tag?: string;
+  limit?: number;
+  offset?: number;
+  messageLimit?: number;
 }
 
 export interface TrajectoryRecord {
@@ -227,4 +264,20 @@ export interface TrajectoryRecord {
   durationMs: number | null;
   messages: SessionMessageRecord[];
   metadata: Record<string, unknown> | null;
+}
+
+export interface SessionStorageOperationMetric {
+  count: number;
+  errors: number;
+  slowCount: number;
+  p50Ms: number;
+  p95Ms: number;
+  p99Ms: number;
+  maxMs: number;
+  lastMs: number;
+}
+
+export interface SessionStorageMetrics {
+  queueDepth: number;
+  operations: Record<string, SessionStorageOperationMetric>;
 }

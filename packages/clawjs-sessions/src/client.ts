@@ -9,6 +9,7 @@ import type {
   ListSessionsResult,
   ProjectRecord,
   SearchSessionsInput,
+  SidebarBootstrapResult,
   SessionEvent,
   SessionMessageRecord,
   SessionRecord,
@@ -33,6 +34,9 @@ interface ImportCodexResult {
     skipped: boolean;
     reason?: string;
   }>;
+  skipped: number;
+  budgetExhausted: boolean;
+  changedFiles: number;
 }
 
 function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
@@ -131,6 +135,12 @@ export class SessionsApiClient {
     })}`));
   }
 
+  sidebarBootstrap(input: { recentLimit?: number } = {}): Promise<SidebarBootstrapResult> {
+    return this.call("GET", clawApiPath(`sidebar/bootstrap${buildQuery({
+      recentLimit: input.recentLimit,
+    })}`));
+  }
+
   search(input: SearchSessionsInput): Promise<{ items: SessionSearchHit[] }> {
     return this.call("GET", clawApiPath(`sessions/search${buildQuery({
       q: input.query,
@@ -169,7 +179,14 @@ export class SessionsApiClient {
     return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/messages${buildQuery(opts)}`));
   }
 
-  importCodex(input: { dir?: string; forceReimport?: boolean; machine?: string } = {}): Promise<ImportCodexResult> {
+  importCodex(input: {
+    dir?: string;
+    forceReimport?: boolean;
+    machine?: string;
+    budgetMs?: number;
+    maxFiles?: number;
+    mode?: "incremental" | "full";
+  } = {}): Promise<ImportCodexResult> {
     return this.call("POST", clawApiPath("sessions/import/codex"), input);
   }
 
@@ -214,13 +231,25 @@ export class SessionsApiClient {
     }
   }
 
-  async exportTrajectories(options: { agent?: string; since?: number; includeFailed?: boolean; tag?: string; format?: "json" | "jsonl" } = {}): Promise<unknown> {
+  async exportTrajectories(options: {
+    agent?: string;
+    since?: number;
+    includeFailed?: boolean;
+    tag?: string;
+    format?: "json" | "jsonl";
+    limit?: number;
+    offset?: number;
+    messageLimit?: number;
+  } = {}): Promise<unknown> {
     const path = clawApiPath(`sessions/export${buildQuery({
       agent: options.agent,
       since: options.since,
       includeFailed: options.includeFailed,
       tag: options.tag,
       format: options.format,
+      limit: options.limit,
+      offset: options.offset,
+      messageLimit: options.messageLimit,
     })}`);
     const url = `${this.baseUrl}${path}`;
     const response = await this.fetchImpl(url, {
@@ -235,5 +264,9 @@ export class SessionsApiClient {
       return await response.text();
     }
     return await response.json();
+  }
+
+  storageMetrics(): Promise<unknown> {
+    return this.call("GET", clawApiPath("storage/metrics"));
   }
 }

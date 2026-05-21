@@ -1,11 +1,17 @@
 import { clawApiPath, clawSessionEvents } from "@clawjs/core";
+import {
+  AsyncDatabaseServiceStore,
+  appStateRequestFromOperations,
+  loadDatabaseConfig,
+} from "@clawjs/database";
 import fs from "node:fs";
 
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 
-import { importCodexSessionsDir } from "./adapters/codex.ts";
+import { AsyncSessionsServiceStore } from "./async-store.ts";
 import { loadSessionsConfig, type SessionsServiceConfig } from "./config.ts";
-import { SessionsServiceStore } from "./store.ts";
+import { createLazyResource, createLazyResourceProxy } from "./lazy-resource.ts";
+import { SessionEventBroadcaster } from "./sse-broadcaster.ts";
 import type {
   AppendMessageInput,
   CreateProjectInput,
@@ -15,6 +21,9 @@ import type {
   MessageRole,
   SearchSessionsInput,
   SessionEvent,
+  SessionMessageUpdatedDelta,
+  SessionMessageUpdatedPayload,
+  SessionMessageRecord,
   SessionStatus,
   StartTurnInput,
   UpdateProjectInput,
@@ -67,9 +76,33 @@ function asBool(value: unknown): boolean | undefined {
   return undefined;
 }
 
-function writeSse(reply: FastifyReply, event: SessionEvent): void {
-  reply.raw.write(`event: ${event.type}\n`);
-  reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+function asCodexImportMode(value: unknown): "incremental" | "full" | undefined {
+  return value === "incremental" || value === "full" ? value : undefined;
+}
+
+function messageUpdatedPayload(
+  message: SessionMessageRecord,
+  delta: SessionMessageUpdatedDelta,
+): SessionMessageUpdatedPayload {
+  return {
+    id: message.id,
+    sessionId: message.sessionId,
+    messageId: message.id,
+    delta,
+    full: false,
+  };
+}
+
+function buildCompactAssistantStreamTrace(text: string, coalesceMs = 16): unknown {
+  return {
+    kind: "assistant_stream_trace",
+    schemaVersion: 1,
+    coalesceMs,
+    finalLength: text.length,
+    deltas: text
+      ? [{ offset: 0, length: text.length, text, at: Date.now() }]
+      : [],
+  };
 }
 
 export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
@@ -77,20 +110,35 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
   fs.mkdirSync(config.dataDir, { recursive: true });
 
   const app = Fastify({ logger: false, bodyLimit: 16 * 1024 * 1024 });
-  const store = new SessionsServiceStore(config.dbPath);
-  const subscribers = new Set<FastifyReply>();
+  const lazyStore = createLazyResource(
+    () => new AsyncSessionsServiceStore(config.dbPath),
+    (openedStore) => {
+      void openedStore.close();
+    },
+  );
+  const store = createLazyResourceProxy<AsyncSessionsServiceStore>(lazyStore);
+  const lazyAppStateStore = createLazyResource(
+    () => {
+      const databaseConfig = loadDatabaseConfig();
+      return new AsyncDatabaseServiceStore(databaseConfig.dbPath, databaseConfig.filesDir);
+    },
+    (openedStore) => {
+      void openedStore.close();
+    },
+  );
+  const events = new SessionEventBroadcaster();
   const interruptedTurns = new Set<string>();
 
   function publish(event: Omit<SessionEvent, "at">): SessionEvent {
     const resolved: SessionEvent = { ...event, at: Date.now() };
-    for (const reply of subscribers) {
-      writeSse(reply, resolved);
-    }
+    events.publish(resolved);
     return resolved;
   }
 
   app.addHook("onClose", async () => {
-    store.close();
+    events.close();
+    lazyStore.closeIfOpened();
+    lazyAppStateStore.closeIfOpened();
   });
 
   app.get(clawApiPath("health"), async () => ({
@@ -100,6 +148,42 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     port: config.port,
   }));
 
+  app.get(clawApiPath("host/app-state/projection"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const query = readQuery(request);
+      return await lazyAppStateStore.get().readAppStateProjection({
+        sidebarLimit: asNumber(query.limit) ?? 200,
+        receiptLimit: asNumber(query.receiptLimit ?? query["receipt-limit"]) ?? 20,
+      });
+    } catch (error) {
+      return reply.code(500).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(clawApiPath("host/app-state/apply"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const body = readBody(request);
+      const requestBody = Array.isArray(body.operations) && body.schemaVersion === undefined
+        ? appStateRequestFromOperations(body.operations, {
+            requestId: asString(body.requestId),
+            hostId: asString(body.hostId) ?? "sessions-api",
+            clientContext: typeof body.clientContext === "object" && body.clientContext !== null
+              ? body.clientContext as Record<string, unknown>
+              : undefined,
+          })
+        : body;
+      return await lazyAppStateStore.get().applyAppStateTransaction(requestBody);
+    } catch (error) {
+      const receipt = typeof error === "object" && error && "receipt" in error ? (error as { receipt: unknown }).receipt : undefined;
+      return reply.code(500).send({
+        error: error instanceof Error ? error.message : String(error),
+        receipt,
+      });
+    }
+  });
+
   app.get(clawApiPath("events"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     void reply.raw.writeHead(200, {
@@ -107,11 +191,21 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
     });
-    subscribers.add(reply);
-    writeSse(reply, { type: clawSessionEvents.updated, at: Date.now(), payload: { ready: true } });
+    const subscription = events.subscribe(reply.raw);
+    subscription.enqueue({ type: clawSessionEvents.updated, at: Date.now(), payload: { ready: true } });
     request.raw.on("close", () => {
-      subscribers.delete(reply);
+      subscription.close();
     });
+  });
+
+  app.get(clawApiPath("storage/metrics"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    return {
+      service: "sessions",
+      storage: store.snapshotMetrics(),
+      events: events.snapshotMetrics(),
+      appStateStorage: lazyAppStateStore.opened ? lazyAppStateStore.get().snapshotMetrics() : null,
+    };
   });
 
   app.post(clawApiPath("projects"), async (request, reply) => {
@@ -129,7 +223,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
         createdAt: asNumber(body.createdAt),
       };
       if (!input.path) return await reply.code(400).send({ error: "path is required" });
-      const project = store.createProject(input);
+      const project = await store.createProject(input);
       publish({ type: clawSessionEvents.projectUpdated, projectId: project.id, payload: project });
       return project;
     } catch (error) {
@@ -146,15 +240,21 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       limit: asNumber(query.limit),
       offset: asNumber(query.offset),
     };
-    return store.listProjects(filter);
+    return await store.listProjects(filter);
   });
 
   app.get(clawApiPath("projects/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
-    const project = store.getProject(params.id);
+    const project = await store.getProject(params.id);
     if (!project) return await reply.code(404).send({ error: "project_not_found" });
     return project;
+  });
+
+  app.get(clawApiPath("sidebar/bootstrap"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    return await store.sidebarBootstrap({ recentLimit: asNumber(query.recentLimit) });
   });
 
   app.patch(clawApiPath("projects/:id"), async (request, reply) => {
@@ -169,7 +269,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       archived: asBool(body.archived),
       sortRank: asNumber(body.sortRank),
     };
-    const project = store.updateProject(params.id, patch);
+    const project = await store.updateProject(params.id, patch);
     if (!project) return await reply.code(404).send({ error: "project_not_found" });
     publish({ type: clawSessionEvents.projectUpdated, projectId: project.id, payload: project });
     return project;
@@ -178,7 +278,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
   app.delete(clawApiPath("projects/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
-    const deleted = store.deleteProject(params.id);
+    const deleted = await store.deleteProject(params.id);
     publish({ type: clawSessionEvents.projectUpdated, projectId: params.id, payload: { deleted } });
     return { deleted };
   });
@@ -205,7 +305,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
         customMetadata: (body.customMetadata as Record<string, unknown> | null) ?? null,
       };
       if (!input.agent) return await reply.code(400).send({ error: "agent is required" });
-      const session = store.createSession(input);
+      const session = await store.createSession(input);
       publish({ type: clawSessionEvents.updated, sessionId: session.id, payload: session });
       return session;
     } catch (error) {
@@ -219,11 +319,11 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     const query = readQuery(request);
     const includeMessages = asBool(query.includeMessages) === true;
     if (includeMessages) {
-      const result = store.getSessionWithMessages(params.id, asNumber(query.limit) ?? 500);
+      const result = await store.getSessionWithMessages(params.id, asNumber(query.limit) ?? 200);
       if (!result) return await reply.code(404).send({ error: "session_not_found" });
       return result;
     }
-    const session = store.getSession(params.id);
+    const session = await store.getSession(params.id);
     if (!session) return await reply.code(404).send({ error: "session_not_found" });
     return session;
   });
@@ -247,7 +347,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       limit: asNumber(query.limit),
       offset: asNumber(query.offset),
     };
-    return store.listSessions(filter);
+    return await store.listSessions(filter);
   });
 
   app.get(clawApiPath("sessions/search"), async (request, reply) => {
@@ -262,22 +362,22 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       projectPath: asString(query.projectPath),
       limit: asNumber(query.limit),
     };
-    return { items: store.searchMessages(input) };
+    return { items: await store.searchMessages(input) };
   });
 
   app.patch(clawApiPath("sessions/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     const body = readBody(request);
-    let session = store.getSession(params.id);
+    let session = await store.getSession(params.id);
     if (!session) return await reply.code(404).send({ error: "session_not_found" });
-    if (typeof body.title === "string" && body.title.trim()) session = store.updateSessionTitle(params.id, body.title);
-    if (typeof body.pinned === "boolean") session = store.setPinned(params.id, body.pinned);
-    if (typeof body.archived === "boolean") session = store.setArchived(params.id, body.archived);
-    if (typeof body.sidebarVisible === "boolean") session = store.setSidebarVisibility(params.id, body.sidebarVisible);
-    if (body.projectId === null || typeof body.projectId === "string") session = store.assignProjectById(params.id, body.projectId as string | null);
-    if (body.projectPath === null || typeof body.projectPath === "string") session = store.assignProject(params.id, body.projectPath as string | null);
-    if (typeof body.status === "string") session = store.setStatus(params.id, body.status as SessionStatus);
+    if (typeof body.title === "string" && body.title.trim()) session = await store.updateSessionTitle(params.id, body.title);
+    if (typeof body.pinned === "boolean") session = await store.setPinned(params.id, body.pinned);
+    if (typeof body.archived === "boolean") session = await store.setArchived(params.id, body.archived);
+    if (typeof body.sidebarVisible === "boolean") session = await store.setSidebarVisibility(params.id, body.sidebarVisible);
+    if (body.projectId === null || typeof body.projectId === "string") session = await store.assignProjectById(params.id, body.projectId as string | null);
+    if (body.projectPath === null || typeof body.projectPath === "string") session = await store.assignProject(params.id, body.projectPath as string | null);
+    if (typeof body.status === "string") session = await store.setStatus(params.id, body.status as SessionStatus);
     if (session) publish({ type: clawSessionEvents.updated, sessionId: session.id, payload: session });
     return session;
   });
@@ -285,7 +385,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
   app.delete(clawApiPath("sessions/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
-    return { deleted: store.deleteSession(params.id) };
+    return { deleted: await store.deleteSession(params.id) };
   });
 
   app.post(clawApiPath("sessions/:id/messages"), async (request, reply) => {
@@ -311,7 +411,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       if (!input.role || !input.contentText) {
         return await reply.code(400).send({ error: "role and contentText are required" });
       }
-      const message = store.appendMessage(input);
+      const message = await store.appendMessage(input);
       publish({ type: clawSessionEvents.messageAppended, sessionId: params.id, messageId: message.id, payload: message });
       return message;
     } catch (error) {
@@ -324,7 +424,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     const params = request.params as { id: string };
     const query = readQuery(request);
     return {
-      items: store.listMessages(params.id, asNumber(query.limit) ?? 500, asNumber(query.offset) ?? 0),
+      items: await store.listMessages(params.id, asNumber(query.limit) ?? 200, asNumber(query.offset) ?? 0),
     };
   });
 
@@ -332,7 +432,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { sessionId: string; messageId: string };
     const body = readBody(request);
-    const message = store.updateMessage(params.messageId, {
+    const patch = {
       contentText: typeof body.contentText === "string" ? body.contentText : undefined,
       contentBlocks: Array.isArray(body.contentBlocks) || body.contentBlocks === null ? (body.contentBlocks as unknown[] | null) : undefined,
       toolCalls: Array.isArray(body.toolCalls) || body.toolCalls === null ? (body.toolCalls as unknown[] | null) : undefined,
@@ -340,11 +440,25 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       workSummary: body.workSummary,
       streamingState: (body.streamingState as AppendMessageInput["streamingState"]) ?? undefined,
       attachments: Array.isArray(body.attachments) || body.attachments === null ? (body.attachments as unknown[] | null) : undefined,
-    });
+    };
+    const message = await store.updateMessage(params.messageId, patch);
     if (!message || message.sessionId !== params.sessionId) {
       return await reply.code(404).send({ error: "message_not_found" });
     }
-    publish({ type: clawSessionEvents.messageUpdated, sessionId: params.sessionId, messageId: message.id, payload: message });
+    const delta: SessionMessageUpdatedDelta = {};
+    if (patch.contentText !== undefined) delta.contentText = message.contentText;
+    if (patch.contentBlocks !== undefined) delta.contentBlocks = message.contentBlocks;
+    if (patch.toolCalls !== undefined) delta.toolCalls = message.toolCalls;
+    if (patch.timeline !== undefined) delta.timeline = message.timeline;
+    if (patch.workSummary !== undefined) delta.workSummary = message.workSummary;
+    if (patch.streamingState !== undefined) delta.streamingState = message.streamingState;
+    if (patch.attachments !== undefined) delta.attachments = message.attachments;
+    publish({
+      type: clawSessionEvents.messageUpdated,
+      sessionId: params.sessionId,
+      messageId: message.id,
+      payload: messageUpdatedPayload(message, delta),
+    });
     return message;
   });
 
@@ -366,9 +480,9 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       };
       if (!input.prompt.trim()) return await reply.code(400).send({ error: "prompt is required" });
 
-      let session = store.getSession(params.id);
+      let session = await store.getSession(params.id);
       if (!session) {
-        session = store.createSession({
+        session = await store.createSession({
           id: params.id,
           agent: "codex",
           runtime: "codex",
@@ -383,7 +497,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       }
 
       interruptedTurns.delete(session.id);
-      const userMessage = store.appendMessage({
+      const userMessage = await store.appendMessage({
         sessionId: session.id,
         role: "user",
         contentText: input.prompt,
@@ -393,7 +507,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       });
       publish({ type: clawSessionEvents.messageAppended, sessionId: session.id, messageId: userMessage.id, payload: userMessage });
 
-      const assistantMessage = store.appendMessage({
+      const assistantMessage = await store.appendMessage({
         sessionId: session.id,
         role: "assistant",
         contentText: "",
@@ -411,20 +525,31 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
           : "Local Codex turn fixture completed. Enable SESSIONS_ENABLE_REAL_CODEX_TURNS=1 only after confirming real prompt execution."
       );
       const streamingState = interruptedTurns.has(session.id) ? "interrupted" : "complete";
-      const updated = store.updateMessage(assistantMessage.id, {
+      const updated = await store.updateMessage(assistantMessage.id, {
         contentText: streamingState === "complete" ? finalText : "",
         timeline: [
           ...(assistantMessage.timeline ?? []),
           { kind: "tool", title: "Codex", status: realTurnsEnabled ? "ready" : "fixture", at: Date.now() },
+          ...(streamingState === "complete" ? [buildCompactAssistantStreamTrace(finalText)] : []),
           { kind: clawSessionEvents.turnFinished, status: streamingState, at: Date.now() },
         ],
         workSummary: { status: streamingState, text: streamingState === "complete" ? "Completed" : "Interrupted" },
         streamingState,
       });
       if (updated) {
-        publish({ type: clawSessionEvents.messageUpdated, sessionId: session.id, messageId: updated.id, payload: updated });
+        publish({
+          type: clawSessionEvents.messageUpdated,
+          sessionId: session.id,
+          messageId: updated.id,
+          payload: messageUpdatedPayload(updated, {
+            contentText: updated.contentText,
+            timeline: updated.timeline,
+            workSummary: updated.workSummary,
+            streamingState: updated.streamingState,
+          }),
+        });
       }
-      const finished = store.setStatus(session.id, streamingState === "complete" ? "completed" : "interrupted");
+      const finished = await store.setStatus(session.id, streamingState === "complete" ? "completed" : "interrupted");
       if (finished) publish({ type: clawSessionEvents.turnFinished, sessionId: session.id, payload: { session: finished, message: updated } });
       return { session: finished, userMessage, assistantMessage: updated };
     } catch (error) {
@@ -437,7 +562,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     interruptedTurns.add(params.id);
-    const session = store.setStatus(params.id, "interrupted");
+    const session = await store.setStatus(params.id, "interrupted");
     if (!session) return await reply.code(404).send({ error: "session_not_found" });
     publish({ type: clawSessionEvents.turnFinished, sessionId: params.id, payload: { interrupted: true, session } });
     return { interrupted: true, session };
@@ -446,17 +571,20 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
   app.get(clawApiPath("sessions/:id/origins"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
-    return { items: store.listOrigins(params.id) };
+    return { items: await store.listOrigins(params.id) };
   });
 
   app.get(clawApiPath("sessions/export"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
-    const items = store.exportTrajectories({
+    const items = await store.exportTrajectories({
       agent: asString(query.agent),
       sinceCreatedAt: asNumber(query.since),
       includeFailed: asBool(query.includeFailed) === true,
       tag: asString(query.tag),
+      limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
+      messageLimit: asNumber(query.messageLimit ?? query["message-limit"]),
     });
     if ((query.format ?? "json") === "jsonl") {
       const body = items.map((entry) => JSON.stringify(entry)).join("\n") + (items.length ? "\n" : "");
@@ -473,12 +601,18 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       const dir = asString(body.dir) ?? config.codexSessionsDir;
       const forceReimport = body.forceReimport === true;
       const machine = asString(body.machine);
-      const result = importCodexSessionsDir(store, dir, { forceReimport, machine });
+      const result = await store.importCodexSessionsDir(dir, {
+        forceReimport,
+        machine,
+        budgetMs: asNumber(body.budgetMs),
+        maxFiles: asNumber(body.maxFiles),
+        mode: asCodexImportMode(body.mode),
+      });
       return result;
     } catch (error) {
       return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
 
-  return { app, config, store };
+  return { app, config, store, events };
 }

@@ -17,6 +17,7 @@ import type {
   MessageRole,
   ProjectRecord,
   SearchSessionsInput,
+  SidebarBootstrapResult,
   SessionMessageRecord,
   SessionOriginRecord,
   SessionRecord,
@@ -25,7 +26,15 @@ import type {
   SessionWithMessages,
   UpdateProjectInput,
   UpsertOriginInput,
+  ExportTrajectoryOptions,
 } from "./types.ts";
+
+const DEFAULT_MESSAGE_LIST_LIMIT = 200;
+const MAX_MESSAGE_LIST_LIMIT = 1000;
+const DEFAULT_EXPORT_SESSION_LIMIT = 100;
+const MAX_EXPORT_SESSION_LIMIT = 500;
+const DEFAULT_EXPORT_MESSAGE_LIMIT = 1000;
+const MAX_EXPORT_MESSAGE_LIMIT = 2000;
 
 const SCHEMA_DDL = `
   CREATE TABLE IF NOT EXISTS projects (
@@ -72,6 +81,8 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_sessions_last_message   ON sessions(last_message_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_pinned         ON sessions(pinned, last_message_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_status         ON sessions(status, last_message_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_bootstrap
+    ON sessions(archived, sidebar_visible, pinned, last_message_at DESC, created_at DESC);
 
   CREATE TABLE IF NOT EXISTS session_messages (
     id                 TEXT PRIMARY KEY,
@@ -98,6 +109,10 @@ const SCHEMA_DDL = `
     native_format      TEXT NOT NULL,
     last_synced_at     INTEGER NOT NULL,
     mirror_hash        TEXT,
+    source_mtime_ms    REAL,
+    source_size        INTEGER,
+    source_ino         INTEGER,
+    source_dev         INTEGER,
     PRIMARY KEY (session_id, native_path)
   );
   CREATE INDEX IF NOT EXISTS idx_origins_path            ON session_origins(native_path);
@@ -121,6 +136,8 @@ const SCHEMA_DDL = `
     INSERT INTO fts_messages(rowid, content_text) VALUES (new.rowid, new.content_text);
   END;
 `;
+const SESSIONS_SCHEMA_META_TABLE = "sessions_service_schema_meta";
+const SESSIONS_SCHEMA_VERSION = 1;
 
 interface SessionRow {
   id: string;
@@ -179,6 +196,10 @@ interface OriginRow {
   native_format: string;
   last_synced_at: number;
   mirror_hash: string | null;
+  source_mtime_ms: number | null;
+  source_size: number | null;
+  source_ino: number | null;
+  source_dev: number | null;
 }
 
 function parseJson<T>(value: string | null): T | null {
@@ -272,6 +293,10 @@ function rowToOrigin(row: OriginRow): SessionOriginRecord {
     nativeFormat: row.native_format,
     lastSyncedAt: row.last_synced_at,
     mirrorHash: row.mirror_hash,
+    sourceMtimeMs: row.source_mtime_ms,
+    sourceSize: row.source_size,
+    sourceIno: row.source_ino,
+    sourceDev: row.source_dev,
   };
 }
 
@@ -283,12 +308,34 @@ export class SessionsServiceStore {
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
-    this.db.exec(SCHEMA_DDL);
-    this.ensureLegacyColumns();
+    this.ensureSchema();
   }
 
   close(): void {
     this.db.close();
+  }
+
+  private ensureSchema(): void {
+    if (this.schemaVersion() >= SESSIONS_SCHEMA_VERSION) return;
+    this.db.exec(SCHEMA_DDL);
+    this.ensureLegacyColumns();
+    this.markSchemaCurrent();
+  }
+
+  private schemaVersion(): number {
+    const table = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(SESSIONS_SCHEMA_META_TABLE);
+    if (!table) return 0;
+    const row = this.db.prepare(`SELECT version FROM ${SESSIONS_SCHEMA_META_TABLE} WHERE id = 'schema'`).get() as { version: number } | undefined;
+    return row?.version ?? 0;
+  }
+
+  private markSchemaCurrent(): void {
+    this.db.prepare(`CREATE TABLE IF NOT EXISTS ${SESSIONS_SCHEMA_META_TABLE} (id TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at INTEGER NOT NULL)`).run();
+    this.db.prepare(`
+      INSERT INTO ${SESSIONS_SCHEMA_META_TABLE} (id, version, updated_at)
+      VALUES ('schema', ?, ?)
+      ON CONFLICT(id) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at
+    `).run(SESSIONS_SCHEMA_VERSION, Date.now());
   }
 
   private ensureLegacyColumns(): void {
@@ -298,9 +345,14 @@ export class SessionsServiceStore {
     this.ensureColumn("projects", "resource_id", "TEXT");
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_runtime_adapter ON sessions(runtime_adapter)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_bootstrap ON sessions(archived, sidebar_visible, pinned, last_message_at DESC, created_at DESC)").run();
     this.db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL").run();
     this.ensureColumn("session_messages", "timeline", "TEXT");
     this.ensureColumn("session_messages", "streaming_state", "TEXT");
+    this.ensureColumn("session_origins", "source_mtime_ms", "REAL");
+    this.ensureColumn("session_origins", "source_size", "INTEGER");
+    this.ensureColumn("session_origins", "source_ino", "INTEGER");
+    this.ensureColumn("session_origins", "source_dev", "INTEGER");
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -461,7 +513,7 @@ export class SessionsServiceStore {
     return row ? rowToSession(row) : null;
   }
 
-  getSessionWithMessages(id: string, limit = 500): SessionWithMessages | null {
+  getSessionWithMessages(id: string, limit = DEFAULT_MESSAGE_LIST_LIMIT): SessionWithMessages | null {
     const session = this.getSession(id);
     if (!session) return null;
     const messages = this.listMessages(id, limit);
@@ -493,6 +545,30 @@ export class SessionsServiceStore {
       `SELECT * FROM sessions ${where} ORDER BY pinned DESC, COALESCE(last_message_at, created_at) DESC LIMIT ${limit} OFFSET ${offset}`,
     ).all(params) as SessionRow[];
     return { items: rows.map(rowToSession), total };
+  }
+
+  sidebarBootstrap(input: { recentLimit?: number } = {}): SidebarBootstrapResult {
+    const recentLimit = Math.min(Math.max(input.recentLimit ?? 200, 0), 1000);
+    const baseWhere = "archived = 0 AND sidebar_visible = 1";
+    const totalActiveVisible = (this.db.prepare(`SELECT COUNT(*) AS n FROM sessions WHERE ${baseWhere}`).get() as { n: number }).n;
+    const projects = this.listProjects({ hidden: false, archived: false }).items;
+    const pinnedRows = this.db.prepare(`
+      SELECT * FROM sessions
+      WHERE ${baseWhere} AND pinned = 1
+      ORDER BY COALESCE(last_message_at, created_at) DESC
+    `).all() as SessionRow[];
+    const recentRows = this.db.prepare(`
+      SELECT * FROM sessions
+      WHERE ${baseWhere} AND pinned = 0
+      ORDER BY COALESCE(last_message_at, created_at) DESC
+      LIMIT ?
+    `).all(recentLimit) as SessionRow[];
+    return {
+      projects,
+      pinned: pinnedRows.map(rowToSession),
+      recent: recentRows.map(rowToSession),
+      totalActiveVisible,
+    };
   }
 
   updateSessionTitle(id: string, title: string): SessionRecord | null {
@@ -626,13 +702,15 @@ export class SessionsServiceStore {
     return rowToMessage(updated);
   }
 
-  listMessages(sessionId: string, limit = 500, offset = 0): SessionMessageRecord[] {
+  listMessages(sessionId: string, limit = DEFAULT_MESSAGE_LIST_LIMIT, offset = 0): SessionMessageRecord[] {
+    const resolvedLimit = clampInt(limit, 1, MAX_MESSAGE_LIST_LIMIT, DEFAULT_MESSAGE_LIST_LIMIT);
+    const resolvedOffset = clampInt(offset, 0, Number.MAX_SAFE_INTEGER, 0);
     const rows = this.db.prepare(
       `SELECT * FROM session_messages
        WHERE session_id = ?
        ORDER BY timestamp ASC, rowid ASC
        LIMIT ? OFFSET ?`,
-    ).all(sessionId, Math.min(limit, 5000), offset) as MessageRow[];
+    ).all(sessionId, resolvedLimit, resolvedOffset) as MessageRow[];
     return rows.map(rowToMessage);
   }
 
@@ -716,18 +794,32 @@ export class SessionsServiceStore {
   upsertOrigin(input: UpsertOriginInput): SessionOriginRecord {
     const now = Date.now();
     this.db.prepare(`
-      INSERT INTO session_origins (session_id, native_path, native_format, last_synced_at, mirror_hash)
-      VALUES (@session_id, @native_path, @native_format, @last_synced_at, @mirror_hash)
+      INSERT INTO session_origins (
+        session_id, native_path, native_format, last_synced_at, mirror_hash,
+        source_mtime_ms, source_size, source_ino, source_dev
+      )
+      VALUES (
+        @session_id, @native_path, @native_format, @last_synced_at, @mirror_hash,
+        @source_mtime_ms, @source_size, @source_ino, @source_dev
+      )
       ON CONFLICT(session_id, native_path) DO UPDATE SET
-        native_format  = excluded.native_format,
-        last_synced_at = excluded.last_synced_at,
-        mirror_hash    = excluded.mirror_hash
+        native_format   = excluded.native_format,
+        last_synced_at  = excluded.last_synced_at,
+        mirror_hash     = excluded.mirror_hash,
+        source_mtime_ms = excluded.source_mtime_ms,
+        source_size     = excluded.source_size,
+        source_ino      = excluded.source_ino,
+        source_dev      = excluded.source_dev
     `).run({
       session_id: input.sessionId,
       native_path: input.nativePath,
       native_format: input.nativeFormat,
       last_synced_at: now,
       mirror_hash: input.mirrorHash ?? null,
+      source_mtime_ms: input.sourceMtimeMs ?? null,
+      source_size: input.sourceSize ?? null,
+      source_ino: input.sourceIno ?? null,
+      source_dev: input.sourceDev ?? null,
     });
     const row = this.db.prepare(
       "SELECT * FROM session_origins WHERE session_id = ? AND native_path = ?",
@@ -749,18 +841,23 @@ export class SessionsServiceStore {
     return row ? rowToOrigin(row) : null;
   }
 
-  exportTrajectories(options: { agent?: string; sinceCreatedAt?: number; includeFailed?: boolean; tag?: string } = {}): import("./types.ts").TrajectoryRecord[] {
+  exportTrajectories(options: ExportTrajectoryOptions = {}): import("./types.ts").TrajectoryRecord[] {
     const conditions: string[] = [];
-    const params: Record<string, unknown> = {};
+    const params: Record<string, unknown> = {
+      limit: clampInt(options.limit, 1, MAX_EXPORT_SESSION_LIMIT, DEFAULT_EXPORT_SESSION_LIMIT),
+      offset: clampInt(options.offset, 0, Number.MAX_SAFE_INTEGER, 0),
+    };
     if (options.agent) { conditions.push("agent = @agent"); params.agent = options.agent; }
-    if (options.sinceCreatedAt !== undefined) { conditions.push("created_at >= @since"); params.since = options.sinceCreatedAt; }
+    const sinceCreatedAt = options.sinceCreatedAt ?? options.since;
+    if (sinceCreatedAt !== undefined) { conditions.push("created_at >= @since"); params.since = sinceCreatedAt; }
     if (!options.includeFailed) { conditions.push("status IN ('active','completed')"); }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const sessionRows = this.db.prepare(`SELECT * FROM sessions ${where} ORDER BY created_at ASC`).all(params) as SessionRow[];
+    const sessionRows = this.db.prepare(`SELECT * FROM sessions ${where} ORDER BY created_at ASC LIMIT @limit OFFSET @offset`).all(params) as SessionRow[];
+    const messageLimit = clampInt(options.messageLimit, 1, MAX_EXPORT_MESSAGE_LIMIT, DEFAULT_EXPORT_MESSAGE_LIMIT);
     const trajectories: import("./types.ts").TrajectoryRecord[] = [];
     for (const row of sessionRows) {
       const session = rowToSession(row);
-      const messages = this.listMessages(session.id, 5000);
+      const messages = this.listMessages(session.id, messageLimit);
       const lastMessageAt = session.lastMessageAt ?? session.createdAt;
       const outcome: import("./types.ts").TrajectoryRecord["outcome"] =
         session.status === "completed" ? "success"
@@ -785,4 +882,10 @@ export class SessionsServiceStore {
     }
     return trajectories;
   }
+}
+
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
 }

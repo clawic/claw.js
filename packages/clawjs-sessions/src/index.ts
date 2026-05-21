@@ -1,4 +1,5 @@
 export * from "./app.ts";
+export * from "./async-store.ts";
 export * from "./client.ts";
 export * from "./config.ts";
 export * from "./store.ts";
