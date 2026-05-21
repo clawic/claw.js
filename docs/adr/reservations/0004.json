@@ -1,0 +1,9 @@
+{
+  "number": "0004",
+  "slug": "persistent-surface-registry-and-inspection",
+  "title": "Stable surface registry and inspection",
+  "status": "proposed",
+  "adr": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+  "historical": true,
+  "canonicalName": "adr:persistent-surface-registry"
+}

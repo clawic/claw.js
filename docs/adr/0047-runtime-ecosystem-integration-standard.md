@@ -95,8 +95,7 @@ PMF, or external ecosystem canonicity.
 
 ## Source Decision Audit
 
-Conversation-derived decision from private source audit
-`/Users/trabajo/.codex/goals/clawix-clawjs-runtime-ecosystem-integration-standard-source-audit-2026-05-21.md`.
+Conversation-derived decision from private source audit, not published.
 Public-safe implemented rows are represented by this ADR, the standard doc, the
 runtime ecosystem manifest, decision-map routing, Clawix mirror ADR, and the
 validator script.

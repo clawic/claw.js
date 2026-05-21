@@ -1,0 +1,9 @@
+{
+  "number": "0038",
+  "slug": "portable-archive-contract",
+  "title": "Portable archive contract",
+  "status": "proposed",
+  "adr": "docs/adr/0038-portable-archive-contract.md",
+  "historical": true,
+  "canonicalName": "adr:portable-archive-contract"
+}

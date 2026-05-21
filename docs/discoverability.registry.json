@@ -37,39 +37,6 @@
       "canonicalName": "adr:claw-framework-host-boundary"
     },
     {
-      "id": "adr-docs-adr-0048-naming-and-stability-surfaces",
-      "kind": "adr",
-      "steward": "claw",
-      "canonicalSource": "docs/adr/0048-naming-and-stability-surfaces.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/discoverability.md",
-        "CONSTITUTION.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "ADR 0048: Naming and stability surfaces",
-        "0048-naming-and-stability-surfaces",
-        "ADR 0001",
-        "adr:naming-stability"
-      ],
-      "searchQueries": [
-        {
-          "query": "ADR 0048: Naming and stability surfaces",
-          "expectPath": "docs/adr/0048-naming-and-stability-surfaces.md"
-        },
-        {
-          "query": "adr:naming-stability",
-          "expectPath": "docs/adr/0048-naming-and-stability-surfaces.md"
-        }
-      ],
-      "guard": "scripts/discoverability-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-18",
-      "canonicalName": "adr:naming-stability"
-    },
-    {
       "id": "adr-docs-adr-0002-testing-architecture",
       "kind": "adr",
       "steward": "claw",
@@ -1562,46 +1529,6 @@
       "canonicalName": "adr:adoption-canonicity-governance"
     },
     {
-      "id": "adr-docs-adr-0050-zero-accidental-work",
-      "kind": "adr",
-      "steward": "claw",
-      "canonicalSource": "docs/adr/0050-zero-accidental-work.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/discoverability.md",
-        "CONSTITUTION.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "ADR 0050: Zero Accidental Work",
-        "0050-zero-accidental-work",
-        "ADR 0041",
-        "zero accidental work",
-        "inert createClaw",
-        "bridge runtime separation",
-        "adr:zero-accidental-work"
-      ],
-      "searchQueries": [
-        {
-          "query": "zero accidental work",
-          "expectPath": "docs/adr/0050-zero-accidental-work.md"
-        },
-        {
-          "query": "inert createClaw",
-          "expectPath": "docs/adr/0050-zero-accidental-work.md"
-        },
-        {
-          "query": "adr:zero-accidental-work",
-          "expectPath": "docs/adr/0050-zero-accidental-work.md"
-        }
-      ],
-      "guard": "scripts/zero-accidental-work-guard.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-18",
-      "canonicalName": "adr:zero-accidental-work"
-    },
-    {
       "id": "adr-docs-adr-0042-streaming-backpressure-contract",
       "kind": "adr",
       "steward": "claw",
@@ -1640,34 +1567,6 @@
       "status": "enforced",
       "reviewDate": "2026-08-21",
       "canonicalName": "adr:streaming-backpressure-contract"
-    },
-    {
-      "id": "adr-docs-adr-0051-supply-chain-security-governance",
-      "kind": "adr",
-      "steward": "claw",
-      "canonicalSource": "docs/adr/0051-supply-chain-security-governance.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/discoverability.md",
-        "CONSTITUTION.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "ADR 0051: Supply-chain security governance",
-        "0051-supply-chain-security-governance",
-        "ADR 0042"
-      ],
-      "searchQueries": [
-        {
-          "query": "ADR 0051: Supply-chain security governance",
-          "expectPath": "docs/adr/0051-supply-chain-security-governance.md"
-        }
-      ],
-      "guard": "scripts/discoverability-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-18",
-      "canonicalName": "adr:supply-chain-security-governance"
     },
     {
       "id": "adr-docs-adr-0043-streaming-backpressure-bounded-queues",
@@ -1816,6 +1715,145 @@
       "canonicalName": "adr:runtime-ecosystem-integration-standard"
     },
     {
+      "id": "adr-docs-adr-0048-naming-and-stability-surfaces",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0048-naming-and-stability-surfaces.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0048: Naming and stability surfaces",
+        "0048-naming-and-stability-surfaces",
+        "ADR 0048",
+        "ADR 0001",
+        "adr:naming-stability"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0048: Naming and stability surfaces",
+          "expectPath": "docs/adr/0048-naming-and-stability-surfaces.md"
+        },
+        {
+          "query": "adr:naming-stability",
+          "expectPath": "docs/adr/0048-naming-and-stability-surfaces.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:naming-stability"
+    },
+    {
+      "id": "adr-docs-adr-0050-zero-accidental-work",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0050-zero-accidental-work.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0050: Zero Accidental Work",
+        "0050-zero-accidental-work",
+        "ADR 0050",
+        "ADR 0041",
+        "zero accidental work",
+        "inert createClaw",
+        "bridge runtime separation",
+        "adr:zero-accidental-work"
+      ],
+      "searchQueries": [
+        {
+          "query": "zero accidental work",
+          "expectPath": "docs/adr/0050-zero-accidental-work.md"
+        },
+        {
+          "query": "inert createClaw",
+          "expectPath": "docs/adr/0050-zero-accidental-work.md"
+        },
+        {
+          "query": "adr:zero-accidental-work",
+          "expectPath": "docs/adr/0050-zero-accidental-work.md"
+        }
+      ],
+      "guard": "scripts/zero-accidental-work-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:zero-accidental-work"
+    },
+    {
+      "id": "adr-docs-adr-0051-supply-chain-security-governance",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0051-supply-chain-security-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0051: Supply-chain security governance",
+        "0051-supply-chain-security-governance",
+        "ADR 0051",
+        "ADR 0042"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0051: Supply-chain security governance",
+          "expectPath": "docs/adr/0051-supply-chain-security-governance.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:supply-chain-security-governance"
+    },
+    {
+      "id": "adr-docs-adr-0052-adr-number-reservation-governance",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0052-adr-number-reservation-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0052: ADR number reservation governance",
+        "0052-adr-number-reservation-governance",
+        "ADR 0052",
+        "adr:adr-number-reservation-governance",
+        "ADR number reservation governance",
+        "ADR reservation"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR number reservation governance",
+          "expectPath": "docs/adr/0052-adr-number-reservation-governance.md"
+        },
+        {
+          "query": "adr:adr-number-reservation-governance",
+          "expectPath": "docs/adr/0052-adr-number-reservation-governance.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:adr-number-reservation-governance"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "steward": "claw",
@@ -1831,6 +1869,7 @@
       "discoveryTerms": [
         "ADR 0049: Surface route graph",
         "0049-surface-route-graph",
+        "ADR 0049",
         "ADR 0012",
         "surface route graph",
         "route-first",
@@ -4271,6 +4310,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-remote-sync-goal-helpers",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-remote-sync-goal-helpers.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-remote-sync-goal-helpers",
+        "Verify Remote Sync Goal Helpers"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-remote-sync-goal-helpers",
+          "expectPath": "scripts/verify-remote-sync-goal-helpers.mjs"
+        }
+      ],
+      "guard": "scripts/verify-remote-sync-goal-helpers.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-remote-sync-goal",
       "kind": "guardrail",
       "steward": "claw",
@@ -4427,6 +4491,31 @@
         }
       ],
       "guard": "scripts/verify-system-telemetry-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-system-telemetry-search-discoverability",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-system-telemetry-search-discoverability.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-system-telemetry-search-discoverability",
+        "Verify System Telemetry Search Discoverability"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-system-telemetry-search-discoverability",
+          "expectPath": "scripts/verify-system-telemetry-search-discoverability.mjs"
+        }
+      ],
+      "guard": "scripts/verify-system-telemetry-search-discoverability.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },

@@ -583,10 +583,9 @@ function commandToArgs(command) {
 function clawBin() {
   const sourceRunner = path.join(scriptRoot, "scripts/claw-source-runner.mjs");
   if (fs.existsSync(sourceRunner)) return { command: process.execPath, prefix: ["--import", "tsx", sourceRunner] };
+  if (process.env.CLAWJS_CLAW_BIN) return { command: process.execPath, prefix: [process.env.CLAWJS_CLAW_BIN] };
   const local = path.join(scriptRoot, "packages/clawjs/bin/claw.mjs");
-  const sibling = "/Users/trabajo/Desktop/clawjs/packages/clawjs/bin/claw.mjs";
   if (fs.existsSync(local)) return { command: process.execPath, prefix: [local] };
-  if (fs.existsSync(sibling)) return { command: process.execPath, prefix: [sibling] };
   return { command: "claw", prefix: [] };
 }
 

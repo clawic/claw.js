@@ -1,0 +1,9 @@
+{
+  "number": "0029",
+  "slug": "connector-governed-context-v1",
+  "title": "Connector Governed Context V1",
+  "status": "accepted",
+  "adr": "docs/adr/0029-connector-governed-context-v1.md",
+  "historical": true,
+  "canonicalName": "adr:connector-governed-context-v1"
+}

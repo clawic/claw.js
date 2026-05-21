@@ -1,0 +1,9 @@
+{
+  "number": "0043",
+  "slug": "streaming-backpressure-bounded-queues",
+  "title": "Streaming, backpressure, and bounded queues",
+  "status": "accepted",
+  "adr": "docs/adr/0043-streaming-backpressure-bounded-queues.md",
+  "historical": true,
+  "canonicalName": "adr:streaming-backpressure-bounded-queues"
+}

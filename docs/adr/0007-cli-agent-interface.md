@@ -13,8 +13,7 @@ embedding framework internals. Before V1, parts of the CLI surface were still
 manual: help text, routing, aliases, inspection, connector coverage, and tests
 could drift from the framework contracts they were meant to expose.
 
-The decision thread `019e26ab-3d52-72b2-8653-08569db30681` and active goal
-`019e26b6-1bbd-7d10-b68c-84d815b655e2` require the CLI to become complete,
+The private decision thread and active goal require the CLI to become complete,
 discoverable, registry-driven, and guarded. This ADR records that standard so
 future agents do not treat CLI behavior as a secondary convenience layer.
 

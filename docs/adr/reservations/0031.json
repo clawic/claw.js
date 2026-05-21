@@ -1,0 +1,9 @@
+{
+  "number": "0031",
+  "slug": "progressive-modularity-and-zero-surprise-install",
+  "title": "Progressive modularity and zero-surprise install",
+  "status": "proposed",
+  "adr": "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md",
+  "historical": true,
+  "canonicalName": "adr:progressive-modularity-zero-surprise-install"
+}

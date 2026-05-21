@@ -1,0 +1,9 @@
+{
+  "number": "0011",
+  "slug": "report-governance-v1",
+  "title": "Report Governance V1",
+  "status": "proposed",
+  "adr": "docs/adr/0011-report-governance-v1.md",
+  "historical": true,
+  "canonicalName": "adr:report-governance-v1"
+}

@@ -1,0 +1,9 @@
+{
+  "number": "0026",
+  "slug": "regulated-domain-safety-liability-boundary",
+  "title": "Regulated domain safety and liability boundary",
+  "status": "proposed",
+  "adr": "docs/adr/0026-regulated-domain-safety-liability-boundary.md",
+  "historical": true,
+  "canonicalName": "adr:regulated-domain-safety"
+}

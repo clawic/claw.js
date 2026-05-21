@@ -1,0 +1,9 @@
+{
+  "number": "0049",
+  "slug": "surface-route-graph",
+  "title": "Surface route graph",
+  "status": "accepted",
+  "adr": "docs/adr/0049-surface-route-graph.md",
+  "historical": true,
+  "canonicalName": "adr:surface-route-graph"
+}

@@ -1,0 +1,9 @@
+{
+  "number": "0045",
+  "slug": "ui-state-invalidation-high-churn-data-boundary",
+  "title": "UI state invalidation and high-churn data boundary",
+  "status": "accepted",
+  "adr": "docs/adr/0045-ui-state-invalidation-high-churn-data-boundary.md",
+  "historical": true,
+  "canonicalName": "adr:ui-state-invalidation-high-churn-boundary"
+}

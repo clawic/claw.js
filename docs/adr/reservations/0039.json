@@ -1,0 +1,9 @@
+{
+  "number": "0039",
+  "slug": "global-threat-modeling-governance",
+  "title": "Global threat modeling governance",
+  "status": "accepted",
+  "adr": "docs/adr/0039-global-threat-modeling-governance.md",
+  "historical": true,
+  "canonicalName": "adr:global-threat-modeling-governance"
+}

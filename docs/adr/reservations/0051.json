@@ -1,0 +1,9 @@
+{
+  "number": "0051",
+  "slug": "supply-chain-security-governance",
+  "title": "Supply-chain security governance",
+  "status": "accepted",
+  "adr": "docs/adr/0051-supply-chain-security-governance.md",
+  "historical": true,
+  "canonicalName": "adr:supply-chain-security-governance"
+}

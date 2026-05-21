@@ -1,0 +1,9 @@
+{
+  "number": "0046",
+  "slug": "problem-to-guardrail-loop",
+  "title": "Problem-to-Guardrail loop",
+  "status": "accepted",
+  "adr": "docs/adr/0046-problem-to-guardrail-loop.md",
+  "historical": true,
+  "canonicalName": "adr:problem-to-guardrail-loop"
+}

@@ -1,0 +1,9 @@
+{
+  "number": "0018",
+  "slug": "cli-action-intent-registry",
+  "title": "CLI action intent registry",
+  "status": "accepted",
+  "adr": "docs/adr/0018-cli-action-intent-registry.md",
+  "historical": true,
+  "canonicalName": "adr:cli-action-intent-registry"
+}

@@ -1,0 +1,8 @@
+{
+  "number": "0052",
+  "slug": "adr-number-reservation-governance",
+  "title": "ADR number reservation governance",
+  "status": "accepted",
+  "adr": "docs/adr/0052-adr-number-reservation-governance.md",
+  "canonicalName": "adr:adr-number-reservation-governance"
+}

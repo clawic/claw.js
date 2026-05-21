@@ -1,0 +1,9 @@
+{
+  "number": "0002",
+  "slug": "testing-architecture",
+  "title": "Testing architecture",
+  "status": "accepted",
+  "adr": "docs/adr/0002-testing-architecture.md",
+  "historical": true,
+  "canonicalName": "adr:testing-architecture"
+}

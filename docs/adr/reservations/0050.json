@@ -1,0 +1,9 @@
+{
+  "number": "0050",
+  "slug": "zero-accidental-work",
+  "title": "Zero Accidental Work",
+  "status": "proposed",
+  "adr": "docs/adr/0050-zero-accidental-work.md",
+  "historical": true,
+  "canonicalName": "adr:zero-accidental-work"
+}

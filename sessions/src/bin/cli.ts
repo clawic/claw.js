@@ -58,7 +58,7 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
     "  sessions visibility --id ID --visible true|false",
     "  sessions project --id ID [--path PATH | --clear]",
     "  sessions delete --id ID",
-    "  sessions import codex [--dir ~/.codex/sessions] [--force]",
+    "  sessions import codex [--dir CODEX_SESSIONS_DIR] [--force]",
     "",
     "Service flags shared by client commands:",
     "  --url URL (default http://127.0.0.1:24101)",

@@ -1,0 +1,9 @@
+{
+  "number": "0033",
+  "slug": "open-standard-official-trust",
+  "title": "Open standard and official trust",
+  "status": "accepted",
+  "adr": "docs/adr/0033-open-standard-official-trust.md",
+  "historical": true,
+  "canonicalName": "adr:open-standard-official-trust"
+}

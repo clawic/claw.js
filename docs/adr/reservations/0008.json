@@ -1,0 +1,9 @@
+{
+  "number": "0008",
+  "slug": "secrets-security-v1",
+  "title": "Secrets Security V1",
+  "status": "proposed",
+  "adr": "docs/adr/0008-secrets-security-v1.md",
+  "historical": true,
+  "canonicalName": "adr:secrets-security-v1"
+}

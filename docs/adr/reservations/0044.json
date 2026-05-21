@@ -1,0 +1,9 @@
+{
+  "number": "0044",
+  "slug": "launch-and-idle-contract",
+  "title": "Launch and idle contract",
+  "status": "accepted",
+  "adr": "docs/adr/0044-launch-and-idle-contract.md",
+  "historical": true,
+  "canonicalName": "adr:launch-idle-contract"
+}

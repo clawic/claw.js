@@ -1,0 +1,9 @@
+{
+  "number": "0025",
+  "slug": "pre-v1-version-governance",
+  "title": "Pre-V1 version governance",
+  "status": "proposed",
+  "adr": "docs/adr/0025-pre-v1-version-governance.md",
+  "historical": true,
+  "canonicalName": "adr:pre-v1-version-governance"
+}

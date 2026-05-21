@@ -1,0 +1,9 @@
+{
+  "number": "0028",
+  "slug": "workspace-project-folder-manifest",
+  "title": "Workspace, Project, Folder, And Manifest Boundary",
+  "status": "accepted",
+  "adr": "docs/adr/0028-workspace-project-folder-manifest.md",
+  "historical": true,
+  "canonicalName": "adr:workspace-project-folder-manifest"
+}

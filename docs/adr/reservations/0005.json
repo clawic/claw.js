@@ -1,0 +1,9 @@
+{
+  "number": "0005",
+  "slug": "canonical-data-catalog",
+  "title": "Canonical data catalog",
+  "status": "accepted",
+  "adr": "docs/adr/0005-canonical-data-catalog.md",
+  "historical": true,
+  "canonicalName": "adr:canonical-data-catalog"
+}

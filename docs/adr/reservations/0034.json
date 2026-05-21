@@ -1,0 +1,9 @@
+{
+  "number": "0034",
+  "slug": "network-control-plane",
+  "title": "Network Control Plane",
+  "status": "proposed",
+  "adr": "docs/adr/0034-network-control-plane.md",
+  "historical": true,
+  "canonicalName": "adr:network-control-plane"
+}

@@ -1,0 +1,9 @@
+{
+  "number": "0022",
+  "slug": "remote-gateway-sync-redesign",
+  "title": "Remote Gateway and Sync Redesign",
+  "status": "accepted",
+  "adr": "docs/adr/0022-remote-gateway-sync-redesign.md",
+  "historical": true,
+  "canonicalName": "adr:remote-gateway-sync-redesign"
+}

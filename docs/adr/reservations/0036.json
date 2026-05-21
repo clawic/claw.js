@@ -1,0 +1,9 @@
+{
+  "number": "0036",
+  "slug": "performance-governance",
+  "title": "Performance governance for user computer resources",
+  "status": "accepted",
+  "adr": "docs/adr/0036-performance-governance.md",
+  "historical": true,
+  "canonicalName": "adr:performance-governance"
+}

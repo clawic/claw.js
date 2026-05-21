@@ -1,0 +1,9 @@
+{
+  "number": "0024",
+  "slug": "mac-permission-broker-v1",
+  "title": "Mac Permission Broker V1",
+  "status": "proposed",
+  "adr": "docs/adr/0024-mac-permission-broker-v1.md",
+  "historical": true,
+  "canonicalName": "adr:mac-permission-broker-v1"
+}

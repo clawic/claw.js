@@ -1,0 +1,9 @@
+{
+  "number": "0035",
+  "slug": "decision-tension-rubric",
+  "title": "Decision tension rubric",
+  "status": "accepted",
+  "adr": "docs/adr/0035-decision-tension-rubric.md",
+  "historical": true,
+  "canonicalName": "adr:decision-tension-rubric"
+}

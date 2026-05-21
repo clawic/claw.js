@@ -1,0 +1,9 @@
+{
+  "number": "0027",
+  "slug": "governance-identity-scope-model",
+  "title": "Governance Identity And Scope Model",
+  "status": "accepted",
+  "adr": "docs/adr/0027-governance-identity-scope-model.md",
+  "historical": true,
+  "canonicalName": "adr:governance-identity-scope-model"
+}

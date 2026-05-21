@@ -1,0 +1,9 @@
+{
+  "number": "0015",
+  "slug": "connector-control-plane-v1",
+  "title": "Connector Control Plane V1",
+  "status": "accepted",
+  "adr": "docs/adr/0015-connector-control-plane-v1.md",
+  "historical": true,
+  "canonicalName": "adr:connector-control-plane-v1"
+}

@@ -1,0 +1,9 @@
+{
+  "number": "0040",
+  "slug": "no-irreversible-data-loss",
+  "title": "No irreversible data loss guardrail",
+  "status": "accepted",
+  "adr": "docs/adr/0040-no-irreversible-data-loss.md",
+  "historical": true,
+  "canonicalName": "adr:no-irreversible-data-loss"
+}

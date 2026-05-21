@@ -1,0 +1,9 @@
+{
+  "number": "0012",
+  "slug": "domain-surface-registry-db-to-cli",
+  "title": "Domain surface registry from database to CLI",
+  "status": "accepted",
+  "adr": "docs/adr/0012-domain-surface-registry-db-to-cli.md",
+  "historical": true,
+  "canonicalName": "adr:domain-surface-registry"
+}

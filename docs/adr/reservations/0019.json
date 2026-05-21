@@ -1,0 +1,9 @@
+{
+  "number": "0019",
+  "slug": "search-v1-1-architecture",
+  "title": "Search V1.1 architecture",
+  "status": "accepted",
+  "adr": "docs/adr/0019-search-v1-1-architecture.md",
+  "historical": true,
+  "canonicalName": "adr:search-v1-1-architecture"
+}

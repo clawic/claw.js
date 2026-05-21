@@ -1,0 +1,9 @@
+{
+  "number": "0047",
+  "slug": "runtime-ecosystem-integration-standard",
+  "title": "Runtime ecosystem integration standard",
+  "status": "accepted",
+  "adr": "docs/adr/0047-runtime-ecosystem-integration-standard.md",
+  "historical": true,
+  "canonicalName": "adr:runtime-ecosystem-integration-standard"
+}

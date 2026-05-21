@@ -1,0 +1,9 @@
+{
+  "number": "0023",
+  "slug": "mac-control-plane-v1",
+  "title": "Mac Control Plane V1",
+  "status": "proposed",
+  "adr": "docs/adr/0023-mac-control-plane-v1.md",
+  "historical": true,
+  "canonicalName": "adr:mac-control-plane-v1"
+}

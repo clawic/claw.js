@@ -1,0 +1,9 @@
+{
+  "number": "0020",
+  "slug": "agents-v1-refactor",
+  "title": "Agents V1 refactor",
+  "status": "accepted",
+  "adr": "docs/adr/0020-agents-v1-refactor.md",
+  "historical": true,
+  "canonicalName": "adr:agents-v1-refactor"
+}

@@ -1,0 +1,9 @@
+{
+  "number": "0021",
+  "slug": "dense-data-operating-system",
+  "title": "Dense data operating system",
+  "status": "accepted",
+  "adr": "docs/adr/0021-dense-data-operating-system.md",
+  "historical": true,
+  "canonicalName": "adr:dense-data-operating-system"
+}

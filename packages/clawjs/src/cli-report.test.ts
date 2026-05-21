@@ -89,7 +89,7 @@ test("report bug creates a sanitized local draft with quality metadata", async (
     "--workspace",
     workspace,
     "--observed",
-    "Saw /Users/alice/project and ghp_123456789012345678901234567890123456 at https://internal.example/token?secret=abc with TEAM_ID=ABCDE12345",
+    "Saw /Users/alice/project and ghp_123456789012345678901234567890123456 at https://internal.example/token?secret=abc with TEAM_ID=TEAM123",
     "--expected",
     "No private path or token",
     "--repro",

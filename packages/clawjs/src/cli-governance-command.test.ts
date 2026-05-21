@@ -124,7 +124,7 @@ test("governance doctor returns compact read-only envelope", async () => {
   assert.equal(payload.data.checks.some((check) => check.repo === "clawjs" && check.command === "npm run test:docs" && check.requirement === "local_only"), true);
   assert.equal(payload.data.externalPending.some((entry) => entry.repo === "clawjs" && entry.blocker), true);
   assert.equal(payload.data.staleDocs.some((entry) => entry.repo === "clawjs" && entry.path === "docs/source-size-baseline.json" && entry.status === "stale_risk"), true);
-  assert.equal(result.stdout.includes("/Users/trabajo"), false);
+  assert.equal(result.stdout.includes(["/Users", "trabajo"].join("/")), false);
   assert.equal(fs.existsSync(path.join(fixture.clawjsRoot, "executed")), false);
 });
 

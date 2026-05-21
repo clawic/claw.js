@@ -1,0 +1,9 @@
+{
+  "number": "0030",
+  "slug": "post-v1-evolution-rescue-backbone",
+  "title": "Post-V1 evolution and rescue backbone",
+  "status": "proposed",
+  "adr": "docs/adr/0030-post-v1-evolution-rescue-backbone.md",
+  "historical": true,
+  "canonicalName": "adr:evolution-rescue-backbone"
+}
