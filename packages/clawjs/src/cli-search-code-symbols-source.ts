@@ -85,6 +85,12 @@ export function ensureCodeSymbolResourceIndexed(store: SearchStore, flags: Recor
     return 1;
   }
   upsertCodeFileSearchDocument(store, document);
+  store.markFileInventoryIndexed({
+    source: "code.symbols",
+    root,
+    relativePath: relativeFromRoot,
+    checksum: typeof document.metadata?.contentChecksum === "string" ? document.metadata.contentChecksum : null,
+  });
   store.setSourceState("code.symbols", "enabled", {
     backlog: 0,
     error: null,
@@ -117,6 +123,7 @@ export function codeFileSearchDocument(root: string, file: CodeFileCandidate): S
     return null;
   }
   if (content.includes("\0")) return null;
+  const contentChecksum = createHash("sha256").update(content).digest("hex");
   const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
   const title = path.basename(file.absolutePath);
   const symbols = extractCodeSearchSymbols(content, file.language);
@@ -140,6 +147,7 @@ export function codeFileSearchDocument(root: string, file: CodeFileCandidate): S
       extension: file.extension,
       language: file.language,
       symbolCount: symbols.length,
+      contentChecksum,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {

@@ -262,6 +262,20 @@ test("search changes scan schedules upserts and deletes from a root snapshot", a
     assert.equal(secondPayload.data.scheduledUpserts, 0);
     assert.equal(secondPayload.data.scheduledDeletes, 0);
     assert.equal(secondPayload.data.state, "empty");
+    fs.writeFileSync(filePath, [
+      "export function scanScheduleNeedleChanged() {",
+      "  return \"code-symbol-scan-ready-changed\";",
+      "}",
+      "",
+    ].join("\n"));
+    fs.utimesSync(filePath, new Date("2026-05-21T10:00:00.000Z"), new Date("2026-05-21T10:00:00.000Z"));
+    const modifiedScan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(modifiedScan.code, CLI_EXIT_OK);
+    const modifiedPayload = JSON.parse(modifiedScan.stdout) as { data: { scanned: number; scheduledUpserts: number; scheduledDeletes: number; jobs: Array<{ source: string; operation: string; resourceId?: string }> } };
+    assert.equal(modifiedPayload.data.scanned, 1);
+    assert.equal(modifiedPayload.data.scheduledUpserts, 1);
+    assert.equal(modifiedPayload.data.scheduledDeletes, 0);
+    assert.deepEqual({ source: modifiedPayload.data.jobs[0]?.source, operation: modifiedPayload.data.jobs[0]?.operation, resourceId: modifiedPayload.data.jobs[0]?.resourceId }, { source: "code.symbols", operation: "upsert", resourceId: "src/scan-refresh.ts" });
     fs.rmSync(filePath);
     const deleteScan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(deleteScan.code, CLI_EXIT_OK);
@@ -270,6 +284,78 @@ test("search changes scan schedules upserts and deletes from a root snapshot", a
     assert.equal(deletePayload.data.scheduledUpserts, 0);
     assert.equal(deletePayload.data.scheduledDeletes, 1);
     assert.deepEqual({ source: deletePayload.data.jobs[0]?.source, operation: deletePayload.data.jobs[0]?.operation, resourceId: deletePayload.data.jobs[0]?.resourceId }, { source: "code.symbols", operation: "delete", resourceId: "src/scan-refresh.ts" });
+  });
+});
+test("search changes scan incrementally tracks file sources", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-file-source-scan-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const cases = [
+    { source: "local.files", rootName: "files", relativePath: "docs/local.txt", content: "local file scan needle", rootFlag: "--root" },
+    { source: "web.ingested", rootName: "web", relativePath: "page.html", content: "<html><body>web scan needle</body></html>", rootFlag: "--root" },
+    { source: "external.cache", rootName: "external", relativePath: "record.json", content: JSON.stringify({ title: "External scan", text: "external scan needle" }), rootFlag: "--root" },
+  ];
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    for (const entry of cases) {
+      const root = path.join(workspaceRoot, entry.rootName);
+      const filePath = path.join(root, entry.relativePath);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, entry.content);
+      const firstScan = await runCliCapture(["search", "changes", "scan", "--source", entry.source, entry.rootFlag, root, "--data-dir", dataRoot, "--json"], workspaceRoot);
+      assert.equal(firstScan.code, CLI_EXIT_OK, firstScan.stderr || firstScan.stdout);
+      const firstPayload = JSON.parse(firstScan.stdout) as { data: { scanned: number; scheduledUpserts: number; scheduledDeletes: number; jobs: Array<{ source: string; operation: string; resourceId?: string }> } };
+      assert.equal(firstPayload.data.scanned, 1);
+      assert.equal(firstPayload.data.scheduledUpserts, 1);
+      assert.equal(firstPayload.data.scheduledDeletes, 0);
+      assert.deepEqual({ source: firstPayload.data.jobs[0]?.source, operation: firstPayload.data.jobs[0]?.operation, resourceId: firstPayload.data.jobs[0]?.resourceId }, { source: entry.source, operation: "upsert", resourceId: entry.relativePath });
+      const secondScan = await runCliCapture(["search", "changes", "scan", "--source", entry.source, "--root", root, "--data-dir", dataRoot, "--json"], workspaceRoot);
+      assert.equal(secondScan.code, CLI_EXIT_OK, secondScan.stderr || secondScan.stdout);
+      const secondPayload = JSON.parse(secondScan.stdout) as { data: { scheduledUpserts: number; scheduledDeletes: number; state: string } };
+      assert.equal(secondPayload.data.scheduledUpserts, 0);
+      assert.equal(secondPayload.data.scheduledDeletes, 0);
+      assert.equal(secondPayload.data.state, "empty");
+    }
+  });
+});
+test("search changes scan resumes bounded file-source ticks without duplicate jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-file-source-budget-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const sourceRoot = path.join(workspaceRoot, "project");
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  for (const name of ["one.ts", "two.ts", "three.ts"]) {
+    fs.writeFileSync(path.join(sourceRoot, name), `export const ${name.replace(".ts", "")}Needle = "${name}";\n`);
+  }
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const seen = new Set<string>();
+    for (let index = 0; index < 3; index += 1) {
+      const scan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--limit", "1", "--data-dir", dataRoot, "--json"], workspaceRoot);
+      assert.equal(scan.code, CLI_EXIT_OK, scan.stderr || scan.stdout);
+      const payload = JSON.parse(scan.stdout) as { data: { scheduledUpserts: number; jobs: Array<{ resourceId?: string }>; pending: boolean; budgetExhausted: boolean } };
+      assert.equal(payload.data.scheduledUpserts, 1);
+      assert.equal(payload.data.budgetExhausted, true);
+      const resourceId = payload.data.jobs[0]?.resourceId;
+      assert.equal(typeof resourceId, "string");
+      assert.equal(seen.has(resourceId as string), false);
+      seen.add(resourceId as string);
+    }
+    assert.deepEqual([...seen].sort(), ["one.ts", "three.ts", "two.ts"]);
+    const finalScan = await runCliCapture(["search", "changes", "scan", "--source", "code.symbols", "--root", sourceRoot, "--limit", "1", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(finalScan.code, CLI_EXIT_OK, finalScan.stderr || finalScan.stdout);
+    const finalPayload = JSON.parse(finalScan.stdout) as { data: { scheduledUpserts: number; scheduledDeletes: number; pending: boolean } };
+    assert.equal(finalPayload.data.scheduledUpserts, 0);
+    assert.equal(finalPayload.data.scheduledDeletes, 0);
+    assert.equal(finalPayload.data.pending, false);
   });
 });
 test("search keeps optional full sources out of scoped domain queries", async () => {

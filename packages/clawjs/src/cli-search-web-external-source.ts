@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
 
 import { isIgnoredCodeSearchDirectory } from "./cli-search-code-symbols-source.ts";
+import { runIncrementalFileSourceTick } from "./cli-search-incremental-files.ts";
 
 interface WebIngestedCandidate {
   absolutePath: string;
@@ -32,25 +33,30 @@ export function ensureWebIngestedSourceIndexed(store: SearchStore, flags: Record
   const maxFiles = boundedNumberFlag(flags["web-limit"] ?? flags["web-cache-limit"], 500, 1, 20000);
   const maxDepth = boundedNumberFlag(flags["web-max-depth"] ?? flags["web-cache-max-depth"], 8, 1, 32);
   const maxBytes = boundedNumberFlag(flags["web-max-bytes"] ?? flags["web-cache-max-bytes"], 512 * 1024, 1024, 4 * 1024 * 1024);
-  const files = discoverWebIngestedFiles(root, { maxFiles, maxDepth, maxBytes });
-  let indexed = 0;
-  for (const file of files) {
-    const document = webIngestedSearchDocument(root, file, maxBytes);
-    if (!document) continue;
-    store.upsertDocument(document);
-    indexed += 1;
-  }
-  store.setCursor({
+  const tick = runIncrementalFileSourceTick({
+    store,
     source: "web.ingested",
-    cursor: `root:${stableSearchId(root)}:pages:${indexed}`,
-    metadata: { root, maxFiles, maxDepth, maxBytes },
+    root,
+    limits: { maxFiles, maxDepth, maxBytes },
+    ignoreDirectory: (name) => isIgnoredLocalFilesDirectory(name),
+    fileInfo: ({ extension, stat }) => ({
+      indexable: [".html", ".htm", ".json", ".md", ".txt"].includes(extension) && stat.size <= maxBytes,
+      kind: extension.replace(/^\./, "") || "file",
+      reason: "web cache file skipped during incremental Search scan",
+    }),
+    onUpsert: ({ relativePath }) => ({ indexed: ensureWebIngestedResourceIndexed(store, flags, cwd, relativePath, root) }),
+    onDelete: ({ relativePath, reason }) => {
+      store.tombstone({ source: "web.ingested", resourceId: relativePath, reason });
+      return { indexed: 1 };
+    },
   });
   store.setSourceState("web.ingested", "enabled", {
-    backlog: 0,
+    backlog: tick.pending ? Math.max(1, tick.frontierRemaining) : 0,
     error: null,
     lastIndexedAt: new Date().toISOString(),
   });
-  return indexed;
+  if (tick.pending) enqueueFileSourceContinuation(store, "web.ingested", root);
+  return tick.indexed;
 }
 
 export function ensureWebIngestedResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
@@ -84,6 +90,12 @@ export function ensureWebIngestedResourceIndexed(store: SearchStore, flags: Reco
     return 1;
   }
   store.upsertDocument(document);
+  store.markFileInventoryIndexed({
+    source: "web.ingested",
+    root,
+    relativePath: relativeFromRoot,
+    checksum: typeof document.metadata?.contentChecksum === "string" ? document.metadata.contentChecksum : null,
+  });
   store.setSourceState("web.ingested", "enabled", {
     backlog: 0,
     error: null,
@@ -105,25 +117,30 @@ export function ensureExternalCacheSourceIndexed(store: SearchStore, flags: Reco
   const maxFiles = boundedNumberFlag(flags["external-limit"] ?? flags["external-cache-limit"], 500, 1, 20000);
   const maxDepth = boundedNumberFlag(flags["external-max-depth"] ?? flags["external-cache-max-depth"], 8, 1, 32);
   const maxBytes = boundedNumberFlag(flags["external-max-bytes"] ?? flags["external-cache-max-bytes"], 512 * 1024, 1024, 4 * 1024 * 1024);
-  const files = discoverExternalCacheFiles(root, { maxFiles, maxDepth, maxBytes });
-  let indexed = 0;
-  for (const file of files) {
-    const document = externalCacheSearchDocument(root, file, maxBytes);
-    if (!document) continue;
-    store.upsertDocument(document);
-    indexed += 1;
-  }
-  store.setCursor({
+  const tick = runIncrementalFileSourceTick({
+    store,
     source: "external.cache",
-    cursor: `root:${stableSearchId(root)}:items:${indexed}`,
-    metadata: { root, maxFiles, maxDepth, maxBytes },
+    root,
+    limits: { maxFiles, maxDepth, maxBytes },
+    ignoreDirectory: (name) => isIgnoredLocalFilesDirectory(name),
+    fileInfo: ({ extension, stat }) => ({
+      indexable: [".json", ".jsonl", ".md", ".txt"].includes(extension) && stat.size <= maxBytes,
+      kind: extension.replace(/^\./, "") || "file",
+      reason: "external cache file skipped during incremental Search scan",
+    }),
+    onUpsert: ({ relativePath }) => ({ indexed: ensureExternalCacheResourceIndexed(store, flags, cwd, relativePath, root) }),
+    onDelete: ({ relativePath, reason }) => {
+      store.tombstone({ source: "external.cache", resourceId: relativePath, reason });
+      return { indexed: 1 };
+    },
   });
   store.setSourceState("external.cache", "enabled", {
-    backlog: 0,
+    backlog: tick.pending ? Math.max(1, tick.frontierRemaining) : 0,
     error: null,
     lastIndexedAt: new Date().toISOString(),
   });
-  return indexed;
+  if (tick.pending) enqueueFileSourceContinuation(store, "external.cache", root);
+  return tick.indexed;
 }
 
 export function ensureExternalCacheResourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string, relativePath: string, rootOverride?: string): number {
@@ -157,6 +174,12 @@ export function ensureExternalCacheResourceIndexed(store: SearchStore, flags: Re
     return 1;
   }
   store.upsertDocument(document);
+  store.markFileInventoryIndexed({
+    source: "external.cache",
+    root,
+    relativePath: relativeFromRoot,
+    checksum: typeof document.metadata?.contentChecksum === "string" ? document.metadata.contentChecksum : null,
+  });
   store.setSourceState("external.cache", "enabled", {
     backlog: 0,
     error: null,
@@ -184,6 +207,17 @@ function resolveWebIngestedRoot(flags: Record<string, string>, cwd: string): str
 
 function resolveExternalCacheRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["external-root"] ?? flags["external-cache-root"] ?? flags.workspace ?? cwd);
+}
+
+function enqueueFileSourceContinuation(store: SearchStore, source: string, root: string): void {
+  store.enqueueIndexJob({
+    id: `scan:${source}:${stableSearchId(root)}:continue`,
+    source,
+    operation: "rebuild",
+    resourceId: root,
+    payload: { root },
+    priority: 20,
+  });
 }
 
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
@@ -267,6 +301,7 @@ function isIgnoredLocalFilesDirectory(name: string): boolean {
 function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, maxBytes: number): SearchDocumentInput | null {
   const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
   if (!raw) return null;
+  const contentChecksum = createHash("sha256").update(raw).digest("hex");
   const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
   const parsed = parseWebIngestedPayload(raw, file.extension);
   const url = parsed.url ?? urlFromWebCachePath(relativePath);
@@ -294,6 +329,7 @@ function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, max
       url,
       crawlScope: parsed.crawlScope ?? "explicit_cache",
       contentType: parsed.contentType ?? contentTypeForWebCacheExtension(file.extension),
+      contentChecksum,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {
@@ -311,6 +347,7 @@ function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, max
 function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate, maxBytes: number): SearchDocumentInput | null {
   const raw = readLocalTextFile(file.absolutePath).slice(0, maxBytes);
   if (!raw) return null;
+  const contentChecksum = createHash("sha256").update(raw).digest("hex");
   const relativePath = normalizeRelativePath(path.relative(root, file.absolutePath));
   const record = parseExternalCacheRecord(raw, file.extension, relativePath);
   if (!record) return null;
@@ -344,6 +381,7 @@ function externalCacheSearchDocument(root: string, file: ExternalCacheCandidate,
       syncMode: record.syncMode ?? "cache",
       externalId: record.externalId ?? record.id,
       kind: record.type ?? "external_record",
+      contentChecksum,
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: {

@@ -5,6 +5,7 @@ import path from "node:path";
 import type { SearchDocumentInput, SearchStore } from "@clawjs/search";
 
 import { isIgnoredCodeSearchDirectory, languageForCodeSearchExtension } from "./cli-search-code-symbols-source.ts";
+import { runIncrementalFileSourceTick } from "./cli-search-incremental-files.ts";
 
 export function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<string, string>, cwd: string): number {
   const root = resolveLocalFilesSearchRoot(flags, cwd);
@@ -19,25 +20,29 @@ export function ensureLocalFilesSourceIndexed(store: SearchStore, flags: Record<
   const maxFiles = boundedNumberFlag(flags["file-limit"] ?? flags["local-files-limit"], 500, 1, 20000);
   const maxDepth = boundedNumberFlag(flags["file-max-depth"] ?? flags["local-files-max-depth"], 8, 1, 32);
   const maxBytes = boundedNumberFlag(flags["file-max-bytes"] ?? flags["local-files-max-bytes"], 256 * 1024, 1024, 2 * 1024 * 1024);
-  const files = discoverLocalSearchFiles(root, { maxFiles, maxDepth });
-  let indexed = 0;
-  for (const file of files) {
-    const document = localFileSearchDocument(root, file, maxBytes);
-    if (!document) continue;
-    store.upsertDocument(document);
-    indexed += 1;
-  }
-  store.setCursor({
+  const tick = runIncrementalFileSourceTick({
+    store,
     source: "local.files",
-    cursor: `root:${stableSearchId(root)}:files:${indexed}`,
-    metadata: { root, maxFiles, maxDepth, maxBytes },
+    root,
+    limits: { maxFiles, maxDepth, maxBytes },
+    ignoreDirectory: (name) => isIgnoredLocalFilesDirectory(name),
+    fileInfo: ({ extension, stat }) => ({
+      indexable: stat.isFile() && stat.size > 0,
+      kind: localFileKind(extension),
+    }),
+    onUpsert: ({ relativePath }) => ({ indexed: ensureLocalFileResourceIndexed(store, flags, cwd, relativePath, root) }),
+    onDelete: ({ relativePath, reason }) => {
+      store.tombstone({ source: "local.files", resourceId: relativePath, reason });
+      return { indexed: 1 };
+    },
   });
   store.setSourceState("local.files", "enabled", {
-    backlog: 0,
+    backlog: tick.pending ? Math.max(1, tick.frontierRemaining) : 0,
     error: null,
     lastIndexedAt: new Date().toISOString(),
   });
-  return indexed;
+  if (tick.pending) enqueueFileSourceContinuation(store, "local.files", root);
+  return tick.indexed;
 }
 
 export function ensureLocalFileResourceIndexed(
@@ -79,6 +84,12 @@ export function ensureLocalFileResourceIndexed(
     return 1;
   }
   store.upsertDocument(document);
+  store.markFileInventoryIndexed({
+    source: "local.files",
+    root,
+    relativePath: relativeFromRoot,
+    checksum: typeof document.metadata?.contentChecksum === "string" ? document.metadata.contentChecksum : null,
+  });
   store.setSourceState("local.files", "enabled", {
     backlog: 0,
     error: null,
@@ -89,6 +100,17 @@ export function ensureLocalFileResourceIndexed(
 
 function resolveLocalFilesSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["file-root"] ?? flags["local-files-root"] ?? flags.workspace ?? cwd);
+}
+
+function enqueueFileSourceContinuation(store: SearchStore, source: string, root: string): void {
+  store.enqueueIndexJob({
+    id: `scan:${source}:${stableSearchId(root)}:continue`,
+    source,
+    operation: "rebuild",
+    resourceId: root,
+    payload: { root },
+    priority: 20,
+  });
 }
 
 function discoverLocalSearchFiles(root: string, limits: { maxFiles: number; maxDepth: number }): LocalFileCandidate[] {
@@ -158,6 +180,7 @@ function localFileSearchDocument(root: string, file: LocalFileCandidate, maxByte
   const title = path.basename(file.absolutePath);
   const canReadContent = localFileTextExtension(file.extension) && file.size <= maxBytes;
   const content = canReadContent ? readLocalTextFile(file.absolutePath) : "";
+  const contentChecksum = content ? createHash("sha256").update(content).digest("hex") : undefined;
   const snippet = firstMeaningfulLine(content) ?? relativePath;
   const documentId = `local.files:${stableSearchId(`${root}\0${relativePath}`)}`;
   return {
@@ -184,6 +207,7 @@ function localFileSearchDocument(root: string, file: LocalFileCandidate, maxByte
       kind: file.kind,
       size: file.size,
       indexedContent: Boolean(content),
+      ...(contentChecksum ? { contentChecksum } : {}),
     },
     permissions: { canOpen: true, canPreview: Boolean(content), redacted: false },
     rankingHints: {

@@ -436,6 +436,63 @@ test("SearchStore keeps hot shard and Root Search first-batch latency within bud
   }
 });
 
+test("SearchStore materializes fragments, actions and interactions without N+1 query latency", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-materialization-batch-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "batch.items",
+      domain: "batch",
+      name: "Batch items",
+      resultTypes: ["batch-item"],
+    }));
+    store.upsertDocuments(Array.from({ length: 320 }, (_value, index) => ({
+      id: `batch.items:${index}`,
+      source: "batch.items",
+      domain: "batch",
+      type: "batch-item",
+      title: `Batch materialization result ${index} batchneedle`,
+      body: `Search materialization regression body batchneedle ${index}`,
+      updatedAt: new Date(1_800_000_000_000 + index).toISOString(),
+      fragments: Array.from({ length: 6 }, (_fragment, fragmentIndex) => ({
+        id: `batch.items:${index}:fragment:${fragmentIndex}`,
+        title: `Fragment ${fragmentIndex}`,
+        body: `Fragment body batchneedle ${index} ${fragmentIndex}`,
+      })),
+      actions: [{ id: "open", kind: "open", label: "Open batch item" }],
+    })));
+    for (let index = 0; index < 40; index += 1) {
+      store.recordInteraction({
+        resultId: `batch.items:${280 + index}`,
+        actor: "agent:codex",
+        surface: "cli",
+        actionId: "open",
+        kind: "open",
+        createdAt: new Date(1_800_000_500_000 + index).toISOString(),
+      });
+    }
+
+    const output = store.query({
+      query: "batchneedle",
+      domains: ["batch"],
+      actor: "agent:codex",
+      surface: "cli",
+      limit: 80,
+      explain: true,
+    });
+
+    assert.equal(output.results.length, 80);
+    assert.ok(output.elapsedMs <= DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs, `batched materialization exceeded ${DEFAULT_SEARCH_BUDGETS.globalFirstBatchMs}ms: ${output.elapsedMs}ms`);
+    assert.equal(output.results[0]?.actions?.[0]?.id, "open");
+    assert.equal(output.results[0]?.fragments?.length, 5);
+    assert.equal(output.results.every((result) => (result.fragments?.length ?? 0) <= 5), true);
+    assert.equal(output.results.some((result) => (result.explanation?.scoreBreakdown?.frecency ?? 0) > 0), true);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore keeps shard-scoped ranking cache through unrelated cold backfill", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cache-scopes-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
@@ -1044,6 +1101,67 @@ test("SearchStore uses physical FTS partitions for shard-scoped lexical queries"
 
     const unscoped = store.query({ query: "partition sentinel", domains: ["documents"], limit: 5 });
     assert.equal(unscoped.results.some((result) => result.id === "documents.blocks:cold:one"), true);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("SearchStore persists rebuildable file inventory by source root and path", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-file-inventory-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "local.files",
+      domain: "files",
+      name: "Local files",
+      resultTypes: ["file"],
+    }));
+    const rootA = path.join(dir, "root-a");
+    const rootB = path.join(dir, "root-b");
+    const first = store.upsertFileInventoryEntry({
+      source: "local.files",
+      root: rootA,
+      relativePath: "docs/readme.md",
+      dev: 10,
+      ino: 20,
+      mtimeMs: 1234,
+      size: 42,
+      extension: ".md",
+      kind: "text",
+      lastSeenGeneration: 1,
+    });
+    assert.equal(first.state, "active");
+    assert.equal(first.dev, "10");
+    assert.equal(first.ino, "20");
+    assert.equal(store.fileInventoryEntry("local.files", rootA, "docs/readme.md")?.size, 42);
+    assert.equal(store.fileInventoryEntry("local.files", rootB, "docs/readme.md"), null);
+
+    store.markFileInventoryIndexed({
+      source: "local.files",
+      root: rootA,
+      relativePath: "docs/readme.md",
+      checksum: "sha256:alpha",
+      indexedAt: "2026-05-21T10:00:00.000Z",
+    });
+    const indexed = store.fileInventoryEntry("local.files", rootA, "docs/readme.md");
+    assert.equal(indexed?.checksum, "sha256:alpha");
+    assert.equal(indexed?.lastIndexedAt, "2026-05-21T10:00:00.000Z");
+
+    store.upsertFileInventoryEntry({
+      source: "local.files",
+      root: rootA,
+      relativePath: "docs/old.md",
+      mtimeMs: 1000,
+      size: 12,
+      extension: ".md",
+      kind: "text",
+      lastSeenGeneration: 0,
+    });
+    assert.deepEqual(store.staleFileInventoryEntries({ source: "local.files", root: rootA, generation: 1 }).map((entry) => entry.relativePath), ["docs/old.md"]);
+    store.markFileInventoryDeleted({ source: "local.files", root: rootA, relativePath: "docs/old.md", generation: 1 });
+    assert.equal(store.fileInventoryEntry("local.files", rootA, "docs/old.md")?.state, "deleted");
+    assert.deepEqual(store.staleFileInventoryEntries({ source: "local.files", root: rootA, generation: 1 }), []);
   } finally {
     store.close();
     fs.rmSync(dir, { recursive: true, force: true });

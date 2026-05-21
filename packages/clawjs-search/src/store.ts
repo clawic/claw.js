@@ -27,208 +27,94 @@ import {
   type SearchSourceState,
   type SearchSourceStatus,
 } from "./index.ts";
+import {
+  SEARCH_RESET_SQL,
+  SEARCH_SCHEMA_SQL,
+  SavedSearchRow,
+  SearchAuditEventRow,
+  SearchCursorRow,
+  SearchDocumentRow,
+  SearchEmbeddingDocumentRow,
+  SearchEmbeddingFragmentRow,
+  SearchEmbeddingStatusRow,
+  SearchFileInventoryRow,
+  SearchFragmentRow,
+  SearchFtsPartitionRow,
+  SearchIndexJobRow,
+  SearchInteractionRow,
+  SearchMonitorRow,
+  SearchRankingCachePayload,
+  SearchSemanticCandidate,
+  SearchSemanticCandidateRow,
+  SearchShardRow,
+  SearchTouchedCacheScopes,
+  SearchVectorRow,
+  addInClause,
+  agentBudgetResultFilter,
+  buildDocumentClauses,
+  centralSearchScore,
+  cosineSimilarity,
+  effectiveResultLimit,
+  existingSearchDocumentIds,
+  existingSearchDocumentShardRows,
+  ftsPartitionTableName,
+  ftsQuery,
+  isRebuildableSearchSchemaMismatch,
+  mergeSearchRows,
+  normalizeEmbedding,
+  normalizeInlineSearchQuery,
+  parseJson,
+  quoteSqlIdentifier,
+  rankingCacheCutoffIso,
+  rankingCacheScopeDeleteSql,
+  searchAclAllows,
+  searchCursorChecksum,
+  searchCursorFromRow,
+  searchEmbeddingText,
+  searchFtsPartitionFromRow,
+  searchIndexJobFromRow,
+  searchInteractionFromRow,
+  searchRankingCacheKey,
+  searchRankingCacheScope,
+  searchShardFromRow,
+  searchVectorFromRow,
+  shouldRunFuzzyFallback,
+  stableJobIdPart,
+  truncateUtf8,
+} from "./store-helpers.ts";
+import type {
+  SavedSearchInput,
+  SearchAuditEvent,
+  SearchAuditEventInput,
+  SearchAuditEventType,
+  SearchDocumentFragmentInput,
+  SearchDocumentInput,
+  SearchEmbeddingIndexInput,
+  SearchEmbeddingIndexSummary,
+  SearchEmbeddingStatus,
+  SearchEmbeddingStatusInput,
+  SearchFileInventoryEntry,
+  SearchFileInventoryInput,
+  SearchFileInventoryState,
+  SearchIndexEventInput,
+  SearchIndexJob,
+  SearchIndexJobInput,
+  SearchIndexJobOperation,
+  SearchIndexJobStatus,
+  SearchMonitorInput,
+  SearchRankingCacheStats,
+  SearchResultAccessInput,
+  SearchShardState,
+  SearchShardStatus,
+  SearchSourceCursor,
+  SearchTombstone,
+  SearchVectorInput,
+  SearchVectorRecord
+} from "./store-types.ts";
+import { fileInventoryIdentityPart, searchFileInventoryFromRow } from "./store-types.ts";
+export * from "./store-types.ts";
 
-export interface SearchDocumentFragmentInput {
-  id: string;
-  title?: string;
-  body?: string;
-  snippet?: string;
-  sortOrder?: number;
-  metadata?: Record<string, unknown>;
-}
-
-export type SearchResultAccessInput = Pick<SearchQueryInput, "actor" | "surface" | "filters">;
-
-export interface SearchDocumentInput {
-  id: string;
-  source: string;
-  shard?: string;
-  domain: string;
-  type: string;
-  title: string;
-  subtitle?: string;
-  snippet?: string;
-  body?: string;
-  resourceId?: string;
-  path?: string;
-  updatedAt?: string;
-  metadata?: Record<string, unknown>;
-  permissions?: SearchResult["permissions"];
-  rankingHints?: Record<string, number>;
-  fragments?: SearchDocumentFragmentInput[];
-  actions?: SearchAction[];
-}
-
-export interface SavedSearchInput {
-  id: string;
-  name: string;
-  query: SearchQueryInput;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface SearchMonitorInput {
-  id: string;
-  savedSearchId: string;
-  name?: string;
-  enabled?: boolean;
-  cadence?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface SearchSourceCursor {
-  source: string;
-  shard: string;
-  cursor: string;
-  watermark: string;
-  checksum: string;
-  updatedAt: string;
-  metadata: Record<string, unknown>;
-}
-
-export type SearchShardState = "active" | "empty";
-
-export interface SearchShardStatus {
-  source: string;
-  shard: string;
-  domain: string;
-  state: SearchShardState;
-  documentCount: number;
-  fragmentCount: number;
-  updatedAt: string;
-}
-
-export interface SearchTombstone {
-  id: string;
-  source: string;
-  resourceId: string;
-  deletedAt: string;
-  reason?: string;
-}
-
-export type SearchIndexJobOperation = "upsert" | "delete" | "backfill" | "rebuild" | "embed";
-
-export type SearchIndexJobStatus = "queued" | "leased" | "done" | "failed";
-
-export interface SearchIndexJobInput {
-  id?: string;
-  source: string;
-  shard?: string;
-  operation: SearchIndexJobOperation;
-  resourceId?: string;
-  payload?: Record<string, unknown>;
-  priority?: number;
-  scheduledAt?: string;
-  createdAt?: string;
-}
-
-export interface SearchIndexEventInput {
-  source: string;
-  resourceId: string;
-  operation: Extract<SearchIndexJobOperation, "upsert" | "delete">;
-  shard?: string;
-  payload?: Record<string, unknown>;
-  priority?: number;
-  scheduledAt?: string;
-  observedAt?: string;
-}
-
-export interface SearchIndexJob {
-  id: string;
-  source: string;
-  shard: string;
-  operation: SearchIndexJobOperation;
-  resourceId?: string;
-  payload: Record<string, unknown>;
-  status: SearchIndexJobStatus;
-  attempts: number;
-  priority: number;
-  scheduledAt: string;
-  createdAt: string;
-  updatedAt: string;
-  leasedUntil?: string;
-  error?: string;
-}
-
-export interface SearchEmbeddingIndexInput {
-  sources?: string[];
-  domains?: string[];
-  shards?: string[];
-  limit?: number;
-  model?: string;
-}
-
-export interface SearchEmbeddingIndexSummary {
-  model: string;
-  documents: number;
-  indexed: number;
-  selectedSources: string[] | null;
-  selectedDomains: string[] | null;
-  selectedShards: string[] | null;
-}
-
-export interface SearchEmbeddingStatusInput {
-  sources?: string[];
-  domains?: string[];
-  shards?: string[];
-  model?: string;
-}
-
-export interface SearchEmbeddingStatus {
-  source: string;
-  domain: string;
-  shard: string;
-  model: string;
-  documents: number;
-  vectors: number;
-  updatedAt?: string;
-}
-
-export interface SearchVectorInput {
-  documentId: string;
-  fragmentId?: string;
-  model: string;
-  embedding: number[];
-  updatedAt?: string;
-}
-
-export interface SearchVectorRecord {
-  documentId: string;
-  fragmentId?: string;
-  model: string;
-  embedding: number[];
-  updatedAt: string;
-}
-
-export type SearchAuditEventType = "sensitive_query" | "action";
-
-export interface SearchAuditEventInput {
-  type: SearchAuditEventType;
-  actor?: string;
-  surface?: string;
-  query?: string;
-  source?: string;
-  domain?: string;
-  resultId?: string;
-  actionId?: string;
-  status?: string;
-  risk?: string;
-  grant?: string;
-  reason?: string;
-  metadata?: Record<string, unknown>;
-  createdAt?: string;
-}
-
-export interface SearchAuditEvent extends SearchAuditEventInput {
-  id: string;
-  createdAt: string;
-}
-
-export interface SearchRankingCacheStats {
-  entries: number;
-  updatedAt?: string;
-}
+const SEARCH_RESULT_LEXICAL_BODY_CHARS = 2048;
 
 const SEARCH_RANKING_CACHE_LIMITS = {
   maxEntries: 256,
@@ -236,6 +122,19 @@ const SEARCH_RANKING_CACHE_LIMITS = {
   maxTotalBytes: 16 * 1024 * 1024,
   maxEntryBytes: 256 * 1024,
 } as const;
+
+type SearchLexicalMatch = ReturnType<typeof scoreLexicalMatch>;
+type SearchResultFragment = NonNullable<SearchResult["fragments"]>[number];
+
+interface SearchMaterializationOptions {
+  lexicalMatches?: Map<string, SearchLexicalMatch>;
+  ftsDocumentIds?: Set<string>;
+}
+
+interface SearchFragmentMaterialization {
+  fragment: SearchResultFragment;
+  match: SearchLexicalMatch;
+}
 
 export class SearchStore {
   readonly db: Database.Database;
@@ -266,6 +165,7 @@ export class SearchStore {
       const deleteShards = this.db.prepare("DELETE FROM search_shards WHERE source = ?");
       const deleteCursors = this.db.prepare("DELETE FROM search_cursors WHERE source = ?");
       const deleteTombstones = this.db.prepare("DELETE FROM search_tombstones WHERE source = ?");
+      const deleteFileInventory = this.db.prepare("DELETE FROM search_file_inventory WHERE source = ?");
       for (const source of uniqueSources) {
         this.dropFtsPartitions({ source });
         deleteFts.run(source);
@@ -273,6 +173,7 @@ export class SearchStore {
         deleteShards.run(source);
         deleteCursors.run(source);
         deleteTombstones.run(source);
+        deleteFileInventory.run(source);
       }
       this.clearRankingCacheForScopes(touchedCacheScopes);
     });
@@ -582,11 +483,16 @@ export class SearchStore {
       ? { ...queryInput, shards: shardPlan.activeShards }
       : queryInput;
     const rows = new Map<string, SearchDocumentRow>();
+    const lexicalMatches = new Map<string, SearchLexicalMatch>();
+    const ftsDocumentIds = new Set<string>();
     if (strategy !== "semantic" || !plannedQueryInput.embedding) {
       const lexicalRows = this.lexicalRows(plannedQueryInput, sourceSet, match, candidateLimit);
-      for (const row of lexicalRows) rows.set(row.id, row);
+      for (const row of lexicalRows) {
+        rows.set(row.id, row);
+        ftsDocumentIds.add(row.id);
+      }
       if (rows.size < candidateLimit && shouldRunFuzzyFallback(plannedQueryInput.query)) {
-        for (const row of this.fuzzyFallbackRows(plannedQueryInput, sourceSet, candidateLimit, rows)) {
+        for (const row of this.fuzzyFallbackRows(plannedQueryInput, sourceSet, candidateLimit, rows, lexicalMatches)) {
           rows.set(row.id, row);
         }
       }
@@ -597,9 +503,12 @@ export class SearchStore {
         rows.set(row.id, existing ? mergeSearchRows(existing, row) : row);
       }
     }
-    const results = [...rows.values()]
-      .filter((row) => searchAclAllows(row.permissions_json, plannedQueryInput))
-      .map((row) => this.resultFromRow(row, plannedQueryInput))
+    const materializedResults = this.materializeResults(
+      [...rows.values()].filter((row) => searchAclAllows(row.permissions_json, plannedQueryInput)),
+      plannedQueryInput,
+      { lexicalMatches, ftsDocumentIds },
+    );
+    const results = materializedResults
       .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
       .filter(agentBudgetResultFilter(plannedQueryInput.agentBudget))
       .slice(0, outputLimit);
@@ -976,6 +885,89 @@ export class SearchStore {
     return rows.map(searchIndexJobFromRow);
   }
 
+  upsertFileInventoryEntry(input: SearchFileInventoryInput): SearchFileInventoryEntry {
+    const updatedAt = input.updatedAt ?? new Date().toISOString();
+    const state = input.state ?? "active";
+    this.db.prepare(`
+      INSERT INTO search_file_inventory (
+        source, root, relative_path, dev, ino, mtime_ms, size, checksum,
+        extension, kind, last_seen_generation, last_indexed_at, state, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(source, root, relative_path) DO UPDATE SET
+        dev = excluded.dev,
+        ino = excluded.ino,
+        mtime_ms = excluded.mtime_ms,
+        size = excluded.size,
+        checksum = COALESCE(excluded.checksum, search_file_inventory.checksum),
+        extension = excluded.extension,
+        kind = excluded.kind,
+        last_seen_generation = excluded.last_seen_generation,
+        last_indexed_at = COALESCE(excluded.last_indexed_at, search_file_inventory.last_indexed_at),
+        state = excluded.state,
+        updated_at = excluded.updated_at
+    `).run(
+      input.source,
+      input.root,
+      input.relativePath,
+      fileInventoryIdentityPart(input.dev),
+      fileInventoryIdentityPart(input.ino),
+      input.mtimeMs,
+      input.size,
+      input.checksum ?? null,
+      input.extension ?? null,
+      input.kind ?? null,
+      input.lastSeenGeneration,
+      input.lastIndexedAt ?? null,
+      state,
+      updatedAt,
+    );
+    const stored = this.fileInventoryEntry(input.source, input.root, input.relativePath);
+    if (!stored) throw new Error("Search file inventory upsert failed");
+    return stored;
+  }
+
+  markFileInventoryIndexed(input: { source: string; root: string; relativePath: string; checksum?: string | null; indexedAt?: string }): SearchFileInventoryEntry | null {
+    const indexedAt = input.indexedAt ?? new Date().toISOString();
+    this.db.prepare(`
+      UPDATE search_file_inventory
+      SET checksum = COALESCE(?, checksum), last_indexed_at = ?, state = 'active', updated_at = ?
+      WHERE source = ? AND root = ? AND relative_path = ?
+    `).run(input.checksum ?? null, indexedAt, indexedAt, input.source, input.root, input.relativePath);
+    return this.fileInventoryEntry(input.source, input.root, input.relativePath);
+  }
+
+  markFileInventoryDeleted(input: { source: string; root: string; relativePath: string; generation?: number; updatedAt?: string }): SearchFileInventoryEntry | null {
+    const updatedAt = input.updatedAt ?? new Date().toISOString();
+    this.db.prepare(`
+      UPDATE search_file_inventory
+      SET state = 'deleted',
+          last_seen_generation = COALESCE(?, last_seen_generation),
+          updated_at = ?
+      WHERE source = ? AND root = ? AND relative_path = ?
+    `).run(input.generation ?? null, updatedAt, input.source, input.root, input.relativePath);
+    return this.fileInventoryEntry(input.source, input.root, input.relativePath);
+  }
+
+  fileInventoryEntry(source: string, root: string, relativePath: string): SearchFileInventoryEntry | null {
+    const row = this.db.prepare(`
+      SELECT * FROM search_file_inventory
+      WHERE source = ? AND root = ? AND relative_path = ?
+    `).get(source, root, relativePath) as SearchFileInventoryRow | undefined;
+    return row ? searchFileInventoryFromRow(row) : null;
+  }
+
+  staleFileInventoryEntries(input: { source: string; root: string; generation: number; limit?: number }): SearchFileInventoryEntry[] {
+    const limit = Math.max(1, Math.min(1000, input.limit ?? 100));
+    const rows = this.db.prepare(`
+      SELECT * FROM search_file_inventory
+      WHERE source = ? AND root = ? AND state != 'deleted' AND last_seen_generation < ?
+      ORDER BY relative_path ASC
+      LIMIT ?
+    `).all(input.source, input.root, input.generation, limit) as SearchFileInventoryRow[];
+    return rows.map(searchFileInventoryFromRow);
+  }
+
   saveSearch(input: SavedSearchInput): void {
     const now = new Date().toISOString();
     this.db.prepare(`
@@ -1160,7 +1152,7 @@ export class SearchStore {
       LIMIT 1
     `).get(resultId) as SearchDocumentRow | undefined;
     if (!row || !searchAclAllows(row.permissions_json, { query: "", ...access })) return null;
-    return this.resultFromRow(row, { query: "", ...access });
+    return this.materializeResults([row], { query: "", ...access })[0] ?? null;
   }
 
   private indexJob(id: string): SearchIndexJob | null {
@@ -1194,6 +1186,7 @@ export class SearchStore {
         || !this.tableHasColumn("search_ranking_cache", "shard_count")
         || !this.tableExists("search_ranking_cache_scopes")
         || !this.tableExists("search_source_sets")
+        || !this.tableExists("search_file_inventory")
         || !this.tableHasColumn("search_sources", "source_set")
       ) {
         this.resetSearchSchema();
@@ -1300,17 +1293,21 @@ export class SearchStore {
   }
 
   private lexicalRowsFromGlobalFts(input: SearchQueryInput, sourceSet: SearchSourceSetId, match: string, limit: number): SearchDocumentRow[] {
-    const { clauses, params } = buildDocumentClauses(input, sourceSet, match);
+    const { clauses, params } = buildDocumentClauses(input, sourceSet);
     return this.db.prepare(`
-      SELECT d.*, 0 AS rank, NULL AS semantic_score
-      FROM search_fts
-      JOIN search_documents d ON d.id = search_fts.doc_id
+      SELECT d.*, MIN(hit.rank) AS rank, NULL AS semantic_score
+      FROM (
+        SELECT doc_id, rank
+        FROM search_fts
+        WHERE search_fts MATCH ?
+      ) hit
+      JOIN search_documents d ON d.id = hit.doc_id
       JOIN search_sources s ON s.id = d.source
       WHERE ${clauses.join(" AND ")}
       GROUP BY d.id
       ORDER BY rank ASC, d.updated_at DESC
       LIMIT ?
-    `).all(...params, limit) as SearchDocumentRow[];
+    `).all(match, ...params, limit) as SearchDocumentRow[];
   }
 
   private lexicalRowsFromPartitions(partitions: Array<{ tableName: string }>, input: SearchQueryInput, sourceSet: SearchSourceSetId, match: string, limit: number): SearchDocumentRow[] {
@@ -1320,11 +1317,15 @@ export class SearchStore {
     for (const partition of partitions) {
       const table = quoteSqlIdentifier(partition.tableName);
       selects.push(`
-        SELECT d.*, 0 AS rank, NULL AS semantic_score
-        FROM ${table}
-        JOIN search_documents d ON d.id = ${table}.doc_id
+        SELECT d.*, MIN(hit.rank) AS rank, NULL AS semantic_score
+        FROM (
+          SELECT doc_id, rank
+          FROM ${table}
+          WHERE ${table} MATCH ?
+        ) hit
+        JOIN search_documents d ON d.id = hit.doc_id
         JOIN search_sources s ON s.id = d.source
-        WHERE ${table} MATCH ? AND ${clauses.join(" AND ")}
+        WHERE ${clauses.join(" AND ")}
         GROUP BY d.id
       `);
       allParams.push(match, ...params);
@@ -1566,7 +1567,13 @@ export class SearchStore {
     });
   }
 
-  private fuzzyFallbackRows(input: SearchQueryInput, sourceSet: SearchSourceSetId, limit: number, existingRows: Map<string, SearchDocumentRow>): SearchDocumentRow[] {
+  private fuzzyFallbackRows(
+    input: SearchQueryInput,
+    sourceSet: SearchSourceSetId,
+    limit: number,
+    existingRows: Map<string, SearchDocumentRow>,
+    lexicalMatches: Map<string, SearchLexicalMatch>,
+  ): SearchDocumentRow[] {
     const { clauses, params } = buildDocumentClauses(input, sourceSet);
     const scanLimit = Math.min(1000, Math.max(limit * 8, 100));
     const rows = this.db.prepare(`
@@ -1579,81 +1586,172 @@ export class SearchStore {
     `).all(...params, scanLimit) as SearchDocumentRow[];
     return rows
       .filter((row) => !existingRows.has(row.id))
-      .map((row) => ({ row, match: scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`) }))
+      .map((row) => ({ row, match: scoreLexicalMatch(input.query, this.lexicalTextForRow(row, true)) }))
       .filter((entry) => entry.match.matchedBy.includes("fuzzy"))
       .sort((left, right) => right.match.score - left.match.score || (right.row.updated_at ?? "").localeCompare(left.row.updated_at ?? ""))
       .slice(0, Math.max(0, limit - existingRows.size))
-      .map((entry) => entry.row);
-  }
-
-  private resultFromRow(row: SearchDocumentRow, input: SearchQueryInput): SearchResult {
-    const permissions = { canOpen: true, canPreview: true, redacted: false, ...parseJson(row.permissions_json) };
-    const previewRedacted = permissions.redacted === true || permissions.canPreview === false;
-    const fragmentsWithMatch = previewRedacted ? [] : (this.db.prepare(`
-        SELECT id, title, snippet, body FROM search_fragments
-        WHERE document_id = ?
-        ORDER BY sort_order ASC, id ASC
-        LIMIT 5
-      `).all(row.id) as SearchFragmentRow[]).map((fragment) => {
-        const match = scoreLexicalMatch(input.query, `${fragment.title} ${fragment.snippet ?? ""} ${fragment.body}`);
-        return {
-          fragment: {
-            id: fragment.id,
-            title: fragment.title || undefined,
-            snippet: fragment.snippet || fragment.body.slice(0, 180) || undefined,
-            score: match.score,
-          },
-          match,
-        };
+      .map((entry) => {
+        lexicalMatches.set(entry.row.id, entry.match);
+        return entry.row;
       });
-    const fragments = fragmentsWithMatch.map((entry) => entry.fragment);
-    const actions = (this.db.prepare("SELECT action_json FROM search_actions WHERE document_id = ? ORDER BY action_id ASC").all(row.id) as Array<{ action_json: string }>).map((action) => parseJson<SearchAction>(action.action_json));
-    const lexical = scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""} ${row.body}`);
-    const rankingHints = parseJson<Record<string, number>>(row.ranking_json);
-    const metadata = parseJson(row.metadata_json);
-    const localFrecency = this.localFrecencyForResult(row.id, input);
-    const score = centralSearchScore({ lexicalScore: lexical.score, semanticScore: row.semantic_score ?? 0, rowRank: row.rank ?? 0, rankingHints, metadata, input, localFrecency });
-    const matchedBy = lexical.matchedBy.length
-      ? lexical.matchedBy
-      : (fragmentsWithMatch.find((entry) => entry.match.matchedBy.length)?.match.matchedBy ?? []);
-    if ((row.semantic_score ?? 0) > 0 && !matchedBy.includes("semantic")) matchedBy.push("semantic");
-    return {
-      id: row.id,
-      source: row.source,
-      ...(row.shard !== "default" ? { shard: row.shard } : {}),
-      domain: row.domain,
-      type: row.type,
-      title: row.title,
-      ...(row.subtitle ? { subtitle: row.subtitle } : {}),
-      snippet: previewRedacted ? "[redacted]" : row.snippet ?? row.body.slice(0, 180),
-      score: score.total,
-      updatedAt: row.updated_at,
-      ...(row.resource_id ? { resourceId: row.resource_id } : {}),
-      ...(row.path ? { path: row.path } : {}),
-      ...(fragments.length ? { fragments } : {}),
-      ...(actions.length ? { actions } : {}),
-      permissions: {
-        ...permissions,
-        ...(previewRedacted ? { canPreview: false, redacted: true } : {}),
-      },
-      metadata,
-      ...(input.explain ? {
-        explanation: {
-          sourceScore: lexical.score,
-          rankingHints: localFrecency > 0 ? { ...rankingHints, localFrecency } : rankingHints,
-          scoreBreakdown: score.breakdown,
-          matchedBy,
-        },
-      } : {}),
-    };
   }
 
-  private localFrecencyForResult(resultId: string, input: SearchQueryInput): number {
+  private materializeResults(rows: SearchDocumentRow[], input: SearchQueryInput, options: SearchMaterializationOptions = {}): SearchResult[] {
+    if (!rows.length) return [];
+    const permissionsById = new Map<string, NonNullable<SearchResult["permissions"]>>();
+    const previewableIds: string[] = [];
+    for (const row of rows) {
+      const permissions = { canOpen: true, canPreview: true, redacted: false, ...parseJson(row.permissions_json) };
+      permissionsById.set(row.id, permissions);
+      if (permissions.redacted !== true && permissions.canPreview !== false) previewableIds.push(row.id);
+    }
+    const allIds = rows.map((row) => row.id);
+    const fragmentsByDocument = this.fragmentsByDocument(previewableIds, input);
+    const actionsByDocument = this.actionsByDocument(allIds);
+    const interactionsByDocument = this.interactionsByDocument(allIds);
+
+    return rows.map((row) => {
+      const permissions = permissionsById.get(row.id) ?? { canOpen: true, canPreview: true, redacted: false };
+      const previewRedacted = permissions.redacted === true || permissions.canPreview === false;
+      const fragmentsWithMatch = previewRedacted ? [] : fragmentsByDocument.get(row.id) ?? [];
+      const fragments = fragmentsWithMatch.map((entry) => entry.fragment);
+      const actions = actionsByDocument.get(row.id) ?? [];
+      const lexical = options.lexicalMatches?.get(row.id) ?? this.lexicalMatchForRow(row, input, options.ftsDocumentIds?.has(row.id) === true);
+      const rankingHints = parseJson<Record<string, number>>(row.ranking_json);
+      const metadata = parseJson(row.metadata_json);
+      const localFrecency = this.localFrecencyFromInteractions(interactionsByDocument.get(row.id) ?? [], input);
+      const score = centralSearchScore({ lexicalScore: lexical.score, semanticScore: row.semantic_score ?? 0, rowRank: this.normalizedRowRank(row.rank), rankingHints, metadata, input, localFrecency });
+      const matchedBy = lexical.matchedBy.length
+        ? [...lexical.matchedBy]
+        : [...(fragmentsWithMatch.find((entry) => entry.match.matchedBy.length)?.match.matchedBy ?? [])];
+      if ((row.semantic_score ?? 0) > 0 && !matchedBy.includes("semantic")) matchedBy.push("semantic");
+      return {
+        id: row.id,
+        source: row.source,
+        ...(row.shard !== "default" ? { shard: row.shard } : {}),
+        domain: row.domain,
+        type: row.type,
+        title: row.title,
+        ...(row.subtitle ? { subtitle: row.subtitle } : {}),
+        snippet: previewRedacted ? "[redacted]" : row.snippet ?? row.body.slice(0, 180),
+        score: score.total,
+        updatedAt: row.updated_at,
+        ...(row.resource_id ? { resourceId: row.resource_id } : {}),
+        ...(row.path ? { path: row.path } : {}),
+        ...(fragments.length ? { fragments } : {}),
+        ...(actions.length ? { actions } : {}),
+        permissions: {
+          ...permissions,
+          ...(previewRedacted ? { canPreview: false, redacted: true } : {}),
+        },
+        metadata,
+        ...(input.explain ? {
+          explanation: {
+            sourceScore: lexical.score,
+            rankingHints: localFrecency > 0 ? { ...rankingHints, localFrecency } : rankingHints,
+            scoreBreakdown: score.breakdown,
+            matchedBy,
+          },
+        } : {}),
+      };
+    });
+  }
+
+  private fragmentsByDocument(documentIds: string[], input: SearchQueryInput): Map<string, SearchFragmentMaterialization[]> {
+    const fragmentsByDocument = new Map<string, SearchFragmentMaterialization[]>();
+    const uniqueIds = [...new Set(documentIds)];
+    if (!uniqueIds.length) return fragmentsByDocument;
+    const placeholders = uniqueIds.map(() => "?").join(", ");
     const rows = this.db.prepare(`
-      SELECT actor, surface, interaction_count, last_interacted_at
+      SELECT id, document_id, title, snippet, body
+      FROM (
+        SELECT id, document_id, title, snippet, body,
+          ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY sort_order ASC, id ASC) AS row_number
+        FROM search_fragments
+        WHERE document_id IN (${placeholders})
+      )
+      WHERE row_number <= 5
+      ORDER BY document_id ASC, row_number ASC
+    `).all(...uniqueIds) as Array<SearchFragmentRow & { document_id: string }>;
+    for (const fragment of rows) {
+      const match = scoreLexicalMatch(input.query, `${fragment.title} ${fragment.snippet ?? ""} ${fragment.body}`);
+      const entries = fragmentsByDocument.get(fragment.document_id) ?? [];
+      entries.push({
+        fragment: {
+          id: fragment.id,
+          title: fragment.title || undefined,
+          snippet: fragment.snippet || fragment.body.slice(0, 180) || undefined,
+          score: match.score,
+        },
+        match,
+      });
+      fragmentsByDocument.set(fragment.document_id, entries);
+    }
+    return fragmentsByDocument;
+  }
+
+  private actionsByDocument(documentIds: string[]): Map<string, SearchAction[]> {
+    const actionsByDocument = new Map<string, SearchAction[]>();
+    const uniqueIds = [...new Set(documentIds)];
+    if (!uniqueIds.length) return actionsByDocument;
+    const placeholders = uniqueIds.map(() => "?").join(", ");
+    const rows = this.db.prepare(`
+      SELECT document_id, action_json
+      FROM search_actions
+      WHERE document_id IN (${placeholders})
+      ORDER BY document_id ASC, action_id ASC
+    `).all(...uniqueIds) as Array<{ document_id: string; action_json: string }>;
+    for (const row of rows) {
+      const entries = actionsByDocument.get(row.document_id) ?? [];
+      entries.push(parseJson<SearchAction>(row.action_json));
+      actionsByDocument.set(row.document_id, entries);
+    }
+    return actionsByDocument;
+  }
+
+  private interactionsByDocument(documentIds: string[]): Map<string, SearchInteractionRow[]> {
+    const interactionsByDocument = new Map<string, SearchInteractionRow[]>();
+    const uniqueIds = [...new Set(documentIds)];
+    if (!uniqueIds.length) return interactionsByDocument;
+    const placeholders = uniqueIds.map(() => "?").join(", ");
+    const rows = this.db.prepare(`
+      SELECT document_id, source, shard, domain, actor, surface, action_id, kind,
+        interaction_count, last_interacted_at, metadata_json
       FROM search_interactions
-      WHERE document_id = ?
-    `).all(resultId) as Array<{ actor: string; surface: string; interaction_count: number; last_interacted_at: string }>;
+      WHERE document_id IN (${placeholders})
+      ORDER BY document_id ASC, last_interacted_at DESC
+    `).all(...uniqueIds) as SearchInteractionRow[];
+    for (const row of rows) {
+      const entries = interactionsByDocument.get(row.document_id) ?? [];
+      entries.push(row);
+      interactionsByDocument.set(row.document_id, entries);
+    }
+    return interactionsByDocument;
+  }
+
+  private lexicalMatchForRow(row: SearchDocumentRow, input: SearchQueryInput, matchedByFts: boolean): SearchLexicalMatch {
+    const headerMatch = scoreLexicalMatch(input.query, `${row.title} ${row.subtitle ?? ""} ${row.snippet ?? ""}`);
+    if (headerMatch.score > 0) return headerMatch;
+    if (matchedByFts) return { score: 70, matchedBy: ["fts"] };
+    return scoreLexicalMatch(input.query, this.lexicalTextForRow(row, true));
+  }
+
+  private lexicalTextForRow(row: SearchDocumentRow, includeBody: boolean): string {
+    return [
+      row.title,
+      row.subtitle ?? "",
+      row.snippet ?? "",
+      includeBody ? row.body.slice(0, SEARCH_RESULT_LEXICAL_BODY_CHARS) : "",
+    ].filter(Boolean).join(" ");
+  }
+
+  private normalizedRowRank(rank: number | undefined): number {
+    if (typeof rank !== "number" || !Number.isFinite(rank)) return 0;
+    if (rank <= 0) return 0;
+    return Math.min(99, rank);
+  }
+
+  private localFrecencyFromInteractions(rows: SearchInteractionRow[], input: SearchQueryInput): number {
     if (!rows.length) return 0;
     const actor = input.actor?.trim() ?? "";
     const surface = input.surface?.trim() ?? "";
@@ -1695,20 +1793,24 @@ export class SearchStore {
       };
     }
     const rows = this.rankingCacheRows(resultRefs.map((result) => result.id), payload.sourceSet);
-    const results: SearchResult[] = [];
+    const rowRefs: SearchDocumentRow[] = [];
     for (const ref of resultRefs) {
       const document = rows.get(ref.id);
       if (!document || document.updated_at !== ref.updatedAt || !searchAclAllows(document.permissions_json, input)) {
         this.db.prepare("DELETE FROM search_ranking_cache WHERE cache_key = ?").run(cacheKey);
         return null;
       }
-      const result = this.resultFromRow({
+      rowRefs.push({
         ...document,
         rank: ref.rowRank ?? 0,
         semantic_score: ref.semanticScore ?? null,
-      }, input);
-      results.push({ ...result, score: ref.score });
+      });
     }
+    const materializedById = new Map(this.materializeResults(rowRefs, input).map((result) => [result.id, result]));
+    const results = resultRefs.flatMap((ref) => {
+      const result = materializedById.get(ref.id);
+      return result ? [{ ...result, score: ref.score }] : [];
+    });
     return {
       query: payload.query,
       sourceSet: payload.sourceSet,
@@ -1859,1070 +1961,3 @@ export class SearchStore {
     `).run(SEARCH_RANKING_CACHE_LIMITS.maxTotalBytes);
   }
 }
-
-interface SearchTouchedCacheScopes {
-  sources: Set<string>;
-  domains: Set<string>;
-  shards: Set<string>;
-}
-
-interface SearchRankingCachePayload {
-  query: string;
-  sourceSet: SearchSourceSetId;
-  results: SearchRankingCacheResultRef[];
-  facets?: SearchFacetDeclaration[];
-  partial: boolean;
-  omittedSources: SearchQueryOutput["omittedSources"];
-}
-
-interface SearchRankingCacheResultRef {
-  id: string;
-  score: number;
-  updatedAt: string;
-  order: number;
-  rowRank?: number;
-  semanticScore?: number | null;
-}
-
-interface SearchDocumentRow {
-  id: string;
-  source: string;
-  shard: string;
-  domain: string;
-  type: string;
-  resource_id: string | null;
-  title: string;
-  subtitle: string | null;
-  snippet: string | null;
-  body: string;
-  path: string | null;
-  updated_at: string;
-  metadata_json: string;
-  permissions_json: string;
-  ranking_json: string;
-  rank?: number;
-  semantic_score?: number | null;
-}
-
-interface SearchSemanticCandidateRow {
-  document_id: string;
-  embedding_json: string;
-  updated_at: string;
-}
-
-interface SearchSemanticCandidate {
-  documentId: string;
-  updatedAt: string;
-  rank: number;
-  semanticScore: number;
-}
-
-interface SearchFragmentRow {
-  id: string;
-  title: string;
-  snippet: string | null;
-  body: string;
-}
-
-interface SearchCursorRow {
-  source: string;
-  shard: string;
-  cursor: string;
-  watermark: string;
-  checksum: string;
-  updated_at: string;
-  metadata_json: string;
-}
-
-interface SearchShardRow {
-  source: string;
-  shard: string;
-  domain: string;
-  state: SearchShardState;
-  document_count: number;
-  fragment_count: number;
-  updated_at: string;
-}
-
-interface SearchFtsPartitionRow {
-  source: string;
-  shard: string;
-  domain: string;
-  table_name: string;
-  updated_at: string;
-}
-
-interface SearchIndexJobRow {
-  id: string;
-  source: string;
-  shard: string;
-  operation: SearchIndexJobOperation;
-  resource_id: string | null;
-  payload_json: string;
-  status: SearchIndexJobStatus;
-  attempts: number;
-  priority: number;
-  scheduled_at: string;
-  created_at: string;
-  updated_at: string;
-  leased_until: string | null;
-  error: string | null;
-}
-
-interface SearchVectorRow {
-  document_id: string;
-  fragment_id: string;
-  model: string;
-  embedding_json: string;
-  updated_at: string;
-}
-
-interface SearchEmbeddingDocumentRow {
-  id: string;
-  source: string;
-  shard: string;
-  domain: string;
-  title: string;
-  subtitle: string | null;
-  snippet: string | null;
-  body: string;
-  updated_at: string;
-}
-
-interface SearchEmbeddingFragmentRow {
-  title: string;
-  snippet: string | null;
-  body: string;
-}
-
-interface SearchEmbeddingStatusRow {
-  source: string;
-  domain: string;
-  shard: string;
-  model: string;
-  documents: number;
-  vectors: number;
-  updated_at: string | null;
-}
-
-interface SavedSearchRow {
-  id: string;
-  name: string;
-  query_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface SearchMonitorRow {
-  id: string;
-  saved_search_id: string;
-  name: string | null;
-  enabled: number;
-  cadence: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface SearchAuditEventRow {
-  id: string;
-  type: SearchAuditEventType;
-  actor: string | null;
-  surface: string | null;
-  query: string | null;
-  source: string | null;
-  domain: string | null;
-  result_id: string | null;
-  action_id: string | null;
-  status: string | null;
-  risk: string | null;
-  grant_id: string | null;
-  reason: string | null;
-  metadata_json: string;
-  created_at: string;
-}
-
-interface SearchInteractionRow {
-  document_id: string;
-  source: string;
-  shard: string;
-  domain: string;
-  actor: string;
-  surface: string;
-  action_id: string;
-  kind: SearchInteraction["kind"];
-  interaction_count: number;
-  last_interacted_at: string;
-  metadata_json: string;
-}
-
-function parseJson<T = Record<string, unknown>>(value: string | null | undefined): T {
-  if (!value) return {} as T;
-  return JSON.parse(value) as T;
-}
-
-function existingSearchDocumentIds(db: Database.Database, ids: string[]): Set<string> {
-  const uniqueIds = [...new Set(ids)];
-  const existing = new Set<string>();
-  for (let index = 0; index < uniqueIds.length; index += 900) {
-    const chunk = uniqueIds.slice(index, index + 900);
-    if (!chunk.length) continue;
-    const placeholders = chunk.map(() => "?").join(",");
-    const rows = db.prepare(`SELECT id FROM search_documents WHERE id IN (${placeholders})`).all(...chunk) as Array<{ id: string }>;
-    for (const row of rows) existing.add(row.id);
-  }
-  return existing;
-}
-
-function existingSearchDocumentShardRows(db: Database.Database, ids: string[]): Map<string, { source: string; shard: string; domain: string }> {
-  const uniqueIds = [...new Set(ids)];
-  const existing = new Map<string, { source: string; shard: string; domain: string }>();
-  for (let index = 0; index < uniqueIds.length; index += 900) {
-    const chunk = uniqueIds.slice(index, index + 900);
-    if (!chunk.length) continue;
-    const placeholders = chunk.map(() => "?").join(",");
-    const rows = db.prepare(`SELECT id, source, shard, domain FROM search_documents WHERE id IN (${placeholders})`).all(...chunk) as Array<{ id: string; source: string; shard: string; domain: string }>;
-    for (const row of rows) existing.set(row.id, { source: row.source, shard: row.shard, domain: row.domain });
-  }
-  return existing;
-}
-
-function searchCursorFromRow(row: SearchCursorRow): SearchSourceCursor {
-  return {
-    source: row.source,
-    shard: row.shard,
-    cursor: row.cursor,
-    watermark: row.watermark,
-    checksum: row.checksum,
-    updatedAt: row.updated_at,
-    metadata: parseJson(row.metadata_json),
-  };
-}
-
-function searchShardFromRow(row: SearchShardRow): SearchShardStatus {
-  return {
-    source: row.source,
-    shard: row.shard,
-    domain: row.domain,
-    state: row.state,
-    documentCount: row.document_count,
-    fragmentCount: row.fragment_count,
-    updatedAt: row.updated_at,
-  };
-}
-
-function searchInteractionFromRow(row: SearchInteractionRow): SearchInteraction {
-  return {
-    resultId: row.document_id,
-    source: row.source,
-    domain: row.domain,
-    ...(row.shard !== "default" ? { shard: row.shard } : {}),
-    ...(row.actor ? { actor: row.actor } : {}),
-    ...(row.surface ? { surface: row.surface } : {}),
-    ...(row.action_id ? { actionId: row.action_id } : {}),
-    kind: row.kind,
-    count: row.interaction_count,
-    lastInteractedAt: row.last_interacted_at,
-    metadata: parseJson(row.metadata_json),
-  };
-}
-
-function searchFtsPartitionFromRow(row: SearchFtsPartitionRow): { source: string; shard: string; domain: string; tableName: string } {
-  return {
-    source: row.source,
-    shard: row.shard,
-    domain: row.domain,
-    tableName: row.table_name,
-  };
-}
-
-function searchIndexJobFromRow(row: SearchIndexJobRow): SearchIndexJob {
-  return {
-    id: row.id,
-    source: row.source,
-    shard: row.shard,
-    operation: row.operation,
-    ...(row.resource_id ? { resourceId: row.resource_id } : {}),
-    payload: parseJson(row.payload_json),
-    status: row.status,
-    attempts: row.attempts,
-    priority: row.priority,
-    scheduledAt: row.scheduled_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    ...(row.leased_until ? { leasedUntil: row.leased_until } : {}),
-    ...(row.error ? { error: row.error } : {}),
-  };
-}
-
-function stableJobIdPart(value: string): string {
-  const safe = value.replace(/[^A-Za-z0-9_.:-]+/g, "_").replace(/^_+|_+$/g, "");
-  if (safe === value && safe.length > 0 && safe.length <= 120) return safe;
-  const hash = createHash("sha256").update(value).digest("hex").slice(0, 16);
-  return `${safe.slice(0, 100) || "resource"}-${hash}`;
-}
-
-function searchCursorChecksum(input: { source: string; shard: string; cursor: string; watermark: string; metadata: Record<string, unknown> }): string {
-  return createHash("sha256").update(stableJson(input)).digest("hex");
-}
-
-function ftsPartitionTableName(source: string, shard: string): string {
-  return `search_fts_part_${createHash("sha256").update(`${source}\0${shard}`).digest("hex").slice(0, 24)}`;
-}
-
-function quoteSqlIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, "\"\"")}"`;
-}
-
-function searchVectorFromRow(row: SearchVectorRow): SearchVectorRecord {
-  return {
-    documentId: row.document_id,
-    ...(row.fragment_id ? { fragmentId: row.fragment_id } : {}),
-    model: row.model,
-    embedding: parseJson<number[]>(row.embedding_json),
-    updatedAt: row.updated_at,
-  };
-}
-
-function buildDocumentClauses(input: SearchQueryInput, sourceSet: SearchSourceSetId, match?: string): { clauses: string[]; params: unknown[] } {
-  const clauses = ["d.deleted_at IS NULL"];
-  const params: unknown[] = [];
-  if (match) {
-    clauses.push("search_fts MATCH ?");
-    params.push(match);
-  }
-  if (input.domains?.length) {
-    clauses.push(`d.domain IN (${input.domains.map(() => "?").join(", ")})`);
-    params.push(...input.domains);
-  }
-  if (input.sources?.length) {
-    clauses.push(`d.source IN (${input.sources.map(() => "?").join(", ")})`);
-    params.push(...input.sources);
-  }
-  if (input.shards?.length) {
-    clauses.push(`d.shard IN (${input.shards.map(() => "?").join(", ")})`);
-    params.push(...input.shards);
-  }
-  applySearchFilters(clauses, params, input.filters);
-  if (sourceSet !== "full") clauses.push("s.source_set = 'framework'");
-  clauses.push("s.state NOT IN ('disabled', 'paused', 'excluded', 'external_pending')");
-  return { clauses, params };
-}
-
-function searchAclAllows(permissionsJson: string, input: SearchQueryInput): boolean {
-  const permissions = parseJson<NonNullable<SearchResult["permissions"]>>(permissionsJson);
-  const actor = input.actor?.trim();
-  if (!stringListAllows(permissions.allowedActors, actor)) return false;
-  if (!stringListAllows(permissions.allowedAgents, actor)) return false;
-  const requiredScopes = normalizedStringList(permissions.requiredScopes);
-  if (requiredScopes.length) {
-    const queryScopes = searchQueryScopes(input);
-    if (!requiredScopes.every((scope) => queryScopes.includes(scope))) return false;
-  }
-  return true;
-}
-
-function stringListAllows(values: string[] | undefined, value: string | undefined): boolean {
-  const list = normalizedStringList(values);
-  if (!list.length) return true;
-  return Boolean(value && list.includes(value));
-}
-
-function searchQueryScopes(input: SearchQueryInput): string[] {
-  const filters = input.filters ?? {};
-  return normalizedStringList([
-    ...valueToStringList(filters.aclScope),
-    ...valueToStringList(filters.aclScopes),
-    ...valueToStringList(filters.scope),
-    ...valueToStringList(filters.scopes),
-    ...valueToStringList(filters["metadata.scope"]),
-    ...valueToStringList(filters["metadata.scopeId"]),
-    ...valueToStringList(filters.scopeId),
-  ]);
-}
-
-function valueToStringList(value: unknown): string[] {
-  if (Array.isArray(value)) return value.flatMap(valueToStringList);
-  if (typeof value === "object" && value !== null) {
-    const record = value as Record<string, unknown>;
-    return [
-      ...valueToStringList(record.scope),
-      ...valueToStringList(record.scopeId),
-      ...valueToStringList(record.id),
-    ];
-  }
-  return typeof value === "string" && value.trim() ? [value.trim()] : [];
-}
-
-function normalizedStringList(values: unknown): string[] {
-  if (!Array.isArray(values)) return [];
-  return [...new Set(values.filter((value): value is string => typeof value === "string" && value.trim().length > 0).map((value) => value.trim()))];
-}
-
-function mergeSearchRows(left: SearchDocumentRow, right: SearchDocumentRow): SearchDocumentRow {
-  return {
-    ...left,
-    rank: Math.min(left.rank ?? Number.MAX_SAFE_INTEGER, right.rank ?? Number.MAX_SAFE_INTEGER),
-    semantic_score: Math.max(left.semantic_score ?? 0, right.semantic_score ?? 0),
-  };
-}
-
-function normalizeEmbedding(embedding: number[]): number[] {
-  if (!embedding.length) throw new Error("Search vector embedding must not be empty");
-  if (!embedding.every((value) => Number.isFinite(value))) throw new Error("Search vector embedding must contain only finite numbers");
-  return embedding;
-}
-
-function cosineSimilarity(left: number[], right: number[]): number {
-  const length = Math.min(left.length, right.length);
-  if (!length) return 0;
-  let dot = 0;
-  let leftMagnitude = 0;
-  let rightMagnitude = 0;
-  for (let index = 0; index < length; index += 1) {
-    const leftValue = left[index] ?? 0;
-    const rightValue = right[index] ?? 0;
-    dot += leftValue * rightValue;
-    leftMagnitude += leftValue * leftValue;
-    rightMagnitude += rightValue * rightValue;
-  }
-  if (!leftMagnitude || !rightMagnitude) return 0;
-  return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
-}
-
-function isRebuildableSearchSchemaMismatch(error: unknown): boolean {
-  return error instanceof Error
-    && /no such column: source|no such column: shard|search_fts|schema/i.test(error.message);
-}
-
-function ftsQuery(query: string): string {
-  const terms = query
-    .trim()
-    .split(/\s+/)
-    .flatMap((term) => term.replace(/[^\p{L}\p{N}_]+/gu, " ").split(/\s+/))
-    .filter(Boolean);
-  return terms.map((term) => `"${term}"*`).join(" ");
-}
-
-function shouldRunFuzzyFallback(query: string): boolean {
-  return query.trim().split(/[^\p{L}\p{N}_]+/u).some((term) => term.length >= 4);
-}
-
-function normalizeInlineSearchQuery(input: SearchQueryInput): SearchQueryInput {
-  const parsed = parseInlineSearchFilters(input.query);
-  if (!parsed.changed) return input;
-  const filters = { ...(input.filters ?? {}) };
-  for (const [key, values] of Object.entries(parsed.filters)) {
-    filters[key] = mergeInlineFilterValue(filters[key], values);
-  }
-  return {
-    ...input,
-    query: parsed.query,
-    ...(parsed.domains.length ? { domains: uniqueStrings([...(input.domains ?? []), ...parsed.domains]) } : {}),
-    ...(parsed.sources.length ? { sources: uniqueStrings([...(input.sources ?? []), ...parsed.sources]) } : {}),
-    ...(parsed.shards.length ? { shards: uniqueStrings([...(input.shards ?? []), ...parsed.shards]) } : {}),
-    ...(Object.keys(filters).length ? { filters } : {}),
-  };
-}
-
-function parseInlineSearchFilters(query: string): {
-  changed: boolean;
-  query: string;
-  domains: string[];
-  sources: string[];
-  shards: string[];
-  filters: Record<string, string[]>;
-} {
-  const domains: string[] = [];
-  const sources: string[] = [];
-  const shards: string[] = [];
-  const filters: Record<string, string[]> = {};
-  let changed = false;
-  const text = query.replace(/(?:^|\s)(domain|domains|source|sources|shard|shards|type|types|scope|scopes):(?:"([^"]+)"|'([^']+)'|([^\s]+))/gi, (_token, rawKey: string, quoted: string | undefined, singleQuoted: string | undefined, bare: string | undefined) => {
-    const key = rawKey.toLowerCase();
-    const value = (quoted ?? singleQuoted ?? bare ?? "").trim();
-    if (!value) return " ";
-    changed = true;
-    switch (key) {
-      case "domain":
-      case "domains":
-        domains.push(value);
-        break;
-      case "source":
-      case "sources":
-        sources.push(value);
-        break;
-      case "shard":
-      case "shards":
-        shards.push(value);
-        break;
-      case "type":
-      case "types":
-        pushInlineFilter(filters, "type", value);
-        break;
-      case "scope":
-      case "scopes":
-        pushInlineFilter(filters, "scope", value);
-        break;
-    }
-    return " ";
-  }).replace(/\s+/g, " ").trim();
-  return {
-    changed,
-    query: changed ? text : query,
-    domains: uniqueStrings(domains),
-    sources: uniqueStrings(sources),
-    shards: uniqueStrings(shards),
-    filters,
-  };
-}
-
-function pushInlineFilter(filters: Record<string, string[]>, key: string, value: string): void {
-  filters[key] = uniqueStrings([...(filters[key] ?? []), value]);
-}
-
-function mergeInlineFilterValue(current: unknown, values: string[]): string | string[] {
-  const merged = uniqueStrings([...valueToStringList(current), ...values]);
-  return merged.length === 1 ? merged[0] ?? "" : merged;
-}
-
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
-}
-
-function applySearchFilters(clauses: string[], params: unknown[], filters: Record<string, unknown> | undefined): void {
-  if (!filters) return;
-  for (const [key, value] of Object.entries(filters)) {
-    if (value === undefined || value === null || value === "") continue;
-    switch (key) {
-      case "domain":
-      case "domains":
-        addInClause(clauses, params, "d.domain", value);
-        break;
-      case "source":
-      case "sources":
-        addInClause(clauses, params, "d.source", value);
-        break;
-      case "shard":
-      case "shards":
-        addInClause(clauses, params, "d.shard", value);
-        break;
-      case "type":
-      case "types":
-        addInClause(clauses, params, "d.type", value);
-        break;
-      case "resourceId":
-      case "resource_id":
-        addInClause(clauses, params, "d.resource_id", value);
-        break;
-      case "scope":
-      case "scopes":
-      case "scopeId":
-      case "aclScope":
-      case "aclScopes":
-        break;
-      case "path":
-        addInClause(clauses, params, "d.path", value);
-        break;
-      case "canOpen":
-      case "canPreview":
-      case "redacted":
-        addJsonEqualsClause(clauses, params, "d.permissions_json", key, value);
-        break;
-      default:
-        addJsonEqualsClause(clauses, params, "d.metadata_json", key.startsWith("metadata.") ? key.slice("metadata.".length) : key, value);
-        break;
-    }
-  }
-}
-
-function addInClause(clauses: string[], params: unknown[], column: string, value: unknown): void {
-  const values = Array.isArray(value) ? value : [value];
-  const normalized = values.filter((entry) => entry !== undefined && entry !== null && entry !== "");
-  if (!normalized.length) return;
-  clauses.push(`${column} IN (${normalized.map(() => "?").join(", ")})`);
-  params.push(...normalized);
-}
-
-function searchEmbeddingText(row: SearchEmbeddingDocumentRow, fragments: SearchEmbeddingFragmentRow[]): string {
-  const parts = [
-    row.title,
-    row.subtitle,
-    row.snippet,
-    row.body,
-    ...fragments.flatMap((fragment) => [fragment.title, fragment.snippet, fragment.body]),
-  ];
-  return parts
-    .map((part) => (part ?? "").trim())
-    .filter(Boolean)
-    .join("\n")
-    .slice(0, 128 * 1024);
-}
-
-function addJsonEqualsClause(clauses: string[], params: unknown[], jsonColumn: string, key: string, value: unknown): void {
-  const path = jsonPath(key);
-  const values = Array.isArray(value) ? value : [value];
-  const normalized = values.filter((entry) => entry !== undefined && entry !== null && entry !== "");
-  if (!normalized.length) return;
-  clauses.push(`json_extract(${jsonColumn}, ?) IN (${normalized.map(() => "?").join(", ")})`);
-  params.push(path, ...normalized.map(normalizeJsonFilterValue));
-}
-
-function jsonPath(key: string): string {
-  return `$.${key.split(".").map((part) => `"${part.replace(/"/g, '\\"')}"`).join(".")}`;
-}
-
-function normalizeJsonFilterValue(value: unknown): unknown {
-  if (typeof value === "boolean") return value ? 1 : 0;
-  return value;
-}
-
-function truncateUtf8(value: string, maxBytes: number): string {
-  if (Buffer.byteLength(value, "utf8") <= maxBytes) return value;
-  let bytes = 0;
-  let output = "";
-  for (const char of value) {
-    const size = Buffer.byteLength(char, "utf8");
-    if (bytes + size > maxBytes) break;
-    output += char;
-    bytes += size;
-  }
-  return output;
-}
-
-function centralSearchScore(input: {
-  lexicalScore: number;
-  semanticScore: number;
-  rowRank: number;
-  rankingHints: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-  input: SearchQueryInput;
-  localFrecency?: number;
-}): { total: number; breakdown: NonNullable<SearchResult["explanation"]>["scoreBreakdown"] } {
-  const base = Math.max(1, 100 - Math.max(0, input.rowRank)) + input.lexicalScore / 100;
-  const semanticBoost = boundedNumber(input.semanticScore, 0, 100) / 4;
-  const hintBoost = boundedNumber(input.rankingHints.priority, 0, 10)
-    + boundedNumber(input.rankingHints.hot, 0, 5)
-    + boundedNumber(input.rankingHints.fastPath, 0, 2);
-  const frecency = Math.min(1, boundedNumber(input.rankingHints.frecency ?? input.metadata.frecency, 0, 1) + boundedNumber(input.localFrecency, 0, 1));
-  const frecencyBoost = frecency * 8;
-  const actorBoost = contextMatchBoost(input.input.actor, input.metadata, input.rankingHints, ["actor", "actorId", "agentId", "ownerActorId"], "actor");
-  const surfaceBoost = contextMatchBoost(input.input.surface, input.metadata, input.rankingHints, ["surface", "surfaceId"], "surface");
-  const scopeBoost = scopeFilterBoost(input.input.filters, input.metadata, input.rankingHints);
-  const context = actorBoost + surfaceBoost + scopeBoost;
-  return {
-    total: base + semanticBoost + hintBoost + frecencyBoost + context,
-    breakdown: {
-      lexical: input.lexicalScore,
-      semantic: semanticBoost,
-      base,
-      hints: hintBoost,
-      frecency: frecencyBoost,
-      context,
-    },
-  };
-}
-
-function contextMatchBoost(
-  value: string | undefined,
-  metadata: Record<string, unknown>,
-  rankingHints: Record<string, unknown>,
-  metadataKeys: string[],
-  hintPrefix: string,
-): number {
-  if (!value) return 0;
-  let boost = boundedNumber(rankingHints[`${hintPrefix}:${value}`], 0, 10);
-  if (metadataKeys.some((key) => metadataValueMatches(metadata[key], value))) boost += 6;
-  return boost;
-}
-
-function scopeFilterBoost(filters: Record<string, unknown> | undefined, metadata: Record<string, unknown>, rankingHints: Record<string, unknown>): number {
-  if (!filters) return 0;
-  let boost = 0;
-  for (const [key, value] of Object.entries(filters)) {
-    if (!key.startsWith("metadata.")) continue;
-    const metadataKey = key.slice("metadata.".length);
-    if (metadataValueMatches(metadata[metadataKey], value)) boost += 2;
-  }
-  return Math.min(8, boost + boundedNumber(rankingHints.scope, 0, 4));
-}
-
-function metadataValueMatches(left: unknown, right: unknown): boolean {
-  if (Array.isArray(right)) return right.some((entry) => metadataValueMatches(left, entry));
-  if (Array.isArray(left)) return left.some((entry) => metadataValueMatches(entry, right));
-  return left !== undefined && left !== null && right !== undefined && right !== null && String(left) === String(right);
-}
-
-function boundedNumber(value: unknown, min: number, max: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : 0;
-}
-
-function effectiveResultLimit(limit: number, budget: SearchAgentResultBudget | undefined): number {
-  const maxResults = boundedPositiveInteger(budget?.maxResults);
-  return maxResults === undefined ? limit : Math.min(limit, maxResults);
-}
-
-function agentBudgetResultFilter(budget: SearchAgentResultBudget | undefined): (result: SearchResult) => boolean {
-  const maxPerSource = boundedPositiveInteger(budget?.maxResultsPerSource);
-  const maxPerDomain = boundedPositiveInteger(budget?.maxResultsPerDomain);
-  if (maxPerSource === undefined && maxPerDomain === undefined) return () => true;
-  const bySource = new Map<string, number>();
-  const byDomain = new Map<string, number>();
-  return (result) => {
-    const sourceCount = bySource.get(result.source) ?? 0;
-    const domainCount = byDomain.get(result.domain) ?? 0;
-    if (maxPerSource !== undefined && sourceCount >= maxPerSource) return false;
-    if (maxPerDomain !== undefined && domainCount >= maxPerDomain) return false;
-    if (maxPerSource !== undefined) {
-      bySource.set(result.source, sourceCount + 1);
-    }
-    if (maxPerDomain !== undefined) {
-      byDomain.set(result.domain, domainCount + 1);
-    }
-    return true;
-  };
-}
-
-function boundedPositiveInteger(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  return Math.max(1, Math.floor(value));
-}
-
-function searchRankingCacheKey(input: SearchQueryInput): string {
-  return createHash("sha256").update(stableJson({
-    query: input.query,
-    domains: sortedStrings(input.domains),
-    sources: sortedStrings(input.sources),
-    shards: sortedStrings(input.shards),
-    sourceSet: input.sourceSet ?? input.profile ?? "framework",
-    actor: input.actor ?? "",
-    surface: input.surface ?? "",
-    limit: input.limit ?? 20,
-    explain: input.explain === true,
-    filters: normalizeCacheValue(input.filters ?? {}),
-    agentBudget: normalizeCacheValue(input.agentBudget ?? {}),
-    strategy: input.strategy ?? (input.embedding ? "hybrid" : "lexical"),
-    embedding: input.embedding ? {
-      model: input.embedding.model,
-      vectorHash: createHash("sha256").update(JSON.stringify(normalizeEmbedding(input.embedding.vector))).digest("hex"),
-    } : null,
-  })).digest("hex");
-}
-
-interface SearchRankingCacheScope {
-  domains: string[];
-  sources: string[];
-  shards: string[];
-}
-
-function searchRankingCacheScope(input: SearchQueryInput): SearchRankingCacheScope {
-  return {
-    domains: sortedStrings(input.domains),
-    sources: sortedStrings(input.sources),
-    shards: sortedStrings(input.shards),
-  };
-}
-
-function rankingCacheScopeDeleteSql(touched: SearchTouchedCacheScopes): { sql: string; params: string[] } | null {
-  const sources = sortedStrings([...touched.sources]);
-  const domains = sortedStrings([...touched.domains]);
-  const shards = sortedStrings([...touched.shards]);
-  if (!sources.length && !domains.length && !shards.length) return null;
-  const params: string[] = [];
-  const sourceMatch = rankingCacheScopeDimensionSql("source", "source_count", sources, params);
-  const domainMatch = rankingCacheScopeDimensionSql("domain", "domain_count", domains, params);
-  const shardMatch = rankingCacheScopeDimensionSql("shard", "shard_count", shards, params);
-  return {
-    sql: `
-      DELETE FROM search_ranking_cache
-      WHERE ${sourceMatch}
-        AND ${domainMatch}
-        AND ${shardMatch}
-    `,
-    params,
-  };
-}
-
-function rankingCacheScopeDimensionSql(kind: "source" | "domain" | "shard", countColumn: string, values: string[], params: string[]): string {
-  if (!values.length) return `${countColumn} = 0`;
-  params.push(kind, ...values);
-  return `(
-    ${countColumn} = 0
-    OR cache_key IN (
-      SELECT cache_key
-      FROM search_ranking_cache_scopes
-      WHERE scope_kind = ? AND scope_value IN (${values.map(() => "?").join(", ")})
-    )
-  )`;
-}
-
-function rankingCacheCutoffIso(now: number = Date.now()): string {
-  return new Date(now - SEARCH_RANKING_CACHE_LIMITS.ttlMs).toISOString();
-}
-
-function sortedStrings(values: string[] | undefined): string[] {
-  return [...new Set(values ?? [])].sort();
-}
-
-function stableJson(value: unknown): string {
-  return JSON.stringify(normalizeCacheValue(value));
-}
-
-function normalizeCacheValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(normalizeCacheValue);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => [key, normalizeCacheValue(entry)]));
-  }
-  return value;
-}
-
-const SEARCH_SCHEMA_SQL = String.raw`
-CREATE TABLE IF NOT EXISTS search_source_sets (
-  id TEXT PRIMARY KEY,
-  label TEXT NOT NULL,
-  default_enabled INTEGER NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS search_sources (
-  id TEXT PRIMARY KEY,
-  domain TEXT NOT NULL,
-  name TEXT NOT NULL,
-  version INTEGER NOT NULL,
-  source_set TEXT NOT NULL,
-  manifest_json TEXT NOT NULL,
-  state TEXT NOT NULL,
-  backlog INTEGER NOT NULL DEFAULT 0,
-  last_indexed_at TEXT,
-  error TEXT,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS search_sources_domain_idx ON search_sources(domain, state);
-
-CREATE TABLE IF NOT EXISTS search_documents (
-  id TEXT PRIMARY KEY,
-  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
-  shard TEXT NOT NULL DEFAULT 'default',
-  domain TEXT NOT NULL,
-  type TEXT NOT NULL,
-  resource_id TEXT,
-  title TEXT NOT NULL,
-  subtitle TEXT,
-  snippet TEXT,
-  body TEXT NOT NULL DEFAULT '',
-  path TEXT,
-  updated_at TEXT NOT NULL,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  permissions_json TEXT NOT NULL DEFAULT '{}',
-  ranking_json TEXT NOT NULL DEFAULT '{}',
-  deleted_at TEXT
-);
-CREATE INDEX IF NOT EXISTS search_documents_source_idx ON search_documents(source, updated_at DESC);
-CREATE INDEX IF NOT EXISTS search_documents_shard_idx ON search_documents(source, shard, updated_at DESC);
-CREATE INDEX IF NOT EXISTS search_documents_domain_idx ON search_documents(domain, updated_at DESC);
-CREATE INDEX IF NOT EXISTS search_documents_resource_idx ON search_documents(source, resource_id);
-
-CREATE TABLE IF NOT EXISTS search_fts_partitions (
-  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
-  shard TEXT NOT NULL DEFAULT 'default',
-  domain TEXT NOT NULL,
-  table_name TEXT NOT NULL UNIQUE,
-  updated_at TEXT NOT NULL,
-  PRIMARY KEY (source, shard)
-);
-CREATE INDEX IF NOT EXISTS search_fts_partitions_domain_idx ON search_fts_partitions(domain, shard);
-
-CREATE TABLE IF NOT EXISTS search_shards (
-  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
-  shard TEXT NOT NULL DEFAULT 'default',
-  domain TEXT NOT NULL,
-  state TEXT NOT NULL DEFAULT 'active',
-  document_count INTEGER NOT NULL DEFAULT 0,
-  fragment_count INTEGER NOT NULL DEFAULT 0,
-  updated_at TEXT NOT NULL,
-  PRIMARY KEY (source, shard)
-);
-CREATE INDEX IF NOT EXISTS search_shards_domain_idx ON search_shards(domain, shard, state);
-
-CREATE TABLE IF NOT EXISTS search_fragments (
-  id TEXT PRIMARY KEY,
-  document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
-  source TEXT NOT NULL,
-  shard TEXT NOT NULL DEFAULT 'default',
-  domain TEXT NOT NULL,
-  title TEXT NOT NULL DEFAULT '',
-  body TEXT NOT NULL DEFAULT '',
-  snippet TEXT,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  metadata_json TEXT NOT NULL DEFAULT '{}'
-);
-CREATE INDEX IF NOT EXISTS search_fragments_document_idx ON search_fragments(document_id, sort_order);
-
-CREATE TABLE IF NOT EXISTS search_actions (
-  document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
-  action_id TEXT NOT NULL,
-  action_json TEXT NOT NULL,
-  PRIMARY KEY (document_id, action_id)
-);
-
-CREATE TABLE IF NOT EXISTS search_cursors (
-  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
-  shard TEXT NOT NULL DEFAULT 'default',
-  cursor TEXT NOT NULL,
-  watermark TEXT NOT NULL,
-  checksum TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  PRIMARY KEY (source, shard)
-);
-CREATE INDEX IF NOT EXISTS search_cursors_source_idx ON search_cursors(source, updated_at DESC);
-
-CREATE TABLE IF NOT EXISTS search_index_jobs (
-  id TEXT PRIMARY KEY,
-  source TEXT NOT NULL REFERENCES search_sources(id) ON DELETE CASCADE,
-  shard TEXT NOT NULL DEFAULT 'default',
-  operation TEXT NOT NULL,
-  resource_id TEXT,
-  payload_json TEXT NOT NULL DEFAULT '{}',
-  status TEXT NOT NULL DEFAULT 'queued',
-  attempts INTEGER NOT NULL DEFAULT 0,
-  priority INTEGER NOT NULL DEFAULT 0,
-  scheduled_at TEXT NOT NULL,
-  leased_until TEXT,
-  error TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS search_index_jobs_claim_idx ON search_index_jobs(status, scheduled_at, priority DESC);
-CREATE INDEX IF NOT EXISTS search_index_jobs_source_idx ON search_index_jobs(source, shard, status, scheduled_at);
-
-CREATE TABLE IF NOT EXISTS search_tombstones (
-  id TEXT PRIMARY KEY,
-  source TEXT NOT NULL,
-  resource_id TEXT NOT NULL,
-  deleted_at TEXT NOT NULL,
-  reason TEXT
-);
-CREATE INDEX IF NOT EXISTS search_tombstones_source_idx ON search_tombstones(source, resource_id);
-
-CREATE TABLE IF NOT EXISTS saved_searches (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  query_json TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS search_monitors (
-  id TEXT PRIMARY KEY,
-  saved_search_id TEXT NOT NULL REFERENCES saved_searches(id) ON DELETE CASCADE,
-  name TEXT,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  cadence TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS search_monitors_saved_search_idx ON search_monitors(saved_search_id, enabled);
-
-CREATE TABLE IF NOT EXISTS search_audit_events (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  actor TEXT,
-  surface TEXT,
-  query TEXT,
-  source TEXT,
-  domain TEXT,
-  result_id TEXT,
-  action_id TEXT,
-  status TEXT,
-  risk TEXT,
-  grant_id TEXT,
-  reason TEXT,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS search_audit_events_type_idx ON search_audit_events(type, created_at DESC);
-CREATE INDEX IF NOT EXISTS search_audit_events_actor_idx ON search_audit_events(actor, created_at DESC);
-
-CREATE TABLE IF NOT EXISTS search_interactions (
-  document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
-  source TEXT NOT NULL,
-  shard TEXT NOT NULL DEFAULT 'default',
-  domain TEXT NOT NULL,
-  actor TEXT NOT NULL DEFAULT '',
-  surface TEXT NOT NULL DEFAULT '',
-  action_id TEXT NOT NULL DEFAULT '',
-  kind TEXT NOT NULL DEFAULT 'action',
-  interaction_count INTEGER NOT NULL DEFAULT 0,
-  last_interacted_at TEXT NOT NULL,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
-  PRIMARY KEY (document_id, actor, surface, action_id, kind)
-);
-CREATE INDEX IF NOT EXISTS search_interactions_document_idx ON search_interactions(document_id, last_interacted_at DESC);
-CREATE INDEX IF NOT EXISTS search_interactions_context_idx ON search_interactions(actor, surface, last_interacted_at DESC);
-
-CREATE TABLE IF NOT EXISTS search_vectors (
-  document_id TEXT NOT NULL REFERENCES search_documents(id) ON DELETE CASCADE,
-  fragment_id TEXT,
-  model TEXT NOT NULL,
-  embedding_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  PRIMARY KEY (document_id, fragment_id, model)
-);
-CREATE INDEX IF NOT EXISTS search_vectors_model_document_idx ON search_vectors(model, document_id);
-
-CREATE TABLE IF NOT EXISTS search_ranking_cache (
-  cache_key TEXT PRIMARY KEY,
-  payload_json TEXT NOT NULL,
-  byte_count INTEGER NOT NULL DEFAULT 0,
-  result_count INTEGER NOT NULL DEFAULT 0,
-  source_count INTEGER NOT NULL DEFAULT 0,
-  domain_count INTEGER NOT NULL DEFAULT 0,
-  shard_count INTEGER NOT NULL DEFAULT 0,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS search_ranking_cache_updated_idx ON search_ranking_cache(updated_at DESC);
-CREATE INDEX IF NOT EXISTS search_ranking_cache_bytes_idx ON search_ranking_cache(byte_count);
-
-CREATE TABLE IF NOT EXISTS search_ranking_cache_scopes (
-  cache_key TEXT NOT NULL REFERENCES search_ranking_cache(cache_key) ON DELETE CASCADE,
-  scope_kind TEXT NOT NULL,
-  scope_value TEXT NOT NULL,
-  PRIMARY KEY (cache_key, scope_kind, scope_value)
-);
-CREATE INDEX IF NOT EXISTS search_ranking_cache_scopes_lookup_idx ON search_ranking_cache_scopes(scope_kind, scope_value, cache_key);
-
-CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
-  doc_id UNINDEXED,
-  fragment_id UNINDEXED,
-  source UNINDEXED,
-  shard UNINDEXED,
-  domain UNINDEXED,
-  type UNINDEXED,
-  title,
-  body,
-  path,
-  tokenize='unicode61'
-);
-`;
-
-const SEARCH_RESET_SQL = String.raw`
-DROP TABLE IF EXISTS search_fts;
-DROP TABLE IF EXISTS search_fts_partitions;
-DROP TABLE IF EXISTS search_ranking_cache_scopes;
-DROP TABLE IF EXISTS search_ranking_cache;
-DROP TABLE IF EXISTS search_vectors;
-DROP TABLE IF EXISTS search_interactions;
-DROP TABLE IF EXISTS search_audit_events;
-DROP TABLE IF EXISTS search_monitors;
-DROP TABLE IF EXISTS saved_searches;
-DROP TABLE IF EXISTS search_tombstones;
-DROP TABLE IF EXISTS search_index_jobs;
-DROP TABLE IF EXISTS search_cursors;
-DROP TABLE IF EXISTS search_actions;
-DROP TABLE IF EXISTS search_fragments;
-DROP TABLE IF EXISTS search_shards;
-DROP TABLE IF EXISTS search_documents;
-DROP TABLE IF EXISTS search_sources;
-DROP TABLE IF EXISTS search_source_sets;
-`;
