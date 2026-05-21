@@ -100,6 +100,8 @@ test("install.sh --help prints usage", async () => {
   assert.match(stdout, /--tarball/);
   assert.match(stdout, /--systemd/);
   assert.match(stdout, /--launchd/);
+  assert.match(stdout, /--exposure/);
+  assert.match(stdout, /--enable-iroh/);
 });
 
 test("install.sh extracts a tarball and creates a working symlink", async () => {
@@ -212,6 +214,17 @@ test("install.sh errors when tarball is missing", async () => {
     const r = await runInstall(["--tarball", "/tmp/does-not-exist.tgz"], h.home);
     assert.notEqual(r.code, 0);
     assert.match(r.stderr, /not found/);
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("install.sh rejects invalid exposure before installing", async () => {
+  const h = await makeIsolatedHome();
+  try {
+    const r = await runInstall(["--exposure", "public"], h.home);
+    assert.notEqual(r.code, 0);
+    assert.match(r.stderr, /invalid --exposure/);
   } finally {
     await h.cleanup();
   }

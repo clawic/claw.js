@@ -32,8 +32,17 @@ import { CodexRuntime, type CodexRuntimeOptions } from "./codex-runtime.ts";
 import { createCodexWsHandler } from "./codex-ws-bridge.ts";
 import type { BridgeConfig } from "./config.ts";
 import type { ComputerUse } from "./computer-use.ts";
-import { CoordinatorClient, type SignalingEnvelope } from "./coordinator-client.ts";
-import { createIrohNode, type IrohBiStream, type IrohNode } from "./iroh-node.ts";
+import {
+  CoordinatorClient,
+  type CoordinatorClientOptions,
+  type SignalingEnvelope,
+} from "./coordinator-client.ts";
+import {
+  createIrohNode,
+  type IrohBiStream,
+  type IrohNode,
+  type IrohNodeOptions,
+} from "./iroh-node.ts";
 import { httpLinkClient } from "./link-client.ts";
 import { handleSshJob, type SshAuditSink } from "./ssh-job-handler.ts";
 import { createSshWsHandler } from "./ssh-ws-bridge.ts";
@@ -69,6 +78,8 @@ export interface BridgeRuntimeOptions {
   jobHandler?: MeshJobHandler;
   databaseFactory?: (path: string) => Database.Database;
   bonjourFactory?: () => BonjourAnnouncer;
+  irohFactory?: (options?: IrohNodeOptions) => Promise<IrohNode>;
+  coordinatorFactory?: (options: CoordinatorClientOptions) => CoordinatorClient;
   codex?: CodexRuntimeOptions;
   computerUse?: ComputerUse;
   terminal?: TerminalProcessController;
@@ -188,7 +199,7 @@ export function createBridgeRuntime(
     ? (options.bonjourFactory ?? (() => new BonjourAnnouncer()))()
     : undefined;
 
-  const irohEnabled = config.iroh?.enabled !== false;
+  const irohEnabled = config.iroh?.enabled === true;
   let irohNode: IrohNode | undefined;
   let coordinatorClient: CoordinatorClient | undefined;
 
@@ -246,7 +257,8 @@ export function createBridgeRuntime(
         await codex.start();
       }
       if (irohEnabled) {
-        irohNode = await createIrohNode({
+        const buildIrohNode = options.irohFactory ?? createIrohNode;
+        irohNode = await buildIrohNode({
           ...(config.iroh?.relayUrl ? { relayUrl: config.iroh.relayUrl } : {}),
         }).catch(() => undefined);
         if (irohNode) {
@@ -263,7 +275,10 @@ export function createBridgeRuntime(
         const endpointDescriptor = irohNode
           ? await irohNode.describeEndpoint().catch(() => null)
           : null;
-        coordinatorClient = new CoordinatorClient({
+        const buildCoordinator =
+          options.coordinatorFactory ??
+          ((clientOptions) => new CoordinatorClient(clientOptions));
+        coordinatorClient = buildCoordinator({
           baseUrl: opts.baseUrl,
           accessToken: opts.accessToken,
           deviceId: opts.deviceId,
@@ -350,15 +365,27 @@ function resolveLocalEndpoints(config: BridgeConfig): HostEndpoint[] {
       protocol: "bridge",
     },
   ];
-  for (const lan of listLanIPv4()) {
-    endpoints.push({
-      kind: "lan",
-      host: lan,
-      port: config.bridgePort,
-      protocol: "bridge",
-    });
+  if ((config.exposure ?? "loopback") !== "loopback") {
+    for (const lan of resolveAdvertisedLanHosts(config.bindAddress)) {
+      endpoints.push({
+        kind: "lan",
+        host: lan,
+        port: config.bridgePort,
+        protocol: "bridge",
+      });
+    }
   }
   return endpoints;
+}
+
+function resolveAdvertisedLanHosts(bindAddress: string): string[] {
+  if (isLoopbackBind(bindAddress)) return [];
+  if (bindAddress === "0.0.0.0" || bindAddress === "::") return listLanIPv4();
+  return [bindAddress];
+}
+
+function isLoopbackBind(bindAddress: string): boolean {
+  return bindAddress === "127.0.0.1" || bindAddress === "::1" || bindAddress === "localhost";
 }
 
 function listLanIPv4(): string[] {

@@ -73,6 +73,14 @@ curl -fsSL https://example.com/install.sh | sh -s -- \
 ./scripts/install.sh --tarball ./out/...-0.1.0.tar.gz --systemd \
   --bridge-port 9778 --http-port 9779
 
+# Explicit LAN pairing advertisement
+./scripts/install.sh --tarball ./out/...-0.1.0.tar.gz --systemd \
+  --exposure pairing --bind 0.0.0.0
+
+# Explicit remote transport/coordinator mode
+./scripts/install.sh --tarball ./out/...-0.1.0.tar.gz --systemd \
+  --exposure remote --enable-iroh --enable-coordinator
+
 # Dry install (no service registration)
 ./scripts/install.sh --tarball ./out/...-0.1.0.tar.gz --no-start
 
@@ -87,9 +95,22 @@ Defaults:
 - systemd unit: `$HOME/.config/systemd/user/claw-remote.service`
 - launchd plist: `$HOME/Library/LaunchAgents/com.claw.remote.plist`
 - bridge port: `24112`, http port: `24113`
+- exposure: `loopback`
+- bind address: `127.0.0.1`
+- Bonjour, Iroh and coordinator: disabled unless explicitly enabled by exposure
+  and positive env/installer flags
 
 The install is idempotent: the previous prefix is moved aside and replaced
 atomically (`<prefix>.prev`), and the symlink is overwritten.
+
+Network and remote behavior is fail-closed. The default service listens on
+loopback only and does not advertise Bonjour, start Iroh, contact a
+coordinator, or report LAN endpoints. Use `--exposure pairing` for an explicit
+pairing surface, and `--exposure remote` plus `--enable-iroh` /
+`--enable-coordinator` for remote transport work. Coordinator startup also
+requires the `CLAW_REMOTE_COORDINATOR_URL`, `CLAW_REMOTE_COORDINATOR_TOKEN`,
+`CLAW_REMOTE_COORDINATOR_DEVICE_ID`, and `CLAW_REMOTE_COORDINATOR_TENANT_ID`
+environment variables.
 
 ## Remote install via SSH (`ssh.installBridge`)
 

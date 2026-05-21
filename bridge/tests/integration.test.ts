@@ -76,6 +76,14 @@ test("bridge runtime exposes /v1/mesh/identity over HTTP", async () => {
   assert.equal(body.displayName, "Test Mac");
   assert.deepEqual(body.capabilities, ["bridge", "test"]);
   assert.ok(Array.isArray(body.endpoints));
+  assert.deepEqual(body.endpoints, [
+    {
+      kind: "loopback",
+      host: "127.0.0.1",
+      port: h.config.bridgePort,
+      protocol: "bridge",
+    },
+  ]);
   await h.cleanup();
 });
 
@@ -170,6 +178,41 @@ test("createBridgeRuntime can run with bonjour disabled", () => {
   // when config.bonjourEnabled is false. The integration tests above use that
   // path; this assertion makes the dependency explicit for future readers.
   assert.equal(typeof BonjourAnnouncer, "function");
+});
+
+test("bridge runtime does not instantiate remote transports by default", async () => {
+  const workdir = await mkdtemp(join(tmpdir(), "clawjs-bridge-local-only-"));
+  const [bridgePort, httpPort] = nextPortPair();
+  let bonjourCalls = 0;
+  let irohCalls = 0;
+  const config: BridgeConfig = {
+    bridgePort,
+    httpPort,
+    bindAddress: "127.0.0.1",
+    dbPath: join(workdir, "runtime.sqlite"),
+    statusPath: join(workdir, "state", "bridge-status.json"),
+    displayName: "Local Only Mac",
+    bonjourEnabled: false,
+    version: "0.0.0-test",
+    capabilities: ["bridge"],
+  };
+  const runtime = createBridgeRuntime({
+    config,
+    bonjourFactory: () => {
+      bonjourCalls += 1;
+      return new BonjourAnnouncer();
+    },
+    irohFactory: async () => {
+      irohCalls += 1;
+      throw new Error("Iroh should not start by default");
+    },
+  });
+  await runtime.start();
+  assert.equal(bonjourCalls, 0);
+  assert.equal(irohCalls, 0);
+  assert.equal(runtime.irohNode, undefined);
+  await runtime.stop();
+  await rm(workdir, { recursive: true, force: true });
 });
 
 test("crypto helpers re-export from @clawjs/mesh stay stable", () => {

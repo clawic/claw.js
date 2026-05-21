@@ -9,6 +9,8 @@
 #   ./install.sh --systemd                       # write a systemd --user unit (Linux)
 #   ./install.sh --launchd                       # write a launchd plist (macOS)
 #   ./install.sh --bridge-port 24112 --http-port 24113
+#   ./install.sh --exposure loopback|pairing|remote
+#   ./install.sh --enable-bonjour --enable-iroh --enable-coordinator
 #   ./install.sh --no-start                      # do not enable+start the unit
 #   ./install.sh --uninstall                     # remove unit + symlink + prefix
 #
@@ -23,6 +25,10 @@ install_launchd=0
 bridge_port=24112
 http_port=24113
 bind_addr=""
+exposure=""
+enable_bonjour=0
+enable_iroh=0
+enable_coordinator=0
 do_uninstall=0
 start_service=1
 
@@ -36,6 +42,10 @@ while [ $# -gt 0 ]; do
     --bridge-port) bridge_port="$2"; shift 2;;
     --http-port) http_port="$2"; shift 2;;
     --bind) bind_addr="$2"; shift 2;;
+    --exposure) exposure="$2"; shift 2;;
+    --enable-bonjour) enable_bonjour=1; shift;;
+    --enable-iroh) enable_iroh=1; shift;;
+    --enable-coordinator) enable_coordinator=1; shift;;
     --uninstall) do_uninstall=1; shift;;
     --no-start) start_service=0; shift;;
     -h|--help)
@@ -58,6 +68,11 @@ case "$uname_m" in
   x86_64|amd64) host_arch="x64";;
   aarch64|arm64) host_arch="arm64";;
   *) host_arch="$uname_m";;
+esac
+
+case "$exposure" in
+  ""|loopback|pairing|remote) ;;
+  *) echo "invalid --exposure: $exposure" >&2; exit 1;;
 esac
 
 if [ "$do_uninstall" -eq 1 ]; then
@@ -147,6 +162,18 @@ EOF
   if [ -n "$bind_addr" ]; then
     echo "Environment=CLAW_REMOTE_BIND=$bind_addr" >> "$unit_path"
   fi
+  if [ -n "$exposure" ]; then
+    echo "Environment=CLAW_REMOTE_EXPOSURE=$exposure" >> "$unit_path"
+  fi
+  if [ "$enable_bonjour" -eq 1 ]; then
+    echo "Environment=CLAW_REMOTE_ENABLE_BONJOUR=1" >> "$unit_path"
+  fi
+  if [ "$enable_iroh" -eq 1 ]; then
+    echo "Environment=CLAW_REMOTE_ENABLE_IROH=1" >> "$unit_path"
+  fi
+  if [ "$enable_coordinator" -eq 1 ]; then
+    echo "Environment=CLAW_REMOTE_ENABLE_COORDINATOR=1" >> "$unit_path"
+  fi
   cat >> "$unit_path" <<'EOF'
 Restart=on-failure
 RestartSec=5
@@ -190,6 +217,38 @@ write_launchd_plist() {
     <string>$bridge_port</string>
     <key>CLAW_REMOTE_HTTP_PORT</key>
     <string>$http_port</string>
+EOF
+  if [ -n "$bind_addr" ]; then
+    cat >> "$plist_path" <<EOF
+    <key>CLAW_REMOTE_BIND</key>
+    <string>$bind_addr</string>
+EOF
+  fi
+  if [ -n "$exposure" ]; then
+    cat >> "$plist_path" <<EOF
+    <key>CLAW_REMOTE_EXPOSURE</key>
+    <string>$exposure</string>
+EOF
+  fi
+  if [ "$enable_bonjour" -eq 1 ]; then
+    cat >> "$plist_path" <<'EOF'
+    <key>CLAW_REMOTE_ENABLE_BONJOUR</key>
+    <string>1</string>
+EOF
+  fi
+  if [ "$enable_iroh" -eq 1 ]; then
+    cat >> "$plist_path" <<'EOF'
+    <key>CLAW_REMOTE_ENABLE_IROH</key>
+    <string>1</string>
+EOF
+  fi
+  if [ "$enable_coordinator" -eq 1 ]; then
+    cat >> "$plist_path" <<'EOF'
+    <key>CLAW_REMOTE_ENABLE_COORDINATOR</key>
+    <string>1</string>
+EOF
+  fi
+  cat >> "$plist_path" <<'EOF'
   </dict>
 </dict>
 </plist>

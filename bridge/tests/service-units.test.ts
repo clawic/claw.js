@@ -21,8 +21,28 @@ test("renderSystemdUnit emits an enabled service with ExecStart and env", () => 
   assert.match(unit, /ExecStart=\/usr\/local\/bin\/claw-remote/);
   assert.match(unit, /Environment=CLAW_REMOTE_PORT=24112/);
   assert.match(unit, /Environment=CLAW_REMOTE_HTTP_PORT=24113/);
+  assert.doesNotMatch(unit, /CLAW_REMOTE_EXPOSURE/);
+  assert.doesNotMatch(unit, /CLAW_REMOTE_ENABLE_BONJOUR/);
+  assert.doesNotMatch(unit, /CLAW_REMOTE_ENABLE_IROH/);
+  assert.doesNotMatch(unit, /CLAW_REMOTE_ENABLE_COORDINATOR/);
   assert.match(unit, /Restart=on-failure/);
   assert.match(unit, /WantedBy=default\.target/);
+});
+
+test("buildBridgeServiceSpec emits remote env only when explicitly requested", () => {
+  const spec = buildBridgeServiceSpec({
+    binaryPath: "/usr/local/bin/claw-remote",
+    exposure: "remote",
+    enableBonjour: true,
+    enableIroh: true,
+    enableCoordinator: true,
+  });
+  const unit = renderSystemdUnit(spec);
+
+  assert.match(unit, /Environment=CLAW_REMOTE_EXPOSURE=remote/);
+  assert.match(unit, /Environment=CLAW_REMOTE_ENABLE_BONJOUR=1/);
+  assert.match(unit, /Environment=CLAW_REMOTE_ENABLE_IROH=1/);
+  assert.match(unit, /Environment=CLAW_REMOTE_ENABLE_COORDINATOR=1/);
 });
 
 test("renderSystemdUnit shell-quotes args with whitespace", () => {

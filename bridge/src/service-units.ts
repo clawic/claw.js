@@ -109,6 +109,10 @@ export interface BridgeUnitOptions {
   bridgePort?: number;
   httpPort?: number;
   bindAddress?: string;
+  exposure?: "loopback" | "pairing" | "remote";
+  enableBonjour?: boolean;
+  enableIroh?: boolean;
+  enableCoordinator?: boolean;
   bridgeName?: string;
   version?: string;
   extraEnv?: Record<string, string>;
@@ -121,6 +125,10 @@ export function buildBridgeServiceSpec(
   if (opts.bridgePort) env.CLAW_REMOTE_PORT = String(opts.bridgePort);
   if (opts.httpPort) env.CLAW_REMOTE_HTTP_PORT = String(opts.httpPort);
   if (opts.bindAddress) env.CLAW_REMOTE_BIND = opts.bindAddress;
+  if (opts.exposure) env.CLAW_REMOTE_EXPOSURE = opts.exposure;
+  if (opts.enableBonjour) env.CLAW_REMOTE_ENABLE_BONJOUR = "1";
+  if (opts.enableIroh) env.CLAW_REMOTE_ENABLE_IROH = "1";
+  if (opts.enableCoordinator) env.CLAW_REMOTE_ENABLE_COORDINATOR = "1";
   if (opts.bridgeName) env.CLAW_REMOTE_NAME = opts.bridgeName;
   if (opts.version) env.CLAW_REMOTE_VERSION = opts.version;
   return {
