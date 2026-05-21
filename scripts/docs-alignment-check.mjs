@@ -284,7 +284,7 @@ for (const snippet of [
 
 for (const snippet of [
   "\"schemaVersion\": 1",
-  "\"owner\": \"clawjs\"",
+  "\"steward\": \"clawjs\"",
   "\"preferredTerm\": \"session\"",
   "\"preferredTerm\": \"threadId\"",
 ]) {

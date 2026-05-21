@@ -461,6 +461,7 @@ function requireRelayBrowserConfig(flags: Record<string, string>): {
   agentId: string;
   workspaceId: string;
 } {
+  // Relay provider tenant is a remote technical isolation identifier, not product scope.
   const accessToken = (flags["access-token"] ?? process.env.CLAW_RELAY_ACCESS_TOKEN ?? "").trim();
   const tenantId = (flags["tenant-id"] ?? process.env.CLAW_RELAY_TENANT_ID ?? "").trim();
   const agentId = (flags["agent-id"] ?? process.env.CLAW_RELAY_AGENT_ID ?? "").trim();

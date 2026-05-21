@@ -16,7 +16,7 @@
             "id": "generic-owner-authority",
             "pattern": "\\bowner(?:Id|Kind|_id|ship)?\\b",
             "suggestion": "Do not use generic owner vocabulary for authority. Use steward/principal/grant/scope or a documented domain owner field.",
-            "allowedContextPhrases": ["legal owner", "asset owner", "account owner", "pet owner", "provider owner", "domain owner", "host ownership docs", "host ownership", "ownership docs", "ownership relation"]
+            "allowedContextPhrases": ["legal owner", "asset owner", "account owner", "pet owner", "provider owner", "domain owner", "legacy ownerId projection", "legacy owner_id read-only projection", "host ownership docs", "host ownership", "ownership docs", "ownership relation"]
           },
           {
             "id": "owner-implies-access",

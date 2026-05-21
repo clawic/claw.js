@@ -33,8 +33,10 @@ const ignoredDirs = new Set([
 const ignoredPathParts = [
   "/package-lock.json",
   "/docs/conceptual-vocabulary-baseline.json",
+  "/docs/governance-vocabulary-classifications.json",
   "/docs/vocabulary.registry.json",
   "/scripts/conceptual-vocabulary-guard.mjs",
+  "/scripts/governance-scope-guard.mjs",
 ];
 const docsExtensions = new Set([".md", ".json", ".yaml", ".yml"]);
 const sourceExtensions = new Set([".swift", ".ts", ".tsx", ".js", ".mjs", ".kt", ".cs"]);

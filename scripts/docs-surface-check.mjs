@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const writeSurface = process.argv.includes("--write");
 const surfaceContract = JSON.parse(
   fs.readFileSync(path.join(rootDir, "docs", "surface-contract.registry.json"), "utf8"),
 );
@@ -211,6 +212,26 @@ function extractSurfaceEntries(filePath) {
     .filter((line) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(line));
 }
 
+function renderSurface(entries) {
+  return `---
+title: Public Surface
+description: Exhaustive published export inventory for @clawjs/claw, @clawjs/core, @clawjs/database, @clawjs/audio, @clawjs/sessions, @clawjs/user-model, and @clawjs/runtime.
+---
+
+# Public Surface
+
+This page is the exhaustive inventory for the published package exports.
+The docs check script validates that every current export from
+\`@clawjs/claw\`, \`@clawjs/core\`, \`@clawjs/database\`,
+\`@clawjs/audio\`, \`@clawjs/sessions\`, \`@clawjs/user-model\`, and
+\`@clawjs/runtime\` appear here.
+
+## Published Exports
+
+${entries.map((entry) => `    ${entry}`).join("\n")}
+`;
+}
+
 function routeSnippet(route) {
   if (route.path.startsWith("WS/")) {
     return `app.${route.method.toLowerCase()}(\`${"${workspacePrefix}"}/${route.path.slice(3)}\``;
@@ -348,7 +369,6 @@ for (const resource of surfaceContract.relay.resources) {
 }
 
 const surfacePath = path.join(rootDir, "docs", "surface.md");
-const surfaceEntries = new Set(extractSurfaceEntries(surfacePath));
 const sdkExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-node", "dist", "index.d.ts")));
 const coreExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-core", "dist", "index.d.ts")));
 const databaseExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-database", "dist", "index.d.ts")));
@@ -357,6 +377,10 @@ const sessionsExports = new Set(extractExports(path.join(rootDir, "packages", "c
 const userModelExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-user-model", "dist", "index.d.ts")));
 const runtimeExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-runtime", "dist", "index.d.ts")));
 const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports, ...audioExports, ...sessionsExports, ...userModelExports, ...runtimeExports]);
+if (writeSurface) {
+  fs.writeFileSync(surfacePath, renderSurface([...expectedSurfaceEntries].sort()));
+}
+const surfaceEntries = new Set(extractSurfaceEntries(surfacePath));
 
 for (const exportName of expectedSurfaceEntries) {
   if (!surfaceEntries.has(exportName)) {

@@ -895,7 +895,7 @@ const corePublicRoutes = [
   ["claw.api.sync.plan", "POST", "/v1/sync/plan", "Sync dry-run planning contract"],
   ["claw.api.sync.conflicts", "POST", "/v1/sync/conflicts", "Sync conflict inspection contract"],
   ["claw.api.sync.applications", "POST", "/v1/sync/applications", "Sync driver application receipt contract"],
-  ["claw.api.sync.authorityHandoffs", "POST", "/v1/sync/authority-handoffs", "Sync authority handoff receipt contract"],
+  ["claw.api.sync.authorityHandoffs", "POST", "/v1/sync/authority-handoffs", "Sync handoff receipt contract"],
   ["claw.api.nodes", "GET", "/v1/nodes", "Node identity and trust contract"],
   ["claw.api.nodes.pair", "POST", "/v1/nodes/pair", "Node pairing dry-run contract"],
   ["claw.api.nodes.trust", "POST", "/v1/nodes/trust", "Node trust dry-run contract"],

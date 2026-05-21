@@ -3080,6 +3080,7 @@ function ensureNotesPagesSourceIndexed(store: SearchStore, flags: Record<string,
       });
       return 0;
     }
+    // Legacy owner_id read-only projection for the existing notes schema; it does not grant authority.
     const pages = db.prepare(`
       SELECT id, title, space, surface, owner_id, author_kind, author_id, visibility, sensitivity,
         tags_json, properties_json, source_record_domain, source_record_id, created_at, updated_at, archived_at
@@ -5404,6 +5405,7 @@ function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow
       tag: tags,
       sourceRecordDomain: row.source_record_domain,
       sourceRecordId: row.source_record_id,
+      // Legacy ownerId projection for search metadata only; authority stays with grants/scopes.
       ownerId: row.owner_id,
       authorKind: row.author_kind,
       authorId: row.author_id,
