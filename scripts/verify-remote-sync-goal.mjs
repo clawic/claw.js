@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRemoteSyncVerifierHelpers } from "./verify-remote-sync-goal-helpers.mjs";
 import {
   buildRemoteConformanceReport,
   buildRemoteExternalPendingRegister, buildRemoteExternalValidationEvidenceArtifact,
@@ -192,45 +193,7 @@ const driverRouteExpectations = new Map([
 ]);
 
 const failures = [];
-
-function fail(message) {
-  failures.push(message);
-}
-
-function readRequired(relativePath) {
-  const fullPath = path.join(rootDir, relativePath);
-  if (!fs.existsSync(fullPath)) {
-    fail(`missing required file ${relativePath}`);
-    return "";
-  }
-  return fs.readFileSync(fullPath, "utf8");
-}
-
-function readRequiredJson(relativePath) {
-  const text = readRequired(relativePath);
-  if (!text) return {};
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    fail(`${relativePath} must be valid JSON`);
-    return {};
-  }
-}
-
-function requireText(label, text, needle) {
-  if (!text.includes(needle)) fail(`${label} must include ${needle}`);
-}
-
-function requireSameOrderedList(label, actual, expected) {
-  const actualList = Array.isArray(actual) ? actual : [];
-  if (actualList.join(",") !== expected.join(",")) {
-    fail(`${label} must be ${expected.join(",")} but was ${actualList.join(",")}`);
-  }
-}
-
-function extractTableIds(text, prefix) {
-  return new Set([...text.matchAll(new RegExp(`\\|\\s*(${prefix}-\\d{3})\\s*\\|`, "g"))].map((match) => match[1]));
-}
+const { fail, readRequired, readRequiredJson, requireText, requireSameOrderedList, extractTableIds } = createRemoteSyncVerifierHelpers({ fs, path, rootDir, failures });
 
 const docTexts = new Map(requiredDocs.map((relativePath) => [relativePath, readRequired(relativePath)]));
 const docCorpus = [...docTexts.values()].join("\n\n");
