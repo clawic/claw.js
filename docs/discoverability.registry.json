@@ -1370,6 +1370,41 @@
       "canonicalName": "adr:performance-governance"
     },
     {
+      "id": "adr-docs-adr-0037-capability-maturity-activation-governance",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0037-capability-maturity-activation-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0037: Capability maturity and activation governance",
+        "0037-capability-maturity-activation-governance",
+        "ADR 0037",
+        "capability maturity",
+        "activation governance",
+        "adr:capability-maturity-activation-governance"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0037: Capability maturity and activation governance",
+          "expectPath": "docs/adr/0037-capability-maturity-activation-governance.md"
+        },
+        {
+          "query": "adr:capability-maturity-activation-governance",
+          "expectPath": "docs/adr/0037-capability-maturity-activation-governance.md"
+        }
+      ],
+      "guard": "scripts/capability-maturity-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "adr:capability-maturity-activation-governance"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "steward": "claw",

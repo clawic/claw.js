@@ -219,6 +219,18 @@ function checkLegalReleaseGate() {
   }
 }
 
+function checkCapabilityMaturityReleaseGate() {
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "./scripts/capability-maturity-guard.mjs"],
+    { cwd: rootDir, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 },
+  );
+  if (result.status !== 0) {
+    const output = `${result.stdout || ""}${result.stderr || ""}`.trim();
+    fail(`capability maturity release gate failed${output ? `:\n${output}` : ""}`);
+  }
+}
+
 function checkCompletionAudit() {
   const audit = read("docs/governance/pre-v1-version-governance/completion.md");
   for (const snippet of [
@@ -325,6 +337,7 @@ if (args.has("--release-gate")) {
   if (process.env.CLAW_RELEASE_APPROVED_FOR !== expectedApproval) {
     fail(`pre_v1_mutable requires exact release approval CLAW_RELEASE_APPROVED_FOR=${expectedApproval}`);
   }
+  checkCapabilityMaturityReleaseGate();
   checkLegalReleaseGate();
 } else {
   checkPolicyExport();
