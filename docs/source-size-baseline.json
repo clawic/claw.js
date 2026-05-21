@@ -7,13 +7,13 @@
   "longLineWarning": 240,
   "longLineCritical": 1600,
   "files": {
-    "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift": {
-      "lines": 1583,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
-    },
     "apps/host/Sources/ClawHostKit/MacControl.swift": {
       "lines": 2009,
       "reason": "Mac Control broker crossed the 2000-line boundary while adding signed-host audio volume and display brightness execution; extract action planning, native runners, and audit helpers before expanding more host capabilities."
+    },
+    "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift": {
+      "lines": 1583,
+      "reason": "Existing broad test coverage; split by scenario before expanding."
     },
     "content/src/server/db.ts": {
       "lines": 1419,
@@ -82,6 +82,10 @@
     "packages/clawjs-core/src/agents-v1.ts": {
       "lines": 2225,
       "reason": "Agents V1 runtime model after autonomy, supervisor, memory, budget, access, routing, and projection gates; split new policy families into focused modules before expanding further."
+    },
+    "packages/clawjs-core/src/index.test.ts": {
+      "lines": 2038,
+      "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test."
     },
     "packages/clawjs-core/src/remote-sync.ts": {
       "lines": 2062,
@@ -159,10 +163,10 @@
       "lines": 1583,
       "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
     },
-    "packages/clawjs/src/cli-search-command.ts": {
-      "lines": 8103,
+    "packages/clawjs/src/cli-search-heavy-command.ts": {
+      "lines": 4984,
       "blockGrowth": true,
-      "reason": "Emergency search CLI debt after search V1.1 source-surface expansion in the current dirty worktree; immediate follow-up should extract source adapters, event refresh, and admin subcommands, and future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
+      "reason": "Search CLI heavy implementation after extracting search document builders, row types, parsers, and local discovery helpers into cli-search-document-* owner modules; future growth is blocked except for further extraction, deletion, or compatibility-preserving split work."
     },
     "packages/clawjs/src/cli-search-index.test.ts": {
       "lines": 5248,
@@ -172,10 +176,6 @@
     "packages/clawjs/src/index-data.test.ts": {
       "lines": 2043,
       "reason": "Dense Data and persistent surface integration coverage after remote/source QA evidence expansion; split new data route scenarios into focused test files before expanding further."
-    },
-    "packages/clawjs-core/src/index.test.ts": {
-      "lines": 2038,
-      "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test."
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 1580,
