@@ -37,7 +37,7 @@ claw watch thread:thread-42 --if-no reply --after 24h --then remind "ping owner"
 
 ## SDK
 
-Use the service through `CreateClawOptions.time`:
+Use the service through explicit `CreateClawOptions.time` mode:
 
 ```ts
 const claw = await createClaw({
@@ -49,6 +49,7 @@ const claw = await createClaw({
     rootDir: "./workspace",
   },
   time: {
+    mode: "client",
     baseUrl: "http://127.0.0.1:4730",
   },
 });
@@ -88,6 +89,12 @@ const run = await claw.routines.run("item_123");
 const executions = await claw.routines.history("item_123");
 const calendar = await claw.calendar.view();
 ```
+
+Omitting `time` leaves the SDK temporal namespaces unconfigured and does not
+open SQLite or start a scheduler. Use `mode: "embedded-on-demand"` for a local
+SQLite-backed engine that opens only on first temporal method call. Use
+`mode: "scheduler"` only when the caller explicitly wants the in-process
+background scheduler.
 
 ## Data Model
 

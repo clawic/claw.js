@@ -58,8 +58,9 @@ const same = await createClaw({
 | `secrets.baseUrl`, `secrets.credential`, `secrets.tenantId` | Secrets connection used by `claw.secrets`, typed actions, and brokered HTTP execution. |
 | `secrets.sidecarPath` | Optional Secrets sidecar path used for proxy-compatible `{{secretName}}` flows and lease-backed process/browser injection. |
 | `notify.baseUrl`, `sourceToken`, `clientToken` | Optional Notify service endpoint and source/client credentials for `claw.notify`. |
-| `time.baseUrl`, `time.token` | Optional standalone time-service endpoint used for calendar, routines, reminders, deadlines, and follow-ups. |
-| `time.dbPath`, `defaultTimeZone`, `schedulerIntervalMs`, `notifyBaseUrl`, `notifySourceToken` | Optional embedded temporal engine and notification integration settings when no time-service URL is configured. |
+| `time.mode` | Optional explicit time mode: `disabled`, `client`, `embedded-on-demand`, or `scheduler`. Omitted `time` is disabled. |
+| `time.baseUrl`, `time.token` | Required endpoint and optional token for `mode: "client"`. |
+| `time.dbPath`, `defaultTimeZone`, `schedulerIntervalMs`, `notifyBaseUrl`, `notifySourceToken` | Embedded temporal engine settings for `mode: "embedded-on-demand"` or `mode: "scheduler"`. Only `scheduler` starts background polling. |
 | `content.baseUrl`, `content.token` | Optional Content service endpoint and token for `claw.content`. |
 | `iot.baseUrl`, `iot.token`, `iot.homeId` | Optional IoT service endpoint, token, and default home id for `claw.iot`. |
 
@@ -260,9 +261,10 @@ intent/observed stores currently persisted in the workspace.
 
 ## Time
 
-Configure the standalone temporal service through `CreateClawOptions.time`
-when you want one source of truth for calendar events, routines,
-reminders, deadlines, and conditional watches:
+Configure time explicitly through `CreateClawOptions.time` when you want
+calendar events, routines, reminders, deadlines, and conditional watches.
+If `time` is omitted, the temporal namespaces are present but unconfigured and
+`createClaw()` does not open SQLite or start a scheduler.
 
 ```ts
 const claw = await createClaw({
@@ -274,6 +276,7 @@ const claw = await createClaw({
     rootDir: "./workspace",
   },
   time: {
+    mode: "client",
     baseUrl: "http://127.0.0.1:4730",
   },
 });
@@ -299,6 +302,11 @@ await claw.watch.create({
 const calendar = await claw.calendar.view();
 const executions = await claw.routines.history();
 ```
+
+Use `mode: "embedded-on-demand"` for a local SQLite-backed temporal engine that
+opens only on first temporal method call and never starts background polling.
+Use `mode: "scheduler"` only for an explicit in-process scheduler; it is the
+only SDK mode that calls `EmbeddedTimeEngine.startScheduler()`.
 
 Use `claw.calendar`, `claw.routines`, `claw.reminders`, and `claw.watch`
 for public integrations. The lower-level `claw.time` namespace remains

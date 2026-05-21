@@ -879,6 +879,7 @@ The docs check script validates that every current export from
     createClaw
     createClawAgentsFacades
     CreateClawOptions
+    CreateClawTimeOptions
     createClawProjectId
     createCodeGlobalIndex
     CreateCodeGlobalIndexOptions
