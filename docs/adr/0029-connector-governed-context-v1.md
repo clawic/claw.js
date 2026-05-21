@@ -66,6 +66,17 @@ context refs, applied fallback rule ids, approval grant id, and redacted reason
 codes. The audit declaration is metadata only; it does not include private
 field values or plaintext credentials.
 
+## Performance Impact
+
+Governed context is local metadata in core.sqlite, so explain, doctor, and selection paths should stay bounded by provider schema and context record count. The design prevents expensive or dangerous provider execution before account, environment, secret, and policy context are resolved. Future import, live provider discovery, signing, and release flows must separately budget network, secret lease, audit, and provider latency.
+
+## Decision Tensions
+
+- **Prioritized axes**: connector safety, context clarity, redaction, fail-closed provider selection, and auditability.
+- **Constrained axes**: implicit defaults, plaintext setup notes, and provider mutation without governed context are constrained.
+- **Tradeoffs accepted**: connector workflows need more local setup and doctor evidence before they run; this is accepted because wrong accounts or signing identities can cause costly external mistakes.
+- **Debt or pending evidence**: live provider import, private setup evidence, and per-provider context completeness remain staged behind explicit approval and external validation.
+
 ## Consequences
 
 - Agents can explain why a provider account, app, Team ID, Bundle ID, SKU,

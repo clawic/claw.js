@@ -1405,6 +1405,383 @@
       "canonicalName": "adr:capability-maturity-activation-governance"
     },
     {
+      "id": "adr-docs-adr-0038-portable-archive-contract",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0038-portable-archive-contract.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/portable-archive-contract.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0038: Portable archive contract",
+        "0038-portable-archive-contract",
+        "ADR 0038",
+        "portable archive contract",
+        "backup export import restore",
+        ".clawbackup .clawexport .clawsecrets",
+        "secrets backup signed host",
+        "manifest.json restore report"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0038: Portable archive contract",
+          "expectPath": "docs/adr/0038-portable-archive-contract.md"
+        },
+        {
+          "query": "portable archive contract",
+          "expectPath": "docs/adr/0038-portable-archive-contract.md"
+        },
+        {
+          "query": "backup export import restore",
+          "expectPath": "docs/adr/0038-portable-archive-contract.md"
+        },
+        {
+          "query": "secrets backup signed host",
+          "expectPath": "docs/adr/0038-portable-archive-contract.md"
+        }
+      ],
+      "guard": "scripts/portable-archive-governance-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "adr:portable-archive-contract"
+    },
+    {
+      "id": "adr-docs-adr-0039-global-threat-modeling-governance",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0039-global-threat-modeling-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0039: Global threat modeling governance",
+        "0039-global-threat-modeling-governance",
+        "ADR 0039",
+        "adr:global-threat-modeling-governance",
+        "security-threat-model",
+        "global-threat-modeling",
+        "threat model",
+        "prompt exfiltration",
+        "hostile local process",
+        "supply chain update channel"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0039: Global threat modeling governance",
+          "expectPath": "docs/adr/0039-global-threat-modeling-governance.md"
+        },
+        {
+          "query": "adr:global-threat-modeling-governance",
+          "expectPath": "docs/adr/0039-global-threat-modeling-governance.md"
+        },
+        {
+          "query": "threat model",
+          "expectPath": "docs/adr/0039-global-threat-modeling-governance.md"
+        },
+        {
+          "query": "prompt exfiltration",
+          "expectPath": "docs/adr/0039-global-threat-modeling-governance.md"
+        },
+        {
+          "query": "hostile local process",
+          "expectPath": "docs/adr/0039-global-threat-modeling-governance.md"
+        },
+        {
+          "query": "supply chain update channel",
+          "expectPath": "docs/adr/0039-global-threat-modeling-governance.md"
+        }
+      ],
+      "guard": "scripts/security-threat-model-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:global-threat-modeling-governance"
+    },
+    {
+      "id": "adr-docs-adr-0040-no-irreversible-data-loss",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0040-no-irreversible-data-loss.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0040: No irreversible data loss guardrail",
+        "0040-no-irreversible-data-loss",
+        "ADR 0040"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0040: No irreversible data loss guardrail",
+          "expectPath": "docs/adr/0040-no-irreversible-data-loss.md"
+        }
+      ],
+      "guard": "scripts/no-irreversible-data-loss-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:no-irreversible-data-loss"
+    },
+    {
+      "id": "adr-docs-adr-0041-adoption-and-canonicity-governance",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0041-adoption-and-canonicity-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0041: Adoption and canonicity governance",
+        "0041-adoption-and-canonicity-governance",
+        "ADR 0041"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0041: Adoption and canonicity governance",
+          "expectPath": "docs/adr/0041-adoption-and-canonicity-governance.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:adoption-canonicity-governance"
+    },
+    {
+      "id": "adr-docs-adr-0041-zero-accidental-work",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0041-zero-accidental-work.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0041: Zero Accidental Work",
+        "0041-zero-accidental-work",
+        "ADR 0041",
+        "zero accidental work",
+        "inert createClaw",
+        "bridge runtime separation",
+        "adr:zero-accidental-work"
+      ],
+      "searchQueries": [
+        {
+          "query": "zero accidental work",
+          "expectPath": "docs/adr/0041-zero-accidental-work.md"
+        },
+        {
+          "query": "inert createClaw",
+          "expectPath": "docs/adr/0041-zero-accidental-work.md"
+        },
+        {
+          "query": "adr:zero-accidental-work",
+          "expectPath": "docs/adr/0041-zero-accidental-work.md"
+        }
+      ],
+      "guard": "scripts/zero-accidental-work-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:zero-accidental-work"
+    },
+    {
+      "id": "adr-docs-adr-0042-streaming-backpressure-contract",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0042-streaming-backpressure-contract.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0042: Streaming backpressure contract",
+        "0042-streaming-backpressure-contract",
+        "ADR 0042",
+        "streaming backpressure",
+        "Streaming Backpressure",
+        "adr:streaming-backpressure-contract",
+        "claw.streaming.default.v1"
+      ],
+      "searchQueries": [
+        {
+          "query": "streaming backpressure",
+          "expectPath": "docs/adr/0042-streaming-backpressure-contract.md"
+        },
+        {
+          "query": "adr:streaming-backpressure-contract",
+          "expectPath": "docs/adr/0042-streaming-backpressure-contract.md"
+        },
+        {
+          "query": "claw.streaming.default.v1",
+          "expectPath": "docs/adr/0042-streaming-backpressure-contract.md"
+        }
+      ],
+      "guard": "scripts/streaming-backpressure-contract-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "adr:streaming-backpressure-contract"
+    },
+    {
+      "id": "adr-docs-adr-0042-supply-chain-security-governance",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0042-supply-chain-security-governance.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0042: Supply-chain security governance",
+        "0042-supply-chain-security-governance",
+        "ADR 0042"
+      ],
+      "searchQueries": [
+        {
+          "query": "ADR 0042: Supply-chain security governance",
+          "expectPath": "docs/adr/0042-supply-chain-security-governance.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:supply-chain-security-governance"
+    },
+    {
+      "id": "adr-docs-adr-0043-streaming-backpressure-bounded-queues",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0043-streaming-backpressure-bounded-queues.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0043: Streaming, backpressure, and bounded queues",
+        "0043-streaming-backpressure-bounded-queues",
+        "ADR 0043"
+      ],
+      "searchQueries": [
+        {
+          "query": "streaming backpressure bounded queues",
+          "expectPath": "docs/adr/0043-streaming-backpressure-bounded-queues.md"
+        }
+      ],
+      "guard": "scripts/surface-resource-contract-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:streaming-backpressure-bounded-queues"
+    },
+    {
+      "id": "adr-docs-adr-0044-launch-and-idle-contract",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0044-launch-and-idle-contract.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0044: Launch and idle contract",
+        "0044-launch-and-idle-contract",
+        "ADR 0044"
+      ],
+      "searchQueries": [
+        {
+          "query": "launch idle contract",
+          "expectPath": "docs/adr/0044-launch-and-idle-contract.md"
+        }
+      ],
+      "guard": "scripts/performance-governance-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:launch-idle-contract"
+    },
+    {
+      "id": "adr-docs-adr-0045-ui-state-invalidation-high-churn-data-boundary",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0045-ui-state-invalidation-high-churn-data-boundary.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0045: UI state invalidation and high-churn data boundary",
+        "0045-ui-state-invalidation-high-churn-data-boundary",
+        "ADR 0045"
+      ],
+      "searchQueries": [
+        {
+          "query": "ui state invalidation high churn",
+          "expectPath": "docs/adr/0045-ui-state-invalidation-high-churn-data-boundary.md"
+        }
+      ],
+      "guard": "scripts/surface-resource-contract-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:ui-state-invalidation-high-churn-boundary"
+    },
+    {
+      "id": "adr-docs-adr-0046-problem-to-guardrail-loop",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0046-problem-to-guardrail-loop.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0046: Problem-to-Guardrail loop",
+        "0046-problem-to-guardrail-loop",
+        "ADR 0046"
+      ],
+      "searchQueries": [
+        {
+          "query": "problem guardrail",
+          "expectPath": "docs/adr/0046-problem-to-guardrail-loop.md"
+        }
+      ],
+      "guard": "scripts/problem-to-guardrail-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "adr:problem-to-guardrail-loop"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "steward": "claw",
@@ -1446,6 +1823,30 @@
         }
       ],
       "canonicalName": "adr:surface-route-graph"
+    },
+    {
+      "id": "skill-skills-adoption-canonicity-review",
+      "kind": "skill",
+      "steward": "claw",
+      "canonicalSource": "skills/adoption-canonicity-review/SKILL.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md"
+      ],
+      "discoveryTerms": [
+        "adoption-canonicity-review",
+        "Review or update stable, canonical, any-human, PMF, and adoption claims using adoption/canonicity governance packets."
+      ],
+      "searchQueries": [
+        {
+          "query": "adoption-canonicity-review",
+          "expectPath": "skills/adoption-canonicity-review/SKILL.md"
+        }
+      ],
+      "guard": "scripts/skills-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
     },
     {
       "id": "skill-skills-adr-to-guardrail",
@@ -2351,6 +2752,31 @@
       "steward": "claw"
     },
     {
+      "id": "guard-scripts-adoption-canonicity-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/adoption-canonicity-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "adoption-canonicity-check",
+        "Adoption Canonicity Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "adoption-canonicity-check",
+          "expectPath": "scripts/adoption-canonicity-check.mjs"
+        }
+      ],
+      "guard": "scripts/adoption-canonicity-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-adr-operational-coverage-check",
       "kind": "guardrail",
       "steward": "claw",
@@ -2397,6 +2823,31 @@
         }
       ],
       "guard": "scripts/agent-instructions-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-boundedness-guard",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/boundedness-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "boundedness-guard",
+        "Boundedness Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "boundedness-guard",
+          "expectPath": "scripts/boundedness-guard.mjs"
+        }
+      ],
+      "guard": "scripts/boundedness-guard.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -2705,6 +3156,81 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-hot-path-guard",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/hot-path-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "hot-path-guard",
+        "Hot Path Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "hot-path-guard",
+          "expectPath": "scripts/hot-path-guard.mjs"
+        }
+      ],
+      "guard": "scripts/hot-path-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-idle-quiescence-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/idle-quiescence-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "idle-quiescence-check",
+        "Idle Quiescence Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "idle-quiescence-check",
+          "expectPath": "scripts/idle-quiescence-check.mjs"
+        }
+      ],
+      "guard": "scripts/idle-quiescence-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-incident-response-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/incident-response-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "incident-response-check",
+        "Incident Response Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "incident-response-check",
+          "expectPath": "scripts/incident-response-check.mjs"
+        }
+      ],
+      "guard": "scripts/incident-response-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-naming-shape-check",
       "kind": "guardrail",
       "steward": "claw",
@@ -2751,6 +3277,31 @@
         }
       ],
       "guard": "scripts/naming-surface-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-no-irreversible-data-loss-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/no-irreversible-data-loss-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "no-irreversible-data-loss-check",
+        "No Irreversible Data Loss Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "no-irreversible-data-loss-check",
+          "expectPath": "scripts/no-irreversible-data-loss-check.mjs"
+        }
+      ],
+      "guard": "scripts/no-irreversible-data-loss-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -2880,6 +3431,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-portable-archive-governance-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/portable-archive-governance-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "portable-archive-governance-check",
+        "Portable Archive Governance Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "portable-archive-governance-check",
+          "expectPath": "scripts/portable-archive-governance-check.mjs"
+        }
+      ],
+      "guard": "scripts/portable-archive-governance-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-privacy-check",
       "kind": "guardrail",
       "steward": "claw",
@@ -2901,6 +3477,31 @@
         }
       ],
       "guard": "scripts/privacy-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-problem-to-guardrail-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/problem-to-guardrail-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "problem-to-guardrail-check",
+        "Problem To Guardrail Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "problem-to-guardrail-check",
+          "expectPath": "scripts/problem-to-guardrail-check.mjs"
+        }
+      ],
+      "guard": "scripts/problem-to-guardrail-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -2928,6 +3529,56 @@
         }
       ],
       "guard": "scripts/progressive-modularity-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-rfc-process-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/rfc-process-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "rfc-process-check",
+        "Rfc Process Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "rfc-process-check",
+          "expectPath": "scripts/rfc-process-check.mjs"
+        }
+      ],
+      "guard": "scripts/rfc-process-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-security-threat-model-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/security-threat-model-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "security-threat-model-check",
+        "Security Threat Model Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "security-threat-model-check",
+          "expectPath": "scripts/security-threat-model-check.mjs"
+        }
+      ],
+      "guard": "scripts/security-threat-model-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -3007,6 +3658,60 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-streaming-backpressure-contract-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/streaming-backpressure-contract-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/adr/0042-streaming-backpressure-contract.md"
+      ],
+      "discoveryTerms": [
+        "streaming-backpressure-contract-check",
+        "Streaming Backpressure Contract Check",
+        "streaming backpressure guard",
+        "claw.streaming.default.v1 guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "streaming backpressure guard",
+          "expectPath": "scripts/streaming-backpressure-contract-check.mjs"
+        }
+      ],
+      "guard": "scripts/streaming-backpressure-contract-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "guard:streaming-backpressure-contract-check"
+    },
+    {
+      "id": "guard-scripts-supply-chain-security-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/supply-chain-security-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "supply-chain-security-check",
+        "Supply Chain Security Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "supply-chain-security-check",
+          "expectPath": "scripts/supply-chain-security-check.mjs"
+        }
+      ],
+      "guard": "scripts/supply-chain-security-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-surface-evidence-guard",
       "kind": "guardrail",
       "steward": "claw",
@@ -3053,6 +3758,31 @@
         }
       ],
       "guard": "scripts/surface-narrative-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-surface-resource-contract-guard",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/surface-resource-contract-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "surface-resource-contract-guard",
+        "Surface Resource Contract Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface-resource-contract-guard",
+          "expectPath": "scripts/surface-resource-contract-guard.mjs"
+        }
+      ],
+      "guard": "scripts/surface-resource-contract-guard.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -3682,6 +4412,33 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-zero-accidental-work-guard",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/zero-accidental-work-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "zero-accidental-work-guard",
+        "Zero Accidental Work Guard",
+        "inert createClaw guard",
+        "startup side effect guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "zero-accidental-work-guard",
+          "expectPath": "scripts/zero-accidental-work-guard.mjs"
+        }
+      ],
+      "guard": "scripts/zero-accidental-work-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "docs-alignment-routing",
       "kind": "guardrail",
       "steward": "claw",
@@ -4044,6 +4801,45 @@
       "steward": "claw"
     },
     {
+      "id": "rfc-process-governance",
+      "kind": "docs-page",
+      "steward": "claw",
+      "canonicalSource": "docs/governance/rfc-process.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/constitution-map.md",
+        "docs/governance/README.md",
+        "docs/canonical-data-catalog.md"
+      ],
+      "discoveryTerms": [
+        "RFC process",
+        "canonical type RFC",
+        "canonical user profile attribute RFC",
+        "maintainer sign-off",
+        "community review"
+      ],
+      "searchQueries": [
+        {
+          "query": "RFC process",
+          "expectPath": "docs/governance/rfc-process.md"
+        },
+        {
+          "query": "canonical type RFC",
+          "expectPath": "docs/governance/rfc-process.md"
+        },
+        {
+          "query": "user profile RFC process",
+          "expectPath": "docs/governance/rfc-process.md"
+        }
+      ],
+      "guard": "scripts/rfc-process-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21"
+    },
+    {
       "id": "sdk-first-custom-surfaces-completion-audit",
       "kind": "docs-page",
       "canonicalSource": "docs/governance/sdk-first-custom-surfaces/completion.md",
@@ -4202,6 +4998,44 @@
       "steward": "claw"
     },
     {
+      "id": "incident-response-playbook",
+      "kind": "docs-page",
+      "steward": "claw",
+      "canonicalSource": "docs/incident-response.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "SECURITY.md"
+      ],
+      "discoveryTerms": [
+        "Incident response",
+        "Operational Incident Response",
+        "remote exploit",
+        "compromised connector",
+        "data-loss incident"
+      ],
+      "searchQueries": [
+        {
+          "query": "incident response",
+          "expectPath": "docs/incident-response.md"
+        },
+        {
+          "query": "remote exploit",
+          "expectPath": "docs/incident-response.md"
+        },
+        {
+          "query": "compromised connector",
+          "expectPath": "docs/incident-response.md"
+        }
+      ],
+      "guard": "scripts/incident-response-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-05-21",
+      "canonicalName": "incident-response"
+    },
+    {
       "id": "docs-official-trust-and-compatibility",
       "kind": "docs-page",
       "canonicalSource": "docs/official-trust-and-compatibility.md",
@@ -4227,6 +5061,103 @@
       "status": "enforced",
       "reviewDate": "2026-08-18",
       "steward": "claw"
+    },
+    {
+      "id": "docs-portable-archive-contract",
+      "kind": "docs-page",
+      "steward": "claw",
+      "canonicalSource": "docs/portable-archive-contract.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/adr/0038-portable-archive-contract.md"
+      ],
+      "discoveryTerms": [
+        "Portable Archive Contract",
+        "claw archive plan export verify inspect import restore doctor",
+        "PortableArchiveManifestV1",
+        "PortableArchiveRestoreReport",
+        "requires_signed_host",
+        "rebuildable_no_canonical_backup",
+        "backup",
+        "export",
+        "import",
+        "restore",
+        "portable archive"
+      ],
+      "searchQueries": [
+        {
+          "query": "backup",
+          "expectPath": "docs/portable-archive-contract.md"
+        },
+        {
+          "query": "export",
+          "expectPath": "docs/portable-archive-contract.md"
+        },
+        {
+          "query": "import",
+          "expectPath": "docs/portable-archive-contract.md"
+        },
+        {
+          "query": "restore",
+          "expectPath": "docs/portable-archive-contract.md"
+        },
+        {
+          "query": "portable archive",
+          "expectPath": "docs/portable-archive-contract.md"
+        }
+      ],
+      "guard": "scripts/portable-archive-governance-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "portable-archive-contract"
+    },
+    {
+      "id": "global-threat-model-doc",
+      "kind": "docs-page",
+      "steward": "claw",
+      "canonicalSource": "docs/security-threat-model.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/adr/0039-global-threat-modeling-governance.md",
+        "docs/security-threat-model.coverage.json"
+      ],
+      "discoveryTerms": [
+        "security-threat-model",
+        "global threat model",
+        "threat model",
+        "prompt exfiltration",
+        "hostile local process",
+        "supply chain update channel"
+      ],
+      "searchQueries": [
+        {
+          "query": "security-threat-model",
+          "expectPath": "docs/security-threat-model.md"
+        },
+        {
+          "query": "prompt exfiltration",
+          "expectPath": "docs/security-threat-model.md"
+        },
+        {
+          "query": "hostile local process",
+          "expectPath": "docs/security-threat-model.md"
+        },
+        {
+          "query": "supply chain update channel",
+          "expectPath": "docs/security-threat-model.md"
+        }
+      ],
+      "guard": "scripts/security-threat-model-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "security-threat-model"
     },
     {
       "id": "sdk-first-custom-surfaces-external-evidence-fixtures",
@@ -4567,6 +5498,38 @@
       "status": "enforced",
       "reviewDate": "2026-08-20",
       "steward": "claw"
+    },
+    {
+      "id": "global-threat-model-coverage",
+      "kind": "validation-manifest",
+      "steward": "claw",
+      "canonicalSource": "docs/security-threat-model.coverage.json",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/security-threat-model.md",
+        "docs/adr/0039-global-threat-modeling-governance.md"
+      ],
+      "discoveryTerms": [
+        "security-threat-model.coverage.json",
+        "global threat model coverage",
+        "critical security surface coverage",
+        "critical route threat coverage"
+      ],
+      "searchQueries": [
+        {
+          "query": "security-threat-model.coverage.json",
+          "expectPath": "docs/security-threat-model.coverage.json"
+        },
+        {
+          "query": "critical route threat coverage",
+          "expectPath": "docs/security-threat-model.coverage.json"
+        }
+      ],
+      "guard": "scripts/security-threat-model-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "security-threat-model-coverage"
     },
     {
       "id": "system-telemetry-external-approval-validator",

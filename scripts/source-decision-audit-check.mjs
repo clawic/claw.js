@@ -63,9 +63,23 @@ function requireStringArray(value, label, options = {}) {
   return value;
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function extractMarkdownDecisionRows(text, prefix) {
-  const pattern = new RegExp(`^\\|\\s*${prefix}-[0-9]+\\s*\\|`, "gm");
+  const pattern = new RegExp(`^\\|\\s*${escapeRegExp(prefix)}-[0-9]+\\s*\\|`, "gm");
   return text.match(pattern) ?? [];
+}
+
+function extractMarkdownPatternRows(text, pattern, label) {
+  try {
+    const regex = new RegExp(pattern, "gm");
+    return text.match(regex) ?? [];
+  } catch (error) {
+    fail(`${label}: invalid markdown row pattern ${error.message}`);
+    return [];
+  }
 }
 
 function sourceReviewRows(artifact) {
@@ -99,6 +113,21 @@ function validateEvidenceRefs(seed) {
   }
 }
 
+function validateSelectiveBackfill(seed) {
+  if (seed.historicalBackfill !== true) return;
+  if (seed.backfillTier !== "P0" && seed.backfillTier !== "P1") {
+    fail(`${seed.id}: historical backfill must declare backfillTier P0 or P1`);
+  }
+  if (typeof seed.backfillReason !== "string" || seed.backfillReason.length === 0) {
+    fail(`${seed.id}: historical backfill must declare backfillReason`);
+  }
+  if (typeof seed.backfillArtifactRef !== "string" || seed.backfillArtifactRef.length === 0) {
+    fail(`${seed.id}: historical backfill must declare backfillArtifactRef`);
+  } else if (seed.backfillArtifactRef.startsWith("docs/") || seed.backfillArtifactRef.startsWith("scripts/")) {
+    requireFile(seed.backfillArtifactRef.split("#")[0]);
+  }
+}
+
 function validateJsonSeed(seed) {
   const artifact = readJson(seed.artifactPath);
   const rows = sourceReviewRows(artifact);
@@ -128,10 +157,43 @@ function validateJsonSeed(seed) {
 
 function validateMarkdownSeed(seed) {
   const text = read(seed.artifactPath);
-  const rowPrefix = seed.id.includes("dense-data") ? "DQ" : "";
-  const rows = rowPrefix ? extractMarkdownDecisionRows(text, rowPrefix) : [];
-  if (rowPrefix && rows.length < seed.minimumDecisionRows) {
-    fail(`${seed.id}: expected at least ${seed.minimumDecisionRows} ${rowPrefix} rows, found ${rows.length}`);
+  const rowRequirements = [];
+  if (typeof seed.markdownRowPrefix === "string") {
+    rowRequirements.push({
+      label: seed.markdownRowPrefix,
+      minimumDecisionRows: seed.minimumDecisionRows,
+      rows: extractMarkdownDecisionRows(text, seed.markdownRowPrefix),
+    });
+  }
+  for (const requirement of seed.markdownRowPrefixes ?? []) {
+    rowRequirements.push({
+      label: requirement.prefix,
+      minimumDecisionRows: requirement.minimumDecisionRows,
+      rows: extractMarkdownDecisionRows(text, requirement.prefix),
+    });
+  }
+  if (typeof seed.markdownRowPattern === "string") {
+    rowRequirements.push({
+      label: seed.markdownRowPatternLabel ?? "markdownRowPattern",
+      minimumDecisionRows: seed.minimumDecisionRows,
+      rows: extractMarkdownPatternRows(text, seed.markdownRowPattern, `${seed.id}.markdownRowPattern`),
+    });
+  }
+  if (rowRequirements.length === 0) {
+    fail(`${seed.id}: markdown source audits must declare markdownRowPrefix, markdownRowPrefixes, or markdownRowPattern`);
+  }
+  for (const requirement of rowRequirements) {
+    if (typeof requirement.label !== "string" || requirement.label.length === 0) {
+      fail(`${seed.id}: markdown row requirement missing label`);
+      continue;
+    }
+    if (typeof requirement.minimumDecisionRows !== "number" || requirement.minimumDecisionRows < 1) {
+      fail(`${seed.id}: markdown row requirement ${requirement.label} missing minimumDecisionRows`);
+      continue;
+    }
+    if (requirement.rows.length < requirement.minimumDecisionRows) {
+      fail(`${seed.id}: expected at least ${requirement.minimumDecisionRows} ${requirement.label} rows, found ${requirement.rows.length}`);
+    }
   }
   requireSnippet(seed.artifactPath, seed.sourceConversationId);
   if (seed.sourcePlanId) requireSnippet(seed.artifactPath, seed.sourcePlanId);
@@ -152,6 +214,7 @@ function validateRegistry() {
   if (registry.schemaVersion !== 1) fail("registry.schemaVersion must be 1");
   if (registry.canonicalDoc !== "docs/governance/source-decision-audits.md") fail("registry.canonicalDoc drifted");
   if (registry.forwardOnly !== true) fail("registry.forwardOnly must be true");
+  if (registry.selectiveHistoricalBackfill !== true) fail("registry.selectiveHistoricalBackfill must be true");
   const statuses = requireStringArray(registry.statusVocabulary, "registry.statusVocabulary", { nonEmpty: true });
   if (JSON.stringify(statuses) !== JSON.stringify(allowedStates)) {
     fail(`registry.statusVocabulary must be exactly ${allowedStates.join(", ")}`);
@@ -189,6 +252,7 @@ function validateRegistry() {
     assertPublicSafe(seed.id, seed);
     requireFile(seed.artifactPath);
     validateEvidenceRefs(seed);
+    validateSelectiveBackfill(seed);
     if (seed.artifactKind.startsWith("json")) validateJsonSeed(seed);
     if (seed.artifactKind.startsWith("markdown")) validateMarkdownSeed(seed);
   }
@@ -208,6 +272,8 @@ function runSelfTest() {
   if (mapped !== "blocked") fail("self-test: external_pending must normalize to blocked");
   const markdownRows = extractMarkdownDecisionRows("| DQ-001 | x |\n| QA-001 | y |\n", "DQ");
   if (markdownRows.length !== 1) fail("self-test: markdown row extraction failed");
+  const patternRows = extractMarkdownPatternRows("| `plan_scope` | x |\n| QA-001 | y |\n", "^\\| `[^`]+`\\s*\\|", "self-test");
+  if (patternRows.length !== 1) fail("self-test: markdown pattern row extraction failed");
   assertPublicSafe("self-test-public-alias", "private-session:not-a-path");
   assertPublicSafe("self-test-safe-ref", "docs/governance/source-decision-audits.md");
 }

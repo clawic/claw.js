@@ -29,6 +29,10 @@ field optionality, relationship meaning, or migration safety.
 - Canonical status requires a purpose plus evidence such as
   `human_recognizable`, `market_validated`, `multi_domain_reuse`, or
   `agent_useful`.
+- Promotion to canonical status follows the public RFC process in
+  `docs/governance/rfc-process.md`; accepted canonical type and canonical
+  user-profile attribute proposals require public review and maintainer
+  sign-off before implementation is treated as canon.
 - Fields are optional by default. Required fields need a reason tied to
   identity, integrity, lifecycle, or relation integrity.
 - Relations are semantic. New relation fields must identify whether they model
@@ -46,6 +50,17 @@ field optionality, relationship meaning, or migration safety.
 - Every canonical or registered-hidden collection must be represented in the
   domain surface registry with storage ownership and CLI coverage from
   database schema inspection through `claw db` CRUD/query.
+
+## Performance Impact
+
+A broad canonical catalog increases schema and registry size, but the decision keeps runtime cost bounded by centralizing definitions instead of letting every host or provider create duplicate stores. Catalog reads should be lazy, cacheable, and metadata-sized; search, indexing, import, and dense-domain operations that consume the catalog must budget their own storage, query, and index growth. Promotion evidence should include whether a collection creates high-churn sidecars or large derived indexes.
+
+## Decision Tensions
+
+- **Prioritized axes**: data canon, provider portability, schema reuse, discoverability, and agent-operable structure.
+- **Constrained axes**: provider-shaped completeness and catch-all entity growth are constrained so the catalog stays human-recognizable and reusable.
+- **Tradeoffs accepted**: new domains need evidence and naming review before becoming canonical; this slows expansion but prevents duplicate or vague data surfaces.
+- **Debt or pending evidence**: existing catalog breadth must keep gaining RFC, fixture, alias, and relation evidence as domains mature.
 
 ## Consequences
 

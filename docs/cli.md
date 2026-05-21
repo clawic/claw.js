@@ -113,6 +113,22 @@ The response uses the standard JSON envelope. The data payload contains
 reported with its working directory and whether it is local-only, host-required,
 or externally pending.
 
+## Supply-chain Verification
+
+`claw verify` checks concrete release evidence and plugin/sub-app packages
+against the supply-chain policy. It is local and offline: it verifies manifest
+shape, SHA-256 checksums when artifact files are present, SBOM references,
+provenance references, signature or signed-checksum references, package
+identity, lifecycle-script risk, and malware-review metadata.
+
+```bash
+claw verify release --manifest release-evidence.json --json
+claw verify plugin ./packages/openclaw-plugin --json
+```
+
+The repository-wide policy gate is `node ./scripts/supply-chain-security-check.mjs`.
+Release flows use `node ./scripts/supply-chain-security-check.mjs --release`.
+
 ## Evolution
 
 `claw evolution` is the agent-facing operator surface for public surface
@@ -247,6 +263,7 @@ claw inspect schemas --json
 claw inspect agent agent.ops --json
 claw inspect storage --json
 claw inspect command-intents --json
+claw inspect canonicity --json
 claw inspect dense-data --json
 claw inspect dense-gaps --json
 claw inspect dense-intents --json

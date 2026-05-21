@@ -45,6 +45,17 @@ reducers/actions, effects, and derived projections. Protocol and schema files
 may be larger only when they are canonical contract surfaces; docs, fixtures,
 codecs, migrations, and tests still split out.
 
+## Performance Impact
+
+The guard is static and reads source-size metadata during validation; it does not add runtime cost. The product impact is indirect: smaller responsibility scopes make hot paths, startup work, and retention bugs easier to isolate before large files hide expensive behavior. Existing oversized files remain baseline debt rather than a runtime regression by themselves.
+
+## Decision Tensions
+
+- **Prioritized axes**: maintainability, reviewability, agent usefulness, source ownership, and evidence for large changes.
+- **Constrained axes**: unrestricted single-file iteration is limited once file size starts hiding multiple responsibilities.
+- **Tradeoffs accepted**: some cohesive files may need split plans or baseline entries before further growth; that friction is accepted to keep future changes understandable and testable.
+- **Debt or pending evidence**: historical oversized files require extraction, deletion, or documented exceptions before they can grow materially.
+
 ## Guardrail
 
 `scripts/source-size-check.mjs` audits hand-authored source files. It ignores

@@ -29,6 +29,15 @@ gate in their path so stable surface drift fails before merge or publication.
 The gate requires both an active evolution record and a refreshed
 `public-surface-baseline.json`; covered-but-unsealed drift is still a failure.
 
+Evolution work also inherits the
+[No Irreversible Data Loss](../governance/no-irreversible-data-loss/README.md)
+guardrail. Migrations, rollback, backup, repair, imports, exports, and sync
+apply operations must declare recovery class, pre-mutation snapshot or
+rebuildability, redacted receipts, and approval policy before they can replace
+or remove durable user state. Existing gaps are tracked in the no-data-loss
+baseline; new destructive/data-moving growth must add policy evidence instead
+of growing the baseline silently.
+
 ## Files
 
 - `schema.json`: machine-readable record schema.

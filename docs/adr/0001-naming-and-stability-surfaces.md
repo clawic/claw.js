@@ -17,6 +17,17 @@ ports, protocol fields, database names, event names, docs, examples, templates,
 and agent instructions. Do not add a new public name in these areas without
 updating this ADR or adding a successor ADR.
 
+## Performance Impact
+
+Naming itself has no runtime hot path, but this ADR fixes ports, paths, database names, cache locations, sockets, and protocol fields that determine how many services start and where persistent state grows. The performance effect is indirect: stable names reduce compatibility shims, duplicate migrations, stale cache roots, and unnecessary service probes. Any implementation that creates a new long-lived process, cache, socket, or database under these names must still classify its own resource behavior separately.
+
+## Decision Tensions
+
+- **Prioritized axes**: canon and semantic coherence, public surface stability, discoverability, storage clarity, and migration safety.
+- **Constrained axes**: compatibility with pre-public accidental names is intentionally constrained while the project can still rename without harming public users.
+- **Tradeoffs accepted**: contributors must update docs, registries, examples, and tests when introducing stable names; the cost is accepted because name drift becomes much more expensive after V1.
+- **Debt or pending evidence**: existing legacy references remain cleanup debt until the registered guards and migration reviews classify or remove them.
+
 ## Frozen values summary
 
 - Framework/product name: `ClawJS`.

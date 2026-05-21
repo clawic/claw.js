@@ -56,6 +56,17 @@ choices.
 - `qa/scenarios` is the canonical home for agentic/manual/live validation
   scenarios that cannot be fully automated.
 
+## Performance Impact
+
+The lane model adds validation work, but it protects everyday performance by keeping the default gates hermetic and bounded while reserving host, device, live, and release checks for cases that need them. It prevents expensive real services, paid prompts, and physical-device validation from running accidentally. Suite runtime, quarantine age, coverage budgets, and release-lane cost remain measured through the test runners and QA ledgers.
+
+## Decision Tensions
+
+- **Prioritized axes**: reliability and evidence, boundary ownership, external-pending honesty, privacy, and release confidence.
+- **Constrained axes**: one universal always-run suite is rejected in favor of lanes that match real risk and dependency cost.
+- **Tradeoffs accepted**: authors must choose the correct lane and maintain QA scenarios for non-automatable cases; that is acceptable to avoid false proof from cheap tests or unsafe live validation.
+- **Debt or pending evidence**: physical, provider, and signed-host checks may remain EXTERNAL PENDING only when hermetic coverage and scenario docs exist.
+
 ## ClawJS runner policy
 
 - ClawJS uses Vitest for TypeScript unit and integration tests.

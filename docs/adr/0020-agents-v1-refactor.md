@@ -65,6 +65,17 @@ expiry. The central access gate rejects direct `read`/`write`/`execute`
 requests against secret/vault resources even when all planes contain matching
 allow grants; only `lease_secret` can pass into the broker flow.
 
+## Performance Impact
+
+Centralizing agents avoids duplicate rosters, stores, and runtime-specific identity graphs, but the domain can grow into memory, sessions, skills, model preferences, and channel placements. Implementations must keep agent lookup, roster projection, migration, and permission checks lazy and indexed. Runtime execution, model calls, memory hydration, and channel fan-out are outside this ADR's static decision and need separate performance evidence.
+
+## Decision Tensions
+
+- **Prioritized axes**: agent identity canon, authority boundaries, migration safety, channel consistency, and user sovereignty over agent state.
+- **Constrained axes**: deployment-shaped or app-local agent concepts are constrained so broad access is not inferred from a UI roster or provider placement.
+- **Tradeoffs accepted**: legacy company-agent rows need migration and fallback handling; the complexity is accepted to prevent parallel agent identities from gaining inconsistent permissions.
+- **Debt or pending evidence**: old stores, runtime placements, and channel integrations must keep proving they consume canonical agents records.
+
 ## Enforcement
 
 The first implementation slice is model plus gates:

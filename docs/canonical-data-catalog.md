@@ -61,6 +61,13 @@ provider-shaped payloads.
 
 ## Canonical Status
 
+Promotion to canonical status follows the public
+[RFC process](./governance/rfc-process.md). A built-in collection can be added
+as implementation work only after the RFC record demonstrates the constitutional
+criterion it relies on and maintainer sign-off is recorded. Private notes,
+local sessions, and maintainer-only discussions do not satisfy the public RFC
+requirement.
+
 A collection may be canonical when it satisfies at least one evidence tag:
 
 | Evidence tag | Meaning |

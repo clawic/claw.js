@@ -71,6 +71,17 @@ Sensitive domains remain gated by metadata and signed-host ownership. Node must
 not become the owner of native permissions, grants, approvals, secrets, or host
 audit.
 
+## Performance Impact
+
+The registry is metadata and should stay cheap to load, inspect, and validate. It reduces runtime drift by making domains explicit before CLI and database routes fan out into separate implementations. Implementations that query large collections, generate CLI output, or bridge service runtimes must still use pagination, source-local fast paths, and focused tests for their own cost.
+
+## Decision Tensions
+
+- **Prioritized axes**: domain ownership, database-to-CLI traceability, discoverability, and semantic coherence across packages and services.
+- **Constrained axes**: ad hoc module naming and implicit package boundaries are constrained so folders do not pretend to be product contracts.
+- **Tradeoffs accepted**: every durable domain surface needs registry classification before it becomes public; this slows casual additions but makes route and ownership review possible.
+- **Debt or pending evidence**: older domains and aliases need continued classification until registry, CLI, docs, and storage agree.
+
 ## Surface Parity
 
 - **Human surface**: docs, ADRs, module manifests, and host-facing discovery

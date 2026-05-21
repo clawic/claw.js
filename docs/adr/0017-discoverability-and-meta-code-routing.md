@@ -45,6 +45,17 @@ durable decisions and guardrails must point to an ADR, docs page, registry, or
 test. Decision-like comment markers such as `CANON`, `DECISION`, or
 `GUARDRAIL` must include a canonical reference.
 
+## Performance Impact
+
+Discoverability records and generated docs add static metadata, not runtime work. CLI search and inspect checks must stay deterministic and bounded by the registry and local manifests. The benefit is lower agent search cost and fewer misrouted changes; any surface discovered through this system still owns its runtime performance separately.
+
+## Decision Tensions
+
+- **Prioritized axes**: discoverability, traceability, agent routing, governance enforceability, and public/private hygiene.
+- **Constrained axes**: hidden instructions and undocumented meta-code are constrained even when they would be faster to add locally.
+- **Tradeoffs accepted**: durable artifacts need registry entries, search terms, guards, and review dates; this maintenance cost is accepted because unreachable rules behave like optional rules.
+- **Debt or pending evidence**: inherited route debt remains in baselines until every important ADR, skill, guard, and manifest is reachable within the route budget.
+
 ## Surface Parity
 
 - **Human surface**: `AGENTS.md`, `CLAUDE.md`, `docs/decision-map.md`, and

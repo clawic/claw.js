@@ -54,6 +54,17 @@ collections. It is not a duplicate database. First-wave systems default to
 `core.sqlite`; sidecars are allowed only for technical reasons such as search,
 runtime, high-churn logs, or large blobs.
 
+## Performance Impact
+
+Dense data can become heavy because it spans broad catalogs, relations, semantic views, validations, imports, and orchestration. The ADR keeps the model registry-driven and layered so domain packs can declare operations without forcing all data, mappings, or views into startup. Implementations must measure catalog load, query plans, index size, import/export cost, and long-session memory behavior for high-density domains.
+
+## Decision Tensions
+
+- **Prioritized axes**: data richness, canonical operations, domain portability, agent usefulness, and cross-domain composition.
+- **Constrained axes**: parallel specialized apps and unbounded domain-specific abstractions are constrained in favor of shared primitives and registries.
+- **Tradeoffs accepted**: dense domains need more modeling and validation before they feel complete; that is accepted to avoid one-off schemas that cannot interoperate.
+- **Debt or pending evidence**: regulated, provider-backed, and high-volume domains need continued fixtures, performance baselines, and external-pending records before full closure.
+
 ## CLI surface
 
 Human-facing nouns are top-level routes. Domain portals and acronyms are also

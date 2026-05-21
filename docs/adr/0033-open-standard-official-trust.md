@@ -49,6 +49,17 @@ verifiable.
   checksums, signatures, provenance, and host/build identity. This ADR does not
   implement that command.
 
+## Performance Impact
+
+The trust taxonomy is mostly documentation and release metadata, so it adds no runtime cost by itself. It can add release checks, provenance validation, and identity verification work for official artifacts, but those are bounded publication gates rather than product hot paths. Source and community builds must not be slowed by checks that only official release channels require.
+
+## Decision Tensions
+
+- **Prioritized axes**: openness, user trust, truthful compatibility, public/private hygiene, and official artifact integrity.
+- **Constrained axes**: exclusive distribution control and ambiguous endorsement language are constrained so forks and compatible implementations remain legitimate without confusing users.
+- **Tradeoffs accepted**: official builds need clearer marks, provenance, and release discipline; that cost is accepted to keep open-source freedom and upstream trust distinct.
+- **Debt or pending evidence**: release channels, package metadata, trademark guidance, and compatibility claims must keep being checked as distribution surfaces expand.
+
 ## Surface Parity
 
 - **Human surface**: public docs explain official/source/community/compatible

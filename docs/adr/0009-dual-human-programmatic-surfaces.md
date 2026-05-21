@@ -62,6 +62,17 @@ SDK namespace, or durable user-facing data domain must declare its surface
 coverage. If a capability is intentionally one-sided, the ADR must state why
 and classify the missing surface.
 
+## Performance Impact
+
+Surface parity can add adapters, tests, and projections, but it prevents a single interface from becoming the only expensive path to user value. Human UI, CLI, SDK, service API, MCP, and Relay surfaces must not all eagerly initialize for every capability; each implementation still needs lazy activation, backpressure, and bounded persistence. The parity requirement is design coverage, not permission to multiply always-on runtimes.
+
+## Decision Tensions
+
+- **Prioritized axes**: user sovereignty, portability, surface parity, accessibility for agents and humans, and durable value.
+- **Constrained axes**: UI-only or CLI-only shortcuts are constrained for important capabilities even when they would be faster to ship.
+- **Tradeoffs accepted**: meaningful capabilities need at least two usable access paths or a classified gap; the extra work is accepted to avoid lock-in to one app, model, or workflow.
+- **Debt or pending evidence**: existing one-surface capabilities must be completed, classified as gaps, or tracked through operational coverage.
+
 ## Enforcement
 
 - `docs/interface-matrix.md` is the human-readable coverage matrix.

@@ -53,6 +53,17 @@ that they are not executable plans.
 The surface is inspectable through `claw inspect command-intents` and the route
 graph route `cli.commandIntentResolution`.
 
+## Performance Impact
+
+Intent resolution is local, deterministic, and non-executing, so it should stay bounded by registry size and simple matching. It prevents unknown command paths from triggering speculative work, network calls, or hidden automation. Promotion of candidates into real commands must classify any new runtime, storage, or service cost separately.
+
+## Decision Tensions
+
+- **Prioritized axes**: CLI discoverability, controlled automation, traceability of user demand, and safe handling of unknown actions.
+- **Constrained axes**: automatic alias activation and free-form command execution are constrained so intent evidence cannot become ambient authority.
+- **Tradeoffs accepted**: unknown phrases may become recorded gaps instead of immediately useful commands; that is accepted to keep command growth explicit and reviewable.
+- **Debt or pending evidence**: candidate aliases and gaps require later review, promotion criteria, and tests before they become public behavior.
+
 ## Consequences
 
 The CLI gets closer to the agent ideal where arbitrary action attempts produce

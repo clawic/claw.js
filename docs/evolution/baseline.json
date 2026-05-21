@@ -191,6 +191,35 @@
       "adr": "docs/adr/0031-progressive-modularity-and-zero-surprise-install.md",
       "notes": "Registers additive setup and modules CLI surfaces for zero-surprise progressive modularity, including explicit module enablement before niche areas can execute.",
       "createdAt": "2026-05-19T00:00:00.000Z"
+    },
+    {
+      "id": "evo_portable_archive_contract",
+      "title": "Portable archive contract surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.cli.command.archive",
+        "claw.api.archives.plans",
+        "claw.api.archives.exports",
+        "claw.api.archives.verifications",
+        "claw.api.archives.importPreviews",
+        "claw.api.archives.restores",
+        "claw.schema.portableArchive.manifest.v1",
+        "claw.schema.portableArchive.plan.v1",
+        "claw.schema.portableArchive.verificationReport.v1",
+        "claw.schema.portableArchive.importPreview.v1",
+        "claw.schema.portableArchive.restoreReport.v1"
+      ],
+      "tests": [
+        "packages/clawjs-core/src/portable-archive.test.ts",
+        "packages/clawjs/src/index.test.ts",
+        "scripts/portable-archive-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0038-portable-archive-contract.md",
+      "notes": "Registers additive portable archive CLI, API, schema, and restore report surfaces so backup/export/import/restore remains a user-right contract and public surface drift is sealed.",
+      "createdAt": "2026-05-21T00:00:00.000Z"
     }
   ]
 }

@@ -16,6 +16,17 @@ The program fails only clear mechanical debt: local unused code, true orphan fil
 
 Public APIs, package entrypoints, CLI/router/registry/protocol surfaces, canonical docs, fixtures, stable registries, and compatibility names are retained as contract. Future intent must live in an issue, backlog entry, ADR, or canonical doc; dormant code alone is not enough.
 
+## Performance Impact
+
+The hygiene program runs in validation and may invoke static analyzers, but it adds no product runtime cost. Removing dead code, stale dependencies, orphan assets, and invalid baselines can reduce install size, build time, and hidden startup/import work over time. Expensive semantic categories remain report-only until calibrated so the guard does not block useful work with noisy analysis.
+
+## Decision Tensions
+
+- **Prioritized axes**: maintainability, public-surface safety, dependency discipline, agent clarity, and testable cleanup.
+- **Constrained axes**: broad destructive cleanup and semantic guesses are constrained; the program acts on clear mechanical debt first.
+- **Tradeoffs accepted**: some ambiguous APIs, assets, and duplicates stay in report-only mode longer; this is accepted to avoid deleting active or public surfaces by mistake.
+- **Debt or pending evidence**: baseline categories must keep shrinking or gain explicit classification as the analyzers and ownership maps improve.
+
 ## Guardrail
 
 `scripts/code-hygiene-check.mjs` validates the decision checklist, baseline schema, expiration policy, ledger, JSON/Markdown report pair, and required skills. Knip is the pinned TS/JS scanner after entrypoints are configured. Periphery is the versioned Swift scanner, report-only until calibrated.

@@ -160,6 +160,17 @@ action, allow/deny decision, and `hostAuditStore: signed_host_audit`. It remains
 no-write and marks `signed_host_audit_persistence` as external pending until a
 signed host audit store physically persists the event.
 
+## Performance Impact
+
+Remote gateway and sync work can consume network, disk, battery, CPU, retry queues, and long-running background resources. The redesign must therefore use explicit coordinators, gateway contracts, cache/authority manifests, backoff, secret-reference leases, and sync handoff receipts rather than implicit always-on mesh behavior. Live network and multi-device evidence are required before claiming production performance or reliability.
+
+## Decision Tensions
+
+- **Prioritized axes**: remote authority, sync integrity, provider portability, secret safety, and observable handoff.
+- **Constrained axes**: peer-to-peer convenience and automatic background sync are constrained until authority, leases, and conflict behavior are explicit.
+- **Tradeoffs accepted**: remote flows need more manifests, receipts, and conformance checks; this is accepted because silent remote drift can corrupt data or leak authority.
+- **Debt or pending evidence**: live remote mesh, provider, device, and gateway conformance evidence remains external-pending where physical prerequisites are unavailable.
+
 ## Enforcement
 
 The surface route graph must register:

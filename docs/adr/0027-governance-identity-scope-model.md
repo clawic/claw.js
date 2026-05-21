@@ -84,6 +84,17 @@ scope is the local principal's default workspace and the local host. This keeps
 zero-config performance and storage simple while preserving a migration path to
 shared use.
 
+## Performance Impact
+
+The governance graph adds more concepts than a flat owner field, but the default individual/local case stays implicit and cheap. Performance depends on indexed grants, restrictions, bindings, and projections so reads do not walk a full authority graph unnecessarily. Future implementation must measure effective permission checks, project/workspace switching, and audit growth for shared scopes.
+
+## Decision Tensions
+
+- **Prioritized axes**: authority correctness, least privilege, semantic clarity, delegation safety, and solo-user simplicity.
+- **Constrained axes**: generic owner, tenant, and organization-shortcut models are constrained because they hide the difference between grouping, stewardship, and permission authority.
+- **Tradeoffs accepted**: the model is more verbose than flat ownership fields; that cost is accepted to avoid irreversible access and migration mistakes.
+- **Debt or pending evidence**: existing vocabulary debt and authority checks must be classified, guarded, and eventually migrated to explicit governance concepts.
+
 ## Surface Parity
 
 - **Human surface**: Clawix shows workspace/project/entity context, sharing,

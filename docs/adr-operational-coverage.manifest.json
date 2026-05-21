@@ -53,6 +53,219 @@
           "command": "claw inspect why search --json"
         }
       ]
+    },
+    {
+      "adr": "docs/adr/0040-no-irreversible-data-loss.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/no-irreversible-data-loss-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/governance/no-irreversible-data-loss/README.md"
+      ],
+      "programmaticSurface": [
+        "scripts/no-irreversible-data-loss-check.mjs"
+      ],
+      "persistence": [
+        "docs/governance/no-irreversible-data-loss/manifest.json",
+        "docs/governance/no-irreversible-data-loss/baseline.json",
+        "docs/governance/no-irreversible-data-loss/fixtures.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect why search --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0038-portable-archive-contract.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/portable-archive-governance-check.mjs",
+        "scripts/discoverability-check.mjs",
+        "scripts/adr-operational-coverage-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/portable-archive-contract.md",
+        "../Clawix/clawix/docs/adr/0024-portable-archive-contract-mirror.md"
+      ],
+      "programmaticSurface": [
+        "packages/clawjs-core/src/portable-archive.ts",
+        "packages/clawjs/src/cli-archive-command.ts",
+        "packages/clawjs-core/src/surface-registry.ts"
+      ],
+      "persistence": [
+        "docs/discoverability.registry.json",
+        "docs/evolution/public-surface-baseline.json",
+        "docs/constitution.assertions.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect commands --json"
+        },
+        {
+          "command": "claw inspect schemas --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0041-zero-accidental-work.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/zero-accidental-work-guard.mjs",
+        "scripts/verify-cli-base-imports.mjs",
+        "scripts/progressive-modularity-guard.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/api.md"
+      ],
+      "programmaticSurface": [
+        "scripts/zero-accidental-work-guard.mjs",
+        "packages/clawjs-node/src/create-claw.ts",
+        "packages/clawjs-node/src/storage/store.ts"
+      ],
+      "persistence": [
+        "docs/discoverability.registry.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect commands --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0042-streaming-backpressure-contract.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/streaming-backpressure-contract-check.mjs",
+        "scripts/discoverability-check.mjs",
+        "scripts/adr-operational-coverage-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "../Clawix/clawix/docs/adr/0026-streaming-backpressure-contract-mirror.md"
+      ],
+      "programmaticSurface": [
+        "packages/clawjs-core/src/streaming-backpressure.ts",
+        "packages/clawjs-core/src/surface-registry.ts",
+        "scripts/streaming-backpressure-contract-check.mjs"
+      ],
+      "persistence": [
+        "docs/discoverability.registry.json",
+        "docs/adr-operational-coverage.manifest.json",
+        "docs/governance/streaming-backpressure/source-review.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect route chat.localDesktop --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0043-streaming-backpressure-bounded-queues.md",
+      "guardrails": [
+        "scripts/boundedness-guard.mjs",
+        "scripts/surface-resource-contract-guard.mjs",
+        "scripts/performance-governance-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md"
+      ],
+      "programmaticSurface": [
+        "scripts/boundedness-guard.mjs",
+        "scripts/surface-resource-contract-guard.mjs"
+      ],
+      "persistence": [
+        "docs/boundedness-baseline.json",
+        "docs/surface-resource-contract-baseline.json",
+        "docs/discoverability.registry.json"
+      ],
+      "cliInspect": [
+        {
+          "command": "claw inspect routes --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0044-launch-and-idle-contract.md",
+      "guardrails": [
+        "scripts/performance-governance-check.mjs",
+        "scripts/surface-resource-contract-guard.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md"
+      ],
+      "programmaticSurface": [
+        "scripts/performance-governance-check.mjs",
+        "scripts/surface-resource-contract-guard.mjs"
+      ],
+      "persistence": [
+        "docs/surface-resource-contract-baseline.json",
+        "docs/discoverability.registry.json"
+      ],
+      "cliInspect": [
+        {
+          "command": "claw inspect routes --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0045-ui-state-invalidation-high-churn-data-boundary.md",
+      "guardrails": [
+        "scripts/surface-resource-contract-guard.mjs",
+        "scripts/performance-governance-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md"
+      ],
+      "programmaticSurface": [
+        "scripts/surface-resource-contract-guard.mjs"
+      ],
+      "persistence": [
+        "docs/surface-resource-contract-baseline.json",
+        "docs/discoverability.registry.json"
+      ],
+      "cliInspect": [
+        {
+          "command": "claw inspect routes --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0046-problem-to-guardrail-loop.md",
+      "guardrails": [
+        "scripts/problem-to-guardrail-check.mjs",
+        "scripts/adr-operational-coverage-check.mjs",
+        "scripts/discoverability-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/agent-rules/index.md",
+        "skills/adr-to-guardrail/SKILL.md",
+        "skills/code-review-risk/SKILL.md"
+      ],
+      "programmaticSurface": [
+        "scripts/problem-to-guardrail-check.mjs",
+        "scripts/adr-operational-coverage-check.mjs"
+      ],
+      "persistence": [
+        "docs/discoverability.registry.json",
+        "docs/adr-operational-coverage.manifest.json"
+      ],
+      "cliInspect": [
+        {
+          "command": "claw inspect why search --json"
+        }
+      ]
     }
   ]
 }

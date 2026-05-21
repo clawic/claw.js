@@ -52,6 +52,17 @@ protected by Vitest coverage. The matrix starts from the official Bot API 10.0
 surface published on 2026-05-08 and must be updated whenever Telegram ships a
 new official method or delivery surface.
 
+## Performance Impact
+
+The QA Lab keeps default validation light by separating hermetic fixtures from explicit live lanes. Provider snapshots and coverage matrices add documentation and fixture maintenance, not runtime cost. Live checks can consume network, provider quota, time, and sometimes money, so they remain opt-in, bounded, and recorded as external validation rather than part of ordinary fast paths.
+
+## Decision Tensions
+
+- **Prioritized axes**: reliability, provider truth, security, consent, auditability, and external-pending honesty.
+- **Constrained axes**: claims of connector completeness are constrained until the official provider surface and live/manual gaps are classified.
+- **Tradeoffs accepted**: connector work must maintain provider matrices and fixtures before calling a surface complete; this is accepted because partial connectors can otherwise look safer than they are.
+- **Debt or pending evidence**: real provider coverage, destructive operations, paid flows, and physical approval paths may remain pending only with explicit lab records.
+
 ## Consequences
 
 - Connector reviews start by comparing against the provider's official API, not

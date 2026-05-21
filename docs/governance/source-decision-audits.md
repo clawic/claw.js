@@ -36,6 +36,21 @@ audit, while an `implemented` or `documented` row lacks evidence refs, while a
 `blocked` row lacks remaining-work and reentry details, or while a `superseded`
 row lacks the replacing decision or artifact reference.
 
+## Selective Historical Backfill
+
+The registry stays forward-only for normal future work. The explicit
+`selectiveHistoricalBackfill` exception is for discovered historical P0/P1
+decisions whose closure impact would otherwise depend on memory, private
+sessions, or reinterpreted docs. Eligible backfills affect durable
+architecture, security/privacy/legal, storage, permissions, release gates,
+rescue/compatibility, native control, governance, or public activation.
+
+Historical backfill seeds must name `historicalBackfill`, `backfillTier`,
+`backfillReason`, and a stable public-safe `backfillArtifactRef`. This is not a
+full historical audit. When old P0/P1 closure-impacting decisions are found,
+they must either be added as selective backfill seeds or explicitly left out of
+scope with a public-safe reason.
+
 ## Seed Precedents
 
 `docs/governance/source-decision-audits.registry.json` records the initial

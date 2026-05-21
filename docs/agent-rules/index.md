@@ -20,7 +20,18 @@ lanes. Do not duplicate long ADR rationale here.
   [Performance Governance](../governance/performance-governance.md) and
   [ADR 0036](../adr/0036-performance-governance.md) for whole-computer
   resource impact across CPU, RAM, GPU/Neural Engine, disk, network, battery,
-  thermals, idle behavior, and growth.
+  thermals, idle behavior, growth, resource contracts, streaming/backpressure,
+  launch/idle, high-churn UI boundaries, P1 event-loop hot-path checks through
+  `scripts/hot-path-guard.mjs`, and Idle Quiescence Contract P1 through
+  `scripts/idle-quiescence-check.mjs`.
+- Problem-to-Guardrail loop:
+  [ADR 0046](../adr/0046-problem-to-guardrail-loop.md) requires detected
+  problems to close as `guard/test añadido`, `ADR/regla añadida`, or
+  `deuda explícita con expiry`.
+- Adoption/canonicity governance:
+  [Adoption And Canonicity Governance](../governance/adoption-canonicity.md)
+  and [ADR 0041](../adr/0041-adoption-and-canonicity-governance.md) for
+  `stable`, `canonical`, any-human, PMF, and adoption claims.
 - Framework/host boundary: [Host Ownership](../host-ownership.md) and
   [ADR 0001](../adr/0001-claw-framework-host-boundary.md).
 - Storage and data placement: [Data Storage Boundary](../data-storage-boundary.md).
@@ -57,7 +68,8 @@ lanes. Do not duplicate long ADR rationale here.
 Use `skills/<id>/SKILL.md` instead of loading long procedures into prompts.
 
 - Constitution and ADR alignment: `constitution-drift-audit`,
-  `architecture-drift-repair`, `adr-to-guardrail`, `decision-map-maintenance`.
+  `architecture-drift-repair`, `adr-to-guardrail`, `decision-map-maintenance`,
+  `adoption-canonicity-review`.
 - Stable surfaces: `naming-surface-audit`, `surface-registry-alignment`,
   `surface-route-work`, `cli-agent-surface-work`,
   `source-file-boundary-refactor`, `progressive-modularity-review`.
@@ -99,14 +111,23 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
 - Sensitive native permissions, approvals, grants, audit, LaunchAgents, Mach
   services, and native execution belong to the active signed host, not Node.
 - Stable capabilities are complete only when their human and programmatic
-  surfaces are registered or their gaps are explicitly classified.
+  surfaces are registered or their gaps are explicitly classified; promotion to
+  `stable` or `canonical` also requires an adoption/canonicity packet.
 - New API, UI, CLI, schema, storage key, route, permission, and feature flag
   surfaces are incomplete without `surfaceNarrative` tying them to concept,
   authorizing decision, completing surface, and non-inference boundary.
+- New runtime, UI, storage, stream, cache, queue, IPC, daemon, worker, and
+  long-running-agent surfaces are incomplete without `resourceContract` for
+  startup, idle, memory, streaming, storage, hot-path, scale, and validation
+  behavior, unless they are pre-existing expiring baseline debt.
+- Every problem detected by an agent or review closes with one durable output:
+  `guard/test añadido`, `ADR/regla añadida`, or `deuda explícita con expiry`.
 - Runtime-critical work starts from `claw inspect show|neighbors|routes`.
 - Performance-sensitive work classifies whole-computer resource impact before
   durable acceptance: speed, CPU, RAM, GPU/Neural Engine, disk, network,
-  battery, thermals, idle behavior, and growth.
+  battery, thermals, idle behavior, growth, bounded retained state, hot-path
+  cost, and sleep behavior for timers, pollers, schedulers, watchers,
+  reconnects, refreshes, telemetry loops, and diagnostic probes.
 - Installing the base `claw` CLI must be zero-surprise: no implicit host
   startup, OS permission prompt, app launch, model/browser download, provider
   network call, or niche domain activation.

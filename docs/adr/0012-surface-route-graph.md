@@ -48,6 +48,12 @@ route, the decision that authorizes it, the human and programmatic surfaces
 that complete it, and the boundary of what must not be inferred from the
 route's existence.
 
+Each new route also records `resourceContract`: what starts, what stays idle,
+what memory is retained, how streaming/backpressure/cancellation works, what
+storage is written and retained, which hot paths are touched, how the route
+scales at 10, 1,000, and 100,000 items where applicable, and which test or
+measurement proves the contract.
+
 `claw inspect` is the public read-only view for agents. It must expose:
 
 - `claw inspect show <id>` with the node fiche plus incoming edges, outgoing
@@ -79,6 +85,17 @@ Relay is registered as a first-class critical node. It is not promoted to the
 canonical local API; it remains the remote-safe control plane described by ADR
 0009.
 
+## Performance Impact
+
+The route graph is metadata plus inspect output, so the guard itself should be bounded by manifest size and static validation. Its product performance value is preventing hidden cross-surface routes that accidentally start daemons, bridge loops, or broad storage reads. Runtime route implementations still need their own latency, IPC, network, and background-work budgets.
+
+## Decision Tensions
+
+- **Prioritized axes**: route traceability, ownership, surface parity, validation evidence, and agent navigation across complex systems.
+- **Constrained axes**: implicit architecture memory and undocumented bridge or Relay paths are constrained even when a direct patch would be quicker.
+- **Tradeoffs accepted**: authors must register nodes, edges, routes, and narratives for durable paths; this added metadata is accepted to make future work reviewable and testable.
+- **Debt or pending evidence**: inherited route gaps remain baseline debt until manifest entries and inspect evidence cover the full transverse workflows.
+
 ## Enforcement
 
 `surface-route-graph-guard` fails when required runtime-critical nodes,
@@ -92,6 +109,9 @@ and runtime-critical debt is not accepted as implicit.
 `surface-narrative-guard` additionally fails new routes whose conceptual relato
 is absent, while existing missing route narratives are bounded by
 `docs/surface-narrative-baseline.json`.
+`surface-resource-contract-guard` fails new nodes or routes whose operational
+resource contract is absent, while existing missing contracts are bounded by
+`docs/surface-resource-contract-baseline.json`.
 
 Language-specific manifests may continue to be node-only while Clawix closes
 its base map. When a manifest does include `edges` or `routes`, `claw inspect`

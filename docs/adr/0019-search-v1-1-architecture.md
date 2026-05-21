@@ -141,6 +141,17 @@ Sensitive queries and action execution attempts are recorded with compact
 context so admin/debug surfaces can inspect risky search usage without mutating
 canonical application records.
 
+## Performance Impact
+
+Search is performance-sensitive by design: it touches indexes, sidecars, facets, UI latency, storage growth, and optional external sources. This ADR prioritizes source-local fast paths, federated fan-out, and indexing policies so narrow searches do not require whole-world reads. Implementations must measure query latency, index growth, rebuild cost, cancellation, and background indexing before claiming closure.
+
+## Decision Tensions
+
+- **Prioritized axes**: user-visible speed, source ownership, search completeness, index boundedness, and programmatic inspectability.
+- **Constrained axes**: a single universal index and eager ingestion of every source are constrained to avoid heavy startup, disk, and memory behavior.
+- **Tradeoffs accepted**: each source must declare capabilities and indexing policy before joining root Search; this slows additions but keeps latency and relevance reviewable.
+- **Debt or pending evidence**: external sources, large-corpus baselines, rebuild measurements, and per-source ranking evidence remain staged work.
+
 ## Consequences
 
 Search can grow to many sources without one global query becoming the only

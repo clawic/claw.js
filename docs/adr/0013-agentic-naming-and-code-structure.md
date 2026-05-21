@@ -98,6 +98,17 @@ current task or duplicate obvious code are not useful.
 Barrel/index files are allowed for public surfaces and domain aggregators when
 they expose a clear map. They must not hide behavior.
 
+## Performance Impact
+
+The naming and structure guards are static checks and documentation routes, not runtime work. They improve performance investigations indirectly by making hot paths, storage surfaces, and protocol names easier for agents to find without loading unrelated code. Any new module, watcher, service, or cache introduced while following these rules still needs its own impact classification.
+
+## Decision Tensions
+
+- **Prioritized axes**: agent usefulness, semantic coherence, source discoverability, vocabulary stability, and maintainability.
+- **Constrained axes**: local stylistic freedom is constrained where it creates synonyms, hidden concepts, or misleading module boundaries.
+- **Tradeoffs accepted**: contributors must use canonical names even when local provider or UI vocabulary differs; this is accepted to reduce context cost and future migration ambiguity.
+- **Debt or pending evidence**: existing mixed vocabulary and source-shape debt remains tracked by guards and baselines until reclassified or removed.
+
 ## Guardrails
 
 `scripts/naming-shape-check.mjs` audits vocabulary drift, file naming, JSON/YAML

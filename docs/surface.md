@@ -326,6 +326,7 @@ The docs check script validates that every current export from
     ClawPersistentSurfaceStorageClass
     ClawPreV1VersionGovernancePolicy
     ClawProjectManifest
+    ClawResourceContract
     ClawRuntimeAppServer
     ClawRuntimeAppServerOptions
     ClawRuntimeAuthSource
@@ -347,6 +348,12 @@ The docs check script validates that every current export from
     ClawStableSurfaceStability
     ClawStoragePlatform
     ClawStorageRootsInput
+    ClawStreamingBackpressurePolicy
+    ClawStreamingBufferPolicy
+    ClawStreamingCancellationPolicy
+    ClawStreamingCoalescingPolicy
+    ClawStreamingPersistencePolicy
+    ClawStreamingSlowConsumerBehavior
     ClawSurfaceConnectionVisibility
     ClawSurfaceEdge
     ClawSurfaceEdgeType
@@ -980,6 +987,11 @@ The docs check script validates that every current export from
     OutcomeStoreOptions
     OutcomeWriteContext
     OutputLabelPolicy
+    PORTABLE_ARCHIVE_BACKUP_EXTENSION
+    PORTABLE_ARCHIVE_CLI_COMMAND
+    PORTABLE_ARCHIVE_EXPORT_EXTENSION
+    PORTABLE_ARCHIVE_MANIFEST_PATH
+    PORTABLE_ARCHIVE_SECRETS_EXTENSION
     PRODUCTIVITY_COLLECTION_DEFINITIONS
     PROVIDER_STATE_FILE
     PermissionRequirement
@@ -993,6 +1005,13 @@ The docs check script validates that every current export from
     PluginsObservedState
     PolicyRecord
     PollWatchOptions
+    PortableArchiveImportPreview
+    PortableArchiveManifestV1
+    PortableArchivePlan
+    PortableArchivePlanInput
+    PortableArchivePreviewInput
+    PortableArchiveRestoreReport
+    PortableArchiveVerificationReport
     PreserveManagedBlocksWriteOptions
     ProductivityAgenda
     ProductivityAgendaItem
@@ -1715,6 +1734,7 @@ The docs check script validates that every current export from
     clawChannelEvents
     clawChatAppStorageKeys
     clawCliCommandContractCatalog
+    clawCliCommandRegistry
     clawCliFlagContractCatalog
     clawClientContextSchema
     clawCodexExternalEventSamples
@@ -1734,6 +1754,7 @@ The docs check script validates that every current export from
     clawDeepLinkContractCatalog
     clawDeepLinkSchemes
     clawDefaultBindAddress
+    clawDefaultStreamingBackpressurePolicy
     clawDomainOwnershipEntriesV1
     clawDomainOwnershipMatrixV1
     clawDomainSchema
@@ -1794,6 +1815,7 @@ The docs check script validates that every current export from
     clawPackageBinContractCatalog
     clawPackageNameContractCatalog
     clawPersistentSurface
+    clawPersistentSurfaceRegistry
     clawPortContractCatalog
     clawPortRange
     clawPortSubranges
@@ -1825,6 +1847,7 @@ The docs check script validates that every current export from
     clawStableSurface
     clawStorageApiRoutes
     clawStorageFiles
+    clawStreamingBackpressurePolicyId
     clawStrictDdlObjectSources
     clawSurfaceRegistryVersion
     clawTemporalEvents
@@ -1931,6 +1954,10 @@ The docs check script validates that every current export from
     createNetworkRuleSuggestion
     createNodeTrustDecision
     createOutcomeStore
+    createPortableArchiveImportPreview
+    createPortableArchiveManifestFixture
+    createPortableArchivePlan
+    createPortableArchiveRestoreReport
     createRegulatedOutputLabels
     createRemoteAgentServiceExecutionReceipt
     createRemoteClientCacheSnapshot
@@ -2038,6 +2065,7 @@ The docs check script validates that every current export from
     ensureSecretReference
     ensureTelegramBotSecretReference
     epicRecordSchema
+    estimateUtf8Bytes
     evaluateAgentActionSeverity
     evaluateAgentAssignmentRoute
     evaluateAgentAutonomyPolicy
@@ -2318,6 +2346,24 @@ The docs check script validates that every current export from
     picoclawAdapter
     planNeedRouteGeneration
     policyRecordSchema
+    portableArchiveExternalSourceSchema
+    portableArchiveHashSchema
+    portableArchiveImportPreviewSchema
+    portableArchiveImportPreviewSchemaId
+    portableArchiveInventoryEntrySchema
+    portableArchiveInventoryKinds
+    portableArchiveManifestSchemaId
+    portableArchiveManifestV1Schema
+    portableArchivePlanSchema
+    portableArchivePlanSchemaId
+    portableArchiveRestoreReportSchema
+    portableArchiveRestoreReportSchemaId
+    portableArchiveRestoreStrategies
+    portableArchiveSchemaVersion
+    portableArchiveStatuses
+    portableArchiveStorageClasses
+    portableArchiveVerificationReportSchema
+    portableArchiveVerificationReportSchemaId
     previewDiff
     previewManagedBlockMutation
     previewWorkspaceFile
@@ -2559,6 +2605,7 @@ The docs check script validates that every current export from
     soulStateSchema
     splitConnectorCapabilityId
     splitFrontmatter
+    splitStreamingTextDelta
     splitTextIntoChunks
     stableProjectIdFromPath
     startCodeServer
@@ -2663,6 +2710,7 @@ The docs check script validates that every current export from
     validateSettingsUpdate
     validateWorkspace
     verifyActorAssertion
+    verifyPortableArchiveManifest
     waitForOpenClawGateway
     watchPolledValue
     watchProviderStatus

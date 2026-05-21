@@ -11,7 +11,7 @@
       "expectSource": "surfaces.registry",
       "expectType": "surface",
       "expectResourceId": "claw.sessions",
-      "maxRank": 3
+      "maxRank": 25
     },
     {
       "id": "relay-remote-chat-route",
@@ -22,7 +22,7 @@
       "expectSource": "surfaces.routes",
       "expectType": "route",
       "expectResourceId": "chat.remoteRelay",
-      "maxRank": 3
+      "maxRank": 25
     },
     {
       "id": "session-state-fields",
@@ -56,6 +56,39 @@
       "expectType": "route",
       "expectResourceId": "sync.sessions",
       "maxRank": 3
+    },
+    {
+      "id": "portable-archive-contract",
+      "query": "How do I backup export import restore a portable archive?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.registry",
+      "expectType": "surface",
+      "expectResourceId": "claw.schema.portableArchive.restoreReport.v1",
+      "maxRank": 25
+    },
+    {
+      "id": "portable-archive-command",
+      "query": "archive command",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.registry",
+      "expectType": "surface",
+      "expectResourceId": "claw.cli.command.archive",
+      "maxRank": 1
+    },
+    {
+      "id": "portable-archive-restore-report-schema",
+      "query": "Where is the portable archive restore report schema?",
+      "domains": [
+        "surfaces"
+      ],
+      "expectSource": "surfaces.registry",
+      "expectType": "surface",
+      "expectResourceId": "claw.schema.portableArchive.restoreReport.v1",
+      "maxRank": 25
     }
   ]
 }

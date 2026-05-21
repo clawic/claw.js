@@ -8,6 +8,12 @@ import path from "node:path";
 const scriptRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const today = new Date().toISOString().slice(0, 10);
 const allowedExemptions = new Set(["decisionMap", "guardrails", "surfaceParity", "cliInspect"]);
+const requiredDecisionTensionFields = [
+  "Prioritized axes",
+  "Constrained axes",
+  "Tradeoffs accepted",
+  "Debt or pending evidence",
+];
 
 function parseArgs(argv) {
   const args = { root: scriptRoot, profile: null, selfTest: false, json: false, cli: false };
@@ -103,12 +109,37 @@ function headingSection(text, heading) {
   return (next >= 0 ? rest.slice(0, next) : rest).trim();
 }
 
+function hasHeading(text, heading) {
+  const pattern = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "im");
+  return pattern.test(text);
+}
+
 function hasSurfaceParityInAdr(relativePath) {
   const section = headingSection(read(relativePath), "Surface Parity");
   return section.includes("Human surface")
     && section.includes("Programmatic surface")
     && section.includes("Persistence")
     && section.includes("Validation");
+}
+
+function validateAcceptedAdrRequiredSections(relativePath, errors) {
+  const text = read(relativePath);
+  for (const heading of ["Performance Impact", "Decision Tensions"]) {
+    if (!hasHeading(text, heading)) {
+      errors.push(`${relativePath} is accepted but missing ## ${heading}`);
+      continue;
+    }
+    if (headingSection(text, heading).trim().length === 0) {
+      errors.push(`${relativePath} has an empty ## ${heading} section`);
+    }
+  }
+
+  const tensions = headingSection(text, "Decision Tensions");
+  for (const field of requiredDecisionTensionFields) {
+    if (!tensions.includes(field)) {
+      errors.push(`${relativePath} Decision Tensions must include ${field}`);
+    }
+  }
 }
 
 function decisionMapMentions(adr) {
@@ -256,6 +287,8 @@ function runCheck() {
     const registryEntry = registryBySource.get(adr);
     const coverage = mergeCoverage(manifest.defaults, coverageByAdr.get(adr));
 
+    validateAcceptedAdrRequiredSections(adr, errors);
+
     if (!registryEntry) {
       errors.push(`${label} is accepted but missing from docs/discoverability.registry.json`);
     } else {
@@ -363,7 +396,7 @@ function baseFixture(overrides = {}) {
     ...overrides.registry,
   };
   return {
-    "docs/adr/0001-test.md": "# ADR 0001: Test\n\nStatus: Accepted\n\n## Decision\n\nDo it.\n",
+    "docs/adr/0001-test.md": "# ADR 0001: Test\n\nStatus: Accepted\n\n## Decision\n\nDo it.\n\n## Performance Impact\n\nStatic fixture only.\n\n## Decision Tensions\n\n- **Prioritized axes**: fixture coverage.\n- **Constrained axes**: production behavior.\n- **Tradeoffs accepted**: tiny test ADR.\n- **Debt or pending evidence**: none.\n",
     "docs/decision-map.md": "| Decision | Canonical document | Guardrail or validation |\n| --- | --- | --- |\n| Test | docs/adr/0001-test.md | scripts/guard.mjs |\n",
     "docs/discoverability.registry.json": `${JSON.stringify(registry, null, 2)}\n`,
     "docs/adr-operational-coverage.manifest.json": `${JSON.stringify(manifest, null, 2)}\n`,
@@ -384,6 +417,30 @@ function runSelfTest() {
   const missingRegistry = runFixture(baseFixture({ registry: { artifacts: [] } }));
   assert.notEqual(missingRegistry.status, 0);
   assert.match(`${missingRegistry.stderr}${missingRegistry.stdout}`, /discoverability\.registry/);
+
+  const missingPerformanceImpact = runFixture(baseFixture({
+    files: {
+      "docs/adr/0001-test.md": "# ADR 0001: Test\n\nStatus: Accepted\n\n## Decision\n\nDo it.\n\n## Decision Tensions\n\n- **Prioritized axes**: fixture coverage.\n- **Constrained axes**: production behavior.\n- **Tradeoffs accepted**: tiny test ADR.\n- **Debt or pending evidence**: none.\n",
+    },
+  }));
+  assert.notEqual(missingPerformanceImpact.status, 0);
+  assert.match(`${missingPerformanceImpact.stderr}${missingPerformanceImpact.stdout}`, /Performance Impact/);
+
+  const missingDecisionTensions = runFixture(baseFixture({
+    files: {
+      "docs/adr/0001-test.md": "# ADR 0001: Test\n\nStatus: Accepted\n\n## Decision\n\nDo it.\n\n## Performance Impact\n\nStatic fixture only.\n",
+    },
+  }));
+  assert.notEqual(missingDecisionTensions.status, 0);
+  assert.match(`${missingDecisionTensions.stderr}${missingDecisionTensions.stdout}`, /Decision Tensions/);
+
+  const incompleteDecisionTensions = runFixture(baseFixture({
+    files: {
+      "docs/adr/0001-test.md": "# ADR 0001: Test\n\nStatus: Accepted\n\n## Decision\n\nDo it.\n\n## Performance Impact\n\nStatic fixture only.\n\n## Decision Tensions\n\n- **Prioritized axes**: fixture coverage.\n",
+    },
+  }));
+  assert.notEqual(incompleteDecisionTensions.status, 0);
+  assert.match(`${incompleteDecisionTensions.stderr}${incompleteDecisionTensions.stdout}`, /Constrained axes|Tradeoffs accepted|Debt or pending evidence/);
 
   const missingGuard = runFixture(baseFixture({ registry: { artifacts: [{ canonicalSource: "docs/adr/0001-test.md", canonicalName: "adr:test", searchQueries: [{ query: "ADR 0001 test", expectPath: "docs/adr/0001-test.md" }], guard: "scripts/missing.mjs" }] } }));
   assert.notEqual(missingGuard.status, 0);

@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "canonicalDoc": "docs/governance/source-decision-audits.md",
   "forwardOnly": true,
+  "selectiveHistoricalBackfill": true,
   "statusVocabulary": ["implemented", "documented", "blocked", "superseded"],
   "rowContract": {
     "requiredFields": [
@@ -26,6 +27,7 @@
       "sourceConversationId": "019e35a1-06bb-77f2-a712-92ed2646bd15",
       "sourcePlanId": "019e3659-0335-7811-9cda-c9d176e91515-plan",
       "artifactKind": "markdown-source-audit",
+      "markdownRowPrefix": "DQ",
       "minimumDecisionRows": 18,
       "normalizedStates": ["implemented", "documented", "blocked"],
       "blockedRefs": [
@@ -100,6 +102,155 @@
         "docs/governance/v1-surface-closure/acceptance.json",
         "docs/governance/v1-surface-closure/validation.json",
         "scripts/v1-surface-closure-audit-check.mjs"
+      ]
+    },
+    {
+      "id": "legal-closure-selective-backfill",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/legal/source-audit.md",
+      "sourceConversationId": "019e3a44-1175-7930-b45c-252f342b5ec2",
+      "artifactKind": "markdown-source-audit",
+      "markdownRowPrefix": "LC",
+      "minimumDecisionRows": 33,
+      "historicalBackfill": true,
+      "backfillTier": "P0",
+      "backfillReason": "Legal and regulated-domain release decisions are public-release blockers and must not depend on private session memory.",
+      "backfillArtifactRef": "docs/governance/legal/source-audit.md",
+      "normalizedStates": ["implemented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/legal/external-pending.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/legal/source-audit.md",
+        "docs/governance/legal/external-pending.md",
+        "scripts/verify-regulated-domain-safety-goal.mjs"
+      ]
+    },
+    {
+      "id": "connector-governed-context-selective-backfill",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/connector-governed-context/source-audit.md",
+      "sourceConversationId": "019e3a54-4629-7c90-b85e-927bf34c4d1b",
+      "sourcePlanId": "019e3a65-edb8-7350-ba56-1c5d4e097677-plan",
+      "artifactKind": "markdown-source-audit",
+      "markdownRowPrefixes": [
+        { "prefix": "QA", "minimumDecisionRows": 22 },
+        { "prefix": "CGC", "minimumDecisionRows": 66 }
+      ],
+      "minimumDecisionRows": 88,
+      "historicalBackfill": true,
+      "backfillTier": "P1",
+      "backfillReason": "Connector context decisions govern provider identity, secret refs, approvals, and fail-closed external operations.",
+      "backfillArtifactRef": "docs/governance/connector-governed-context/source-audit.md",
+      "normalizedStates": ["implemented", "documented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/connector-governed-context/completion.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/connector-governed-context/source-audit.md",
+        "docs/governance/connector-governed-context/completion.md",
+        "scripts/verify-connector-governed-context-goal.mjs"
+      ]
+    },
+    {
+      "id": "governance-workspace-project-selective-backfill",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/governance-workspace-project/source-audit.md",
+      "sourceConversationId": "019e3a47-6485-7430-a5a9-97d32166f255",
+      "artifactKind": "markdown-source-audit",
+      "markdownRowPrefix": "GQ",
+      "minimumDecisionRows": 84,
+      "historicalBackfill": true,
+      "backfillTier": "P1",
+      "backfillReason": "Governance, workspace, project, sharing, and handoff decisions define authority and storage boundaries.",
+      "backfillArtifactRef": "docs/governance/governance-workspace-project/source-audit.md",
+      "normalizedStates": ["implemented", "documented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/governance-workspace-project/completion.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/governance-workspace-project/source-audit.md",
+        "docs/governance/governance-workspace-project/completion.md",
+        "scripts/verify-governance-workspace-project-goal.mjs"
+      ]
+    },
+    {
+      "id": "mac-control-plane-selective-backfill",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/mac-control-plane/source-audit.md",
+      "sourceConversationId": "019e366f-8e14-7e51-8817-9820d2914dc4",
+      "artifactKind": "markdown-source-audit",
+      "markdownRowPrefix": "MCQ",
+      "minimumDecisionRows": 18,
+      "historicalBackfill": true,
+      "backfillTier": "P1",
+      "backfillReason": "Mac control decisions govern native actions, permissions, rollback, host audit, and direct CLI activation.",
+      "backfillArtifactRef": "docs/governance/mac-control-plane/source-audit.md",
+      "normalizedStates": ["implemented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/mac-control-plane/completion.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/mac-control-plane/source-audit.md",
+        "docs/governance/mac-control-plane/completion.md",
+        "docs/governance/mac-control-plane/decision-matrix.md"
+      ]
+    },
+    {
+      "id": "evolution-rescue-backbone-selective-backfill",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/evolution/source-audit.md",
+      "sourceConversationId": "019e3b2e-3f4a-7753-a2ce-c92fce7c4436",
+      "sourcePlanId": "019e3b8a-fab7-75e0-8a23-a49524afe727-plan",
+      "artifactKind": "markdown-source-audit",
+      "markdownRowPattern": "^\\| `[^`]+`\\s*\\|",
+      "markdownRowPatternLabel": "evolution decision",
+      "minimumDecisionRows": 74,
+      "historicalBackfill": true,
+      "backfillTier": "P1",
+      "backfillReason": "Evolution and rescue decisions define compatibility, migration, rollback, and launch survival policy.",
+      "backfillArtifactRef": "docs/governance/evolution/source-audit.md",
+      "normalizedStates": ["implemented", "blocked"],
+      "blockedRefs": [
+        "docs/governance/evolution/source-audit.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/evolution/source-audit.md",
+        "docs/evolution/README.md",
+        "scripts/evolution-governance-check.mjs"
+      ]
+    },
+    {
+      "id": "adoption-canonicity-governance-p0",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/adoption-canonicity/source-review.json",
+      "sourceConversationId": "current-thread-2026-05-21",
+      "sourcePlanId": "p0-adoption-and-canonicity-governance",
+      "artifactKind": "json-source-review",
+      "minimumDecisionRows": 1,
+      "normalizedStates": ["implemented"],
+      "evidenceRefs": [
+        "docs/governance/adoption-canonicity.md",
+        "docs/governance/adoption-canonicity.manifest.json",
+        "scripts/adoption-canonicity-check.mjs",
+        "packages/clawjs-core/src/capability-maturity.ts",
+        "packages/clawjs/src/inspect-cli.ts"
+      ]
+    },
+    {
+      "id": "streaming-backpressure-contract-p0",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/streaming-backpressure/source-review.json",
+      "sourceConversationId": "current-thread-2026-05-21",
+      "sourcePlanId": "p0-streaming-backpressure-contract",
+      "artifactKind": "json-source-review",
+      "minimumDecisionRows": 1,
+      "normalizedStates": ["implemented"],
+      "evidenceRefs": [
+        "docs/adr/0042-streaming-backpressure-contract.md",
+        "packages/clawjs-core/src/streaming-backpressure.ts",
+        "packages/clawjs-core/src/surface-registry.ts",
+        "scripts/streaming-backpressure-contract-check.mjs"
       ]
     }
   ],

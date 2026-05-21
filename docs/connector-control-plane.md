@@ -114,5 +114,14 @@ requirements, disallowed hosts, and governed-context failures such as blocked
 records, missing fields, missing secret bindings, wrong environment, or
 authorization-required context.
 
+Destructive provider operations also inherit the
+[No Irreversible Data Loss](./governance/no-irreversible-data-loss/README.md)
+contract. A provider trash, archive, restore, cancel, or unarchive path is
+classified as `external_recoverable`. A provider hard delete is classified as
+`irreversible_external_requires_exact_human_approval`: it requires exact human
+approval, a provider receipt, local pre-action snapshot or export evidence where
+possible, redacted audit, and `EXTERNAL PENDING` live evidence until a real
+provider run is approved and recorded.
+
 See [ADR 0015](./adr/0015-connector-control-plane-v1.md) for the accepted
 architecture.

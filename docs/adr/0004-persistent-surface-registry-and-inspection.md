@@ -155,6 +155,15 @@ which human and programmatic surfaces complete it, and what must not be
 inferred from its existence. Existing nodes without this field are bounded by
 `docs/surface-narrative-baseline.json`; new missing narratives are blocked.
 
+Each new stable surface node must also carry `resourceContract` as the
+operational counterpart to `surfaceNarrative`. Runtime, UI, storage, stream,
+cache, queue, IPC, daemon, worker, and long-running-agent surfaces require this
+metadata before implementation closure. The contract records startup, idle,
+memory, streaming, storage, hot-path, scale, and validation behavior so a
+surface is not registered only nominally. Existing nodes without this field are
+bounded by `docs/surface-resource-contract-baseline.json`; new missing resource
+contracts are blocked.
+
 ## Rules
 
 Any code that introduces a new durable path, database, collection/table,
@@ -184,6 +193,13 @@ permission, or feature flag surface must register `surfaceNarrative` before it
 lands. The narrative is not a second source of truth; it points to the
 authorizing ADR, decision-map row, or governance decision and states the
 non-inference boundary for reviewers and agents.
+
+Any code that introduces a new API, UI, CLI, schema, storage key, route,
+permission, stream, cache, or feature flag surface must also register
+`resourceContract` before it lands. The resource contract is not a performance
+test by itself; it records the expected startup, idle, memory, streaming,
+storage, hot-path, scale, and validation obligations that tests or measurements
+must prove.
 
 Manual lists are allowed only as generated output or as tests that assert registry coverage. They are not source of truth.
 

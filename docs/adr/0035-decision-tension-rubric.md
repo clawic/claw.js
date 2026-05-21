@@ -50,8 +50,11 @@ quality as a human-facing product/UI concern only; agent and code quality are
 evaluated through clarity, boundaries, traceability, reliability,
 maintainability, and evidence.
 
-## Decision Tensions
+## Performance Impact
 
+The rubric is a documentation and review requirement, not runtime behavior. Its validation cost is static heading and content checks in docs lanes. It improves performance governance indirectly by requiring durable decisions to state when resource behavior is prioritized, constrained, or left pending.
+
+## Decision Tensions
 - **Prioritized axes**: canon and semantic coherence; discoverability and
   traceability; reliability and evidence; evolution and debt; human and agent
   experience.

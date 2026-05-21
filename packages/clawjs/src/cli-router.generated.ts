@@ -1652,7 +1652,7 @@ export const GENERATED_CLI_COMMANDS = [
     name: "inspect",
     kind: "canonical",
     summary: "Read-only stable surface inspection.",
-    usage: "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|agent|edges|why|commands|debt-ledger|governance|codebase|connectors|aliases|database|storage|prefs|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|external|render",
+    usage: "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|debt-ledger|governance|codebase|connectors|aliases|database|storage|prefs|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|external|render",
     schemaVersion: 1,
     jsonSchemaId: "claw.cli.inspect.v1",
     support: {
@@ -1669,6 +1669,7 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0012-surface-route-graph.md",
+      "docs/adr/0041-adoption-and-canonicity-governance.md",
       "docs/adr/0017-discoverability-and-meta-code-routing.md"
     ],
     tests: [
@@ -2117,6 +2118,40 @@ export const GENERATED_CLI_COMMANDS = [
     routeGroup: "inspect-search-governance"
   },
   {
+    name: "verify",
+    kind: "canonical",
+    summary: "Verify release evidence manifests and plugin/sub-app packages for SBOM, provenance, checksum, signature, and malware-review metadata.",
+    usage: "verify release --manifest <file>|plugin <dir|tgz> [--json]",
+    family: "diagnostics",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.verify.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw verify --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md",
+      "docs/supply-chain-security.md"
+    ],
+    adrs: [
+      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0042-supply-chain-security-governance.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-verify-command.test.ts",
+      "scripts/supply-chain-security-check.mjs"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-verify-command.ts",
+      symbol: "runVerifyCli"
+    },
+    routeGroup: "legacy"
+  },
+  {
     name: "debt",
     kind: "canonical",
     summary: "Federated report-only debt and pending ledger for ClawJS and Clawix public artifacts.",
@@ -2222,6 +2257,47 @@ export const GENERATED_CLI_COMMANDS = [
       symbol: "runEvolutionCli"
     },
     routeGroup: "inspect-search-governance"
+  },
+  {
+    name: "archive",
+    kind: "canonical",
+    summary: "Portable archive planning, export handoff, verification, import preview, restore report, and encrypted secrets backup gates.",
+    usage: "archive plan|export|verify|inspect|import|restore|doctor [--include-secrets] [--signed-host] [--target PATH]",
+    family: "diagnostics",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.archive.v1",
+    support: {
+      state: "host_required",
+      reason: "Sensitive permissions or host-owned capabilities require the active signed host broker.",
+      scenario: "claw archive --help"
+    },
+    securityPolicy: "signed_host_broker",
+    docs: [
+      "docs/cli.md",
+      "docs/portable-archive-contract.md"
+    ],
+    adrs: [
+      "docs/adr/0001-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0008-secrets-security-v1.md",
+      "docs/adr/0038-portable-archive-contract.md"
+    ],
+    tests: [
+      "packages/clawjs-core/src/portable-archive.test.ts",
+      "packages/clawjs/src/index.test.ts",
+      "scripts/portable-archive-governance-check.mjs"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-archive-command.ts",
+      symbol: "runArchiveCli"
+    },
+    relatedSurfaces: [
+      "claw.format.backup",
+      "claw.format.secrets",
+      "claw.schema.portableArchive.manifest.v1"
+    ],
+    routeGroup: "legacy"
   },
   {
     name: "safety",
@@ -5502,9 +5578,11 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   report: "media-documents",
   needs: "inspect-search-governance",
   commands: "inspect-search-governance",
+  verify: "legacy",
   debt: "inspect-search-governance",
   governance: "inspect-search-governance",
   evolution: "inspect-search-governance",
+  archive: "legacy",
   safety: "inspect-search-governance",
   work: "database-productivity",
   project: "scaffold-setup",
@@ -5622,6 +5700,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "app",
   "approvals",
   "apps",
+  "archive",
   "artifacts",
   "assignments",
   "audio",
@@ -5762,6 +5841,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "travel",
   "tts",
   "usb",
+  "verify",
   "video",
   "voice-notes",
   "vpn",

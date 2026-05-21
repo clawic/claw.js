@@ -52,17 +52,21 @@
         "docs/decision-map.md",
         "docs/interface-matrix.md",
         "docs/adr/0009-dual-human-programmatic-surfaces.md",
+        "docs/adr/0041-adoption-and-canonicity-governance.md",
+        "docs/governance/adoption-canonicity.md",
+        "docs/governance/adoption-canonicity.manifest.json",
         "docs/regulated-domain-safety.md"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
+        "scripts/adoption-canonicity-check.mjs",
         "scripts/docs-alignment-check.mjs",
         "scripts/discoverability-check.mjs",
         "scripts/verify-regulated-domain-safety-goal.mjs"
       ],
-      "evidenceMode": "delegated",
+      "evidenceMode": "shape",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "I.2.human-and-agent-are-equal-consumers",
@@ -142,17 +146,21 @@
         "docs/decision-map.md",
         "docs/interface-matrix.md",
         "docs/adr/0009-dual-human-programmatic-surfaces.md",
+        "docs/adr/0041-adoption-and-canonicity-governance.md",
+        "docs/governance/adoption-canonicity.md",
+        "docs/governance/adoption-canonicity.manifest.json",
         "docs/regulated-domain-safety.md"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
+        "scripts/adoption-canonicity-check.mjs",
         "scripts/docs-alignment-check.mjs",
         "scripts/discoverability-check.mjs",
         "scripts/verify-regulated-domain-safety-goal.mjs"
       ],
-      "evidenceMode": "delegated",
+      "evidenceMode": "shape",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "I.5.the-cli-is-the-agent-interface-to-the-framework",
@@ -321,6 +329,9 @@
         "docs/data-storage-boundary.md",
         "docs/host-ownership.md",
         "docs/workspace.md",
+        "docs/portable-archive-contract.md",
+        "docs/adr/0038-portable-archive-contract.md",
+        "docs/adr/0008-secrets-security-v1.md",
         "docs/adr/0027-governance-identity-scope-model.md",
         "docs/adr/0028-workspace-project-folder-manifest.md"
       ],
@@ -328,7 +339,8 @@
         "scripts/constitution-assertions-check.mjs",
         "scripts/docs-alignment-check.mjs",
         "scripts/governance-scope-guard.mjs",
-        "scripts/naming-surface-guard.mjs"
+        "scripts/naming-surface-guard.mjs",
+        "scripts/portable-archive-governance-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
@@ -471,18 +483,25 @@
         "docs/data-storage-boundary.md",
         "docs/host-ownership.md",
         "docs/workspace.md",
+        "docs/portable-archive-contract.md",
+        "docs/adr/0038-portable-archive-contract.md",
+        "docs/adr/0008-secrets-security-v1.md",
         "docs/adr/0027-governance-identity-scope-model.md",
-        "docs/adr/0028-workspace-project-folder-manifest.md"
+        "docs/adr/0028-workspace-project-folder-manifest.md",
+        "docs/adr/0040-no-irreversible-data-loss.md",
+        "docs/governance/no-irreversible-data-loss/manifest.json"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
         "scripts/docs-alignment-check.mjs",
         "scripts/governance-scope-guard.mjs",
-        "scripts/naming-surface-guard.mjs"
+        "scripts/naming-surface-guard.mjs",
+        "scripts/no-irreversible-data-loss-check.mjs",
+        "scripts/portable-archive-governance-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "II.7.inference-is-paid-by-the-user-not-by-us",
@@ -508,7 +527,8 @@
         "scripts/constitution-assertions-check.mjs",
         "scripts/docs-alignment-check.mjs",
         "scripts/governance-scope-guard.mjs",
-        "scripts/naming-surface-guard.mjs"
+        "scripts/naming-surface-guard.mjs",
+        "scripts/portable-archive-governance-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
@@ -592,17 +612,20 @@
         "docs/host-ownership.md",
         "docs/workspace.md",
         "docs/adr/0027-governance-identity-scope-model.md",
-        "docs/adr/0028-workspace-project-folder-manifest.md"
+        "docs/adr/0028-workspace-project-folder-manifest.md",
+        "docs/adr/0040-no-irreversible-data-loss.md",
+        "docs/governance/no-irreversible-data-loss/manifest.json"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
         "scripts/docs-alignment-check.mjs",
         "scripts/governance-scope-guard.mjs",
-        "scripts/naming-surface-guard.mjs"
+        "scripts/naming-surface-guard.mjs",
+        "scripts/no-irreversible-data-loss-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "III.1.open-data-open-local-api-open-source",
@@ -1374,6 +1397,7 @@
       "canonicalDocs": [
         "CONSTITUTION.md",
         "docs/canonical-data-catalog.md",
+        "docs/governance/rfc-process.md",
         "docs/database.md",
         "docs/data-storage-boundary.md",
         "docs/search.md",
@@ -1381,13 +1405,14 @@
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
+        "scripts/rfc-process-check.mjs",
         "scripts/domain-surface-registry-guard.mjs",
         "scripts/persistent-surface-guard.mjs",
         "scripts/docs-alignment-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "VI.5.structured-knowledge-is-a-first-class-capability-not-a-f",
@@ -1524,6 +1549,7 @@
       "canonicalDocs": [
         "CONSTITUTION.md",
         "docs/canonical-data-catalog.md",
+        "docs/governance/rfc-process.md",
         "docs/database.md",
         "docs/data-storage-boundary.md",
         "docs/search.md",
@@ -1531,13 +1557,14 @@
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
+        "scripts/rfc-process-check.mjs",
         "scripts/domain-surface-registry-guard.mjs",
         "scripts/persistent-surface-guard.mjs",
         "scripts/docs-alignment-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "VI.10.schemas-evolve-conservatively",
@@ -1712,17 +1739,20 @@
         "docs/adr/0007-cli-agent-interface.md",
         "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
         "docs/connector-governed-context.md",
-        "docs/governance/performance-governance.md"
+        "docs/governance/performance-governance.md",
+        "docs/adr/0040-no-irreversible-data-loss.md",
+        "docs/governance/no-irreversible-data-loss/manifest.json"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
         "scripts/verify-cli-registry-router-parity.mjs",
         "scripts/performance-governance-check.mjs",
-        "scripts/docs-alignment-check.mjs"
+        "scripts/docs-alignment-check.mjs",
+        "scripts/no-irreversible-data-loss-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "VII.6.agents-improve-themselves",
@@ -1743,17 +1773,20 @@
         "docs/adr/0007-cli-agent-interface.md",
         "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
         "docs/connector-governed-context.md",
-        "docs/governance/performance-governance.md"
+        "docs/governance/performance-governance.md",
+        "docs/adr/0040-no-irreversible-data-loss.md",
+        "docs/governance/no-irreversible-data-loss/manifest.json"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
         "scripts/verify-cli-registry-router-parity.mjs",
         "scripts/performance-governance-check.mjs",
-        "scripts/docs-alignment-check.mjs"
+        "scripts/docs-alignment-check.mjs",
+        "scripts/no-irreversible-data-loss-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "VII.7.agents-compose",
@@ -1898,17 +1931,20 @@
         "docs/adr/0007-cli-agent-interface.md",
         "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
         "docs/connector-governed-context.md",
-        "docs/governance/performance-governance.md"
+        "docs/governance/performance-governance.md",
+        "docs/adr/0040-no-irreversible-data-loss.md",
+        "docs/governance/no-irreversible-data-loss/manifest.json"
       ],
       "protectorScripts": [
         "scripts/constitution-assertions-check.mjs",
         "scripts/verify-cli-registry-router-parity.mjs",
         "scripts/performance-governance-check.mjs",
-        "scripts/docs-alignment-check.mjs"
+        "scripts/docs-alignment-check.mjs",
+        "scripts/no-irreversible-data-loss-check.mjs"
       ],
       "evidenceMode": "delegated",
       "repoScope": "shared",
-      "status": "partial"
+      "status": "enforced"
     },
     {
       "id": "VII.12.the-system-is-the-multiplier",
@@ -3049,7 +3085,37 @@
       "evidenceMode": "shape",
       "repoScope": "shared",
       "status": "enforced"
+    },
+    {
+      "id": "RedLine.4.no-irreversible-data-loss",
+      "principle": "VII.5",
+      "summary": "No user data is ever lost irreversibly is mapped to explicit recovery policy, baseline, fixtures, and guardrails.",
+      "forbiddenTerms": [],
+      "affectedSurfaces": [
+        "data",
+        "storage",
+        "cli",
+        "runtime",
+        "permissions",
+        "audit",
+        "host",
+        "docs"
+      ],
+      "canonicalDocs": [
+        "CONSTITUTION.md",
+        "docs/adr/0040-no-irreversible-data-loss.md",
+        "docs/governance/no-irreversible-data-loss/manifest.json",
+        "docs/governance/no-irreversible-data-loss/baseline.json"
+      ],
+      "protectorScripts": [
+        "scripts/constitution-assertions-check.mjs",
+        "scripts/no-irreversible-data-loss-check.mjs",
+        "scripts/docs-alignment-check.mjs"
+      ],
+      "evidenceMode": "fixture",
+      "repoScope": "shared",
+      "status": "enforced"
     }
   ],
-  "contractDigest": "2c2d3c92f4dcaa0bd4f4f62d1d33320ac4b55f011735fd6689c3af05c305b4ae"
+  "contractDigest": "0cad787569277b4a4aab11f7356c71ac221d179d80bfde420159e34a77344700"
 }

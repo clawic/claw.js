@@ -65,6 +65,17 @@ network, and audit checks before JSON-RPC invocation. External CLIs use
 declarative command adapters with `runtimeKind: "cli"`; unsupported or
 evidence-free adapters are not executable.
 
+## Performance Impact
+
+V1 is explicitly local and non-executing, so policy evaluation should be cheap: metadata lookup, request classification, and redacted audit declaration only. The control plane prevents expensive or dangerous connector runtimes from starting before provider, budget, network, approval, and credential conditions are satisfied. Future runtime execution must separately budget network fan-out, credential leases, retries, audit volume, and provider latency.
+
+## Decision Tensions
+
+- **Prioritized axes**: security, least privilege, connector authority, auditability, budget control, and fail-closed behavior.
+- **Constrained axes**: convenience execution and automatic provider mutation are constrained until policy, approval, credentials, and context are explicit.
+- **Tradeoffs accepted**: connector calls require more planning and explanation before execution; that is accepted because integrations can spend money, mutate external systems, or expose private data.
+- **Debt or pending evidence**: live execution, provider-specific runtime enforcement, and full approval receipts remain follow-on work beyond the V1 local decision surface.
+
 ## Consequences
 
 Connector execution has a stable preflight contract. Agents can explain why a

@@ -154,12 +154,21 @@ requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");
 requireSnippet("docs/adr/TEMPLATE.md", "## Decision Tensions");
 requireSnippet("docs/adr/TEMPLATE.md", "## Performance Impact");
 requireSnippet("docs/adr/TEMPLATE.md", "## Source Decision Audit");
+requireSnippet("docs/adr/TEMPLATE.md", "## Adoption And Canonicity");
 requireSnippet("docs/adr/TEMPLATE.md", "adr-operational-coverage.manifest.json");
 requireSnippet("docs/governance/decision-tension-rubric.md", "Canon and semantic coherence");
 requireSnippet("docs/governance/performance-governance.md", "whole-computer resource behavior");
+requireSnippet("docs/governance/adoption-canonicity.md", "Telemetry remains disabled by default");
+requireSnippet("docs/governance/adoption-canonicity.manifest.json", "claw-shell-core-stable-2026-05-21");
 requireSnippet("docs/governance/source-decision-audits.md", "Source decision audits");
+requireSnippet("docs/governance/rfc-process.md", "canonical data type promotion under VI.4");
+requireSnippet("docs/governance/rfc-process.md", "canonical user-profile attribute standardization under VI.9");
+requireSnippet("docs/governance/rfc-process.md", "public GitHub Discussion, issue, or pull request");
+requireSnippet("docs/rfcs/TEMPLATE.md", "Proposal Kind:");
+requireSnippet("docs/rfcs/registry.json", "\"rfcs\"");
 requireSnippet("docs/agent-rules/index.md", "Decision Tension Rubric");
 requireSnippet("docs/agent-rules/index.md", "Performance governance");
+requireSnippet("docs/agent-rules/index.md", "Adoption/canonicity governance");
 requireSnippet("docs/adr/0009-dual-human-programmatic-surfaces.md", "MCP is the model-native surface");
 requireSnippet("docs/adr/0004-persistent-surface-registry-and-inspection.md", "surface parity metadata");
 
@@ -168,8 +177,10 @@ for (const snippet of [
   "Constitution Operational Map",
   "Decision Tension Rubric",
   "Source decision audits",
+  "Public RFCs are the required operating process",
   "Accepted ADRs are transactional",
   "scripts/adr-operational-coverage-check.mjs",
+  "scripts/rfc-process-check.mjs",
   "Performance Governance",
   "ClawJS/Claw owns framework contracts",
   "New workspace-local framework writes use `.claw/`",
@@ -180,6 +191,8 @@ for (const snippet of [
   "scripts/verify-host-permission-contract.mjs",
   "scripts/source-decision-audit-check.mjs",
   "scripts/performance-governance-check.mjs",
+  "scripts/hot-path-guard.mjs",
+  "scripts/adoption-canonicity-check.mjs",
   "No known pending guardrails",
 ]) {
   requireSnippet("docs/decision-map.md", snippet);
@@ -191,6 +204,7 @@ for (const snippet of [
   "Fields are optional by default",
   "Every new relation field must declare what the relation means",
   "Custom databases",
+  "RFC process",
 ]) {
   requireSnippet("docs/canonical-data-catalog.md", snippet);
 }
@@ -202,6 +216,7 @@ for (const snippet of [
   "Relations are semantic",
   "active debt, not",
   "zero undocumented built-ins",
+  "docs/governance/rfc-process.md",
 ]) {
   requireSnippet("docs/adr/0005-canonical-data-catalog.md", snippet);
 }

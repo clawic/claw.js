@@ -73,6 +73,17 @@ project memory, entity/resource memory, and session memory are separate layers
 with explicit sharing/forking rules. Shareable resources use multi-scope
 bindings with a single source of truth plus detach/fork behavior.
 
+## Performance Impact
+
+Keeping full workspace state at workspace roots avoids duplicating databases, indexes, memory, and caches into every project folder. Project folders carry a small manifest and shims, so path repair and external-agent handoff should be metadata-sized. Attach, export, sync, and copy workflows still need measurements for large folders, duplicate manifests, and repair previews.
+
+## Decision Tensions
+
+- **Prioritized axes**: project identity stability, recoverability, external tool handoff, storage boundary clarity, and direct sharing.
+- **Constrained axes**: treating every folder as a full workspace is constrained to avoid noisy state duplication and slow discovery.
+- **Tradeoffs accepted**: projects need a visible manifest and managed adapter shims; this is accepted because path names alone cannot preserve identity, sessions, pins, or grants.
+- **Debt or pending evidence**: path-keyed project/sidebar/session code must be migrated and tested against move, copy, duplicate, missing, attach, and export scenarios.
+
 ## Surface Parity
 
 - **Human surface**: Clawix sidebar uses project/resource ids as identity and
