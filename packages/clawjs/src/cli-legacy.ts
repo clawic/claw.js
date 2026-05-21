@@ -461,19 +461,19 @@ function requireRelayBrowserConfig(flags: Record<string, string>): {
   agentId: string;
   workspaceId: string;
 } {
-  // Relay provider tenant is a remote technical isolation identifier, not product scope.
+  // Relay provider tenant is a remote tenant technical isolation identifier, not product scope.
   const accessToken = (flags["access-token"] ?? process.env.CLAW_RELAY_ACCESS_TOKEN ?? "").trim();
   const tenantId = (flags["tenant-id"] ?? process.env.CLAW_RELAY_TENANT_ID ?? "").trim();
   const agentId = (flags["agent-id"] ?? process.env.CLAW_RELAY_AGENT_ID ?? "").trim();
   const workspaceId = (flags["workspace-id"] ?? process.env.CLAW_RELAY_WORKSPACE_ID ?? "").trim();
   if (!accessToken) throw new Error("--access-token is required");
-  if (!tenantId) throw new Error("--tenant-id is required");
+  if (!tenantId) throw new Error("--tenant-id is required"); // remote tenant technical isolation
   if (!agentId) throw new Error("--agent-id is required");
   if (!workspaceId) throw new Error("--workspace-id is required");
   return {
     baseUrl: resolveRelayBaseUrl(flags),
     accessToken,
-    tenantId,
+    tenantId, // remote tenant technical isolation
     agentId,
     workspaceId,
   };
@@ -1048,6 +1048,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         ...(flags["idempotency-key"] ? { idempotencyKey: flags["idempotency-key"] } : {}),
         ...(flags.priority ? { priority: flags.priority as "passive" | "normal" | "time-sensitive" | "critical" } : {}),
         ...(parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") ? { audience: parseJsonFlag<Record<string, unknown>>(flags["audience-json"], "--audience-json") } : {}),
+        // Provider tenant context is a remote tenant technical isolation field.
         context: parseJsonFlag<Record<string, unknown>>(flags["context-json"], "--context-json")
           ?? {
             tenantId: flags["tenant-id"] ?? "",
@@ -1625,6 +1626,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "browser" && (command === "status" || command === "ensure" || command === "share")) {
     try {
       const relay = requireRelayBrowserConfig(flags);
+      // Remote tenant path segment is technical isolation, not product scope.
       const browserPath = `/tenants/${relay.tenantId}/agents/${relay.agentId}/workspaces/${relay.workspaceId}/browser/session`;
       const payload = command === "status"
         ? await relayBrowserRequest<{
