@@ -87,6 +87,7 @@ file; do not hand-maintain this table.
 | `guard-scripts-code-hygiene-check` | guardrail |  | `scripts/code-hygiene-check.mjs` | code-hygiene-check, Code Hygiene Check | `scripts/code-hygiene-check.mjs` |
 | `guard-scripts-conceptual-vocabulary-guard` | guardrail |  | `scripts/conceptual-vocabulary-guard.mjs` | conceptual-vocabulary-guard, Conceptual Vocabulary Guard | `scripts/conceptual-vocabulary-guard.mjs` |
 | `guard-scripts-constitution-assertions-check` | guardrail |  | `scripts/constitution-assertions-check.mjs` | constitution-assertions-check, Constitution Assertions Check, constitutional assertion guard, checkable constitution guard | `scripts/constitution-assertions-check.mjs` |
+| `guard-scripts-constitution-sync-check` | guardrail |  | `scripts/constitution-sync-check.mjs` | constitution-sync-check, Constitution Sync Check | `scripts/constitution-sync-check.mjs` |
 | `guard-scripts-discoverability-check` | guardrail |  | `scripts/discoverability-check.mjs` | discoverability-check, Discoverability Check | `scripts/discoverability-check.mjs` |
 | `guard-scripts-docs-alignment-check` | guardrail |  | `scripts/docs-alignment-check.mjs` | docs-alignment-check, Docs Alignment Check | `scripts/docs-alignment-check.mjs` |
 | `guard-scripts-docs-rendered-link-check` | guardrail |  | `scripts/docs-rendered-link-check.mjs` | docs-rendered-link-check, Docs Rendered Link Check | `scripts/docs-rendered-link-check.mjs` |

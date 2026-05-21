@@ -13,9 +13,12 @@ When an agent or contributor faces a decision, this document is the highest
 authority. Project-level CLAUDE.md / AGENTS.md files defer to it. When local
 documents conflict with the constitution, the constitution wins.
 
-Durable meta-code decisions, skills, guardrails, harnesses, and route work must
-also remain discoverable through the generated `docs/discoverability.md` router
-and the `docs/discoverability.registry.json` contract.
+Durable meta-code decisions, workflow skills, guardrails, harnesses, route
+work, and UI governance artifacts must stay discoverable through the
+repository's generated discoverability router and registry. If an artifact
+shapes future behavior, agents must be able to find its canonical source from
+the repository entrypoints, task skill, decision map, and CLI discovery rather
+than relying on buried prose or source comments.
 
 ## Preamble
 
@@ -142,15 +145,15 @@ autonomous agents to be first-class. They still obey the same constitutional
 rules for permissions, audit, state, portability, and user ownership.
 
 **I.8 Regulated domains are assistive, never final decision authorities.**
-Claw may structure, search, relate, summarize, label, and prepare drafts for
-health, mental health, legal, finance, banking, insurance, employment,
-education, government, pharma, labs, identity, security, physical-control, and
-other sensitive domains. It must not replace regulated professionals,
-institutions, public authorities, or emergency services, and it must not make
-final clinical, legal, financial, insurance, employment, education,
-government, emergency, safety, or other regulated decisions. Sensitive outputs
-carry review labels and external sensitive actions require explicit human
-review.
+Clawix and Claw may structure, search, relate, summarize, label, and prepare
+drafts for health, mental health, legal, finance, banking, insurance,
+employment, education, government, pharma, labs, identity, security,
+physical-control, and other sensitive domains. They must not replace regulated
+professionals, institutions, public authorities, or emergency services, and
+they must not make final clinical, legal, financial, insurance, employment,
+education, government, emergency, safety, or other regulated decisions.
+Sensitive outputs carry review labels and external sensitive actions require
+explicit human review.
 
 **I.9 Operational context is governed, not guessed.** Agents must not infer or
 freestyle external provider accounts, app identifiers, Team IDs, Bundle IDs,
@@ -271,16 +274,15 @@ or provider-side approval is missing. The user must be able to tell the
 difference between implemented, fixture-only, live-smoked, manual-only,
 policy-blocked, and deprecated provider behavior.
 
-**III.4 Compatibility is open; official trust is verifiable.** Anyone may fork,
-modify, redistribute, sell, or implement Claw-compatible software under the
-repository license, and truthful compatibility claims are welcome when they do
-not imply endorsement. Official status is a separate trust claim, reserved for
-upstream-maintained builds, packages, registries, docs, channels, and marks.
-Forks, commercial use, source builds, and compatible implementations are
-legitimate.
-The framework must make the difference between `official`, `source`,
-`community`, and `compatible` understandable and verifiable without locking
-users into upstream.
+**III.4 Compatibility is open; official trust is verifiable.** Forks,
+commercial use, source builds, and compatible implementations are legitimate
+under the repository license. Anyone may fork, modify, redistribute, sell, or
+implement Claw-compatible software, and truthful compatibility claims are
+welcome when they do not imply endorsement. Official status is a separate trust
+claim, reserved for upstream-maintained builds, packages, registries, docs,
+channels, and marks. The framework must make the difference between
+`official`, `source`, `community`, and `compatible` understandable and
+verifiable without locking users into upstream.
 
 ### IV. Security and integrity
 
@@ -657,17 +659,23 @@ parent run. Every link in a delegation chain remains inspectable,
 attributable, and bounded by the policy grant that allowed it.
 
 **VII.17 The computer's resources are product correctness.** The user's
-computer is not an unlimited substrate hidden beneath the product. CPU, RAM, GPU/Neural Engine, disk, network, battery, thermals, timers, logs, indexes,
+computer is not an unlimited substrate hidden beneath the product. CPU, RAM,
+GPU/Neural Engine, disk, network, battery, thermals, timers, logs, indexes,
 caches, processes, background work, and local inference are budgets the system
-spends on the user's behalf. A feature that works by making the machine feel
-heavy, hot, noisy, full, blocked, or unable to rest is incomplete even when its
-functional behavior is correct.
+spends on the user's behalf. CPU, RAM, GPU/Neural Engine, disk, network,
+battery, thermals, and idle behavior are product correctness surfaces. A
+feature that works by making the machine feel heavy, hot, noisy, full, blocked,
+or unable to rest is incomplete even when its functional behavior is correct.
 
 The default design pressure is toward lazy startup, bounded growth, explicit
 retention, cancellation, backpressure, incremental work, idle quiescence, and
 equivalent behavior with lower resource cost when evidence proves it. Powerful
 optional capabilities are welcome, but the base experience must keep feeling
 like the lightest possible local app and framework.
+
+Durable resource decisions name CPU, RAM, GPU/Neural Engine, disk, network,
+battery, thermals, idle behavior, and boundedness before claiming completion.
+The required resource list is CPU, RAM, GPU/Neural Engine, disk, network, battery, thermals.
 
 ### VIII. Sub-apps and modularity
 
@@ -861,10 +869,23 @@ policy instead of creating a parallel remote business API. Connector links a
 host to runtime, storage, services, policies, and audit. Sync governs resource
 authority, changelogs, cursors, conflict elevation, drivers, encrypted client
 cache, and audit. Iroh is the preferred v1 transport adapter, not the
-permanent contract. External physical/provider validation is explicit and
-artifact-bound: raw evidence rows are report-only, and closure can clear only
-from a source-bound and approval-request-bound evidence artifact that proves an
-approved run, physical evidence, accepted criteria, and no plaintext material.
+permanent contract.
+
+Remote access has two explicit trust modes: sovereign E2E tunnel-only and
+Gateway-governed projection. Stable capabilities must be classified as
+`remote-safe`, `local-only`, `blocked`, or `pending`; `remote-safe` requires a
+registered route, owner, policy, and tests. Secrets cross remote and sync paths
+only as opaque references plus brokered secret leases, never as plaintext.
+Sync authority handoff is signed intent, not physical authority transfer,
+until the host/Coordinator proves it. Clawix consumes the framework-owned
+`RemoteExternalPendingRegister`, `RemoteRouteContractCatalog`, and
+`claw inspect remote` view for status, gaps, contracts, and conformance; it
+does not create a second remote source of truth.
+
+External physical/provider validation is explicit and artifact-bound: raw evidence
+rows are report-only, and closure can clear only from a source-bound and
+approval-request-bound evidence artifact that proves an approved run, physical
+evidence, accepted criteria, and no plaintext material.
 
 **X.5 Meshes can collaborate.** Two users' meshes can share a resource (a
 document, an agent, a calendar, a memory) under explicit, revocable
