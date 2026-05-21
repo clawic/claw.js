@@ -119,6 +119,11 @@ const escapeHtml = (value) => {
     .replace(/"/g, "&quot;");
 };
 
+const escapeCssValue = (value) => {
+  if (globalThis.CSS?.escape) return globalThis.CSS.escape(String(value));
+  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+};
+
 const formatCell = (value) => {
   if (value == null) return "";
   if (typeof value === "object") return JSON.stringify(value);
@@ -699,7 +704,7 @@ function patchVisibleRecordRow(record) {
   const index = state.records.findIndex((item) => item.id === record.id);
   if (index === -1) return false;
   state.records[index] = record;
-  const tr = els.recordsTable.querySelector(`tbody tr[data-id="${CSS.escape(record.id)}"]`);
+  const tr = els.recordsTable.querySelector(`tbody tr[data-id="${escapeCssValue(record.id)}"]`);
   if (tr) tr.outerHTML = renderRecordRow(record, getRecordColumns());
   return true;
 }
@@ -708,7 +713,7 @@ function removeVisibleRecordRow(recordId) {
   const index = state.records.findIndex((item) => item.id === recordId);
   if (index === -1) return false;
   state.records.splice(index, 1);
-  const tr = els.recordsTable.querySelector(`tbody tr[data-id="${CSS.escape(recordId)}"]`);
+  const tr = els.recordsTable.querySelector(`tbody tr[data-id="${escapeCssValue(recordId)}"]`);
   if (tr) tr.remove();
   state.recordsPaging.total = Math.max(0, state.recordsPaging.total - 1);
   if (state.records.length === 0) {
