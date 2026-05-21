@@ -68,6 +68,8 @@ export interface SessionOriginRecord {
   sourceSize: number | null;
   sourceIno: number | null;
   sourceDev: number | null;
+  sourceCursorLine: number | null;
+  sourceCursorHash: string | null;
 }
 
 export interface ListSessionsFilter {
@@ -236,6 +238,14 @@ export interface UpsertOriginInput {
   sourceSize?: number | null;
   sourceIno?: number | null;
   sourceDev?: number | null;
+  sourceCursorLine?: number | null;
+  sourceCursorHash?: string | null;
+}
+
+export interface ImportSessionBatchInput {
+  sessions?: CreateSessionInput[];
+  messages?: AppendMessageInput[];
+  origin?: UpsertOriginInput | null;
 }
 
 export interface SessionWithMessages {

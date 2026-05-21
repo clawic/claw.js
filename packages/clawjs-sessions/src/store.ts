@@ -27,6 +27,7 @@ import type {
   UpdateProjectInput,
   UpsertOriginInput,
   ExportTrajectoryOptions,
+  ImportSessionBatchInput,
 } from "./types.ts";
 
 const DEFAULT_MESSAGE_LIST_LIMIT = 200;
@@ -113,6 +114,8 @@ const SCHEMA_DDL = `
     source_size        INTEGER,
     source_ino         INTEGER,
     source_dev         INTEGER,
+    source_cursor_line INTEGER,
+    source_cursor_hash TEXT,
     PRIMARY KEY (session_id, native_path)
   );
   CREATE INDEX IF NOT EXISTS idx_origins_path            ON session_origins(native_path);
@@ -137,7 +140,7 @@ const SCHEMA_DDL = `
   END;
 `;
 const SESSIONS_SCHEMA_META_TABLE = "sessions_service_schema_meta";
-const SESSIONS_SCHEMA_VERSION = 1;
+const SESSIONS_SCHEMA_VERSION = 2;
 
 interface SessionRow {
   id: string;
@@ -200,6 +203,8 @@ interface OriginRow {
   source_size: number | null;
   source_ino: number | null;
   source_dev: number | null;
+  source_cursor_line: number | null;
+  source_cursor_hash: string | null;
 }
 
 function parseJson<T>(value: string | null): T | null {
@@ -297,6 +302,8 @@ function rowToOrigin(row: OriginRow): SessionOriginRecord {
     sourceSize: row.source_size,
     sourceIno: row.source_ino,
     sourceDev: row.source_dev,
+    sourceCursorLine: row.source_cursor_line,
+    sourceCursorHash: row.source_cursor_hash,
   };
 }
 
@@ -353,6 +360,8 @@ export class SessionsServiceStore {
     this.ensureColumn("session_origins", "source_size", "INTEGER");
     this.ensureColumn("session_origins", "source_ino", "INTEGER");
     this.ensureColumn("session_origins", "source_dev", "INTEGER");
+    this.ensureColumn("session_origins", "source_cursor_line", "INTEGER");
+    this.ensureColumn("session_origins", "source_cursor_hash", "TEXT");
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -674,6 +683,59 @@ export class SessionsServiceStore {
     return { message: rowToMessage(row), inserted: resolved.inserted };
   }
 
+  importSessionBatch(input: ImportSessionBatchInput): { messagesInserted: number } {
+    const tx = this.db.transaction(() => {
+      for (const session of input.sessions ?? []) this.createSession(session);
+      let messagesInserted = 0;
+      for (const message of input.messages ?? []) {
+        const id = message.id ?? randomUUID();
+        const timestamp = message.timestamp ?? Date.now();
+        if (message.sourceNativeId) {
+          const existing = this.db.prepare(
+            "SELECT id FROM session_messages WHERE session_id = ? AND source_native_id = ?",
+          ).get(message.sessionId, message.sourceNativeId) as { id: string } | undefined;
+          if (existing) continue;
+        }
+        this.db.prepare(`
+          INSERT INTO session_messages (
+            id, session_id, role, content_text, content_blocks, timestamp,
+            tool_calls, timeline, work_summary, streaming_state, audio_ref, attachments, source_native_id
+          ) VALUES (
+            @id, @session_id, @role, @content_text, @content_blocks, @timestamp,
+            @tool_calls, @timeline, @work_summary, @streaming_state, @audio_ref, @attachments, @source_native_id
+          )
+        `).run({
+          id,
+          session_id: message.sessionId,
+          role: message.role,
+          content_text: message.contentText,
+          content_blocks: message.contentBlocks ? JSON.stringify(message.contentBlocks) : null,
+          timestamp,
+          tool_calls: message.toolCalls ? JSON.stringify(message.toolCalls) : null,
+          timeline: message.timeline ? JSON.stringify(message.timeline) : null,
+          work_summary: message.workSummary != null ? JSON.stringify(message.workSummary) : null,
+          streaming_state: message.streamingState ?? null,
+          audio_ref: message.audioRef ? JSON.stringify(message.audioRef) : null,
+          attachments: message.attachments ? JSON.stringify(message.attachments) : null,
+          source_native_id: message.sourceNativeId ?? null,
+        });
+        this.db.prepare(`
+          UPDATE sessions
+          SET message_count = message_count + 1,
+              last_message_at = CASE
+                WHEN last_message_at IS NULL OR last_message_at < @timestamp THEN @timestamp
+                ELSE last_message_at
+              END
+          WHERE id = @session_id
+        `).run({ session_id: message.sessionId, timestamp });
+        messagesInserted += 1;
+      }
+      if (input.origin) this.upsertOrigin(input.origin);
+      return { messagesInserted };
+    });
+    return tx();
+  }
+
   updateMessage(id: string, patch: Partial<Pick<AppendMessageInput, "contentText" | "contentBlocks" | "toolCalls" | "timeline" | "workSummary" | "streamingState" | "attachments">>): SessionMessageRecord | null {
     const row = this.db.prepare("SELECT * FROM session_messages WHERE id = ?").get(id) as MessageRow | undefined;
     if (!row) return null;
@@ -796,20 +858,24 @@ export class SessionsServiceStore {
     this.db.prepare(`
       INSERT INTO session_origins (
         session_id, native_path, native_format, last_synced_at, mirror_hash,
-        source_mtime_ms, source_size, source_ino, source_dev
+        source_mtime_ms, source_size, source_ino, source_dev, source_cursor_line,
+        source_cursor_hash
       )
       VALUES (
         @session_id, @native_path, @native_format, @last_synced_at, @mirror_hash,
-        @source_mtime_ms, @source_size, @source_ino, @source_dev
+        @source_mtime_ms, @source_size, @source_ino, @source_dev, @source_cursor_line,
+        @source_cursor_hash
       )
       ON CONFLICT(session_id, native_path) DO UPDATE SET
-        native_format   = excluded.native_format,
-        last_synced_at  = excluded.last_synced_at,
-        mirror_hash     = excluded.mirror_hash,
-        source_mtime_ms = excluded.source_mtime_ms,
-        source_size     = excluded.source_size,
-        source_ino      = excluded.source_ino,
-        source_dev      = excluded.source_dev
+        native_format      = excluded.native_format,
+        last_synced_at     = excluded.last_synced_at,
+        mirror_hash        = excluded.mirror_hash,
+        source_mtime_ms    = excluded.source_mtime_ms,
+        source_size        = excluded.source_size,
+        source_ino         = excluded.source_ino,
+        source_dev         = excluded.source_dev,
+        source_cursor_line = excluded.source_cursor_line,
+        source_cursor_hash = excluded.source_cursor_hash
     `).run({
       session_id: input.sessionId,
       native_path: input.nativePath,
@@ -820,6 +886,8 @@ export class SessionsServiceStore {
       source_size: input.sourceSize ?? null,
       source_ino: input.sourceIno ?? null,
       source_dev: input.sourceDev ?? null,
+      source_cursor_line: input.sourceCursorLine ?? null,
+      source_cursor_hash: input.sourceCursorHash ?? null,
     });
     const row = this.db.prepare(
       "SELECT * FROM session_origins WHERE session_id = ? AND native_path = ?",

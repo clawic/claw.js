@@ -62,7 +62,7 @@ async function handle(request: StoreWorkerRequest): Promise<void> {
 
 async function run(request: StoreWorkerRequest): Promise<StoreWorkerResponse> {
   try {
-    const result = execute(request.operation, request.args);
+    const result = await execute(request.operation, request.args);
     return { id: request.id, ok: true, result };
   } catch (error) {
     return {
@@ -77,7 +77,7 @@ async function run(request: StoreWorkerRequest): Promise<StoreWorkerResponse> {
   }
 }
 
-function execute(operation: string, args: unknown[]): unknown {
+async function execute(operation: string, args: unknown[]): Promise<unknown> {
   if (!allowedOperations.has(operation)) {
     throw new Error(`Unsupported sessions store operation: ${operation}`);
   }

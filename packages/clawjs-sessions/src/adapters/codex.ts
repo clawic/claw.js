@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { createHash } from "node:crypto";
 
 import type { SessionsServiceStore } from "../store.ts";
 import type { CreateSessionInput, AppendMessageInput, MessageRole } from "../types.ts";
 
 const NATIVE_FORMAT = "codex-rollout-jsonl-v1";
+const DEFAULT_IMPORT_BATCH_SIZE = 500;
 
 export interface CodexImportResult {
   filePath: string;
@@ -80,10 +82,6 @@ function rolloutBasename(filePath: string): string {
   return path.basename(filePath);
 }
 
-function sha1OfBuffer(buf: Buffer): string {
-  return createHash("sha1").update(buf).digest("hex");
-}
-
 function rolloutSessionIdFromName(filePath: string): string | null {
   const match = rolloutBasename(filePath).match(/rollout-[\d-]+T[\d-]+-([0-9a-f-]{8,})\.jsonl$/i);
   return match ? match[1] : null;
@@ -101,6 +99,7 @@ export interface ImportCodexFileOptions {
   forceReimport?: boolean;
   machine?: string;
   mode?: "incremental" | "full";
+  batchSize?: number;
 }
 
 interface CodexFileFingerprint {
@@ -129,11 +128,211 @@ function fingerprintsMatch(
     && existing.sourceDev === current.sourceDev;
 }
 
-export function importCodexRolloutFile(
+function updateNormalizedLineHash(hash: ReturnType<typeof createHash>, line: string): void {
+  hash.update(line);
+  hash.update("\n");
+}
+
+interface CodexImportBatch {
+  sessions: CreateSessionInput[];
+  messages: AppendMessageInput[];
+}
+
+interface StreamImportState {
+  sessionId: string | null;
+  sessionInitialized: boolean;
+  messagesImported: number;
+  logicalLine: number;
+}
+
+interface StreamImportOutcome {
+  sessionId: string | null;
+  messagesImported: number;
+  mirrorHash: string;
+  sourceCursorLine: number | null;
+  sourceCursorHash: string | null;
+  prefixMatched: boolean;
+}
+
+function sessionMetaInput(meta: SessionMetaPayload, targetId: string, machine: string | undefined): CreateSessionInput {
+  return {
+    id: targetId,
+    agent: "codex",
+    runtime: meta.originator ?? meta.cli_version ?? "codex-cli",
+    machine: machine ?? null,
+    projectPath: meta.cwd ?? null,
+    title: `Codex ${new Date(isoToMillis(meta.timestamp)).toISOString().slice(0, 16)}`,
+    createdAt: isoToMillis(meta.timestamp),
+    branch: meta.git?.branch ?? null,
+    cwd: meta.cwd ?? null,
+    status: "active",
+    customMetadata: {
+      codex: {
+        originator: meta.originator ?? null,
+        cliVersion: meta.cli_version ?? null,
+        instructions: meta.instructions ?? null,
+        repositoryUrl: meta.git?.repository_url ?? null,
+        commitHash: meta.git?.commit_hash ?? null,
+      },
+    },
+  };
+}
+
+function fallbackSessionInput(filePath: string, sessionId: string, timestamp: number, machine: string | undefined): CreateSessionInput {
+  return {
+    id: sessionId,
+    agent: "codex",
+    runtime: "codex-cli",
+    machine: machine ?? null,
+    title: `Codex ${rolloutBasename(filePath)}`,
+    createdAt: timestamp,
+    status: "active",
+  };
+}
+
+function parseRolloutLineToBatch(
+  filePath: string,
+  line: string,
+  lineIndex: number,
+  state: StreamImportState,
+  batch: CodexImportBatch,
+  options: ImportCodexFileOptions,
+): void {
+  let parsed: RolloutLine;
+  try {
+    parsed = JSON.parse(line) as RolloutLine;
+  } catch {
+    return;
+  }
+  const type = parsed.type;
+  const payload = parsed.payload ?? {};
+  const lineTimestamp = isoToMillis(parsed.timestamp);
+
+  if (type === "session_meta") {
+    const meta = payload as SessionMetaPayload;
+    const targetId = meta.id ?? state.sessionId;
+    if (!targetId) return;
+    state.sessionId = targetId;
+    batch.sessions.push(sessionMetaInput(meta, targetId, options.machine));
+    state.sessionInitialized = true;
+    return;
+  }
+
+  if (!state.sessionId) return;
+
+  if (!state.sessionInitialized) {
+    batch.sessions.push(fallbackSessionInput(filePath, state.sessionId, lineTimestamp, options.machine));
+    state.sessionInitialized = true;
+  }
+
+  if (type === "response_item") {
+    const item = payload as ResponseMessagePayload;
+    if (item.type !== "message") return;
+    const role = classifyResponseMessage(item.role);
+    if (!role) return;
+    const bodyText = extractMessageText(item.content);
+    if (!bodyText.trim()) return;
+    batch.messages.push({
+      sessionId: state.sessionId,
+      role,
+      contentText: bodyText,
+      contentBlocks: Array.isArray(item.content) ? (item.content as unknown[]) : null,
+      timestamp: lineTimestamp,
+      sourceNativeId: `${rolloutBasename(filePath)}::line:${lineIndex}`,
+    });
+    return;
+  }
+
+  if (type === "event_msg") {
+    const ev = payload as EventMsgPayload;
+    if (ev.type === "user_message" && typeof ev.message === "string" && ev.message.trim()) {
+      batch.messages.push({
+        sessionId: state.sessionId,
+        role: "user",
+        contentText: ev.message,
+        timestamp: lineTimestamp,
+        sourceNativeId: `${rolloutBasename(filePath)}::line:${lineIndex}`,
+      });
+    }
+  }
+}
+
+function shouldFlush(batch: CodexImportBatch, batchSize: number): boolean {
+  return batch.messages.length >= batchSize || batch.sessions.length >= batchSize;
+}
+
+function flushBatch(store: SessionsServiceStore, batch: CodexImportBatch): number {
+  if (batch.sessions.length === 0 && batch.messages.length === 0) return 0;
+  const result = store.importSessionBatch({
+    sessions: batch.sessions.splice(0),
+    messages: batch.messages.splice(0),
+  });
+  return result.messagesInserted;
+}
+
+async function streamCodexRolloutFile(
+  store: SessionsServiceStore,
+  filePath: string,
+  options: ImportCodexFileOptions,
+  cursor?: { line: number; hash: string },
+): Promise<StreamImportOutcome> {
+  const input = fs.createReadStream(filePath, { encoding: "utf8" });
+  const reader = createInterface({ input, crlfDelay: Infinity });
+  const hash = createHash("sha1");
+  const prefixHash = cursor ? createHash("sha1") : null;
+  const batchSize = Math.max(1, Math.floor(options.batchSize ?? DEFAULT_IMPORT_BATCH_SIZE));
+  const batch: CodexImportBatch = { sessions: [], messages: [] };
+  const state: StreamImportState = {
+    sessionId: cursor ? store.findOriginByPath(filePath)?.sessionId ?? rolloutSessionIdFromName(filePath) : rolloutSessionIdFromName(filePath),
+    sessionInitialized: cursor ? true : false,
+    messagesImported: 0,
+    logicalLine: -1,
+  };
+  let prefixMatched = cursor ? false : true;
+  let sourceCursorHash: string | null = null;
+
+  for await (const rawLine of reader) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    state.logicalLine += 1;
+    updateNormalizedLineHash(hash, line);
+
+    if (cursor && state.logicalLine <= cursor.line) {
+      if (prefixHash) updateNormalizedLineHash(prefixHash, line);
+      if (state.logicalLine === cursor.line) {
+        sourceCursorHash = prefixHash?.digest("hex") ?? null;
+        prefixMatched = sourceCursorHash === cursor.hash;
+        if (!prefixMatched) {
+          reader.close();
+          input.destroy();
+          break;
+        }
+      }
+      continue;
+    }
+
+    parseRolloutLineToBatch(filePath, line, state.logicalLine, state, batch, options);
+    if (shouldFlush(batch, batchSize)) state.messagesImported += flushBatch(store, batch);
+  }
+
+  state.messagesImported += flushBatch(store, batch);
+  const sourceCursorLine = state.logicalLine >= 0 ? state.logicalLine : null;
+  const mirrorHash = hash.digest("hex");
+  return {
+    sessionId: state.sessionId,
+    messagesImported: state.messagesImported,
+    mirrorHash,
+    sourceCursorLine,
+    sourceCursorHash: sourceCursorLine === null ? null : mirrorHash,
+    prefixMatched: cursor ? prefixMatched && state.logicalLine >= cursor.line : true,
+  };
+}
+
+export async function importCodexRolloutFile(
   store: SessionsServiceStore,
   filePath: string,
   options: ImportCodexFileOptions = {},
-): CodexImportResult {
+): Promise<CodexImportResult> {
   let stat: fs.Stats;
   try {
     stat = fs.statSync(filePath);
@@ -150,134 +349,51 @@ export function importCodexRolloutFile(
     return { filePath, sessionId: existingOrigin?.sessionId ?? null, messagesImported: 0, skipped: true, reason: "unchanged_fingerprint" };
   }
 
-  const buf = fs.readFileSync(filePath);
-  const currentHash = sha1OfBuffer(buf);
-  if (!options.forceReimport && existingOrigin && existingOrigin.mirrorHash === currentHash) {
+  const cursor = !options.forceReimport
+    && (options.mode ?? "incremental") === "incremental"
+    && existingOrigin?.sourceCursorLine != null
+    && existingOrigin.sourceCursorHash
+    ? { line: existingOrigin.sourceCursorLine, hash: existingOrigin.sourceCursorHash }
+    : undefined;
+  let outcome = await streamCodexRolloutFile(store, filePath, options, cursor);
+  if (cursor && !outcome.prefixMatched) {
+    outcome = await streamCodexRolloutFile(store, filePath, options);
+  }
+
+  const sessionId = outcome.sessionId ?? existingOrigin?.sessionId ?? null;
+  if (!sessionId) {
+    return { filePath, sessionId: null, messagesImported: outcome.messagesImported, skipped: false };
+  }
+
+  if (!options.forceReimport && existingOrigin && existingOrigin.mirrorHash === outcome.mirrorHash) {
     store.upsertOrigin({
       sessionId: existingOrigin.sessionId,
       nativePath: filePath,
       nativeFormat: NATIVE_FORMAT,
-      mirrorHash: currentHash,
+      mirrorHash: outcome.mirrorHash,
+      sourceCursorLine: outcome.sourceCursorLine,
+      sourceCursorHash: outcome.sourceCursorHash,
       ...fingerprint,
     });
     return { filePath, sessionId: existingOrigin.sessionId, messagesImported: 0, skipped: true, reason: "unchanged" };
   }
 
-  const text = buf.toString("utf8");
-  const lines = text.split("\n").filter((line) => line.trim().length > 0);
-
-  let sessionId: string | null = existingOrigin?.sessionId ?? rolloutSessionIdFromName(filePath);
-  let sessionInitialized = false;
-  let messagesImported = 0;
-
-  for (let index = 0; index < lines.length; index += 1) {
-    let parsed: RolloutLine;
-    try {
-      parsed = JSON.parse(lines[index]) as RolloutLine;
-    } catch {
-      continue;
-    }
-    const type = parsed.type;
-    const payload = parsed.payload ?? {};
-    const lineTimestamp = isoToMillis(parsed.timestamp);
-
-    if (type === "session_meta") {
-      const meta = payload as SessionMetaPayload;
-      const targetId = meta.id ?? sessionId;
-      if (!targetId) continue;
-      sessionId = targetId;
-      const input: CreateSessionInput = {
-        id: targetId,
-        agent: "codex",
-        runtime: meta.originator ?? meta.cli_version ?? "codex-cli",
-        machine: options.machine ?? null,
-        projectPath: meta.cwd ?? null,
-        title: `Codex ${new Date(isoToMillis(meta.timestamp)).toISOString().slice(0, 16)}`,
-        createdAt: isoToMillis(meta.timestamp),
-        branch: meta.git?.branch ?? null,
-        cwd: meta.cwd ?? null,
-        status: "active",
-        customMetadata: {
-          codex: {
-            originator: meta.originator ?? null,
-            cliVersion: meta.cli_version ?? null,
-            instructions: meta.instructions ?? null,
-            repositoryUrl: meta.git?.repository_url ?? null,
-            commitHash: meta.git?.commit_hash ?? null,
-          },
-        },
-      };
-      store.createSession(input);
-      sessionInitialized = true;
-      continue;
-    }
-
-    if (!sessionId) continue;
-
-    if (!sessionInitialized) {
-      store.createSession({
-        id: sessionId,
-        agent: "codex",
-        runtime: "codex-cli",
-        machine: options.machine ?? null,
-        title: `Codex ${rolloutBasename(filePath)}`,
-        createdAt: lineTimestamp,
-        status: "active",
-      });
-      sessionInitialized = true;
-    }
-
-    if (type === "response_item") {
-      const item = payload as ResponseMessagePayload;
-      if (item.type !== "message") continue;
-      const role = classifyResponseMessage(item.role);
-      if (!role) continue;
-      const bodyText = extractMessageText(item.content);
-      if (!bodyText.trim()) continue;
-      const input: AppendMessageInput = {
-        sessionId,
-        role,
-        contentText: bodyText,
-        contentBlocks: Array.isArray(item.content) ? (item.content as unknown[]) : null,
-        timestamp: lineTimestamp,
-        sourceNativeId: `${rolloutBasename(filePath)}::line:${index}`,
-      };
-      const outcome = store.appendMessageResult(input);
-      if (outcome.inserted) messagesImported += 1;
-      continue;
-    }
-
-    if (type === "event_msg") {
-      const ev = payload as EventMsgPayload;
-      if (ev.type === "user_message" && typeof ev.message === "string" && ev.message.trim()) {
-        const input: AppendMessageInput = {
-          sessionId,
-          role: "user",
-          contentText: ev.message,
-          timestamp: lineTimestamp,
-          sourceNativeId: `${rolloutBasename(filePath)}::line:${index}`,
-        };
-        const outcome = store.appendMessageResult(input);
-        if (outcome.inserted) messagesImported += 1;
-        continue;
-      }
-    }
-  }
-
-  if (sessionId) {
-    store.upsertOrigin({
+  store.importSessionBatch({
+    origin: {
       sessionId,
       nativePath: filePath,
       nativeFormat: NATIVE_FORMAT,
-      mirrorHash: currentHash,
+      mirrorHash: outcome.mirrorHash,
+      sourceCursorLine: outcome.sourceCursorLine,
+      sourceCursorHash: outcome.sourceCursorHash,
       ...fingerprint,
-    });
-  }
+    },
+  });
 
   return {
     filePath,
     sessionId,
-    messagesImported,
+    messagesImported: outcome.messagesImported,
     skipped: false,
   };
 }
@@ -288,11 +404,11 @@ export interface ImportCodexDirOptions extends ImportCodexFileOptions {
   maxFiles?: number;
 }
 
-export function importCodexSessionsDir(
+export async function importCodexSessionsDir(
   store: SessionsServiceStore,
   rootDir: string,
   options: ImportCodexDirOptions = {},
-): CodexScanResult {
+): Promise<CodexScanResult> {
   if (!fs.existsSync(rootDir)) {
     return { scanned: 0, imported: [], skipped: 0, budgetExhausted: false, changedFiles: 0 };
   }
@@ -338,10 +454,11 @@ export function importCodexSessionsDir(
       const full = path.join(dir, entry.name);
       if (pattern.test(entry.name)) {
         scanned += 1;
-        imported.push(importCodexRolloutFile(store, full, {
+        imported.push(await importCodexRolloutFile(store, full, {
           forceReimport: options.forceReimport,
           machine: options.machine,
           mode: options.mode,
+          batchSize: options.batchSize,
         }));
       }
     }
