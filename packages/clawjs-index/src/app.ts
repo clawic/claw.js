@@ -139,17 +139,21 @@ export function buildIndexApp(options: BuildIndexAppOptions = {}) {
   app.post(`${INDEX_API}/entities/query`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;
     const body = readBody(req);
-    return {
-      entities: store.queryEntities({
+    try {
+      return store.queryEntities({
         typeName: body.type as string | undefined,
         where: body.where as Record<string, unknown> | undefined,
         orderBy: body.orderBy as { field: string; direction: "asc" | "desc" } | undefined,
         limit: body.limit as number | undefined,
         offset: body.offset as number | undefined,
+        cursor: body.cursor as string | undefined,
         tagIds: body.tagIds as string[] | undefined,
         collectionId: body.collectionId as string | undefined,
-      }),
-    };
+        fullText: typeof body.fullText === "string" ? body.fullText : undefined,
+      });
+    } catch (error) {
+      return reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
   app.get(`${INDEX_API}/entities/counts`, async (req, reply) => {
     if (!(await requirePrincipal(req, reply, auth))) return;

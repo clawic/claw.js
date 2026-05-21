@@ -9,7 +9,7 @@ import { canonicalTypes } from "./schema/registry.ts";
 import { MarketplaceStore } from "./marketplace-store.ts";
 import type {
   AlertRow, AlertRule, AlertRuleKind, CollectionRow, DeviceTokenRow, EntityRow,
-  EntityType, FieldHistoryPoint, IndexEvent, JsonSchema, MonitorRow,
+  EntityQueryPage, EntityType, FieldHistoryPoint, IndexEvent, JsonSchema, MonitorRow,
   ObservationRow, RelationRow, RunRow, RunStatus, SearchRow, TagRow, UiHints,
 } from "./types.ts";
 
@@ -29,6 +29,70 @@ function readSchema(): string {
 
 function uuid(prefix: string): string {
   return `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 22)}`;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((entry) => stableJson(entry)).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function entityQueryHash(input: EntityQueryInput, order: EntityQueryOrder): string {
+  return createHash("sha256").update(stableJson({
+    typeName: input.typeName ?? null,
+    where: input.where ?? {},
+    tagIds: input.tagIds ?? [],
+    collectionId: input.collectionId ?? null,
+    fullText: input.fullText?.trim() ?? "",
+    order,
+  })).digest("base64url");
+}
+
+interface EntityQueryCursor {
+  lastSeenAt?: string;
+  firstSeenAt?: string;
+  id: string;
+  hash: string;
+}
+
+interface EntityQueryInput {
+  typeName?: string;
+  where?: Record<string, unknown>;
+  orderBy?: { field: string; direction: "asc" | "desc" };
+  limit?: number;
+  offset?: number;
+  cursor?: string;
+  tagIds?: string[];
+  collectionId?: string;
+  fullText?: string;
+}
+
+interface EntityQueryOrder {
+  field: "last_seen_at" | "first_seen_at";
+  direction: "asc" | "desc";
+}
+
+function decodeEntityQueryCursor(cursor: string): EntityQueryCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as EntityQueryCursor;
+    if (typeof parsed !== "object" || parsed === null || typeof parsed.id !== "string" || typeof parsed.hash !== "string") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function encodeEntityQueryCursor(cursor: EntityQueryCursor): string {
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+function resolveEntityQueryOrder(orderBy?: EntityQueryInput["orderBy"]): EntityQueryOrder {
+  const field = orderBy?.field === "first_seen_at" ? "first_seen_at" : "last_seen_at";
+  const direction = orderBy?.direction === "asc" ? "asc" : "desc";
+  return { field, direction };
 }
 
 function deriveIdentityKey(typeName: string, identityFields: string[], data: Record<string, unknown>): string {
@@ -260,7 +324,8 @@ export class IndexStore {
       if (!type.timeseriesFields.includes(change.path)) continue;
       this.db.prepare(`INSERT INTO field_history (entity_id, field_path, value_json, valid_from, run_id) VALUES (?, ?, ?, ?, ?)`).run(entityId, change.path, JSON.stringify(change.after ?? null), observedAt, input.runId ?? null);
     }
-    this.db.prepare(`INSERT INTO entities_fts (id, type_id, title, body) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, body = excluded.body`).run(entityId, type.id, title ?? "", JSON.stringify(input.data).slice(0, 4000));
+    this.db.prepare(`DELETE FROM entities_fts WHERE id = ?`).run(entityId);
+    this.db.prepare(`INSERT INTO entities_fts (id, type_id, title, body) VALUES (?, ?, ?, ?)`).run(entityId, type.id, title ?? "", JSON.stringify(input.data).slice(0, 4000));
     if (input.runId) {
       this.db.prepare(`INSERT OR IGNORE INTO run_entities (run_id, entity_id) VALUES (?, ?)`).run(input.runId, entityId);
       this.db.prepare(`UPDATE runs SET observations_count = observations_count + 1, entities_seen = (SELECT COUNT(*) FROM run_entities WHERE run_id = ?) WHERE id = ?`).run(input.runId, input.runId);
@@ -293,12 +358,11 @@ export class IndexStore {
     }));
   }
 
-  queryEntities(input: {
-    typeName?: string; where?: Record<string, unknown>;
-    orderBy?: { field: string; direction: "asc" | "desc" };
-    limit?: number; offset?: number; tagIds?: string[]; collectionId?: string;
-  }): EntityRow[] {
+  queryEntities(input: EntityQueryInput): EntityQueryPage {
     const clauses: string[] = []; const params: unknown[] = [];
+    const joins: string[] = [];
+    const order = resolveEntityQueryOrder(input.orderBy);
+    const hash = entityQueryHash(input, order);
     if (input.typeName) { clauses.push("t.name = ?"); params.push(input.typeName); }
     for (const [field, value] of Object.entries(input.where ?? {})) {
       clauses.push("json_extract(e.data_json, '$.' || ?) = ?");
@@ -313,11 +377,39 @@ export class IndexStore {
       clauses.push("e.id IN (SELECT entity_id FROM collection_members WHERE collection_id = ?)");
       params.push(input.collectionId);
     }
+    const fullText = input.fullText?.trim();
+    if (fullText) {
+      joins.push("JOIN entities_fts f ON f.id = e.id");
+      clauses.push("f.body MATCH ?");
+      params.push(`${fullText.replace(/"/g, '""')}*`);
+    }
+    if (input.cursor) {
+      const cursor = decodeEntityQueryCursor(input.cursor);
+      if (!cursor || cursor.hash !== hash) throw new Error("query cursor does not match the current entity filters");
+      const cursorValue = order.field === "first_seen_at" ? cursor.firstSeenAt : cursor.lastSeenAt;
+      if (!cursorValue) throw new Error("query cursor is missing its ordered position");
+      const op = order.direction === "asc" ? ">" : "<";
+      clauses.push(`(e.${order.field} ${op} ? OR (e.${order.field} = ? AND e.id ${op} ?))`);
+      params.push(cursorValue, cursorValue, cursor.id);
+    }
     const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
-    const order = input.orderBy ? `ORDER BY ${input.orderBy.field === "last_seen_at" ? "e.last_seen_at" : input.orderBy.field === "first_seen_at" ? "e.first_seen_at" : "e.last_seen_at"} ${input.orderBy.direction.toUpperCase()}` : "ORDER BY e.last_seen_at DESC";
-    const limit = input.limit ?? 200;
-    const offset = input.offset ?? 0;
-    return this.db.prepare(`${this.selectEntity()} ${where} ${order} LIMIT ? OFFSET ?`).all(...params, limit, offset).map((r) => entityFromRow(r));
+    const orderSql = `ORDER BY e.${order.field} ${order.direction.toUpperCase()}, e.id ${order.direction.toUpperCase()}`;
+    const limit = Math.max(1, Math.min(500, Math.floor(input.limit ?? 200)));
+    const offset = input.cursor ? 0 : Math.max(0, Math.floor(input.offset ?? 0));
+    const rows = this.db.prepare(`${this.selectEntity()} ${joins.join(" ")} ${where} ${orderSql} LIMIT ? OFFSET ?`).all(...params, limit + 1, offset);
+    const entities = rows.slice(0, limit).map((r) => entityFromRow(r));
+    const last = entities.at(-1);
+    return {
+      entities,
+      nextCursor: rows.length > limit && last
+        ? encodeEntityQueryCursor({
+          id: last.id,
+          lastSeenAt: last.lastSeenAt,
+          firstSeenAt: last.firstSeenAt,
+          hash,
+        })
+        : null,
+    };
   }
 
   searchEntitiesFullText(query: string, typeName?: string, limit = 100): EntityRow[] {

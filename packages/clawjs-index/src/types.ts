@@ -48,6 +48,11 @@ export interface EntityRow {
   thumbnailUrl?: string | null;
 }
 
+export interface EntityQueryPage {
+  entities: EntityRow[];
+  nextCursor?: string | null;
+}
+
 export interface ObservationRow {
   id: string;
   entityId: string;
