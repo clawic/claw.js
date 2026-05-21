@@ -18,7 +18,8 @@
     ],
     "persistence": [
       "docs/discoverability.registry.json",
-      "docs/adr-operational-coverage.manifest.json"
+      "docs/adr-operational-coverage.manifest.json",
+      "docs/adr/reservations"
     ],
     "cliSearch": "docs/discoverability.registry.json searchQueries",
     "cliInspect": [
@@ -46,31 +47,6 @@
       "persistence": [
         "qa/coverage-budgets.json",
         "qa/quarantine.json"
-      ],
-      "cliSearch": "docs/discoverability.registry.json searchQueries",
-      "cliInspect": [
-        {
-          "command": "claw inspect why search --json"
-        }
-      ]
-    },
-    {
-      "adr": "docs/adr/0040-no-irreversible-data-loss.md",
-      "decisionMap": "docs/decision-map.md",
-      "guardrails": [
-        "scripts/no-irreversible-data-loss-check.mjs"
-      ],
-      "humanSurface": [
-        "docs/decision-map.md",
-        "docs/governance/no-irreversible-data-loss/README.md"
-      ],
-      "programmaticSurface": [
-        "scripts/no-irreversible-data-loss-check.mjs"
-      ],
-      "persistence": [
-        "docs/governance/no-irreversible-data-loss/manifest.json",
-        "docs/governance/no-irreversible-data-loss/baseline.json",
-        "docs/governance/no-irreversible-data-loss/fixtures.json"
       ],
       "cliSearch": "docs/discoverability.registry.json searchQueries",
       "cliInspect": [
@@ -112,29 +88,27 @@
       ]
     },
     {
-      "adr": "docs/adr/0050-zero-accidental-work.md",
+      "adr": "docs/adr/0040-no-irreversible-data-loss.md",
       "decisionMap": "docs/decision-map.md",
       "guardrails": [
-        "scripts/zero-accidental-work-guard.mjs",
-        "scripts/verify-cli-base-imports.mjs",
-        "scripts/progressive-modularity-guard.mjs"
+        "scripts/no-irreversible-data-loss-check.mjs"
       ],
       "humanSurface": [
         "docs/decision-map.md",
-        "docs/api.md"
+        "docs/governance/no-irreversible-data-loss/README.md"
       ],
       "programmaticSurface": [
-        "scripts/zero-accidental-work-guard.mjs",
-        "packages/clawjs-node/src/create-claw.ts",
-        "packages/clawjs-node/src/storage/store.ts"
+        "scripts/no-irreversible-data-loss-check.mjs"
       ],
       "persistence": [
-        "docs/discoverability.registry.json"
+        "docs/governance/no-irreversible-data-loss/manifest.json",
+        "docs/governance/no-irreversible-data-loss/baseline.json",
+        "docs/governance/no-irreversible-data-loss/fixtures.json"
       ],
       "cliSearch": "docs/discoverability.registry.json searchQueries",
       "cliInspect": [
         {
-          "command": "claw inspect commands --json"
+          "command": "claw inspect why search --json"
         }
       ]
     },
@@ -297,6 +271,62 @@
         },
         {
           "command": "claw inspect commands --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0050-zero-accidental-work.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/zero-accidental-work-guard.mjs",
+        "scripts/verify-cli-base-imports.mjs",
+        "scripts/progressive-modularity-guard.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/api.md"
+      ],
+      "programmaticSurface": [
+        "scripts/zero-accidental-work-guard.mjs",
+        "packages/clawjs-node/src/create-claw.ts",
+        "packages/clawjs-node/src/storage/store.ts"
+      ],
+      "persistence": [
+        "docs/discoverability.registry.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect commands --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0052-adr-number-reservation-governance.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/adr-reserve.mjs",
+        "scripts/adr-operational-coverage-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/adr/TEMPLATE.md",
+        "skills/adr-to-guardrail/SKILL.md",
+        "skills/decision-map-maintenance/SKILL.md"
+      ],
+      "programmaticSurface": [
+        "scripts/adr-reserve.mjs",
+        "scripts/adr-operational-coverage-check.mjs"
+      ],
+      "persistence": [
+        "docs/adr/reservations",
+        "docs/discoverability.registry.json",
+        "docs/adr-operational-coverage.manifest.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw search \"ADR number reservation governance\" --json"
         }
       ]
     }
