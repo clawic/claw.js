@@ -80,6 +80,44 @@ test("runCli rejects removed public pre-v1 namespaces before V1 routing", async 
   }
 });
 
+test("runCli exposes portable archive governance and signed-host gates", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-archive-cli-"));
+
+  const planStdout = captureStream();
+  assert.equal(await runCli(["archive", "plan", "--include-secrets", "--json"], {
+    stdout: planStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const plan = parseCliJsonPayload<{ status: string; requiresSignedHost: boolean; expectedManifest: { format: string; manifestPath: string } }>(planStdout.getOutput());
+  assert.equal(plan.status, "requires_signed_host");
+  assert.equal(plan.requiresSignedHost, true);
+  assert.equal(plan.expectedManifest.format, ".clawbackup");
+  assert.equal(plan.expectedManifest.manifestPath, "manifest.json");
+
+  const verifyStdout = captureStream();
+  assert.equal(await runCli(["archive", "verify", "--json"], {
+    stdout: verifyStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const verification = parseCliJsonPayload<{ status: string; counts: { entries: number; plaintextSecretFindings: number } }>(verifyStdout.getOutput());
+  assert.equal(verification.status, "ok");
+  assert.equal(verification.counts.plaintextSecretFindings, 0);
+  assert.ok(verification.counts.entries > 0);
+
+  const restoreStdout = captureStream();
+  assert.equal(await runCli(["archive", "restore", "--include-secrets", "--json"], {
+    stdout: restoreStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const restore = parseCliJsonPayload<{ dryRun: boolean; report: { status: string; blockedReasons: string[] } }>(restoreStdout.getOutput());
+  assert.equal(restore.dryRun, true);
+  assert.equal(restore.report.status, "requires_signed_host");
+  assert.ok(restore.report.blockedReasons.includes("requires_signed_host"));
+});
+
 test("runCli exposes Search source registry, profiles, status and explain admin commands", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-cli-"));
 
