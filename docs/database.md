@@ -104,10 +104,17 @@ files.
 - `loadDatabaseConfig()` and `DatabaseServiceConfig` for runtime config
 - `DatabaseServiceStore` for the SQLite-backed namespace, schema,
   record, token, and file store
+- `AsyncDatabaseServiceStore` for the Fastify service worker boundary; HTTP
+  record listing is paginated in SQL and rejects unsupported full-scan
+  filters/sorts
 - `DatabaseApiClient` for remote admin and scoped-token calls
 - `DatabaseAuthService`, `hashSecret()`, and `generateOpaqueToken()` for
   admin/scoped-token auth
 - `RealtimeHub` and `RecordChangeEvent` for WebSocket record events
+
+`GET /v1/storage/metrics` is an authenticated diagnostic route for the
+database and sessions services. It reports worker queue depth and per-operation
+count/error/p50/p95/p99/max timings without record payloads or secrets.
 
 ## Migration Note
 

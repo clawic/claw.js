@@ -821,6 +821,12 @@ Session messages now normalize persisted file references into `message.documents
 Legacy `attachments` are still accepted as input, but persisted transcripts and relay
 responses expose document refs instead of embedding file payloads in the transcript.
 
+The sessions and database Fastify services run SQLite work through dedicated
+workers so event streams and realtime sockets stay responsive during bounded
+list/search/export operations. Session transcript and export routes are
+paginated by default; `GET /v1/storage/metrics` exposes authenticated
+non-sensitive queue and p95/p99 timing diagnostics.
+
 On the `openclaw` adapter, session routing is capability-based:
 
 - `streamAssistantReply*()` prefers `/v1/responses`

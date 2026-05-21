@@ -222,6 +222,25 @@
 
           <div class="clearfix m-b-sm"></div>
           <div id="records-table" class="table-wrapper" data-testid="records-table"></div>
+          <div class="records-pagination" aria-label="Records pagination">
+            <span id="records-range" class="records-range">0-0 of 0</span>
+            <label class="records-page-size">
+              <span>Rows</span>
+              <select id="records-page-size" aria-label="Rows per page">
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <div class="records-page-actions">
+              <button type="button" id="records-prev" class="btn btn-transparent btn-circle" title="Previous page" aria-label="Previous page" disabled>
+                <i class="ri-arrow-left-s-line"></i>
+              </button>
+              <button type="button" id="records-next" class="btn btn-transparent btn-circle" title="Next page" aria-label="Next page" disabled>
+                <i class="ri-arrow-right-s-line"></i>
+              </button>
+            </div>
+          </div>
         </section>
 
         <!-- ==== Logs pane ==== -->

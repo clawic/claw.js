@@ -198,6 +198,8 @@ The docs check script validates that every current export from
     AudioServiceStore
     AudioTranscript
     AudioTranscriptRole
+    AsyncDatabaseServiceStore
+    AsyncSessionsServiceStore
     AUDIT_FAMILY
     AuditEvent
     auditEventSchema
@@ -987,6 +989,8 @@ The docs check script validates that every current export from
     DatabaseRecordChangeEventType
     DatabaseServiceConfig
     DatabaseServiceStore
+    DatabaseStorageMetrics
+    DatabaseStorageOperationMetric
     DeadlineRecord
     deadlineRecordSchema
     DecisionRecord
@@ -1442,6 +1446,7 @@ The docs check script validates that every current export from
     listOpenClawModels
     ListProjectsFilter
     ListProjectsResult
+    ListRecordsOptions
     ListRecord
     listRecordSchema
     listRuntimeAdapters
@@ -2236,6 +2241,8 @@ The docs check script validates that every current export from
     SessionGatewayDescriptor
     SessionMessage
     SessionMessageRecord
+    SessionMessageUpdatedDelta
+    SessionMessageUpdatedPayload
     SessionOriginRecord
     SessionPolicy
     sessionPolicySchema
@@ -2257,12 +2264,15 @@ The docs check script validates that every current export from
     SessionsServiceConfig
     SessionsServiceStore
     SessionStatus
+    SessionStorageMetrics
+    SessionStorageOperationMetric
     SessionStore
     SessionStoreOptions
     SessionStoreSearchOptions
     SessionStreamEvent
     SessionSummary
     SessionSummaryAlias
+    SidebarBootstrapResult
     SessionTransport
     SessionWithMessages
     setDefaultModel

@@ -749,17 +749,18 @@ function applyRealtimeRecordEvent(event) {
     return;
   }
   if (type.includes("updated")) {
-    if (!event.record || !patchVisibleRecordRow(event.record)) {
+    const isVisible = state.records.some((record) => record.id === event.recordId);
+    if (isVisible && (!event.record || !patchVisibleRecordRow(event.record))) {
       scheduleRecordsRefresh();
     }
     return;
   }
   if (type.includes("deleted")) {
     const removed = removeVisibleRecordRow(event.recordId);
-    if (!removed && state.recordsPaging.offset > 0) {
+    if (!removed) {
       state.recordsPaging.total = Math.max(0, state.recordsPaging.total - 1);
       renderRecordsPagination();
-      scheduleRecordsRefresh();
+      if (state.recordsPaging.offset > 0) scheduleRecordsRefresh();
     } else if (removed && state.recordsPaging.offset + state.records.length < state.recordsPaging.total) {
       scheduleRecordsRefresh();
     }
@@ -1115,8 +1116,36 @@ els.schemaSave.addEventListener("click", async () => {
 });
 
 els.recordsRefresh.addEventListener("click", () => refreshRecords().catch(() => {}));
-els.recordsFilter.addEventListener("change", () => refreshRecords().catch(() => {}));
-els.recordsSort.addEventListener("change", () => refreshRecords().catch(() => {}));
+els.recordsFilter.addEventListener("change", () => {
+  resetRecordsPage();
+  refreshRecords().catch(() => {});
+});
+els.recordsSort.addEventListener("change", () => {
+  resetRecordsPage();
+  refreshRecords().catch(() => {});
+});
+els.recordsTable.addEventListener("click", openRecordFromTableEvent);
+els.recordsTable.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    openRecordFromTableEvent(event);
+  }
+});
+if (els.recordsPageSize) {
+  els.recordsPageSize.addEventListener("change", () => setRecordsPageSize(els.recordsPageSize.value));
+}
+if (els.recordsPrev) {
+  els.recordsPrev.addEventListener("click", () => {
+    state.recordsPaging.offset = Math.max(0, state.recordsPaging.offset - state.recordsPaging.limit);
+    refreshRecords().catch(() => {});
+  });
+}
+if (els.recordsNext) {
+  els.recordsNext.addEventListener("click", () => {
+    if (state.recordsPaging.offset + state.recordsPaging.limit >= state.recordsPaging.total) return;
+    state.recordsPaging.offset += state.recordsPaging.limit;
+    refreshRecords().catch(() => {});
+  });
+}
 
 els.recordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1126,7 +1155,8 @@ els.recordForm.addEventListener("submit", async (event) => {
     const dynamicData = collectDynamicFields() || {};
     const jsonData = JSON.parse(els.recordData.value || "{}");
     const payload = { ...dynamicData, ...jsonData };
-    if (els.recordId.value) {
+    const editingRecord = Boolean(els.recordId.value);
+    if (editingRecord) {
       await request(apiPath(`namespaces/${state.currentNamespace.id}/collections/${state.currentCollection.name}/records/${els.recordId.value}`), {
         method: "PATCH",
         body: JSON.stringify(payload),
@@ -1140,6 +1170,7 @@ els.recordForm.addEventListener("submit", async (event) => {
     els.recordId.value = "";
     els.recordData.value = exampleRecord();
     closeRecordDrawer();
+    if (!editingRecord) resetRecordsPage();
     await refreshRecords();
   } catch (error) {
     alert(error.message);

@@ -135,6 +135,8 @@ flowchart TD
   claw_contracts_api --> claw_api_database_adminLogin
   claw_api_database_realtime["Database realtime websocket\napiRoute"]
   claw_contracts_api --> claw_api_database_realtime
+  claw_api_database_storageMetrics["Database and sessions storage worker metrics\napiRoute"]
+  claw_contracts_api --> claw_api_database_storageMetrics
   claw_api_drive_health["Drive health endpoint\napiRoute"]
   claw_contracts_api --> claw_api_drive_health
   claw_api_drive_login["Drive admin login\napiRoute"]
@@ -2460,6 +2462,7 @@ flowchart TD
 | `claw.api.database.records` | apiRoute | api | claw |  |  |  |  | `/v1/namespaces/{namespace}/collections/{collection}/records` |
 | `claw.api.database.adminLogin` | apiRoute | api | claw |  |  |  |  | `/v1/auth/admin/login` |
 | `claw.api.database.realtime` | apiRoute | api | claw |  |  |  |  | `/v1/realtime` |
+| `claw.api.database.storageMetrics` | apiRoute | api | claw |  |  |  |  | `/v1/storage/metrics` |
 | `claw.api.drive.health` | apiRoute | api | claw |  |  |  |  | `/v1/health` |
 | `claw.api.drive.login` | apiRoute | api | claw |  |  |  |  | `/v1/auth/admin/login` |
 | `claw.api.drive.items` | apiRoute | api | claw |  |  |  |  | `/v1/items` |
