@@ -30,7 +30,7 @@ test("NotifyClient can send notifications and sync the client feed", async () =>
       id: "sdk-ios",
       displayName: "SDK iOS",
       platform: "ios",
-      bundleId: "com.claw.sdk.ios",
+      bundleId: "com.example.claw.sdk.ios",
     });
     const installation = await adminClient.registerInstallation({
       tenantId: "tenant-sdk",

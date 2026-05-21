@@ -54,7 +54,7 @@ test("runCli supports notify send and subscription commands", async () => {
         id: "cli-ios",
         displayName: "CLI iOS",
         platform: "ios",
-        bundleId: "com.claw.cli.ios",
+        bundleId: "com.example.claw.cli.ios",
       }),
     });
     const installResponse = await fetch(`${server.baseUrl}/v1/client/installations/register`, {

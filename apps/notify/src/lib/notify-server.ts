@@ -358,13 +358,13 @@ export async function bootstrapNotifyDemo() {
     id: "claw-mobile-ios",
     displayName: "Claw Mobile iOS",
     platform: "ios",
-    bundleId: "com.claw.mobile.ios",
+    bundleId: "com.example.claw.mobile.ios",
   });
   await ensureClientApp(config, adminToken, {
     id: "claw-mobile-android",
     displayName: "Claw Mobile Android",
     platform: "android",
-    bundleId: "com.claw.mobile.android",
+    bundleId: "com.example.claw.mobile.android",
   });
   const installations = await ensureInstallations(config, adminToken);
   await ensureDemoPreferences(config, adminToken);

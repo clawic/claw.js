@@ -68,6 +68,7 @@ const patterns = [
     id: "signing-identity",
     description: "private Apple signing identity",
     regex: /\b(?:Apple Development|Apple Distribution|Developer ID Application):[^\n"']+/g,
+    allow: (match) => /:\s*Example\b/u.test(match),
   },
   {
     id: "release-output-reference",

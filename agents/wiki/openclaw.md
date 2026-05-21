@@ -46,8 +46,8 @@ Operational notes for ClawJS maintainers and coding agents. This is not public p
 - Verify `command -v openclaw` returns nothing when testing a clean-install path.
 - If `openclaw` is still detected after uninstall, inspect common stray locations:
   - the active global npm prefix
-  - `/Users/trabajo/node_modules/openclaw`
-  - `/Users/trabajo/node_modules/.bin/openclaw`
+  - user-level `node_modules/openclaw`
+  - user-level `node_modules/.bin/openclaw`
   - any nvm-managed global install
 - For a truly clean ChatGPT subscription repro, clearing `~/.openclaw` is not enough. Also inspect:
   - `~/.codex/auth.json`

@@ -129,13 +129,13 @@ test("send fanout, multi-device feed, read flow, and critical ack work together"
     id: "claw-mobile-ios",
     displayName: "Claw Mobile iOS",
     platform: "ios",
-    bundleId: "com.claw.mobile.ios",
+    bundleId: "com.example.claw.mobile.ios",
   });
   await createClientApp(server, {
     id: "claw-mobile-android",
     displayName: "Claw Mobile Android",
     platform: "android",
-    bundleId: "com.claw.mobile.android",
+    bundleId: "com.example.claw.mobile.android",
   });
   const iosInstall = await registerInstallation(server, {
     userId: "user-1",
@@ -249,13 +249,13 @@ test("subscription resolution supports allow, mute, critical-only, unsubscribe, 
     id: "claw-mobile-ios",
     displayName: "Claw Mobile iOS",
     platform: "ios",
-    bundleId: "com.claw.mobile.ios",
+    bundleId: "com.example.claw.mobile.ios",
   });
   await createClientApp(server, {
     id: "claw-mobile-android",
     displayName: "Claw Mobile Android",
     platform: "android",
-    bundleId: "com.claw.mobile.android",
+    bundleId: "com.example.claw.mobile.android",
   });
   const iosInstall = await registerInstallation(server, {
     userId: "user-2",
@@ -399,14 +399,14 @@ test("idempotency, cancelation, push-token rotation, glances, and tenant isolati
     id: "tenant-a-ios",
     displayName: "Tenant A iOS",
     platform: "ios",
-    bundleId: "com.claw.a.ios",
+    bundleId: "com.example.claw.a.ios",
   });
   await createClientApp(server, {
     tenantId: "tenant-b",
     id: "tenant-b-ios",
     displayName: "Tenant B iOS",
     platform: "ios",
-    bundleId: "com.claw.b.ios",
+    bundleId: "com.example.claw.b.ios",
   });
   const installA = await registerInstallation(server, {
     tenantId: "tenant-a",
@@ -545,7 +545,7 @@ test("admin dashboard routes expose prefs, devices, feed, and quiet-hours gating
     id: "tenant-admin-ios",
     displayName: "Tenant Admin iOS",
     platform: "ios",
-    bundleId: "com.claw.admin.ios",
+    bundleId: "com.example.claw.admin.ios",
   });
   const installation = await registerInstallation(server, {
     tenantId: "tenant-admin",

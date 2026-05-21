@@ -7,7 +7,7 @@ Native macOS chat client for ClawJS, a port of the iOS app under `apps/chat/ios`
 - Pure SwiftUI, no dependencies, single `ClawJSMac` app target.
 - `NavigationSplitView` layout with a persistent sidebar for Projects / Agents / Conversations.
 - Talks directly to a ClawJS Relay instance via REST + SSE (same endpoints as the iOS app).
-- Bundle identifier: `com.clawjs.mac`
+- Bundle identifier: `com.example.clawjs.mac`
 - Deployment target: macOS 26 (Tahoe), required for the `glassEffect` Liquid Glass API shared with the iOS target.
 - App Sandbox enabled with the network client entitlement.
 
