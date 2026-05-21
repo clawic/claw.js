@@ -2366,6 +2366,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-capability-maturity-guard",
+      "kind": "guardrail",
+      "owner": "claw",
+      "canonicalSource": "scripts/capability-maturity-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "capability-maturity-guard",
+        "Capability Maturity Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "capability-maturity-guard",
+          "expectPath": "scripts/capability-maturity-guard.mjs"
+        }
+      ],
+      "guard": "scripts/capability-maturity-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-code-hygiene-check",
       "kind": "guardrail",
       "owner": "claw",
