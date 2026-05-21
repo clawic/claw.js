@@ -70,13 +70,23 @@ candidate_sign_identities() {
     return 0
   fi
 
+  if [[ -z "$TEAM_ID" ]]; then
+    echo "Refusing to auto-select a signing identity from the login keychain." >&2
+    echo "Pass --sign-identity, --team-id, or --skip-sign explicitly." >&2
+    return 2
+  fi
+
   if [[ -n "$TEAM_ID" ]]; then
     security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep "($TEAM_ID)" | grep -v "CSSMERR" | awk '{print $2}' || true
     return 0
   fi
-
-  security find-identity -v -p codesigning 2>/dev/null | grep "Apple Development:" | grep -v "CSSMERR" | awk '{print $2}' || true
 }
+
+if [[ "$SKIP_SIGN" != "1" && -z "$SIGN_IDENTITY" && -z "$TEAM_ID" ]]; then
+  echo "Refusing to auto-select a signing identity from the login keychain." >&2
+  echo "Pass --sign-identity, --team-id, or --skip-sign explicitly." >&2
+  exit 1
+fi
 
 mkdir -p "$(dirname "$OUTPUT_PATH")"
 rm -rf "$OUTPUT_PATH"

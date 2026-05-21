@@ -709,6 +709,7 @@ final class CommanderE2ETests: XCTestCase {
             "--output", output.path,
             "--binary-path", context.binary(named: "ClawApp"),
             "--skip-build",
+            "--skip-sign",
         ]
         packageProcess.standardOutput = Pipe()
         packageProcess.standardError = Pipe()
