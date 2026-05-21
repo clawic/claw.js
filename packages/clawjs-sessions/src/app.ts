@@ -126,7 +126,10 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       void openedStore.close();
     },
   );
-  const events = new SessionEventBroadcaster();
+  const events = new SessionEventBroadcaster({
+    hardQueueLimit: config.eventsHardQueueLimit,
+    maxSubscribers: config.eventsMaxSubscribers,
+  });
   const interruptedTurns = new Set<string>();
 
   function publish(event: Omit<SessionEvent, "at">): SessionEvent {
@@ -186,12 +189,15 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
 
   app.get(clawApiPath("events"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const subscription = events.trySubscribe(reply.raw);
+    if (!subscription) {
+      return reply.code(503).send({ error: "Too many session event subscribers." });
+    }
     void reply.raw.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
     });
-    const subscription = events.subscribe(reply.raw);
     subscription.enqueue({ type: clawSessionEvents.updated, at: Date.now(), payload: { ready: true } });
     request.raw.on("close", () => {
       subscription.close();

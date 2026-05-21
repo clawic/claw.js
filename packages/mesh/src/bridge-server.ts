@@ -1,7 +1,7 @@
 import type { IncomingMessage, Server as HttpServer } from "node:http";
 import type { Duplex } from "node:stream";
 
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 
 import { AuditStore } from "./audit-store.ts";
@@ -51,23 +51,49 @@ export interface BridgeServerDeps {
   onFrame?: (session: BridgeSession, frame: BridgeFrame) => void | Promise<void>;
   onSessionClose?: (session: BridgeSession) => void;
   pingIntervalMs?: number;
+  maxSessions?: number;
+  maxQueuedFramesPerSession?: number;
+  maxBufferedBytesPerSession?: number;
 }
 
 const CLOSE_CODES = {
   unauthorized: 4401,
   badFrame: 4400,
+  slowClient: 4408,
   serverShutdown: 1001,
 } as const;
+
+const DEFAULT_MAX_SESSIONS = 64;
+const DEFAULT_MAX_QUEUED_FRAMES_PER_SESSION = 256;
+const DEFAULT_MAX_BUFFERED_BYTES_PER_SESSION = 1024 * 1024;
+
+interface BridgeServerLimits {
+  maxSessions: number;
+  maxQueuedFramesPerSession: number;
+  maxBufferedBytesPerSession: number;
+}
 
 export class BridgeServer {
   private readonly wss: WebSocketServer;
   private readonly deps: BridgeServerDeps;
+  private readonly limits: BridgeServerLimits;
   private readonly sessions = new Set<BridgeSession>();
   private pingInterval: NodeJS.Timeout | null = null;
   private nextId = 1;
 
   constructor(deps: BridgeServerDeps) {
     this.deps = deps;
+    this.limits = {
+      maxSessions: readPositiveLimit(deps.maxSessions, DEFAULT_MAX_SESSIONS),
+      maxQueuedFramesPerSession: readPositiveLimit(
+        deps.maxQueuedFramesPerSession,
+        DEFAULT_MAX_QUEUED_FRAMES_PER_SESSION,
+      ),
+      maxBufferedBytesPerSession: readPositiveLimit(
+        deps.maxBufferedBytesPerSession,
+        DEFAULT_MAX_BUFFERED_BYTES_PER_SESSION,
+      ),
+    };
     this.wss = new WebSocketServer({ noServer: true });
   }
 
@@ -128,12 +154,23 @@ export class BridgeServer {
       this.rejectUnauthorized(socket, "invalid bearer token");
       return;
     }
+    if (this.sessions.size >= this.limits.maxSessions) {
+      this.deps.auditStore.record({
+        action: "bridgeAuth",
+        outcome: "deny",
+        context: { reason: "too-many-sessions", remote: req.socket.remoteAddress },
+      });
+      this.rejectTooManyRequests(socket, "too many bridge sessions");
+      return;
+    }
     this.wss.handleUpgrade(req, socket, head, (ws) => {
       this.installSession(ws, req);
     });
   }
 
   private installSession(ws: WebSocket, req: IncomingMessage): void {
+    const queue: string[] = [];
+    let flushing = false;
     const session: BridgeSession = {
       id: `bridge-${this.nextId++}`,
       remoteAddress: req.socket.remoteAddress ?? undefined,
@@ -142,8 +179,39 @@ export class BridgeServer {
       closed: false,
       send: (frame: BridgeFrame) => {
         if (session.closed) return;
-        ws.send(JSON.stringify(frame));
+        if (queue.length >= this.limits.maxQueuedFramesPerSession) {
+          this.closeWebSocketSession(session, ws, CLOSE_CODES.slowClient, "slow client");
+          return;
+        }
+        queue.push(JSON.stringify(frame));
+        flush();
       },
+    };
+    const finalize = () => {
+      if (session.closed) return;
+      session.closed = true;
+      queue.length = 0;
+      this.sessions.delete(session);
+      this.deps.onSessionClose?.(session);
+    };
+    const flush = () => {
+      if (flushing || session.closed) return;
+      if (ws.readyState !== WebSocket.OPEN) return;
+      if (ws.bufferedAmount > this.limits.maxBufferedBytesPerSession) {
+        this.closeWebSocketSession(session, ws, CLOSE_CODES.slowClient, "slow client");
+        return;
+      }
+      const next = queue.shift();
+      if (!next) return;
+      flushing = true;
+      ws.send(next, (error) => {
+        flushing = false;
+        if (error) {
+          this.closeWebSocketSession(session, ws, CLOSE_CODES.slowClient, "send failed");
+          return;
+        }
+        flush();
+      });
     };
     this.sessions.add(session);
     this.deps.auditStore.record({
@@ -172,9 +240,7 @@ export class BridgeServer {
       void this.deps.onFrame?.(session, frame.data);
     });
     ws.on("close", () => {
-      session.closed = true;
-      this.sessions.delete(session);
-      this.deps.onSessionClose?.(session);
+      finalize();
     });
     ws.on("error", () => {
       try {
@@ -186,6 +252,19 @@ export class BridgeServer {
   }
 
   attachExternalStream(stream: ExternalDuplexStream, options: { remoteLabel?: string } = {}): BridgeSession {
+    if (this.sessions.size >= this.limits.maxSessions) {
+      stream.close();
+      return {
+        id: `bridge-iroh-rejected-${this.nextId++}`,
+        remoteAddress: options.remoteLabel,
+        socket: null,
+        transport: "iroh",
+        closed: true,
+        send: () => {},
+      };
+    }
+    const queue: Buffer[] = [];
+    let flushing = false;
     const session: BridgeSession = {
       id: `bridge-iroh-${this.nextId++}`,
       remoteAddress: options.remoteLabel,
@@ -194,11 +273,44 @@ export class BridgeServer {
       closed: false,
       send: (frame: BridgeFrame) => {
         if (session.closed) return;
-        void stream.send(Buffer.from(JSON.stringify(frame), "utf8")).catch(() => {
-          session.closed = true;
-          this.sessions.delete(session);
-        });
+        if (queue.length >= this.limits.maxQueuedFramesPerSession) {
+          closeExternalSession();
+          return;
+        }
+        queue.push(Buffer.from(JSON.stringify(frame), "utf8"));
+        flush();
       },
+    };
+    const finalize = () => {
+      if (session.closed) return;
+      session.closed = true;
+      queue.length = 0;
+      this.sessions.delete(session);
+      this.deps.onSessionClose?.(session);
+    };
+    const closeExternalSession = () => {
+      finalize();
+      try {
+        stream.close();
+      } catch {
+        /* ignore */
+      }
+    };
+    const flush = () => {
+      if (flushing || session.closed) return;
+      const next = queue.shift();
+      if (!next) return;
+      flushing = true;
+      void stream.send(next).then(
+        () => {
+          flushing = false;
+          flush();
+        },
+        () => {
+          flushing = false;
+          closeExternalSession();
+        },
+      );
     };
     this.sessions.add(session);
     this.deps.onSession?.(session);
@@ -221,12 +333,6 @@ export class BridgeServer {
       }
       void this.deps.onFrame?.(session, frame.data);
     });
-    const finalize = () => {
-      if (session.closed) return;
-      session.closed = true;
-      this.sessions.delete(session);
-      this.deps.onSessionClose?.(session);
-    };
     stream.on("end", finalize);
     stream.on("close", finalize);
     stream.on("error", finalize);
@@ -234,12 +340,38 @@ export class BridgeServer {
   }
 
   private rejectUnauthorized(socket: Duplex, reason: string): void {
+    this.rejectHttp(socket, 401, "Unauthorized", reason);
+  }
+
+  private rejectTooManyRequests(socket: Duplex, reason: string): void {
+    this.rejectHttp(socket, 429, "Too Many Requests", reason);
+  }
+
+  private rejectHttp(socket: Duplex, statusCode: number, statusText: string, reason: string): void {
     socket.write(
-      `HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: ${
+      `HTTP/1.1 ${statusCode} ${statusText}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: ${
         Buffer.byteLength(reason)
       }\r\n\r\n${reason}`,
     );
     socket.destroy();
+  }
+
+  private closeWebSocketSession(
+    session: BridgeSession,
+    ws: WebSocket,
+    code: number,
+    reason: string,
+  ): void {
+    if (session.closed) return;
+    try {
+      ws.close(code, reason);
+    } catch {
+      try {
+        ws.terminate();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   private startPingInterval(): void {
@@ -256,6 +388,10 @@ export class BridgeServer {
     }, ms);
     this.pingInterval.unref?.();
   }
+}
+
+function readPositiveLimit(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : fallback;
 }
 
 function extractBearer(header: string | string[] | undefined): string | null {

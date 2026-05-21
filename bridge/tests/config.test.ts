@@ -119,6 +119,19 @@ test("loadConfig requires positive coordinator enable in remote exposure", () =>
   assert.equal(config.coordinator?.accessToken, "token");
 });
 
+test("loadConfig reads bridge backpressure limits from env", () => {
+  const config = loadConfig({
+    HOME: "/tmp/clawjs-bridge-home",
+    CLAW_REMOTE_MAX_SESSIONS: "9",
+    CLAW_REMOTE_MAX_QUEUE_FRAMES: "17",
+    CLAW_REMOTE_MAX_BUFFERED_BYTES: "4096",
+  });
+
+  assert.equal(config.maxSessions, 9);
+  assert.equal(config.maxQueuedFramesPerSession, 17);
+  assert.equal(config.maxBufferedBytesPerSession, 4096);
+});
+
 test("loadConfig rejects unknown exposure modes", () => {
   assert.throws(
     () => loadConfig({ HOME: "/tmp/clawjs-bridge-home", CLAW_REMOTE_EXPOSURE: "public" }),

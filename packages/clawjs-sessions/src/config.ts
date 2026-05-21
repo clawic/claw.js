@@ -12,9 +12,13 @@ export interface SessionsServiceConfig {
   enableCodexAdapter: boolean;
   enableHermesAdapter: boolean;
   hermesStateDbPath: string | null;
+  eventsMaxSubscribers: number;
+  eventsHardQueueLimit: number;
 }
 
 export const SESSIONS_DEFAULT_PORT = 24101;
+export const SESSIONS_DEFAULT_EVENTS_MAX_SUBSCRIBERS = 128;
+export const SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT = 256;
 
 export function loadSessionsConfig(overrides: Partial<SessionsServiceConfig> = {}): SessionsServiceConfig {
   const cwd = process.cwd();
@@ -30,6 +34,14 @@ export function loadSessionsConfig(overrides: Partial<SessionsServiceConfig> = {
     enableCodexAdapter: overrides.enableCodexAdapter ?? (process.env.CLAW_SESSIONS_DISABLE_CODEX !== "1"),
     enableHermesAdapter: overrides.enableHermesAdapter ?? (process.env.CLAW_SESSIONS_DISABLE_HERMES !== "1"),
     hermesStateDbPath: overrides.hermesStateDbPath ?? process.env.CLAW_SESSIONS_HERMES_DB ?? path.join(home, ".hermes", "state.db"),
+    eventsMaxSubscribers: parsePositiveInteger(
+      overrides.eventsMaxSubscribers ?? process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS,
+      SESSIONS_DEFAULT_EVENTS_MAX_SUBSCRIBERS,
+    ),
+    eventsHardQueueLimit: parsePositiveInteger(
+      overrides.eventsHardQueueLimit ?? process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT,
+      SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT,
+    ),
   };
 }
 
@@ -41,4 +53,10 @@ function defaultClawjsDataRoot(): string {
 
 function expandHome(value: string): string {
   return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+}
+
+function parsePositiveInteger(value: unknown, fallback: number): number {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isSafeInteger(numberValue) || numberValue <= 0) return fallback;
+  return numberValue;
 }

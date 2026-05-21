@@ -173,6 +173,9 @@ export function createBridgeRuntime(
   const bridgeServer = new BridgeServer({
     identityStore,
     auditStore,
+    maxSessions: config.maxSessions,
+    maxQueuedFramesPerSession: config.maxQueuedFramesPerSession,
+    maxBufferedBytesPerSession: config.maxBufferedBytesPerSession,
     onFrame: onFrame
       ? (session, frame) => {
           void onFrame(session, frame);

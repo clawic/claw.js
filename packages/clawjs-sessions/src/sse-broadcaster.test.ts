@@ -9,6 +9,7 @@ import { clawSessionEvents } from "@clawjs/core";
 
 import { buildSessionsApp } from "./app.ts";
 import { SessionsApiClient } from "./client.ts";
+import { loadSessionsConfig } from "./config.ts";
 import {
   SessionEventBroadcaster,
   type SessionSseWritable,
@@ -165,6 +166,34 @@ test("SessionEventBroadcaster closes only the slow client on hard queue overflow
   assert.equal(decoded(slow).at(-1)?.type, "error");
 });
 
+test("SessionEventBroadcaster rejects subscribers past the configured limit", () => {
+  const broadcaster = new SessionEventBroadcaster({ maxSubscribers: 1 });
+  const first = new FakeSseRaw();
+  const second = new FakeSseRaw();
+
+  assert.ok(broadcaster.trySubscribe(first));
+  assert.equal(broadcaster.trySubscribe(second), null);
+  assert.equal(broadcaster.snapshotMetrics().subscribers, 1);
+  assert.equal(broadcaster.snapshotMetrics().rejectedSubscribers, 1);
+});
+
+test("loadSessionsConfig reads SSE backpressure limits from env", () => {
+  const previousMaxSubscribers = process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS;
+  const previousQueueLimit = process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT;
+  try {
+    process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS = "7";
+    process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT = "11";
+    const config = loadSessionsConfig();
+    assert.equal(config.eventsMaxSubscribers, 7);
+    assert.equal(config.eventsHardQueueLimit, 11);
+  } finally {
+    if (previousMaxSubscribers === undefined) delete process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS;
+    else process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS = previousMaxSubscribers;
+    if (previousQueueLimit === undefined) delete process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT;
+    else process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT = previousQueueLimit;
+  }
+});
+
 test("SessionsApiClient.events parses existing SSE frames split across chunks", async () => {
   const frame = "event: session.updated\n"
     + `data: ${JSON.stringify(event({ type: clawSessionEvents.updated, sessionId: "session-1", payload: { ready: true } }))}\n\n`;
@@ -240,6 +269,43 @@ test("sessions app emits message.updated as a delta envelope over SSE", async ()
       full: false,
     });
     assert.equal(built.events.snapshotMetrics().subscribers, 1);
+  } finally {
+    abort.abort();
+    await app.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("sessions app returns 503 when the SSE subscriber limit is reached", async () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-sse-limit-"));
+  const built = buildSessionsApp({
+    config: {
+      sharedSecret: "test-secret",
+      dataDir: path.join(rootDir, "sessions"),
+      dbPath: path.join(rootDir, "sessions.sqlite"),
+      eventsMaxSubscribers: 1,
+    },
+  });
+  const app = built.app;
+  const abort = new AbortController();
+
+  try {
+    await app.listen({ host: "127.0.0.1", port: 0 });
+    const address = app.server.address();
+    assert.equal(typeof address, "object");
+    assert.ok(address);
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const first = await fetch(`${baseUrl}/v1/events`, {
+      headers: { authorization: "Bearer test-secret" },
+      signal: abort.signal,
+    });
+    assert.equal(first.status, 200);
+
+    const second = await fetch(`${baseUrl}/v1/events`, {
+      headers: { authorization: "Bearer test-secret" },
+    });
+    assert.equal(second.status, 503);
+    assert.equal(built.events.snapshotMetrics().rejectedSubscribers, 1);
   } finally {
     abort.abort();
     await app.close();

@@ -14,6 +14,7 @@ export interface SessionSseWritable {
 
 export interface SessionEventBroadcasterOptions {
   hardQueueLimit?: number;
+  maxSubscribers?: number;
   now?: () => number;
 }
 
@@ -25,6 +26,7 @@ export interface SessionEventBroadcasterMetrics {
   droppedEvents: number;
   lastFlushLatencyMs: number;
   closedSlowClients: number;
+  rejectedSubscribers: number;
 }
 
 interface QueuedSessionEvent {
@@ -183,16 +185,28 @@ export class SessionEventBroadcaster {
     droppedEvents: 0,
     lastFlushLatencyMs: 0,
     closedSlowClients: 0,
+    rejectedSubscribers: 0,
   };
 
   constructor(options: SessionEventBroadcasterOptions = {}) {
     this.options = {
       hardQueueLimit: options.hardQueueLimit ?? 256,
+      maxSubscribers: options.maxSubscribers ?? 128,
       now: options.now ?? Date.now,
     };
   }
 
   subscribe(raw: SessionSseWritable): SessionEventSubscription {
+    const subscription = this.trySubscribe(raw);
+    if (!subscription) throw new Error("too many session event subscribers");
+    return subscription;
+  }
+
+  trySubscribe(raw: SessionSseWritable): SessionEventSubscription | null {
+    if (this.clients.size >= this.options.maxSubscribers) {
+      this.metrics.rejectedSubscribers += 1;
+      return null;
+    }
     const client = new SessionEventClient(raw, this.options, this.metrics, (closedClient) => {
       this.clients.delete(closedClient);
     });

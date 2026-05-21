@@ -13,6 +13,9 @@ export interface BridgeConfig {
   bonjourEnabled: boolean;
   version: string;
   capabilities: string[];
+  maxSessions: number;
+  maxQueuedFramesPerSession: number;
+  maxBufferedBytesPerSession: number;
   coordinator?: {
     baseUrl: string;
     accessToken: string;
@@ -37,6 +40,9 @@ export interface BridgeConfigEnv {
   CLAW_REMOTE_ENABLE_BONJOUR?: string;
   CLAW_REMOTE_DISABLE_BONJOUR?: string;
   CLAW_REMOTE_VERSION?: string;
+  CLAW_REMOTE_MAX_SESSIONS?: string;
+  CLAW_REMOTE_MAX_QUEUE_FRAMES?: string;
+  CLAW_REMOTE_MAX_BUFFERED_BYTES?: string;
   CLAW_REMOTE_ENABLE_COORDINATOR?: string;
   CLAW_REMOTE_COORDINATOR_URL?: string;
   CLAW_REMOTE_COORDINATOR_TOKEN?: string;
@@ -55,6 +61,9 @@ export interface BridgeConfigEnv {
 export type BridgeExposureMode = "loopback" | "pairing" | "remote";
 
 const DEFAULT_CAPABILITIES = ["remote", "pair", "jobs"];
+const DEFAULT_MAX_SESSIONS = 64;
+const DEFAULT_MAX_QUEUE_FRAMES = 256;
+const DEFAULT_MAX_BUFFERED_BYTES = 1024 * 1024;
 
 export function loadConfig(
   env: BridgeConfigEnv = process.env,
@@ -103,6 +112,9 @@ export function loadConfig(
     bonjourEnabled,
     version: env.CLAW_REMOTE_VERSION ?? "0.1.0",
     capabilities: DEFAULT_CAPABILITIES,
+    maxSessions: parsePositiveInteger(env.CLAW_REMOTE_MAX_SESSIONS, DEFAULT_MAX_SESSIONS),
+    maxQueuedFramesPerSession: parsePositiveInteger(env.CLAW_REMOTE_MAX_QUEUE_FRAMES, DEFAULT_MAX_QUEUE_FRAMES),
+    maxBufferedBytesPerSession: parsePositiveInteger(env.CLAW_REMOTE_MAX_BUFFERED_BYTES, DEFAULT_MAX_BUFFERED_BYTES),
     ...(coordinator ? { coordinator } : {}),
     iroh: {
       enabled: irohEnabled,
@@ -143,5 +155,12 @@ function parsePort(raw: string | undefined, fallback: number): number {
   if (!Number.isFinite(n) || n < 1 || n > 65535) {
     throw new Error(`invalid port: ${raw}`);
   }
+  return n;
+}
+
+function parsePositiveInteger(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isSafeInteger(n) || n <= 0) return fallback;
   return n;
 }
