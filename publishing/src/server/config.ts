@@ -12,7 +12,9 @@ export interface PublishingConfig {
   vaultBaseUrl: string | null;
   driveBaseUrl: string | null;
   schedulerTickMs: number;
-  workerTickMs: number;
+  workerIdleMinMs: number;
+  workerIdleMaxMs: number;
+  workerBudget: number;
   recurrenceTickMs: number;
   healthProbeMs: number;
   pipelineEnabled: boolean;
@@ -45,7 +47,12 @@ export function loadConfig(overrides: Partial<PublishingConfig> = {}): Publishin
     vaultBaseUrl: overrides.vaultBaseUrl ?? process.env.CLAW_PUBLISHING_VAULT_URL ?? null,
     driveBaseUrl: overrides.driveBaseUrl ?? process.env.CLAW_PUBLISHING_DRIVE_URL ?? null,
     schedulerTickMs: overrides.schedulerTickMs ?? Number(process.env.CLAW_PUBLISHING_SCHEDULER_TICK_MS ?? "30000"),
-    workerTickMs: overrides.workerTickMs ?? Number(process.env.CLAW_PUBLISHING_WORKER_TICK_MS ?? "500"),
+    workerIdleMinMs:
+      overrides.workerIdleMinMs ??
+      Number(process.env.CLAW_PUBLISHING_WORKER_IDLE_MIN_MS ?? process.env.CLAW_PUBLISHING_WORKER_TICK_MS ?? "1000"),
+    workerIdleMaxMs:
+      overrides.workerIdleMaxMs ?? Number(process.env.CLAW_PUBLISHING_WORKER_IDLE_MAX_MS ?? "30000"),
+    workerBudget: overrides.workerBudget ?? Number(process.env.CLAW_PUBLISHING_WORKER_BUDGET ?? "25"),
     recurrenceTickMs:
       overrides.recurrenceTickMs ?? Number(process.env.CLAW_PUBLISHING_RECURRENCE_TICK_MS ?? "60000"),
     healthProbeMs: overrides.healthProbeMs ?? Number(process.env.CLAW_PUBLISHING_HEALTH_PROBE_MS ?? "3600000"),

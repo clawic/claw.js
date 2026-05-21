@@ -44,7 +44,14 @@ export interface JobBatchRow {
 }
 
 export class JobsService {
+  private readonly queueChangeListeners = new Set<() => void>();
+
   constructor(private readonly db: DB) {}
+
+  onQueueChange(listener: () => void): () => void {
+    this.queueChangeListeners.add(listener);
+    return () => this.queueChangeListeners.delete(listener);
+  }
 
   createBatch(workspaceId: string, purpose: string, targetId: string | null): JobBatchRow {
     const id = prefixedId("jb");
@@ -84,7 +91,9 @@ export class JobsService {
     if (input.batchId) {
       this.db.prepare(`UPDATE job_batch SET total = total + 1 WHERE id = ?`).run(input.batchId);
     }
-    return this.get(id)!;
+    const job = this.get(id)!;
+    this.emitQueueChange();
+    return job;
   }
 
   /**
@@ -121,6 +130,7 @@ export class JobsService {
     this.db
       .prepare(`UPDATE job SET state = 'queued', available_at = ?, last_error = ? WHERE id = ?`)
       .run(availableAt, lastError ?? null, id);
+    this.emitQueueChange();
   }
 
   cancel(id: string): void {
@@ -159,6 +169,15 @@ export class JobsService {
     const running = (this.db.prepare(`SELECT COUNT(*) as c FROM job WHERE state = 'running'`).get() as { c: number }).c;
     const oldest = this.db.prepare(`SELECT MIN(available_at) as t FROM job WHERE state = 'queued'`).get() as { t: number | null };
     return { queued, running, oldestQueuedAt: oldest.t ?? null, lastSchedulerTick: null };
+  }
+
+  nextQueuedAt(): number | null {
+    const row = this.db.prepare(`SELECT MIN(available_at) as t FROM job WHERE state = 'queued'`).get() as { t: number | null };
+    return row.t ?? null;
+  }
+
+  private emitQueueChange(): void {
+    for (const listener of this.queueChangeListeners) listener();
   }
 }
 

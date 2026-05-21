@@ -44,6 +44,7 @@ import { EventBus } from "./webhooks/emitter.ts";
 import { RateLimiter } from "./pipeline/rate_limiter.ts";
 import { Scheduler } from "./pipeline/scheduler.ts";
 import { Worker } from "./pipeline/worker.ts";
+import { AdaptiveWorkerLoop } from "./pipeline/adaptive_worker_loop.ts";
 import { registerRoutes } from "./routes/v1/index.ts";
 
 export interface BuildAppOptions {
@@ -56,6 +57,7 @@ export interface BuiltApp {
   config: PublishingConfig;
   services: AppServices;
   timers: NodeJS.Timeout[];
+  workerLoop: AdaptiveWorkerLoop | null;
   shutdown: () => Promise<void>;
 }
 
@@ -202,13 +204,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   await registerRoutes(app);
 
   const timers: NodeJS.Timeout[] = [];
+  let workerLoop: AdaptiveWorkerLoop | null = null;
   if (config.pipelineEnabled) {
     timers.push(setInterval(() => {
       try { scheduler.tick(); } catch (err) { app.log.error({ err }, "scheduler tick failed"); }
     }, config.schedulerTickMs));
-    timers.push(setInterval(() => {
-      worker.tick().catch((err) => app.log.error({ err }, "worker tick failed"));
-    }, config.workerTickMs));
+    workerLoop = new AdaptiveWorkerLoop({
+      worker,
+      jobs,
+      workerBudget: config.workerBudget,
+      idleMinMs: config.workerIdleMinMs,
+      idleMaxMs: config.workerIdleMaxMs,
+      logger: app.log,
+    });
+    workerLoop.start();
     timers.push(setInterval(() => {
       try {
         const due = recurrences.due(Date.now());
@@ -220,12 +229,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<BuiltApp>
   }
 
   const shutdown = async () => {
+    workerLoop?.stop();
     for (const t of timers) clearInterval(t);
     await app.close();
     db.close();
   };
 
-  return { app, config, services, timers, shutdown };
+  return { app, config, services, timers, workerLoop, shutdown };
 }
 
 function isOpenPath(url: string): boolean {

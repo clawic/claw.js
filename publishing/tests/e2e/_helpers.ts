@@ -16,7 +16,9 @@ export async function bootTestApp() {
       port: 0,
       pipelineEnabled: false, // tests drive the pipeline manually
       schedulerTickMs: 50,
-      workerTickMs: 50,
+      workerIdleMinMs: 50,
+      workerIdleMaxMs: 500,
+      workerBudget: 25,
     },
   });
   await built.app.listen({ host: "127.0.0.1", port: 0 });
