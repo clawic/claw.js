@@ -1,3 +1,7 @@
+// @generated compact catalog snapshot.
+// This file is intentionally a derived, import-light data surface. The
+// catalog-boundary tests compare it against the canonical heavy catalogs.
+
 export interface CompactBuiltinCollectionSummary {
   name: string;
   displayName: string;
