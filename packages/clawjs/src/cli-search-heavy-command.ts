@@ -1062,12 +1062,12 @@ export async function runSearchAdminCli(input: {
         source,
         cwd: input.context.cwd,
         flags: input.flags,
-        SearchDocuments.boundedNumberFlag,
+        boundedNumberFlag: SearchDocuments.boundedNumberFlag,
         expandSearchPath,
         openStore: openCliSearchStore,
         registerSources: registerCliSearchSources,
         scheduleChangedEvent: scheduleSearchChangedSourceEvent,
-        SearchDocuments.stableSearchId,
+        stableSearchId: SearchDocuments.stableSearchId,
       });
       if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "changes" });
       else input.context.stdout.write(`source=${data.source} scanned=${data.scanned} upserts=${data.scheduledUpserts} deletes=${data.scheduledDeletes}\n`);

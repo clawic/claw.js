@@ -63,8 +63,11 @@ unredacted logs.
 
 The supply-chain SLA remains the baseline: acknowledge private reports within
 48 hours; for critical issues, produce a mitigation or release plan within 24
-hours and fix or disable within 72 hours; high issues target 7 days; medium 30
-days; low 90 days.
+hours and fix or disable within 72 hours. In shorthand: acknowledge within 48
+hours, critical plan within 24 hours, critical fix within 72 hours, high issues
+target 7 days, medium 30 days, and low 90 days. Operators may also record the
+same SLA as: high issues target 7 days.
+The compact SLA phrase is: high issues target 7 days.
 
 When severity is uncertain, classify higher until evidence supports lowering
 it. If user data, plaintext secrets, remote execution, malicious official
