@@ -662,6 +662,14 @@ function validateGoldenQueries(errors) {
   if (!options.cli) return;
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-golden-discoverability-"));
   const env = { ...process.env, CLAW_DATA_DIR: dataDir, CLAW_HOME: dataDir };
+  for (const source of ["surfaces.registry", "surfaces.routes"]) {
+    const rebuild = runClaw(["search", "rebuild", "--source", source, "--data-dir", dataDir, "--json"], rootDir, env);
+    const output = `${rebuild.stdout ?? ""}\n${rebuild.stderr ?? ""}`;
+    if (rebuild.status !== 0) {
+      errors.push(`golden query index rebuild failed for ${source}: ${output.trim()}`);
+      return;
+    }
+  }
   for (const query of fixture.queries) {
     if (!query.query || !query.expectSource || !query.expectType || !query.expectResourceId || !Number.isInteger(query.maxRank)) continue;
     const domains = query.domains.join(",");
