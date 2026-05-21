@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "decisionId": "SBC-001",
+      "sourceConversationId": "current-thread-2026-05-21",
+      "sourceAnchor": "Streaming and Backpressure ADR P0 implementation request",
+      "architectureImpact": "Streaming, IPC, SSE, WebSocket, Relay, session events, and UI delta routes must declare bounded frame, queue, slow-consumer, cancellation, overflow, and incremental persistence behavior.",
+      "state": "implemented",
+      "evidenceRefs": [
+        "docs/adr/0042-streaming-backpressure-contract.md",
+        "packages/clawjs-core/src/streaming-backpressure.ts",
+        "packages/clawjs-core/src/surface-registry.ts",
+        "scripts/streaming-backpressure-contract-check.mjs"
+      ],
+      "reviewedAt": "2026-05-21"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { clawCodexExternalEventSamples } from "@clawjs/core";
+import { clawCodexExternalEventSamples, clawDefaultStreamingBackpressurePolicy, estimateUtf8Bytes } from "@clawjs/core";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "fs";
@@ -240,6 +240,38 @@ test("coalesceStreamChunks batches small deltas and flushes before done", async 
 
   assert.deepEqual(chunks, ["ab"]);
   assert.equal(done, true);
+});
+
+test("streamOpenClawSession splits oversized deltas without losing text", async () => {
+  const longDelta = `start-${"😀".repeat(20_000)}-end`;
+  const chunks: string[] = [];
+  const dependencies: StreamSessionDependencies = {
+    gatewayConfig: {
+      url: "http://127.0.0.1:18789",
+      port: 18789,
+      source: "explicit",
+    },
+    fetchImpl: async () => new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(responseDeltaSse(longDelta));
+        controller.close();
+      },
+    }), { status: 200 }),
+  };
+
+  for await (const chunk of streamOpenClawSession({
+    sessionId: "session-large-frame",
+    messages: [{ role: "user", content: "large reply" }],
+    coalesceMs: 0,
+  }, dependencies)) {
+    if (!chunk.done) {
+      chunks.push(chunk.delta);
+      assert.ok(estimateUtf8Bytes(chunk.delta) <= clawDefaultStreamingBackpressurePolicy.maxFrameBytes);
+    }
+  }
+
+  assert.ok(chunks.length > 1);
+  assert.equal(chunks.join(""), longDelta);
 });
 
 test("streamOpenClawSession streams via OpenAI responses when available", async () => {

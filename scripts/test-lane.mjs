@@ -159,6 +159,8 @@ function device() {
 }
 
 function release() {
+  run("node", ["./scripts/supply-chain-security-check.mjs", "--release"]);
+  run("node", ["./scripts/idle-quiescence-check.mjs"]);
   integration();
   npmRun("test:ts");
   npmRun("build");

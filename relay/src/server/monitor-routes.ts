@@ -1,4 +1,9 @@
-import { clawApiPath } from "@clawjs/core";
+import {
+  clawApiPath,
+  clawDefaultStreamingBackpressurePolicy,
+  estimateUtf8Bytes,
+  splitStreamingTextDelta,
+} from "@clawjs/core";
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 
@@ -6,6 +11,46 @@ import { RelayAuthService } from "./auth.ts";
 import { RelayDatabase } from "./db.ts";
 import { MonitorBus } from "./monitor-bus.ts";
 import { authorizeTenant, requireClaims } from "./app-helpers.ts";
+
+const monitorStreamPolicy = clawDefaultStreamingBackpressurePolicy;
+
+interface MonitorStreamMetrics {
+  queuedFrames: number;
+  queuedBytes: number;
+  droppedFrames: number;
+  droppedBytes: number;
+  overflowCount: number;
+  closedSlowConsumers: number;
+}
+
+interface MonitorStreamFrame {
+  frame: string;
+  frameBytes: number;
+}
+
+export function encodeMonitorEvent(event: string, payload: Record<string, unknown>): MonitorStreamFrame {
+  const frame = `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
+  return { frame, frameBytes: estimateUtf8Bytes(frame) };
+}
+
+export function splitMonitorPayload(event: string, payload: Record<string, unknown>): MonitorStreamFrame[] {
+  const encoded = encodeMonitorEvent(event, payload);
+  if (encoded.frameBytes <= monitorStreamPolicy.maxFrameBytes) return [encoded];
+  if (event !== "monitor.session.delta" || typeof payload.delta !== "string") {
+    return [encodeMonitorEvent("monitor.overflow", {
+      originalEvent: event,
+      frameBytes: encoded.frameBytes,
+      maxFrameBytes: monitorStreamPolicy.maxFrameBytes,
+      reason: "frame_too_large",
+      ts: Date.now(),
+    })];
+  }
+  const withoutDelta = encodeMonitorEvent(event, { ...payload, delta: "" });
+  const maxDeltaBytes = Math.max(1, monitorStreamPolicy.maxFrameBytes - withoutDelta.frameBytes - 8);
+  return splitStreamingTextDelta(payload.delta, maxDeltaBytes).map((delta) => (
+    encodeMonitorEvent(event, { ...payload, delta })
+  ));
+}
 
 export function registerMonitorRoutes(input: {
   app: FastifyInstance;
@@ -185,15 +230,86 @@ export function registerMonitorRoutes(input: {
     reply.raw.setHeader("cache-control", "no-cache, no-transform");
     reply.raw.setHeader("connection", "keep-alive");
 
+    const queue: MonitorStreamFrame[] = [];
+    const metrics: MonitorStreamMetrics = {
+      queuedFrames: 0,
+      queuedBytes: 0,
+      droppedFrames: 0,
+      droppedBytes: 0,
+      overflowCount: 0,
+      closedSlowConsumers: 0,
+    };
+    let writing = false;
+    let closed = false;
+    let unsubscribe: () => void = () => {};
+    let refreshTimer: ReturnType<typeof setInterval> | undefined;
+
+    const cleanup = () => {
+      if (closed) return;
+      closed = true;
+      if (refreshTimer) clearInterval(refreshTimer);
+      unsubscribe();
+      monitor.detachClient(params.tenantId, clientId);
+      if (!reply.raw.destroyed) reply.raw.end();
+    };
+
+    const closeForOverflow = (frame: MonitorStreamFrame) => {
+      metrics.overflowCount += 1;
+      metrics.droppedFrames += queue.length + 1;
+      metrics.droppedBytes += metrics.queuedBytes + frame.frameBytes;
+      metrics.closedSlowConsumers += 1;
+      if (!reply.raw.destroyed) {
+        const overflow = encodeMonitorEvent("monitor.overflow", {
+          reason: "slow_consumer_overflow",
+          metrics,
+          policyId: monitorStreamPolicy.id,
+          ts: Date.now(),
+        });
+        reply.raw.write(overflow.frame);
+      }
+      cleanup();
+    };
+
+    const pump = () => {
+      if (closed || writing || reply.raw.destroyed) return;
+      writing = true;
+      while (queue.length > 0 && !reply.raw.destroyed) {
+        const next = queue.shift()!;
+        metrics.queuedBytes -= next.frameBytes;
+        metrics.queuedFrames = queue.length;
+        if (!reply.raw.write(next.frame)) {
+          reply.raw.once("drain", () => {
+            writing = false;
+            pump();
+          });
+          return;
+        }
+      }
+      writing = false;
+    };
+
     const writeEvent = (event: string, payload: Record<string, unknown>) => {
-      if (reply.raw.destroyed) return;
-      reply.raw.write(`event: ${event}\n`);
-      reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
+      if (closed || reply.raw.destroyed) return;
+      for (const frame of splitMonitorPayload(event, payload)) {
+        const nextFrames = queue.length + 1;
+        const nextBytes = metrics.queuedBytes + frame.frameBytes;
+        if (
+          nextFrames > monitorStreamPolicy.maxQueuedFrames ||
+          nextBytes > monitorStreamPolicy.maxQueuedBytes
+        ) {
+          closeForOverflow(frame);
+          return;
+        }
+        queue.push(frame);
+        metrics.queuedFrames = queue.length;
+        metrics.queuedBytes = nextBytes;
+      }
+      pump();
     };
 
     writeEvent("monitor.snapshot", buildMonitorSnapshot(params.tenantId, clientId, openedSessionId));
 
-    const unsubscribe = monitor.subscribe(params.tenantId, (envelope) => {
+    unsubscribe = monitor.subscribe(params.tenantId, (envelope) => {
       writeEvent(envelope.event, { ...envelope.payload, ts: envelope.ts });
     });
 
@@ -203,19 +319,10 @@ export function registerMonitorRoutes(input: {
       ...(openedSessionId ? { openedSessionId } : {}),
     });
 
-    const refreshTimer = setInterval(() => {
+    refreshTimer = setInterval(() => {
       writeEvent("monitor.snapshot", buildMonitorSnapshot(params.tenantId, clientId, openedSessionId));
     }, 15_000);
 
-    let closed = false;
-    const cleanup = () => {
-      if (closed) return;
-      closed = true;
-      clearInterval(refreshTimer);
-      unsubscribe();
-      monitor.detachClient(params.tenantId, clientId);
-      if (!reply.raw.destroyed) reply.raw.end();
-    };
     request.raw.on("close", cleanup);
     request.raw.on("error", cleanup);
   });

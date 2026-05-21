@@ -115,6 +115,17 @@ export interface ClawSurfaceNarrative {
   nonInference: string;
 }
 
+export interface ClawResourceContract {
+  startup: string;
+  idle: string;
+  memory: string;
+  streaming: string;
+  storage: string;
+  hotPath: string;
+  scale: string;
+  validation: string;
+}
+
 export interface ClawPersistentSurfaceSource {
   file: string;
   line?: number;
@@ -161,6 +172,7 @@ export interface ClawPersistentSurfaceNode {
   programmaticSurfaces?: ClawSurfaceParitySurface[];
   surfaceGaps?: ClawSurfaceParityGap[];
   surfaceNarrative?: ClawSurfaceNarrative;
+  resourceContract?: ClawResourceContract;
   notes?: string;
   warnings?: string[];
 }
@@ -174,6 +186,7 @@ export interface ClawSurfaceEdge {
   visibility: ClawSurfaceConnectionVisibility;
   contractId?: string;
   transport?: string;
+  streamingPolicyId?: string;
   validation?: string;
   source?: ClawPersistentSurfaceSource;
   notes?: string;
@@ -188,6 +201,7 @@ export interface ClawSurfaceRouteStep {
   steward?: ClawPersistentSurfaceSteward;
   visibility?: ClawSurfaceConnectionVisibility;
   transport?: string;
+  streamingPolicyId?: string;
   validation?: string;
   gaps?: string[];
 }
@@ -201,6 +215,7 @@ export interface ClawSurfaceRoute {
   steward: ClawPersistentSurfaceSteward;
   visibility: ClawSurfaceConnectionVisibility;
   transport?: string;
+  streamingPolicyId?: string;
   validation: string;
   steps: ClawSurfaceRouteStep[];
   tests?: string[];
@@ -208,6 +223,7 @@ export interface ClawSurfaceRoute {
   adrs?: string[];
   gaps?: string[];
   surfaceNarrative?: ClawSurfaceNarrative;
+  resourceContract?: ClawResourceContract;
   source?: ClawPersistentSurfaceSource;
   notes?: string;
 }

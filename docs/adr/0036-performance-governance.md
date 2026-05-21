@@ -38,7 +38,30 @@ the section is not relevant, the ADR states why.
 The default design stance is lazy startup, opt-in modules, bounded caches,
 explicit retention, backpressure, cancellation, batching, pagination or
 windowing, incremental indexing, idle quiescence, and no unproven heavy work on
-main/UI hot paths.
+main/UI hot paths. The Idle Quiescence Contract P1 requires timers, pollers,
+schedulers, watchers, health loops, reconnect loops, refresh loops, telemetry
+loops, and diagnostic probes to be registered in
+`docs/idle-quiescence.manifest.json` with visible-only UI behavior, opt-in
+diagnostics, backoff or leases, shared-timer rationale, and inactivity
+shutdown.
+
+Windowing/Pagination by Default makes broad reads a P0/P1 closure blocker. Any
+list, transcript, timeline, sidebar, database-admin view, search indexer,
+rollout JSONL reader, embedding job, table, or import must use a
+cursor/window/batch/limit contract before touching large data. The pattern
+`load all -> filter/sort/render` is forbidden unless the dataset has a
+documented maximum count or byte size. Pre-existing exceptions must live in
+`docs/boundedness-baseline.json` with owner, reason, current limit, cleanup
+policy, reference, expiration, and release-blocking status.
+
+Resource Contract is required for implementation closure. New registered
+runtime, UI, storage, stream, cache, queue, IPC, daemon, worker, or long-running
+agent surfaces must carry `resourceContract` metadata before they are complete.
+That contract names startup behavior, idle quiescence, memory bounds,
+streaming/backpressure behavior, storage retention, hot-path constraints,
+scale/windowing expectations, and validation evidence. Historical missing
+contracts are allowed only through `docs/surface-resource-contract-baseline.json`
+with owner, reason, expiry, and reentry condition.
 
 Equivalent behavior with lower computer-resource cost is a preferred refactor
 class when tests and measurements prove compatibility. Performance debt is
@@ -91,15 +114,19 @@ capture. Future budgets require measured evidence before enforcement.
   `docs/decision-map.md`, `docs/constitution-map.md`, and
   `docs/agent-rules/index.md` route contributors and agents to the policy.
 - **Programmatic surface**: `scripts/performance-governance-check.mjs`, docs
-  alignment checks, discoverability checks, and `claw search "performance
-  governance" --json` expose and validate the route.
+  alignment checks, `scripts/boundedness-guard.mjs`,
+  `scripts/idle-quiescence-check.mjs`, discoverability checks, and `claw
+  search "performance governance" --json` expose and validate the route.
 - **Persistence**: this ADR, the governance doc, the ADR template, decision-map
-  routing, discoverability records, and the performance-governance check carry
-  the durable contract.
+  routing, `docs/boundedness-baseline.json`,
+  `docs/idle-quiescence.manifest.json`, discoverability records, and the
+  performance-governance check carry the durable contract.
 - **Gaps**: automatic historical ADR remediation and non-UI resource budgets
   are planned progressive enforcement, not complete in this slice.
 - **Validation**: `npm run test:docs`, `node scripts/performance-governance-check.mjs`,
-  discoverability generation/audit, and Clawix mirror checks protect the route.
+  `node scripts/boundedness-guard.mjs`, `node
+  scripts/idle-quiescence-check.mjs`, discoverability generation/audit, and
+  Clawix mirror checks protect the route.
 
 ## Discovery Route
 

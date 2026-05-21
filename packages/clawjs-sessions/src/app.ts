@@ -128,6 +128,8 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
   );
   const events = new SessionEventBroadcaster({
     hardQueueLimit: config.eventsHardQueueLimit,
+    maxQueuedBytes: config.eventsMaxQueuedBytes,
+    maxFrameBytes: config.eventsMaxFrameBytes,
     maxSubscribers: config.eventsMaxSubscribers,
   });
   const interruptedTurns = new Set<string>();

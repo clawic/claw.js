@@ -1,4 +1,5 @@
 import { clawCliCommandRegistry } from "./cli-command-registry.ts";
+import { clawStreamingBackpressurePolicyId } from "./streaming-backpressure.ts";
 
 export const clawSurfaceRegistryVersion = 1;
 
@@ -115,6 +116,17 @@ export interface ClawSurfaceNarrative {
   nonInference: string;
 }
 
+export interface ClawResourceContract {
+  startup: string;
+  idle: string;
+  memory: string;
+  streaming: string;
+  storage: string;
+  hotPath: string;
+  scale: string;
+  validation: string;
+}
+
 export interface ClawPersistentSurfaceSource {
   file: string;
   line?: number;
@@ -161,6 +173,7 @@ export interface ClawPersistentSurfaceNode {
   programmaticSurfaces?: ClawSurfaceParitySurface[];
   surfaceGaps?: ClawSurfaceParityGap[];
   surfaceNarrative?: ClawSurfaceNarrative;
+  resourceContract?: ClawResourceContract;
   notes?: string;
   warnings?: string[];
 }
@@ -174,6 +187,7 @@ export interface ClawSurfaceEdge {
   visibility: ClawSurfaceConnectionVisibility;
   contractId?: string;
   transport?: string;
+  streamingPolicyId?: string;
   validation?: string;
   source?: ClawPersistentSurfaceSource;
   notes?: string;
@@ -188,6 +202,7 @@ export interface ClawSurfaceRouteStep {
   steward?: ClawPersistentSurfaceSteward;
   visibility?: ClawSurfaceConnectionVisibility;
   transport?: string;
+  streamingPolicyId?: string;
   validation?: string;
   gaps?: string[];
 }
@@ -201,6 +216,7 @@ export interface ClawSurfaceRoute {
   steward: ClawPersistentSurfaceSteward;
   visibility: ClawSurfaceConnectionVisibility;
   transport?: string;
+  streamingPolicyId?: string;
   validation: string;
   steps: ClawSurfaceRouteStep[];
   tests?: string[];
@@ -208,6 +224,7 @@ export interface ClawSurfaceRoute {
   adrs?: string[];
   gaps?: string[];
   surfaceNarrative?: ClawSurfaceNarrative;
+  resourceContract?: ClawResourceContract;
   source?: ClawPersistentSurfaceSource;
   notes?: string;
 }
@@ -1021,6 +1038,11 @@ const corePublicRoutes = [
   ["claw.api.gateway.agentServiceEvaluate", "POST", "/v1/gateway/agent-service/evaluate", "Gateway multi-tenant agent service evaluation contract"],
   ["claw.api.gateway.agentServiceExecutions", "POST", "/v1/gateway/agent-service/executions", "Gateway multi-tenant agent service execution receipt contract"],
   ["claw.api.gateway.auditReceipts", "POST", "/v1/gateway/audit/receipts", "Gateway signed host audit receipt contract"],
+  ["claw.api.archives.plans", "POST", "/v1/archives/plans", "Portable archive plan contract"],
+  ["claw.api.archives.exports", "POST", "/v1/archives/exports", "Portable archive export handoff contract"],
+  ["claw.api.archives.verifications", "POST", "/v1/archives/verifications", "Portable archive verification report contract"],
+  ["claw.api.archives.importPreviews", "POST", "/v1/archives/import-previews", "Portable archive import preview contract"],
+  ["claw.api.archives.restores", "POST", "/v1/archives/restores", "Portable archive restore report contract"],
 ] as const;
 
 const corePrivateRouteValues = "/api/attachments /api/auth/token /api/capture /api/captures /api/chat/feedback /api/comments /api/config/profile /api/config/reset /api/config/workspace-files /api/connectors/catalog /api/context /api/custom-fields /api/cycles /api/discover/local /api/e2e/seed /api/epics /api/export /api/field-values /api/goals /api/graph /api/hot-topics/seed /api/images /api/instances /api/integrations/auth /api/integrations/enable /api/integrations/gateway /api/integrations/install /api/integrations/install-stream /api/integrations/reveal /api/integrations/slack/connect /api/integrations/slack/test /api/integrations/telegram/connect /api/integrations/telegram/test /api/integrations/uninstall /api/integrations/whatsapp/cleanup /api/integrations/whatsapp/connect /api/lists /api/memory/person /api/milestones /api/monitors /api/notes/ /api/notify/actions /api/people /api/projects /api/promote /api/recurrences /api/row /api/saved-views /api/search /api/search/index /api/sections /api/seed /api/sessions /api/setup /api/skills/install /api/skills/remove /api/skills/sources /api/sources/refresh /api/stats /api/telegram/account /api/templates /api/timeline /api/tools/conclude /api/tools/get/ /api/tools/search /api/tools/status /api/tts /api/tts/providers /api/users /api/activity /api/apps/{appId}/dashboard /api/apps/{appId}/assets /api/auth.test /api/chat/sessions /api/claw/status /api/companies /api/config /api/config/local /api/connectors/subscriptions /api/contacts /api/data /api/dm /api/e2e/reset /api/e2e/status /api/events /api/health /api/images/backends /api/inbox /api/inspect/preview /api/integrations/setup /api/integrations/status /api/integrations/whatsapp/chats /api/memory /api/notes /api/notify/dashboard /api/personas /api/plugins /api/routines /api/rules /api/schema /api/skills/list /api/sources /api/spaces /api/summary /api/tasks /api/tools/save /api/ui /api/usage".split(" ");
@@ -1259,6 +1281,24 @@ const publicApiRouteNarratives: Partial<Record<string, ClawSurfaceNarrative>> = 
     },
     nonInference: "This endpoint does not authorize record payload access, storage mutation, secret exposure, or background polling.",
   },
+  ...Object.fromEntries([
+    "claw.api.archives.plans",
+    "claw.api.archives.exports",
+    "claw.api.archives.verifications",
+    "claw.api.archives.importPreviews",
+    "claw.api.archives.restores",
+  ].map((id) => [id, {
+    concept: "Portable archive API surface for user-owned backup, verification, import preview, and restore reporting.",
+    authorizingDecision: {
+      ref: "ADR 0038: Portable archive contract",
+      path: "docs/adr/0038-portable-archive-contract.md",
+    },
+    completingSurface: {
+      human: "Clawix Settings/Data portable archive flow and docs/portable-archive-contract.md",
+      programmatic: "claw archive JSON output and @clawjs/core portable archive schemas",
+    },
+    nonInference: "This route registration does not permit plaintext secret export or restore mutation without signed-host approval.",
+  }])),
 };
 
 export const clawPublicApiRouteContractCatalog = defineStableCatalogFromEntries(corePublicRoutes.map(([id, method, route, name]) => {
@@ -1439,6 +1479,18 @@ const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
       programmatic: "clawCapabilityMaturityRegistry plus JSON output from claw maturity and claw inspect maturity",
     },
     nonInference: "This command does not promote capabilities, enable experimental features, or override activation policy.",
+  },
+  archive: {
+    concept: "Portable archive governance CLI for backup planning, export handoff, archive verification, import preview, restore reporting, and signed-host secrets gates.",
+    authorizingDecision: {
+      ref: "ADR 0038: Portable archive contract",
+      path: "docs/adr/0038-portable-archive-contract.md",
+    },
+    completingSurface: {
+      human: "docs/portable-archive-contract.md and Clawix Settings/Data portable archive surface",
+      programmatic: "claw archive plan|export|verify|inspect|import|restore|doctor --json",
+    },
+    nonInference: "This command does not reveal plaintext secrets and does not perform restore mutation without explicit approval and signed-host proof when needed.",
   },
 };
 
@@ -2001,6 +2053,16 @@ export const clawSurfaceGraphEdges: ClawSurfaceEdge[] = [
   { id: "claw.edge.meshShare.brokers.sync", type: "brokers", fromId: "claw.mesh.share", toId: "claw.sync", steward: "claw", visibility: "external", contractId: "claw.api.mesh.shares", transport: "invite/share/revoke primitives", validation: "inter-mesh sharing primitive tests", source: surfaceRouteGraphSource },
 ];
 
+function transportRequiresStreamingPolicy(transport?: string): boolean {
+  return /\b(stream|streaming|sse|websocket|ipc|stdout events?|session events?)\b/i.test(transport ?? "");
+}
+
+for (const edge of clawSurfaceGraphEdges) {
+  if (transportRequiresStreamingPolicy(edge.transport)) {
+    edge.streamingPolicyId ??= clawStreamingBackpressurePolicyId;
+  }
+}
+
 function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {
   const edge = clawSurfaceGraphEdges.find((candidate) => candidate.id === edgeId);
   if (!edge) throw new Error(`Missing surface route edge ${edgeId}`);
@@ -2013,6 +2075,7 @@ function routeStep(edgeId: string, gaps: string[] = []): ClawSurfaceRouteStep {
     steward: edge.steward,
     visibility: edge.visibility,
     transport: edge.transport,
+    streamingPolicyId: edge.streamingPolicyId,
     validation: edge.validation,
     ...(gaps.length ? { gaps } : {}),
   };
@@ -2176,6 +2239,16 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
         programmatic: "claw inspect route chat.localDesktop plus bridge/runtime/session contracts",
       },
       nonInference: "This route does not authorize remote Relay chat, companion pairing behavior, or a new chat API outside its registered steps.",
+    },
+    resourceContract: {
+      startup: "No chat turn starts on app open; the route becomes available after Clawix bridge and local runtime readiness.",
+      idle: "Idle state keeps only bridge/runtime readiness and session metadata; no active model stream or response buffer is retained.",
+      memory: "Conversation/session state is retained by the sessions store; live turn buffers are bounded to the active stream and released on completion or cancellation.",
+      streaming: "Bridge and sessions frames stream incrementally, support cancellation, and must coalesce UI updates without unbounded response buffering.",
+      storage: "Session records and event history are written through the framework sessions store with its registered retention policy.",
+      hotPath: "UI body updates, bridge frame handling, and runtime event-loop callbacks are on the hot path and must avoid synchronous heavy work.",
+      scale: "The route handles one active desktop turn directly, remains indexed across 1,000 sessions through session/search stores, and must rely on pagination/search rather than loading 100,000 sessions into UI memory.",
+      validation: "packages/clawjs/src/inspect-cli.test.ts and macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py",
     },
     source: surfaceRouteGraphSource,
   },
@@ -2577,6 +2650,15 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
   },
 ];
 
+for (const route of clawSurfaceGraphRoutes) {
+  if (
+    transportRequiresStreamingPolicy(route.transport)
+    || route.steps.some((step) => transportRequiresStreamingPolicy(step.transport))
+  ) {
+    route.streamingPolicyId ??= clawStreamingBackpressurePolicyId;
+  }
+}
+
 export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
   version: clawSurfaceRegistryVersion,
   nodes: [
@@ -2602,6 +2684,16 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
           programmatic: "@clawjs/core surface registry plus claw inspect",
         },
         nonInference: "Registering a surface here does not by itself authorize a feature, native permission, storage steward, or route beyond its explicit node, edge, route, and decision evidence.",
+      },
+      resourceContract: {
+        startup: "The static registry is imported by inspect/search/doc tooling; no live service or user data read starts merely because the root node exists.",
+        idle: "Idle cost is module-resident static metadata only.",
+        memory: "Registry nodes, edges, and routes are retained as bounded static arrays; growth is guarded by source-size and surface guards.",
+        streaming: "No runtime stream is owned by this root; route-specific streams must declare their own resourceContract.",
+        storage: "Generated docs and baselines are written by explicit validation/generation commands, not by application startup.",
+        hotPath: "Inspect/search commands traverse the registry on demand; application UI and runtime hot paths must not synchronously render the full registry.",
+        scale: "Designed for hundreds to low thousands of surfaces; 100,000-item behavior requires indexed search or generated projections instead of full Markdown rendering.",
+        validation: "packages/clawjs/src/inspect-cli.test.ts and scripts/surface-resource-contract-guard.mjs",
       },
       source: registrySource,
       notes: "Root for names, fields, routes, protocols, CLI commands, IDs, and external mappings that must not drift after V1 without versioning.",
@@ -2757,6 +2849,35 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       direction: "bidirectional",
       notes: "Stable record shape for public surface evolution, migrations, adapters, rescue policy, redacted receipts, and repair planning.",
     }),
+    ...[
+      ["claw.schema.portableArchive.manifest.v1", "Portable archive backup manifest schema v1", "claw.portableArchive.manifest.v1"],
+      ["claw.schema.portableArchive.plan.v1", "Portable archive backup export plan schema v1", "claw.portableArchive.plan.v1"],
+      ["claw.schema.portableArchive.verificationReport.v1", "Portable archive backup verification report schema v1", "claw.portableArchive.verificationReport.v1"],
+      ["claw.schema.portableArchive.importPreview.v1", "Portable archive backup import preview schema v1", "claw.portableArchive.importPreview.v1"],
+      ["claw.schema.portableArchive.restoreReport.v1", "Portable archive backup restore report schema v1", "claw.portableArchive.restoreReport.v1"],
+    ].map(([id, name, value]) => clawPersistentSurface.contract({
+      ...contractDefaults,
+      id,
+      kind: "jsonSchema",
+      name,
+      value,
+      parentId: "claw.contracts.schemas",
+      surfaceClass: "schema",
+      direction: "bidirectional",
+      notes: "Stable portable archive contract exported from packages/clawjs-core/src/portable-archive.ts.",
+      surfaceNarrative: {
+        concept: "Versioned JSON contract for readable, verifiable, restorable user-state portable archives.",
+        authorizingDecision: {
+          ref: "ADR 0038: Portable archive contract",
+          path: "docs/adr/0038-portable-archive-contract.md",
+        },
+        completingSurface: {
+          human: "docs/portable-archive-contract.md",
+          programmatic: "@clawjs/core portable archive schemas and claw archive --json",
+        },
+        nonInference: "The schema does not allow plaintext secrets or bypass signed-host restore approval.",
+      },
+    })),
     ...clawCliFlagContractCatalog.nodes,
     ...["openai", "anthropic", "stripe", "telegram", "slack", "google", "microsoft"].map((provider) => clawPersistentSurface.contract({
       ...contractDefaults,

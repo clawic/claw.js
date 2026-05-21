@@ -33,7 +33,8 @@ performance fix.
   build indexes, warm models, or start polling until a user, agent, route, or
   explicit module requires it.
 - Stay bounded. Caches, logs, queues, snapshots, indexes, attachments, and
-  model artifacts need size, age, or count limits plus cleanup ownership.
+  model artifacts need bytes, count, age, or active-window limits plus cleanup
+  ownership.
 - Sleep at idle. Idle CPU, GPU, timers, workers, WebViews, streams, and
   watchers must quiesce when no useful work remains.
 - Apply backpressure. Streams, bridge frames, sync, indexing, search,
@@ -47,6 +48,89 @@ performance fix.
 - Prefer equivalent cheaper behavior. When tests and measurements prove the
   same user-visible and programmatic behavior, the lower-resource
   implementation is the preferred refactor.
+
+## Windowing/Pagination by Default
+
+The default rule is: do not load all -> filter/sort/render. Lists,
+transcripts, timelines, sidebars, database administration, search indexing,
+rollout JSONL readers, embeddings, tables, and imports must use a
+cursor/window/batch/limit contract before they touch large data.
+
+List-like public and internal APIs should return a bounded item slice plus
+`hasMore`, `nextCursor`, or explicit `offset` metadata. Database and dense-data
+callers must pass a deliberate `limit` for high-volume records even when the
+store has a defensive default. Rollout and transcript readers should prefer
+tail windows and `readWindowBefore`-style older-page fetches over whole-file
+hydration. Imports must stream or batch, or prove a maximum file size and row
+count before using whole-file parsing.
+
+Exceptions are allowed only for datasets with a documented maximum count or
+byte size. Existing historical exceptions live in
+`docs/boundedness-baseline.json`; new or touched exceptions need the affected
+surface, risk kind, bound, cleanup policy, review reference, and expiry.
+
+## Hot Path Guard P1
+
+UI, realtime, server route, websocket, render, and event-loop hot paths must
+not add synchronous heavy work without bounded-size proof. The static guard
+blocks synchronous SQLite in request/realtime handlers, `Buffer.concat`,
+whole-file read-and-split parsing, and JSON decode in hot paths unless the call
+has a nearby `hot-path-ok` marker with `maxBytes`, `maxItems`, or `maxPixels`
+and a reason.
+
+Existing reviewed hot-path debt lives in `docs/hot-path-baseline.json` with an
+expiry and replacement plan. New code should prefer streaming, pagination,
+async store boundaries, cached snapshots, or worker isolation instead of adding
+exceptions.
+
+## Boundedness Guard P0
+
+Any cache, queue, log, snapshot, checkpoint, timeline, upload buffer,
+transcript, session state, EventBus, WebSocket or SSE fanout, markdown cache,
+ranking cache, or similar retained collection must declare a bytes, count, age,
+or active-window limit plus cleanup ownership. The cleanup policy names how the
+state is trimmed, expired, compacted, evicted, backpressured, paginated,
+leased, or otherwise released.
+
+Unbounded growth is a P0 closure blocker. New work fails validation when a
+risk surface has no nearby boundedness declaration. Historical debt is allowed
+only through `docs/boundedness-baseline.json`, with owner area, reason, limit
+kind, current limit value, cleanup policy, reference, expiration date, and
+release-blocking classification.
+
+Examples that block closure include async queues without a maximum, caches
+limited only by entry count when entry byte cost is unbounded, whole-payload
+`Buffer.concat` or `Data` retention for large uploads, full transcripts kept in
+UI state, and checkpoints that survive their active window without compaction.
+
+## Resource Contract Closure
+
+Registered runtime, UI, storage, stream, cache, queue, IPC, daemon, worker, and
+long-running-agent surfaces are not complete until `resourceContract` records
+startup, idle, memory, streaming, storage, hot-path, scale, and validation
+behavior. Existing missing contracts are allowed only through
+`docs/surface-resource-contract-baseline.json` with owner, reason, expiry, and
+reentry condition.
+
+## Idle Quiescence Contract P1
+
+Every timer, poller, scheduler, watcher, health loop, reconnect loop, refresh
+loop, telemetry loop, and diagnostic probe must declare why it exists and when
+it sleeps in `docs/idle-quiescence.manifest.json`.
+
+UI periodic work is visible-only: it starts when the surface is mounted or
+visible, checks visibility when needed, and clears on unmount, close, or route
+change. Diagnostics are explicit opt-in and must keep release behavior separate
+from debug behavior. Reconnects, pollers, health checks, and refresh loops use
+adaptive backoff, server-directed intervals, visibility gating, or bounded
+request leases instead of fixed forever loops. Periodic work uses a shared or
+aggregated scheduler where practical; dedicated timers need a protocol,
+request, service-supervision, or UI-lifecycle rationale. Idle shutdown is the
+default unless the loop is an active protocol heartbeat with a declared lease.
+
+New unregistered periodic work is a P1 release-check failure. Existing
+non-adaptive or dedicated loops may be carried only as expiring manifest debt
+with owner area, evidence, target sleep behavior, and release-blocking status.
 
 ## Resource Dimensions
 
@@ -83,10 +167,13 @@ blockers after the progressive enforcement phase.
 1. **Routing and classification**: accepted durable ADRs and governance changes
    that affect resource-sensitive surfaces include `Performance Impact`, or
    state why it is not applicable.
-2. **Approved budgets**: critical paths gain measured baselines and budgets
+2. **Boundedness guard**: `scripts/boundedness-guard.mjs` blocks new obvious
+   broad reads and requires cursor/window/batch/limit evidence or an expiring
+   baseline entry.
+3. **Approved budgets**: critical paths gain measured baselines and budgets
    only after evidence exists and the user approves the baseline where private
    machine evidence is required.
-3. **Release pressure**: repeated regressions, expired debt, missing cleanup,
+4. **Release pressure**: repeated regressions, expired debt, missing cleanup,
    or approved-budget violations become blocking checks for the affected lane.
 
 Performance work still starts with reproduction and instrumentation before

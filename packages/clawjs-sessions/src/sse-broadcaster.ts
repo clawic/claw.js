@@ -1,4 +1,9 @@
-import { clawSessionEvents } from "@clawjs/core";
+import {
+  clawDefaultStreamingBackpressurePolicy,
+  clawSessionEvents,
+  estimateUtf8Bytes,
+  splitStreamingTextDelta,
+} from "@clawjs/core";
 
 import type { SessionEvent } from "./types.ts";
 
@@ -14,6 +19,8 @@ export interface SessionSseWritable {
 
 export interface SessionEventBroadcasterOptions {
   hardQueueLimit?: number;
+  maxQueuedBytes?: number;
+  maxFrameBytes?: number;
   maxSubscribers?: number;
   now?: () => number;
 }
@@ -21,9 +28,13 @@ export interface SessionEventBroadcasterOptions {
 export interface SessionEventBroadcasterMetrics {
   subscribers: number;
   queuedEvents: number;
+  queuedBytes: number;
   maxQueueDepth: number;
+  maxQueuedBytes: number;
   coalescedEvents: number;
   droppedEvents: number;
+  droppedBytes: number;
+  overflowCount: number;
   lastFlushLatencyMs: number;
   closedSlowClients: number;
   rejectedSubscribers: number;
@@ -31,6 +42,8 @@ export interface SessionEventBroadcasterMetrics {
 
 interface QueuedSessionEvent {
   event: SessionEvent;
+  frame: string;
+  frameBytes: number;
   coalesceKey: string | null;
   queuedAt: number;
 }
@@ -56,7 +69,7 @@ class SessionEventClient implements SessionEventSubscription {
   private readonly coalesced = new Map<string, QueuedSessionEvent>();
   private readonly raw: SessionSseWritable;
   private readonly options: Required<SessionEventBroadcasterOptions>;
-  private readonly metrics: Omit<SessionEventBroadcasterMetrics, "subscribers" | "queuedEvents">;
+  private readonly metrics: Omit<SessionEventBroadcasterMetrics, "subscribers" | "queuedEvents" | "queuedBytes">;
   private readonly onClose: (client: SessionEventClient) => void;
   private flushing = false;
   private waitingForDrain = false;
@@ -65,7 +78,7 @@ class SessionEventClient implements SessionEventSubscription {
   constructor(
     raw: SessionSseWritable,
     options: Required<SessionEventBroadcasterOptions>,
-    metrics: Omit<SessionEventBroadcasterMetrics, "subscribers" | "queuedEvents">,
+    metrics: Omit<SessionEventBroadcasterMetrics, "subscribers" | "queuedEvents" | "queuedBytes">,
     onClose: (client: SessionEventClient) => void,
   ) {
     this.raw = raw;
@@ -78,29 +91,51 @@ class SessionEventClient implements SessionEventSubscription {
     return this.queue.length;
   }
 
+  get queuedBytes(): number {
+    return this.queue.reduce((total, event) => total + event.frameBytes, 0);
+  }
+
   enqueue(event: SessionEvent): void {
     if (this.closed || this.raw.destroyed || this.raw.writableEnded) return;
+    for (const frameEvent of splitOversizedSessionEvent(event, this.options.maxFrameBytes)) {
+      this.enqueueFrame(frameEvent);
+      if (this.closed) return;
+    }
+  }
+
+  private enqueueFrame(event: SessionEvent): void {
+    const frame = encodeSseEvent(event);
+    const frameBytes = estimateUtf8Bytes(frame);
+    if (frameBytes > this.options.maxFrameBytes) {
+      this.closeForOverflow(event, frameBytes);
+      return;
+    }
 
     const coalesceKey = messageUpdatedCoalesceKey(event);
     if (coalesceKey) {
       const existing = this.coalesced.get(coalesceKey);
       if (existing) {
+        this.metrics.droppedBytes += existing.frameBytes;
+        existing.frame = frame;
+        existing.frameBytes = frameBytes;
         existing.event = event;
         existing.queuedAt = this.options.now();
         this.metrics.coalescedEvents += 1;
+        this.metrics.maxQueuedBytes = Math.max(this.metrics.maxQueuedBytes, this.queuedBytes);
         return;
       }
     }
 
-    if (this.queue.length >= this.options.hardQueueLimit) {
-      this.closeForOverflow(event);
+    if (this.queue.length >= this.options.hardQueueLimit || this.queuedBytes + frameBytes > this.options.maxQueuedBytes) {
+      this.closeForOverflow(event, frameBytes);
       return;
     }
 
-    const queued = { event, coalesceKey, queuedAt: this.options.now() };
+    const queued = { event, frame, frameBytes, coalesceKey, queuedAt: this.options.now() };
     this.queue.push(queued);
     if (coalesceKey) this.coalesced.set(coalesceKey, queued);
     this.metrics.maxQueueDepth = Math.max(this.metrics.maxQueueDepth, this.queue.length);
+    this.metrics.maxQueuedBytes = Math.max(this.metrics.maxQueuedBytes, this.queuedBytes);
     this.flush();
   }
 
@@ -112,10 +147,13 @@ class SessionEventClient implements SessionEventSubscription {
     this.onClose(this);
   }
 
-  private closeForOverflow(triggerEvent: SessionEvent): void {
+  private closeForOverflow(triggerEvent: SessionEvent, triggerBytes = 0): void {
     if (this.closed) return;
     const dropped = this.queue.length + 1;
+    const droppedBytes = this.queuedBytes + triggerBytes;
     this.metrics.droppedEvents += dropped;
+    this.metrics.droppedBytes += droppedBytes;
+    this.metrics.overflowCount += 1;
     this.metrics.closedSlowClients += 1;
     this.closed = true;
     this.queue.length = 0;
@@ -128,6 +166,7 @@ class SessionEventClient implements SessionEventSubscription {
       payload: {
         error: "session_event_stream_overflow",
         dropped,
+        droppedBytes,
         triggerType: triggerEvent.type,
       },
     };
@@ -149,7 +188,7 @@ class SessionEventClient implements SessionEventSubscription {
     try {
       while (this.queue.length > 0 && !this.closed) {
         const next = this.queue[0];
-        const accepted = this.raw.write(encodeSseEvent(next.event));
+        const accepted = this.raw.write(next.frame);
         this.shiftWrittenEvent();
         this.metrics.lastFlushLatencyMs = Math.max(0, this.options.now() - next.queuedAt);
         if (!accepted) {
@@ -181,8 +220,11 @@ export class SessionEventBroadcaster {
   private readonly options: Required<SessionEventBroadcasterOptions>;
   private readonly metrics = {
     maxQueueDepth: 0,
+    maxQueuedBytes: 0,
     coalescedEvents: 0,
     droppedEvents: 0,
+    droppedBytes: 0,
+    overflowCount: 0,
     lastFlushLatencyMs: 0,
     closedSlowClients: 0,
     rejectedSubscribers: 0,
@@ -190,7 +232,9 @@ export class SessionEventBroadcaster {
 
   constructor(options: SessionEventBroadcasterOptions = {}) {
     this.options = {
-      hardQueueLimit: options.hardQueueLimit ?? 256,
+      hardQueueLimit: options.hardQueueLimit ?? clawDefaultStreamingBackpressurePolicy.maxQueuedFrames,
+      maxQueuedBytes: options.maxQueuedBytes ?? clawDefaultStreamingBackpressurePolicy.maxQueuedBytes,
+      maxFrameBytes: options.maxFrameBytes ?? clawDefaultStreamingBackpressurePolicy.maxFrameBytes,
       maxSubscribers: options.maxSubscribers ?? 128,
       now: options.now ?? Date.now,
     };
@@ -228,11 +272,52 @@ export class SessionEventBroadcaster {
 
   snapshotMetrics(): SessionEventBroadcasterMetrics {
     let queuedEvents = 0;
-    for (const client of this.clients) queuedEvents += client.queueDepth;
+    let queuedBytes = 0;
+    for (const client of this.clients) {
+      queuedEvents += client.queueDepth;
+      queuedBytes += client.queuedBytes;
+    }
     return {
       subscribers: this.clients.size,
       queuedEvents,
+      queuedBytes,
       ...this.metrics,
     };
   }
+}
+
+function cloneSessionEventWithContentText(event: SessionEvent, contentText: string): SessionEvent {
+  const payload = event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+    ? event.payload as Record<string, unknown>
+    : {};
+  const delta = payload.delta && typeof payload.delta === "object" && !Array.isArray(payload.delta)
+    ? payload.delta as Record<string, unknown>
+    : {};
+  return {
+    ...event,
+    payload: {
+      ...payload,
+      delta: {
+        ...delta,
+        contentText,
+      },
+    },
+  };
+}
+
+function splitOversizedSessionEvent(event: SessionEvent, maxFrameBytes: number): SessionEvent[] {
+  if (estimateUtf8Bytes(encodeSseEvent(event)) <= maxFrameBytes) return [event];
+  if (event.type !== clawSessionEvents.messageUpdated) return [event];
+  const payload = event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+    ? event.payload as Record<string, unknown>
+    : {};
+  const delta = payload.delta && typeof payload.delta === "object" && !Array.isArray(payload.delta)
+    ? payload.delta as Record<string, unknown>
+    : {};
+  if (typeof delta.contentText !== "string" || !delta.contentText) return [event];
+
+  const emptyFrameBytes = estimateUtf8Bytes(encodeSseEvent(cloneSessionEventWithContentText(event, "")));
+  const maxDeltaBytes = Math.max(4, maxFrameBytes - emptyFrameBytes - 16);
+  return splitStreamingTextDelta(delta.contentText, maxDeltaBytes)
+    .map((contentText) => cloneSessionEventWithContentText(event, contentText));
 }

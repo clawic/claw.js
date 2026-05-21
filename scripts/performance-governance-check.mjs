@@ -29,16 +29,45 @@ for (const [relativePath, snippets] of new Map([
   ["CONSTITUTION.md", [
     "The computer's resources are product correctness",
     "CPU, RAM, GPU/Neural Engine, disk, network, battery, thermals",
+    "boundedness, lazy startup, cancellation, backpressure, windowing, and idle quiescence",
   ]],
   ["docs/adr/0036-performance-governance.md", [
     "Status: Accepted",
     "Performance means whole-computer resource behavior",
+    "Windowing/Pagination by Default",
+    "Resource Contract is required for implementation closure",
+    "docs/boundedness-baseline.json",
+    "docs/surface-resource-contract-baseline.json",
+    "Idle Quiescence Contract P1",
+    "docs/idle-quiescence.manifest.json",
     "## Performance Impact",
     "adr:performance-governance",
+  ]],
+  ["docs/adr/0043-streaming-backpressure-bounded-queues.md", [
+    "Status: Accepted",
+    "resourceContract.streaming",
+    "bounded queues",
+  ]],
+  ["docs/adr/0044-launch-and-idle-contract.md", [
+    "Status: Accepted",
+    "resourceContract.startup",
+    "resourceContract.idle",
+  ]],
+  ["docs/adr/0045-ui-state-invalidation-high-churn-data-boundary.md", [
+    "Status: Accepted",
+    "High-churn data",
+    "resource contracts",
   ]],
   ["docs/governance/performance-governance.md", [
     "whole-computer resource behavior",
     "## Required Impact Classification",
+    "## Windowing/Pagination by Default",
+    "load all -> filter/sort/render",
+    "cursor/window/batch/limit",
+    "## Hot Path Guard P1",
+    "hot-path-ok",
+    "## Idle Quiescence Contract P1",
+    "docs/idle-quiescence.manifest.json",
     "## Resource Dimensions",
     "GPU / Neural Engine",
     "## Performance Debt",
@@ -49,8 +78,15 @@ for (const [relativePath, snippets] of new Map([
   ]],
   ["docs/decision-map.md", [
     "Performance Governance",
+    "streaming, backpressure, and bounded queues",
+    "launch and idle contract",
+    "UI state invalidation and high-churn data boundary",
     "./adr/0036-performance-governance.md",
     "scripts/performance-governance-check.mjs",
+    "scripts/boundedness-guard.mjs",
+    "scripts/hot-path-guard.mjs",
+    "scripts/surface-resource-contract-guard.mjs",
+    "scripts/idle-quiescence-check.mjs",
   ]],
   ["docs/constitution-map.md", [
     "Performance Governance",
@@ -62,6 +98,32 @@ for (const [relativePath, snippets] of new Map([
   ]],
   ["docs/governance/README.md", [
     "Performance Governance",
+  ]],
+  ["docs/boundedness-baseline.json", [
+    "\"program\": \"boundedness-guard\"",
+    "\"entries\"",
+  ]],
+  ["docs/hot-path-baseline.json", [
+    "\"program\": \"hot-path-guard\"",
+    "\"entries\"",
+  ]],
+  ["docs/idle-quiescence.manifest.json", [
+    "\"program\": \"idle-quiescence-check\"",
+    "\"severity\": \"P1\"",
+    "\"visibleOnly\"",
+  ]],
+  ["scripts/hot-path-guard.mjs", [
+    "Hot Path Guard P1",
+    "hot-path-ok",
+  ]],
+  ["scripts/idle-quiescence-check.mjs", [
+    "Idle Quiescence Contract P1",
+    "diagnosticsOptIn",
+  ]],
+  ["scripts/boundedness-guard.mjs", [
+    "Boundedness Guard P0",
+    "buffer-concat",
+    "eventbus",
   ]],
   ["skills/performance-investigation/SKILL.md", [
     "CPU, RAM, GPU/Neural Engine",

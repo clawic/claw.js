@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { clawSessionEvents } from "@clawjs/core";
+import { clawDefaultStreamingBackpressurePolicy, clawSessionEvents, estimateUtf8Bytes } from "@clawjs/core";
 
 import { buildSessionsApp } from "./app.ts";
 import { SessionsApiClient } from "./client.ts";
@@ -163,7 +163,50 @@ test("SessionEventBroadcaster closes only the slow client on hard queue overflow
   assert.equal(decoded(fast).length, 4);
   assert.equal(broadcaster.snapshotMetrics().closedSlowClients, 1);
   assert.equal(broadcaster.snapshotMetrics().droppedEvents, 3);
+  assert.equal(broadcaster.snapshotMetrics().overflowCount, 1);
   assert.equal(decoded(slow).at(-1)?.type, "error");
+});
+
+test("SessionEventBroadcaster splits oversized message updates below max frame bytes", () => {
+  const maxFrameBytes = 512;
+  const broadcaster = new SessionEventBroadcaster({ maxFrameBytes });
+  const raw = new FakeSseRaw();
+  broadcaster.subscribe(raw);
+
+  const contentText = "x".repeat(clawDefaultStreamingBackpressurePolicy.maxFrameBytes);
+  broadcaster.publish(event({
+    type: clawSessionEvents.messageUpdated,
+    sessionId: "session-1",
+    messageId: "message-1",
+    payload: { id: "message-1", sessionId: "session-1", messageId: "message-1", delta: { contentText }, full: false },
+  }));
+
+  assert.ok(raw.chunks.length > 1);
+  for (const chunk of raw.chunks) {
+    assert.ok(estimateUtf8Bytes(chunk) <= maxFrameBytes);
+  }
+  const joined = decoded(raw)
+    .map((item) => (item.payload as { delta?: { contentText?: string } })?.delta?.contentText ?? "")
+    .join("");
+  assert.equal(joined, contentText);
+});
+
+test("SessionEventBroadcaster closes slow clients when queued bytes overflow", () => {
+  const broadcaster = new SessionEventBroadcaster({ maxQueuedBytes: 300, hardQueueLimit: 10 });
+  const slow = new FakeSseRaw();
+  slow.writesBeforeBackpressure = 0;
+  const fast = new FakeSseRaw();
+  broadcaster.subscribe(slow);
+  broadcaster.subscribe(fast);
+
+  broadcaster.publish(event({ type: clawSessionEvents.updated, sessionId: "session-1", payload: { text: "x".repeat(120) } }));
+  broadcaster.publish(event({ type: clawSessionEvents.messageAppended, sessionId: "session-1", messageId: "message-1", payload: { text: "y".repeat(120) } }));
+  broadcaster.publish(event({ type: clawSessionEvents.turnFinished, sessionId: "session-1", payload: { text: "z".repeat(120) } }));
+
+  assert.equal(slow.ended, true);
+  assert.equal(fast.ended, false);
+  assert.equal(broadcaster.snapshotMetrics().overflowCount, 1);
+  assert.ok(broadcaster.snapshotMetrics().droppedBytes > 0);
 });
 
 test("SessionEventBroadcaster rejects subscribers past the configured limit", () => {
@@ -180,17 +223,27 @@ test("SessionEventBroadcaster rejects subscribers past the configured limit", ()
 test("loadSessionsConfig reads SSE backpressure limits from env", () => {
   const previousMaxSubscribers = process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS;
   const previousQueueLimit = process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT;
+  const previousQueuedBytes = process.env.CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES;
+  const previousFrameBytes = process.env.CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES;
   try {
     process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS = "7";
     process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT = "11";
+    process.env.CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES = "12345";
+    process.env.CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES = "6789";
     const config = loadSessionsConfig();
     assert.equal(config.eventsMaxSubscribers, 7);
     assert.equal(config.eventsHardQueueLimit, 11);
+    assert.equal(config.eventsMaxQueuedBytes, 12345);
+    assert.equal(config.eventsMaxFrameBytes, 6789);
   } finally {
     if (previousMaxSubscribers === undefined) delete process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS;
     else process.env.CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS = previousMaxSubscribers;
     if (previousQueueLimit === undefined) delete process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT;
     else process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT = previousQueueLimit;
+    if (previousQueuedBytes === undefined) delete process.env.CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES;
+    else process.env.CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES = previousQueuedBytes;
+    if (previousFrameBytes === undefined) delete process.env.CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES;
+    else process.env.CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES = previousFrameBytes;
   }
 });
 

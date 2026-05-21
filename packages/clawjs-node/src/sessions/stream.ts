@@ -1,7 +1,14 @@
 import { randomUUID } from "crypto";
 import { spawn } from "child_process";
 
-import type { DocumentRef, Message, PromptContextBlock, StreamChunk } from "@clawjs/core";
+import {
+  clawDefaultStreamingBackpressurePolicy,
+  splitStreamingTextDelta,
+  type DocumentRef,
+  type Message,
+  type PromptContextBlock,
+  type StreamChunk,
+} from "@clawjs/core";
 
 import type { CommandRunner, RuntimeSessionAdapter, SessionGatewayDescriptor } from "../runtime/contracts.ts";
 import {
@@ -68,6 +75,7 @@ export interface CompactAssistantStreamTrace {
 
 const SESSION_EVENT_TITLE_EXCERPT_MAX_CHARS = 2_048;
 const SESSION_EVENT_PARTIAL_TAIL_MAX_CHARS = 8_192;
+const SESSION_STREAM_MAX_FRAME_BYTES = clawDefaultStreamingBackpressurePolicy.maxFrameBytes;
 
 export function buildCompactAssistantStreamTrace(
   deltas: Array<{ delta: string; at?: number }>,
@@ -154,13 +162,33 @@ function appendChunkText(existing: StreamChunk, next: StreamChunk): StreamChunk 
   };
 }
 
+function splitStreamChunkFrame(chunk: StreamChunk): StreamChunk[] {
+  if (chunk.done || !chunk.delta) return [chunk];
+  const deltas = splitStreamingTextDelta(chunk.delta, SESSION_STREAM_MAX_FRAME_BYTES);
+  return deltas.map((delta, index) => ({
+    ...chunk,
+    delta,
+    ...(index === 0 ? {} : { reasoningDelta: undefined }),
+  }));
+}
+
+function pushStreamChunk(queue: AsyncQueue<StreamChunk>, chunk: StreamChunk): void {
+  for (const frame of splitStreamChunkFrame(chunk)) queue.push(frame);
+}
+
+async function* yieldSplitStreamChunk(chunk: StreamChunk): AsyncGenerator<StreamChunk> {
+  yield* splitStreamChunkFrame(chunk);
+}
+
 export async function* coalesceStreamChunks(
   source: AsyncIterable<StreamChunk>,
   input: Pick<StreamSessionInput, "coalesceMs"> = {},
 ): AsyncGenerator<StreamChunk> {
   const coalesceMs = input.coalesceMs ?? 16;
   if (coalesceMs <= 0) {
-    yield* source;
+    for await (const chunk of source) {
+      yield* yieldSplitStreamChunk(chunk);
+    }
     return;
   }
 
@@ -174,7 +202,7 @@ export async function* coalesceStreamChunks(
       timer = null;
     }
     if (!pending) return;
-    queue.push(pending);
+    pushStreamChunk(queue, pending);
     pending = null;
   };
 
@@ -526,7 +554,7 @@ function emitCompletionFallback(
 ): string {
   if (!completedText.trim()) return streamedText;
   if (!streamedText) {
-    queue.push({
+    pushStreamChunk(queue, {
       sessionId: input.sessionId,
       messageId,
       delta: completedText,
@@ -536,7 +564,7 @@ function emitCompletionFallback(
   }
   if (completedText.startsWith(streamedText) && completedText.length > streamedText.length) {
     const suffix = completedText.slice(streamedText.length);
-    queue.push({
+    pushStreamChunk(queue, {
       sessionId: input.sessionId,
       messageId,
       delta: suffix,
@@ -629,7 +657,7 @@ async function* streamCodexAppServerChunks(
 
     for (const delta of extractCodexLiveDeltas(message)) {
       streamedText += delta;
-      queue.push({
+      pushStreamChunk(queue, {
         sessionId: input.sessionId,
         messageId,
         delta,
@@ -812,12 +840,12 @@ async function* streamChatCompletionsChunks(
         };
         const text = payload.choices?.[0]?.delta?.content;
         if (text) {
-          yield {
+          yield* yieldSplitStreamChunk({
             sessionId: input.sessionId,
             messageId,
             delta: text,
             done: false,
-          };
+          });
         }
       } catch {
         continue;
@@ -904,12 +932,12 @@ async function* streamResponsesChunks(
                 })()
             : "";
         if (delta) {
-          yield {
+          yield* yieldSplitStreamChunk({
             sessionId: input.sessionId,
             messageId,
             delta,
             done: false,
-          };
+          });
         }
       }
     }
@@ -1019,12 +1047,12 @@ async function* streamCliChunks(
   }
 
   const messageId = randomUUID();
-  yield {
+  yield* yieldSplitStreamChunk({
     sessionId: input.sessionId,
     messageId,
     delta: text,
     done: false,
-  };
+  });
 
   yield {
     sessionId: input.sessionId,
@@ -1052,7 +1080,7 @@ async function* streamCodexJsonlCliChunks(
     if (completed) completedText = completed;
     for (const delta of extractCodexLiveDeltas(message)) {
       streamedText += delta;
-      queue.push({
+      pushStreamChunk(queue, {
         sessionId: input.sessionId,
         messageId,
         delta,

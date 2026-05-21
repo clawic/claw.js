@@ -1,4 +1,4 @@
-import { clawGlobalHomeLayout } from "@clawjs/core";
+import { clawDefaultStreamingBackpressurePolicy, clawGlobalHomeLayout } from "@clawjs/core";
 import path from "node:path";
 import os from "node:os";
 
@@ -14,11 +14,15 @@ export interface SessionsServiceConfig {
   hermesStateDbPath: string | null;
   eventsMaxSubscribers: number;
   eventsHardQueueLimit: number;
+  eventsMaxQueuedBytes: number;
+  eventsMaxFrameBytes: number;
 }
 
 export const SESSIONS_DEFAULT_PORT = 24101;
 export const SESSIONS_DEFAULT_EVENTS_MAX_SUBSCRIBERS = 128;
-export const SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT = 256;
+export const SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT = clawDefaultStreamingBackpressurePolicy.maxQueuedFrames;
+export const SESSIONS_DEFAULT_EVENTS_MAX_QUEUED_BYTES = clawDefaultStreamingBackpressurePolicy.maxQueuedBytes;
+export const SESSIONS_DEFAULT_EVENTS_MAX_FRAME_BYTES = clawDefaultStreamingBackpressurePolicy.maxFrameBytes;
 
 export function loadSessionsConfig(overrides: Partial<SessionsServiceConfig> = {}): SessionsServiceConfig {
   const cwd = process.cwd();
@@ -41,6 +45,14 @@ export function loadSessionsConfig(overrides: Partial<SessionsServiceConfig> = {
     eventsHardQueueLimit: parsePositiveInteger(
       overrides.eventsHardQueueLimit ?? process.env.CLAW_SESSIONS_EVENTS_QUEUE_LIMIT,
       SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT,
+    ),
+    eventsMaxQueuedBytes: parsePositiveInteger(
+      overrides.eventsMaxQueuedBytes ?? process.env.CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES,
+      SESSIONS_DEFAULT_EVENTS_MAX_QUEUED_BYTES,
+    ),
+    eventsMaxFrameBytes: parsePositiveInteger(
+      overrides.eventsMaxFrameBytes ?? process.env.CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES,
+      SESSIONS_DEFAULT_EVENTS_MAX_FRAME_BYTES,
     ),
   };
 }
