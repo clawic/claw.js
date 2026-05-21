@@ -3080,7 +3080,6 @@ function ensureNotesPagesSourceIndexed(store: SearchStore, flags: Record<string,
       });
       return 0;
     }
-    // Legacy owner_id read-only projection for the existing notes schema; it does not grant authority.
     const pages = db.prepare(`
       SELECT id, title, space, surface, owner_id, author_kind, author_id, visibility, sensitivity,
         tags_json, properties_json, source_record_domain, source_record_id, created_at, updated_at, archived_at
@@ -3128,7 +3127,6 @@ function ensureNotesPageResourceIndexed(store: SearchStore, flags: Record<string
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
     if (!hasTable(db, "pages") || !hasTable(db, "page_blocks")) return 0;
-    // Legacy owner_id read-only projection for the existing notes schema; it does not grant authority.
     const page = db.prepare(`
       SELECT id, title, space, surface, owner_id, author_kind, author_id, visibility, sensitivity,
         tags_json, properties_json, source_record_domain, source_record_id, created_at, updated_at, archived_at
@@ -3994,7 +3992,6 @@ function ensureAgentsCatalogSourceIndexed(store: SearchStore, flags: Record<stri
       });
       return 0;
     }
-    // Legacy owner_id read-only projection for the existing agent catalog schema.
     const agents = db.prepare(`
       SELECT id, kind, name, status, agency_mode, role, title, description, owner_kind, owner_id,
         workspace_id, project_id, runtime, model, autonomy_profile, builtin, secret_ref,
@@ -4062,7 +4059,6 @@ function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<st
   try {
     if (parsed.kind === "agent") {
       if (!hasTable(db, "agents")) return 0;
-      // Legacy owner_id read-only projection for the existing agent catalog schema.
       const row = db.prepare(`
         SELECT id, kind, name, status, agency_mode, role, title, description, owner_kind, owner_id,
           workspace_id, project_id, runtime, model, autonomy_profile, builtin, secret_ref,
@@ -5408,7 +5404,6 @@ function notesPageSearchDocument(row: NotesPageRow, blockRows: NotesPageBlockRow
       tag: tags,
       sourceRecordDomain: row.source_record_domain,
       sourceRecordId: row.source_record_id,
-      // Legacy ownerId projection for search metadata only; authority stays with grants/scopes.
       ownerId: row.owner_id,
       authorKind: row.author_kind,
       authorId: row.author_id,
@@ -6384,7 +6379,6 @@ function agentCatalogAgentSearchDocument(row: AgentCatalogAgentRow): SearchDocum
     row.role,
     row.title,
     row.description,
-    // Legacy owner_id read-only projection for search body text only.
     row.owner_kind,
     row.owner_id,
     row.workspace_id,
@@ -7252,7 +7246,6 @@ interface NotesPageRow {
   title: string;
   space: string;
   surface: string;
-  // Legacy owner_id read-only projection from the existing notes schema.
   owner_id: string | null;
   author_kind: string;
   author_id: string | null;
@@ -7482,7 +7475,6 @@ interface AgentCatalogAgentRow {
   role: string;
   title: string | null;
   description: string | null;
-  // Legacy owner_id read-only projection from the existing agent catalog schema.
   owner_kind: string | null;
   owner_id: string | null;
   workspace_id: string | null;

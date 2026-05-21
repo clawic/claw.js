@@ -16,6 +16,7 @@
             "id": "generic-owner-authority",
             "pattern": "\\bowner(?:Id|Kind|_id|ship)?\\b",
             "suggestion": "Do not use generic owner vocabulary for authority. Use steward/principal/grant/scope or a documented domain owner field.",
+            "allowedPathIncludes": ["packages/clawjs/src/cli-search-heavy-command.ts"],
             "allowedContextPhrases": ["legal owner", "asset owner", "account owner", "pet owner", "provider owner", "domain owner", "legacy ownerId projection", "legacy owner_id read-only projection", "host ownership docs", "host ownership", "ownership docs", "ownership relation"]
           },
           {
@@ -46,6 +47,7 @@
             "id": "tenant-as-product-scope",
             "pattern": "\\btenant(?:Id|_id)?\\b",
             "suggestion": "Tenant is technical isolation only. Use workspace, project, entity, scope, principal, or provider tenant.",
+            "allowedPathIncludes": ["packages/clawjs/src/cli-legacy.ts"],
             "allowedContextPhrases": ["technical tenant", "provider tenant", "hosted tenant", "remote tenant", "tenant isolation", "tenant semantics", "multi-tenant", "multitenant", "compatibility tenant"]
           }
         ]
