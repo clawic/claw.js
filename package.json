@@ -66,6 +66,7 @@
     "test:sdk-first-custom-surfaces-goal": "node ./scripts/verify-sdk-first-custom-surfaces-goal.mjs",
     "test:governance": "node ./scripts/governance-scope-guard.mjs && node ./scripts/verify-governance-workspace-project-goal.mjs",
     "test:governance-workspace-project-goal": "node ./scripts/verify-governance-workspace-project-goal.mjs",
+    "test:capability-maturity": "node --import tsx ./scripts/capability-maturity-guard.mjs && node --import tsx ./scripts/capability-maturity-guard.mjs --self-test",
     "test:search-goal": "node ./scripts/verify-search-v1-1-goal.mjs",
     "test:persistent-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test",
     "test:stable-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test",

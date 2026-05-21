@@ -55,6 +55,7 @@ function fast(args = []) {
   npmRun("privacy:test");
   buildPackages();
   inspectabilityGate();
+  npmRun("test:capability-maturity");
   npmRun("test:policy");
   evolutionGate();
   npmRun("code-hygiene:check");
@@ -74,6 +75,7 @@ function changed() {
     npmRun("privacy:check");
     npmRun("privacy:test");
     buildPackages();
+    npmRun("test:capability-maturity");
     npmRun("test:policy");
     evolutionGate();
     const packageScripts = new Set();
