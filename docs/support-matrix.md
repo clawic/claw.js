@@ -7,6 +7,15 @@ description: Runtime adapter stability, support level, and recommended productio
 
 ClawJS uses explicit v1 support classifications.
 
+Runtime ecosystem claims are stricter than adapter stability. A runtime can
+have an adapter and still be dev-only for sessions, skills, memory, channels,
+providers, plugins, or write-back. See
+[Runtime Ecosystem Integration Standard](/runtime-ecosystem-integration-standard)
+and the machine-readable
+[`runtime-ecosystem-integration.manifest.json`](runtime-ecosystem-integration.manifest.json)
+before promoting a runtime lens, `recommended`, `production`, or native parity
+claim.
+
 | Adapter | Stability | Support level | Recommended |
 | --- | --- | --- | --- |
 | `openclaw` | stable | production | yes |
@@ -28,3 +37,6 @@ ClawJS uses explicit v1 support classifications.
 - Only production adapters should be presented as the default path in onboarding material.
 - Dev-only adapters may be used for local runtime work, fixture coverage, and explicit adapter development. They must not be presented as production defaults.
 - The `codex` adapter uses the Codex CLI's own authentication store. ClawJS checks `codex login status` and launches `codex login`, but does not read or persist Codex tokens.
+- `recommended`, `production`, and UI parity claims require a current official
+  runtime ecosystem snapshot, complete triple matrix, field/action authority
+  policy, and passing `npm run test:runtime-ecosystem`.

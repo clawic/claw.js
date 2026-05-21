@@ -266,6 +266,39 @@
           "command": "claw inspect why search --json"
         }
       ]
+    },
+    {
+      "adr": "docs/adr/0047-runtime-ecosystem-integration-standard.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/verify-runtime-ecosystem-integration.mjs",
+        "scripts/adr-operational-coverage-check.mjs",
+        "scripts/discoverability-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/runtime-ecosystem-integration-standard.md",
+        "docs/support-matrix.md",
+        "../Clawix/clawix/docs/adr/0033-runtime-ecosystem-integration-standard-mirror.md"
+      ],
+      "programmaticSurface": [
+        "docs/runtime-ecosystem-integration.manifest.json",
+        "docs/runtime-ecosystem-integration.schema.json",
+        "scripts/verify-runtime-ecosystem-integration.mjs"
+      ],
+      "persistence": [
+        "docs/runtime-ecosystem-integration.manifest.json",
+        "docs/discoverability.registry.json",
+        "docs/adr-operational-coverage.manifest.json"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw search \"runtime ecosystem integration\" --json"
+        },
+        {
+          "command": "claw inspect commands --json"
+        }
+      ]
     }
   ]
 }

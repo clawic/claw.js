@@ -56,6 +56,7 @@
     "code-hygiene:check": "node ./scripts/code-hygiene-check.mjs",
     "code-hygiene:self-test": "node ./scripts/code-hygiene-check.mjs --self-test",
     "test:policy": "node ./scripts/verify-testing-policy.mjs && node --import tsx ./scripts/verify-cli-registry-router-parity.mjs && node ./scripts/verify-cli-json-envelope-debt.mjs",
+    "test:runtime-ecosystem": "node ./scripts/verify-runtime-ecosystem-integration.mjs",
     "test:evolution": "node ./scripts/evolution-governance-check.mjs && node ./scripts/evolution-governance-check.mjs --self-test && node --import tsx ./packages/clawjs/bin/claw.mjs evolution verify --json",
     "test:domain-surface-registry": "node --import tsx ./scripts/domain-surface-registry-guard.mjs",
     "test:dense-data-goal": "node --import tsx ./scripts/verify-dense-data-goal.mjs",

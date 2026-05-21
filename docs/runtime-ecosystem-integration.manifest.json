@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "sourceSnapshotDate": "2026-05-21",
+  "description": "Runtime ecosystem support is declared through official snapshots, triple matrices, authority policy, and claim guardrails. This manifest is the canonical machine-readable nucleus for ADR 0047.",
+  "requiredDomains": [
+    "sessions",
+    "skills",
+    "memory",
+    "channels",
+    "providers",
+    "auth",
+    "models",
+    "scheduler",
+    "plugins",
+    "gateway",
+    "doctorCompat",
+    "sandboxPermissions",
+    "configuration"
+  ],
+  "claimLadder": [
+    "inventoried",
+    "projected",
+    "operable",
+    "write_back",
+    "preserved",
+    "native_parity",
+    "recommended",
+    "production"
+  ],
+  "defaults": {
+    "sessions": "index_plus_shadow_when_safe",
+    "skills": "index_without_import",
+    "memory": "sensitive_index",
+    "channels": "claw_registry_authority_with_runtime_binding",
+    "providers": "governed_context_and_secret_refs",
+    "conflicts": "no_silent_overwrite",
+    "freshness": "snapshot_with_ttl_or_event_source",
+    "liveValidation": "external_pending_until_explicit_approval"
+  },
+  "runtimes": [
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "supportStage": "production",
+      "recommended": true,
+      "production": true,
+      "uiParityClaim": "semantic_native_projection",
+      "officialSnapshot": {
+        "capturedAt": "2026-05-21",
+        "sourceType": "official_docs",
+        "sources": [
+          "https://openclaw.cc/en/cli/",
+          "https://docs.openclaw.ai/agent"
+        ],
+        "driftPolicy": "degrade_affected_domains_until_matrix_and_tests_update"
+      },
+      "portal": {
+        "shape": "claw runtime openclaw <domain-or-command> ... --json",
+        "nativeCommand": "openclaw",
+        "writePolicy": "official_cli_or_gateway_only"
+      },
+      "tripleMatrix": {
+        "nativeSurface": [
+          { "domain": "sessions", "nativeTerms": ["sessions", "message", "agent"], "officialCommands": ["openclaw sessions", "openclaw message", "openclaw agent", "openclaw agents list"], "authority": "runtime", "claim": "projected" },
+          { "domain": "skills", "nativeTerms": ["skills"], "officialCommands": ["openclaw skills list", "openclaw skills info", "openclaw skills check"], "authority": "runtime", "claim": "projected" },
+          { "domain": "memory", "nativeTerms": ["MEMORY.md", "memory/*.md"], "officialCommands": ["openclaw memory status", "openclaw memory index", "openclaw memory search"], "authority": "runtime", "claim": "projected" },
+          { "domain": "channels", "nativeTerms": ["channels", "accounts"], "officialCommands": ["openclaw channels list", "openclaw channels status", "openclaw channels add", "openclaw channels remove", "openclaw channels login", "openclaw channels logout"], "authority": "runtime", "claim": "operable" },
+          { "domain": "providers", "nativeTerms": ["providers", "auth profiles"], "officialCommands": ["openclaw models auth", "openclaw onboard --auth-choice"], "authority": "runtime", "claim": "operable" },
+          { "domain": "auth", "nativeTerms": ["secrets", "provider tokens"], "officialCommands": ["openclaw secrets reload", "openclaw secrets audit", "openclaw secrets configure"], "authority": "runtime", "claim": "operable" },
+          { "domain": "models", "nativeTerms": ["models", "aliases", "fallbacks"], "officialCommands": ["openclaw models list", "openclaw models status", "openclaw models set", "openclaw models aliases", "openclaw models fallbacks"], "authority": "runtime", "claim": "operable" },
+          { "domain": "scheduler", "nativeTerms": ["cron"], "officialCommands": ["openclaw cron status", "openclaw cron list", "openclaw cron add", "openclaw cron edit", "openclaw cron rm"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "plugins", "nativeTerms": ["plugins"], "officialCommands": ["openclaw plugins list", "openclaw plugins info", "openclaw plugins install", "openclaw plugins enable", "openclaw plugins disable", "openclaw plugins doctor"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "gateway", "nativeTerms": ["gateway", "daemon"], "officialCommands": ["openclaw gateway status", "openclaw gateway health", "openclaw gateway start", "openclaw daemon status"], "authority": "runtime", "claim": "operable" },
+          { "domain": "doctorCompat", "nativeTerms": ["doctor", "status", "health"], "officialCommands": ["openclaw doctor", "openclaw status", "openclaw health"], "authority": "runtime", "claim": "operable" },
+          { "domain": "sandboxPermissions", "nativeTerms": ["sandbox", "approvals", "security"], "officialCommands": ["openclaw sandbox list", "openclaw sandbox explain", "openclaw approvals get", "openclaw approvals set", "openclaw security audit"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "configuration", "nativeTerms": ["config", "setup", "onboard"], "officialCommands": ["openclaw config get", "openclaw config set", "openclaw config unset", "openclaw setup", "openclaw onboard"], "authority": "runtime", "claim": "operable" }
+        ],
+        "clawDomainSurface": [
+          { "domain": "sessions", "clawSurface": "claw sessions plus runtime.openclaw native namespace", "canonicalAuthority": "runtime", "persistence": "index_and_shadow" },
+          { "domain": "skills", "clawSurface": "claw skills inventory with explicit promotion", "canonicalAuthority": "runtime_for_native_installation_claw_for_canon", "persistence": "index_only" },
+          { "domain": "memory", "clawSurface": "claw memory projection with sensitivity policy", "canonicalAuthority": "runtime_until_promoted", "persistence": "sensitive_index" },
+          { "domain": "channels", "clawSurface": "connector control plane and governed context", "canonicalAuthority": "claw_registry_with_runtime_binding", "persistence": "secret_refs_and_binding_metadata" },
+          { "domain": "providers", "clawSurface": "governed provider context", "canonicalAuthority": "claw_for_context_runtime_for_native_profile", "persistence": "secret_refs" },
+          { "domain": "auth", "clawSurface": "signed-host secret refs and runtime broker", "canonicalAuthority": "host_for_secrets_runtime_for_native_profile", "persistence": "opaque_refs" },
+          { "domain": "models", "clawSurface": "provider routing and model selection", "canonicalAuthority": "both_with_resolver", "persistence": "routing_metadata" },
+          { "domain": "scheduler", "clawSurface": "tasks/automation projection", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "plugins", "clawSurface": "runtime plugin inventory", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "gateway", "clawSurface": "runtime lifecycle/status", "canonicalAuthority": "runtime", "persistence": "status_snapshot" },
+          { "domain": "doctorCompat", "clawSurface": "diagnostics/status", "canonicalAuthority": "runtime", "persistence": "diagnostic_receipts" },
+          { "domain": "sandboxPermissions", "clawSurface": "permission and approval projection", "canonicalAuthority": "runtime_and_host_by_action", "persistence": "audit_summary" },
+          { "domain": "configuration", "clawSurface": "runtime setup and workspace contract", "canonicalAuthority": "runtime", "persistence": "config_snapshot_without_secrets" }
+        ],
+        "linkMatrix": [
+          { "domain": "sessions", "relation": "native_projection", "lossPolicy": "preserve_transcript_when_safe", "writeBackPolicy": "official_cli_or_gateway_only", "validation": "hermetic_fixture_required" },
+          { "domain": "skills", "relation": "native_inventory_to_claw_catalog", "lossPolicy": "no_auto_import", "writeBackPolicy": "explicit_native_install_only", "validation": "snapshot_required" },
+          { "domain": "memory", "relation": "sensitive_projection", "lossPolicy": "metadata_default_content_policy_gated", "writeBackPolicy": "blocked_until_policy", "validation": "sensitive_fixture_required" },
+          { "domain": "channels", "relation": "brokered_binding", "lossPolicy": "secret_refs_only", "writeBackPolicy": "official_cli_with_dry_run_when_available", "validation": "external_pending_for_live_accounts" },
+          { "domain": "providers", "relation": "governed_context_binding", "lossPolicy": "no_plaintext_secrets", "writeBackPolicy": "brokered_only", "validation": "fixture_and_external_pending_live" },
+          { "domain": "auth", "relation": "secret_ref_mapping", "lossPolicy": "opaque_refs_only", "writeBackPolicy": "signed_host_or_runtime_official_cli", "validation": "secret_guard" },
+          { "domain": "models", "relation": "model_profile_projection", "lossPolicy": "native_aliases_preserved", "writeBackPolicy": "official_cli_only", "validation": "fixture_required" },
+          { "domain": "scheduler", "relation": "task_projection", "lossPolicy": "index_only_until_operable", "writeBackPolicy": "blocked_until_tested", "validation": "fixture_required" },
+          { "domain": "plugins", "relation": "inventory_projection", "lossPolicy": "no_auto_enable", "writeBackPolicy": "blocked_until_plugin_policy", "validation": "fixture_required" },
+          { "domain": "gateway", "relation": "lifecycle_status", "lossPolicy": "status_snapshot", "writeBackPolicy": "lifecycle_commands_only", "validation": "local_dry_run_or_fixture" },
+          { "domain": "doctorCompat", "relation": "diagnostic_projection", "lossPolicy": "redacted_receipts", "writeBackPolicy": "safe_repair_only_after_approval", "validation": "fixture_required" },
+          { "domain": "sandboxPermissions", "relation": "approval_projection", "lossPolicy": "no_silent_permission_change", "writeBackPolicy": "explicit_approval_only", "validation": "permission_fixture_required" },
+          { "domain": "configuration", "relation": "config_projection", "lossPolicy": "secrets_redacted", "writeBackPolicy": "official_cli_only", "validation": "config_fixture_required" }
+        ]
+      }
+    },
+    {
+      "id": "codex",
+      "name": "OpenAI Codex",
+      "supportStage": "dev_only",
+      "recommended": false,
+      "production": false,
+      "uiParityClaim": "partial_template_only",
+      "officialSnapshot": {
+        "capturedAt": "2026-05-21",
+        "sourceType": "official_docs",
+        "sources": [
+          "https://github.com/openai/codex",
+          "https://developers.openai.com/codex/skills",
+          "https://developers.openai.com/codex/mcp"
+        ],
+        "driftPolicy": "codex_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
+      },
+      "portal": {
+        "shape": "claw runtime codex <domain-or-command> ... --json",
+        "nativeCommand": "codex",
+        "writePolicy": "read_only_by_default_for_codex_owned_sources"
+      },
+      "tripleMatrix": {
+        "nativeSurface": [
+          { "domain": "sessions", "nativeTerms": ["Codex sessions", "CLI/app conversations"], "officialCommands": ["codex"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "skills", "nativeTerms": ["skills", "plugins"], "officialCommands": ["/skills", "$skill-name"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "memory", "nativeTerms": ["AGENTS.md", "instructions"], "officialCommands": ["repository and user instructions"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "channels", "nativeTerms": ["connectors", "MCP"], "officialCommands": ["codex mcp"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "providers", "nativeTerms": ["model/provider configuration"], "officialCommands": ["codex config"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "auth", "nativeTerms": ["config.toml", "OAuth/bearer token MCP"], "officialCommands": ["codex mcp login"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "models", "nativeTerms": ["models"], "officialCommands": ["codex model/config"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "scheduler", "nativeTerms": ["not officially classified in snapshot"], "officialCommands": [], "authority": "blocked", "claim": "inventoried" },
+          { "domain": "plugins", "nativeTerms": ["plugins bundle skills/apps/MCP"], "officialCommands": ["plugin manifests"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "gateway", "nativeTerms": ["MCP stdio/streamable HTTP servers"], "officialCommands": ["codex mcp add", "codex mcp login"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "doctorCompat", "nativeTerms": ["CLI help/status"], "officialCommands": ["codex --help"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "sandboxPermissions", "nativeTerms": ["approvals", "sandbox"], "officialCommands": ["Codex CLI runtime policy"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "configuration", "nativeTerms": ["~/.codex/config.toml", ".codex/config.toml"], "officialCommands": ["codex config", "codex mcp"], "authority": "runtime", "claim": "inventoried" }
+        ],
+        "clawDomainSurface": [
+          { "domain": "sessions", "clawSurface": "read-only external session index", "canonicalAuthority": "runtime", "persistence": "index_and_shadow_when_safe" },
+          { "domain": "skills", "clawSurface": "native skill inventory", "canonicalAuthority": "runtime_for_installation_claw_for_canon", "persistence": "index_only" },
+          { "domain": "memory", "clawSurface": "instructions projection", "canonicalAuthority": "runtime", "persistence": "metadata_only" },
+          { "domain": "channels", "clawSurface": "MCP/connector projection", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "providers", "clawSurface": "governed context mapping", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" },
+          { "domain": "auth", "clawSurface": "secret-ref projection only", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" },
+          { "domain": "models", "clawSurface": "model profile projection", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "scheduler", "clawSurface": "blocked until official surface", "canonicalAuthority": "blocked", "persistence": "none" },
+          { "domain": "plugins", "clawSurface": "plugin inventory", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "gateway", "clawSurface": "MCP server inventory", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "doctorCompat", "clawSurface": "diagnostic projection", "canonicalAuthority": "runtime", "persistence": "diagnostic_summary" },
+          { "domain": "sandboxPermissions", "clawSurface": "policy projection", "canonicalAuthority": "runtime", "persistence": "audit_summary" },
+          { "domain": "configuration", "clawSurface": "read-only config projection", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" }
+        ],
+        "linkMatrix": [
+          { "domain": "sessions", "relation": "read_only_projection", "lossPolicy": "no_destructive_migration", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "skills", "relation": "inventory_projection", "lossPolicy": "no_auto_import", "writeBackPolicy": "blocked_until_official_write_policy", "validation": "snapshot_required" },
+          { "domain": "memory", "relation": "instruction_projection", "lossPolicy": "metadata_default", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "channels", "relation": "mcp_projection", "lossPolicy": "no_secret_copy", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "providers", "relation": "config_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "auth", "relation": "secret_ref_projection", "lossPolicy": "no_plaintext", "writeBackPolicy": "blocked_by_default", "validation": "secret_guard" },
+          { "domain": "models", "relation": "model_projection", "lossPolicy": "native_names_preserved", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "scheduler", "relation": "unsupported", "lossPolicy": "not_applicable", "writeBackPolicy": "blocked", "validation": "manifest_guard" },
+          { "domain": "plugins", "relation": "inventory_projection", "lossPolicy": "no_auto_enable", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "gateway", "relation": "mcp_server_projection", "lossPolicy": "no_secret_copy", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "doctorCompat", "relation": "diagnostic_projection", "lossPolicy": "redacted_summary", "writeBackPolicy": "blocked_by_default", "validation": "fixture_required" },
+          { "domain": "sandboxPermissions", "relation": "policy_projection", "lossPolicy": "no_silent_permission_change", "writeBackPolicy": "blocked_by_default", "validation": "permission_fixture_required" },
+          { "domain": "configuration", "relation": "read_only_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_by_default", "validation": "config_fixture_required" }
+        ]
+      }
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Agent",
+      "supportStage": "dev_only",
+      "recommended": false,
+      "production": false,
+      "uiParityClaim": "partial_template_only",
+      "officialSnapshot": {
+        "capturedAt": "2026-05-21",
+        "sourceType": "official_docs",
+        "sources": [
+          "https://github.com/NousResearch/hermes-agent"
+        ],
+        "driftPolicy": "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
+      },
+      "portal": {
+        "shape": "claw runtime hermes <domain-or-command> ... --json",
+        "nativeCommand": "hermes",
+        "writePolicy": "official_cli_only_after_fixture_coverage"
+      },
+      "tripleMatrix": {
+        "nativeSurface": [
+          { "domain": "sessions", "nativeTerms": ["conversation", "CLI chat", "gateway chat"], "officialCommands": ["hermes", "/new", "/reset"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "skills", "nativeTerms": ["skills", "Skills Hub"], "officialCommands": ["/skills", "/<skill-name>"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "memory", "nativeTerms": ["persistent memory", "user profiles"], "officialCommands": ["memory docs", "OpenClaw migrate memories"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "channels", "nativeTerms": ["gateway", "Telegram", "Discord", "Slack", "WhatsApp", "Signal", "Email"], "officialCommands": ["hermes gateway", "hermes gateway setup", "hermes gateway start"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "providers", "nativeTerms": ["LLM provider"], "officialCommands": ["hermes model"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "auth", "nativeTerms": ["configuration", "API keys migration"], "officialCommands": ["hermes setup", "hermes claw migrate"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "models", "nativeTerms": ["model"], "officialCommands": ["hermes model", "/model"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "scheduler", "nativeTerms": ["cron"], "officialCommands": ["cron scheduling docs"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "plugins", "nativeTerms": ["tools", "toolsets", "MCP"], "officialCommands": ["hermes tools", "MCP integration docs"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "gateway", "nativeTerms": ["messaging gateway"], "officialCommands": ["hermes gateway"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "doctorCompat", "nativeTerms": ["doctor", "update"], "officialCommands": ["hermes doctor", "hermes update"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "sandboxPermissions", "nativeTerms": ["command approval", "container isolation"], "officialCommands": ["security docs", "tools docs"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "configuration", "nativeTerms": ["config"], "officialCommands": ["hermes config set", "hermes setup"], "authority": "runtime", "claim": "inventoried" }
+        ],
+        "clawDomainSurface": [
+          { "domain": "sessions", "clawSurface": "native session template", "canonicalAuthority": "runtime", "persistence": "index_and_shadow_when_safe" },
+          { "domain": "skills", "clawSurface": "native skill inventory", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "memory", "clawSurface": "sensitive memory projection", "canonicalAuthority": "runtime", "persistence": "sensitive_index" },
+          { "domain": "channels", "clawSurface": "connector binding projection", "canonicalAuthority": "runtime", "persistence": "secret_refs_only" },
+          { "domain": "providers", "clawSurface": "governed provider context", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" },
+          { "domain": "auth", "clawSurface": "secret-ref projection", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" },
+          { "domain": "models", "clawSurface": "model projection", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "scheduler", "clawSurface": "scheduler inventory", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "plugins", "clawSurface": "tool/plugin inventory", "canonicalAuthority": "runtime", "persistence": "index_only" },
+          { "domain": "gateway", "clawSurface": "gateway status projection", "canonicalAuthority": "runtime", "persistence": "status_snapshot" },
+          { "domain": "doctorCompat", "clawSurface": "diagnostic projection", "canonicalAuthority": "runtime", "persistence": "diagnostic_summary" },
+          { "domain": "sandboxPermissions", "clawSurface": "approval projection", "canonicalAuthority": "runtime", "persistence": "audit_summary" },
+          { "domain": "configuration", "clawSurface": "config projection", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" }
+        ],
+        "linkMatrix": [
+          { "domain": "sessions", "relation": "native_projection", "lossPolicy": "preserve_when_safe", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "skills", "relation": "inventory_projection", "lossPolicy": "no_auto_import", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "snapshot_required" },
+          { "domain": "memory", "relation": "sensitive_projection", "lossPolicy": "metadata_default", "writeBackPolicy": "blocked_until_policy", "validation": "fixture_required" },
+          { "domain": "channels", "relation": "gateway_projection", "lossPolicy": "secret_refs_only", "writeBackPolicy": "external_pending_live_accounts", "validation": "external_pending_for_live_accounts" },
+          { "domain": "providers", "relation": "provider_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "auth", "relation": "secret_ref_projection", "lossPolicy": "no_plaintext", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "secret_guard" },
+          { "domain": "models", "relation": "model_projection", "lossPolicy": "native_names_preserved", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "scheduler", "relation": "scheduler_projection", "lossPolicy": "index_only", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "plugins", "relation": "inventory_projection", "lossPolicy": "no_auto_enable", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "gateway", "relation": "status_projection", "lossPolicy": "status_snapshot", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "doctorCompat", "relation": "diagnostic_projection", "lossPolicy": "redacted_summary", "writeBackPolicy": "safe_repair_only_after_approval", "validation": "fixture_required" },
+          { "domain": "sandboxPermissions", "relation": "approval_projection", "lossPolicy": "no_silent_permission_change", "writeBackPolicy": "explicit_approval_only", "validation": "permission_fixture_required" },
+          { "domain": "configuration", "relation": "config_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "config_fixture_required" }
+        ]
+      }
+    }
+  ],
+  "baselineAdapters": [
+    { "id": "demo", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "generated starter only; no external ecosystem claim" },
+    { "id": "claw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "framework self-adapter baseline; no external runtime ecosystem claim" },
+    { "id": "zeroclaw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "adapter exists without current total official snapshot in this standard" },
+    { "id": "picoclaw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "adapter exists without current total official snapshot in this standard" },
+    { "id": "nanobot", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "adapter exists without current total official snapshot in this standard" },
+    { "id": "nanoclaw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "adapter exists without current total official snapshot in this standard" },
+    { "id": "nullclaw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "null adapter cannot claim runtime ecosystem support" },
+    { "id": "ironclaw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "adapter exists without current total official snapshot in this standard" },
+    { "id": "nemoclaw", "supportStage": "dev_only", "recommended": false, "production": false, "reason": "adapter exists without current total official snapshot in this standard" }
+  ],
+  "guardrails": [
+    "scripts/verify-runtime-ecosystem-integration.mjs",
+    "scripts/adr-operational-coverage-check.mjs",
+    "scripts/discoverability-check.mjs"
+  ]
+}

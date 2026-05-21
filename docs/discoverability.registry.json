@@ -1782,6 +1782,40 @@
       "canonicalName": "adr:problem-to-guardrail-loop"
     },
     {
+      "id": "adr-docs-adr-0047-runtime-ecosystem-integration-standard",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0047-runtime-ecosystem-integration-standard.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0047: Runtime ecosystem integration standard",
+        "0047-runtime-ecosystem-integration-standard",
+        "ADR 0047",
+        "runtime ecosystem integration standard",
+        "adr:runtime-ecosystem-integration-standard"
+      ],
+      "searchQueries": [
+        {
+          "query": "runtime ecosystem integration standard",
+          "expectPath": "docs/adr/0047-runtime-ecosystem-integration-standard.md"
+        },
+        {
+          "query": "adr:runtime-ecosystem-integration-standard",
+          "expectPath": "docs/adr/0047-runtime-ecosystem-integration-standard.md"
+        }
+      ],
+      "guard": "scripts/verify-runtime-ecosystem-integration.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "adr:runtime-ecosystem-integration-standard"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "steward": "claw",
@@ -4287,6 +4321,41 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "runtime-ecosystem-integration-guard",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-runtime-ecosystem-integration.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/runtime-ecosystem-integration-standard.md",
+        "package.json"
+      ],
+      "discoveryTerms": [
+        "verify-runtime-ecosystem-integration",
+        "Verify Runtime Ecosystem Integration",
+        "verify runtime ecosystem integration",
+        "runtime ecosystem guard",
+        "test runtime ecosystem"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify runtime ecosystem integration",
+          "expectPath": "scripts/verify-runtime-ecosystem-integration.mjs"
+        },
+        {
+          "query": "test runtime ecosystem",
+          "expectPath": "scripts/verify-runtime-ecosystem-integration.mjs"
+        }
+      ],
+      "guard": "scripts/verify-runtime-ecosystem-integration.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "runtime-ecosystem-integration-guard"
+    },
+    {
       "id": "guard-scripts-verify-sdk-first-custom-surfaces-goal",
       "kind": "guardrail",
       "steward": "claw",
@@ -5116,6 +5185,39 @@
       "canonicalName": "portable-archive-contract"
     },
     {
+      "id": "runtime-ecosystem-integration-standard",
+      "kind": "docs-page",
+      "steward": "claw",
+      "canonicalSource": "docs/runtime-ecosystem-integration-standard.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "runtime ecosystem integration standard",
+        "runtime lens semantic native parity",
+        "claw runtime runtime-id portal",
+        "triple matrix runtime"
+      ],
+      "searchQueries": [
+        {
+          "query": "runtime lens semantic native parity",
+          "expectPath": "docs/runtime-ecosystem-integration-standard.md"
+        },
+        {
+          "query": "claw runtime runtime-id portal",
+          "expectPath": "docs/runtime-ecosystem-integration-standard.md"
+        }
+      ],
+      "guard": "scripts/verify-runtime-ecosystem-integration.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "runtime-ecosystem-integration-standard"
+    },
+    {
       "id": "global-threat-model-doc",
       "kind": "docs-page",
       "steward": "claw",
@@ -5498,6 +5600,37 @@
       "status": "enforced",
       "reviewDate": "2026-08-20",
       "steward": "claw"
+    },
+    {
+      "id": "runtime-ecosystem-integration-manifest",
+      "kind": "validation-manifest",
+      "steward": "claw",
+      "canonicalSource": "docs/runtime-ecosystem-integration.manifest.json",
+      "requiredEntrypoints": [
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/runtime-ecosystem-integration-standard.md",
+        "docs/adr/0047-runtime-ecosystem-integration-standard.md"
+      ],
+      "discoveryTerms": [
+        "runtime ecosystem integration manifest",
+        "runtime triple matrix manifest",
+        "runtime support claim guardrail"
+      ],
+      "searchQueries": [
+        {
+          "query": "runtime ecosystem integration manifest",
+          "expectPath": "docs/runtime-ecosystem-integration.manifest.json"
+        },
+        {
+          "query": "runtime support claim guardrail",
+          "expectPath": "docs/runtime-ecosystem-integration.manifest.json"
+        }
+      ],
+      "guard": "scripts/verify-runtime-ecosystem-integration.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-21",
+      "canonicalName": "runtime-ecosystem-integration-manifest"
     },
     {
       "id": "global-threat-model-coverage",

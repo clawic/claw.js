@@ -61,6 +61,11 @@ summary. \`capabilityMap\` gives the typed version with:
 
 For adapter support tiers and defaults, see [Support Matrix](/support-matrix). For upgrade and recovery details, see [Runtime Migration Notes](/runtime-migration-notes).
 
+For runtime ecosystems that expose their own sessions, skills, memory,
+channels, providers, plugins, gateways, permissions, and app/CLI semantics, see
+[Runtime Ecosystem Integration Standard](/runtime-ecosystem-integration-standard).
+Adapter availability alone is not a support claim for the whole ecosystem.
+
 ## Lifecycle operations
 
 | Method | Description |
@@ -178,6 +183,20 @@ This extension is intentionally adapter-specific. It is the right place
 for native gateway methods such as session inspection, native chat
 history, or other OpenClaw-only operations that should not be forced
 into the generic `claw.sessions` contract.
+
+## Runtime ecosystem portal
+
+Native runtime ecosystem operations use the portal shape:
+
+```bash
+claw runtime <runtime-id> <domain-or-command> ... --json
+```
+
+The portal wraps official runtime CLIs or APIs in Claw JSON envelopes with
+provenance, support state, freshness, dry-run/write policy when available, and
+blocked/unsupported responses for unmapped behavior. It does not make every
+runtime command a Claw top-level command, and it does not bypass the runtime
+ecosystem manifest.
 
 ## Location overrides
 
