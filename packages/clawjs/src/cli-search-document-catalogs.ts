@@ -1154,3 +1154,4 @@ export function connectorCapabilitiesById(db: Database.Database): Map<string, Co
     FROM connector_capabilities
   `).all() as ConnectorCapabilityRow[];
   return new Map(rows.map((row) => [row.id, row]));
+}

@@ -523,3 +523,4 @@ export function mergeSearchResults(results: ClawCliSearchResult[], limit: number
   return [...byKey.values()]
     .sort((left, right) => right.score - left.score || left.type.localeCompare(right.type) || left.name.localeCompare(right.name))
     .slice(0, limit);
+}
