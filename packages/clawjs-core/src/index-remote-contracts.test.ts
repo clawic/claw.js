@@ -1,5 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import { clawStorageFiles as clawRegistryStorageFiles } from "./surface-registry-contracts.ts";
 
 import {
   CLAW_CANONICAL_HIERARCHY,
@@ -65,6 +67,7 @@ import {
   clawCorePorts,
   clawContractFixturesV1,
   clawContractVersionV1,
+  MAC_CARE_SIDECAR_FILENAME,
   clawStorageFiles,
   clawEventsPath,
   clawExportExtensions,
@@ -91,6 +94,11 @@ import {
   clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
+  resolveCodexConfigPath,
+  resolveCodexHomeDir,
+  resolveCodexSessionsDir,
+  resolveCodexArchivedSessionsDir,
+  resolveCodexProjectConfigPath,
   createMeshInvitation,
   createMeshInvitationAcceptance,
   createMeshResourceShare,
@@ -140,11 +148,17 @@ import {
   releaseRecordSchema,
   reminderRecordSchema,
   reconcileSyncQueue,
+  expandClawHomePath,
   resolveClawPersistentSurfacePath,
+  resolveClawConfigDir,
   resolveClawGlobalDataDir,
+  resolveClawGlobalDataStorageDir,
+  resolveClawGlobalModulesConfigPath,
   resolveClawHostRegistryPath,
   resolveClawHostStateDir,
+  resolveClawModulesConfigPath,
   resolveClawWorkspaceDir,
+  resolveClawWorkspaceModulesConfigPath,
   resourceKindSchema,
   remoteActorContextSchema,
   remoteAccessDecisionSchema,
@@ -1458,10 +1472,35 @@ test("storage helpers resolve Claw roots and enforce Codex read-only policy", ()
     resolveClawGlobalDataDir({ homeDir: "/Users/demo", platform: "darwin" }),
     "/Users/demo/.claw",
   );
+  assert.equal(
+    resolveClawGlobalDataStorageDir({ homeDir: "/Users/demo", platform: "darwin" }),
+    "/Users/demo/.claw/data",
+  );
+  assert.equal(
+    resolveClawGlobalDataStorageDir({ homeDir: "/Users/demo", clawHome: "~/custom-claw" }),
+    "/Users/demo/custom-claw/data",
+  );
+  assert.equal(
+    resolveClawGlobalDataStorageDir({ homeDir: "/Users/demo", dataDir: "~/custom-data" }),
+    "/Users/demo/custom-data",
+  );
+  assert.equal(expandClawHomePath("~", "/Users/demo"), "/Users/demo");
+  assert.equal(expandClawHomePath("~/custom-data", "/Users/demo"), "/Users/demo/custom-data");
   assert.equal(resolveClawWorkspaceDir("/repo/app"), "/repo/app/.claw");
+  assert.equal(resolveClawConfigDir("/Users/demo/.claw"), "/Users/demo/.claw/config");
+  assert.equal(resolveClawModulesConfigPath("/Users/demo/.claw"), "/Users/demo/.claw/config/modules.json");
+  assert.equal(
+    resolveClawGlobalModulesConfigPath({ homeDir: "/Users/demo", platform: "darwin" }),
+    "/Users/demo/.claw/config/modules.json",
+  );
+  assert.equal(resolveClawWorkspaceModulesConfigPath("/repo/app"), "/repo/app/.claw/config/modules.json");
   assert.equal(
     resolveClawHostStateDir({ homeDir: "/Users/demo", hostName: "Clawix", platform: "darwin" }),
     "/Users/demo/.clawix",
+  );
+  assert.equal(
+    resolveClawHostStateDir({ homeDir: "/Users/demo", hostName: "OtherHost", platform: "darwin" }),
+    "/Users/demo/Library/Application Support/OtherHost",
   );
   assert.equal(
     resolveClawHostRegistryPath({ homeDir: "/Users/demo", platform: "darwin" }),
@@ -1496,6 +1535,17 @@ test("storage helpers resolve Claw roots and enforce Codex read-only policy", ()
     allowedOperations: ["read", "mirror", "index"],
     writePolicy: "agents_md_opt_in_only",
   });
+  assert.equal(resolveCodexHomeDir("/tmp/claw-demo-home"), "/tmp/claw-demo-home/.codex");
+  assert.equal(resolveCodexConfigPath("/tmp/claw-demo-home"), "/tmp/claw-demo-home/.codex/config.toml");
+  assert.equal(resolveCodexProjectConfigPath("/tmp/claw-demo-project"), "/tmp/claw-demo-project/.codex/config.toml");
+  assert.equal(resolveCodexSessionsDir("/tmp/claw-demo-home"), ["/tmp/claw-demo-home", ".codex", "sessions"].join("/"));
+  assert.equal(resolveCodexArchivedSessionsDir("/tmp/claw-demo-home"), ["/tmp/claw-demo-home", ".codex", "archived_sessions"].join("/"));
+});
+
+test("storage host state dir depends on the Mac Care application support route", () => {
+  const source = fs.readFileSync(new URL("./storage.ts", import.meta.url), "utf8");
+  assert.match(source, /requireMacCareRoutePathPattern\("mac_care\.route\.application_support"/);
+  assert.equal(source.includes('joinPath(input.homeDir, "Library", "Application Support")'), false);
 });
 
 test("surface registry freezes ports, paths, sockets, hostnames, and data files", () => {
@@ -1515,6 +1565,7 @@ test("surface registry freezes ports, paths, sockets, hostnames, and data files"
   assert.equal(clawApiPath("sessions/export"), "/v1/sessions/export");
   assert.equal(clawEventsPath, "/v1/events");
   assert.equal(clawStorageFiles.mainDatabase, "core.sqlite");
+  assert.equal(clawRegistryStorageFiles.macCareDatabase, MAC_CARE_SIDECAR_FILENAME);
   assert.equal(clawWorkspaceLayout.manifest, ".claw/manifest.json");
   assert.equal(clawWorkspaceLayout.browser, ".claw/browser");
   assert.equal(clawGlobalHomeLayout.config, "~/.claw/config.yaml");
@@ -1526,6 +1577,12 @@ test("surface registry freezes ports, paths, sockets, hostnames, and data files"
   const socketFallbackEnv = findClawPersistentSurfaceNode("claw.env.hostDisableSocketFallback");
   assert.equal(socketFallbackEnv?.value, "CLAW_HOST_DISABLE_SOCKET_FALLBACK");
   assert.equal(findClawPersistentSurfaceNode("claw.env.hostDisableLegacySocketFallback"), undefined);
+});
+
+test("surface registry storage files use the canonical Mac Care sidecar filename", () => {
+  const source = fs.readFileSync(new URL("./surface-registry-contracts.ts", import.meta.url), "utf8");
+  assert.match(source, /macCareDatabase: MAC_CARE_SIDECAR_FILENAME/);
+  assert.equal(source.includes('macCareDatabase: "mac_care.sqlite"'), false);
 });
 
 test("semantic plan schema validates agent-native action previews", () => {

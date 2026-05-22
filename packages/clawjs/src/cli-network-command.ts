@@ -18,6 +18,7 @@ import {
   networkRuleSchema,
   networkSubjectSchema,
   redactNetworkEvent,
+  resolveClawGlobalDataStorageDir,
   resolveClawPersistentSurfacePath,
   type NetworkEvent,
   type NetworkRule,
@@ -109,9 +110,12 @@ function monitorDatabasePath(flags: Record<string, string>): string {
   if (flags["monitor-db"]) return expandHome(flags["monitor-db"]);
   if (process.env.CLAW_MONITOR_DB_PATH) return expandHome(process.env.CLAW_MONITOR_DB_PATH);
   if (process.env.CLAW_MONITOR_DATA_DIR) return path.join(expandHome(process.env.CLAW_MONITOR_DATA_DIR), "monitor.sqlite");
-  if (process.env.CLAW_DATA_DIR) return path.join(expandHome(process.env.CLAW_DATA_DIR), "monitor.sqlite");
-  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data", "monitor.sqlite");
-  return expandHome(resolveClawPersistentSurfacePath("claw.database.monitor"));
+  const dataDir = resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(process.env.CLAW_DATA_DIR ? { dataDir: process.env.CLAW_DATA_DIR } : {}),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
+  return path.join(dataDir, "monitor.sqlite");
 }
 
 function openMonitorDatabase(flags: Record<string, string>): { db: Database.Database; dbPath: string } {

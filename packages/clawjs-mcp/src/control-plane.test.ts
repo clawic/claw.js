@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "vitest";
 
+import { registeredPublicApiRoute } from "../../../tests/helpers/stable-surface-test-builders";
+
 import { buildMCPApp } from "./app.ts";
 import type { MacSignedHostBridge } from "./mac-signed-host-bridge.ts";
 
@@ -14,7 +16,7 @@ describe("MCP connector control plane", () => {
       const request = fixtureMacActionRequest();
       const plan = await app.inject({
         method: "POST",
-        url: "/v1/mac/plan",
+        url: registeredPublicApiRoute("claw.api.mac.plan"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: request,
       });
@@ -25,7 +27,7 @@ describe("MCP connector control plane", () => {
 
       const execute = await app.inject({
         method: "POST",
-        url: "/v1/mac/execute",
+        url: registeredPublicApiRoute("claw.api.mac.execute"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: request,
       });
@@ -35,7 +37,7 @@ describe("MCP connector control plane", () => {
 
       const permissions = await app.inject({
         method: "GET",
-        url: "/v1/mac/permissions",
+        url: registeredPublicApiRoute("claw.api.mac.permissions"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(permissions.statusCode, 200);
@@ -50,7 +52,7 @@ describe("MCP connector control plane", () => {
     try {
       const tools = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
       });
       assert.equal(tools.statusCode, 200);
@@ -58,7 +60,7 @@ describe("MCP connector control plane", () => {
 
       const plan = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 2,
@@ -71,7 +73,7 @@ describe("MCP connector control plane", () => {
 
       const execute = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 3,
@@ -91,7 +93,7 @@ describe("MCP connector control plane", () => {
     try {
       const http = await app.inject({
         method: "GET",
-        url: "/v1/mcp/expose/custom-app-sdk",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeCustomAppSdk"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(http.statusCode, 200);
@@ -111,7 +113,7 @@ describe("MCP connector control plane", () => {
 
       const tools = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
       });
       assert.equal(tools.statusCode, 200);
@@ -119,7 +121,7 @@ describe("MCP connector control plane", () => {
 
       const rpc = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 2,
@@ -140,7 +142,7 @@ describe("MCP connector control plane", () => {
     try {
       const tools = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: { jsonrpc: "2.0", id: 1, method: "tools/list" },
       });
       assert.equal(tools.statusCode, 200);
@@ -160,7 +162,7 @@ describe("MCP connector control plane", () => {
 
       const snapshot = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 2,
@@ -174,7 +176,7 @@ describe("MCP connector control plane", () => {
 
       const widgets = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 3,
@@ -187,7 +189,7 @@ describe("MCP connector control plane", () => {
 
       const providers = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 4,
@@ -200,7 +202,7 @@ describe("MCP connector control plane", () => {
 
       const providerPlan = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 45,
@@ -219,7 +221,7 @@ describe("MCP connector control plane", () => {
 
       const providerPlanWithCredential = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 46,
@@ -233,7 +235,7 @@ describe("MCP connector control plane", () => {
 
       const providerPlanWithUnsafeCredential = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 47,
@@ -246,7 +248,7 @@ describe("MCP connector control plane", () => {
 
       const controls = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 5,
@@ -260,7 +262,7 @@ describe("MCP connector control plane", () => {
 
       const plan = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 6,
@@ -285,7 +287,7 @@ describe("MCP connector control plane", () => {
     try {
       const metrics = await app.inject({
         method: "GET",
-        url: "/v1/system/metrics",
+        url: registeredPublicApiRoute("claw.api.system.metrics"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(metrics.statusCode, 200);
@@ -294,7 +296,7 @@ describe("MCP connector control plane", () => {
 
       const snapshot = await app.inject({
         method: "GET",
-        url: "/v1/system/snapshot",
+        url: registeredPublicApiRoute("claw.api.system.snapshot"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(snapshot.statusCode, 200);
@@ -302,7 +304,7 @@ describe("MCP connector control plane", () => {
 
       const widgets = await app.inject({
         method: "GET",
-        url: "/v1/system/widgets",
+        url: registeredPublicApiRoute("claw.api.system.widgets"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(widgets.statusCode, 200);
@@ -310,7 +312,7 @@ describe("MCP connector control plane", () => {
 
       const providers = await app.inject({
         method: "GET",
-        url: "/v1/system/providers",
+        url: registeredPublicApiRoute("claw.api.system.providers"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(providers.statusCode, 200);
@@ -318,7 +320,7 @@ describe("MCP connector control plane", () => {
 
       const providerPlan = await app.inject({
         method: "POST",
-        url: "/v1/system/providers/plan",
+        url: registeredPublicApiRoute("claw.api.system.providersPlan"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: { providerId: "context.weather.live", reason: "test-plan" },
       });
@@ -332,7 +334,7 @@ describe("MCP connector control plane", () => {
 
       const providerPlanWithCredential = await app.inject({
         method: "POST",
-        url: "/v1/system/providers/plan",
+        url: registeredPublicApiRoute("claw.api.system.providersPlan"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: { providerId: "context.weather.live", credentialRef: "credential-lease:weather-local", reason: "credential-test" },
       });
@@ -342,7 +344,7 @@ describe("MCP connector control plane", () => {
 
       const providerPlanWithUnsafeCredential = await app.inject({
         method: "POST",
-        url: "/v1/system/providers/plan",
+        url: registeredPublicApiRoute("claw.api.system.providersPlan"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "unsafe-credential-test" },
       });
@@ -351,7 +353,7 @@ describe("MCP connector control plane", () => {
 
       const controls = await app.inject({
         method: "GET",
-        url: "/v1/system/controls",
+        url: registeredPublicApiRoute("claw.api.system.controls"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(controls.statusCode, 200);
@@ -360,7 +362,7 @@ describe("MCP connector control plane", () => {
 
       const controlPlan = await app.inject({
         method: "POST",
-        url: "/v1/system/controls/plan",
+        url: registeredPublicApiRoute("claw.api.system.controlsPlan"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: { controlId: "system.display.set_brightness", target: "main", value: "70", reason: "test-plan" },
       });
@@ -371,7 +373,7 @@ describe("MCP connector control plane", () => {
 
       const history = await app.inject({
         method: "GET",
-        url: `/v1/system/history/system.memory.used?range=1h&monitorDb=${encodeURIComponent(monitorDb)}`,
+        url: registeredPublicApiRoute("claw.api.system.history", { metricKey: "system.memory.used" }, { range: "1h", monitorDb: monitorDb }),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(history.statusCode, 200);
@@ -427,7 +429,7 @@ describe("MCP connector control plane", () => {
     try {
       const execute = await app.inject({
         method: "POST",
-        url: "/v1/mac/execute",
+        url: registeredPublicApiRoute("claw.api.mac.execute"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: fixtureMacActionRequest(),
       });
@@ -438,7 +440,7 @@ describe("MCP connector control plane", () => {
 
       const audit = await app.inject({
         method: "GET",
-        url: "/v1/mac/audit",
+        url: registeredPublicApiRoute("claw.api.mac.audit"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(audit.statusCode, 200);
@@ -446,7 +448,7 @@ describe("MCP connector control plane", () => {
 
       const permissions = await app.inject({
         method: "GET",
-        url: "/v1/mac/permissions",
+        url: registeredPublicApiRoute("claw.api.mac.permissions"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(permissions.statusCode, 200);
@@ -454,7 +456,7 @@ describe("MCP connector control plane", () => {
 
       const permissionRequest = await app.inject({
         method: "POST",
-        url: "/v1/mac/permissions/request",
+        url: registeredPublicApiRoute("claw.api.mac.permissionsRequest"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: { permissionId: "mac.permission.microphone", confirm: false },
       });
@@ -462,7 +464,7 @@ describe("MCP connector control plane", () => {
 
       const mcpExecute = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 4,
@@ -475,7 +477,7 @@ describe("MCP connector control plane", () => {
 
       const mcpPermissionRequest = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 5,
@@ -507,7 +509,7 @@ describe("MCP connector control plane", () => {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
       const response = await app.inject({
         method: "POST",
-        url: "/v1/mcp/tools/call",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: {
           prefixedName: "mcp_fixture_echo",
@@ -531,7 +533,7 @@ describe("MCP connector control plane", () => {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
       const response = await app.inject({
         method: "POST",
-        url: "/v1/mcp/tools/call",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: {
           prefixedName: "mcp_fixture_echo",
@@ -569,7 +571,7 @@ describe("MCP connector control plane", () => {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
       const response = await app.inject({
         method: "POST",
-        url: "/v1/mcp/tools/call",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: {
           prefixedName: "mcp_fixture_echo",
@@ -595,7 +597,7 @@ describe("MCP connector control plane", () => {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
       const response = await app.inject({
         method: "POST",
-        url: "/v1/mcp/tools/call",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: {
           prefixedName: "mcp_fixture_echo",
@@ -622,7 +624,7 @@ describe("MCP connector control plane", () => {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
       const response = await app.inject({
         method: "POST",
-        url: "/v1/mcp/tools/call",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: {
           prefixedName: "mcp_fixture_echo",
@@ -652,7 +654,7 @@ describe("MCP connector control plane", () => {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
       const response = await app.inject({
         method: "POST",
-        url: "/v1/mcp/tools/call",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
         payload: {
           prefixedName: "mcp_fixture_echo",
@@ -739,7 +741,7 @@ function buildFixtureApp(onToolCall?: () => void, macSignedHostBridge?: MacSigne
 async function registerAndRefreshFixtureServer(app: ReturnType<typeof buildMCPApp>["app"], sharedSecret: string): Promise<void> {
   const register = await app.inject({
     method: "POST",
-    url: "/v1/mcp/servers",
+    url: registeredPublicApiRoute("claw.api.mcp.servers"),
     headers: { authorization: `Bearer ${sharedSecret}` },
     payload: {
       id: "srv_fixture",
@@ -752,7 +754,7 @@ async function registerAndRefreshFixtureServer(app: ReturnType<typeof buildMCPAp
 
   const refresh = await app.inject({
     method: "POST",
-    url: "/v1/mcp/servers/srv_fixture/refresh",
+    url: registeredPublicApiRoute("claw.api.mcp.serversRefresh", { serverId: "srv_fixture" }),
     headers: { authorization: `Bearer ${sharedSecret}` },
     payload: {},
   });

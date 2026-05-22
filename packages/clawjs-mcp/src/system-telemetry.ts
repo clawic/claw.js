@@ -12,7 +12,8 @@ import {
   listSystemTelemetryMetrics,
   listSystemTelemetryProviders,
   listSystemTelemetryWidgets,
-  resolveClawPersistentSurfacePath,
+  expandClawHomePath,
+  resolveClawGlobalDataStorageDir,
   systemTelemetryCredentialRefSafetyError,
   type SystemTelemetryMetricSample,
   type SystemTelemetrySnapshot,
@@ -72,17 +73,16 @@ interface MetricIncidentRow {
 
 const MONITOR_ROLLUP_BUCKET_MS = 60_000;
 
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
-}
-
 export function systemTelemetryMonitorDbPath(input: { monitorDb?: string } = {}): string {
-  if (input.monitorDb) return expandHome(input.monitorDb);
-  if (process.env.CLAW_MONITOR_DB_PATH) return expandHome(process.env.CLAW_MONITOR_DB_PATH);
-  if (process.env.CLAW_MONITOR_DATA_DIR) return path.join(expandHome(process.env.CLAW_MONITOR_DATA_DIR), "monitor.sqlite");
-  if (process.env.CLAW_DATA_DIR) return path.join(expandHome(process.env.CLAW_DATA_DIR), "monitor.sqlite");
-  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data", "monitor.sqlite");
-  return expandHome(resolveClawPersistentSurfacePath("claw.database.monitor"));
+  if (input.monitorDb) return expandClawHomePath(input.monitorDb, os.homedir());
+  if (process.env.CLAW_MONITOR_DB_PATH) return expandClawHomePath(process.env.CLAW_MONITOR_DB_PATH, os.homedir());
+  if (process.env.CLAW_MONITOR_DATA_DIR) return path.join(expandClawHomePath(process.env.CLAW_MONITOR_DATA_DIR, os.homedir()), "monitor.sqlite");
+  const dataDir = resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(process.env.CLAW_DATA_DIR ? { dataDir: process.env.CLAW_DATA_DIR } : {}),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
+  return path.join(dataDir, "monitor.sqlite");
 }
 
 function nowIso(): string {

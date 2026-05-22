@@ -71,6 +71,17 @@ test("verify plugin requires supply-chain metadata and malware review", () => {
   assert.equal(__verifyCliTest.validatePlugin(root).ok, true);
 });
 
+test("verify plugin tarball extraction uses the Mac Care system temp route", () => {
+  assert.equal(__verifyCliTest.verifyPluginTempRoot(), "/tmp");
+  assert.equal(__verifyCliTest.verifyTarExecutablePath(), "/usr/bin/tar");
+  const source = fs.readFileSync(new URL("./cli-verify-command.ts", import.meta.url), "utf8");
+  assert.match(source, /requireMacCareRoutePathPattern\("mac_care\.route\.system_temp"\)/);
+  assert.match(source, /requireMacCareRoutePathPattern\("mac_care\.route\.system_tar_cli"\)/);
+  assert.equal(source.includes("os.tmpdir()"), false);
+  assert.equal(source.includes('path.join(os.tmpdir(), "claw-verify-plugin-")'), false);
+  assert.equal(source.includes('spawnSync("tar"'), false);
+});
+
 test("verify plugin rejects lifecycle scripts without accepted metadata", () => {
   const root = tempDir();
   fs.writeFileSync(path.join(root, "plugin.json"), JSON.stringify({ name: "sample" }));

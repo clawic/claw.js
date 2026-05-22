@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "vitest";
 
+import { registeredPublicApiRoute } from "../../../tests/helpers/stable-surface-test-builders";
+
 import { buildMCPApp } from "./app.ts";
 
 const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
@@ -37,7 +39,7 @@ describe("MCP custom app SDK contract boundary", () => {
     try {
       const http = await app.inject({
         method: "GET",
-        url: "/v1/mcp/expose/custom-app-sdk",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeCustomAppSdk"),
         headers: { authorization: `Bearer ${config.sharedSecret}` },
       });
       assert.equal(http.statusCode, 200);
@@ -64,7 +66,7 @@ describe("MCP custom app SDK contract boundary", () => {
 
       const rpc = await app.inject({
         method: "POST",
-        url: "/v1/mcp/expose/rpc",
+        url: registeredPublicApiRoute("claw.api.mcp.exposeRpc"),
         payload: {
           jsonrpc: "2.0",
           id: 1,

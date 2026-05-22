@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+
+import { requireMacCareRoutePathPattern } from "@clawjs/core";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
@@ -50,6 +51,14 @@ function sha256(filePath: string): string {
 function resolveAgainst(baseDir: string, candidate: string | undefined): string | null {
   if (!candidate) return null;
   return path.isAbsolute(candidate) ? candidate : path.resolve(baseDir, candidate);
+}
+
+function verifyPluginTempRoot(): string {
+  return requireMacCareRoutePathPattern("mac_care.route.system_temp");
+}
+
+function verifyTarExecutablePath(): string {
+  return requireMacCareRoutePathPattern("mac_care.route.system_tar_cli");
 }
 
 function validateReleaseManifest(manifestPath: string): { ok: boolean; artifacts: unknown[]; issues: VerificationIssue[] } {
@@ -103,8 +112,8 @@ function validateReleaseManifest(manifestPath: string): { ok: boolean; artifacts
 }
 
 function extractTgz(tgzPath: string): string {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-verify-plugin-"));
-  const result = spawnSync("tar", ["-xzf", path.resolve(tgzPath), "-C", tempDir], { encoding: "utf8" });
+  const tempDir = fs.mkdtempSync(path.join(verifyPluginTempRoot(), "claw-verify-plugin-"));
+  const result = spawnSync(verifyTarExecutablePath(), ["-xzf", path.resolve(tgzPath), "-C", tempDir], { encoding: "utf8" });
   if (result.status !== 0) {
     throw new Error(result.stderr || result.stdout || "Failed to extract plugin tarball");
   }
@@ -195,4 +204,6 @@ export async function runVerifyCli(input: VerifyCliInput): Promise<number> {
 export const __verifyCliTest = {
   validateReleaseManifest,
   validatePlugin,
+  verifyPluginTempRoot,
+  verifyTarExecutablePath,
 };
