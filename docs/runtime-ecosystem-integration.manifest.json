@@ -37,14 +37,55 @@
     "freshness": "snapshot_with_ttl_or_event_source",
     "liveValidation": "external_pending_until_explicit_approval"
   },
+  "sessionActionContracts": {
+    "openclaw": [
+      { "action": "list", "status": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "runtime_gateway_snapshot", "delegatesTo": "runtime.openclaw.sessions.list", "guard": "official_gateway_read_only" },
+      { "action": "preview", "status": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "runtime_gateway_snapshot", "delegatesTo": "runtime.openclaw.sessions.preview", "guard": "official_gateway_preview_read_only" },
+      { "action": "resolve", "status": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "runtime_gateway_snapshot", "delegatesTo": "runtime.openclaw.sessions.resolve", "guard": "official_gateway_resolve_read_only" },
+      { "action": "history", "status": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "runtime_gateway_snapshot", "delegatesTo": "runtime.openclaw.chat.history", "guard": "official_gateway_history_read_only" },
+      { "action": "send", "status": "implemented_requires_confirmation", "authority": "runtime", "writesRuntime": true, "persistence": "runtime_gateway_write", "delegatesTo": "runtime.openclaw.chat.send", "guard": "requires_confirm_runtime_write" },
+      { "action": "inject", "status": "implemented_requires_confirmation", "authority": "runtime", "writesRuntime": true, "persistence": "runtime_gateway_write", "delegatesTo": "runtime.openclaw.chat.inject", "guard": "requires_confirm_runtime_write" },
+      { "action": "abort", "status": "implemented_requires_confirmation", "authority": "runtime", "writesRuntime": true, "persistence": "runtime_gateway_control", "delegatesTo": "runtime.openclaw.chat.abort", "guard": "requires_confirm_runtime_write" },
+      { "action": "create", "status": "blocked", "authority": "runtime", "writesRuntime": false, "wouldWriteRuntime": true, "persistence": "none", "delegatesTo": "blocked until official runtime create contract and fixture", "guard": "blocked_until_official_create_fixture", "requiredEvidence": ["official_create_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_native_list_evidence"] },
+      { "action": "pin", "status": "local_overlay_only", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay", "delegatesTo": "ClawJS app-state local pin overlay", "guard": "must_not_write_runtime_pin_without_official_api" },
+      { "action": "unpin", "status": "local_overlay_only", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay", "delegatesTo": "ClawJS app-state local pin overlay", "guard": "must_not_write_runtime_pin_without_official_api" },
+      { "action": "conflicts", "status": "implemented", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay_report", "delegatesTo": "ClawJS app-state local overlay reconciliation report", "guard": "no_silent_overwrite_or_runtime_write_back" }
+    ],
+    "codex": [
+      { "action": "list", "status": "degraded", "statusWhenSessionPath": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "metadata_only", "delegatesTo": "runtime session path metadata projection", "guard": "bounded_scan_without_transcript_reads" },
+      { "action": "preview", "status": "blocked", "statusWhenSessionPath": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "none", "persistenceWhenSessionPath": "bounded_local_session_preview", "delegatesTo": "blocked until native preview contract", "delegatesToWhenSessionPath": "runtime session path bounded preview", "guard": "blocked_until_preview_contract_and_content_policy", "guardWhenSessionPath": "metadata_default_include_content_required" },
+      { "action": "resolve", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native resolve contract", "guard": "blocked_until_resolve_contract" },
+      { "action": "history", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native history contract", "guard": "blocked_until_history_contract_and_content_policy" },
+      { "action": "send", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native send contract", "guard": "blocked_until_send_contract" },
+      { "action": "inject", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native inject contract", "guard": "blocked_until_inject_contract" },
+      { "action": "abort", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native abort contract", "guard": "blocked_until_abort_contract" },
+      { "action": "create", "status": "blocked", "authority": "runtime", "writesRuntime": false, "wouldWriteRuntime": true, "persistence": "none", "delegatesTo": "blocked until official runtime create contract and fixture", "guard": "blocked_until_official_create_fixture", "requiredEvidence": ["official_create_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_native_list_evidence"] },
+      { "action": "pin", "status": "local_overlay_only", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay", "delegatesTo": "ClawJS app-state local pin overlay", "guard": "must_not_write_runtime_pin_without_official_api" },
+      { "action": "unpin", "status": "local_overlay_only", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay", "delegatesTo": "ClawJS app-state local pin overlay", "guard": "must_not_write_runtime_pin_without_official_api" },
+      { "action": "conflicts", "status": "implemented", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay_report", "delegatesTo": "ClawJS app-state local overlay reconciliation report", "guard": "no_silent_overwrite_or_runtime_write_back" }
+    ],
+    "hermes": [
+      { "action": "list", "status": "degraded", "statusWhenSessionPath": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "metadata_only", "delegatesTo": "runtime session path metadata projection", "guard": "bounded_scan_without_transcript_reads" },
+      { "action": "preview", "status": "blocked", "statusWhenSessionPath": "implemented", "authority": "runtime", "writesRuntime": false, "persistence": "none", "persistenceWhenSessionPath": "bounded_local_session_preview", "delegatesTo": "blocked until native preview contract", "delegatesToWhenSessionPath": "runtime session path bounded preview", "guard": "blocked_until_preview_contract_and_content_policy", "guardWhenSessionPath": "metadata_default_include_content_required" },
+      { "action": "resolve", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native resolve contract", "guard": "blocked_until_resolve_contract" },
+      { "action": "history", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native history contract", "guard": "blocked_until_history_contract_and_content_policy" },
+      { "action": "send", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native send contract", "guard": "blocked_until_send_contract" },
+      { "action": "inject", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native inject contract", "guard": "blocked_until_inject_contract" },
+      { "action": "abort", "status": "blocked", "authority": "runtime", "writesRuntime": false, "persistence": "none", "delegatesTo": "blocked until native abort contract", "guard": "blocked_until_abort_contract" },
+      { "action": "create", "status": "blocked", "authority": "runtime", "writesRuntime": false, "wouldWriteRuntime": true, "persistence": "none", "delegatesTo": "blocked until official runtime create contract and fixture", "guard": "blocked_until_official_create_fixture", "requiredEvidence": ["official_create_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_native_list_evidence"] },
+      { "action": "pin", "status": "local_overlay_only", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay", "delegatesTo": "ClawJS app-state local pin overlay", "guard": "must_not_write_runtime_pin_without_official_api" },
+      { "action": "unpin", "status": "local_overlay_only", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay", "delegatesTo": "ClawJS app-state local pin overlay", "guard": "must_not_write_runtime_pin_without_official_api" },
+      { "action": "conflicts", "status": "implemented", "authority": "clawix_local_overlay", "writesRuntime": false, "persistence": "local_pin_overlay_report", "delegatesTo": "ClawJS app-state local overlay reconciliation report", "guard": "no_silent_overwrite_or_runtime_write_back" }
+    ]
+  },
   "runtimes": [
     {
       "id": "openclaw",
       "name": "OpenClaw",
-      "supportStage": "production",
-      "recommended": true,
-      "production": true,
-      "uiParityClaim": "semantic_native_projection",
+      "supportStage": "operable",
+      "recommended": false,
+      "production": false,
+      "uiParityClaim": "partial_runtime_lens",
       "officialSnapshot": {
         "capturedAt": "2026-05-21",
         "sourceType": "official_docs",
@@ -61,16 +102,16 @@
       },
       "tripleMatrix": {
         "nativeSurface": [
-          { "domain": "sessions", "nativeTerms": ["sessions", "message", "agent"], "officialCommands": ["openclaw sessions", "openclaw message", "openclaw agent", "openclaw agents list"], "authority": "runtime", "claim": "projected" },
+          { "domain": "sessions", "nativeTerms": ["sessions", "message", "agent"], "officialCommands": ["openclaw sessions", "openclaw sessions --json", "openclaw sessions cleanup --dry-run", "openclaw sessions cleanup --json", "openclaw message", "openclaw agent", "openclaw agents list"], "authority": "runtime", "claim": "projected" },
           { "domain": "skills", "nativeTerms": ["skills"], "officialCommands": ["openclaw skills list", "openclaw skills info", "openclaw skills check"], "authority": "runtime", "claim": "projected" },
           { "domain": "memory", "nativeTerms": ["MEMORY.md", "memory/*.md"], "officialCommands": ["openclaw memory status", "openclaw memory index", "openclaw memory search"], "authority": "runtime", "claim": "projected" },
           { "domain": "channels", "nativeTerms": ["channels", "accounts"], "officialCommands": ["openclaw channels list", "openclaw channels status", "openclaw channels add", "openclaw channels remove", "openclaw channels login", "openclaw channels logout"], "authority": "runtime", "claim": "operable" },
           { "domain": "providers", "nativeTerms": ["providers", "auth profiles"], "officialCommands": ["openclaw models auth", "openclaw onboard --auth-choice"], "authority": "runtime", "claim": "operable" },
           { "domain": "auth", "nativeTerms": ["secrets", "provider tokens"], "officialCommands": ["openclaw secrets reload", "openclaw secrets audit", "openclaw secrets configure"], "authority": "runtime", "claim": "operable" },
           { "domain": "models", "nativeTerms": ["models", "aliases", "fallbacks"], "officialCommands": ["openclaw models list", "openclaw models status", "openclaw models set", "openclaw models aliases", "openclaw models fallbacks"], "authority": "runtime", "claim": "operable" },
-          { "domain": "scheduler", "nativeTerms": ["cron"], "officialCommands": ["openclaw cron status", "openclaw cron list", "openclaw cron add", "openclaw cron edit", "openclaw cron rm"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "plugins", "nativeTerms": ["plugins"], "officialCommands": ["openclaw plugins list", "openclaw plugins info", "openclaw plugins install", "openclaw plugins enable", "openclaw plugins disable", "openclaw plugins doctor"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "gateway", "nativeTerms": ["gateway", "daemon"], "officialCommands": ["openclaw gateway status", "openclaw gateway health", "openclaw gateway start", "openclaw daemon status"], "authority": "runtime", "claim": "operable" },
+          { "domain": "scheduler", "nativeTerms": ["cron", "tasks", "task flow"], "officialCommands": ["openclaw cron status", "openclaw cron list", "openclaw cron add", "openclaw cron edit", "openclaw cron rm", "openclaw tasks", "openclaw tasks list", "openclaw tasks show", "openclaw tasks notify", "openclaw tasks cancel", "openclaw tasks audit", "openclaw tasks maintenance", "openclaw tasks flow list", "openclaw tasks flow show", "openclaw tasks flow cancel"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "plugins", "nativeTerms": ["plugins", "hooks", "hook packs"], "officialCommands": ["openclaw plugins list", "openclaw plugins info", "openclaw plugins install", "openclaw plugins enable", "openclaw plugins disable", "openclaw plugins doctor", "openclaw hooks list", "openclaw hooks info", "openclaw hooks check", "openclaw hooks enable", "openclaw hooks disable", "openclaw hooks install", "openclaw hooks update"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "gateway", "nativeTerms": ["gateway", "daemon", "system events", "heartbeat", "presence"], "officialCommands": ["openclaw gateway status", "openclaw gateway health", "openclaw gateway start", "openclaw daemon status", "openclaw system event", "openclaw system heartbeat last", "openclaw system heartbeat enable", "openclaw system heartbeat disable", "openclaw system presence"], "authority": "runtime", "claim": "operable" },
           { "domain": "doctorCompat", "nativeTerms": ["doctor", "status", "health"], "officialCommands": ["openclaw doctor", "openclaw status", "openclaw health"], "authority": "runtime", "claim": "operable" },
           { "domain": "sandboxPermissions", "nativeTerms": ["sandbox", "approvals", "security"], "officialCommands": ["openclaw sandbox list", "openclaw sandbox explain", "openclaw approvals get", "openclaw approvals set", "openclaw security audit"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "configuration", "nativeTerms": ["config", "setup", "onboard"], "officialCommands": ["openclaw config get", "openclaw config set", "openclaw config unset", "openclaw setup", "openclaw onboard"], "authority": "runtime", "claim": "operable" }
@@ -131,19 +172,19 @@
       },
       "tripleMatrix": {
         "nativeSurface": [
-          { "domain": "sessions", "nativeTerms": ["Codex sessions", "CLI/app conversations"], "officialCommands": ["codex"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "sessions", "nativeTerms": ["Codex sessions", "CLI/app conversations", "resume picker", "fork"], "officialCommands": ["codex", "codex resume", "codex resume --last", "codex resume --all", "codex fork", "codex fork --last", "codex exec"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "skills", "nativeTerms": ["skills", "plugins"], "officialCommands": ["/skills", "$skill-name"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "memory", "nativeTerms": ["AGENTS.md", "instructions"], "officialCommands": ["repository and user instructions"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "channels", "nativeTerms": ["connectors", "MCP"], "officialCommands": ["codex mcp"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "channels", "nativeTerms": ["connectors", "MCP"], "officialCommands": ["codex mcp", "codex mcp list", "codex mcp get", "codex mcp add", "codex mcp remove", "codex mcp login", "codex mcp logout"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "providers", "nativeTerms": ["model/provider configuration"], "officialCommands": ["codex config"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "auth", "nativeTerms": ["config.toml", "OAuth/bearer token MCP"], "officialCommands": ["codex mcp login"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "auth", "nativeTerms": ["config.toml", "OAuth/bearer token MCP", "login status"], "officialCommands": ["codex login", "codex login status", "codex login --with-api-key", "codex login --with-access-token", "codex logout", "codex mcp login", "codex mcp logout"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "models", "nativeTerms": ["models"], "officialCommands": ["codex model/config"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "scheduler", "nativeTerms": ["not officially classified in snapshot"], "officialCommands": [], "authority": "blocked", "claim": "inventoried" },
-          { "domain": "plugins", "nativeTerms": ["plugins bundle skills/apps/MCP"], "officialCommands": ["plugin manifests"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "gateway", "nativeTerms": ["MCP stdio/streamable HTTP servers"], "officialCommands": ["codex mcp add", "codex mcp login"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "doctorCompat", "nativeTerms": ["CLI help/status"], "officialCommands": ["codex --help"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "sandboxPermissions", "nativeTerms": ["approvals", "sandbox"], "officialCommands": ["Codex CLI runtime policy"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "configuration", "nativeTerms": ["~/.codex/config.toml", ".codex/config.toml"], "officialCommands": ["codex config", "codex mcp"], "authority": "runtime", "claim": "inventoried" }
+          { "domain": "plugins", "nativeTerms": ["plugins bundle skills/apps/MCP", "plugin marketplaces"], "officialCommands": ["codex plugin", "codex plugin marketplace"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "gateway", "nativeTerms": ["MCP stdio/streamable HTTP servers", "app server", "remote control"], "officialCommands": ["codex mcp add", "codex mcp login", "codex mcp-server", "codex app-server daemon", "codex app-server proxy", "codex remote-control"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "doctorCompat", "nativeTerms": ["CLI help/status", "features", "debug"], "officialCommands": ["codex --help", "codex --version", "codex features list", "codex debug"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "sandboxPermissions", "nativeTerms": ["approvals", "sandbox"], "officialCommands": ["codex sandbox", "codex sandbox macos", "codex sandbox linux", "codex sandbox windows"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "configuration", "nativeTerms": ["~/.codex/config.toml", ".codex/config.toml", "feature flags"], "officialCommands": ["codex config", "codex features list", "codex features enable", "codex features disable", "codex mcp"], "authority": "runtime", "claim": "inventoried" }
         ],
         "clawDomainSurface": [
           { "domain": "sessions", "clawSurface": "read-only external session index", "canonicalAuthority": "runtime", "persistence": "index_and_shadow_when_safe" },
@@ -199,7 +240,7 @@
       },
       "tripleMatrix": {
         "nativeSurface": [
-          { "domain": "sessions", "nativeTerms": ["conversation", "CLI chat", "gateway chat"], "officialCommands": ["hermes", "/new", "/reset"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "sessions", "nativeTerms": ["conversation", "CLI chat", "gateway chat", "resume", "session picker", "session title"], "officialCommands": ["hermes", "hermes --continue", "hermes --resume <session_id>", "hermes sessions list", "hermes sessions rename", "/new", "/reset", "/sessions", "/title"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "skills", "nativeTerms": ["skills", "Skills Hub"], "officialCommands": ["/skills", "/<skill-name>"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "memory", "nativeTerms": ["persistent memory", "user profiles"], "officialCommands": ["memory docs", "OpenClaw migrate memories"], "authority": "runtime", "claim": "inventoried" },
           { "domain": "channels", "nativeTerms": ["gateway", "Telegram", "Discord", "Slack", "WhatsApp", "Signal", "Email"], "officialCommands": ["hermes gateway", "hermes gateway setup", "hermes gateway start"], "authority": "runtime", "claim": "inventoried" },

@@ -114,6 +114,15 @@ requirements, disallowed hosts, and governed-context failures such as blocked
 records, missing fields, missing secret bindings, wrong environment, or
 authorization-required context.
 
+Network decisions are owned by the [Network Control Plane](./network-control-plane.md).
+Connector network records are projections of that decision surface, not a
+second policy engine. A connector request that declares `networkPolicyId` must
+present a `ConnectorNetworkProof` containing a compatible
+`NetworkPolicyEvaluation`; legacy egress, VPN, proxy, or allowed-host fields in
+`connector_network_policies` are retained only as catalog metadata and cannot
+authorize execution by themselves. If the proof omits the network evaluation,
+the connector control plane fails closed with `network_proof_mismatch`.
+
 Destructive provider operations also inherit the
 [No Irreversible Data Loss](./governance/no-irreversible-data-loss/README.md)
 contract. A provider trash, archive, restore, cancel, or unarchive path is

@@ -9,6 +9,8 @@ const args = new Set(process.argv.slice(2));
 let releaseMode = args.has("--release");
 const selfTest = args.has("--self-test");
 const errors = [];
+const evidenceRefTypes = new Set(["path", "command", "hash", "attestation", "capture", "log", "validation"]);
+const declarativeEvidencePattern = /\b(must include|should include|requires?|required|pending|future|debe incluir|deben incluir|debera|deberá|checklist requires|release evidence includes|release evidence must include)\b/iu;
 
 const ignoredDirs = new Set([
   ".git",
@@ -63,6 +65,30 @@ function requireSnippet(relativePath, snippet) {
   if (!read(relativePath).includes(snippet)) fail(`${relativePath} must mention ${snippet}`);
 }
 
+function isFixtureRef(value) {
+  return /\bfixture\b|synthetic_templates_not_evidence/iu.test(String(value ?? ""));
+}
+
+function validateEvidenceRef(surface, fieldName, ref) {
+  const label = `${surface.id}.${fieldName}.evidenceRefs`;
+  if (!ref || typeof ref !== "object" || Array.isArray(ref)) {
+    fail(`${label} entries must be objects`);
+    return;
+  }
+  if (!evidenceRefTypes.has(ref.type)) fail(`${label}.type must be one of ${[...evidenceRefTypes].join(", ")}`);
+  if (typeof ref.ref !== "string" || ref.ref.trim() === "") {
+    fail(`${label}.ref must be non-empty`);
+    return;
+  }
+  if (ref.ref.includes("/Users/") || ref.ref.includes("file://")) fail(`${label}.${ref.ref} must be public-safe`);
+  if (isFixtureRef(ref.ref)) fail(`${label}.${ref.ref} cannot cite fixtures or synthetic templates as real evidence`);
+  if (ref.type === "path" && !exists(ref.ref)) fail(`${label}.${ref.ref} path does not exist`);
+  if (ref.type === "hash" && !/^sha256:[a-f0-9]{64}$/u.test(ref.ref)) fail(`${label}.${ref.ref} must be sha256:<64 lowercase hex>`);
+  if ((ref.type === "command" || ref.type === "validation") && !/^(node scripts\/|bash scripts\/|npm run |swift test |claw verify )/u.test(ref.ref)) {
+    fail(`${label}.${ref.ref} must be a known validation command`);
+  }
+}
+
 function validateControl(surface, fieldName) {
   const control = surface[fieldName];
   if (!control || typeof control !== "object" || Array.isArray(control)) {
@@ -74,6 +100,15 @@ function validateControl(surface, fieldName) {
   }
   if (typeof control.evidence !== "string" || control.evidence.trim() === "") {
     fail(`${surface.id}.${fieldName}.evidence must be non-empty`);
+  }
+  if (control.status === "pass") {
+    if (declarativeEvidencePattern.test(control.evidence)) {
+      fail(`${surface.id}.${fieldName}.evidence must cite real evidence, not a future requirement`);
+    }
+    if (!Array.isArray(control.evidenceRefs) || control.evidenceRefs.length === 0) {
+      fail(`${surface.id}.${fieldName}.evidenceRefs must be non-empty when status is pass`);
+    }
+    for (const ref of control.evidenceRefs ?? []) validateEvidenceRef(surface, fieldName, ref);
   }
   if (control.status !== "pass" && typeof control.exception !== "string") {
     fail(`${surface.id}.${fieldName} with ${control.status} must record an exception`);
@@ -230,18 +265,29 @@ function runSelfTest() {
       path: "package.json",
       releaseCritical: true,
       dependencyScope: "runtime",
-      lockfile: { status: "pass", evidence: "package-lock.json" },
-      sbom: { status: "pass", evidence: "fixture" },
-      provenance: { status: "pass", evidence: "fixture" },
-      dependencyReview: { status: "pass", evidence: "fixture" },
-      vulnerabilityTriage: { status: "pass", evidence: "fixture" },
-      artifactIntegrity: { status: "pass", evidence: "fixture" },
-      malwareReview: { status: "pass", evidence: "fixture" },
+      lockfile: { status: "pass", evidence: "package-lock.json", evidenceRefs: [{ type: "path", ref: "package-lock.json" }] },
+      sbom: { status: "pass", evidence: "RELEASING.md", evidenceRefs: [{ type: "path", ref: "RELEASING.md" }] },
+      provenance: { status: "pass", evidence: "RELEASING.md", evidenceRefs: [{ type: "path", ref: "RELEASING.md" }] },
+      dependencyReview: { status: "pass", evidence: ".github/CODEOWNERS", evidenceRefs: [{ type: "path", ref: ".github/CODEOWNERS" }] },
+      vulnerabilityTriage: { status: "pass", evidence: "SECURITY.md", evidenceRefs: [{ type: "path", ref: "SECURITY.md" }] },
+      artifactIntegrity: { status: "pass", evidence: "scripts/pack-smoke.mjs", evidenceRefs: [{ type: "path", ref: "scripts/pack-smoke.mjs" }] },
+      malwareReview: { status: "pass", evidence: "docs/supply-chain-security.md", evidenceRefs: [{ type: "path", ref: "docs/supply-chain-security.md" }] },
     }],
   };
   errors.length = 0;
   validateManifest(validManifest);
   assert.equal(errors.length, 0);
+  const declarativeManifest = structuredClone(validManifest);
+  declarativeManifest.surfaces[0].sbom = { status: "pass", evidence: "release evidence must include CycloneDX JSON" };
+  errors.length = 0;
+  validateManifest(declarativeManifest);
+  assert(errors.some((error) => error.includes("must cite real evidence")));
+
+  const fixtureManifest = structuredClone(validManifest);
+  fixtureManifest.surfaces[0].sbom = { status: "pass", evidence: "fixture", evidenceRefs: [{ type: "path", ref: "fixture" }] };
+  errors.length = 0;
+  validateManifest(fixtureManifest);
+  assert(errors.some((error) => error.includes("cannot cite fixtures")));
 
   const invalidManifest = structuredClone(validManifest);
   invalidManifest.surfaces[0].sbom = { status: "baseline_exception", evidence: "missing", exception: "fixture" };

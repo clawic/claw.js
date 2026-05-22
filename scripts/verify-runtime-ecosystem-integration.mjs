@@ -10,6 +10,8 @@ const supportMatrixPath = path.join(rootDir, "docs/support-matrix.md");
 const decisionMapPath = path.join(rootDir, "docs/decision-map.md");
 const discoverabilityPath = path.join(rootDir, "docs/discoverability.registry.json");
 const adrCoveragePath = path.join(rootDir, "docs/adr-operational-coverage.manifest.json");
+const runtimePortalPath = path.join(rootDir, "packages/clawjs/src/cli-runtime-portal-command.ts");
+const commandIntentsPath = path.join(rootDir, "packages/clawjs-core/src/cli-command-intents.ts");
 
 const requiredRuntimeIds = ["openclaw", "codex", "hermes"];
 const requiredDomains = [
@@ -38,6 +40,7 @@ const allowedClaims = new Set([
   "production",
 ]);
 const stableStages = new Set(["recommended", "production", "native_parity"]);
+const requiredSessionActions = ["list", "preview", "resolve", "history", "send", "inject", "abort", "create", "pin", "unpin", "conflicts"];
 
 function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
@@ -47,6 +50,18 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function extractConstStringArray(source, constName) {
+  const match = source.match(new RegExp(`const\\s+${constName}\\s*=\\s*\\[([\\s\\S]*?)\\];`));
+  if (!match) return null;
+  return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
+}
+
+function extractJsonParseConst(source, constName) {
+  const match = source.match(new RegExp("const\\s+" + constName + "\\s*=\\s*JSON\\.parse\\(\\x60([\\s\\S]*?)\\x60\\);"));
+  if (!match) return null;
+  return JSON.parse(match[1]);
+}
+
 function hasAllDomains(rows, label, errors) {
   const domains = new Set((rows ?? []).map((row) => row.domain));
   for (const domain of requiredDomains) {
@@ -54,9 +69,22 @@ function hasAllDomains(rows, label, errors) {
   }
 }
 
+function claimRank(claim) {
+  return [...allowedClaims].indexOf(claim);
+}
+
+function promotedClaimBlocked(runtime) {
+  const matrix = runtime.tripleMatrix ?? {};
+  const nativeRows = matrix.nativeSurface ?? [];
+  const linkRows = matrix.linkMatrix ?? [];
+  return nativeRows.some((row) => claimRank(row.claim) < claimRank("native_parity"))
+    || linkRows.some((row) => String(row.validation ?? "").includes("external_pending"))
+    || linkRows.some((row) => String(row.writeBackPolicy ?? "").startsWith("blocked"));
+}
+
 function main() {
   const errors = [];
-  for (const file of [manifestPath, standardPath, adrPath, supportMatrixPath, decisionMapPath, discoverabilityPath, adrCoveragePath]) {
+  for (const file of [manifestPath, standardPath, adrPath, supportMatrixPath, decisionMapPath, discoverabilityPath, adrCoveragePath, runtimePortalPath, commandIntentsPath]) {
     if (!fs.existsSync(file)) errors.push(`missing required file ${path.relative(rootDir, file)}`);
   }
   if (errors.length > 0) {
@@ -74,8 +102,58 @@ function main() {
   for (const domain of requiredDomains) {
     if (!manifestDomains.has(domain)) errors.push(`manifest requiredDomains missing ${domain}`);
   }
+  if (JSON.stringify(manifest.requiredDomains ?? []) !== JSON.stringify(requiredDomains)) {
+    errors.push("manifest requiredDomains must exactly match the runtime ecosystem guard order");
+  }
   for (const claim of manifest.claimLadder ?? []) {
     if (!allowedClaims.has(claim)) errors.push(`unknown claim ladder value ${claim}`);
+  }
+
+  const runtimePortal = fs.readFileSync(runtimePortalPath, "utf8");
+  const portalDomains = extractConstStringArray(runtimePortal, "RUNTIME_PORTAL_DOMAIN_ORDER");
+  if (!portalDomains) {
+    errors.push("runtime portal missing RUNTIME_PORTAL_DOMAIN_ORDER");
+  } else if (JSON.stringify(portalDomains) !== JSON.stringify(manifest.requiredDomains ?? [])) {
+    errors.push("runtime portal domain order must exactly match manifest requiredDomains");
+  }
+  const portalPolicies = extractJsonParseConst(runtimePortal, "RUNTIME_PORTAL_DOMAIN_POLICIES");
+  if (!portalPolicies) {
+    errors.push("runtime portal missing RUNTIME_PORTAL_DOMAIN_POLICIES");
+  }
+  if (!runtimePortal.includes("function evidenceRequirementsFor")) {
+    errors.push("runtime portal must expose structured evidence requirements for blocked/external-pending support claims");
+  }
+  for (const snippet of ["blockerClass", "external_pending", "direct_blocker", "redacted_json_receipt", "official_runtime_cli_or_api", "evidenceDisposition", "currentBehavior", "fallbackPolicy", "claimEffect", "reentryCondition", "productDecision", "supportResolution", "userVisibleContract", "explicitly_product_blocked_not_a_silent_gap"]) {
+    if (!runtimePortal.includes(snippet)) errors.push(`runtime portal evidence requirement contract missing ${snippet}`);
+  }
+  for (const snippet of ["function buildSupportAudit", "payload.supportAudit = buildSupportAudit(runtimeId, payload)", "runtime_ecosystem_support_audit", "support_claim_remains_unpromoted_until_all_evidence_requirements_are_closed_or_explicitly_product_blocked", "finalPromotionReview", "unpromoted_external_pending", "keep_lowered_claim_until_upstream_native_contracts_exist", "evidenceReentryPackets", "do_not_run_without_explicit_approval_and_redaction", "keep_unpromoted_and_do_not_synthesize_runtime_state", "finalSupportClaimDecision", "keep_current_lowered_runtime_ecosystem_claim", "use_evidenceReentryPackets_exactly_before_revisiting_claim", "closureChecklist", "closureChecklistSummary", "missing_manifest_domain_projection", "readProjectionStatus", "implementedFacets", "blockingFacets", "projectionDisposition", "read_projection_available_write_back_blocked", "projectionSummary", "byReadProjectionStatus", "productBlockedButProjectedDomainCount", "evidenceReadinessSummary", "approvalRequiredCount", "upstreamContractBlockedCount", "use_evidence_reentry_packets_before_claim_promotion", "syncPolicySummary", "defaultSyncMode", "read_projection_first_no_silent_write_back", "localOverlayDomains", "project_runtime_state_do_not_sync_or_write_back_without_official_contract"]) {
+    if (!runtimePortal.includes(snippet)) errors.push(`runtime portal support audit contract missing ${snippet}`);
+  }
+  for (const snippet of ["sessionActionRequirements", "native_write_back_contract", "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist"]) {
+    if (!runtimePortal.includes(snippet)) errors.push(`runtime portal support audit must include session action blockers: ${snippet}`);
+  }
+  const portalSessionActionContracts = extractJsonParseConst(runtimePortal, "RUNTIME_SESSION_ACTION_CONTRACTS");
+  if (!portalSessionActionContracts) {
+    errors.push("runtime portal missing RUNTIME_SESSION_ACTION_CONTRACTS");
+  }
+  if (!manifest.sessionActionContracts) {
+    errors.push("manifest missing sessionActionContracts");
+  }
+
+  const commandIntents = fs.readFileSync(commandIntentsPath, "utf8");
+  for (const [id, mappedCommand] of [
+    ["cmd_intent_runtime_portal", "runtime <runtime-id>"],
+    ["cmd_intent_runtime_domains", "runtime <runtime-id> domains"],
+    ["cmd_intent_runtime_support", "runtime <runtime-id> support"],
+    ["cmd_intent_runtime_resources", "runtime <runtime-id> resources <domain>"],
+    ["cmd_intent_runtime_domain", "runtime <runtime-id> domain <domain>"],
+    ["cmd_intent_runtime_sessions_list", "runtime <runtime-id> sessions list"],
+    ["cmd_intent_runtime_sessions_preview", "runtime <runtime-id> sessions preview"],
+    ["cmd_intent_runtime_sessions_create", "runtime <runtime-id> sessions create"],
+    ["cmd_intent_runtime_sessions_conflicts", "runtime <runtime-id> sessions conflicts"],
+  ]) {
+    if (!commandIntents.includes(id)) errors.push(`command-intent registry missing ${id}`);
+    if (!commandIntents.includes(`mappedCommand: "${mappedCommand}"`)) errors.push(`command-intent registry missing mapped command ${mappedCommand}`);
   }
 
   const runtimes = new Map((manifest.runtimes ?? []).map((runtime) => [runtime.id, runtime]));
@@ -101,6 +179,9 @@ function main() {
       if (!runtime.uiParityClaim || runtime.uiParityClaim === "visual_clone") {
         errors.push(`${runtimeId} promoted support needs semantic UI parity, not visual clone`);
       }
+      if (promotedClaimBlocked(runtime)) {
+        errors.push(`${runtimeId} cannot claim recommended/production/native-parity while any domain is below native parity, external pending, or blocked for write-back`);
+      }
     }
     if ((runtime.id === "codex" || runtime.id === "hermes") && (runtime.recommended || runtime.production)) {
       errors.push(`${runtime.id} must remain dev-only until explicit evidence promotes it`);
@@ -120,6 +201,56 @@ function main() {
         if (!row[field]) errors.push(`${runtimeId}.${row.domain} linkMatrix missing ${field}`);
       }
     }
+    const runtimePolicy = portalPolicies?.[runtimeId] ?? {};
+    for (const domain of requiredDomains) {
+      if (!runtimePolicy[domain]) errors.push(`runtime portal policy table missing ${runtimeId}.${domain}`);
+      const nativeRow = (matrix.nativeSurface ?? []).find((row) => row.domain === domain);
+      const manifestCommands = JSON.stringify(nativeRow?.officialCommands ?? []);
+      const portalCommands = JSON.stringify(runtimePolicy[domain]?.officialCommands ?? []);
+      if (runtimePolicy[domain] && manifestCommands !== portalCommands) {
+        errors.push(`runtime portal policy officialCommands must match manifest for ${runtimeId}.${domain}`);
+      }
+    }
+    if (runtimeId === "openclaw") {
+      const openclawSessionCommands = (matrix.nativeSurface ?? []).find((row) => row.domain === "sessions")?.officialCommands ?? [];
+      for (const command of ["openclaw sessions", "openclaw sessions --json", "openclaw sessions cleanup --dry-run", "openclaw sessions cleanup --json"]) {
+        if (!openclawSessionCommands.includes(command)) errors.push(`OpenClaw sessions official command inventory missing current docs command: ${command}`);
+      }
+      for (const staleCommand of ["openclaw sessions show", "openclaw sessions export"]) {
+        if (openclawSessionCommands.includes(staleCommand)) errors.push(`OpenClaw sessions official command inventory still includes stale command: ${staleCommand}`);
+      }
+    }
+
+    const manifestActions = manifest.sessionActionContracts?.[runtimeId] ?? [];
+    const portalActions = portalSessionActionContracts?.[runtimeId] ?? [];
+    if (JSON.stringify(manifestActions) !== JSON.stringify(portalActions)) {
+      errors.push(`runtime portal session action contracts must exactly match manifest for ${runtimeId}`);
+    }
+    const actionNames = manifestActions.map((entry) => entry.action);
+    if (JSON.stringify(actionNames) !== JSON.stringify(requiredSessionActions)) {
+      errors.push(`${runtimeId} session action contracts must exactly match required action order`);
+    }
+    for (const action of manifestActions) {
+      for (const field of ["action", "status", "authority", "writesRuntime", "persistence", "delegatesTo", "guard"]) {
+        if (!(field in action)) errors.push(`${runtimeId}.${action.action ?? "unknown"} session action missing ${field}`);
+      }
+      if ((action.action === "create") && (action.wouldWriteRuntime !== true || !Array.isArray(action.requiredEvidence) || action.requiredEvidence.length === 0)) {
+        errors.push(`${runtimeId}.create session action must declare wouldWriteRuntime and requiredEvidence`);
+      }
+      if ((action.action === "pin" || action.action === "unpin") && (action.authority !== "clawix_local_overlay" || action.writesRuntime !== false)) {
+        errors.push(`${runtimeId}.${action.action} session action must be local overlay only`);
+      }
+    }
+    for (const actionName of ["send", "inject", "abort"]) {
+      const action = manifestActions.find((entry) => entry.action === actionName);
+      if (runtimeId === "openclaw") {
+        if (action?.writesRuntime !== true || !String(action?.status ?? "").includes("confirmation")) {
+          errors.push(`${runtimeId}.${actionName} must remain an explicit confirmed runtime write`);
+        }
+      } else if (action?.writesRuntime !== false || action?.status !== "blocked") {
+        errors.push(`${runtimeId}.${actionName} must remain blocked until native contract evidence exists`);
+      }
+    }
   }
 
   for (const adapter of manifest.baselineAdapters ?? []) {
@@ -129,7 +260,7 @@ function main() {
   }
 
   const standard = fs.readFileSync(standardPath, "utf8");
-  for (const snippet of ["Triple Matrix", "claw runtime <runtime-id>", "semantic native parity", "no silent overwrite"]) {
+  for (const snippet of ["Triple Matrix", "claw runtime <runtime-id>", "support --json", "finalPromotionReview", "evidenceReentryPackets", "finalSupportClaimDecision", "closureChecklist", "resources <domain>", "stable `ok:false` JSON error envelopes", "command-intent routes", "semantic native parity", "no silent overwrite"]) {
     if (!standard.includes(snippet)) errors.push(`standard doc missing snippet: ${snippet}`);
   }
 
@@ -142,10 +273,28 @@ function main() {
   if (!support.includes("openclaw") || !support.includes("codex") || !support.includes("hermes")) {
     errors.push("support matrix must include OpenClaw, Codex, and Hermes rows");
   }
+  if (!support.includes("Runtime ecosystem claim") || !support.includes("operable partial")) {
+    errors.push("support matrix must distinguish adapter support from runtime ecosystem claims");
+  }
+  if (support.includes("write-back, UI, and live evidence close")) {
+    errors.push("support matrix must not list current OpenClaw runtime-lens UI evidence as an unresolved blocker");
+  }
+  if (!support.includes("absent native create/write-back contracts are product-blocked")) {
+    errors.push("support matrix must name OpenClaw's product-blocked native contract behavior");
+  }
+  if (!support.includes("ecosystem-production remains blocked until live evidence and final promotion close")) {
+    errors.push("support matrix must name OpenClaw's remaining ecosystem-production blockers");
+  }
 
   const decisionMap = fs.readFileSync(decisionMapPath, "utf8");
   if (!decisionMap.includes("Runtime ecosystem integration")) {
     errors.push("decision map missing Runtime ecosystem integration row");
+  }
+  if (!decisionMap.includes("claw commands resolve runtime resources --json")) {
+    errors.push("decision map missing runtime resource command-intent validation route");
+  }
+  if (!decisionMap.includes("claw commands resolve runtime support --json")) {
+    errors.push("decision map missing runtime support command-intent validation route");
   }
 
   const discoverability = readJson(discoverabilityPath);

@@ -23,6 +23,12 @@ Clawix owns the signed-host projection: native status, review UI, permission
 state, and host-operational adapter state. Native macOS enforcement remains
 `external_pending` until the required entitlements and validation evidence exist.
 
+Connectors consume this plane as decision proof. `ConnectorNetworkPolicy` is a
+projection that names the connector requirement; it does not re-approve hosts,
+egress profiles, VPN profiles, or proxies. A connector execution that requires
+network policy must carry a compatible `NetworkPolicyEvaluation` from this
+module or fail closed before runtime execution.
+
 ## CLI
 
 `claw network` is the canonical portal:

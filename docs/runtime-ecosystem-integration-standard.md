@@ -62,7 +62,7 @@ Defaults by domain:
 | Memory | Sensitive index by default; content preservation requires policy or authorization. |
 | Channels/connectors | Claw registry owns principals, accounts, and secret refs; runtimes receive brokered bindings. |
 | Providers/models/auth | Governed context and secret refs; no guessed provider/account identifiers. |
-| Pins/tags/settings/write-back | Official runtime API/CLI only; otherwise local overlay. |
+| Pins/tags/settings/write-back | Official runtime API/CLI only; otherwise product-blocked local overlay. |
 
 The default conflict rule is no silent overwrite. Authoritative fields win;
 local overlays remain separate; visible divergence is preferred over hidden
@@ -82,6 +82,62 @@ available, brokered credentials, audit receipts for writes, and explicit
 unsupported/blocked states. Lifecycle commands such as `claw runtime status`
 remain generic adapter lifecycle commands; runtime-id subcommands are the
 native ecosystem portal.
+
+Domain-scoped reads are explicit:
+
+```bash
+claw runtime <runtime-id> domains --json
+claw runtime <runtime-id> support --json
+claw runtime <runtime-id> domain <domain> --json
+claw runtime <runtime-id> resources <domain> --json
+```
+
+`support` returns the runtime ecosystem support audit: all manifest domains
+accounted for, current support stage, blocking reasons, blocker classes,
+evidence requirements, session-action blockers, the exact promotion gate, and
+`finalPromotionReview`, `finalSupportClaimDecision`, `closureChecklist`, and
+`evidenceReentryPackets`. The review must
+distinguish product-blocked requirements from external-pending evidence, so a
+runtime can be visibly operable without being promoted as
+recommended/production. The final support-claim decision states the effective
+published support stage, claims that remain blocked, UI parity disposition,
+safe default, and the exact reentry policy before any promotion can be
+revisited. The closure checklist is one machine-readable row per manifest
+domain, with the domain closure status, blocker classes, evidence ids, safe
+default, and next action; it is the product answer to what is implemented,
+product-blocked, external-pending, or still a direct blocker. Each row also
+separates `readProjectionStatus`, `implementedFacets`, `blockingFacets`, and
+`projectionDisposition` so read-only inventory, local overlays, and blocked
+native write-back are visible as different facts instead of one ambiguous
+blocked state. `projectionSummary` aggregates those row fields into counts for
+read projection state, implemented facets, blocking facets, and domains that
+are product-blocked for promotion while still usable as read projections.
+`evidenceReadinessSummary` aggregates the remaining evidence lanes into
+approval-required, external-pending, upstream-contract-blocked,
+product-blocked, and unresolved-native counts plus the exact requirement ids
+and next required action classes. `syncPolicySummary` aggregates authority,
+persistence, relation, write-back, loss, freshness, local-overlay, read-only
+projection, and no-silent-overwrite policy so the runtime lens can show what is
+indexed, what is projected, what is written back, and what is explicitly not
+synced. Reentry packets group the exact command shape,
+expected redacted
+evidence, risk controls, and safe default for each remaining evidence lane. It
+is read-only and cannot substitute for live evidence or official write-back
+contracts.
+
+`resources <domain>` must receive a valid manifest domain before the runtime
+facade or inventories are prepared. A domain-scoped read must not scan unrelated
+domains or attach session inventory unless the requested scope is `sessions` or
+a full snapshot.
+
+Under `--json`, missing or unknown domains return stable `ok:false` JSON error envelopes
+with runtime id, operation, and domain metadata.
+
+The portal is also discoverable through command-intent routes. `claw commands
+resolve runtime domains --json`, `claw commands resolve runtime resources
+--json`, `claw commands resolve runtime support --json`, `claw commands resolve
+runtime domain --json`, and `claw inspect command-intents --json` must expose
+the mapped portal commands without executing them.
 
 ## Support Claims
 
