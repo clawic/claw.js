@@ -6,6 +6,11 @@ import XCTest
 
 @MainActor
 final class MacControlTests: XCTestCase {
+    func testMacCareHostRouteAtlasCentralizesMacControlSystemTools() {
+        XCTAssertEqual(MacCareHostRouteAtlas.networksetupCLI, "/usr/sbin/networksetup")
+        XCTAssertEqual(MacCareHostRouteAtlas.shortcutsCLI, "/usr/bin/shortcuts")
+    }
+
     func testWifiConnectPlanRejectsPlaintextPasswordAndRedactsSSID() throws {
         let request = MacControlActionRequest(
             requestId: "macreq_test_wifi_connect",

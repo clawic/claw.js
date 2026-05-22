@@ -1061,6 +1061,11 @@ public enum MacControlPolicy {
     }
 }
 
+public enum MacCareHostRouteAtlas {
+    public static let networksetupCLI = "/usr/sbin/networksetup"
+    public static let shortcutsCLI = "/usr/bin/shortcuts"
+}
+
 @MainActor
 public enum MacControlActionBroker {
     public static func plan(for request: MacControlActionRequest) throws -> MacControlActionPlan {
@@ -1072,8 +1077,8 @@ public enum MacControlActionBroker {
                 risk: .read,
                 permissions: [],
                 steps: [
-                    .process("/usr/sbin/networksetup", ["-getairportpower", wifiDevice(from: request)], "Read Wi-Fi power state"),
-                    .process("/usr/sbin/networksetup", ["-getairportnetwork", wifiDevice(from: request)], "Read current Wi-Fi network"),
+                    .process(MacCareHostRouteAtlas.networksetupCLI, ["-getairportpower", wifiDevice(from: request)], "Read Wi-Fi power state"),
+                    .process(MacCareHostRouteAtlas.networksetupCLI, ["-getairportnetwork", wifiDevice(from: request)], "Read current Wi-Fi network"),
                 ],
                 blockedReason: blockedReason
             )
@@ -1082,7 +1087,7 @@ public enum MacControlActionBroker {
                 request,
                 risk: .read,
                 permissions: [],
-                steps: [.process("/usr/sbin/networksetup", ["-listpreferredwirelessnetworks", wifiDevice(from: request)], "List preferred Wi-Fi networks")],
+                steps: [.process(MacCareHostRouteAtlas.networksetupCLI, ["-listpreferredwirelessnetworks", wifiDevice(from: request)], "List preferred Wi-Fi networks")],
                 blockedReason: blockedReason
             )
         case "mac.wifi.connect":
@@ -1093,7 +1098,7 @@ public enum MacControlActionBroker {
                 request,
                 risk: .high,
                 permissions: [],
-                steps: [.process("/usr/sbin/networksetup", ["-setairportnetwork", wifiDevice(from: request), ssid], "Connect Wi-Fi to \(redactedName("ssid", ssid))", redacted: true)],
+                steps: [.process(MacCareHostRouteAtlas.networksetupCLI, ["-setairportnetwork", wifiDevice(from: request), ssid], "Connect Wi-Fi to \(redactedName("ssid", ssid))", redacted: true)],
                 requiresApproval: true,
                 continuityBreaker: true,
                 revertLevel: .bestEffort,
@@ -1133,17 +1138,17 @@ public enum MacControlActionBroker {
         case "mac.window.minimize":
             return appleScriptPlan(request, risk: .medium, permissions: [.accessibility], script: minimizeFocusedWindowScript, preview: "Minimize the focused window", requiresApproval: true, revertLevel: .bestEffort, blockedReason: blockedReason)
         case "mac.shortcut.list":
-            return processPlan(request, risk: .read, permissions: [], steps: [.process("/usr/bin/shortcuts", ["list"], "List Shortcuts")], blockedReason: blockedReason)
+            return processPlan(request, risk: .read, permissions: [], steps: [.process(MacCareHostRouteAtlas.shortcutsCLI, ["list"], "List Shortcuts")], blockedReason: blockedReason)
         case "mac.shortcut.show":
             guard let name = request.arguments["name"], !name.isEmpty else {
                 return blockedPlan(request, reason: "Shortcut show requires a shortcut name.")
             }
-            return processPlan(request, risk: .low, permissions: [], steps: [.process("/usr/bin/shortcuts", ["view", name], "Show Shortcut \(redactedName("shortcut", name))", redacted: true)], blockedReason: blockedReason)
+            return processPlan(request, risk: .low, permissions: [], steps: [.process(MacCareHostRouteAtlas.shortcutsCLI, ["view", name], "Show Shortcut \(redactedName("shortcut", name))", redacted: true)], blockedReason: blockedReason)
         case "mac.shortcut.run":
             guard let name = request.arguments["name"], !name.isEmpty else {
                 return blockedPlan(request, reason: "Shortcut run requires a shortcut name.")
             }
-            return processPlan(request, risk: .high, permissions: [.automationAppleEvents], steps: [.process("/usr/bin/shortcuts", ["run", name], "Run Shortcut \(redactedName("shortcut", name))", redacted: true)], requiresApproval: true, revertLevel: .none, blockedReason: blockedReason)
+            return processPlan(request, risk: .high, permissions: [.automationAppleEvents], steps: [.process(MacCareHostRouteAtlas.shortcutsCLI, ["run", name], "Run Shortcut \(redactedName("shortcut", name))", redacted: true)], requiresApproval: true, revertLevel: .none, blockedReason: blockedReason)
         case "mac.audio.volume":
             guard let value = percentArgument("value", from: request) else {
                 return blockedPlan(request, reason: "Audio volume requires a numeric value from 0 to 100.")
@@ -1318,7 +1323,7 @@ public enum MacControlActionBroker {
             request,
             risk: risk,
             permissions: [],
-            steps: [.process("/usr/sbin/networksetup", ["-setairportpower", wifiDevice(from: request), power], "Turn Wi-Fi \(power)")],
+            steps: [.process(MacCareHostRouteAtlas.networksetupCLI, ["-setairportpower", wifiDevice(from: request), power], "Turn Wi-Fi \(power)")],
             requiresApproval: true,
             continuityBreaker: power == "off",
             revertLevel: .bestEffort,
@@ -1367,9 +1372,9 @@ public enum MacControlActionBroker {
     ) throws -> MacControlContinuitySnapshot? {
         guard plan.continuityBreaker, request.capabilityId.hasPrefix("mac.wifi.") else { return nil }
         let device = wifiDevice(from: request)
-        let power = try runner.runProcess("/usr/sbin/networksetup", arguments: ["-getairportpower", device])
+        let power = try runner.runProcess(MacCareHostRouteAtlas.networksetupCLI, arguments: ["-getairportpower", device])
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let network = try runner.runProcess("/usr/sbin/networksetup", arguments: ["-getairportnetwork", device])
+        let network = try runner.runProcess(MacCareHostRouteAtlas.networksetupCLI, arguments: ["-getairportnetwork", device])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let timestamp = timestamp()
         return MacControlContinuitySnapshot(
@@ -1388,7 +1393,7 @@ public enum MacControlActionBroker {
             return [
                 MacControlContinuityRevertStep(
                     kind: .process,
-                    executable: "/usr/sbin/networksetup",
+                    executable: MacCareHostRouteAtlas.networksetupCLI,
                     arguments: ["-setairportpower", snapshot.device, "off"],
                     preview: "Restore Wi-Fi power off on \(snapshot.device)",
                     redacted: false
@@ -1399,7 +1404,7 @@ public enum MacControlActionBroker {
         var steps = [
             MacControlContinuityRevertStep(
                 kind: .process,
-                executable: "/usr/sbin/networksetup",
+                executable: MacCareHostRouteAtlas.networksetupCLI,
                 arguments: ["-setairportpower", snapshot.device, "on"],
                 preview: "Restore Wi-Fi power on for \(snapshot.device)",
                 redacted: false
@@ -1409,7 +1414,7 @@ public enum MacControlActionBroker {
             steps.append(
                 MacControlContinuityRevertStep(
                     kind: .process,
-                    executable: "/usr/sbin/networksetup",
+                    executable: MacCareHostRouteAtlas.networksetupCLI,
                     arguments: ["-setairportnetwork", snapshot.device, network],
                     preview: "Reconnect Wi-Fi to previous saved network \(redactedName("ssid", network))",
                     redacted: true

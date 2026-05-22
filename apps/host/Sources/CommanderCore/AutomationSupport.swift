@@ -26,13 +26,7 @@ public struct AdapterHealthStatus: Equatable, Sendable {
 
 public enum AutomationSupport {
     public static func appExists(_ appName: String) -> Bool {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let candidates = [
-            "/System/Applications/\(appName).app",
-            "/System/Library/CoreServices/\(appName).app",
-            "/Applications/\(appName).app",
-            "\(home)/Applications/\(appName).app",
-        ]
+        let candidates = MacCareHostSystemRoutes.applicationBundleCandidates(named: appName)
         return candidates.contains(where: { FileManager.default.fileExists(atPath: $0) })
     }
 
@@ -80,7 +74,7 @@ public enum AutomationSupport {
             throw CommanderError.notFound("\(appName) is not installed")
         }
         do {
-            return try runProcess(executable: "/usr/bin/osascript", arguments: ["-e", script], timeout: timeout)
+            return try runProcess(executable: MacCareHostSystemRoutes.osascriptCLI, arguments: ["-e", script], timeout: timeout)
         } catch {
             throw mappedAutomationError(error, appName: appName)
         }

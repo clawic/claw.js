@@ -197,6 +197,7 @@ test("Mac V1 executable slice is fully declared", () => {
   }
 
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.backend.strategy, "networksetup");
+  assert.equal(findMacAtlasCapability("mac.wifi.connect")?.backend.executablePath, "/usr/sbin/networksetup");
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.cli.canonicalUsage, "claw wifi connect --ssid <ssid>");
   assert.equal(findMacAtlasCapability("mac.wifi.disconnect")?.backend.strategy, "corewlan");
   assert.equal(findMacAtlasCapability("mac.wifi.power.off")?.risk, "critical");
@@ -208,6 +209,15 @@ test("Mac V1 executable slice is fully declared", () => {
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.risk, "high");
   assert.equal(findMacAtlasCapability("mac.audio.volume")?.portableFamily, "system.audio.set_output_volume");
   assert.equal(findMacAtlasCapability("mac.display.brightness")?.portableFamily, "system.display.set_brightness");
+});
+
+test("Mac control plane executable paths require Mac Care route atlas entries", () => {
+  const source = fs.readFileSync(new URL("./mac-control-plane.ts", import.meta.url), "utf8");
+  assert.match(source, /requireMacCareRoutePathPattern\("mac_care\.route\.system_networksetup_cli"\)/);
+  assert.match(source, /requireMacCareRoutePathPattern\("mac_care\.route\.system_shortcuts_cli"\)/);
+  assert.equal(source.includes('macControlSystemRoutePath("mac_care.route.system_networksetup_cli", "/usr/sbin/networksetup")'), false);
+  assert.equal(source.includes('macControlSystemRoutePath("mac_care.route.system_shortcuts_cli", "/usr/bin/shortcuts")'), false);
+  assert.equal(source.includes('resolveMacCareRoutePathPattern(routeId) ?? fallback'), false);
 });
 
 test("Mac atlas verbs have an explicit full-family review", () => {

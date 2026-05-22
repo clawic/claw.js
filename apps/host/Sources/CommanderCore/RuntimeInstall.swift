@@ -142,10 +142,10 @@ public enum RuntimeInstaller {
         let host = HostConfiguration.current(environment: environment)
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
-            "\(home)/Applications/\(host.displayName).app",
-            "/Applications/\(host.displayName).app",
-            "\(home)/Applications/Commander.app",
-            "/Applications/Commander.app",
+            "\(MacCareHostSystemRoutes.userApplicationsDir(home: home))/\(host.displayName).app",
+            "\(MacCareHostSystemRoutes.applicationsDir)/\(host.displayName).app",
+            "\(MacCareHostSystemRoutes.userApplicationsDir(home: home))/Commander.app",
+            "\(MacCareHostSystemRoutes.applicationsDir)/Commander.app",
         ]
 
         return candidates.first(where: { FileManager.default.fileExists(atPath: $0) })
@@ -194,7 +194,7 @@ public enum RuntimeInstaller {
             return false
         }
         let result = runProcess(
-            "/bin/launchctl",
+            MacCareHostSystemRoutes.launchctlCLI,
             arguments: ["print", "gui/\(uid)/\(launchAgentLabel(environment: environment))"],
             environment: environment
         )

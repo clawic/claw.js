@@ -59,7 +59,7 @@ enum AdapterSupport {
     }
 
     static func runAppleScript(_ script: String, timeout: TimeInterval? = nil) throws -> String {
-        try runProcess(executable: "/usr/bin/osascript", arguments: ["-e", script], timeout: timeout)
+        try runProcess(executable: MacCareHostSystemRoutes.osascriptCLI, arguments: ["-e", script], timeout: timeout)
     }
 
     static func runAppleScript(appName: String, script: String, timeout: TimeInterval? = nil) throws -> String {

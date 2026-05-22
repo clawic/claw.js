@@ -1,8 +1,12 @@
 import { z } from "zod";
 
 import { clawContractVersionV1 } from "./host-contracts.ts";
+import { requireMacCareRoutePathPattern } from "./mac-care.ts";
 
 export const clawMacControlPlaneRegistryVersion = 1;
+
+const networksetupExecutablePath = requireMacCareRoutePathPattern("mac_care.route.system_networksetup_cli");
+const shortcutsExecutablePath = requireMacCareRoutePathPattern("mac_care.route.system_shortcuts_cli");
 
 export const macRiskTierSchema = z.enum(["read", "low", "medium", "high", "critical"]);
 export const macCoverageStateSchema = z.enum([
@@ -591,7 +595,7 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     platforms: ["darwin"],
     coverageState: "executable",
     sourceConfidence: "official",
-    sources: [{ label: "CoreWLAN CWInterface", url: appleCoreWlan }, { label: "networksetup", localPath: "/usr/sbin/networksetup" }],
+    sources: [{ label: "CoreWLAN CWInterface", url: appleCoreWlan }, { label: "networksetup", localPath: networksetupExecutablePath }],
     backend: { strategy: "mixed", notes: "CoreWLAN for read/list where useful; networksetup for stable interface state." },
     permissions: wifiPermissions,
     risk: "read",
@@ -611,7 +615,7 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     platforms: ["darwin"],
     coverageState: "executable",
     sourceConfidence: "official",
-    sources: [{ label: "CoreWLAN CWInterface", url: appleCoreWlan }, { label: "networksetup", localPath: "/usr/sbin/networksetup" }],
+    sources: [{ label: "CoreWLAN CWInterface", url: appleCoreWlan }, { label: "networksetup", localPath: networksetupExecutablePath }],
     backend: { strategy: "mixed" },
     permissions: wifiPermissions,
     risk: "read",
@@ -631,8 +635,8 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     platforms: ["darwin"],
     coverageState: "executable",
     sourceConfidence: "official",
-    sources: [{ label: "networksetup", localPath: "/usr/sbin/networksetup" }],
-    backend: { strategy: "networksetup", executablePath: "/usr/sbin/networksetup" },
+    sources: [{ label: "networksetup", localPath: networksetupExecutablePath }],
+    backend: { strategy: "networksetup", executablePath: networksetupExecutablePath },
     permissions: wifiPermissions,
     risk: "high",
     mutatesState: true,
@@ -651,7 +655,7 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     platforms: ["darwin"],
     coverageState: "executable",
     sourceConfidence: "official",
-    sources: [{ label: "networksetup", localPath: "/usr/sbin/networksetup" }],
+    sources: [{ label: "networksetup", localPath: networksetupExecutablePath }],
     backend: { strategy: "corewlan", notes: "Executed inside the signed host with a continuity breaker; no private airport CLI usage." },
     permissions: wifiPermissions,
     risk: "critical",
@@ -671,8 +675,8 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     platforms: ["darwin"],
     coverageState: "executable",
     sourceConfidence: "official",
-    sources: [{ label: "networksetup", localPath: "/usr/sbin/networksetup" }],
-    backend: { strategy: "networksetup", executablePath: "/usr/sbin/networksetup" },
+    sources: [{ label: "networksetup", localPath: networksetupExecutablePath }],
+    backend: { strategy: "networksetup", executablePath: networksetupExecutablePath },
     permissions: wifiPermissions,
     risk: "medium",
     mutatesState: true,
@@ -691,8 +695,8 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     platforms: ["darwin"],
     coverageState: "executable",
     sourceConfidence: "official",
-    sources: [{ label: "networksetup", localPath: "/usr/sbin/networksetup" }],
-    backend: { strategy: "networksetup", executablePath: "/usr/sbin/networksetup" },
+    sources: [{ label: "networksetup", localPath: networksetupExecutablePath }],
+    backend: { strategy: "networksetup", executablePath: networksetupExecutablePath },
     permissions: wifiPermissions,
     risk: "critical",
     mutatesState: true,
@@ -739,7 +743,10 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     coverageState: "executable",
     sourceConfidence: "official",
     sources: [{ label: "Shortcuts command line interface", url: appleShortcuts }],
-    backend: { strategy: "shortcuts_cli", executablePath: "/usr/bin/shortcuts" },
+    backend: {
+      strategy: "shortcuts_cli",
+      executablePath: shortcutsExecutablePath,
+    },
     permissions: [],
     risk: action === "run" ? "high" : "read",
     mutatesState: action === "run",

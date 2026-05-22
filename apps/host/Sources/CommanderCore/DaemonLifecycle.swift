@@ -147,7 +147,7 @@ public enum DaemonLauncher {
     @discardableResult
     private static func runLaunchctl(arguments: [String], environment: [String: String]) -> (status: Int32, output: String) {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.executableURL = URL(fileURLWithPath: MacCareHostSystemRoutes.launchctlCLI)
         process.arguments = arguments
         process.environment = environment
         let pipe = Pipe()

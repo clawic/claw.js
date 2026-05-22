@@ -8,6 +8,25 @@ import XCTest
 @testable import ClawHostKit
 
 final class CommanderE2ETests: XCTestCase {
+    func testMacCareHostSystemRoutesCentralizeHostUtilityPaths() {
+        XCTAssertEqual(MacCareHostSystemRoutes.applicationsDir, "/Applications")
+        XCTAssertEqual(MacCareHostSystemRoutes.systemApplicationsDir, "/System/Applications")
+        XCTAssertEqual(MacCareHostSystemRoutes.systemCoreServicesDir, "/System/Library/CoreServices")
+        XCTAssertEqual(MacCareHostSystemRoutes.launchctlCLI, "/bin/launchctl")
+        XCTAssertEqual(MacCareHostSystemRoutes.osascriptCLI, "/usr/bin/osascript")
+        XCTAssertEqual(MacCareHostSystemRoutes.psCLI, "/bin/ps")
+        XCTAssertEqual(MacCareHostSystemRoutes.screencaptureCLI, "/usr/sbin/screencapture")
+        XCTAssertEqual(
+            MacCareHostSystemRoutes.applicationBundleCandidates(named: "Finder", home: "/Users/demo"),
+            [
+                "/System/Applications/Finder.app",
+                "/System/Library/CoreServices/Finder.app",
+                "/Applications/Finder.app",
+                "/Users/demo/Applications/Finder.app",
+            ]
+        )
+    }
+
     private final class RecordingMacControlRunner: MacControlCommandRunning {
         var nativeCalls: [(action: String, arguments: [String])] = []
 

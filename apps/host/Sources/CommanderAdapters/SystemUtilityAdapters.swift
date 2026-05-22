@@ -165,7 +165,10 @@ public struct AppsAdapter: CommanderAdapter {
             let semaphore = DispatchSemaphore(value: 0)
             final class OpenResult: @unchecked Sendable { var error: Error? }
             let result = OpenResult()
-            workspace.openApplication(at: URL(fileURLWithPath: "/Applications/\(name).app"), configuration: configuration) { _, thrown in
+            workspace.openApplication(
+                at: URL(fileURLWithPath: "\(MacCareHostSystemRoutes.applicationsDir)/\(name).app"),
+                configuration: configuration
+            ) { _, thrown in
                 result.error = thrown
                 semaphore.signal()
             }
@@ -182,7 +185,7 @@ public struct AppsAdapter: CommanderAdapter {
             let verb = request.action == "quit" ? "quit" : "activate"
             let script = "tell application \"\(name.replacingOccurrences(of: "\"", with: "\\\""))\" to \(verb)"
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.executableURL = URL(fileURLWithPath: MacCareHostSystemRoutes.osascriptCLI)
             process.arguments = ["-e", script]
             try process.run()
             process.waitUntilExit()
@@ -219,7 +222,7 @@ public struct ProcessesAdapter: CommanderAdapter {
 
     public func execute(request: CommandRequest, environment: [String : String]) throws -> JSONValue {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.executableURL = URL(fileURLWithPath: MacCareHostSystemRoutes.psCLI)
         process.arguments = ["-axo", "pid=,ppid=,comm="]
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -279,7 +282,7 @@ public struct ScreenshotsAdapter: CommanderAdapter {
     public func execute(request: CommandRequest, environment: [String : String]) throws -> JSONValue {
         let path = try request.arguments["path"] ?? StatePaths.ensureStateDirectory(environment: environment).appendingPathComponent("capture-\(UUID().uuidString).png").path
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        process.executableURL = URL(fileURLWithPath: MacCareHostSystemRoutes.screencaptureCLI)
         process.arguments = ["-x", path]
         try process.run()
         process.waitUntilExit()
