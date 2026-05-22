@@ -496,6 +496,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     command,
     subcommand,
     positionals,
+    argv,
     flags,
     context,
     wantsJson,

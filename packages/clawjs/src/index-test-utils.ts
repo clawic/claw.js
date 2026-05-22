@@ -330,6 +330,38 @@ if [ "$1" = "gateway" ] && [ "$2" = "call" ]; then
     echo "gateway unavailable" 1>&2
     exit 1
   fi
+  method=""
+  for arg in "$@"; do
+    method="$arg"
+  done
+  if [ "$method" = "sessions.list" ]; then
+    printf "%s\n" '{"sessions":[{"sessionKey":"alpha","title":"Native Alpha","updatedAt":"2026-04-08T10:00:00.000Z"}]}'
+    exit 0
+  fi
+  if [ "$method" = "sessions.preview" ]; then
+    printf "%s\n" '{"sessionKey":"alpha","title":"Native Alpha","preview":"hello from native"}'
+    exit 0
+  fi
+  if [ "$method" = "sessions.resolve" ]; then
+    printf "%s\n" '{"sessionKey":"alpha","found":true,"title":"Native Alpha"}'
+    exit 0
+  fi
+  if [ "$method" = "chat.history" ]; then
+    printf "%s\n" '{"sessionKey":"alpha","messages":[{"role":"assistant","content":"hello from native"}]}'
+    exit 0
+  fi
+  if [ "$method" = "chat.send" ]; then
+    printf "%s\n" '{"accepted":true,"sessionKey":"alpha","runId":"run-alpha"}'
+    exit 0
+  fi
+  if [ "$method" = "chat.inject" ]; then
+    printf "%s\n" '{"accepted":true,"sessionKey":"alpha","messageId":"msg-alpha"}'
+    exit 0
+  fi
+  if [ "$method" = "chat.abort" ]; then
+    printf "%s\n" '{"accepted":true,"sessionKey":"alpha","runId":"run-alpha"}'
+    exit 0
+  fi
   echo "{}"
   exit 0
 fi
