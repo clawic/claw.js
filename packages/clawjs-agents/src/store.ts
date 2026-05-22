@@ -1,4 +1,4 @@
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { expandClawHomePath, resolveClawGlobalDataDir } from "@clawjs/core";
 // Filesystem-backed store for agent / personality / skill-collection /
 // connection records. Mirrors `AgentStore.swift` so both the daemon and
 // the macOS app read/write the same bytes when running side by side.
@@ -44,21 +44,23 @@ import {
   yamlStringArray,
 } from "./yaml.js";
 
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? join(homedir(), value.slice(2)) : value;
-}
-
 export interface AgentStoreOptions {
   /** Override `~/.claw/` (used by tests and the daemon test rig). */
   home?: string;
+}
+
+export function resolveAgentStoreHome(input: { home?: string; clawHome?: string; homeDir?: string } = {}): string {
+  const homeDir = input.homeDir ?? homedir();
+  if (input.home) return expandClawHomePath(input.home, homeDir);
+  if (input.clawHome) return expandClawHomePath(input.clawHome, homeDir);
+  return resolveClawGlobalDataDir({ homeDir });
 }
 
 export class AgentStoreFS {
   private readonly home: string;
 
   constructor(opts: AgentStoreOptions = {}) {
-    this.home =
-      opts.home ?? process.env.CLAW_HOME ?? expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
+    this.home = resolveAgentStoreHome({ home: opts.home, clawHome: process.env.CLAW_HOME });
     this.ensureDirs();
     this.ensureBuiltins();
   }

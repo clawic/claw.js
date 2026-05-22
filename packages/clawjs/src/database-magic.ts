@@ -1,4 +1,5 @@
 import { DatabaseApiClient, DatabaseServiceStore, type CollectionDefinition, type FieldDefinition, type IndexDefinition, type RecordEnvelope, } from "@clawjs/database";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { BUILTIN_COLLECTIONS_BY_ALIAS, BUILTIN_COLLECTIONS_BY_NAME } from "@clawjs/core/catalogs";
 import fs from "fs";
 import path from "path";
@@ -159,7 +160,7 @@ class LocalDbRuntime implements DbRuntime {
 }
 
 function localDatabaseDataDir(workspaceRoot: string): string {
-  return path.join(workspaceRoot, ".claw", "data");
+  return resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot);
 }
 
 function scheduleLocalSearchEventsForRecord(input: {

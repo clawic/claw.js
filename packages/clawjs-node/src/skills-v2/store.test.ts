@@ -3,9 +3,17 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { resolveClawGlobalDataDir } from "@clawjs/core";
 
-import { createSkillsStore } from "./store.ts";
+import { createSkillsStore, resolveSkillsHome } from "./store.ts";
 import { compileSkills } from "./compile.ts";
+
+test("skills-v2 home defaults through the shared global storage helper", () => {
+  assert.equal(resolveSkillsHome({ env: {} }), resolveClawGlobalDataDir({ homeDir: os.homedir() }));
+  assert.equal(resolveSkillsHome({ homeDir: "~", env: {} }), os.homedir());
+  assert.equal(resolveSkillsHome({ homeDir: "~/custom-skills-home", env: {} }), path.join(os.homedir(), "custom-skills-home"));
+  assert.equal(resolveSkillsHome({ env: { CLAW_HOME: "~/env-skills-home" } }), path.join(os.homedir(), "env-skills-home"));
+});
 
 test("skills-v2 store: create, get, list, search, update, remove", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-skills-v2-store-"));

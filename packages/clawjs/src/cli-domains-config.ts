@@ -2,6 +2,8 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { requireMacCareRoutePathPattern } from "@clawjs/core";
+
 import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag } from "./cli-flag-parsers.ts";
 import { OPEN_SURFACES, allOpenSurfaceHostnames, resolveOpenSurface, type OpenSurface } from "./cli-open-surfaces.ts";
@@ -9,7 +11,18 @@ import { OPEN_SURFACES, allOpenSurfaceHostnames, resolveOpenSurface, type OpenSu
 export const CLAW_DOMAINS_BEGIN = "# BEGIN CLAW DOMAINS";
 export const CLAW_DOMAINS_END = "# END CLAW DOMAINS";
 export const CLAW_DOMAINS_LABEL = "com.claw.domains";
-const CLAW_DOMAINS_SERVICE_DIR = "/Library/Application Support/Claw/domains";
+
+function macCareSystemRoutePath(routeId: string): string {
+  return requireMacCareRoutePathPattern(routeId);
+}
+
+export function domainsTempPath(filename: string): string {
+  return path.join(macCareSystemRoutePath("mac_care.route.system_temp"), filename);
+}
+
+function domainsSystemToolPath(routeId: string): string {
+  return macCareSystemRoutePath(routeId);
+}
 
 function xmlEscape(value: string): string {
   return value
@@ -20,15 +33,28 @@ function xmlEscape(value: string): string {
 }
 
 function domainsPlistPath(flags: Record<string, string>): string {
-  return flags["plist-file"] || `/Library/LaunchDaemons/${CLAW_DOMAINS_LABEL}.plist`;
+  return (
+    flags["plist-file"] ||
+    path.join(
+      macCareSystemRoutePath("mac_care.route.system_launch_daemons"),
+      `${CLAW_DOMAINS_LABEL}.plist`,
+    )
+  );
 }
 
 function domainsHostsFile(flags: Record<string, string>): string {
-  return flags["hosts-file"] || "/etc/hosts";
+  return flags["hosts-file"] || macCareSystemRoutePath("mac_care.route.system_hosts_file");
 }
 
 export function domainsServiceDir(flags: Record<string, string>): string {
-  return flags["service-dir"] || CLAW_DOMAINS_SERVICE_DIR;
+  return (
+    flags["service-dir"] ||
+    path.join(
+      macCareSystemRoutePath("mac_care.route.system_application_support"),
+      "Claw",
+      "domains",
+    )
+  );
 }
 
 export function domainsProxyScriptPath(flags: Record<string, string>): string {
@@ -64,9 +90,9 @@ export function buildDomainsPlist(flags: Record<string, string>): string {
     `  <key>KeepAlive</key>`,
     `  <true/>`,
     `  <key>StandardOutPath</key>`,
-    `  <string>/tmp/claw-domains.out.log</string>`,
+    `  <string>${xmlEscape(domainsTempPath("claw-domains.out.log"))}</string>`,
     `  <key>StandardErrorPath</key>`,
-    `  <string>/tmp/claw-domains.err.log</string>`,
+    `  <string>${xmlEscape(domainsTempPath("claw-domains.err.log"))}</string>`,
     `</dict>`,
     `</plist>`,
     "",
@@ -89,6 +115,10 @@ export function replaceDomainHostsBlock(current: string, nextBlock: string | nul
 }
 
 export function buildDomainsProxyScript(): string {
+  const launchctlPath = domainsSystemToolPath("mac_care.route.system_launchctl_cli");
+  const sudoPath = domainsSystemToolPath("mac_care.route.system_sudo_cli");
+  const envPath = domainsSystemToolPath("mac_care.route.system_env_cli");
+
   return `import http from "node:http";
 import net from "node:net";
 import fs from "node:fs";
@@ -142,7 +172,7 @@ async function ensureSurface(surface) {
     "--workspace",
     config.workspace,
     "--domains-hosts-file",
-    "/tmp/claw-domains-disabled-hosts",
+    ${JSON.stringify(domainsTempPath("claw-domains-disabled-hosts"))},
     "--no-browser",
     "--json",
   ];
@@ -154,7 +184,10 @@ async function ensureSurface(surface) {
     "CLAW_DOMAINS_ACTIVE=0",
   ];
   const command = process.platform === "darwin"
-    ? ["/bin/launchctl", ["asuser", String(config.uid), "/usr/bin/sudo", "-u", config.username, "/usr/bin/env", ...envArgs, config.nodePath, ...openArgs]]
+    ? [
+        ${JSON.stringify(launchctlPath)},
+        ["asuser", String(config.uid), ${JSON.stringify(sudoPath)}, "-u", config.username, ${JSON.stringify(envPath)}, ...envArgs, config.nodePath, ...openArgs],
+      ]
     : [config.nodePath, openArgs];
   const result = spawnSync(command[0], command[1], { cwd: "/", encoding: "utf8" });
   if (result.status !== 0) throw new Error(result.stdout || result.stderr || "Failed to start " + surface.id);

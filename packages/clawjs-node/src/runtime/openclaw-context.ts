@@ -1,9 +1,9 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 
 import { NodeProcessHost } from "../host/process.ts";
 import { resolveSessionsDir } from "../sessions/store.ts";
+import { expandHome } from "../surface-paths.ts";
 import {
   readOpenClawGatewayConfig,
   resolveOpenClawConfigPath,
@@ -72,15 +72,9 @@ export interface OpenClawRuntimeContext {
   gateway: OpenClawGatewayConfig | null;
 }
 
-function resolveHomePath(value: string): string {
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
-  return value;
-}
-
 function readValue(value?: string | null): string | null {
   const trimmed = value?.trim();
-  return trimmed ? resolveHomePath(trimmed) : null;
+  return trimmed ? expandHome(trimmed) : null;
 }
 
 function readConfigFile(configPath: string): OpenClawConfigFile | null {

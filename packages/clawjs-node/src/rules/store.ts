@@ -1,4 +1,3 @@
-import os from "os";
 import path from "path";
 
 import {
@@ -14,7 +13,7 @@ import {
   type RulesState,
 } from "@clawjs/core";
 
-import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
+import { expandHome, resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 import { BUILTIN_CLAW_RULE_SCOPES, BUILTIN_CLAW_RULES, isBuiltinClawJSRule } from "./builtin.ts";
@@ -31,17 +30,11 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function resolveHomePath(value: string): string {
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
-  return value;
-}
-
 export function resolveRulesRoot(options: RulesStoreOptions = {}): string {
   const configured = options.rootDir?.trim()
     || options.env?.CLAW_RULES_DIR?.trim()
     || process.env.CLAW_RULES_DIR?.trim();
-  if (configured) return resolveHomePath(configured);
+  if (configured) return expandHome(configured);
   return resolveClawGlobalSurfacePath("claw.global.rules", options.env);
 }
 

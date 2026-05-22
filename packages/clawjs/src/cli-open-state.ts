@@ -1,13 +1,14 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 
+import { requireMacCareRoutePathPattern } from "@clawjs/core";
+
 import type { OpenSurfaceState } from "./cli-open-surfaces.ts";
 
 export function openStateDir(): string {
-  return path.join(os.tmpdir(), "clawjs-open");
+  return path.join(requireMacCareRoutePathPattern("mac_care.route.system_temp"), "clawjs-open");
 }
 
 export function openStatePath(surface: string, host: string, port: number): string {
@@ -37,10 +38,14 @@ export function writeOpenState(filePath: string, state: OpenSurfaceState): void 
   fs.writeFileSync(filePath, `${JSON.stringify(state, null, 2)}\n`);
 }
 
+export function openBrowserMacPath(): string {
+  return requireMacCareRoutePathPattern("mac_care.route.system_open_cli");
+}
+
 export function openBrowser(url: string): void {
   if (process.env.CI || !url.trim()) return;
   if (process.platform === "darwin") {
-    spawn("open", [url], { stdio: "ignore", detached: true }).unref();
+    spawn(openBrowserMacPath(), [url], { stdio: "ignore", detached: true }).unref();
     return;
   }
   if (process.platform === "win32") {

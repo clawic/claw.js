@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 import { spawn, spawnSync } from "child_process";
 import { fileURLToPath } from "url";
-import type { ClawDomain } from "@clawjs/core";
+import { requireMacCareRoutePathPattern, type ClawDomain } from "@clawjs/core";
 import { buildOpenUsage, openSurfaceRows, resolveOpenSurface, surfacePrimaryClawUrl, type OpenSurface, type OpenSurfaceState } from "./cli-open-surfaces.ts";
 import { currentCliEntryPath, openBrowser, openStateDir, openStatePath, readOpenState, repoRootFromCliPackage, writeOpenState } from "./cli-open-state.ts";
 import { buildSurfaceCommand, ensureSurfaceBuild, prepareOpenSurface } from "./cli-open-runtime.ts";
@@ -14,10 +14,22 @@ import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "
 import { writeCommandJsonOk } from "./cli-json.ts";
 import type { CliContext } from "./cli-legacy.ts";
 
+function macCareSystemRoutePath(routeId: string): string {
+  return requireMacCareRoutePathPattern(routeId);
+}
+
+export function openDomainsHostsFile(flags: Record<string, string>): string {
+  return flags["domains-hosts-file"] || flags["hosts-file"] || macCareSystemRoutePath("mac_care.route.system_hosts_file");
+}
+
+export function openDomainsDisabledHostsFile(): string {
+  return path.join(macCareSystemRoutePath("mac_care.route.system_temp"), "claw-domains-disabled-hosts");
+}
+
 export function isClawDomainConfigured(flags: Record<string, string>): boolean {
   if (process.env.CLAW_DOMAINS_ACTIVE === "1") return true;
   if (process.env.CLAW_DOMAINS_ACTIVE === "0") return false;
-  const hostsFile = flags["domains-hosts-file"] || flags["hosts-file"] || "/etc/hosts";
+  const hostsFile = openDomainsHostsFile(flags);
   try {
     const content = fs.readFileSync(hostsFile, "utf8");
     return content.includes(CLAW_DOMAINS_BEGIN) && content.includes(CLAW_DOMAINS_END);
@@ -41,7 +53,7 @@ export async function ensureDomainSurfaceRunning(surface: OpenSurface, flags: Re
     "--workspace",
     workspace,
     "--domains-hosts-file",
-    path.join(os.tmpdir(), "claw-domains-disabled-hosts"),
+    openDomainsDisabledHostsFile(),
     "--no-browser",
     "--json",
   ], {
@@ -175,7 +187,7 @@ export const HOST_FORWARD_DOMAINS = new Set<ClawDomain>([
   "models",
   "services",
   "database",
-  "connectors",
+  "connections",
   "integrations",
   "system",
   "secrets",

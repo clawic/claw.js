@@ -154,6 +154,13 @@ test("V2 workspace collections and context memory use the main DB", () => {
   });
 });
 
+test("Context main DB path uses the shared home expansion helper", () => {
+  const source = fs.readFileSync(new URL("./context/store.ts", import.meta.url), "utf8");
+  assert.match(source, /import \{ expandHome, resolveClawGlobalDataRoot \} from "\.\.\/surface-paths\.ts"/);
+  assert.equal(new RegExp("function\\s+expandHome").test(source), false);
+  assert.equal(new RegExp("path[.]join[(]os[.]homedir[(][)], value[.]slice[(]2[)][)]").test(source), false);
+});
+
 function withPatchedEnv(patch: Record<string, string | undefined>, fn: () => void): void {
   const previous = new Map<string, string | undefined>();
   for (const [key, value] of Object.entries(patch)) {

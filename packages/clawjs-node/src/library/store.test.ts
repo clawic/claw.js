@@ -5,7 +5,15 @@ import os from "os";
 import path from "path";
 
 import { libraryAssetSchema } from "@clawjs/core";
-import { createLocalLibraryStore } from "./store.ts";
+import { createLocalLibraryStore, resolveLibraryRoot } from "./store.ts";
+
+test("library root uses shared surface path home expansion", () => {
+  assert.equal(resolveLibraryRoot({ env: {} }), path.join(os.homedir(), ".claw", "library"));
+  assert.equal(resolveLibraryRoot({ rootDir: "~", env: {} }), os.homedir());
+  assert.equal(resolveLibraryRoot({ rootDir: "~/custom-library", env: {} }), path.join(os.homedir(), "custom-library"));
+  assert.equal(resolveLibraryRoot({ env: { CLAW_LIBRARY_DIR: "~/env-library" } }), path.join(os.homedir(), "env-library"));
+  assert.equal(resolveLibraryRoot({ env: { CLAW_HOME: "~/custom-claw" } }), path.join(os.homedir(), "custom-claw", "library"));
+});
 
 test("local library store persists assets, content, and assignments", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-store-"));

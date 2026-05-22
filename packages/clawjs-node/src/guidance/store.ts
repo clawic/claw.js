@@ -12,7 +12,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
+import { expandHome, resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 
 export const GUIDANCE_STATE_FILE = "guidance.json";
 
@@ -208,12 +208,6 @@ function prefixMatches(value: string | undefined, prefixes: string[]): boolean {
 
 function unique(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
-}
-
-function expandHome(value: string): string {
-  if (value === "~") return process.env.HOME ?? value;
-  if (value.startsWith("~/")) return path.join(process.env.HOME ?? "", value.slice(2));
-  return value;
 }
 
 function nowIso(): string {

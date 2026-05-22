@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 
 import {
@@ -18,7 +17,7 @@ import {
   type LibraryState,
 } from "@clawjs/core";
 
-import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
+import { expandHome, resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
 
@@ -90,7 +89,7 @@ export function resolveLibraryRoot(options: LibraryStoreOptions = {}): string {
   const configured = options.rootDir?.trim()
     || options.env?.CLAW_LIBRARY_DIR?.trim()
     || process.env.CLAW_LIBRARY_DIR?.trim();
-  if (configured) return resolveHomePath(configured);
+  if (configured) return expandHome(configured);
   return resolveClawGlobalSurfacePath("claw.global.library", options.env);
 }
 
@@ -103,12 +102,6 @@ export function normalizeLibraryId(value: string, fallback = "asset"): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     || fallback;
-}
-
-function resolveHomePath(value: string): string {
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
-  return value;
 }
 
 function nowIso(): string {

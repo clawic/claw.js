@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 
+import { resolveClawPersistentSurfacePath, resolveCodexConfigPath, resolveCodexProjectConfigPath } from "@clawjs/core";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { scheduleAppsCatalogSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleDesignResourcesSearchEvent, scheduleMcpServersSearchEvent, scheduleSessionChatSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 import {
@@ -30,11 +31,11 @@ import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
 
 export function runMcpCommand(input: V1DataCliInput): number {
   const command = input.positionals[1];
-  const configPath = input.flags.config || path.join(os.homedir(), ".codex", "config.toml");
+  const configPath = input.flags.config || resolveCodexConfigPath(os.homedir());
   if (command === "config-path") {
     const scope = input.flags.scope || input.positionals[2] || "user";
     const resolved = scope === "project"
-      ? path.join(path.resolve(input.cwd, expandHome(input.flags.project || input.flags.cwd || input.cwd)), ".codex", "config.toml")
+      ? resolveCodexProjectConfigPath(path.resolve(input.cwd, expandHome(input.flags.project || input.flags.cwd || input.cwd)))
       : configPath;
     writeSuccess(input, { scope, configPath: resolved, exists: fs.existsSync(resolved), source: "codex-config" });
     return V1_DATA_EXIT_OK;
@@ -315,7 +316,7 @@ function resolveSheetsWorkbooksCliRoot(input: V1DataCliInput): string {
   const configured = input.flags["sheets-root"] || input.flags["sheets-workbooks-root"] || input.flags["workbooks-root"];
   if (configured) return path.resolve(input.cwd, expandHome(configured));
   const workspaceRoot = path.resolve(input.cwd, expandHome(input.flags.workspace || input.cwd));
-  return path.join(workspaceRoot, ".claw", "sheets", "workbooks");
+  return resolveClawPersistentSurfacePath("claw.workspace.sheets", workspaceRoot, "workbooks");
 }
 
 function workbookManifestFromInput(input: V1DataCliInput): Record<string, unknown> {

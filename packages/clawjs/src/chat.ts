@@ -19,6 +19,7 @@ import {
   type ClawRuntimeWire,
   type RuntimeAdapterOptions,
 } from "@clawjs/claw";
+import { requireMacCareRoutePathPattern } from "@clawjs/core";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface ChatCliContext {
@@ -637,10 +638,17 @@ function writeDeepSeekSecretsInstructions(context: ChatCliContext, secretRef: st
     "Allowed hosts: api.deepseek.com",
     "Allowed headers: Authorization",
     "readOnly: true",
-    `Open: ${path.join(os.homedir(), "Applications", "ClawJS Secrets.app")}`,
+    `Open: ${clawJsSecretsAppPath()}`,
     "Then rerun: claw provider login deepseek",
     "",
   ].join("\n"));
+}
+
+function clawJsSecretsAppPath(): string {
+  return path.join(
+    requireMacCareRoutePathPattern("mac_care.route.user_applications", { homeDir: os.homedir() }),
+    "ClawJS Secrets.app",
+  );
 }
 
 export async function runProviderCli(input: ChatCliInput): Promise<number> {

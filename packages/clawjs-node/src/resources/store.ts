@@ -12,7 +12,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
-import { resolveClawGlobalSurfacePath } from "../surface-paths.ts";
+import { expandHome, resolveClawGlobalSurfacePath } from "../surface-paths.ts";
 
 export const RESOURCES_STATE_FILE = "resources.json";
 
@@ -194,12 +194,6 @@ function fingerprintPath(value: string, kind: ResourceRegisterInput["locator"]["
   } catch {
     return undefined;
   }
-}
-
-function expandHome(value: string): string {
-  if (value === "~") return process.env.HOME ?? value;
-  if (value.startsWith("~/")) return path.join(process.env.HOME ?? "", value.slice(2));
-  return value;
 }
 
 function nowIso(): string {

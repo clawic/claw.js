@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 
 import {
+  resolveClawGlobalDataDir,
   skillFrontmatterSchema,
   skillsStateSchema,
   type ClawjsSkillsConfig,
@@ -19,6 +20,7 @@ import {
 } from "@clawjs/core";
 
 import { NodeFileSystemHost, resolveFileLockPath } from "../host/filesystem.ts";
+import { expandHome } from "../surface-paths.ts";
 import { buildSkillMd, stringifyYaml } from "./yaml.ts";
 import { splitFrontmatter } from "./yaml-parse.ts";
 
@@ -47,19 +49,12 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function expandHome(value: string): string {
-  if (!value) return value;
-  if (value === "~") return os.homedir();
-  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
-  return value;
-}
-
 export function resolveSkillsHome(options: SkillsStoreOptions = {}): string {
   const configured = options.homeDir?.trim()
     || options.env?.CLAW_HOME?.trim()
     || process.env.CLAW_HOME?.trim();
   if (configured) return expandHome(configured);
-  return path.join(os.homedir(), SKILLS_HOME_DIR);
+  return resolveClawGlobalDataDir({ homeDir: os.homedir() });
 }
 
 export function normalizeSlug(value: string, fallback = "skill"): string {

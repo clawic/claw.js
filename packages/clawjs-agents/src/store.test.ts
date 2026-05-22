@@ -3,13 +3,22 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { AgentStoreFS } from "./store.ts";
+import { AgentStoreFS, resolveAgentStoreHome } from "./store.ts";
 
 function tempHome(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agents-store-"));
 }
 
 describe("AgentStoreFS connection secrets", () => {
+  test("resolves the default global home through the shared storage helper", () => {
+    expect(resolveAgentStoreHome({ homeDir: "/Users/demo" })).toBe("/Users/demo/.claw");
+    expect(resolveAgentStoreHome({ home: "~", homeDir: "/Users/demo" })).toBe("/Users/demo");
+    expect(resolveAgentStoreHome({ home: "~/custom-claw", homeDir: "/Users/demo" })).toBe("/Users/demo/custom-claw");
+    expect(resolveAgentStoreHome({ clawHome: "~", homeDir: "/Users/demo" })).toBe("/Users/demo");
+    expect(resolveAgentStoreHome({ clawHome: "~/env-claw", homeDir: "/Users/demo" })).toBe("/Users/demo/env-claw");
+    expect(resolveAgentStoreHome({ home: "/tmp/explicit", clawHome: "~/env-claw", homeDir: "/Users/demo" })).toBe("/tmp/explicit");
+  });
+
   test("stores connection credentials only as opaque secret refs", () => {
     const home = tempHome();
     const store = new AgentStoreFS({ home });

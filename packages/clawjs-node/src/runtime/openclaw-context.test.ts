@@ -108,6 +108,22 @@ test("resolveOpenClawContext falls back to env and default paths", () => {
   assert.equal(context.cliAgentDetected, false);
 });
 
+test("resolveOpenClawContext uses shared home expansion for path inputs", () => {
+  const context = resolveOpenClawContext({
+    stateDir: "~",
+    configPath: path.join(os.tmpdir(), "openclaw-context-home.json"),
+    agentId: "home",
+    workspaceDir: "~/openclaw-workspace",
+    agentDir: "~/openclaw-agent",
+    sessionsDir: "~/openclaw-sessions",
+  });
+
+  assert.equal(context.stateDir, os.homedir());
+  assert.equal(context.workspaceDir, path.join(os.homedir(), "openclaw-workspace"));
+  assert.equal(context.agentDir, path.join(os.homedir(), "openclaw-agent"));
+  assert.equal(context.sessionsDir, path.join(os.homedir(), "openclaw-sessions"));
+});
+
 test("listOpenClawAgents parses model metadata from CLI output", async () => {
   const runner = new FakeRunner({
     "openclaw agents list --json": {

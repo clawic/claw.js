@@ -1,7 +1,7 @@
 import path from "path";
 import { homedir } from "os";
 
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { expandClawHomePath, resolveClawGlobalDataStorageDir } from "@clawjs/core";
 
 const WORKSPACE_SQLITE_SURFACE_IDS = {
   database: "claw.database.core",
@@ -10,15 +10,15 @@ const WORKSPACE_SQLITE_SURFACE_IDS = {
   metaTable: "claw.database.core.table.workspace_meta",
 } as const;
 
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(homedir(), value.slice(2)) : value;
-}
-
 export function resolveWorkspaceSqliteDatabasePath(): string {
-  if (process.env.CLAW_DB_PATH) return expandHome(process.env.CLAW_DB_PATH);
-  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data", "core.sqlite");
-  const dataRoot = process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.global.data");
-  return path.join(expandHome(dataRoot), "core.sqlite");
+  if (process.env.CLAW_DB_PATH) return expandClawHomePath(process.env.CLAW_DB_PATH, homedir());
+  const dataRoot = process.env.CLAW_HOME
+    ? resolveClawGlobalDataStorageDir({ homeDir: homedir(), clawHome: process.env.CLAW_HOME })
+    : resolveClawGlobalDataStorageDir({
+        homeDir: homedir(),
+        ...(process.env.CLAW_DATA_DIR ? { dataDir: process.env.CLAW_DATA_DIR } : {}),
+      });
+  return path.join(dataRoot, "core.sqlite");
 }
 
 // DDL owned by the persistent surface registry above. Keep table/index IDs

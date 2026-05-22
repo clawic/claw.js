@@ -1,11 +1,10 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { createHash, randomUUID } from "crypto";
 
 import Database from "better-sqlite3";
 
-import { resolveClawGlobalDataRoot } from "../surface-paths.ts";
+import { expandHome, resolveClawGlobalDataRoot } from "../surface-paths.ts";
 
 import {
   contextPackRecordSchema,
@@ -510,8 +509,4 @@ function resolveMainDbPath(): string {
 
 function resolveMainDatabaseRoot(): string {
   return resolveClawGlobalDataRoot();
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
 }

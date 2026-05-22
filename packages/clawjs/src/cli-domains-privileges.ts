@@ -1,17 +1,47 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { spawnSync } from "child_process";
+
+import { requireMacCareRoutePathPattern } from "@clawjs/core";
 
 import { CliHandledError } from "./cli-errors.ts";
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
+
+function domainsPrivilegeSystemToolPath(routeId: string): string {
+  return requireMacCareRoutePathPattern(routeId);
+}
+
+export function domainsPrivilegeShellPath(): string {
+  return domainsPrivilegeSystemToolPath("mac_care.route.system_sh_cli");
+}
+
+function domainsPrivilegeSudoPath(): string {
+  return domainsPrivilegeSystemToolPath("mac_care.route.system_sudo_cli");
+}
+
+export function domainsPrivilegeOsascriptPath(): string {
+  return domainsPrivilegeSystemToolPath("mac_care.route.system_osascript_cli");
+}
+
+export function domainsPrivilegeHelperPath(pid: number = process.pid): string {
+  return path.join(domainsPrivilegeSystemToolPath("mac_care.route.system_temp"), `claw-domains-privileged-${pid}.sh`);
+}
+
+export function buildPrivilegedHelperScript(script: string): string {
+  return `#!${domainsPrivilegeShellPath()}\nset -eu\n${script}\n`;
+}
+
+export function buildPrivilegedAppleScriptCommand(helperPath: string): string {
+  return `do shell script ${appleScriptQuote(`${domainsPrivilegeShellPath()} ${shellQuote(helperPath)}`)} with administrator privileges`;
+}
+
 function sudoScript(script: string): void {
-  const result = spawnSync("sudo", [
+  const result = spawnSync(domainsPrivilegeSudoPath(), [
     ...(process.stdin.isTTY ? [] : ["-n"]),
-    "sh",
+    domainsPrivilegeShellPath(),
     "-c",
     script,
   ], { stdio: "inherit" });
@@ -28,11 +58,11 @@ export function runPrivilegedScript(script: string, flags: Record<string, string
     sudoScript(script);
     return;
   }
-  const helperPath = path.join(os.tmpdir(), `claw-domains-privileged-${process.pid}.sh`);
-  fs.writeFileSync(helperPath, `#!/bin/sh\nset -eu\n${script}\n`, { mode: 0o700 });
-  const result = spawnSync("osascript", [
+  const helperPath = domainsPrivilegeHelperPath();
+  fs.writeFileSync(helperPath, buildPrivilegedHelperScript(script), { mode: 0o700 });
+  const result = spawnSync(domainsPrivilegeOsascriptPath(), [
     "-e",
-    `do shell script ${appleScriptQuote(`/bin/sh ${shellQuote(helperPath)}`)} with administrator privileges`,
+    buildPrivilegedAppleScriptCommand(helperPath),
   ], {
     encoding: "utf8",
   });
