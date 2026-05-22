@@ -5,7 +5,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { pathToFileURL } from "url";
 
-import { test, expect } from "./fixtures";
+import { expect, publicApiRoute, test } from "./fixtures";
 
 const execFileAsync = promisify(execFile);
 
@@ -143,7 +143,7 @@ globalThis.fetch = async (url, options = {}) => {
   const href = String(url);
   const body = options.body ? JSON.parse(String(options.body)) : {};
 
-  if (href.endsWith("/v1/responses")) {
+  if (href.endsWith(publicApiRoute("claw.api.responses"))) {
     responseBodies.push({ url: href, body });
     const outputText = responseTextFor(body.input);
     if (outputText === null) {
@@ -164,7 +164,7 @@ globalThis.fetch = async (url, options = {}) => {
     );
   }
 
-  if (href.endsWith("/v1/chat/completions")) {
+  if (href.endsWith(publicApiRoute("claw.api.chatCompletions"))) {
     chatBodies.push({ url: href, body });
     if (body.stream) {
       return new Response(
@@ -371,7 +371,7 @@ process.stdout.write(JSON.stringify({
   expect(attachmentTypes).toContain("input_image");
   expect(attachmentTypes).toContain("input_file");
   expect(payload.chatBodies).toHaveLength(2);
-  expect(payload.chatBodies[0]?.url.endsWith("/v1/chat/completions")).toBe(true);
+  expect(payload.chatBodies[0]?.url.endsWith(publicApiRoute("claw.api.chatCompletions"))).toBe(true);
   expect(payload.chatBodies[0]?.body.stream).not.toBe(true);
   expect(payload.chatBodies[1]?.body.stream).toBe(true);
   expect(payload.nativeList.sessions[0]?.sessionKey).toBe("alpha");

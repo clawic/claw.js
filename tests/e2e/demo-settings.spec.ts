@@ -1,9 +1,9 @@
-import { test, expect, resetDemoState, saveArtifactScreenshot } from "./fixtures";
+import { test, expect, resetDemoState, saveArtifactScreenshot, privateApiRoute } from "./fixtures";
 
 test("settings reset clears the hermetic workspace and returns to onboarding", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
 
-  const createNote = await request.post("/api/notes", {
+  const createNote = await request.post(privateApiRoute("claw.privateApi.notes"), {
     data: { title: "Reset me", content: "This note should disappear after reset." },
   });
   expect(createNote.ok()).toBeTruthy();
@@ -18,13 +18,13 @@ test("settings reset clears the hermetic workspace and returns to onboarding", a
   await page.getByTestId("reset-workspace-confirm").click();
 
   await expect(page.getByTestId("onboarding-flow")).toBeVisible({ timeout: 20_000 });
-  const statusResponse = await request.get("/api/integrations/status");
+  const statusResponse = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
   expect(statusResponse.ok()).toBeTruthy();
   const statusPayload = await statusResponse.json();
   expect(statusPayload.openClaw?.installed).toBeFalsy();
   expect(statusPayload.openClaw?.cliAvailable).toBeFalsy();
 
-  const notesResponse = await request.get("/api/notes");
+  const notesResponse = await request.get(privateApiRoute("claw.privateApi.notes"));
   expect(notesResponse.ok()).toBeTruthy();
   const notesPayload = await notesResponse.json();
   expect(notesPayload.notes).toEqual([]);

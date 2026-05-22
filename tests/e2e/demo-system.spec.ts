@@ -1,4 +1,4 @@
-import { expect, resetDemoState, saveArtifactScreenshot, test } from "./fixtures";
+import { expect, resetDemoState, saveArtifactScreenshot, test, privateApiRoute } from "./fixtures";
 
 test("usage budget updates persist after reload", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
@@ -21,7 +21,7 @@ test("usage budget updates persist after reload", async ({ page, request }) => {
 test("activity log filters seeded and posted events deterministically", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
 
-  const createEvent = await request.post("/api/activity", {
+  const createEvent = await request.post(privateApiRoute("claw.privateApi.activity"), {
     data: {
       event: "skills_registry_failure",
       capability: "skills",

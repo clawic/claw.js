@@ -1,4 +1,4 @@
-import { test, expect, resetDemoState, saveArtifactScreenshot } from "./fixtures";
+import { test, expect, resetDemoState, saveArtifactScreenshot, privateApiRoute } from "./fixtures";
 
 test("chat streams hermetic responses and persists the session", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
@@ -15,7 +15,7 @@ test("chat streams hermetic responses and persists the session", async ({ page, 
   );
   await expect(page.getByTestId("session-item").first()).toBeVisible();
 
-  const sessionsResponse = await request.get("/api/chat/sessions");
+  const sessionsResponse = await request.get(privateApiRoute("claw.privateApi.chatSessions"));
   expect(sessionsResponse.ok()).toBeTruthy();
   const sessionsPayload = await sessionsResponse.json();
   expect(Array.isArray(sessionsPayload.sessions)).toBeTruthy();

@@ -1,4 +1,4 @@
-import { expect, resetDemoState, saveArtifactScreenshot, test } from "./fixtures";
+import { expect, resetDemoState, saveArtifactScreenshot, test, privateApiRoute } from "./fixtures";
 
 test("settings locale, profile, and workspace files persist hermetically", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
@@ -8,7 +8,7 @@ test("settings locale, profile, and workspace files persist hermetically", async
 
   await page.getByTestId("settings-locale-select").selectOption("es");
   await expect.poll(async () => {
-    const response = await request.get("/api/config/local");
+    const response = await request.get(privateApiRoute("claw.privateApi.configLocal"));
     const payload = await response.json();
     return payload.locale;
   }).toBe("es");
@@ -20,7 +20,7 @@ test("settings locale, profile, and workspace files persist hermetically", async
   await page.getByTestId("profile-occupation-input").fill("Operations Lead");
 
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return {
       displayName: payload.displayName,
@@ -41,7 +41,7 @@ test("settings locale, profile, and workspace files persist hermetically", async
   await page.getByTestId("workspace-file-save-agents-md").click();
 
   await expect.poll(async () => {
-    const response = await request.get("/api/config/workspace-files");
+    const response = await request.get(privateApiRoute("claw.privateApi.configWorkspaceFiles"));
     const payload = await response.json();
     return payload.files.find((file: { fileName: string }) => file.fileName === "AGENTS.md")?.content;
   }).toContain("keep tests current");
@@ -64,7 +64,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
 
   await page.getByTestId("whatsapp-integration-toggle").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/integrations/status");
+    const response = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
     const payload = await response.json();
     return payload.whatsapp?.authenticated;
   }).toBe(true);
@@ -74,7 +74,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
   await expect(page.getByText("Nora")).toBeVisible();
   await page.getByTestId("whatsapp-auto-transcribe-toggle").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return payload.whatsappAutoTranscribe;
   }).toBe(true);
@@ -90,7 +90,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
   await expect(page.getByTestId("telegram-disconnect-modal")).toBeVisible();
   await page.getByTestId("telegram-disconnect-delete").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return {
       enabled: payload.telegram?.enabled,
@@ -111,7 +111,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
   await page.getByTestId("telegram-test-connection").click();
   await page.getByTestId("telegram-sync-toggle").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return {
       botToken: payload.telegram?.botToken,
@@ -131,7 +131,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
   await expect(page.getByTestId("slack-disconnect-modal")).toBeVisible();
   await page.getByTestId("slack-disconnect-delete").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/integrations/status");
+    const response = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
     const payload = await response.json();
     return {
       enabled: payload.slack?.enabled,
@@ -149,7 +149,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
   await page.getByTestId("slack-token-input").fill("fixture-slack-token");
   await page.getByTestId("slack-test-connection").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return {
       botToken: payload.slack?.botToken,
@@ -162,7 +162,7 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
     teamName: "ClawJS Demo Team",
   });
   await expect.poll(async () => {
-    const response = await request.get("/api/integrations/status");
+    const response = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
     const payload = await response.json();
     return {
       enabled: payload.slack?.enabled,
@@ -198,14 +198,14 @@ test("settings integration flows stay hermetic across whatsapp, telegram, email,
 
   await page.getByTestId("contacts-integration-toggle").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return payload.contactsEnabled;
   }).toBe(true);
 
   await page.getByTestId("contacts-integration-toggle").click();
   await expect.poll(async () => {
-    const response = await request.get("/api/config");
+    const response = await request.get(privateApiRoute("claw.privateApi.config"));
     const payload = await response.json();
     return payload.contactsEnabled;
   }).toBe(false);

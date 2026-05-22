@@ -1,4 +1,4 @@
-import { test, expect, resetDemoState, saveArtifactScreenshot } from "./fixtures";
+import { test, expect, resetDemoState, saveArtifactScreenshot, privateApiRoute } from "./fixtures";
 
 async function reachAiProviderStep(
   page: import("@playwright/test").Page,
@@ -27,7 +27,7 @@ async function reachAiProviderStep(
   await page.getByRole("button", { name: "Configure" }).click();
 
   await expect.poll(async () => {
-    const response = await request.get("/api/integrations/status");
+    const response = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
     const payload = await response.json();
     return {
       agentConfigured: payload.openClaw?.agentConfigured,
@@ -65,7 +65,7 @@ test("clearing onboarding state returns to onboarding after reload", async ({ pa
   await page.goto("/");
   await expect(page.getByTestId("onboarding-flow")).toHaveCount(0);
 
-  const response = await request.put("/api/config/local", {
+  const response = await request.put(privateApiRoute("claw.privateApi.configLocal"), {
     data: { onboardingCompleted: false },
   });
   expect(response.ok()).toBeTruthy();
@@ -104,7 +104,7 @@ test("onboarding openclaw configure completes the engine step before auth", asyn
   await page.getByRole("button", { name: "Configure" }).click();
 
   await expect.poll(async () => {
-    const response = await request.get("/api/integrations/status");
+    const response = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
     const payload = await response.json();
     return {
       agentConfigured: payload.openClaw?.agentConfigured,
@@ -148,7 +148,7 @@ test("onboarding openclaw install completes the engine step from a clean state",
   await page.getByRole("button", { name: "Install" }).click();
 
   await expect.poll(async () => {
-    const response = await request.get("/api/integrations/status");
+    const response = await request.get(privateApiRoute("claw.privateApi.integrationsStatus"));
     const payload = await response.json();
     return {
       installed: payload.openClaw?.installed,
@@ -270,11 +270,12 @@ test("onboarding chatgpt subscription auth completes and marks the provider as c
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await toggle.click();
 
+  const integrationAuthRoute = privateApiRoute("claw.privateApi.integrationsAuth");
   await expect.poll(async () => {
-    const payload = await page.evaluate(async () => {
-      const response = await fetch("/api/integrations/auth", { cache: "no-store" });
+    const payload = await page.evaluate(async (routePath) => {
+      const response = await fetch(routePath, { cache: "no-store" });
       return response.json();
-    });
+    }, integrationAuthRoute);
     return {
       hasSubscription: payload.providers?.openai?.hasSubscription ?? false,
       defaultModel: payload.defaultModel ?? null,

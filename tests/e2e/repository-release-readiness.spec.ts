@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { test, expect, saveArtifactScreenshot } from "./fixtures";
+import { test, expect, saveArtifactScreenshot, privateApiRoute } from "./fixtures";
 
 function readFile(relativePath: string) {
   return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
@@ -15,7 +15,7 @@ function escapeHtml(value: string) {
 }
 
 test("repository ships an OSS git baseline for the first public release", async ({ request, page }) => {
-  const status = await request.get("/api/e2e/status");
+  const status = await request.get(privateApiRoute("claw.privateApi.e2eStatus"));
   expect(status.ok()).toBeTruthy();
 
   const requiredFiles = [
@@ -224,7 +224,7 @@ test("repository ships an OSS git baseline for the first public release", async 
 });
 
 test("repository exposes a standalone execution plane spec surface", async ({ request, page }) => {
-  const status = await request.get("/api/e2e/status");
+  const status = await request.get(privateApiRoute("claw.privateApi.e2eStatus"));
   expect(status.ok()).toBeTruthy();
 
   const requiredFiles = [

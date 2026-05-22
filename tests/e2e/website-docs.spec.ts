@@ -72,7 +72,7 @@ test("docs site builds and renders core docs navigation publicly", async ({ page
     await expect(page.locator(".VPSidebar").getByRole("link", { name: "Relay" }).first()).toHaveAttribute("href", /\/relay$/);
     await expect(page.locator("main")).toContainText("Quick Start");
     await expect(page.locator("main")).toContainText("Identity and Routing Map");
-    await expect(page.locator("main")).toContainText("/v1/connector/connect");
+    await expect(page.locator("main")).toContainText(publicApiRoute("claw.api.connectorConnect"));
     await expect(page.locator("main")).toContainText("sessions:search");
 
     await page.goto(`http://127.0.0.1:${WEBSITE_PORT}/tracking/index.html`, { waitUntil: "networkidle" });

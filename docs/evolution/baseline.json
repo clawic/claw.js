@@ -294,6 +294,44 @@
       "adr": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "notes": "Registers database, sessions, bridge/remote, actor, telemetry, publishing, image, and guard configuration environment variables as envVar surfaces; registers the existing realtime token private route; and tightens the persistent surface guard so process.env, injected env objects, and typed config env properties cannot introduce unregistered owned env vars.",
       "createdAt": "2026-05-21T00:00:00.000Z"
+    },
+    {
+      "id": "evo_surface_route_graph_mac_care_runtime_surfaces",
+      "title": "Surface route graph, Mac Care, and runtime stable surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.api.sessionsExport",
+        "claw.cli.command.mac-care",
+        "claw.database.macCare",
+        "claw.env.codebaseManifest",
+        "claw.env.inspectManifest",
+        "claw.env.scaleLabHeavy",
+        "claw.event.files.binding.synced",
+        "claw.privateApi.chat",
+        "claw.privateApi.chatSessionsSearch",
+        "claw.privateApi.chatSessionsSessionId",
+        "claw.privateApi.chatSessionsSessionIdGenerateTitle",
+        "claw.privateApi.contactsNative",
+        "claw.privateApi.imagesId",
+        "claw.privateApi.imagesIdFile",
+        "claw.privateApi.skillsSearch",
+        "claw.workspace.sheets",
+        "claw.workspace.storage"
+      ],
+      "tests": [
+        "scripts/evolution-governance-check.mjs",
+        "scripts/surface-route-graph-guard.mjs",
+        "scripts/persistent-surface-guard.mjs",
+        "packages/clawjs-core/src/mac-care.test.ts",
+        "packages/clawjs/src/cli-mac-care-command.test.ts",
+        "packages/clawjs/src/index-workspace-runtime.test.ts",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0049-surface-route-graph.md",
+      "notes": "Registers additive surface route graph, Mac Care sidecar/CLI, runtime manifest/env, private API, workspace storage/sheets, sessions export, and file binding event surfaces so the public baseline drift is covered by the evolution ledger and refreshed snapshot.",
+      "createdAt": "2026-05-22T00:00:00.000Z"
     }
   ]
 }

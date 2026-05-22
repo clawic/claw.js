@@ -97,6 +97,8 @@ flowchart TD
   claw_contracts_api --> claw_api_secrets
   claw_api_secretsSetup["/v1/secrets/setup API route\napiRoute"]
   claw_contracts_api --> claw_api_secretsSetup
+  claw_api_sessionsExport["/v1/sessions/export API route\napiRoute"]
+  claw_contracts_api --> claw_api_sessionsExport
   claw_api_storage["/v1/storage API route\napiRoute"]
   claw_contracts_api --> claw_api_storage
   claw_api_storageObjectsWorkspaceAgentsAgentARemoteNoteTxt["/v1/storage/objects/workspace/agents/agent-a/remote/note.txt API route\napiRoute"]
@@ -333,8 +335,16 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_capture
   claw_privateApi_captures["/api/captures private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_captures
+  claw_privateApi_chat["/api/chat private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chat
   claw_privateApi_chatFeedback["/api/chat/feedback private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_chatFeedback
+  claw_privateApi_chatSessionsSessionId["/api/chat/sessions/{sessionId} private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chatSessionsSessionId
+  claw_privateApi_chatSessionsSessionIdGenerateTitle["/api/chat/sessions/{sessionId}/generate-title private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chatSessionsSessionIdGenerateTitle
+  claw_privateApi_chatSessionsSearch["/api/chat/sessions/search private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_chatSessionsSearch
   claw_privateApi_comments["/api/comments private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_comments
   claw_privateApi_configProfile["/api/config/profile private API route\nprivateApiRoute"]
@@ -369,6 +379,10 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_hotTopicsSeed
   claw_privateApi_images["/api/images private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_images
+  claw_privateApi_imagesId["/api/images/{id} private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_imagesId
+  claw_privateApi_imagesIdFile["/api/images/{id}/file private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_imagesIdFile
   claw_privateApi_instances["/api/instances private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_instances
   claw_privateApi_integrationsAuth["/api/integrations/auth private API route\nprivateApiRoute"]
@@ -439,6 +453,8 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_skillsInstall
   claw_privateApi_skillsRemove["/api/skills/remove private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_skillsRemove
+  claw_privateApi_skillsSearch["/api/skills/search private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_skillsSearch
   claw_privateApi_skillsSources["/api/skills/sources private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_skillsSources
   claw_privateApi_sourcesRefresh["/api/sources/refresh private API route\nprivateApiRoute"]
@@ -487,6 +503,8 @@ flowchart TD
   claw_contracts_api --> claw_privateApi_connectorsSubscriptions
   claw_privateApi_contacts["/api/contacts private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_contacts
+  claw_privateApi_contactsNative["/api/contacts/native private API route\nprivateApiRoute"]
+  claw_contracts_api --> claw_privateApi_contactsNative
   claw_privateApi_data["/api/data private API route\nprivateApiRoute"]
   claw_contracts_api --> claw_privateApi_data
   claw_privateApi_dm["/api/dm private API route\nprivateApiRoute"]
@@ -567,6 +585,8 @@ flowchart TD
   claw_contracts_events --> claw_event_models_default_set
   claw_event_auth_login_started["auth.login-started\neventTopic"]
   claw_contracts_events --> claw_event_auth_login_started
+  claw_event_files_binding_synced["files.binding_synced\neventTopic"]
+  claw_contracts_events --> claw_event_files_binding_synced
   claw_event_database_record_created["record.created\neventTopic"]
   claw_contracts_events --> claw_event_database_record_created
   claw_event_database_record_updated["record.updated\neventTopic"]
@@ -777,6 +797,8 @@ flowchart TD
   claw_contracts_config --> claw_env_calendarMock
   claw_env_channelProcessorId["channel processor id environment variable\nenvVar"]
   claw_contracts_config --> claw_env_channelProcessorId
+  claw_env_codebaseManifest["codebase manifest environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_codebaseManifest
   claw_env_codexPath["codex path environment variable\nenvVar"]
   claw_contracts_config --> claw_env_codexPath
   claw_env_codeHome["code home environment variable\nenvVar"]
@@ -983,6 +1005,8 @@ flowchart TD
   claw_contracts_config --> claw_env_imageAllowEnvCredentials
   claw_env_imageLibraryDir["image library dir environment variable\nenvVar"]
   claw_contracts_config --> claw_env_imageLibraryDir
+  claw_env_inspectManifest["inspect manifest environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_inspectManifest
   claw_env_iotBaseUrl["iot base url environment variable\nenvVar"]
   claw_contracts_config --> claw_env_iotBaseUrl
   claw_env_iotDir["iot dir environment variable\nenvVar"]
@@ -1155,6 +1179,8 @@ flowchart TD
   claw_contracts_config --> claw_env_runtimePort
   claw_env_runtimeSessionsUrl["runtime sessions url environment variable\nenvVar"]
   claw_contracts_config --> claw_env_runtimeSessionsUrl
+  claw_env_scaleLabHeavy["scale lab heavy environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_scaleLabHeavy
   claw_env_searchAdminToken["search admin token environment variable\nenvVar"]
   claw_contracts_config --> claw_env_searchAdminToken
   claw_env_searchBase["search base environment variable\nenvVar"]
@@ -2737,6 +2763,7 @@ flowchart TD
 | `claw.api.responses` | apiRoute | api | claw |  |  |  |  |  | `/v1/responses` |
 | `claw.api.secrets` | apiRoute | api | claw |  |  |  |  |  | `/v1/secrets` |
 | `claw.api.secretsSetup` | apiRoute | api | claw |  |  |  |  |  | `/v1/secrets/setup` |
+| `claw.api.sessionsExport` | apiRoute | api | claw |  |  |  |  |  | `/v1/sessions/export` |
 | `claw.api.storage` | apiRoute | api | claw |  |  |  |  |  | `/v1/storage` |
 | `claw.api.storageObjectsWorkspaceAgentsAgentARemoteNoteTxt` | apiRoute | api | claw |  |  |  |  |  | `/v1/storage/objects/workspace/agents/agent-a/remote/note.txt` |
 | `claw.api.itemsItem1Shares` | apiRoute | api | claw |  |  |  |  |  | `/v1/items/item-1/shares` |
@@ -2855,7 +2882,11 @@ flowchart TD
 | `claw.privateApi.authToken` | privateApiRoute | api | claw |  |  |  |  |  | `/api/auth/token` |
 | `claw.privateApi.capture` | privateApiRoute | api | claw |  |  |  |  |  | `/api/capture` |
 | `claw.privateApi.captures` | privateApiRoute | api | claw |  |  |  |  |  | `/api/captures` |
+| `claw.privateApi.chat` | privateApiRoute | api | claw |  |  |  |  |  | `/api/chat` |
 | `claw.privateApi.chatFeedback` | privateApiRoute | api | claw |  |  |  |  |  | `/api/chat/feedback` |
+| `claw.privateApi.chatSessionsSessionId` | privateApiRoute | api | claw |  |  |  |  |  | `/api/chat/sessions/{sessionId}` |
+| `claw.privateApi.chatSessionsSessionIdGenerateTitle` | privateApiRoute | api | claw |  |  |  |  |  | `/api/chat/sessions/{sessionId}/generate-title` |
+| `claw.privateApi.chatSessionsSearch` | privateApiRoute | api | claw |  |  |  |  |  | `/api/chat/sessions/search` |
 | `claw.privateApi.comments` | privateApiRoute | api | claw |  |  |  |  |  | `/api/comments` |
 | `claw.privateApi.configProfile` | privateApiRoute | api | claw |  |  |  |  |  | `/api/config/profile` |
 | `claw.privateApi.configReset` | privateApiRoute | api | claw |  |  |  |  |  | `/api/config/reset` |
@@ -2873,6 +2904,8 @@ flowchart TD
 | `claw.privateApi.graph` | privateApiRoute | api | claw |  |  |  |  |  | `/api/graph` |
 | `claw.privateApi.hotTopicsSeed` | privateApiRoute | api | claw |  |  |  |  |  | `/api/hot-topics/seed` |
 | `claw.privateApi.images` | privateApiRoute | api | claw |  |  |  |  |  | `/api/images` |
+| `claw.privateApi.imagesId` | privateApiRoute | api | claw |  |  |  |  |  | `/api/images/{id}` |
+| `claw.privateApi.imagesIdFile` | privateApiRoute | api | claw |  |  |  |  |  | `/api/images/{id}/file` |
 | `claw.privateApi.instances` | privateApiRoute | api | claw |  |  |  |  |  | `/api/instances` |
 | `claw.privateApi.integrationsAuth` | privateApiRoute | api | claw |  |  |  |  |  | `/api/integrations/auth` |
 | `claw.privateApi.integrationsEnable` | privateApiRoute | api | claw |  |  |  |  |  | `/api/integrations/enable` |
@@ -2908,6 +2941,7 @@ flowchart TD
 | `claw.privateApi.setup` | privateApiRoute | api | claw |  |  |  |  |  | `/api/setup` |
 | `claw.privateApi.skillsInstall` | privateApiRoute | api | claw |  |  |  |  |  | `/api/skills/install` |
 | `claw.privateApi.skillsRemove` | privateApiRoute | api | claw |  |  |  |  |  | `/api/skills/remove` |
+| `claw.privateApi.skillsSearch` | privateApiRoute | api | claw |  |  |  |  |  | `/api/skills/search` |
 | `claw.privateApi.skillsSources` | privateApiRoute | api | claw |  |  |  |  |  | `/api/skills/sources` |
 | `claw.privateApi.sourcesRefresh` | privateApiRoute | api | claw |  |  |  |  |  | `/api/sources/refresh` |
 | `claw.privateApi.stats` | privateApiRoute | api | claw |  |  |  |  |  | `/api/stats` |
@@ -2932,6 +2966,7 @@ flowchart TD
 | `claw.privateApi.configLocal` | privateApiRoute | api | claw |  |  |  |  |  | `/api/config/local` |
 | `claw.privateApi.connectorsSubscriptions` | privateApiRoute | api | claw |  |  |  |  |  | `/api/connectors/subscriptions` |
 | `claw.privateApi.contacts` | privateApiRoute | api | claw |  |  |  |  |  | `/api/contacts` |
+| `claw.privateApi.contactsNative` | privateApiRoute | api | claw |  |  |  |  |  | `/api/contacts/native` |
 | `claw.privateApi.data` | privateApiRoute | api | claw |  |  |  |  |  | `/api/data` |
 | `claw.privateApi.dm` | privateApiRoute | api | claw |  |  |  |  |  | `/api/dm` |
 | `claw.privateApi.e2eReset` | privateApiRoute | api | claw |  |  |  |  |  | `/api/e2e/reset` |
@@ -2972,6 +3007,7 @@ flowchart TD
 | `claw.event.telegram.webhook.configured` | eventTopic | event | claw |  |  |  |  |  | `telegram.webhook_configured` |
 | `claw.event.models.default.set` | eventTopic | event | claw |  |  |  |  |  | `models.default-set` |
 | `claw.event.auth.login.started` | eventTopic | event | claw |  |  |  |  |  | `auth.login-started` |
+| `claw.event.files.binding.synced` | eventTopic | event | claw |  |  |  |  |  | `files.binding_synced` |
 | `claw.event.database.record.created` | eventTopic | event | claw |  |  |  |  |  | `record.created` |
 | `claw.event.database.record.updated` | eventTopic | event | claw |  |  |  |  |  | `record.updated` |
 | `claw.event.database.record.deleted` | eventTopic | event | claw |  |  |  |  |  | `record.deleted` |
@@ -3077,6 +3113,7 @@ flowchart TD
 | `claw.env.bin` | envVar | config | claw |  |  |  |  |  | `CLAW_BIN` |
 | `claw.env.calendarMock` | envVar | config | claw |  |  |  |  |  | `CLAW_CALENDAR_MOCK` |
 | `claw.env.channelProcessorId` | envVar | config | claw |  |  |  |  |  | `CLAW_CHANNEL_PROCESSOR_ID` |
+| `claw.env.codebaseManifest` | envVar | config | claw |  |  |  |  |  | `CLAW_CODEBASE_MANIFEST` |
 | `claw.env.codexPath` | envVar | config | claw |  |  |  |  |  | `CLAW_CODEX_PATH` |
 | `claw.env.codeHome` | envVar | config | claw |  |  |  |  |  | `CLAW_CODE_HOME` |
 | `claw.env.companyFakeAgentRuns` | envVar | config | claw |  |  |  |  |  | `CLAW_COMPANY_FAKE_AGENT_RUNS` |
@@ -3180,6 +3217,7 @@ flowchart TD
 | `claw.env.hostValidationMode` | envVar | config | claw |  |  |  |  |  | `CLAW_HOST_VALIDATION_MODE` |
 | `claw.env.imageAllowEnvCredentials` | envVar | config | claw |  |  |  |  |  | `CLAW_IMAGE_ALLOW_ENV_CREDENTIALS` |
 | `claw.env.imageLibraryDir` | envVar | config | claw |  |  |  |  |  | `CLAW_IMAGE_LIBRARY_DIR` |
+| `claw.env.inspectManifest` | envVar | config | claw |  |  |  |  |  | `CLAW_INSPECT_MANIFEST` |
 | `claw.env.iotBaseUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_IOT_BASE_URL` |
 | `claw.env.iotDir` | envVar | config | claw |  |  |  |  |  | `CLAW_IOT_DIR` |
 | `claw.env.libraryDir` | envVar | config | claw |  |  |  |  |  | `CLAW_LIBRARY_DIR` |
@@ -3266,6 +3304,7 @@ flowchart TD
 | `claw.env.runtimeHome` | envVar | config | claw |  |  |  |  |  | `CLAW_RUNTIME_HOME` |
 | `claw.env.runtimePort` | envVar | config | claw |  |  |  |  |  | `CLAW_RUNTIME_PORT` |
 | `claw.env.runtimeSessionsUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_RUNTIME_SESSIONS_URL` |
+| `claw.env.scaleLabHeavy` | envVar | config | claw |  |  |  |  |  | `CLAW_SCALE_LAB_HEAVY` |
 | `claw.env.searchAdminToken` | envVar | config | claw |  |  |  |  |  | `CLAW_SEARCH_ADMIN_TOKEN` |
 | `claw.env.searchBase` | envVar | config | claw |  |  |  |  |  | `CLAW_SEARCH_BASE` |
 | `claw.env.searchCodexBinary` | envVar | config | claw |  |  |  |  |  | `CLAW_SEARCH_CODEX_BINARY` |

@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-21T00:00:00.000Z",
+  "generatedAt": "2026-05-22T00:00:00.000Z",
   "sources": {
     "surfaces": "packages/clawjs-core/src/surface-registry.ts",
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1108,
-    "cliCommands": 164
+    "surfaces": 1125,
+    "cliCommands": 165
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:9d70948b",
-    "cliCommands": "fnv1a32:da176093",
-    "combined": "fnv1a32:c94f0cf9"
+    "surfaces": "fnv1a32:49ab860c",
+    "cliCommands": "fnv1a32:0fbc5be0",
+    "combined": "fnv1a32:ba49a051"
   },
   "surfaces": [
     {
@@ -897,6 +897,15 @@
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/sessions/import/codex",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.sessionsExport",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/sessions/export",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -2041,6 +2050,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "mac",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.mac-care",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "mac-care",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -3236,6 +3254,13 @@
       "path": "~/.claw/data/feed.sqlite"
     },
     {
+      "id": "claw.database.macCare",
+      "owner": "claw",
+      "kind": "sidecar",
+      "parentId": "claw.global",
+      "path": "~/.claw/data/mac_care.sqlite"
+    },
+    {
       "id": "claw.database.monitor",
       "owner": "claw",
       "kind": "sidecar",
@@ -3777,6 +3802,14 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAWIX_SDK_FIRST_ROOT",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.codebaseManifest",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_CODEBASE_MANIFEST",
       "surfaceClass": "config"
     },
     {
@@ -4604,6 +4637,14 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.inspectManifest",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_INSPECT_MANIFEST",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.iotBaseUrl",
       "owner": "claw",
       "kind": "envVar",
@@ -5289,6 +5330,14 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_RUNTIME_SESSIONS_URL",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.scaleLabHeavy",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_SCALE_LAB_HEAVY",
       "surfaceClass": "config"
     },
     {
@@ -6070,6 +6119,15 @@
       "kind": "eventTopic",
       "parentId": "claw.contracts.events",
       "value": "record.updated",
+      "surfaceClass": "event",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.event.files.binding.synced",
+      "owner": "claw",
+      "kind": "eventTopic",
+      "parentId": "claw.contracts.events",
+      "value": "files.binding_synced",
       "surfaceClass": "event",
       "stability": "v1"
     },
@@ -7563,6 +7621,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.privateApi.chat",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/chat",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.privateApi.chatFeedback",
       "owner": "claw",
       "kind": "privateApiRoute",
@@ -7577,6 +7644,33 @@
       "kind": "privateApiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /api/chat/sessions",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.chatSessionsSearch",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/chat/sessions/search",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.chatSessionsSessionId",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/chat/sessions/{sessionId}",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.chatSessionsSessionIdGenerateTitle",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/chat/sessions/{sessionId}/generate-title",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -7676,6 +7770,15 @@
       "kind": "privateApiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /api/contacts",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.contactsNative",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/contacts/native",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -7847,6 +7950,24 @@
       "kind": "privateApiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /api/images/backends",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.imagesId",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/images/{id}",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.imagesIdFile",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/images/{id}/file",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -8279,6 +8400,15 @@
       "kind": "privateApiRoute",
       "parentId": "claw.contracts.api",
       "value": "GET /api/skills/remove",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.privateApi.skillsSearch",
+      "owner": "claw",
+      "kind": "privateApiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /api/skills/search",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -9047,11 +9177,25 @@
       "path": ".claw/sessions"
     },
     {
+      "id": "claw.workspace.sheets",
+      "owner": "claw",
+      "kind": "folder",
+      "parentId": "claw.workspace",
+      "path": ".claw/sheets"
+    },
+    {
       "id": "claw.workspace.slides",
       "owner": "claw",
       "kind": "folder",
       "parentId": "claw.workspace",
       "path": ".claw/slides"
+    },
+    {
+      "id": "claw.workspace.storage",
+      "owner": "claw",
+      "kind": "folder",
+      "parentId": "claw.workspace",
+      "path": ".claw/storage"
     },
     {
       "id": "claw.workspace.styles",
@@ -9864,6 +10008,14 @@
       "family": "mac-control",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.mac.v1"
+    },
+    {
+      "name": "mac-care",
+      "kind": "canonical",
+      "usage": "mac-care report|atlas|scan|scans|app-updates handoff|app-updates approval-ready|cloud handoff|cloud approval-ready|finalizer preview|finalizer approval-ready|finalizer fixture-scan|protection adapters|protection engines|protection approval-ready|protection fixture-scan --json",
+      "family": "mac-care",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.mac-care.v1"
     },
     {
       "name": "marketplace",

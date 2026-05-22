@@ -3,7 +3,7 @@ import os from "os";
 import path from "path";
 import { spawn, type ChildProcess } from "child_process";
 
-import { test, expect, saveArtifactScreenshot } from "./fixtures";
+import { expect, publicApiRoute, saveArtifactScreenshot, test } from "./fixtures";
 
 async function waitFor(predicate: () => Promise<boolean>, timeoutMs: number, label: string): Promise<void> {
   const startedAt = Date.now();
@@ -171,7 +171,7 @@ const server = http.createServer(async (req, res) => {
   const body = bodyText ? JSON.parse(bodyText) : {};
   record({ method: req.method, url: req.url, body });
 
-  if (req.url === "/v1/responses" && req.method === "POST") {
+  if (req.url === publicApiRoute("claw.api.responses") && req.method === "POST") {
     const flat = textFromInput(body.input).toLowerCase();
     if (flat.includes("fallback plain text request")) {
       res.writeHead(503, { "Content-Type": "text/plain" });
@@ -187,7 +187,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.url === "/v1/chat/completions" && req.method === "POST") {
+  if (req.url === publicApiRoute("claw.api.chatCompletions") && req.method === "POST") {
     if (body.stream) {
       sendSse(res, [
         "data: " + JSON.stringify({ choices: [{ delta: { content: "Fallback " } }] }) + "\\n\\n",
@@ -301,7 +301,7 @@ process.exit(0);
     await waitForHttp(`http://127.0.0.1:${gatewayPort}/healthz`.replace("/healthz", "/"), 15_000).catch(async () => {
       await waitFor(async () => {
         try {
-          const response = await fetch(`http://127.0.0.1:${gatewayPort}/v1/chat/completions`, { method: "POST" });
+          const response = await fetch(`http://127.0.0.1:${gatewayPort}${publicApiRoute("claw.api.chatCompletions")}`, { method: "POST" });
           return response.status === 404 || response.status === 200;
         } catch {
           return false;
@@ -364,11 +364,11 @@ process.exit(0);
     };
 
     const responsesRequest = gatewayState.requests.find((entry) =>
-      entry.url === "/v1/responses"
+      entry.url === publicApiRoute("claw.api.responses")
       && entry.body?.input?.some((message) => message.content?.some((item) => item.type === "input_image"))
       && entry.body?.input?.some((message) => message.content?.some((item) => item.type === "input_file")));
     expect(responsesRequest).toBeTruthy();
-    expect(gatewayState.requests.some((entry) => entry.url === "/v1/chat/completions")).toBeTruthy();
+    expect(gatewayState.requests.some((entry) => entry.url === publicApiRoute("claw.api.chatCompletions"))).toBeTruthy();
 
     await saveArtifactScreenshot(page, screenshotName);
   } finally {

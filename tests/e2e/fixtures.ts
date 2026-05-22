@@ -3,6 +3,11 @@ import path from "path";
 
 import { expect, test as base } from "@playwright/test";
 
+import {
+  registeredPrivateApiRoute,
+  registeredPublicApiRoute,
+} from "../helpers/stable-surface-test-builders";
+
 type AppErrors = {
   consoleErrors: string[];
   pageErrors: string[];
@@ -78,11 +83,14 @@ export const test = base.extend<{
 
 export { expect };
 
+export const privateApiRoute = registeredPrivateApiRoute;
+export const publicApiRoute = registeredPublicApiRoute;
+
 export async function resetDemoState(
   request: import("@playwright/test").APIRequestContext,
   profile: "seeded" | "fresh" | "clean" = "seeded",
 ) {
-  const response = await request.post("/api/e2e/reset", { data: { profile } });
+  const response = await request.post(privateApiRoute("claw.privateApi.e2eReset"), { data: { profile } });
   expect(response.ok()).toBeTruthy();
 }
 

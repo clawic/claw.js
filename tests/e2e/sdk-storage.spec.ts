@@ -6,7 +6,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { pathToFileURL } from "url";
 
-import { expect, test } from "./fixtures";
+import { expect, publicApiRoute, test } from "./fixtures";
 
 const execFileAsync = promisify(execFile);
 
@@ -24,13 +24,13 @@ function startFakeDriveShareServer(): Promise<{
         const url = new URL(request.url ?? "/", "http://127.0.0.1");
         response.setHeader("content-type", "application/json");
 
-        if (request.method === "POST" && url.pathname === "/v1/uploads") {
+        if (request.method === "POST" && url.pathname === publicApiRoute("claw.api.uploads")) {
           uploads.set("item-1", body);
           response.end(JSON.stringify({ id: "item-1" }));
           return;
         }
 
-        if (request.method === "POST" && url.pathname === "/v1/items/item-1/shares") {
+        if (request.method === "POST" && url.pathname === publicApiRoute("claw.api.itemsItem1Shares")) {
           const address = server.address();
           const port = typeof address === "object" && address ? address.port : 0;
           response.end(JSON.stringify({
@@ -40,7 +40,7 @@ function startFakeDriveShareServer(): Promise<{
           return;
         }
 
-        if (request.method === "POST" && url.pathname === "/v1/items/item-1/shares/share-1/revoke") {
+        if (request.method === "POST" && url.pathname === publicApiRoute("claw.api.itemsItem1SharesShare1Revoke")) {
           response.end(JSON.stringify({ ok: true }));
           return;
         }
@@ -181,14 +181,14 @@ const readonly = agentA.storage.tokens.issue({
     operations: ["objects:list", "objects:read"],
   }],
 });
-const remoteObjectUrl = remote.url + "/v1/storage/objects/workspace/agents/agent-a/remote/note.txt";
+const remoteObjectUrl = remote.url + publicApiRoute("claw.api.storageObjectsWorkspaceAgentsAgentARemoteNoteTxt");
 const remoteWrite = await fetch(remoteObjectUrl, {
   method: "PUT",
   headers: { authorization: "Bearer " + writable.token, "content-type": "text/plain" },
   body: "remote payload",
 });
 const remoteRead = await fetch(remoteObjectUrl, { headers: { authorization: "Bearer " + writable.token } });
-const remoteList = await fetch(remote.url + "/v1/storage/objects?bucket=workspace&prefix=agents/agent-a/remote/", {
+const remoteList = await fetch(remote.url + publicApiRoute("claw.api.storage.objects", undefined, { bucket: "workspace", prefix: "agents/agent-a/remote/" }), {
   headers: { authorization: "Bearer " + writable.token },
 });
 const readonlyWrite = await fetch(remoteObjectUrl, {

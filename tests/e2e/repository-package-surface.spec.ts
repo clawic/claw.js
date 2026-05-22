@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { test, expect, saveArtifactScreenshot } from "./fixtures";
+import { test, expect, saveArtifactScreenshot, privateApiRoute } from "./fixtures";
 
 const cleanedFiles = [
   "README.md",
@@ -27,7 +27,7 @@ function escapeHtml(value: string) {
 }
 
 test("repository no longer exposes the unpublished skill wrapper", async ({ request, page }) => {
-  const status = await request.get("/api/e2e/status");
+  const status = await request.get(privateApiRoute("claw.privateApi.e2eStatus"));
   expect(status.ok()).toBeTruthy();
 
   for (const relativePath of cleanedFiles) {
@@ -143,7 +143,7 @@ test("repository no longer exposes the unpublished skill wrapper", async ({ requ
 });
 
 test("repository no longer carries the examples-app scratch path", async ({ request, page }) => {
-  const status = await request.get("/api/e2e/status");
+  const status = await request.get(privateApiRoute("claw.privateApi.e2eStatus"));
   expect(status.ok()).toBeTruthy();
 
   for (const relativePath of cleanedFiles) {

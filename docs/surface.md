@@ -14,6 +14,8 @@ The docs check script validates that every current export from
 ## Published Exports
 
     AGENCY_MODES
+    AGENT_ACTION_SEVERITY_BY_RANK
+    AGENT_ACTION_SEVERITY_RANK
     AGENT_ASSIGNMENT_KINDS
     AGENT_ASSIGNMENT_STATUSES
     AGENT_RESOURCE_ACTIONS
@@ -310,6 +312,7 @@ The docs check script validates that every current export from
     ClawEvolutionRollbackReport
     ClawEvolutionVersionFixture
     ClawFactory
+    ClawGlobalDataStorageInput
     ClawGrant
     ClawHostDescriptor
     ClawHostRegistry
@@ -480,6 +483,7 @@ The docs check script validates that every current export from
     ConnectorExecutionRequest
     ConnectorGovernedContextRecord
     ConnectorGovernedState
+    ConnectorNetworkAllowedDecision
     ConnectorNetworkPolicy
     ConnectorNetworkProof
     ConnectorOperation
@@ -549,6 +553,8 @@ The docs check script validates that every current export from
     CustomAppSDKSchemaRef
     CustomFieldRecord
     CycleRecord
+    DEFAULT_AGENT_ALLOWED_JSON_FIELDS
+    DEFAULT_AGENT_AUDIT_COVERAGE_KINDS
     DEFAULT_CLAW_OPERATOR_CAPSULE
     DEFAULT_CLAW_OPERATOR_SKILL_ID
     DEFAULT_CLAW_SECRETS_APP_PATH
@@ -755,6 +761,7 @@ The docs check script validates that every current export from
     KanbanTaskRecord
     KnownRuntimeAdapterId
     LEARNING_STATE_FILE
+    LEGACY_AGENT_OVERLAP_COLLECTIONS
     LIBRARY_STATE_FILE
     LearningAddInput
     LearningCaptureResult
@@ -811,6 +818,12 @@ The docs check script validates that every current export from
     LockRetryOptions
     LogLevel
     MAC_CAPABILITY_ATLAS
+    MAC_CARE_DESTRUCTIVE_ACTIONS
+    MAC_CARE_FILESYSTEM_NOISE_DIRECTORIES
+    MAC_CARE_PROTECTION_ADAPTERS
+    MAC_CARE_ROUTE_ATLAS
+    MAC_CARE_SCANNER_WAVE_1_MODULES
+    MAC_CARE_SIDECAR_FILENAME
     MAC_CONTROL_COMMAND_ROOTS
     MAC_PERMISSION_CATALOG
     MAC_PERMISSION_PACKS
@@ -825,6 +838,51 @@ The docs check script validates that every current export from
     MacActionResult
     MacApprovalRequest
     MacAtlasCapability
+    MacCareActionPlan
+    MacCareActionPlanSafetyDecision
+    MacCareAppUpdateApprovalPackageItem
+    MacCareAppUpdateApprovalPackageReport
+    MacCareAppUpdateHandoffItem
+    MacCareAppUpdateHandoffKind
+    MacCareAppUpdateHandoffReport
+    MacCareCandidate
+    MacCareCandidateAction
+    MacCareCandidateGroup
+    MacCareCandidateSelection
+    MacCareCloudProviderApprovalPackageItem
+    MacCareCloudProviderApprovalPackageReport
+    MacCareCloudProviderHandoffItem
+    MacCareCloudProviderHandoffKind
+    MacCareCloudProviderHandoffReport
+    MacCareConsumerIntent
+    MacCareEvidenceLevel
+    MacCareFinalizerActionPreview
+    MacCareFinalizerApprovalPackageAction
+    MacCareFinalizerApprovalPackageReport
+    MacCareFinalizerPreviewReport
+    MacCareFinalizerRollbackLevel
+    MacCareProtectionAdapter
+    MacCareProtectionAdapterExecutionMode
+    MacCareProtectionAdapterId
+    MacCareProtectionApprovalPackageEngine
+    MacCareProtectionApprovalPackageReport
+    MacCareProtectionDatabaseStatus
+    MacCareProtectionDetectedBinary
+    MacCareProtectionEngineReadiness
+    MacCareProtectionEngineReadinessReport
+    MacCareProtectionEngineRuntimeStatus
+    MacCareProtectionFixtureFinding
+    MacCareProtectionFixtureScanReport
+    MacCareReadOnlyScanReport
+    MacCareRouteAtlasEntry
+    MacCareRouteFamily
+    MacCareRouteMutability
+    MacCareRoutePathContext
+    MacCareRouteSensitivity
+    MacCareRouteSource
+    MacCareSafetyActor
+    MacCareScannerModule
+    MacCareScannerModuleId
     MacControlCommandRoot
     MacCoverageState
     MacPermissionCatalogEntry
@@ -987,6 +1045,7 @@ The docs check script validates that every current export from
     OutcomeStoreOptions
     OutcomeWriteContext
     OutputLabelPolicy
+    PLANES
     PORTABLE_ARCHIVE_BACKUP_EXTENSION
     PORTABLE_ARCHIVE_CLI_COMMAND
     PORTABLE_ARCHIVE_EXPORT_EXTENSION
@@ -994,6 +1053,7 @@ The docs check script validates that every current export from
     PORTABLE_ARCHIVE_SECRETS_EXTENSION
     PRODUCTIVITY_COLLECTION_DEFINITIONS
     PROVIDER_STATE_FILE
+    PaperclipAgentDraft
     PermissionRequirement
     PersistProviderApiKeyOptions
     PersistProviderApiKeyResult
@@ -1043,6 +1103,7 @@ The docs check script validates that every current export from
     ProviderStateSnapshot
     ProvidersIntentState
     QuietHoursPolicy
+    REQUIRED_AGENT_STORAGE_COLLECTIONS
     RESOURCES_STATE_FILE
     RULES_STATE_FILE
     RawIoTInvocation
@@ -1188,6 +1249,8 @@ The docs check script validates that every current export from
     RuntimeWorkspaceContract
     RuntimeWorkspaceHandlers
     SCHEDULER_STATE_FILE
+    SESSIONS_DEFAULT_EVENTS_MAX_FRAME_BYTES
+    SESSIONS_DEFAULT_EVENTS_MAX_QUEUED_BYTES
     SESSIONS_DEFAULT_EVENTS_MAX_SUBSCRIBERS
     SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT
     SESSIONS_DEFAULT_PORT
@@ -1202,6 +1265,7 @@ The docs check script validates that every current export from
     SOUL_MANAGED_BLOCK_ID
     SOUL_STATE_FILE
     SOUL_TARGET_FILE
+    SUPERVISOR_RISK_RANK
     SYSTEM_TELEMETRY_CONTROL_ACTIONS
     SYSTEM_TELEMETRY_DEFAULT_WIDGETS
     SYSTEM_TELEMETRY_METRICS
@@ -1638,10 +1702,29 @@ The docs check script validates that every current export from
     WriteTextOptions
     actionReceiptSchema
     activityEntryRecordSchema
+    activityItem
+    activityMetadata
+    activitySummary
+    activityTimestamp
+    activityTitle
     actorAssertionSchema
     actorKindSchema
     actorTrustSourceSchema
+    agentBudgetControlSummary
+    agentControlPanelGaps
+    agentControlPanelRisks
+    agentControlPosture
+    agentControlUiVisibility
+    agentFieldLooksLikeRawSecret
+    agentMemoryControlSummary
+    agentPermissionControlSummary
+    agentPrivacyLifecycleAction
+    agentPrivacyLifecycleGaps
+    agentPrivacyLifecycleRecords
     agentRecordSchema
+    agentServiceApiError
+    agentSurfaceGaps
+    agentSurfaceRisks
     allowedRegulatedUses
     appStateRequestFromOperations
     applyAppStateTransaction
@@ -1655,15 +1738,20 @@ The docs check script validates that every current export from
     assertMacControlPlaneRegistryComplete
     assertRegulatedDomainSafetyComplete
     assertSafeClawProjectHandoff
+    assignmentKindAllowedForSurface
     assignmentRecordSchema
     attachWorkspace
     attachmentRecordSchema
+    auditCoverageInvalidEvent
+    auditCoverageSensitiveFindings
     auditEventSchema
     automationRecordSchema
+    autonomyDispatchMode
     bindingDefinitionSchema
     blockedRegulatedUses
     blockerRecordSchema
     brokerSecretHttp
+    budgetLimitMatches
     buildAudioApp
     buildCodexCommand
     buildCombinedDoctorReport
@@ -1678,6 +1766,8 @@ The docs check script validates that every current export from
     buildMacActionAuditEvent
     buildMacActionPlan
     buildMacActionReceipt
+    buildMacCareFinalizerApprovalPackage
+    buildMacCareFinalizerPreview
     buildOpenAIMessages
     buildOpenAIResponseMessages
     buildOpenClawAuthDiagnostics
@@ -1882,7 +1972,10 @@ The docs check script validates that every current export from
     connectorDescriptorSchema
     connectorExecutionPipeline
     connectorGovernedContextVersion
+    contextEntryId
     contextPackBudgetSchema
+    contextPackGaps
+    contextPackItem
     contextPackItemSchema
     contextPackPurposeSchema
     contextPackRecordSchema
@@ -1890,6 +1983,10 @@ The docs check script validates that every current export from
     contextPackSourceSchema
     contextPackStateSchema
     contextPackStatusSchema
+    contextScopeMatches
+    contextViewRejectionReasons
+    countByKind
+    countByStatus
     createAgentActivityFeed
     createAgentAuditCoverageReport
     createAgentAuditEvent
@@ -1985,6 +2082,9 @@ The docs check script validates that every current export from
     createVoiceNoteStore
     createWhatsAppService
     createWorkspaceStorage
+    creationReviewGaps
+    creationReviewRequiredApprovals
+    creationReviewRisks
     customAppSDKActionsInvokeSchema
     customAppSDKActionsReceiptSchema
     customAppSDKBridgeRecordSchema
@@ -2056,6 +2156,8 @@ The docs check script validates that every current export from
     diffEvolutionPublicSurfaceBaseline
     discoverOpenClawAppContext
     discoverWorkspaces
+    dispatchDisposition
+    dispatchRunStatus
     doctorKeychain
     downloadTelegramFile
     effectPreviewSchema
@@ -2079,6 +2181,7 @@ The docs check script validates that every current export from
     evaluateGovernanceAccess
     evaluateGovernanceDelegation
     evaluateMacActionBroker
+    evaluateMacCareActionPlanSafety
     evaluateNeedRoute
     evaluateNeedRoutes
     evaluateNetworkPolicy
@@ -2088,7 +2191,9 @@ The docs check script validates that every current export from
     eventRecordSchema
     eventReminderSchema
     executeClawRuntimeTool
+    expandClawHomePath
     explainConnectorContextChoice
+    externalTelemetry
     extractClawRuntimeChatText
     extractCodexJsonlText
     extractJsonPayloadText
@@ -2099,11 +2204,15 @@ The docs check script validates that every current export from
     feedbackRecordSchema
     fieldValueRecordSchema
     filterOpenClawProviderAuthByIntent
+    filterOperationalAudits
+    filterOperationalRecords
     findClawProjectManifestPortabilityViolations
     findMacAtlasCapability
+    findMacCareRoute
     findSystemTelemetryControlAction
     findSystemTelemetryProvider
     forkGovernanceResourceScopeBinding
+    formatAgentSkillBindingRef
     formatOpenClawConversation
     gatewayDeploymentManifestSchema
     generateBuiltinSkills
@@ -2133,6 +2242,7 @@ The docs check script validates that every current export from
     getSkillSource
     getTtsCatalog
     goalRecordSchema
+    grantMatches
     guidanceMatchConditionSchema
     guidanceRecordSchema
     guidanceRiskClassSchema
@@ -2143,6 +2253,7 @@ The docs check script validates that every current export from
     handoffRecordSchema
     hasConfirmedOpenClawOAuthSubscription
     hasOpenClawProviderAuth
+    hasValidTelemetryRetention
     hashSecret
     hermesAdapter
     heuristicDistillerSynthesizer
@@ -2167,11 +2278,19 @@ The docs check script validates that every current export from
     iotPolicyEvaluationSchema
     iotStateSnapshotSchema
     ironclawAdapter
+    isAgentServiceApiRequest
     isConnectorCapabilityId
     isCustomAppSensitiveField
+    isExternalAssignmentKind
+    isExternalAssignmentRecord
     isInsideCodexHome
+    isLocalPrivatePath
+    isMacCareFilesystemNoiseDirectoryName
     isOpenClawProviderEnabled
+    isRecord
     isRegulatedDomain
+    isSecretResourceRequest
+    isSensitiveAgentKey
     judgmentContextRefsSchema
     judgmentImpactSchema
     judgmentOptionScoreSchema
@@ -2201,6 +2320,10 @@ The docs check script validates that every current export from
     listCustomAppSDKSchemaRefs
     listDemoScenarios
     listMacAtlasCapabilities
+    listMacCareFilesystemNoiseDirectories
+    listMacCareProtectionAdapters
+    listMacCareRoutes
+    listMacCareScannerWave1Modules
     listMacCommandRoots
     listMacProgrammaticSurfaces
     listMacRelatedSurfaces
@@ -2251,6 +2374,48 @@ The docs check script validates that every current export from
     macApprovalRequestSchema
     macApprovalStatusSchema
     macAtlasCapabilitySchema
+    macCareActionPlanSchema
+    macCareAppUpdateApprovalPackageItemSchema
+    macCareAppUpdateApprovalPackageReportSchema
+    macCareAppUpdateHandoffItemSchema
+    macCareAppUpdateHandoffKindSchema
+    macCareAppUpdateHandoffReportSchema
+    macCareCandidateActionSchema
+    macCareCandidateGroupSchema
+    macCareCandidateSchema
+    macCareCandidateSelectionSchema
+    macCareCloudProviderApprovalPackageItemSchema
+    macCareCloudProviderApprovalPackageReportSchema
+    macCareCloudProviderHandoffItemSchema
+    macCareCloudProviderHandoffKindSchema
+    macCareCloudProviderHandoffReportSchema
+    macCareConsumerIntentSchema
+    macCareEvidenceLevelSchema
+    macCareFinalizerActionPreviewSchema
+    macCareFinalizerApprovalPackageActionSchema
+    macCareFinalizerApprovalPackageReportSchema
+    macCareFinalizerPreviewReportSchema
+    macCareFinalizerRollbackLevelSchema
+    macCareProtectionAdapterExecutionModeSchema
+    macCareProtectionAdapterIdSchema
+    macCareProtectionAdapterSchema
+    macCareProtectionApprovalPackageEngineSchema
+    macCareProtectionApprovalPackageReportSchema
+    macCareProtectionDatabaseStatusSchema
+    macCareProtectionDetectedBinarySchema
+    macCareProtectionEngineReadinessReportSchema
+    macCareProtectionEngineReadinessSchema
+    macCareProtectionEngineRuntimeStatusSchema
+    macCareProtectionFixtureFindingSchema
+    macCareProtectionFixtureScanReportSchema
+    macCareReadOnlyScanReportSchema
+    macCareRouteAtlasEntrySchema
+    macCareRouteFamilySchema
+    macCareRouteMutabilitySchema
+    macCareRouteSensitivitySchema
+    macCareRouteSourceSchema
+    macCareScannerModuleIdSchema
+    macCareScannerModuleSchema
     macCoverageStateSchema
     macFrameworkGrantStateSchema
     macHostIdentitySchema
@@ -2271,6 +2436,12 @@ The docs check script validates that every current export from
     managedBlockMarkers
     manifestSchema
     maskCredential
+    matchMacCareRoutesForPath
+    matches
+    matchesOptional
+    maxAutonomySeverity
+    memoryBoundaryAllowed
+    memoryScopeMatches
     memoryStateSnapshotSchema
     mergeManagedBlocks
     mergeRuntimeCapabilityMaps
@@ -2303,6 +2474,7 @@ The docs check script validates that every current export from
     networkSubjectSchema
     nodeIdentitySchema
     nodeTrustDecisionSchema
+    normalizeAgentSkillBindings
     normalizeAttachment
     normalizeAuthSummaries
     normalizeClawProjectManifest
@@ -2313,12 +2485,14 @@ The docs check script validates that every current export from
     normalizeGuidanceId
     normalizeInstallRef
     normalizeLibraryId
+    normalizePositiveInteger
     normalizeProjectPath
     normalizeProviderAuth
     normalizeRuleId
     normalizeRuntimeSessionAdapter
     normalizeSlug
     normalizeSttConfig
+    normalizeTime
     normalizeTranscriptEvents
     normalizeTranscriptMessage
     normalizeTtsConfig
@@ -2328,14 +2502,28 @@ The docs check script validates that every current export from
     observedDomainSchema
     openclawAdapter
     operationalCheckRecordSchema
+    operationalRecordBelongsToAgent
+    operationalRecordTimestamp
+    operationalSinceMatches
+    operationalSnapshotGaps
+    operationalStatusMatches
     outcomeLinksSchema
     outcomeRecordSchema
     outcomeResultSchema
     outcomeStateSchema
     outcomeStatusSchema
+    paperclipAgencyMode
+    paperclipAgentFromRecord
+    paperclipAgentsFromMarkdown
+    paperclipModelTier
+    parseAgentServiceApiBody
+    parseAgentSkillRef
+    parseCsv
     parseOpenClawMemorySearch
     parseOpenClawModelsStatus
     parseOpenClawVersion
+    parsePaperclipFields
+    parsePaperclipGrantRefs
     parseTranscriptLine
     parseYaml
     patchIntentDomain
@@ -2343,6 +2531,13 @@ The docs check script validates that every current export from
     persistProviderApiKey
     personIdentitySchema
     personRecordSchema
+    pickAgentSurfaceFields
+    pickAssignmentSurfaceFields
+    pickBudgetSurfaceFields
+    pickExecutionProfileSurfaceFields
+    pickMemoryPolicySurfaceFields
+    pickRedacted
+    pickResourceGrantSurfaceFields
     picoclawAdapter
     planNeedRouteGeneration
     policyRecordSchema
@@ -2367,6 +2562,8 @@ The docs check script validates that every current export from
     previewDiff
     previewManagedBlockMutation
     previewWorkspaceFile
+    privacyCollectionRecords
+    privacySubjectKeys
     probeOpenClawCapabilities
     probeRuntimeCapabilities
     productivityApprovalRecordSchema
@@ -2405,8 +2602,11 @@ The docs check script validates that every current export from
     readWorkspaceManifest
     readWorkspaceStateSnapshot
     reconcileSyncQueue
+    recordExpired
+    recordMatchesPrivacySubject
     recurrenceRecordSchema
     redactAgentBoundaryValue
+    redactArray
     redactConnectorContextRecord
     redactConnectorContextValue
     redactCustomAppRecord
@@ -2471,6 +2671,7 @@ The docs check script validates that every current export from
     reportStatusSchema
     reportSubmissionReceiptSchema
     reportValidationPlanSchema
+    requireMacCareRoutePathPattern
     requiresExplicitProviderEnable
     resetWorkspace
     resolveAgentExternalIdentity
@@ -2480,14 +2681,24 @@ The docs check script validates that every current export from
     resolveCapabilityReportPath
     resolveChannelRunKey
     resolveChannelsStatePath
+    resolveClawConfigDir
     resolveClawGlobalDataDir
+    resolveClawGlobalDataStorageDir
+    resolveClawGlobalModulesConfigPath
     resolveClawHostRegistryPath
     resolveClawHostStateDir
+    resolveClawModulesConfigPath
     resolveClawPersistentSurfacePath
     resolveClawRuntimeConfig
     resolveClawRuntimeLocations
     resolveClawWorkspaceDir
+    resolveClawWorkspaceModulesConfigPath
+    resolveCodexArchivedSessionsDir
     resolveCodexBinaryPath
+    resolveCodexConfigPath
+    resolveCodexHomeDir
+    resolveCodexProjectConfigPath
+    resolveCodexSessionsDir
     resolveCompatSnapshotPath
     resolveConnectorContextDefaultRefs
     resolveDemoScenarioId
@@ -2496,6 +2707,7 @@ The docs check script validates that every current export from
     resolveIntentDomainPath
     resolveIntentsDir
     resolveLibraryRoot
+    resolveMacCareRoutePathPattern
     resolveManifestPath
     resolveMemoryHitLabel
     resolveMemoryStatePath
@@ -2531,6 +2743,7 @@ The docs check script validates that every current export from
     resourceRegistryStateSchema
     resourceStatusSchema
     restartOpenClawGateway
+    riskRank
     routeIdForSyncDriver
     ruleApplyWhenSchema
     ruleKindSchema
@@ -2568,6 +2781,7 @@ The docs check script validates that every current export from
     sessionPolicySchema
     setDefaultModel
     setupOpenClawWorkspace
+    severityRankForAction
     signActorAssertion
     skillAssignmentSchema
     skillCapsuleSchema
@@ -2605,8 +2819,10 @@ The docs check script validates that every current export from
     soulStateSchema
     splitConnectorCapabilityId
     splitFrontmatter
+    splitPaperclipMarkdownAgents
     splitStreamingTextDelta
     splitTextIntoChunks
+    stableHash
     stableProjectIdFromPath
     startCodeServer
     startOpenClawGateway
@@ -2617,6 +2833,7 @@ The docs check script validates that every current export from
     streamOpenClawSessionEvents
     streamRuntimeSession
     streamRuntimeSessionEvents
+    stringRecordValue
     stringifyYaml
     stripMarkdownForTts
     suggestSessionTitle
@@ -2627,6 +2844,8 @@ The docs check script validates that every current export from
     summarizePreview
     summarizeReadiness
     summarizeTitle
+    supervisorDefaultActions
+    supervisorMaxRisk
     supportsOpenAIResponseFileMime
     supportsOpenAIResponseImageMime
     syncAuthorityHandoffReceiptSchema
@@ -2677,6 +2896,8 @@ The docs check script validates that every current export from
     toBase64Payload
     toClawError
     toDataUrl
+    toolCatalogGaps
+    toolCatalogProjectionItem
     transcribe
     uninstallOpenClawRuntime
     unknownActor

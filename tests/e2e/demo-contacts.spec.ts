@@ -1,4 +1,4 @@
-import { expect, resetDemoState, saveArtifactScreenshot, test } from "./fixtures";
+import { expect, resetDemoState, saveArtifactScreenshot, test, privateApiRoute } from "./fixtures";
 
 test("contacts page loads, creates contact, searches, and opens detail panel", async ({ page, request }) => {
   await resetDemoState(request, "seeded");
@@ -49,13 +49,13 @@ test("contacts API CRUD contracts are deterministic in hermetic mode", async ({ 
   await resetDemoState(request, "seeded");
 
   // GET - list seeded contacts
-  const listResponse = await request.get("/api/contacts");
+  const listResponse = await request.get(privateApiRoute("claw.privateApi.contacts"));
   expect(listResponse.ok()).toBeTruthy();
   const listPayload = await listResponse.json();
   expect(listPayload.contacts.length).toBeGreaterThan(0);
 
   // POST - create
-  const createResponse = await request.post("/api/contacts", {
+  const createResponse = await request.post(privateApiRoute("claw.privateApi.contacts"), {
     data: {
       label: "API Contact",
       role: "Tester",
@@ -71,7 +71,7 @@ test("contacts API CRUD contracts are deterministic in hermetic mode", async ({ 
   expect(created.id).toBeTruthy();
 
   // PUT - update
-  const updateResponse = await request.put("/api/contacts", {
+  const updateResponse = await request.put(privateApiRoute("claw.privateApi.contacts"), {
     data: { id: created.id, role: "Senior Tester", company: "TestCo International" },
   });
   expect(updateResponse.ok()).toBeTruthy();
@@ -79,11 +79,11 @@ test("contacts API CRUD contracts are deterministic in hermetic mode", async ({ 
   expect(updated.role).toBe("Senior Tester");
 
   // DELETE
-  const deleteResponse = await request.delete(`/api/contacts?id=${created.id}`);
+  const deleteResponse = await request.delete(privateApiRoute("claw.privateApi.contacts", undefined, { id: created.id }));
   expect(deleteResponse.ok()).toBeTruthy();
 
   // GET native contacts (hermetic fallback)
-  const nativeResponse = await request.get("/api/contacts/native?limit=10");
+  const nativeResponse = await request.get(privateApiRoute("claw.privateApi.contactsNative", undefined, { "limit": 10 }));
   expect(nativeResponse.ok()).toBeTruthy();
   const nativePayload = await nativeResponse.json();
   expect(Array.isArray(nativePayload.contacts)).toBeTruthy();
@@ -93,19 +93,19 @@ test("people API CRUD contracts are deterministic in hermetic mode", async ({ re
   await resetDemoState(request, "seeded");
 
   // GET - list (auto-seeds if empty)
-  const listResponse = await request.get("/api/people");
+  const listResponse = await request.get(privateApiRoute("claw.privateApi.people"));
   expect(listResponse.ok()).toBeTruthy();
   const listPayload = await listResponse.json();
   expect(listPayload.people.length).toBeGreaterThan(0);
 
   // GET - search
-  const searchResponse = await request.get("/api/people?q=Alice");
+  const searchResponse = await request.get(privateApiRoute("claw.privateApi.people", undefined, { "q": "Alice" }));
   expect(searchResponse.ok()).toBeTruthy();
   const searchPayload = await searchResponse.json();
   expect(searchPayload.people.length).toBeGreaterThanOrEqual(0);
 
   // POST - create
-  const createResponse = await request.post("/api/people", {
+  const createResponse = await request.post(privateApiRoute("claw.privateApi.people"), {
     data: {
       displayName: "E2E Person",
       kind: "human",
@@ -122,13 +122,13 @@ test("people API CRUD contracts are deterministic in hermetic mode", async ({ re
 
   // PUT - update
   if (created.id) {
-    const updateResponse = await request.put("/api/people", {
+    const updateResponse = await request.put(privateApiRoute("claw.privateApi.people"), {
       data: { id: created.id, role: "Senior QA" },
     });
     expect(updateResponse.ok()).toBeTruthy();
 
     // DELETE
-    const deleteResponse = await request.delete(`/api/people?id=${created.id}`);
+    const deleteResponse = await request.delete(privateApiRoute("claw.privateApi.people", undefined, { id: created.id }));
     expect(deleteResponse.ok()).toBeTruthy();
   }
 });
