@@ -2,7 +2,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { randomUUID } from "crypto";  import BetterSqlite3 from "better-sqlite3"; import type Database from "better-sqlite3"; import { DatabaseServiceStore } from "@clawjs/database"; import type { FieldDefinition, IndexDefinition } from "@clawjs/database"; import { redactSecrets } from "@clawjs/claw"; import { V1_MAIN_SCHEMA_SQL, V1_SIDECAR_SCHEMA_SQL_BY_FILE } from "./v1-data-surface.ts"; import { assertCodexReadOnlyPath, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { randomUUID } from "crypto";  import BetterSqlite3 from "better-sqlite3"; import type Database from "better-sqlite3"; import { DatabaseServiceStore } from "@clawjs/database"; import type { FieldDefinition, IndexDefinition } from "@clawjs/database"; import { redactSecrets } from "@clawjs/claw"; import { V1_MAIN_SCHEMA_SQL, V1_SIDECAR_SCHEMA_SQL_BY_FILE } from "./v1-data-surface.ts"; import { MAC_CARE_SIDECAR_FILENAME, assertCodexReadOnlyPath, resolveClawGlobalDataStorageDir, resolveCodexArchivedSessionsDir, resolveCodexSessionsDir } from "@clawjs/core";
 import { resolveClawCliCommand } from "@clawjs/core/catalogs";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
@@ -98,7 +98,7 @@ const SESSION_DOMAIN_TABLES = ["session_index"];
 const USER_MODEL_DOMAIN_TABLES = ["user_profile_items", "user_profile_meta", "user_profile_history"];
 const SIGNALS_RUNTIME_DOMAIN_TABLES = ["system_variables", "user_variables", "observations", "sessions", "healthkit_sync_state", "hidden_system_variables"];
 const TIME_RUNTIME_DOMAIN_TABLES = ["temporal_projections", "temporal_run_log", "temporal_executions", "temporal_items"];
-const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "feed.sqlite", "ops.sqlite"];
+const SIDECAR_FILENAMES = ["vault.sqlite", "sessions.sqlite", "audio.sqlite", "drive.sqlite", "search.sqlite", MAC_CARE_SIDECAR_FILENAME, "runtime.sqlite", "notify.sqlite", "monitor.sqlite", "infra.sqlite", "feed.sqlite", "ops.sqlite"];
 const V1_MAIN_SCHEMA_META_TABLE = "claw_v1_main_schema_meta";
 const V1_MAIN_SCHEMA_VERSION = 1;
 const V1_SIDECAR_SCHEMA_META_TABLE = "claw_v1_sidecar_schema_meta";
@@ -240,9 +240,12 @@ const SIGNALS_CATALOG_COLLECTION_INDEXES: IndexDefinition[] = [
 
 export function resolveClawjsDataRoot(env: NodeJS.ProcessEnv = process.env): string {
   const explicitData = env.CLAW_DATA_DIR;
-  if (explicitData) return path.resolve(expandHome(explicitData));
-  const home = path.resolve(expandHome(env.CLAW_HOME || resolveClawPersistentSurfacePath("claw.global")));
-  return path.join(home, "data");
+  const clawHome = env.CLAW_HOME;
+  return path.resolve(resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(explicitData ? { dataDir: explicitData } : {}),
+    ...(clawHome ? { clawHome } : {}),
+  }));
 }
 
 export function resolveClawjsMainDbPath(env: NodeJS.ProcessEnv = process.env): string {
@@ -662,8 +665,8 @@ export function sessionRoots(input: V1DataCliInput): string[] {
     ...(input.flags.roots ? input.flags.roots.split(",") : []),
   ].map((entry) => path.resolve(input.cwd, expandHome(entry.trim()))).filter(Boolean);
   const resolved = roots.length > 0 ? roots : [
-    path.join(os.homedir(), ".codex", "sessions"),
-    path.join(os.homedir(), ".codex", "archived_sessions"),
+    resolveCodexSessionsDir(os.homedir()),
+    resolveCodexArchivedSessionsDir(os.homedir()),
   ];
   for (const root of resolved) {
     assertCodexReadOnlyPath({ homeDir: os.homedir(), path: root, operation: "read" });
@@ -917,6 +920,11 @@ function ensureSidecarSchema(filename: string, sqlite: Database.Database): void 
     markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
     return;
   }
+  if (filename === MAC_CARE_SIDECAR_FILENAME) {
+    sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE[MAC_CARE_SIDECAR_FILENAME]);
+    markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
+    return;
+  }
   if (filename === "runtime.sqlite") {
     sqlite.exec(V1_SIDECAR_SCHEMA_SQL_BY_FILE["runtime.sqlite"]);
     markSchemaMetaVersion(sqlite, V1_SIDECAR_SCHEMA_META_TABLE, V1_SIDECAR_SCHEMA_VERSION);
@@ -1030,6 +1038,7 @@ function seedSidecarRegistry(sqlite: Database.Database): void {
     { domain: "conversation-artifacts", id: "audio", path: path.join(root, "audio.sqlite"), metadata: { logicalDomains: ["audio"], owns: ["transcripts", "audio-metadata"], blobs: "filesystem" } },
     { domain: "conversation-artifacts", id: "drive", path: path.join(root, "drive.sqlite"), metadata: { logicalDomains: ["drive"], owns: ["attachments", "assets"], blobs: path.join(root, "blobs") } },
     { domain: "search", id: "global-search", path: path.join(root, "search.sqlite"), cache: true, metadata: { reconstructible: true, owns: ["fts", "embeddings", "ranking"] } },
+    { domain: "mac-care", id: "scan-plans", path: path.join(root, MAC_CARE_SIDECAR_FILENAME), metadata: { owns: ["scan-results", "candidates", "ignore-rules", "action-plans"], destructiveExecution: "signed-host-human-confirmed" } },
     { domain: "runtime", id: "queues", path: path.join(root, "runtime.sqlite"), cache: true, metadata: { retention: "compact", owns: ["jobs", "claims", "retries", "nudges", "draft-distillations"] } },
     { domain: "notify", id: "deliveries", path: path.join(root, "notify.sqlite"), cache: true, metadata: { operational: true } },
     { domain: "monitor", id: "events", path: path.join(root, "monitor.sqlite"), cache: true, metadata: { operational: true } },

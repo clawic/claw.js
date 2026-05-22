@@ -111,6 +111,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runVerifyCli({ argv, context, wantsJson });
   }
 
+  if (group === "mac-care") {
+    const { runMacCareCli } = await import("./cli-mac-care-command.ts");
+    return await runMacCareCli({ argv, positionals, flags, context, wantsJson, binName });
+  }
+
   const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
   if (v1DataExit !== null) return v1DataExit;
 

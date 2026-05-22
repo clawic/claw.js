@@ -1,15 +1,16 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 
-import { clawStorageFiles, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { MAC_CARE_SIDECAR_FILENAME, clawStorageFiles, resolveClawGlobalDataStorageDir, resolveCodexHomeDir } from "@clawjs/core";
 
 import { CLI_EXIT_OK, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
-import { ensureV1MainSchema, openMainDataStore, writeMcpServers } from "./v1-data-core.ts";
+import { ensureV1MainSchema, openMainDataStore, openSidecar, writeMcpServers } from "./v1-data-core.ts";
 import { captureStream, runInternalV1Cli, useIsolatedClawDataRoot, withPatchedEnv } from "./index-test-utils.ts";
 
 function parseCliJsonPayload<T>(output: string): T {
@@ -21,9 +22,14 @@ function parseCliJsonPayload<T>(output: string): T {
 }
 
 test("V2 main data paths default to the Claw home data namespace", () => {
-  assert.equal(resolveClawjsDataRoot({} as NodeJS.ProcessEnv), path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.data").slice("~/".length)));
-  assert.equal(resolveClawjsMainDbPath({} as NodeJS.ProcessEnv), path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.data").slice("~/".length), "core.sqlite"));
-  assert.equal(resolveClawjsFilesDir({} as NodeJS.ProcessEnv), path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.data").slice("~/".length), "files"));
+  const defaultDataRoot = resolveClawGlobalDataStorageDir({ homeDir: os.homedir() });
+  assert.equal(resolveClawjsDataRoot({} as NodeJS.ProcessEnv), defaultDataRoot);
+  assert.equal(resolveClawjsMainDbPath({} as NodeJS.ProcessEnv), path.join(defaultDataRoot, "core.sqlite"));
+  assert.equal(resolveClawjsFilesDir({} as NodeJS.ProcessEnv), path.join(defaultDataRoot, "files"));
+  const source = fs.readFileSync(new URL("./v1-data-core.ts", import.meta.url), "utf8");
+  assert.match(source, /resolveClawGlobalDataStorageDir\(/);
+  assert.equal(/resolveClawPersistentSurfacePath\(["']claw[.]global[.]data["']\)/.test(source), false);
+  assert.equal(source.includes('resolveClawPersistentSurfacePath("claw.global")'), false);
 
   const explicit = path.join(os.tmpdir(), "clawjs-explicit-root");
   assert.equal(resolveClawjsDataRoot({ CLAW_DATA_DIR: explicit } as NodeJS.ProcessEnv), explicit);
@@ -53,20 +59,59 @@ test("openMainDataStore does not create sidecar databases until requested", () =
   const store = openMainDataStore({ CLAW_DATA_DIR: dataRoot } as NodeJS.ProcessEnv);
   store.close();
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
-  for (const filename of ["sessions.sqlite", "drive.sqlite", "runtime.sqlite", "search.sqlite"]) {
+  assert.equal(fs.existsSync(registeredDatabasePath(dataRoot, "claw.database.core")), true);
+  for (const filename of ["sessions.sqlite", "drive.sqlite", "runtime.sqlite", "search.sqlite", MAC_CARE_SIDECAR_FILENAME]) {
     assert.equal(fs.existsSync(path.join(dataRoot, filename)), false, filename);
   }
 });
 
+test("Mac Care sidecar is registered and creates only hermetic plan tables", () => {
+  const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-mac-care-sidecar-"));
+  const sqlite = openSidecar(MAC_CARE_SIDECAR_FILENAME, { CLAW_DATA_DIR: dataRoot } as NodeJS.ProcessEnv);
+  try {
+    assert.equal(fs.existsSync(registeredDatabasePath(dataRoot, "claw.database.macCare")), true);
+    const tables = new Set((sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((row) => row.name));
+    for (const table of ["mac_care_scans", "mac_care_candidates", "mac_care_action_plans", "mac_care_ignore_rules"]) {
+      assert.equal(tables.has(table), true, `missing ${table}`);
+    }
+    assert.equal(tables.has("mac_care_delete_queue"), false);
+    assert.equal(tables.has("mac_care_trash_queue"), false);
+  } finally {
+    sqlite.close();
+  }
+});
+
+test("Mac Care V1 storage uses the canonical sidecar filename", () => {
+  const source = fs.readFileSync(new URL("./v1-data-core.ts", import.meta.url), "utf8");
+  assert.match(source, /SIDECAR_FILENAMES = \[[^\]]*MAC_CARE_SIDECAR_FILENAME/s);
+  assert.match(source, /filename === MAC_CARE_SIDECAR_FILENAME/);
+  assert.match(source, /path\.join\(root, MAC_CARE_SIDECAR_FILENAME\)/);
+  assert.equal(source.includes('filename === "mac_care.sqlite"'), false);
+  assert.equal(source.includes('path.join(root, "mac_care.sqlite")'), false);
+});
+
+test("Mac Care V1 sidecar schema uses the canonical sidecar filename", () => {
+  const source = fs.readFileSync(new URL("./v1-data-surface.ts", import.meta.url), "utf8");
+  assert.match(source, /\[MAC_CARE_SIDECAR_FILENAME\]: String\.raw/);
+  assert.equal(source.includes('"mac_care.sqlite": String.raw'), false);
+});
+
 test("mcp config writes refuse Codex-owned config paths", () => {
-  const codexConfig = path.join(os.homedir(), ".codex", `clawjs-test-${Date.now()}-${Math.random().toString(36).slice(2)}.toml`);
+  const codexConfig = path.join(resolveCodexHomeDir(os.homedir()), `clawjs-test-${Date.now()}-${Math.random().toString(36).slice(2)}.toml`);
   assert.equal(fs.existsSync(codexConfig), false);
   assert.throws(
     () => writeMcpServers(codexConfig, [{ id: "browser", command: "npx" }]),
     /Refusing write operation inside ~\/\.codex/,
   );
   assert.equal(fs.existsSync(codexConfig), false);
+});
+
+test("Codex session roots use the shared storage boundary", () => {
+  const source = fs.readFileSync(new URL("./v1-data-core.ts", import.meta.url), "utf8");
+  assert.match(source, /resolveCodexSessionsDir\(os\.homedir\(\)\)/);
+  assert.match(source, /resolveCodexArchivedSessionsDir\(os\.homedir\(\)\)/);
+  assert.equal(source.includes('path.join(os.homedir(), ".codex", "sessions")'), false);
+  assert.equal(source.includes('path.join(os.homedir(), ".codex", "archived_sessions")'), false);
 });
 
 test("runCli exposes Agents V1 safe surface projection gate", async () => {

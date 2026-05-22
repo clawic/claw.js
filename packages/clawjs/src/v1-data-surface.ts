@@ -1,4 +1,4 @@
-import { clawPersistentSurface } from "@clawjs/core";
+import { MAC_CARE_SIDECAR_FILENAME, clawPersistentSurface } from "@clawjs/core";
 import { V1_AGENT_DATA_SCHEMA_SQL, v1AgentDataSurfaceNodes } from "./v1-data-agent-surfaces.ts";
 const v1MainDatabaseId = "claw.database.core";
 const v1MainSchemaSource = {
@@ -832,6 +832,55 @@ export const V1_SIDECAR_SCHEMA_SQL_BY_FILE = {
         path,
         tokenize='unicode61'
       );
+    `,
+  [MAC_CARE_SIDECAR_FILENAME]: String.raw`
+      CREATE TABLE IF NOT EXISTS mac_care_scans (
+        id TEXT PRIMARY KEY,
+        module_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        summary_json TEXT NOT NULL DEFAULT '{}',
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS mac_care_scans_module_started_idx ON mac_care_scans(module_id, started_at DESC);
+      CREATE TABLE IF NOT EXISTS mac_care_candidates (
+        id TEXT PRIMARY KEY,
+        scan_id TEXT NOT NULL,
+        route_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        action TEXT NOT NULL,
+        selection TEXT NOT NULL,
+        confidence REAL NOT NULL,
+        size_bytes INTEGER,
+        evidence_json TEXT NOT NULL DEFAULT '[]',
+        warnings_json TEXT NOT NULL DEFAULT '[]',
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (scan_id) REFERENCES mac_care_scans(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS mac_care_candidates_scan_idx ON mac_care_candidates(scan_id, route_id);
+      CREATE INDEX IF NOT EXISTS mac_care_candidates_path_idx ON mac_care_candidates(path);
+      CREATE TABLE IF NOT EXISTS mac_care_action_plans (
+        id TEXT PRIMARY KEY,
+        scan_id TEXT,
+        authority TEXT NOT NULL,
+        requested_by TEXT NOT NULL,
+        plan_json TEXT NOT NULL,
+        safety_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS mac_care_action_plans_scan_idx ON mac_care_action_plans(scan_id, created_at DESC);
+      CREATE TABLE IF NOT EXISTS mac_care_ignore_rules (
+        id TEXT PRIMARY KEY,
+        route_id TEXT,
+        path_pattern TEXT NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        expires_at TEXT,
+        metadata_json TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS mac_care_ignore_rules_route_idx ON mac_care_ignore_rules(route_id, created_at DESC);
     `,
   "runtime.sqlite": String.raw`
       CREATE TABLE IF NOT EXISTS runtime_jobs (

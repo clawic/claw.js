@@ -230,6 +230,44 @@ export const GENERATED_CLI_COMMANDS = [
     routeGroup: "host-system-network"
   },
   {
+    name: "mac-care",
+    kind: "canonical",
+    summary: "Read-only Mac Care route atlas, first-wave scanner, persisted scan history, app update/cloud provider/protection handoff and approval-ready packages, finalizer preview/approval-ready package and fixture validation scan, protection adapter contracts and engine readiness, sidecar descriptor, scan report contract, and action-plan safety policy.",
+    usage: "mac-care report|atlas|scan|scans|app-updates handoff|app-updates approval-ready|cloud handoff|cloud approval-ready|finalizer preview|finalizer approval-ready|finalizer fixture-scan|protection adapters|protection engines|protection approval-ready|protection fixture-scan --json",
+    family: "mac-care",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.mac-care.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw mac-care --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md"
+    ],
+    tests: [
+      "packages/clawjs-core/src/mac-care.test.ts",
+      "packages/clawjs/src/cli-mac-care-command.test.ts",
+      "packages/clawjs/src/index-data.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-mac-care-command.ts",
+      symbol: "runMacCareCli"
+    },
+    relatedSurfaces: [
+      "claw system metrics list",
+      "claw permissions show files",
+      "claw search query"
+    ],
+    routeGroup: "host-system-network"
+  },
+  {
     name: "mac",
     kind: "canonical",
     summary: "Mac atlas, coverage, doctor, audit, planning and revert portal.",
@@ -2155,7 +2193,7 @@ export const GENERATED_CLI_COMMANDS = [
     name: "debt",
     kind: "canonical",
     summary: "Federated report-only debt and pending ledger for ClawJS and Clawix public artifacts.",
-    usage: "debt list|show|audit|sources",
+    usage: "debt list|show|audit|sources [--strict] [--severity P0|P1|P2|P3] [--release-effect blocks_release|blocks_growth|report_only]",
     family: "diagnostics",
     schemaVersion: 1,
     jsonSchemaId: "claw.cli.debt.v1",
@@ -5524,6 +5562,7 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   host: "host-system-network",
   system: "host-system-network",
   network: "host-system-network",
+  "mac-care": "host-system-network",
   mac: "host-system-network",
   permissions: "host-system-network",
   wifi: "host-system-network",
@@ -5770,6 +5809,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "location",
   "logs",
   "mac",
+  "mac-care",
   "marketplace",
   "maturity",
   "mcp",
