@@ -5,6 +5,7 @@ import {
   clawCliCommandRegistry,
   connectorExecutionPipeline,
   createConnectorCapability,
+  evaluateNetworkPolicy,
   evaluateConnectorControlPlaneRequest,
   explainConnectorContextChoice,
   isConnectorCapabilityId,
@@ -13,6 +14,7 @@ import {
   type ConnectorProvider,
   type ConnectorExecutionRequest,
   type ConnectorPolicy,
+  type NetworkRule,
 } from "./catalogs.ts";
 
 const basePolicy: ConnectorPolicy = {
@@ -124,6 +126,73 @@ test("connector control plane enforces budgets and network proof", () => {
     "budget_exceeded",
     "network_proof_required",
   ]);
+});
+
+test("connector network proof must derive from Network Control Plane evaluation", () => {
+  const request: ConnectorExecutionRequest = {
+    ...baseRequest,
+    requestedHost: "api.github.com",
+    operation: {
+      ...baseRequest.operation,
+      networkPolicyId: "provider-network",
+    },
+  };
+  const networkPolicies = [{
+    id: "provider-network",
+    required: true,
+    networkPolicyProfileId: "default",
+    expectedMatchedRuleIds: ["network.rule.github-api"],
+    allowedHosts: ["api.github.com"],
+    egressProfileId: "legacy-office",
+  }];
+
+  const legacyProjectionOnly = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+    networkPolicies,
+    networkProof: {
+      policyId: "provider-network",
+      host: "api.github.com",
+      egressProfileId: "legacy-office",
+    },
+  });
+
+  assert.equal(legacyProjectionOnly.allowed, false);
+  assert.equal(legacyProjectionOnly.reasons.some((reason) => reason.code === "network_proof_mismatch"), true);
+
+  const networkRules: NetworkRule[] = [{
+    schemaVersion: 1,
+    id: "network.rule.github-api",
+    action: "allow",
+    subject: { kind: "connector", id: "github" },
+    endpoint: { kind: "provider_endpoint", value: "api.github.com", protocol: "https" },
+    networkPolicyProfileId: "default",
+    priority: 100,
+    enabled: true,
+    lifetime: "permanent",
+    ruleSteward: { kind: "system", id: "claw.network" },
+    source: "system_default",
+    createdAt: "2026-05-21T00:00:00.000Z",
+    updatedAt: "2026-05-21T00:00:00.000Z",
+  }];
+  const networkEvaluation = evaluateNetworkPolicy({
+    subject: { kind: "connector", id: "github" },
+    endpoint: { kind: "provider_endpoint", value: "api.github.com", protocol: "https" },
+    rules: networkRules,
+  });
+
+  const allowed = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+    networkPolicies,
+    networkProof: {
+      policyId: "provider-network",
+      host: "api.github.com",
+      networkEvaluation,
+    },
+  });
+
+  assert.equal(allowed.allowed, true);
 });
 
 test("connector capability ids expose domain action and facet", () => {

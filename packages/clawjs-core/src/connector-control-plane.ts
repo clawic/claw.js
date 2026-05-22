@@ -5,6 +5,7 @@ import {
   type SensitiveRecordClass,
 } from "./regulated-domain-safety.ts";
 import type { ConnectorContextChoice, ConnectorContextDecisionReasonCode, ConnectorContextRequirement } from "./connector-governed-context.ts";
+import type { NetworkPolicyEvaluation } from "./network-control-plane.ts";
 
 export const connectorControlPlaneVersion = 1;
 
@@ -170,14 +171,33 @@ export interface ConnectorBudget {
 export interface ConnectorNetworkPolicy {
   id: string;
   required: boolean;
+  networkPolicyProfileId?: string;
+  allowedDecisions?: ConnectorNetworkAllowedDecision[];
+  expectedAdapterId?: string;
+  expectedMatchedRuleIds?: string[];
+  /**
+   * Deprecated projection fields retained for stored catalog compatibility.
+   * They are not an independent authority; connector execution must present a
+   * Network Control Plane evaluation in ConnectorNetworkProof.
+   */
   egressProfileId?: string;
   vpnProfileId?: string;
   proxyProfileId?: string;
   allowedHosts?: string[];
 }
 
+export type ConnectorNetworkAllowedDecision = Extract<
+  NetworkPolicyEvaluation["decision"],
+  "allow" | "notify" | "routeVia" | "requireVpn"
+>;
+
 export interface ConnectorNetworkProof {
   policyId: string;
+  networkEvaluation?: NetworkPolicyEvaluation;
+  /**
+   * Deprecated projection fields retained so old callers fail closed with a
+   * mismatch instead of silently authorizing network access.
+   */
   egressProfileId?: string;
   vpnProfileId?: string;
   proxyProfileId?: string;
@@ -577,26 +597,55 @@ function evaluateNetworkPolicy(
     if (!grant?.allowsNetworkPolicyBypass) {
       reasons.push({
         code: "network_proof_required",
-        message: `Operation ${request.operation.id} requires egress proof for network policy ${policy.id}.`,
+        message: `Operation ${request.operation.id} requires Network Control Plane proof for connector network policy ${policy.id}.`,
       });
     }
     return;
   }
+  if (networkProof.policyId !== policy.id || !networkProof.networkEvaluation) {
+    reasons.push({
+      code: "network_proof_mismatch",
+      message: `Network proof must match connector policy ${policy.id} and include a Network Control Plane evaluation.`,
+    });
+    return;
+  }
+  const evaluation = networkProof.networkEvaluation;
+  const allowedDecisions = policy.allowedDecisions ?? ["allow", "notify", "routeVia", "requireVpn"];
+  if (!allowedDecisions.includes(evaluation.decision as ConnectorNetworkAllowedDecision)) {
+    reasons.push({
+      code: evaluation.decision === "ask" ? "network_proof_required" : "network_proof_mismatch",
+      message: `Network Control Plane decision ${evaluation.decision} is not sufficient for connector policy ${policy.id}.`,
+    });
+  }
+  if (policy.expectedAdapterId && evaluation.adapterId !== policy.expectedAdapterId) {
+    reasons.push({
+      code: "network_proof_mismatch",
+      message: `Network Control Plane adapter ${evaluation.adapterId} does not match connector policy ${policy.id}.`,
+    });
+  }
+  if (policy.expectedMatchedRuleIds?.length) {
+    const missingRuleIds = policy.expectedMatchedRuleIds.filter((ruleId) => !evaluation.matchedRuleIds.includes(ruleId));
+    if (missingRuleIds.length > 0) {
+      reasons.push({
+        code: "network_proof_mismatch",
+        message: `Network Control Plane evaluation is missing required rule ids for connector policy ${policy.id}: ${missingRuleIds.join(", ")}.`,
+      });
+    }
+  }
   if (
-    networkProof.policyId !== policy.id
-    || networkProof.egressProfileId !== policy.egressProfileId
-    || networkProof.vpnProfileId !== policy.vpnProfileId
-    || networkProof.proxyProfileId !== policy.proxyProfileId
+    policy.networkPolicyProfileId
+    && evaluation.matchedRule
+    && evaluation.matchedRule.networkPolicyProfileId !== policy.networkPolicyProfileId
   ) {
     reasons.push({
       code: "network_proof_mismatch",
-      message: `Network proof does not match connector network policy ${policy.id}.`,
+      message: `Network Control Plane profile ${evaluation.matchedRule.networkPolicyProfileId} does not match connector policy ${policy.id}.`,
     });
   }
-  if (policy.allowedHosts?.length && request.requestedHost && !policy.allowedHosts.includes(request.requestedHost)) {
+  if (request.requestedHost && networkProof.host && request.requestedHost !== networkProof.host) {
     reasons.push({
       code: "host_not_allowed",
-      message: `Host ${request.requestedHost} is not allowed by connector network policy ${policy.id}.`,
+      message: `Network proof host ${networkProof.host} does not match requested host ${request.requestedHost}.`,
     });
   }
 }
