@@ -183,6 +183,23 @@ test("runCli exposes pre-v1 version governance through inspect", async () => {
   assert.match(whyPayload.notes, /Owned version bumps require explicit user approval/);
 });
 
+test("runCli explains discoverability artifacts through inspect why", async () => {
+  const result = await runCliCapture(["inspect", "why", "adr:discoverability-meta-code-routing", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
+  const payload = parseCliJson<{
+    type: string;
+    id: string;
+    canonicalName: string;
+    canonicalSource: string;
+    searchQueries: Array<{ query: string; expectPath: string }>;
+  }>(result.stdout).data;
+  assert.equal(payload.type, "discoverabilityArtifact");
+  assert.equal(payload.id, "discoverability-contract");
+  assert.equal(payload.canonicalName, "adr:discoverability-meta-code-routing");
+  assert.equal(payload.canonicalSource, "docs/adr/0017-discoverability-and-meta-code-routing.md");
+  assert.equal(payload.searchQueries.some((query) => query.query === "discoverability" && query.expectPath === "docs/adr/0017-discoverability-and-meta-code-routing.md"), true);
+});
+
 test("runCli exposes evolution policy through inspect", async () => {
   const evolution = await runCliCapture(["inspect", "evolution", "--json"], process.cwd());
   assert.equal(evolution.code, CLI_EXIT_OK);

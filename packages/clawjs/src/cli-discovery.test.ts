@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
+import { requireMacCareRoutePathPattern, resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { clawProfessionalRecordsOsRegistry } from "@clawjs/core/catalogs";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
@@ -46,6 +47,24 @@ test("runCli returns command-intent metadata for future unknown JSON phrases", a
   assert.equal(payload.meta.commandIntent.execute, false);
   assert.equal(payload.meta.commandIntent.intent.id, "cmd_intent_house_buy");
   assert.equal(payload.meta.commandIntent.intent.reportTarget, "github_discussions_ideas");
+});
+
+test("dense data commands use persistent workspace data routes", () => {
+  const commonSource = fs.readFileSync(new URL("./cli-dense-data-semantic-common.ts", import.meta.url), "utf8");
+  const commandSource = fs.readFileSync(new URL("./cli-dense-data-command.ts", import.meta.url), "utf8");
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.data", "/Users/demo/project"), "/Users/demo/project/.claw/data");
+  assert.match(commonSource, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", root\)/);
+  assert.match(commandSource, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", input\.workspaceRoot, "core\.sqlite"\)/);
+  assert.match(commandSource, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", input\.workspaceRoot\)/);
+  assert.equal(commonSource.includes('path.join(root, ".claw", "data")'), false);
+  assert.equal(commandSource.includes('path.join(input.workspaceRoot, ".claw", "data"'), false);
+});
+
+test("provider secrets app hint uses the Mac Care user applications route", () => {
+  const chatSource = fs.readFileSync(new URL("./chat.ts", import.meta.url), "utf8");
+  assert.equal(requireMacCareRoutePathPattern("mac_care.route.user_applications", { homeDir: "/Users/demo" }), "/Users/demo/Applications");
+  assert.match(chatSource, /requireMacCareRoutePathPattern\("mac_care\.route\.user_applications", \{ homeDir: os\.homedir\(\) \}\)/);
+  assert.equal(chatSource.includes('path.join(os.homedir(), "Applications", "ClawJS Secrets.app")'), false);
 });
 
 test("runCli routes graduated dense-data direct nouns through the shared database", async () => {
@@ -1056,6 +1075,15 @@ test("runCli federates public Clawix and ClawJS discoverability from an overlay 
   const sharedPathPayload = JSON.parse(sharedPathSearch.stdout) as { data: { results: Array<{ repo?: string; path?: string }> } };
   assert.equal(sharedPathPayload.data.results.some((entry) => entry.repo === "clawjs" && entry.path === "docs/shared.md"), true);
   assert.equal(sharedPathPayload.data.results.some((entry) => entry.repo === "clawix" && entry.path === "docs/shared.md"), true);
+
+  const clawixInspect = await runCliCapture(["inspect", "why", "clawix:overlay-sentinel", "--json"], overlayRoot);
+  assert.equal(clawixInspect.code, CLI_EXIT_OK, clawixInspect.stderr || clawixInspect.stdout);
+  const inspectPayload = JSON.parse(clawixInspect.stdout) as { data: { type: string; repo: { repo: string; detectedBy: string }; id: string; canonicalSource: string } };
+  assert.equal(inspectPayload.data.type, "discoverabilityArtifact");
+  assert.equal(inspectPayload.data.repo.repo, "clawix");
+  assert.equal(inspectPayload.data.repo.detectedBy, "nested");
+  assert.equal(inspectPayload.data.id, "clawix-overlay-sentinel");
+  assert.equal(inspectPayload.data.canonicalSource, "docs/shared.md");
 });
 
 test("runCli prints related matches for unknown human commands", async () => {

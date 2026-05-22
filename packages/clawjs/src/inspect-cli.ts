@@ -3,8 +3,8 @@ import os from "os";
 import path from "path";
 
 import Database from "better-sqlite3";
-import { GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteOfflineCommandResult, buildRemoteRouteContractCatalog, buildSyncDriverCatalog, clawEvolutionPolicy, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, remoteSyncRequiredRouteIds, resolveClawPersistentSurfacePath, summarizeGovernanceBindings, syncDriverSchema } from "@clawjs/core";
-import { CLAW_CLI_COMMAND_INTENT_STATUSES, auditClawCapabilityMaturityRegistry, buildClawDebtLedger, buildCustomAppSDKInspectionPayload, buildRemoteDecisionReview, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteSourceQaReviewTemplate, clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, clawPersistentSurfaceRegistry, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCapabilityMaturityEntries, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawProfessionalRecordsGapRegistryEntries, listClawProfessionalRecordsIntentEntries, listClawProfessionalRecordsSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core/catalogs";
+import { GOVERNANCE_CAPABILITIES, GOVERNANCE_ENTITY_KINDS, GOVERNANCE_PRINCIPAL_KINDS, GOVERNANCE_SCOPE_KINDS, buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteOfflineCommandResult, buildRemoteRouteContractCatalog, buildSyncDriverCatalog, clawEvolutionPolicy, clawPreV1VersionGovernancePolicy, connectorExecutionPipeline, createAgentControlPanel, createAgentPrivacyLifecyclePlan, evaluateGovernanceAccess, evaluateGovernanceDelegation, remoteSyncRequiredRouteIds, resolveClawGlobalDataDir, summarizeGovernanceBindings, syncDriverSchema } from "@clawjs/core";
+import { CLAW_CLI_COMMAND_INTENT_STATUSES, auditClawCapabilityMaturityRegistry, buildClawDebtLedger, buildCustomAppSDKInspectionPayload, buildRemoteDecisionReview, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationReport, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteSourceQaReviewTemplate, clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, clawPersistentSurfaceRegistry, detectClawPublicRepositories, findClawPersistentSurfaceNode, getClawCapabilityFiche, listClawCapabilityFiches, listClawCapabilityMaturityEntries, listClawCliAliases, listClawCliCommandIntentRegistry, listClawCliCommands, listClawProfessionalRecordsGapRegistryEntries, listClawProfessionalRecordsIntentEntries, listClawProfessionalRecordsSemanticViewEntries, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, resolveClawCliCommand, searchClawCliRegistry, withSurfaceChildren, type ClawRepositoryRoot, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core/catalogs";
 import type { AgentAuditEvent, ClawPersistentSurfaceNode, ClawPersistentSurfaceRegistry, ClawSurfaceEdge, ClawSurfaceRoute } from "@clawjs/core";
 import type { ClawCapabilityFiche } from "@clawjs/core/catalogs";
 import type { Agent } from "@clawjs/agents";
@@ -65,6 +65,26 @@ interface SurfaceInspectEvidence {
     guards: string[];
     routeIds: string[];
   };
+}
+
+interface DiscoverabilityArtifact {
+  id?: string;
+  kind?: string;
+  steward?: string;
+  canonicalName?: string;
+  canonicalSource?: string;
+  requiredEntrypoints?: string[];
+  discoveryTerms?: string[];
+  searchQueries?: Array<{ query?: string; expectPath?: string }>;
+  inspect?: Array<{ command?: string; expectPath?: string; expectRoute?: string }>;
+  guard?: string;
+  status?: string;
+  reviewDate?: string;
+}
+
+interface ResolvedDiscoverabilityArtifact {
+  repo: Pick<ClawRepositoryRoot, "repo" | "rootDir" | "detectedBy">;
+  artifact: DiscoverabilityArtifact;
 }
 
 interface AgentInspectFiche {
@@ -314,8 +334,18 @@ function isExternalAssignment(entry: unknown): boolean {
   return kind.startsWith("external_") || kind === "support_inbox";
 }
 
+function expandInspectHomePath(value: string, homeDir = os.homedir()): string {
+  if (value === "~") return homeDir;
+  return value.startsWith("~/") ? path.join(homeDir, value.slice(2)) : value;
+}
+
+export function resolveInspectAgentHome(flags: Record<string, string>, env: NodeJS.ProcessEnv = process.env, homeDir = os.homedir()): string {
+  const explicit = flags.home || flags["claw-home"] || env.CLAW_HOME;
+  return explicit ? expandInspectHomePath(explicit, homeDir) : resolveClawGlobalDataDir({ homeDir });
+}
+
 function readAgentAudit(agentId: string, flags: Record<string, string>): unknown[] {
-  const home = flags.home || flags["claw-home"] || process.env.CLAW_HOME || path.join(os.homedir(), resolveClawPersistentSurfacePath("claw.global.root").slice("~/".length));
+  const home = resolveInspectAgentHome(flags);
   const auditPath = path.join(home, "agents", agentId, "audit.log");
   if (!fs.existsSync(auditPath)) return [];
   return fs.readFileSync(auditPath, "utf8")
@@ -369,6 +399,53 @@ function readManifest(manifestPath: string, cwd: string): ClawPersistentSurfaceR
     const message = error instanceof Error ? error.message : String(error);
     throw new InspectCliError("inspect_manifest_error", `Could not read inspect manifest ${manifestPath}: ${message}`, CLI_EXIT_USAGE);
   }
+}
+
+function normalizeDiscoverabilityTarget(value: string): string {
+  return value.trim().replace(/^\.?\//u, "").toLowerCase();
+}
+
+function artifactMatchesTarget(artifact: DiscoverabilityArtifact, target: string): boolean {
+  const normalizedTarget = normalizeDiscoverabilityTarget(target);
+  if (!normalizedTarget) return false;
+  const exactCandidates = [
+    artifact.id,
+    artifact.canonicalName,
+    artifact.canonicalSource,
+    ...(artifact.discoveryTerms ?? []),
+    ...(artifact.searchQueries ?? []).flatMap((query) => [query.query, query.expectPath]),
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+  if (exactCandidates.some((value) => normalizeDiscoverabilityTarget(value) === normalizedTarget)) return true;
+  return (artifact.discoveryTerms ?? []).some((term) => normalizeDiscoverabilityTarget(term).includes(normalizedTarget));
+}
+
+function readDiscoverabilityArtifacts(cwd: string, target: string): ResolvedDiscoverabilityArtifact[] {
+  const repositories = detectClawPublicRepositories(cwd, { includeFallback: true });
+  const matches: ResolvedDiscoverabilityArtifact[] = [];
+  for (const repo of repositories) {
+    const registryPath = path.join(repo.rootDir, "docs/discoverability.registry.json");
+    try {
+      const registry = JSON.parse(fs.readFileSync(registryPath, "utf8")) as { artifacts?: DiscoverabilityArtifact[] };
+      for (const artifact of registry.artifacts ?? []) {
+        if (artifactMatchesTarget(artifact, target)) matches.push({ repo, artifact });
+      }
+    } catch {
+      continue;
+    }
+  }
+  return matches;
+}
+
+function discoverabilityArtifactText(match: ResolvedDiscoverabilityArtifact): string {
+  const artifact = match.artifact;
+  return [
+    `${artifact.id ?? "-"}\t${artifact.kind ?? "-"}\t${artifact.canonicalName ?? "-"}`,
+    `repo\t${match.repo.repo}\t${match.repo.detectedBy}`,
+    `source\t${artifact.canonicalSource ?? "-"}`,
+    `guard\t${artifact.guard ?? "-"}`,
+    `search\t${(artifact.searchQueries ?? []).map((query) => query.query).filter(Boolean).join(", ") || "-"}`,
+    `inspect\t${(artifact.inspect ?? []).map((entry) => entry.command).filter(Boolean).join(", ") || "-"}`,
+  ].join("\n") + "\n";
 }
 
 function defaultCodebaseManifestPaths(cwd: string): string[] {
@@ -1555,6 +1632,21 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
       };
       if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { surfaceId: node.id }));
       else input.context.stdout.write(`${node.id}\t${node.kind}\t${node.source?.file ?? "source-unregistered"}\n${node.notes ?? ""}\n`);
+      return CLI_EXIT_OK;
+    }
+    const artifactMatch = readDiscoverabilityArtifacts(input.context.cwd, target)[0];
+    if (artifactMatch) {
+      const payload = {
+        type: "discoverabilityArtifact",
+        repo: {
+          repo: artifactMatch.repo.repo,
+          rootDir: artifactMatch.repo.rootDir,
+          detectedBy: artifactMatch.repo.detectedBy,
+        },
+        ...artifactMatch.artifact,
+      };
+      if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { artifactId: artifactMatch.artifact.id ?? target, repo: artifactMatch.repo.repo }));
+      else input.context.stdout.write(discoverabilityArtifactText(artifactMatch));
       return CLI_EXIT_OK;
     }
     const related = searchClawCliRegistry(target, { limit: 5 });

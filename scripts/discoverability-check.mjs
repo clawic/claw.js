@@ -34,7 +34,7 @@ const kindOrder = new Map([
 ]);
 
 function parseArgs(argv) {
-  const args = { root: scriptRoot, profile: null, command: "check", write: false, cli: false };
+  const args = { root: scriptRoot, profile: null, command: "check", write: false, cli: false, json: false, changedFiles: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--root") args.root = path.resolve(argv[++index]);
@@ -43,12 +43,23 @@ function parseArgs(argv) {
     else if (arg === "--check") args.write = false;
     else if (arg === "--no-cli") args.cli = false;
     else if (arg === "--cli") args.cli = true;
+    else if (arg === "--json") args.json = true;
+    else if (arg === "--changed-file") args.changedFiles.push(argv[++index]);
+    else if (arg === "--changed-files") args.changedFiles.push(...readChangedFilesArg(argv[++index]));
     else if (arg === "--self-test") args.command = "self-test";
     else if (arg === "--golden-queries") args.command = "golden-queries";
-    else if (["check", "audit", "generate", "golden-queries"].includes(arg)) args.command = arg;
+    else if (["check", "audit", "generate", "golden-queries", "closure"].includes(arg)) args.command = arg;
   }
   args.profile ??= fs.existsSync(path.join(args.root, "macos")) ? "clawix" : "claw";
   return args;
+}
+
+function readChangedFilesArg(value) {
+  if (!value) return [];
+  if (fs.existsSync(value) && fs.statSync(value).isFile()) {
+    return fs.readFileSync(value, "utf8").split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+  }
+  return value.split(",").map((entry) => entry.trim()).filter(Boolean);
 }
 
 const options = parseArgs(process.argv.slice(2));
@@ -607,6 +618,225 @@ function runClaw(args, cwd, env, attempts = 3) {
   return last;
 }
 
+function normalizeChangedPath(filePath) {
+  const normalized = filePath.trim().replace(/^\.?\//u, "").split(path.sep).join("/");
+  if (!path.isAbsolute(filePath)) return normalized;
+  return path.relative(rootDir, filePath).split(path.sep).join("/");
+}
+
+function defaultChangedFiles() {
+  const status = spawnSync("git", ["-C", rootDir, "status", "--porcelain=v1"], { encoding: "utf8" });
+  if (status.status !== 0) return [];
+  return status.stdout.split(/\r?\n/u)
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
+    .map((line) => line.slice(3).split(" -> ").pop())
+    .filter(Boolean)
+    .map(normalizeChangedPath);
+}
+
+function isClosureGatedPath(filePath) {
+  return [
+    /^docs\/adr\/.+\.md$/u,
+    /^CONSTITUTION\.md$/u,
+    /^AGENTS\.md$/u,
+    /^CLAUDE\.md$/u,
+    /^docs\/decision-map\.md$/u,
+    /^docs\/discoverability(?:[./-].*)?$/u,
+    /^skills\/[^/]+\/SKILL\.md$/u,
+    /^scripts\/discoverability-check\.mjs$/u,
+    /^packages\/clawjs\/src\/inspect-cli\.ts$/u,
+    /^docs\/.*(?:surface|route|storage|host|permission|grant|approval|audit|clawix|clawjs).*$/iu,
+    /^packages\/clawjs-core\/src\/surface-registry\.ts$/u,
+  ].some((pattern) => pattern.test(filePath));
+}
+
+function artifactPaths(artifact) {
+  return new Set([
+    artifact.canonicalSource,
+    ...(artifact.searchQueries ?? []).map((query) => query.expectPath),
+  ].filter(Boolean).map(normalizeChangedPath));
+}
+
+function isCoreDiscoveryRouterPath(filePath) {
+  return [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CONSTITUTION.md",
+    "docs/decision-map.md",
+    "docs/discoverability.md",
+    "docs/discoverability.registry.json",
+    "docs/discoverability-baseline.json",
+    "docs/discoverability-golden-queries.json",
+    "packages/clawjs/src/inspect-cli.ts",
+  ].includes(filePath);
+}
+
+function findClosureArtifacts(registry, changedFile) {
+  const direct = (registry.artifacts ?? []).filter((artifact) => artifactPaths(artifact).has(changedFile));
+  if (direct.length > 0) return direct;
+  if (isCoreDiscoveryRouterPath(changedFile)) {
+    return (registry.artifacts ?? []).filter((artifact) => artifact.canonicalName === "adr:discoverability-meta-code-routing");
+  }
+  return [];
+}
+
+function uniqueArtifacts(artifacts) {
+  const seen = new Set();
+  const unique = [];
+  for (const artifact of artifacts) {
+    const key = artifact.id ?? artifact.canonicalSource;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(artifact);
+  }
+  return unique;
+}
+
+function closureInspectTarget(artifact) {
+  return artifact.canonicalName ?? artifact.id ?? artifact.canonicalSource;
+}
+
+function closureCommandString(args) {
+  return `claw ${args.map((arg) => (/\s/u.test(arg) ? JSON.stringify(arg) : arg)).join(" ")}`;
+}
+
+function runClosureClaw(args, env) {
+  return runClaw(args, rootDir, env);
+}
+
+function addClosureCommandResult(payload, artifact, args, result, expectedText) {
+  const command = closureCommandString(args);
+  const output = `${result?.stdout ?? ""}\n${result?.stderr ?? ""}`;
+  payload.commandsRun.push({
+    artifactId: artifact?.id ?? null,
+    command,
+    status: result?.status ?? null,
+  });
+  if (!result || result.status !== 0) {
+    payload.failedCommands.push({
+      artifactId: artifact?.id ?? null,
+      command,
+      status: result?.status ?? null,
+      error: output.trim() || "command did not run",
+    });
+    return;
+  }
+  let flattened = "";
+  try {
+    flattened = flattenJson(JSON.parse(result.stdout));
+  } catch (error) {
+    payload.failedCommands.push({
+      artifactId: artifact?.id ?? null,
+      command,
+      status: result.status,
+      error: `invalid JSON output: ${error instanceof Error ? error.message : String(error)}`,
+    });
+    return;
+  }
+  if (expectedText && !flattened.includes(expectedText)) {
+    payload.failedCommands.push({
+      artifactId: artifact?.id ?? null,
+      command,
+      status: result.status,
+      error: `output did not include ${expectedText}`,
+    });
+  }
+}
+
+function prepareClosureSearchIndex(payload, runner, env) {
+  addClosureCommandResult(
+    payload,
+    { id: "closure-search-index" },
+    ["search", "sources", "enable", "local.files", "--source-set", "full", "--json"],
+    runner(["search", "sources", "enable", "local.files", "--source-set", "full", "--json"], env),
+    "local.files",
+  );
+  for (const source of ["docs.pages", "surfaces.registry", "surfaces.routes"]) {
+    addClosureCommandResult(
+      payload,
+      { id: "closure-search-index" },
+      ["search", "rebuild", "--source", source, "--json"],
+      runner(["search", "rebuild", "--source", source, "--json"], env),
+      source,
+    );
+  }
+  addClosureCommandResult(
+    payload,
+    { id: "closure-search-index" },
+    ["search", "rebuild", "--source", "local.files", "--source-set", "full", "--file-root", rootDir, "--file-limit", "2000", "--json"],
+    runner(["search", "rebuild", "--source", "local.files", "--source-set", "full", "--file-root", rootDir, "--file-limit", "2000", "--json"], env),
+    "local.files",
+  );
+}
+
+function buildClosureGate(registry, changedFiles, runner = runClosureClaw) {
+  const normalizedChangedFiles = [...new Set(changedFiles.map(normalizeChangedPath).filter(Boolean))];
+  const relevantFiles = normalizedChangedFiles.filter(isClosureGatedPath);
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-discoverability-closure-"));
+  const env = { ...process.env, CLAW_DATA_DIR: dataDir, CLAW_HOME: dataDir };
+  const payload = {
+    schemaVersion: 1,
+    status: "ok",
+    changedFiles: normalizedChangedFiles,
+    relevantFiles,
+    commandsRun: [],
+    discoveredArtifacts: [],
+    missingDiscovery: [],
+    failedCommands: [],
+  };
+  const artifacts = [];
+  for (const changedFile of relevantFiles) {
+    const matches = findClosureArtifacts(registry, changedFile);
+    if (matches.length === 0) {
+      payload.missingDiscovery.push({ path: changedFile, reason: "no discoverability registry artifact covers this closure-gated path" });
+    }
+    artifacts.push(...matches);
+  }
+  if (artifacts.length > 0) prepareClosureSearchIndex(payload, runner, env);
+  for (const artifact of uniqueArtifacts(artifacts)) {
+    payload.discoveredArtifacts.push({
+      id: artifact.id ?? null,
+      canonicalName: artifact.canonicalName ?? null,
+      canonicalSource: artifact.canonicalSource ?? null,
+      kind: artifact.kind ?? null,
+    });
+    if (!Array.isArray(artifact.searchQueries) || artifact.searchQueries.length === 0) {
+      payload.missingDiscovery.push({ path: artifact.canonicalSource ?? artifact.id ?? "<unknown>", reason: "artifact has no searchQueries for closure evidence" });
+    }
+    for (const query of artifact.searchQueries ?? []) {
+      if (!query.query || !query.expectPath) {
+        payload.missingDiscovery.push({ path: artifact.canonicalSource ?? artifact.id ?? "<unknown>", reason: "search query is missing query or expectPath" });
+        continue;
+      }
+      const searchArgs = ["search", "query", query.query, "--source-set", "full", "--file-root", rootDir, "--limit", "20", "--json"];
+      addClosureCommandResult(payload, artifact, searchArgs, runner(searchArgs, env), query.expectPath);
+    }
+    const inspectTarget = closureInspectTarget(artifact);
+    if (inspectTarget) {
+      addClosureCommandResult(payload, artifact, ["inspect", "why", inspectTarget, "--json"], runner(["inspect", "why", inspectTarget, "--json"], env), artifact.canonicalSource ?? artifact.id);
+    } else {
+      payload.missingDiscovery.push({ path: artifact.canonicalSource ?? "<unknown>", reason: "artifact has no inspect target" });
+    }
+    for (const inspect of artifact.inspect ?? []) {
+      if (!inspect.command) {
+        payload.missingDiscovery.push({ path: artifact.canonicalSource ?? artifact.id ?? "<unknown>", reason: "inspect entry is missing command" });
+        continue;
+      }
+      const expected = inspect.expectPath ?? inspect.expectRoute;
+      addClosureCommandResult(payload, artifact, commandToArgs(inspect.command), runner(commandToArgs(inspect.command), env), expected);
+    }
+  }
+  if (payload.missingDiscovery.length > 0 || payload.failedCommands.length > 0) payload.status = "blocked";
+  return payload;
+}
+
+function runClosure() {
+  const changedFiles = options.changedFiles.length > 0 ? options.changedFiles : defaultChangedFiles();
+  const registry = fs.existsSync(registryPath) ? readJson(registryPath) : { artifacts: [] };
+  return buildClosureGate(registry, changedFiles);
+}
+
 function validateCli(registry, errors) {
   if (!options.cli) return;
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-discoverability-"));
@@ -772,6 +1002,35 @@ function runSelfTest() {
     }],
   }, legacyErrors);
   assert.equal(legacyErrors.some((error) => error.includes("legacy stewardship field")), true);
+
+  const closureRegistry = {
+    artifacts: [{
+      id: "discoverability-contract",
+      kind: "adr",
+      canonicalName: "adr:discoverability-meta-code-routing",
+      canonicalSource: "docs/adr/0017-discoverability-and-meta-code-routing.md",
+      searchQueries: [{ query: "discoverability", expectPath: "docs/adr/0017-discoverability-and-meta-code-routing.md" }],
+      inspect: [{ command: "claw inspect why search --json", expectPath: "docs/adr/0017-discoverability-and-meta-code-routing.md" }],
+    }],
+  };
+  const okRunner = (args) => ({
+    status: 0,
+    stdout: JSON.stringify({ ok: true, data: { args, path: "docs/adr/0017-discoverability-and-meta-code-routing.md", id: "discoverability-contract" } }),
+    stderr: "",
+  });
+  const okClosure = buildClosureGate(closureRegistry, ["docs/adr/0017-discoverability-and-meta-code-routing.md"], okRunner);
+  assert.equal(okClosure.status, "ok");
+  assert.equal(okClosure.commandsRun.length, 8);
+  const missingQuery = buildClosureGate({ artifacts: [{ ...closureRegistry.artifacts[0], searchQueries: [] }] }, ["docs/adr/0017-discoverability-and-meta-code-routing.md"], okRunner);
+  assert.equal(missingQuery.status, "blocked");
+  assert.equal(missingQuery.missingDiscovery.length > 0 || missingQuery.failedCommands.length > 0, true);
+  const missingInspect = buildClosureGate(closureRegistry, ["docs/adr/0017-discoverability-and-meta-code-routing.md"], () => ({
+    status: 64,
+    stdout: JSON.stringify({ ok: false, error: { code: "inspect_not_found" } }),
+    stderr: "",
+  }));
+  assert.equal(missingInspect.status, "blocked");
+  assert.equal(missingInspect.failedCommands.some((entry) => entry.command.includes("inspect why")), true);
 }
 
 if (options.command === "self-test") {
@@ -811,6 +1070,20 @@ if (options.command === "golden-queries") {
   }
   console.log("discoverability golden query check passed");
   process.exit(0);
+}
+
+if (options.command === "closure") {
+  const payload = runClosure();
+  if (options.json) {
+    console.log(JSON.stringify(payload, null, 2));
+  } else if (payload.status === "ok") {
+    console.log(`discoverability closure gate passed (${payload.commandsRun.length} command(s))`);
+  } else {
+    console.error(`discoverability closure gate ${payload.status}:`);
+    for (const missing of payload.missingDiscovery) console.error(`- missing discovery for ${missing.path}: ${missing.reason}`);
+    for (const failed of payload.failedCommands) console.error(`- command failed for ${failed.artifactId ?? "unknown"}: ${failed.command} (${failed.error})`);
+  }
+  process.exit(payload.status === "ok" ? 0 : 1);
 }
 
 const errors = runCheck();

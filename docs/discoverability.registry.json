@@ -4676,6 +4676,61 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-scale-lab",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/scale-lab.ts",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md"
+      ],
+      "discoveryTerms": [
+        "scale-lab",
+        "Scale Lab",
+        "ClawJS Scale Lab",
+        "performance scale harness"
+      ],
+      "searchQueries": [
+        {
+          "query": "ClawJS Scale Lab",
+          "expectPath": "scripts/scale-lab.ts"
+        }
+      ],
+      "guard": "scripts/scale-lab.ts",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-scale-lab-test",
+      "kind": "test-harness",
+      "steward": "claw",
+      "canonicalSource": "scripts/scale-lab.test.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md"
+      ],
+      "discoveryTerms": [
+        "scale-lab.test",
+        "Scale Lab.Test",
+        "ClawJS Scale Lab test"
+      ],
+      "searchQueries": [
+        {
+          "query": "scale-lab.test",
+          "expectPath": "scripts/scale-lab.test.mjs"
+        }
+      ],
+      "guard": "scripts/scale-lab.test.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-integration-package-live-harness",
       "kind": "test-harness",
       "steward": "claw",
@@ -5809,6 +5864,34 @@
       "status": "enforced",
       "reviewDate": "2026-05-20",
       "steward": "claw"
+    },
+    {
+      "id": "approval-grant-authority-matrix",
+      "kind": "docs-page",
+      "canonicalSource": "docs/governance/approval-grant-authority-matrix.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/security-threat-model.md"
+      ],
+      "discoveryTerms": [
+        "approval grant authority matrix",
+        "approvals grants authority",
+        "grant domain owner",
+        "fail-closed authority matrix"
+      ],
+      "searchQueries": [
+        {
+          "query": "approval grant authority matrix",
+          "expectPath": "docs/governance/approval-grant-authority-matrix.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "approval-grant-authority-matrix"
     }
   ]
 }

@@ -5,9 +5,11 @@ import crypto from "crypto";
 import Database from "better-sqlite3";
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredPrivateApiRouteTemplate, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import { clawEventsPath, remoteSyncRequiredRouteIds } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { resolveInspectAgentHome } from "./inspect-cli.ts";
 import { ensureV1MainSchema } from "./v1-data-core.ts";
 import { withPatchedEnv } from "./index-test-utils.ts";
 import {
@@ -25,6 +27,13 @@ import {
 } from "./inspect-cli-test-support.ts";
 
 const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
+
+test("inspect agent audit resolves its default home through the shared storage helper", () => {
+  assert.equal(resolveInspectAgentHome({}, {}, "/Users/demo"), "/Users/demo/.claw");
+  assert.equal(resolveInspectAgentHome({ "claw-home": "~/inspect-claw" }, {}, "/Users/demo"), "/Users/demo/inspect-claw");
+  assert.equal(resolveInspectAgentHome({ home: "~/inspect-home" }, { CLAW_HOME: "~/env-claw" }, "/Users/demo"), "/Users/demo/inspect-home");
+  assert.equal(resolveInspectAgentHome({}, { CLAW_HOME: "~/env-claw" }, "/Users/demo"), "/Users/demo/env-claw");
+});
 
 function assertCompleteResolvedSurfaces(
   capabilities: Array<{ id: string; surfaces: Array<{ surface: string; status: string; ref?: string }> }>,
@@ -86,7 +95,7 @@ test("runCli renders an Agents V1 inspect fiche with grants, routes, memory, and
     const upsert = await runCliCapture(["agents", "upsert", "agent.support", "--name", "Support", "--role", "Support agent", "--secret-ref", "vault://agents/support", "--json"], process.cwd());
     assert.equal(upsert.code, CLI_EXIT_OK);
 
-    const sqlite = new Database(path.join(dataRoot, "core.sqlite"));
+    const sqlite = new Database(registeredDatabasePath(dataRoot, "claw.database.core"));
     try {
       ensureV1MainSchema(sqlite);
       const now = "2026-05-17T10:00:00.000Z";
@@ -160,7 +169,7 @@ test("runCli filters stable contract surface categories", async () => {
 
   const privateApis = await runCliCapture(["inspect", "private-apis", "--json"], process.cwd());
   assert.equal(privateApis.code, CLI_EXIT_OK);
-  assert.equal(parseCliJson<Array<{ id: string; kind: string; route?: string }>>(privateApis.stdout).data.some((node) => node.kind === "privateApiRoute" && node.route === "/api/apps/{appId}/dashboard"), true);
+  assert.equal(parseCliJson<Array<{ id: string; kind: string; route?: string }>>(privateApis.stdout).data.some((node) => node.kind === "privateApiRoute" && node.route === registeredPrivateApiRouteTemplate("claw.privateApi.appsAppIdDashboard")), true);
 
   const env = await runCliCapture(["inspect", "env", "--json"], process.cwd());
   assert.equal(env.code, CLI_EXIT_OK);

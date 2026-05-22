@@ -25,8 +25,9 @@ surface-route entries, UI governance artifacts, and durable instruction changes
 must be registered in `docs/discoverability.registry.json`.
 
 The registry records the artifact id, kind, owner, canonical source, required
-entrypoints, optional semantic canonical name, discovery terms, required `claw search` queries, optional
-`claw inspect` route, validating guard, status, and review date.
+entrypoints, optional semantic canonical name, discovery terms, required
+`claw search` queries, optional `claw inspect` route, closure inspection
+commands, validating guard, status, and review date.
 ADR numbers are repo-local; `adr:*` canonical names are cross-repository
 semantic identifiers for shared decisions.
 
@@ -65,14 +66,19 @@ Discoverability records and generated docs add static metadata, not runtime work
   discovery routes. When invoked from a private Clawix overlay root that
   contains `clawix/` and has a sibling `clawjs` checkout, public CLI
   discovery federates only those public repository roots and excludes private
-  overlay artifacts.
+  overlay artifacts. `claw inspect why <artifact>` resolves registered
+  discoverability artifacts by id, canonical name, canonical source, and
+  search terms.
 - **Persistence**: `docs/discoverability.registry.json` stores enforced
   routes; `docs/discoverability-baseline.json` stores expiring inherited debt.
 - **Gaps**: existing meta-code not yet routed is `required` debt in the
   baseline until reviewed or promoted into the registry.
 - **Validation**: `npm run test:docs` runs the discoverability guard and its
   self-test; CLI tests prove required discovery queries return the expected
-  ADRs, docs, or skills.
+  ADRs, docs, or skills. Closure-gated changes additionally run
+  `scripts/discoverability-check.mjs closure --changed-file <path> --json`,
+  which emits stable JSON with `status`, `commandsRun`,
+  `discoveredArtifacts`, `missingDiscovery`, and `failedCommands`.
 
 ## Discovery Route
 
@@ -86,14 +92,22 @@ Discoverability records and generated docs add static metadata, not runtime work
 - **CLI**: `claw search discoverability --json` and
   `claw search "meta-code routing" --json` must return this ADR or its
   registered docs from direct repo roots and from a composite Clawix overlay
-  cwd. `claw inspect why search --json` exposes the CLI discovery surface that
-  backs the query.
+  cwd. `claw inspect why adr:discoverability-meta-code-routing --json` must
+  resolve this registered artifact, and `claw inspect why search --json`
+  exposes the CLI discovery surface that backs the query.
 
 ## Consequences
 
 New meta-code additions have a small up-front cost: the author must decide how
 future agents will find the artifact. In exchange, discovery failures become
 test failures instead of relying on memory or long instruction chains.
+
+Changes to canon, routes, storage, permissions, ADRs, skills, or Clawix/ClawJS
+integration cannot close as complete without evidence from a real
+`claw search ... --json` command and a real `claw inspect ... --json` command
+that discover the affected artifact or surface. If `claw` cannot run, the
+artifact is not registered, or the inspection output does not identify the
+expected path, id, or route, the closure is `PARTIAL/BLOCKED` rather than OK.
 
 The registry is intentionally compact. It does not replace ADRs, docs, skills,
 or route graphs; it proves that the path to those sources is short enough to
