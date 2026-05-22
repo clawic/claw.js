@@ -5,7 +5,6 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 
-import { registeredDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, withPatchedEnv } from "./index-test-utils.ts";
 
@@ -215,7 +214,7 @@ test("mac-care scan persists read-only wave output only when requested", async (
     assert.ok(showData.candidates.every((candidate) => candidate.action === "review" && candidate.selection === "unselected"));
     assert.deepEqual(showData.safety.destructiveActions, []);
 
-    const sqlite = new Database(registeredDatabasePath(dataRoot, "claw.database.macCare"), { readonly: true });
+    const sqlite = new Database(path.join(dataRoot, "mac_care.sqlite"), { readonly: true });
     try {
       assert.equal((sqlite.prepare("SELECT COUNT(*) AS count FROM mac_care_scans WHERE id = ?").get(data.scanId) as { count: number }).count, 1);
       assert.equal((sqlite.prepare("SELECT COUNT(*) AS count FROM mac_care_candidates WHERE scan_id = ?").get(data.scanId) as { count: number }).count, data.summary.totalCandidates);

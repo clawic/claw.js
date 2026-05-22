@@ -116,6 +116,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runMacCareCli({ argv, positionals, flags, context, wantsJson, binName });
   }
 
+  if (group === "evolution") {
+    const { runEvolutionCli } = await import("./cli-evolution-command.ts");
+    return await runEvolutionCli({ positionals, flags, context, wantsJson, binName });
+  }
+
   const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
   if (v1DataExit !== null) return v1DataExit;
 

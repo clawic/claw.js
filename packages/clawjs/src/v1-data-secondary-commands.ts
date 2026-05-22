@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -31,7 +30,7 @@ import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
 
 export function runMcpCommand(input: V1DataCliInput): number {
   const command = input.positionals[1];
-  const configPath = input.flags.config || resolveCodexConfigPath(os.homedir());
+  const configPath = input.flags.config || resolveCodexConfigPath(input.homeDir);
   if (command === "config-path") {
     const scope = input.flags.scope || input.positionals[2] || "user";
     const resolved = scope === "project"

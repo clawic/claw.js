@@ -60,6 +60,31 @@ async function hasPackage(packageName) {
   }
 }
 
+function isMissingImport(error, specifier) {
+  const code = error?.code;
+  if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") return false;
+  return String(error?.message ?? "").includes(specifier);
+}
+
+async function importCoreCompactCatalogs() {
+  try {
+    return await import("@clawjs/core/compact-catalogs");
+  } catch (error) {
+    if (!isMissingImport(error, "@clawjs/core/compact-catalogs")) throw error;
+    return import(new URL("../../clawjs-core/src/compact-catalogs.ts", import.meta.url));
+  }
+}
+
+async function importCliRouter() {
+  const distEntry = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/index.js");
+  try {
+    return await import(distEntry);
+  } catch (error) {
+    if (!isMissingImport(error, distEntry)) throw error;
+    return import(new URL("../src/index.ts", import.meta.url));
+  }
+}
+
 function missingPack(canonicalCommand, moduleId, optionalPack) {
   const message = `This command needs optional pack ${optionalPack}. Review it with \`claw modules install ${moduleId}\` and install the pack explicitly before using this capability.`;
   if (wantsJson()) writeJsonError(canonicalCommand, "optional_pack_missing", message, { requiredModule: moduleId, optionalPack });
@@ -199,7 +224,7 @@ if (first === "catalog") {
   process.exit(await runCatalogCli(args));
 }
 if (first && !DENSE_GROUP_MODULES.has(first) && first !== "domains" && first !== "memory" && first !== "user") {
-  const { isStableClawCliCommandName, resolveBuiltinCollectionAlias } = await import("@clawjs/core/compact-catalogs");
+  const { isStableClawCliCommandName, resolveBuiltinCollectionAlias } = await importCoreCompactCatalogs();
   if (!isStableClawCliCommandName(first)) {
   const canonical = resolveBuiltinCollectionAlias(first);
   if (canonical) {
@@ -277,12 +302,11 @@ if (first === "open" && args[1] === "sessions") {
 }
 
 // Fall back to the existing Claw CLI for everything else.
-const distEntry = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/index.js");
 let runCli;
 try {
-  ({ runCli } = await import(distEntry));
+  ({ runCli } = await importCliRouter());
 } catch (err) {
-  console.error("[claw] CLI dist not built:", err?.message ?? err);
+  console.error("[claw] CLI router not available:", err?.message ?? err);
   process.exit(1);
 }
 

@@ -17,7 +17,6 @@ import fs from "node:fs";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { buildCommandHelp } from "./cli-surface.ts";
 import { buildMacCareAppUpdateApprovalPackage, buildMacCareAppUpdateHandoffReport, buildMacCareCloudProviderApprovalPackage, buildMacCareCloudProviderHandoffReport, buildMacCareFinalizerFixtureScan, buildMacCareProtectionApprovalPackage, buildMacCareProtectionEngineReadiness, getPersistedMacCareScan, listPersistedMacCareScans, persistMacCareScanReport, runMacCareProtectionFixtureScan, runMacCareReadOnlyScanner } from "./cli-mac-care-scanner.ts";
 
 const MAC_CARE_SIDECAR_SURFACE_ID = "claw.database.macCare";
@@ -119,10 +118,10 @@ export async function runMacCareCli(input: MacCareCliInput): Promise<number> {
 }
 
 function writeMacCareHelp(input: MacCareCliInput): number {
-  const registryHelp = buildCommandHelp(input.binName, "mac-care");
   const text = [
-    registryHelp ?? ("Usage: " + input.binName + " mac-care report --json"),
+    `Usage: ${input.binName} mac-care report --json`,
     "",
+    "Read-only Mac Care foundation report.",
     "Commands:",
     "  mac-care report --json  Print atlas, sidecar, empty report, and safety policy.",
     "  mac-care atlas --json   Print the central Mac route atlas.",
@@ -143,14 +142,13 @@ function writeMacCareHelp(input: MacCareCliInput): number {
     "  mac-care protection fixture-scan --fixture-dir <path> --json  Run a hermetic fixture-only protection scan.",
   ].join("\n");
   if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "mac-care", { usage: text }, { subcommand: "help" });
-  else input.context.stdout.write(text + "\n");
+  else input.context.stdout.write(`${text}\n`);
   return CLI_EXIT_OK;
 }
 
 function macCareSidecarDescriptor(): Record<string, string> {
   const surface = findClawPersistentSurfaceNode(MAC_CARE_SIDECAR_SURFACE_ID);
   if (!surface) throw new Error(`Mac Care sidecar surface is not registered: ${MAC_CARE_SIDECAR_SURFACE_ID}`);
-  if (!surface.path) throw new Error(`Mac Care sidecar surface path is not registered.`);
   return {
     filename: MAC_CARE_SIDECAR_FILENAME,
     surfaceId: MAC_CARE_SIDECAR_SURFACE_ID,
