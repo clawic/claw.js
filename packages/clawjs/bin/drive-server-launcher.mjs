@@ -8,7 +8,7 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -26,15 +26,14 @@ function findServerEntry() {
   return null;
 }
 
-function expandHome(value) {
-  return value?.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
-}
-
 function defaultClawjsDataRoot(flags) {
   const explicit = flags["data-dir"] ?? process.env.CLAW_DRIVE_DATA_DIR ?? process.env.CLAW_DATA_DIR;
-  if (explicit) return path.resolve(expandHome(explicit));
-  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data");
-  return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
+  if (explicit) return path.resolve(resolveClawGlobalDataStorageDir({ homeDir: os.homedir(), dataDir: explicit }));
+  const clawHome = process.env.CLAW_HOME;
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(clawHome ? { clawHome } : {}),
+  });
 }
 
 export async function runOpenDrive(args) {

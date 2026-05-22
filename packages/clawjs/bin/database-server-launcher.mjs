@@ -9,8 +9,9 @@
 
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -80,9 +81,11 @@ export async function runOpenDatabase(args) {
   const port = flags.port ? Number(flags.port) : Number(process.env.CLAW_DATABASE_PORT ?? 24102);
   const host = flags.host ?? flags.bind ?? process.env.CLAW_DATABASE_HOST ?? "127.0.0.1";
   const workspace = flags.workspace ?? process.env.CLAW_WORKSPACE ?? process.cwd();
-  const defaultDataDir = process.env.CLAW_HOME
-    ? path.join(process.env.CLAW_HOME, "data")
-    : resolveClawPersistentSurfacePath("claw.global.data");
+  const clawHome = process.env.CLAW_HOME;
+  const defaultDataDir = resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(clawHome ? { clawHome } : {}),
+  });
   const dataDir = flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? defaultDataDir;
   const filesDir = flags["files-dir"] ?? path.join(dataDir, "files");
   const dbPath = flags["db-path"] ?? process.env.CLAW_DB_PATH ?? path.join(dataDir, "core.sqlite");
