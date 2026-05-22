@@ -3,8 +3,31 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+
+test("media generation Search event paths use persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./cli-media-generation-command.ts", import.meta.url), "utf8");
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.data", "/Users/demo/project"), "/Users/demo/project/.claw/data");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", workspaceRoot\)/);
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", workspaceRoot, "collections", "media"\)/);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "data")'), false);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "data", "collections", "media")'), false);
+});
+
+test("generations Search source paths use persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./cli-search-generations-source.ts", import.meta.url), "utf8");
+  assert.equal(
+    resolveClawPersistentSurfacePath("claw.workspace.data", "/Users/demo/project", "collections", "generations"),
+    "/Users/demo/project/.claw/data/collections/generations",
+  );
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", workspaceRoot, "assets", outputRelativePath\)/);
+  assert.equal(source.includes('resolveClawPersistentSurfacePath("claw.workspace.data", root, "collections", collection, `${id}.json`)'), true);
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", root, "collections", collection\)/);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "data", "assets", outputRelativePath)'), false);
+  assert.equal(source.includes('path.join(root, ".claw", "data", "collections", collection'), false);
+});
 
 test("search rebuild indexes generations.artifacts from workspace generation records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-generations-"));

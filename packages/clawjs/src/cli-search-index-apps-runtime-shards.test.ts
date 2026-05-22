@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -118,7 +119,7 @@ test("search shards lists physical shard catalog state", async () => {
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
     fs.mkdirSync(dataRoot, { recursive: true });
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       store.registerSource(createFrameworkSearchSourceManifest({
         id: "images.derived",
@@ -186,7 +187,7 @@ test("search rebuild indexes runtime.events from runtime and operational sidecar
   }, async () => {
     fs.mkdirSync(dataRoot, { recursive: true });
     const now = new Date().toISOString();
-    const runtimeDb = new Database(path.join(dataRoot, "runtime.sqlite"));
+    const runtimeDb = new Database(registeredDatabasePath(dataRoot, "claw.database.runtime"));
     try {
       runtimeDb.exec(`
         CREATE TABLE runtime_jobs (
@@ -222,7 +223,7 @@ test("search rebuild indexes runtime.events from runtime and operational sidecar
     } finally {
       runtimeDb.close();
     }
-    const monitorDb = new Database(path.join(dataRoot, "monitor.sqlite"));
+    const monitorDb = new Database(registeredDatabasePath(dataRoot, "claw.database.monitor"));
     try {
       monitorDb.exec(`
         CREATE TABLE operational_events (

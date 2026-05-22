@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
+import { isMacCareFilesystemNoiseDirectoryName, resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { clawCliCommandRegistry, listClawCliAliases } from "@clawjs/core/catalogs";
 import {
   DEFAULT_SEARCH_BUDGETS,
@@ -719,9 +720,16 @@ export default function runDefaultSearchMcpServer(opts: SearchMcpServerOptions =
 function resolveSearchDbPath(opts: SearchMcpServerOptions): string {
   if (opts.dbPath) return path.resolve(opts.dbPath);
   if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
-  const dataDir = opts.dataDir ?? process.env.CLAW_DATA_DIR ?? path.join(os.homedir(), ".claw", "data");
+  const dataDir = opts.dataDir ?? process.env.CLAW_DATA_DIR ?? resolveGlobalClawDataDir();
   fs.mkdirSync(dataDir, { recursive: true });
   return path.join(dataDir, "search.sqlite");
+}
+
+function resolveGlobalClawDataDir(): string {
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
 }
 
 function searchQueryFromParams(params: Record<string, unknown>): SearchQueryInput {
@@ -1377,7 +1385,8 @@ function changedSourceAcceptsExtension(source: string, extension: string): boole
 }
 
 function isIgnoredChangedSourceDirectory(name: string): boolean {
-  return [".git", ".hg", ".svn", ".codex", ".claw", ".next", ".nuxt", ".turbo", ".cache", ".dart_tool", ".build", "build", "coverage", "dist", "DerivedData", "node_modules", "target", "vendor", ".Spotlight-V100", ".TemporaryItems", ".Trashes"].includes(name);
+  return [".git", ".hg", ".svn", ".codex", ".claw", ".next", ".nuxt", ".turbo", ".cache", ".dart_tool", ".build", "build", "coverage", "dist", "node_modules", "target", "vendor"].includes(name)
+    || isMacCareFilesystemNoiseDirectoryName(name);
 }
 
 function boundedIntegerParam(value: unknown, fallback: number, min: number, max: number): number {

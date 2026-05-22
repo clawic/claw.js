@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isMacCareFilesystemNoiseDirectoryName } from "@clawjs/core";
 import type { SearchIndexJob, SearchStore } from "@clawjs/search";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -147,5 +148,5 @@ function searchChangedSourceFileInfo(source: string, extension: string, size: nu
 }
 
 function isIgnoredSearchChangedDirectory(name: string): boolean {
-  return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
+  return isIgnoredCodeSearchDirectory(name) || isMacCareFilesystemNoiseDirectoryName(name);
 }

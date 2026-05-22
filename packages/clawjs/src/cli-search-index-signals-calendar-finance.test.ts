@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -406,7 +407,7 @@ test("search rebuild indexes finance.records with redacted previews", async () =
     assert.equal(rebuildPayload.data.sources.includes("finance.records"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("finance.records"), false);
     assert.equal(rebuildPayload.data.indexedBySource["finance.records"], 1);
-    const searchSqlite = new Database(path.join(dataRoot, "search.sqlite"), { readonly: true, fileMustExist: true });
+    const searchSqlite = new Database(registeredSearchDatabasePath(dataRoot), { readonly: true, fileMustExist: true });
     try {
       const stored = searchSqlite.prepare("SELECT body FROM search_documents WHERE source = 'finance.records' AND resource_id = ?").get(`main:transactions:${createdPayload.data.id}`) as { body: string };
       assert.equal(stored.body.includes("finance-metadata-fragment-needle"), true, stored.body);

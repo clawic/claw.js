@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -131,7 +132,7 @@ test("search indexes scoped code.symbols without broadening other domains", asyn
     assert.equal(result?.fragments?.some((fragment) => fragment.title === "type SearchNeedleController"), true);
     assert.ok(result?.explanation?.matchedBy?.length);
     assert.equal(queryPayload.data.facets?.some((facet) => facet.id === "language"), true);
-    const db = new Database(path.join(dataRoot, "search.sqlite"), { readonly: true });
+    const db = new Database(registeredSearchDatabasePath(dataRoot), { readonly: true });
     try {
       const fragmentTitles = (db.prepare("SELECT title FROM search_fragments WHERE source = ? ORDER BY sort_order ASC").all("code.symbols") as Array<{ title: string }>).map((row) => row.title);
       assert.equal(fragmentTitles.includes("method resolveNeedle"), true);

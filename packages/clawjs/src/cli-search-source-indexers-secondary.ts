@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto"; import Database from "better-sqlite3";
+import { resolveCodexConfigPath } from "@clawjs/core";
 import { clawCliCommandRegistry, detectClawPublicRepositories, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import {
   DEFAULT_SEARCH_BUDGETS,
@@ -260,6 +261,12 @@ export function ensureProvidersRoutingSourceIndexed(store: SearchStore, flags: R
   }
 }
 
+function parseProviderRoutingResourceId(resourceId: string): { feature: string; capability: string } | null {
+  const parts = resourceId.split(":");
+  if (parts.length !== 3 || parts[0] !== "routing" || !parts[1] || !parts[2]) return null;
+  return { feature: parts[1], capability: parts[2] };
+}
+
 export function ensureProvidersRoutingResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
   const dbPath = resolveMainDbPath(flags);
   if (!fs.existsSync(dbPath)) return 0;
@@ -454,6 +461,17 @@ export function ensureAgentsCatalogSourceIndexed(store: SearchStore, flags: Reco
   } finally {
     db.close();
   }
+}
+
+function parseAgentCatalogResourceId(resourceId: string): { kind: "agent" | "personality" | "skill_collection" | "connection"; id: string } | null {
+  for (const kind of ["agent", "personality", "skill_collection", "connection"] as const) {
+    const prefix = `${kind}:`;
+    if (resourceId.startsWith(prefix)) {
+      const id = resourceId.slice(prefix.length);
+      return id ? { kind, id } : null;
+    }
+  }
+  return null;
 }
 
 export function ensureAgentsCatalogResourceIndexed(store: SearchStore, flags: Record<string, string>, resourceId: string): number {
@@ -1422,13 +1440,19 @@ export function resolveSessionsDbPath(flags: Record<string, string>): string {
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return path.join(resolveClawjsDataRoot(env), "sessions.sqlite");
 }
+
+function resolveSearchSidecarPath(flags: Record<string, string>, filename: string): string {
+  const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+  return path.join(resolveClawjsDataRoot(env), filename);
+}
+
 export function resolveMainDbPath(flags: Record<string, string>): string {
   const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
   return resolveClawjsMainDbPath(env);
 }
 export function resolveMcpSearchConfigPath(flags: Record<string, string>, cwd: string): string {
   const configured = flags["mcp-config"] ?? flags.config ?? process.env.CLAW_MCP_CONFIG_PATH;
-  if (!configured) return path.join(os.homedir(), ".codex", "config.toml");
+  if (!configured) return resolveCodexConfigPath(os.homedir());
   const expanded = expandSearchHome(configured);
   return path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
 }

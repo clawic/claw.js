@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
@@ -19,6 +20,20 @@ import {
   runSearchProvidersSnippetsFastPathScenario,
 } from "./cli-search-framework-fast-path-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
+
+test("database magic local data dir uses persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./database-magic.ts", import.meta.url), "utf8");
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.data", "/Users/demo/project"), "/Users/demo/project/.claw/data");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", workspaceRoot\)/);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "data")'), false);
+});
+
+test("productivity Search event data dir uses persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./cli-productivity-command.ts", import.meta.url), "utf8");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", input\.workspaceRoot\)/);
+  assert.equal(source.includes('path.join(input.workspaceRoot, ".claw", "data")'), false);
+});
+
 test("search rebuild indexes database.records from core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-database-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import { test } from "vitest";
 
 import { SearchStore, type SearchIndexJob } from "@clawjs/search";
@@ -249,7 +250,7 @@ test("Search event schedulers create hot event-driven upsert and delete jobs for
       }
     }
 
-    const store = new SearchStore(path.join(dataDir, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataDir));
     try {
       const jobs = store.listIndexJobs({ limit: 500 });
       for (const entry of cases) {

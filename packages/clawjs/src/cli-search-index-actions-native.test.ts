@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -32,7 +33,7 @@ test("Search MCP package publishes only the public Search binary", () => {
 test("search actions honor actor and scope ACLs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-actions-acl-"));
   const dataRoot = path.join(workspaceRoot, "data");
-  const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+  const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
   try {
     store.registerSource(createFrameworkSearchSourceManifest({
       id: "documents.blocks",
@@ -132,7 +133,7 @@ test("search indexes native.system only from signed host snapshots", async () =>
   assert.deepEqual(rebuildPayload.data.sources, ["native.system"]);
   assert.equal(rebuildPayload.data.indexedBySource["native.system"], 1);
   assert.equal(rebuildPayload.data.pendingSources.includes("native.system"), false);
-  const canonicalDb = new Database(path.join(dataRoot, "core.sqlite"));
+  const canonicalDb = new Database(registeredDatabasePath(dataRoot, "claw.database.core"));
   try {
     const rows = canonicalDb.prepare("SELECT source, state FROM search_source_config WHERE source = ?").all("native.system") as Array<{ source: string; state: string }>;
     assert.deepEqual(rows, [{ source: "native.system", state: "enabled" }]);

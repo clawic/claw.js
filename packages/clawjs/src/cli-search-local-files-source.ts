@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { isMacCareFilesystemNoiseDirectoryName } from "@clawjs/core";
 import type { SearchDocumentInput, SearchStore } from "@clawjs/search";
 
 import { isIgnoredCodeSearchDirectory, languageForCodeSearchExtension } from "./cli-search-code-symbols-source.ts";
@@ -147,7 +148,7 @@ function discoverLocalSearchFiles(root: string, limits: { maxFiles: number; maxD
 }
 
 function isIgnoredLocalFilesDirectory(name: string): boolean {
-  return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
+  return isIgnoredCodeSearchDirectory(name) || isMacCareFilesystemNoiseDirectoryName(name);
 }
 
 function localFileKind(extension: string): string {

@@ -12,8 +12,19 @@ import {
   createFullSearchSourceManifest,
   createLocalTextEmbedding,
 } from "@clawjs/search";
+import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 
 import { createSearchMcpTools } from "./index.ts";
+
+test("Search MCP global data fallback uses the central global data storage helper", () => {
+  const source = fs.readFileSync(new URL("./index.ts", import.meta.url), "utf8");
+
+  assert.equal(resolveClawGlobalDataStorageDir({ homeDir: "/Users/demo" }), "/Users/demo/.claw/data");
+  assert.match(source, /resolveClawGlobalDataStorageDir/);
+  assert.match(source, /process\.env\.CLAW_HOME \? \{ clawHome: process\.env\.CLAW_HOME \} : \{\}/);
+  assert.equal(/resolveClawPersistentSurfacePath\("claw\.global\.data"\)/.test(source), false);
+  assert.equal(/path[.]join\(os[.]homedir\(\), "[.]claw", "data"\)/.test(source), false);
+});
 
 test("Search MCP exposes source-set, entrypoint, and explain tools", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-tools-"));
@@ -1117,8 +1128,11 @@ test("Search MCP scans changed source roots into event jobs", () => {
     }));
     const root = path.join(dir, "project");
     const filePath = path.join(root, "src", "scan.ts");
+    const macNoiseFilePath = path.join(root, "DerivedData", "Build", "ignored.ts");
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, "export function scanMcpNeedle() { return true; }\n");
+    fs.mkdirSync(path.dirname(macNoiseFilePath), { recursive: true });
+    fs.writeFileSync(macNoiseFilePath, "export function ignoredMacCareNoise() { return false; }\n");
     const tools = createSearchMcpTools(store);
     const scanTool = tools.find((tool) => tool.name === "search.changes.scan");
     assert.ok(scanTool);

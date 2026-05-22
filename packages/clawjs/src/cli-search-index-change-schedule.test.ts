@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -411,7 +412,7 @@ test("search keeps optional full sources out of scoped domain queries", async ()
     };
     assert.equal(queryPayload.data.results.some((result) => result.source === "local.files" || result.source === "web.ingested" || result.source === "external.cache"), false);
 
-    const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const verified = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       assert.deepEqual(verified.query({
         query: "Optional full source sentinel",

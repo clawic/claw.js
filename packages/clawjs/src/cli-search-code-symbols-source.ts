@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 
+import { isMacCareFilesystemNoiseDirectoryName } from "@clawjs/core";
 import { LOCAL_TEXT_EMBEDDING_MODEL, createLocalTextEmbedding, type SearchDocumentInput, type SearchStore } from "@clawjs/search";
 
 export function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): string {
@@ -211,11 +212,10 @@ export function isIgnoredCodeSearchDirectory(name: string): boolean {
     "build",
     "coverage",
     "dist",
-    "DerivedData",
     "node_modules",
     "target",
     "vendor",
-  ].includes(name);
+  ].includes(name) || isMacCareFilesystemNoiseDirectoryName(name);
 }
 
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {

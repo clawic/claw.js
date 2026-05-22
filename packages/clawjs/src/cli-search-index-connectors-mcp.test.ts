@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -189,7 +190,7 @@ test("search service resource jobs refresh only the targeted connector operation
     assert.equal(serviceRunPayload.data.worker?.items[0]?.operation, "upsert");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       assert.equal(store.query({ query: "images edit", sources: ["connectors.catalog"] }).results.length, 1);
       const generatedRow = store.db.prepare("SELECT id FROM search_documents WHERE source = ? AND resource_id = ? AND deleted_at IS NULL").get("connectors.catalog", "openai.images.generate");

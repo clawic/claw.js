@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -49,7 +50,7 @@ test("search service run-once obeys worker resource budgets", async () => {
     assert.equal(limitedPayload.data.worker?.items[0]?.id, "job:budget:one");
     assert.equal(limitedPayload.data.worker?.items[0]?.status, "done");
     await runCliCapture(["search", "service", "run-once", "--data-dir", dataRoot, "--json", "--source", "commands", "--max-jobs", "10"], workspaceRoot);
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       store.registerSource(createFrameworkSearchSourceManifest({
         id: "missing.source",
@@ -91,14 +92,14 @@ test("search source controls persist canonical config in core.sqlite", async () 
   }, async () => {
     const paused = await runCliCapture(["search", "sources", "pause", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(paused.code, CLI_EXIT_OK);
-    const core = new Database(path.join(dataRoot, "core.sqlite"));
+    const core = new Database(registeredDatabasePath(dataRoot, "claw.database.core"));
     try {
       const row = core.prepare("SELECT source, state, source_set AS sourceSet FROM search_source_config WHERE source = ?").get("commands") as { source: string; state: string; sourceSet: string } | undefined;
       assert.deepEqual(row, { source: "commands", state: "paused", sourceSet: "framework" });
     } finally {
       core.close();
     }
-    fs.rmSync(path.join(dataRoot, "search.sqlite"), { force: true });
+    fs.rmSync(registeredSearchDatabasePath(dataRoot), { force: true });
     const status = await runCliCapture(["search", "status", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(status.code, CLI_EXIT_OK);
     const statusPayload = JSON.parse(status.stdout) as {
@@ -114,7 +115,7 @@ test("search source controls persist canonical config in core.sqlite", async () 
     assert.equal(queryPayload.data.omittedSources.some((source) => source.source === "commands" && source.reason === "disabled" && source.message?.includes("paused")), true);
     const resumed = await runCliCapture(["search", "sources", "resume", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(resumed.code, CLI_EXIT_OK);
-    const resumedCore = new Database(path.join(dataRoot, "core.sqlite"));
+    const resumedCore = new Database(registeredDatabasePath(dataRoot, "claw.database.core"));
     try {
       const state = (resumedCore.prepare("SELECT state FROM search_source_config WHERE source = ?").get("commands") as { state: string } | undefined)?.state;
       assert.equal(state, "enabled");

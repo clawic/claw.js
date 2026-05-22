@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { SearchStore, createFrameworkSearchSourceManifest } from "@clawjs/search";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { captureStream, runCliCapture, runInternalV1Cli, withPatchedEnv } from "./index-test-utils.ts";
@@ -19,6 +20,23 @@ import {
   runSearchProvidersSnippetsFastPathScenario,
 } from "./cli-search-framework-fast-path-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
+
+test("image and media Search source paths use persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./cli-search-image-media-sources.ts", import.meta.url), "utf8");
+  assert.equal(
+    resolveClawPersistentSurfacePath("claw.workspace.data", "/Users/demo/project", "collections", "images"),
+    "/Users/demo/project/.claw/data/collections/images",
+  );
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.storage", "/Users/demo/project", "media/blob.bin"), "/Users/demo/project/.claw/storage/media/blob.bin");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", root, "collections", collection, `\$\{id\}\.json`\)/);
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", root, "collections", collection\)/);
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", imageRoot, "assets", outputRelativePath\)/);
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.storage", workspaceRoot, storageKey\)/);
+  assert.equal(source.includes('path.join(root, ".claw", "data", "collections", collection'), false);
+  assert.equal(source.includes('path.join(imageRoot, ".claw", "data", "assets", outputRelativePath)'), false);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "storage", storageKey)'), false);
+});
+
 test("search rebuild indexes images.derived from image library records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-images-"));
   const dataRoot = path.join(workspaceRoot, "data");

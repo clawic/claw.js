@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import { test } from "vitest";
 
 import { SearchStore } from "@clawjs/search";
@@ -25,7 +26,7 @@ test("productivity database writes schedule work search events for create update
       const deleted = await runCliCapture(["db", "tasks", "delete", taskId, "--force", "--json"], workspaceRoot);
       assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
 
-      const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+      const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
       try {
         const resourceId = `main:tasks:${taskId}`;
         const jobs = store.listIndexJobs({ source: "work.items", limit: 20 });

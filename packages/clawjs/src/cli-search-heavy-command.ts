@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto"; import Database from "better-sqlite3";
+import { requireMacCareRoutePathPattern } from "@clawjs/core";
 import { clawCliCommandRegistry, detectClawPublicRepositories, listClawCliAliases, type ClawCliCommandRegistryEntry, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import {
   DEFAULT_SEARCH_BUDGETS,
@@ -1593,8 +1594,12 @@ export function openCliSearchStore(flags: Record<string, string>): SearchStore {
     return new SearchStore(dbPath);
   } catch (error) {
     if (hasExplicitSearchStorage(flags)) throw error;
-    return new SearchStore(path.join(os.tmpdir(), "claw-search.sqlite"));
+    return new SearchStore(searchFallbackDbPath());
   }
+}
+
+export function searchFallbackDbPath(): string {
+  return path.join(requireMacCareRoutePathPattern("mac_care.route.system_temp"), "claw-search.sqlite");
 }
 
 export function searchCanonicalConfigEnv(flags: Record<string, string>): NodeJS.ProcessEnv {

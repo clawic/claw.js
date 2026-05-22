@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { isMacCareFilesystemNoiseDirectoryName } from "@clawjs/core";
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
 
 import { isIgnoredCodeSearchDirectory } from "./cli-search-code-symbols-source.ts";
@@ -295,7 +296,7 @@ function discoverExternalCacheFiles(root: string, limits: { maxFiles: number; ma
 }
 
 function isIgnoredLocalFilesDirectory(name: string): boolean {
-  return isIgnoredCodeSearchDirectory(name) || name === ".Spotlight-V100" || name === ".TemporaryItems" || name === ".Trashes";
+  return isIgnoredCodeSearchDirectory(name) || isMacCareFilesystemNoiseDirectoryName(name);
 }
 
 function webIngestedSearchDocument(root: string, file: WebIngestedCandidate, maxBytes: number): SearchDocumentInput | null {

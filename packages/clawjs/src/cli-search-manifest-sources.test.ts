@@ -3,9 +3,43 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+
+test("search manifest roots use persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./cli-search-slides-sheets-sources.ts", import.meta.url), "utf8");
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.sheets", "/Users/demo/project", "workbooks"), "/Users/demo/project/.claw/sheets/workbooks");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.slides", workspaceRoot, "decks"\)/);
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.sheets", workspaceRoot, "workbooks"\)/);
+  assert.equal(source.includes('path.join(path.resolve(flags.workspace ?? cwd), ".claw", "sheets", "workbooks")'), false);
+});
+
+test("sheets workbook CLI writes use persistent surface routes", () => {
+  const source = fs.readFileSync(new URL("./v1-data-secondary-commands.ts", import.meta.url), "utf8");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.sheets", workspaceRoot, "workbooks"\)/);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "sheets", "workbooks")'), false);
+});
+
+test("design resource CLI Search events use persistent data routes", () => {
+  const sources = [
+    fs.readFileSync(new URL("./references/cli.ts", import.meta.url), "utf8"),
+    fs.readFileSync(new URL("./styles/cli.ts", import.meta.url), "utf8"),
+    fs.readFileSync(new URL("./templates/cli.ts", import.meta.url), "utf8"),
+  ];
+  assert.equal(resolveClawPersistentSurfacePath("claw.workspace.data", "/Users/demo/project"), "/Users/demo/project/.claw/data");
+  for (const source of sources) {
+    assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", options\.workspaceRoot\)/);
+    assert.equal(source.includes('path.join(options.workspaceRoot, ".claw", "data")'), false);
+  }
+});
+
+test("slides CLI Search events use persistent data routes", () => {
+  const source = fs.readFileSync(new URL("./slides.ts", import.meta.url), "utf8");
+  assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", workspaceRoot\)/);
+  assert.equal(source.includes('path.join(workspaceRoot, ".claw", "data")'), false);
+});
 
 test("search rebuild indexes slides.decks from slide manifests", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-slides-"));

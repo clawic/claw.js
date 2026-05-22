@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -49,7 +50,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(rebuildPayload.data.rebuilt, true);
     assert.equal(rebuildPayload.data.embeddings, 0);
     assert.equal(rebuildPayload.data.storage.index, "search.sqlite");
-    assert.equal(fs.existsSync(path.join(dataRoot, "search.sqlite")), true);
+    assert.equal(fs.existsSync(registeredSearchDatabasePath(dataRoot)), true);
     assert.equal(rebuildPayload.data.sources.includes("commands"), true);
     assert.equal(rebuildPayload.data.pendingSources.includes("sessions.chats"), true);
     assert.ok(rebuildPayload.data.reindexed > 0);
@@ -89,7 +90,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(defaultShardQuery.code, CLI_EXIT_OK);
     const defaultShardPayload = JSON.parse(defaultShardQuery.stdout) as { data: { results: Array<{ source: string; title: string; shard?: string }> } };
     assert.equal(defaultShardPayload.data.results.some((result) => result.source === "commands" && result.title === "system" && result.shard === undefined), true);
-    const cursorStore = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const cursorStore = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       cursorStore.setCursor({
         source: "commands",

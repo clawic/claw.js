@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
 import { redactedStructuredText } from "./cli-search-web-external-source.ts";
 
@@ -116,7 +117,7 @@ export function ensureMediaAssetResourceIndexed(store: SearchStore, flags: Recor
 }
 
 function readWorkspaceCollectionRecord(root: string, collection: string, id: string): Record<string, unknown> | null {
-  const filePath = path.join(root, ".claw", "data", "collections", collection, `${id}.json`);
+  const filePath = resolveClawPersistentSurfacePath("claw.workspace.data", root, "collections", collection, `${id}.json`);
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
     return isPlainRecord(parsed) ? parsed : null;
@@ -126,7 +127,7 @@ function readWorkspaceCollectionRecord(root: string, collection: string, id: str
 }
 
 function readWorkspaceCollectionRecords(root: string, collection: string): Array<Record<string, unknown>> {
-  const dir = path.join(root, ".claw", "data", "collections", collection);
+  const dir = resolveClawPersistentSurfacePath("claw.workspace.data", root, "collections", collection);
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -159,7 +160,7 @@ function imageRecordSearchDocument(record: Record<string, unknown>, imageRoot: s
   const derivedText = imageDerivedTextFields(record);
   const metadata = isPlainRecord(record.metadata) ? record.metadata : {};
   const metadataText = redactedStructuredText(metadata);
-  const pathValue = outputRelativePath ? path.join(imageRoot, ".claw", "data", "assets", outputRelativePath) : undefined;
+  const pathValue = outputRelativePath ? resolveClawPersistentSurfacePath("claw.workspace.data", imageRoot, "assets", outputRelativePath) : undefined;
   const body = [
     title,
     prompt,
@@ -320,7 +321,7 @@ function imageMediaSearchDocument(record: Record<string, unknown>, workspaceRoot
     subtitle: [stringField(record, "origin"), stringField(record, "direction"), stringField(record, "mimeType")].filter(Boolean).join(" / "),
     snippet: sourceText ?? name,
     body,
-    ...(storageKey ? { path: path.join(workspaceRoot, ".claw", "storage", storageKey) } : {}),
+    ...(storageKey ? { path: resolveClawPersistentSurfacePath("claw.workspace.storage", workspaceRoot, storageKey) } : {}),
     ...(stringField(record, "updatedAt") ?? stringField(record, "createdAt") ? { updatedAt: stringField(record, "updatedAt") ?? stringField(record, "createdAt") } : {}),
     metadata: {
       mediaId,
@@ -431,7 +432,7 @@ function mediaAssetSearchDocument(record: Record<string, unknown>, workspaceRoot
     subtitle: [kind, stringField(record, "origin"), stringField(record, "direction"), stringField(record, "mimeType")].filter(Boolean).join(" / "),
     snippet: sourceText ?? name,
     body,
-    ...(storageKey ? { path: path.join(workspaceRoot, ".claw", "storage", storageKey) } : {}),
+    ...(storageKey ? { path: resolveClawPersistentSurfacePath("claw.workspace.storage", workspaceRoot, storageKey) } : {}),
     ...(stringField(record, "updatedAt") ?? stringField(record, "createdAt") ? { updatedAt: stringField(record, "updatedAt") ?? stringField(record, "createdAt") } : {}),
     metadata: {
       mediaId,

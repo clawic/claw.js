@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { SearchStore, type SearchDocumentInput } from "@clawjs/search";
 import { redactedStructuredText } from "./cli-search-web-external-source.ts";
 
@@ -83,7 +84,7 @@ function generationArtifactSearchDocument(record: Record<string, unknown>, works
     subtitle: [kind, stringField(record, "status"), stringField(record, "backendLabel")].filter(Boolean).join(" / "),
     snippet: prompt ?? stringField(record, "error") ?? title,
     body,
-    ...(outputRelativePath ? { path: path.join(workspaceRoot, ".claw", "data", "assets", outputRelativePath) } : {}),
+    ...(outputRelativePath ? { path: resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "assets", outputRelativePath) } : {}),
     ...(stringField(record, "updatedAt") ?? stringField(record, "createdAt") ? { updatedAt: stringField(record, "updatedAt") ?? stringField(record, "createdAt") } : {}),
     metadata: {
       generationId: id,
@@ -131,7 +132,7 @@ function generationArtifactSearchDocument(record: Record<string, unknown>, works
 }
 
 function readWorkspaceCollectionRecord(root: string, collection: string, id: string): Record<string, unknown> | null {
-  const filePath = path.join(root, ".claw", "data", "collections", collection, `${id}.json`);
+  const filePath = resolveClawPersistentSurfacePath("claw.workspace.data", root, "collections", collection, `${id}.json`);
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
     return isPlainRecord(parsed) ? parsed : null;
@@ -141,7 +142,7 @@ function readWorkspaceCollectionRecord(root: string, collection: string, id: str
 }
 
 function readWorkspaceCollectionRecords(root: string, collection: string): Array<Record<string, unknown>> {
-  const dir = path.join(root, ".claw", "data", "collections", collection);
+  const dir = resolveClawPersistentSurfacePath("claw.workspace.data", root, "collections", collection);
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });

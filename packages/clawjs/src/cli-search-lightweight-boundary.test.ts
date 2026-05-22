@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
@@ -27,7 +28,7 @@ test("basic search and query do not create search.sqlite without explicit persis
   }, async () => {
     const basic = await runCliCapture(["search", "Search V1.1", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(basic.code), true);
-    assert.equal(fs.existsSync(path.join(dataRoot, "search.sqlite")), false);
+    assert.equal(fs.existsSync(registeredSearchDatabasePath(dataRoot)), false);
 
     const query = await runCliCapture(["search", "query", "Search V1.1", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(query.code, CLI_EXIT_DEGRADED);
@@ -35,6 +36,6 @@ test("basic search and query do not create search.sqlite without explicit persis
     assert.equal(payload.data.indexState, "missing");
     assert.deepEqual(payload.data.results, []);
     assert.equal(payload.data.scheduledRefreshJobs, undefined);
-    assert.equal(fs.existsSync(path.join(dataRoot, "search.sqlite")), false);
+    assert.equal(fs.existsSync(registeredSearchDatabasePath(dataRoot)), false);
   });
 });

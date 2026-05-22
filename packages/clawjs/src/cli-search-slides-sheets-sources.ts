@@ -128,9 +128,10 @@ function resolveSlidesDecksRoot(flags: Record<string, string>, cwd: string): str
 }
 
 function resolveSheetsWorkbooksRoot(flags: Record<string, string>, cwd: string): string {
+  const workspaceRoot = path.resolve(flags.workspace ?? cwd);
   const configured = flags["sheets-root"] ?? flags["sheets-workbooks-root"] ?? flags["workbooks-root"];
   if (configured) return path.resolve(configured);
-  return path.join(path.resolve(flags.workspace ?? cwd), ".claw", "sheets", "workbooks");
+  return resolveClawPersistentSurfacePath("claw.workspace.sheets", workspaceRoot, "workbooks");
 }
 
 function slideDeckSearchDocument(filePath: string): SearchDocumentInput | null {

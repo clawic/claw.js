@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -77,7 +78,7 @@ test("search service upsert jobs refresh only the targeted database resource", a
     assert.ok(queuedJob);
     const doneTerm = doneJob.resourceId.endsWith(`:${firstPayload.data.id}`) ? "needle-alpha-only" : "needle-beta-only";
     const queuedTerm = queuedJob.resourceId.endsWith(`:${secondPayload.data.id}`) ? "needle-beta-only" : "needle-alpha-only";
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       assert.equal(store.query({ query: doneTerm, sources: ["database.records"] }).results.length, 1);
       assert.equal(store.query({ query: queuedTerm, sources: ["database.records"] }).results.length, 0);
@@ -135,7 +136,7 @@ test("search service upsert jobs refresh only the targeted media resource", asyn
     };
     assert.equal(serviceRunPayload.data.worker?.items[0]?.status, "done");
     assert.equal(serviceRunPayload.data.worker?.items[0]?.indexed, 1);
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       assert.equal(store.query({ query: "needle-media-alpha-only", sources: ["media.assets"] }).results.length, 1);
       assert.equal(store.query({ query: "needle-media-beta-only", sources: ["media.assets"] }).results.length, 0);
@@ -299,7 +300,7 @@ test("sessions.chats backfill only indexes rows after the v2 cursor", async () =
     writeSession(secondSessionId, "incremental-second-session-needle", "2026-05-12T11:00:00.000Z");
     const secondIndex = await runCliCapture(["sessions", "index", "--root", sessionsRoot, "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(secondIndex.code, CLI_EXIT_OK);
-    const searchDb = new Database(path.join(dataRoot, "search.sqlite"));
+    const searchDb = new Database(registeredSearchDatabasePath(dataRoot));
     try {
       searchDb.prepare("DELETE FROM search_index_jobs WHERE source = ?").run("sessions.chats");
     } finally {

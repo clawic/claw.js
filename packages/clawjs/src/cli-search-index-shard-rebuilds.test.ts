@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -116,7 +117,7 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       store.registerSource(createFrameworkSearchSourceManifest({
         id: "images.derived",
@@ -179,7 +180,7 @@ test("search rebuild can refresh one shard without clearing sibling shard fast p
     assert.deepEqual(shardPayload.data.selectedSources, ["images.derived"]);
     assert.deepEqual(shardPayload.data.selectedShards, ["cold"]);
     assert.equal(shardPayload.data.indexedBySource["images.derived"], 0);
-    const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const verified = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       assert.deepEqual(verified.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
         ["cold", "empty", 0],
@@ -202,7 +203,7 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
-    const store = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const store = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       store.registerSource(createFrameworkSearchSourceManifest({
         id: "images.derived",
@@ -287,7 +288,7 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     assert.deepEqual(servicePayload.data.service.worker?.items.map((item) => ({ source: item.source, operation: item.operation, status: item.status, indexed: item.indexed })), [
       { source: "images.derived", operation: "rebuild", status: "done", indexed: 0 },
     ]);
-    const verified = new SearchStore(path.join(dataRoot, "search.sqlite"));
+    const verified = new SearchStore(registeredSearchDatabasePath(dataRoot));
     try {
       assert.deepEqual(verified.listShards({ source: "images.derived" }).map((shard) => [shard.shard, shard.state, shard.documentCount]), [
         ["cold", "empty", 0],
