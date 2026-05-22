@@ -196,3 +196,28 @@ blockers after the progressive enforcement phase.
 
 Performance work still starts with reproduction and instrumentation before
 optimization. Static reading can identify risk, but it does not prove a fix.
+
+## Scale Lab Harness
+
+`scripts/scale-lab.ts` is the governed synthetic scale harness for framework
+growth risks. It runs against temporary `CLAW_HOME`, `CLAW_DATA_DIR`, database,
+session, skill, attachment, runtime, search, and dense-data roots. It must not
+read user data, send prompts, contact providers, use paid APIs, reveal secrets,
+or mutate real services.
+
+The harness has three profiles:
+
+- `smoke`: safe for fast and changed lanes.
+- `medium`: safe for integration and release lanes after conservative disk
+  preflight.
+- `heavy`: blocked unless `CLAW_SCALE_LAB_HEAVY=1` is explicitly set.
+
+Each run emits a JSON-compatible report with workload status, counts,
+estimated and actual disk use, p95 or bounded-operation metrics, skipped or
+external-pending lanes, lock state, and cleanup status. Temporary artifacts are
+removed by default; `--keep` is the only supported way to preserve them for
+debugging.
+
+Scale Lab reports are measurement evidence for synthetic scale behavior. They
+do not replace signed-host, physical-device, provider, or approved private UI
+baseline evidence when those real boundaries are required.

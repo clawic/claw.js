@@ -1,6 +1,6 @@
-import { CLAW_DEBT_LEDGER_CLASSIFICATIONS, CLAW_DEBT_LEDGER_SOURCE_TYPES, CLAW_DEBT_LEDGER_STATUSES, buildClawDebtLedger, type ClawDebtLedger, type ClawDebtLedgerClassification, type ClawDebtLedgerEntry, type ClawDebtLedgerSourceType, type ClawDebtLedgerStatus } from "@clawjs/core/catalogs";
+import { CLAW_DEBT_CONTROL_RELEASE_EFFECTS, CLAW_DEBT_CONTROL_SEVERITIES, CLAW_DEBT_LEDGER_CLASSIFICATIONS, CLAW_DEBT_LEDGER_SOURCE_TYPES, CLAW_DEBT_LEDGER_STATUSES, buildClawDebtLedger, type ClawDebtControlReleaseEffect, type ClawDebtControlSeverity, type ClawDebtLedger, type ClawDebtLedgerClassification, type ClawDebtLedgerEntry, type ClawDebtLedgerSourceType, type ClawDebtLedgerStatus } from "@clawjs/core/catalogs";
 
-import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CliHandledError, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
@@ -35,7 +35,11 @@ export async function runDebtCli(input: DebtCliInput): Promise<number> {
   }
 
   if (action === "audit") {
-    return writeDebtResult(input, action, { ...summaryPayload(ledger), audit: ledger.audit });
+    const strict = strictFlag(input.flags, input.argv ?? []);
+    const payload = { ...summaryPayload(ledger), strict, audit: ledger.audit };
+    const result = writeDebtResult(input, action, payload);
+    if (strict && ledger.audit.strictFailures.length > 0) return CLI_EXIT_FAILURE;
+    return result;
   }
 
   if (action === "sources") {
@@ -54,7 +58,10 @@ function writeDebtUsage(input: DebtCliInput): number {
     "  --classification external_pending|lateral_debt|...",
     "  --status open|blocked|external_pending|...",
     "  --source-type code_hygiene|source_size|...",
+    "  --severity P0|P1|P2|P3",
+    "  --release-effect blocks_release|blocks_growth|report_only",
     "  --needs-action",
+    "  --strict (audit only)",
     "  --json",
   ].join("\n") + "\n");
   return CLI_EXIT_USAGE;
@@ -88,6 +95,7 @@ function writeDebtResult(input: DebtCliInput, action: string, data: unknown): nu
       `unindexedCandidates\t${data.audit.unindexedCandidates.length}`,
       `expiredEntries\t${data.audit.expiredEntries.length}`,
       `duplicateFingerprints\t${data.audit.duplicateFingerprints.length}`,
+      `strictFailures\t${data.audit.strictFailures.length}`,
       `privateSummary\t${data.audit.privateSummary.included ? "included" : "excluded"}`,
     ].join("\n") + "\n");
     return CLI_EXIT_OK;
@@ -127,6 +135,7 @@ function summaryPayload(ledger: ClawDebtLedger): {
       unindexedCandidates: ledger.audit.unindexedCandidates.length,
       expiredEntries: ledger.audit.expiredEntries.length,
       duplicateFingerprints: ledger.audit.duplicateFingerprints.length,
+      strictFailures: ledger.audit.strictFailures.length,
     },
     classifications: ledger.classifications,
     statuses: ledger.statuses,
@@ -138,12 +147,16 @@ function filterDebtEntries(entries: ClawDebtLedgerEntry[], flags: Record<string,
   const classification = parseClassification(flags.classification);
   const status = parseStatus(flags.status);
   const sourceType = parseSourceType(flags["source-type"] || flags.source);
+  const severity = parseSeverity(flags.severity);
+  const releaseEffect = parseReleaseEffect(flags["release-effect"] || flags.releaseEffect);
   const needsAction = flags["needs-action"] === "true" || flags["needs-action"] === "1" || argv.includes("--needs-action");
   return entries.filter((entry) =>
     (!repo || entry.repo === repo)
     && (!classification || entry.classification === classification)
     && (!status || entry.status === status)
     && (!sourceType || entry.sourceType === sourceType)
+    && (!severity || entry.debtControl.severity === severity)
+    && (!releaseEffect || entry.debtControl.releaseEffect.mode === releaseEffect)
     && (!needsAction || entryNeedsAction(entry))
   );
 }
@@ -169,6 +182,22 @@ function parseSourceType(value: string | undefined): ClawDebtLedgerSourceType | 
   if (!value) return undefined;
   if ((CLAW_DEBT_LEDGER_SOURCE_TYPES as readonly string[]).includes(value)) return value as ClawDebtLedgerSourceType;
   throw new CliHandledError("invalid_debt_source_type", `Use one of: ${CLAW_DEBT_LEDGER_SOURCE_TYPES.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function parseSeverity(value: string | undefined): ClawDebtControlSeverity | undefined {
+  if (!value) return undefined;
+  if ((CLAW_DEBT_CONTROL_SEVERITIES as readonly string[]).includes(value)) return value as ClawDebtControlSeverity;
+  throw new CliHandledError("invalid_debt_severity", `Use one of: ${CLAW_DEBT_CONTROL_SEVERITIES.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function parseReleaseEffect(value: string | undefined): ClawDebtControlReleaseEffect | undefined {
+  if (!value) return undefined;
+  if ((CLAW_DEBT_CONTROL_RELEASE_EFFECTS as readonly string[]).includes(value)) return value as ClawDebtControlReleaseEffect;
+  throw new CliHandledError("invalid_debt_release_effect", `Use one of: ${CLAW_DEBT_CONTROL_RELEASE_EFFECTS.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function strictFlag(flags: Record<string, string>, argv: string[]): boolean {
+  return flags.strict === "true" || flags.strict === "1" || argv.includes("--strict");
 }
 
 function isEntryListPayload(value: unknown): value is { entries: ClawDebtLedgerEntry[] } {

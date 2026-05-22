@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 function writeFixtureFile(root: string, relativePath: string, content: string): void {
@@ -101,4 +101,86 @@ test("debt list accepts needs-action filter", async () => {
   assert.equal(Array.isArray(payload.data.entries), true);
   assert.equal(typeof payload.data.summary.missingActionability, "number");
   assert.equal(typeof payload.data.summary.aliasHits, "number");
+});
+
+test("debt list filters by strict debt control severity and release effect", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-debt-filter-"));
+  writeFixtureFile(root, "docs/code-hygiene-baseline.json", JSON.stringify({
+    schemaVersion: 1,
+    entries: [{
+      id: "release-blocking-control",
+      ownerArea: "runtime",
+      reason: "Runtime debt blocks release until reduced.",
+      findingTypes: ["runtime"],
+      expiresAt: "2099-01-01",
+      debtControl: {
+        ownerArea: "runtime",
+        expiresAt: "2099-01-01",
+        severity: "P1",
+        budget: {
+          metric: "runtime_debt",
+          unit: "item",
+          current: 2,
+          maxAllowed: 2,
+          nextMaxAllowed: 1,
+          target: 0,
+          cadence: "release",
+        },
+        releaseEffect: {
+          mode: "blocks_release",
+          targets: ["macos-release"],
+          gate: "node scripts/runtime-check.mjs",
+          reason: "P1 runtime debt must block release until it shrinks.",
+        },
+      },
+    }],
+  }));
+
+  const list = await runCliCapture(["debt", "list", "--root", root, "--severity", "P1", "--release-effect", "blocks_release", "--json"], process.cwd());
+  assert.equal(list.code, CLI_EXIT_OK);
+  const payload = JSON.parse(list.stdout) as { data: { entries: Array<{ id: string; debtControl: { severity: string; releaseEffect: { mode: string } } }> } };
+  assert.equal(payload.data.entries.length, 1);
+  assert.equal(payload.data.entries[0]?.id, "release-blocking-control");
+  assert.equal(payload.data.entries[0]?.debtControl.severity, "P1");
+  assert.equal(payload.data.entries[0]?.debtControl.releaseEffect.mode, "blocks_release");
+});
+
+test("debt audit --strict exits non-zero when debt control cannot reduce debt", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-debt-strict-"));
+  writeFixtureFile(root, "docs/code-hygiene-baseline.json", JSON.stringify({
+    schemaVersion: 1,
+    entries: [{
+      id: "flat-budget-control",
+      ownerArea: "runtime",
+      reason: "Runtime debt has a non-decreasing budget.",
+      findingTypes: ["runtime"],
+      expiresAt: "2099-01-01",
+      debtControl: {
+        ownerArea: "runtime",
+        expiresAt: "2099-01-01",
+        severity: "P1",
+        budget: {
+          metric: "runtime_debt",
+          unit: "item",
+          current: 1,
+          maxAllowed: 1,
+          nextMaxAllowed: 1,
+          target: 0,
+          cadence: "release",
+        },
+        releaseEffect: {
+          mode: "report_only",
+          targets: [],
+          gate: "node scripts/runtime-check.mjs",
+          reason: "This fixture intentionally violates strict mode.",
+        },
+      },
+    }],
+  }));
+
+  const audit = await runCliCapture(["debt", "audit", "--root", root, "--strict", "--json"], process.cwd());
+  assert.equal(audit.code, CLI_EXIT_FAILURE);
+  const payload = JSON.parse(audit.stdout) as { data: { strict: boolean; audit: { strictFailures: Array<{ id: string; reason: string }> } } };
+  assert.equal(payload.data.strict, true);
+  assert.equal(payload.data.audit.strictFailures.some((failure) => failure.id === "flat-budget-control" && failure.reason.includes("nextMaxAllowed")), true);
 });

@@ -72,6 +72,8 @@
     "test:search-goal": "node ./scripts/verify-search-v1-1-goal.mjs",
     "test:persistent-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test && node ./scripts/persistent-surface-guard.mjs .",
     "test:stable-surface-guard": "node ./scripts/persistent-surface-guard.mjs --self-test && node ./scripts/persistent-surface-guard.mjs .",
+    "scale:lab": "node --import tsx ./scripts/scale-lab.ts",
+    "test:scale-lab": "node --import tsx ./scripts/scale-lab.ts --profile smoke",
     "search:scale-lab": "node --import tsx ./scripts/search-scale-lab.ts",
     "test:e2e": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && node ./scripts/run-e2e.mjs",
     "test:e2e:ci": "npm run build:packages && rm -rf examples/showcase/.next && NEXT_DIST_DIR=.next-e2e npm --prefix examples/showcase run build && CI=1 node ./scripts/run-e2e.mjs",

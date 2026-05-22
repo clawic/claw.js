@@ -34,6 +34,7 @@ export const CLAW_DEBT_LEDGER_SOURCE_TYPES = [
   "source_size",
   "surface_evidence",
   "ui_debt",
+  "baseline_debt_control",
   "completion_audit",
   "external_validation",
   "adr_report",
@@ -48,6 +49,39 @@ export const CLAW_DEBT_LEDGER_PRIVACY = [
   "private_summary",
   "private",
 ] as const;
+
+export const CLAW_DEBT_CONTROL_SEVERITIES = ["P0", "P1", "P2", "P3"] as const;
+
+export const CLAW_DEBT_CONTROL_RELEASE_EFFECTS = [
+  "blocks_release",
+  "blocks_growth",
+  "report_only",
+] as const;
+
+export const clawDebtControlBudgetSchema = z.object({
+  metric: z.string().min(1),
+  unit: z.string().min(1),
+  current: z.number().nonnegative(),
+  maxAllowed: z.number().nonnegative(),
+  nextMaxAllowed: z.number().nonnegative(),
+  target: z.number().nonnegative(),
+  cadence: z.string().min(1),
+});
+
+export const clawDebtControlReleaseEffectSchema = z.object({
+  mode: z.enum(CLAW_DEBT_CONTROL_RELEASE_EFFECTS),
+  targets: z.array(z.string().min(1)),
+  gate: z.string().min(1),
+  reason: z.string().min(1),
+});
+
+export const clawDebtControlSchema = z.object({
+  ownerArea: z.string().min(1),
+  expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+  severity: z.enum(CLAW_DEBT_CONTROL_SEVERITIES),
+  budget: clawDebtControlBudgetSchema,
+  releaseEffect: clawDebtControlReleaseEffectSchema,
+});
 
 export const clawDebtLedgerEntrySchema = z.object({
   id: z.string().min(1),
@@ -65,6 +99,7 @@ export const clawDebtLedgerEntrySchema = z.object({
   reentryCommand: z.string().min(1).optional(),
   validation: z.string().min(1),
   privacy: z.enum(CLAW_DEBT_LEDGER_PRIVACY),
+  debtControl: clawDebtControlSchema,
   fingerprint: z.string().min(12),
 });
 
@@ -111,6 +146,14 @@ export const clawDebtLedgerAuditSchema = z.object({
     fingerprint: z.string(),
     ids: z.array(z.string()),
   })),
+  strictFailures: z.array(z.object({
+    repo: z.string(),
+    id: z.string(),
+    sourceType: z.enum(CLAW_DEBT_LEDGER_SOURCE_TYPES),
+    canonicalSource: z.string(),
+    severity: z.enum(CLAW_DEBT_CONTROL_SEVERITIES).optional(),
+    reason: z.string(),
+  })),
   privateSummary: z.object({
     included: z.literal(false),
     reason: z.string(),
@@ -133,6 +176,9 @@ export type ClawDebtLedgerClassification = typeof CLAW_DEBT_LEDGER_CLASSIFICATIO
 export type ClawDebtLedgerStatus = typeof CLAW_DEBT_LEDGER_STATUSES[number];
 export type ClawDebtLedgerSourceType = typeof CLAW_DEBT_LEDGER_SOURCE_TYPES[number];
 export type ClawDebtLedgerPrivacy = typeof CLAW_DEBT_LEDGER_PRIVACY[number];
+export type ClawDebtControlSeverity = typeof CLAW_DEBT_CONTROL_SEVERITIES[number];
+export type ClawDebtControlReleaseEffect = typeof CLAW_DEBT_CONTROL_RELEASE_EFFECTS[number];
+export type ClawDebtControl = z.infer<typeof clawDebtControlSchema>;
 export type ClawDebtLedgerEntry = z.infer<typeof clawDebtLedgerEntrySchema>;
 export type ClawDebtLedgerSource = z.infer<typeof clawDebtLedgerSourceSchema>;
 export type ClawDebtLedgerAudit = z.infer<typeof clawDebtLedgerAuditSchema>;
@@ -150,7 +196,30 @@ interface MutableDebtLedger {
   entries: ClawDebtLedgerEntry[];
   sources: ClawDebtLedgerSource[];
   warnings: string[];
+  strictFailures: ClawDebtLedgerAudit["strictFailures"];
 }
+
+interface DebtControlFallback {
+  ownerArea: string;
+  expiresAt?: string;
+  severity?: ClawDebtControlSeverity;
+  metric: string;
+  unit: string;
+  current: number;
+  maxAllowed?: number;
+  nextMaxAllowed?: number;
+  target?: number;
+  cadence?: string;
+  releaseEffectMode?: ClawDebtControlReleaseEffect;
+  releaseTargets?: string[];
+  releaseGate?: string;
+  releaseReason?: string;
+}
+
+type DebtLedgerEntryInput = Omit<ClawDebtLedgerEntry, "repo" | "fingerprint" | "debtControl"> & {
+  debtControl?: unknown;
+  debtControlFallback: DebtControlFallback;
+};
 
 const debtAliasTerms: ReadonlyArray<{
   term: string;
@@ -183,7 +252,7 @@ const aliasScanPaths = [
 export function buildClawDebtLedger(options: BuildClawDebtLedgerOptions): ClawDebtLedger {
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const repositories = options.repositories ?? detectDebtLedgerRepositories(options.rootDir);
-  const state: MutableDebtLedger = { entries: [], sources: [], warnings: [] };
+  const state: MutableDebtLedger = { entries: [], sources: [], warnings: [], strictFailures: [] };
 
   for (const repository of repositories) {
     collectRepositoryDebt(repository, state);
@@ -206,6 +275,10 @@ export function buildClawDebtLedger(options: BuildClawDebtLedgerOptions): ClawDe
     unindexedCandidates: collectUnindexedCandidates(repositories, entries),
     expiredEntries,
     duplicateFingerprints,
+    strictFailures: [
+      ...state.strictFailures,
+      ...collectStrictDebtControlFailures(entries, generatedAt),
+    ],
     privateSummary: {
       included: false,
       reason: "Public debt ledger excludes .codex goals, sessions, inbox directives, and dirty work. Use the private overlay runner from the Clawix private workspace for local redacted aggregation.",
@@ -261,6 +334,19 @@ function collectCodeHygieneBaseline(repository: ClawDebtLedgerRepositoryRoot, st
       reentryCommand: "node scripts/code-hygiene-check.mjs",
       validation: "scripts/code-hygiene-check.mjs",
       privacy: "public",
+      debtControl: entry.debtControl,
+      debtControlFallback: {
+        ownerArea: stringField(entry.ownerArea) ?? "code-hygiene",
+        expiresAt: stringField(entry.expiresAt),
+        severity: "P2",
+        metric: "baselined_findings",
+        unit: "finding",
+        current: Math.max(1, stringArray(entry.findingTypes).length || 1),
+        cadence: "expiry",
+        releaseEffectMode: "blocks_growth",
+        releaseGate: "scripts/code-hygiene-check.mjs",
+        releaseReason: "Code hygiene baselines must not grow without classification.",
+      },
     });
   }
 }
@@ -271,6 +357,7 @@ function collectSourceSizeBaseline(repository: ClawDebtLedgerRepositoryRoot, sta
   if (!isRecord(json) || !isRecord(json.files)) return;
   for (const [filePath, entry] of Object.entries(json.files)) {
     if (!isRecord(entry)) continue;
+    const lines = numberField(entry.lines) ?? 1;
     addEntry(state, repository, {
       id: stableId(repository.repo, sourcePath, filePath),
       sourceType: "source_size",
@@ -284,6 +371,23 @@ function collectSourceSizeBaseline(repository: ClawDebtLedgerRepositoryRoot, sta
       reentryCommand: "node scripts/source-size-check.mjs",
       validation: "scripts/source-size-check.mjs",
       privacy: "public",
+      debtControl: entry.debtControl,
+      debtControlFallback: {
+        ownerArea: stringField(entry.ownerArea) ?? "source-size",
+        expiresAt: stringField(entry.expiresAt) ?? stringField(json.expiresAt),
+        severity: entry.blockGrowth === true ? "P1" : "P2",
+        metric: "source_lines",
+        unit: "line",
+        current: lines,
+        maxAllowed: lines,
+        nextMaxAllowed: Math.max(0, lines - 1),
+        target: numberField(json.baselineRequiredLines) ?? 1200,
+        cadence: "next_touch_or_expiry",
+        releaseEffectMode: entry.blockGrowth === true ? "blocks_release" : "blocks_growth",
+        releaseTargets: entry.blockGrowth === true ? ["changed-work"] : ["changed-work"],
+        releaseGate: "scripts/source-size-check.mjs",
+        releaseReason: "Large source baselines must shrink or block additional growth.",
+      },
     });
   }
 }
@@ -309,6 +413,20 @@ function collectSurfaceEvidenceBaseline(repository: ClawDebtLedgerRepositoryRoot
       reentryCommand: sourcePath.includes("projection") ? "node scripts/surface-evidence-projection-check.mjs" : "node --import tsx scripts/surface-evidence-guard.mjs",
       validation: sourcePath.includes("projection") ? "scripts/surface-evidence-projection-check.mjs" : "scripts/surface-evidence-guard.mjs",
       privacy: "public",
+      debtControl: entry.debtControl,
+      debtControlFallback: {
+        ownerArea: stringField(entry.owner) ?? stringField(entry.ownerArea) ?? stringField(entry.steward) ?? "surface-evidence",
+        expiresAt: stringField(entry.expires) ?? stringField(entry.expiresAt),
+        severity: classification === "external_pending" ? "P1" : "P2",
+        metric: "missing_surface_evidence",
+        unit: "item",
+        current: aggregateEntryCount(entry),
+        cadence: "expiry",
+        releaseEffectMode: classification === "external_pending" ? "blocks_release" : "blocks_growth",
+        releaseTargets: classification === "external_pending" ? ["release-readiness"] : ["changed-work"],
+        releaseGate: sourcePath.includes("projection") ? "scripts/surface-evidence-projection-check.mjs" : "scripts/surface-evidence-guard.mjs",
+        releaseReason: "Surface evidence debt must shrink before affected release claims are accepted.",
+      },
     });
   }
 }
@@ -335,6 +453,19 @@ function collectUiDebtBaseline(repository: ClawDebtLedgerRepositoryRoot, state: 
       reentryCommand: "node scripts/ui_governance_guard.mjs",
       validation: "scripts/ui_governance_guard.mjs",
       privacy: "public_redacted",
+      debtControl: entry.debtControl,
+      debtControlFallback: {
+        ownerArea: stringField(entry.owner) ?? "ui-governance",
+        expiresAt: stringField(entry.reviewAfter) ?? defaultExpiry,
+        severity: "P2",
+        metric: "ui_debt_entries",
+        unit: "entry",
+        current: 1,
+        cadence: "review_after",
+        releaseEffectMode: "blocks_growth",
+        releaseGate: "scripts/ui_governance_guard.mjs",
+        releaseReason: "Frozen UI debt cannot expand without visual authorization.",
+      },
     });
   }
 }
@@ -364,6 +495,20 @@ function collectExternalValidationManifest(repository: ClawDebtLedgerRepositoryR
       reentryCommand: stringField(row?.reentryCommand),
       validation: "scripts/verify-system-telemetry-goal.mjs",
       privacy: "public_redacted",
+      debtControl: row?.debtControl,
+      debtControlFallback: {
+        ownerArea: "system-telemetry",
+        expiresAt: stringField(row?.expiresAt),
+        severity: "P1",
+        metric: "external_pending_rows",
+        unit: "row",
+        current: 1,
+        cadence: "release_target",
+        releaseEffectMode: "blocks_release",
+        releaseTargets: ["release-readiness"],
+        releaseGate: "scripts/verify-system-telemetry-goal.mjs",
+        releaseReason: "External validation gaps block affected release claims until evidence exists.",
+      },
     });
   }
 }
@@ -398,6 +543,18 @@ function collectCompletionAudits(repository: ClawDebtLedgerRepositoryRoot, state
         reentryCommand,
         validation,
         privacy: "public_redacted",
+        debtControlFallback: {
+          ownerArea: sourcePath.includes("/ui/") ? "ui-governance" : sourcePath.includes("sdk-first") ? "custom-app-sdk" : "system-telemetry",
+          severity: clean.includes("EXTERNAL PENDING") || clean.includes("blocked-external-pending") ? "P1" : "P2",
+          metric: "completion_blockers",
+          unit: "row",
+          current: 1,
+          cadence: "goal_closure",
+          releaseEffectMode: clean.includes("EXTERNAL PENDING") || clean.includes("blocked-external-pending") ? "blocks_release" : "blocks_growth",
+          releaseTargets: clean.includes("EXTERNAL PENDING") || clean.includes("blocked-external-pending") ? ["release-readiness"] : ["changed-work"],
+          releaseGate: validation,
+          releaseReason: "Completion blockers cannot be treated as success until the source verifier passes.",
+        },
       });
     }
   }
@@ -425,6 +582,18 @@ function collectCodeHygieneLedger(repository: ClawDebtLedgerRepositoryRoot, stat
       reentryCommand: "node scripts/code-hygiene-check.mjs",
       validation: "scripts/code-hygiene-check.mjs",
       privacy: "public_redacted",
+      debtControlFallback: {
+        ownerArea: "code-hygiene",
+        severity: status === "external_pending" ? "P1" : "P2",
+        metric: "code_hygiene_ledger_items",
+        unit: "item",
+        current: 1,
+        cadence: "program_closure",
+        releaseEffectMode: status === "external_pending" ? "blocks_release" : "blocks_growth",
+        releaseTargets: status === "external_pending" ? ["release-readiness"] : ["changed-work"],
+        releaseGate: "scripts/code-hygiene-check.mjs",
+        releaseReason: "Code hygiene ledger blockers must shrink or remain release-visible.",
+      },
     });
   }
 }
@@ -463,20 +632,132 @@ function readRepoText(repository: ClawDebtLedgerRepositoryRoot, relativePath: st
   }
 }
 
-function addEntry(state: MutableDebtLedger, repository: ClawDebtLedgerRepositoryRoot, input: Omit<ClawDebtLedgerEntry, "repo" | "fingerprint">): void {
+function addEntry(state: MutableDebtLedger, repository: ClawDebtLedgerRepositoryRoot, input: DebtLedgerEntryInput): void {
+  const debtControl = normalizeDebtControl(input.debtControl, input.debtControlFallback);
   const entry = {
     ...input,
+    debtControl,
     repo: repository.repo,
     summary: compact(input.summary),
     risk: compact(input.risk),
     fingerprint: fingerprintEntry(repository.repo, input),
   };
+  delete (entry as { debtControlFallback?: unknown }).debtControlFallback;
   if (containsPrivatePath(`${entry.summary}\n${entry.risk}\n${entry.canonicalSource}`)) {
     entry.summary = redactPrivatePaths(entry.summary);
     entry.risk = redactPrivatePaths(entry.risk);
     if (entry.privacy === "public") entry.privacy = "public_redacted";
   }
-  state.entries.push(clawDebtLedgerEntrySchema.parse(entry));
+  const parsed = clawDebtLedgerEntrySchema.parse(entry);
+  const explicitDebtControlRequired = requiresExplicitDebtControl(parsed);
+  if (!input.debtControl && explicitDebtControlRequired) {
+    state.strictFailures.push({
+      repo: repository.repo,
+      id: parsed.id,
+      sourceType: parsed.sourceType,
+      canonicalSource: parsed.canonicalSource,
+      severity: parsed.debtControl.severity,
+      reason: "debtControl must be declared explicitly by the source baseline",
+    });
+  } else if (explicitDebtControlRequired) {
+    state.strictFailures.push(...rawDebtControlStrictFailures(repository.repo, parsed, input.debtControl));
+  }
+  state.entries.push(parsed);
+}
+
+function requiresExplicitDebtControl(entry: ClawDebtLedgerEntry): boolean {
+  return entry.canonicalSource.includes("baseline");
+}
+
+function rawDebtControlStrictFailures(repo: string, entry: ClawDebtLedgerEntry, raw: unknown): ClawDebtLedgerAudit["strictFailures"] {
+  const failures: ClawDebtLedgerAudit["strictFailures"] = [];
+  const record = isRecord(raw) ? raw : {};
+  const budget = isRecord(record.budget) ? record.budget : {};
+  const releaseEffect = isRecord(record.releaseEffect) ? record.releaseEffect : {};
+  const missing: string[] = [];
+  for (const field of ["ownerArea", "expiresAt", "severity"]) {
+    if (!stringField(record[field])) missing.push(`debtControl.${field}`);
+  }
+  for (const field of ["metric", "unit", "current", "maxAllowed", "nextMaxAllowed", "target", "cadence"]) {
+    const value = budget[field];
+    if (typeof value === "undefined" || value === "") missing.push(`debtControl.budget.${field}`);
+  }
+  for (const field of ["mode", "targets", "gate", "reason"]) {
+    const value = releaseEffect[field];
+    if (field === "targets") {
+      if (!Array.isArray(value)) missing.push("debtControl.releaseEffect.targets");
+    } else if (!stringField(value)) {
+      missing.push(`debtControl.releaseEffect.${field}`);
+    }
+  }
+  if (missing.length > 0) {
+    failures.push({
+      repo,
+      id: entry.id,
+      sourceType: entry.sourceType,
+      canonicalSource: entry.canonicalSource,
+      severity: entry.debtControl.severity,
+      reason: `debtControl declaration is missing ${missing.join(", ")}`,
+    });
+  }
+  return failures;
+}
+
+function normalizeDebtControl(raw: unknown, fallback: DebtControlFallback): ClawDebtControl {
+  const record = isRecord(raw) ? raw : {};
+  const budget = isRecord(record.budget) ? record.budget : {};
+  const releaseEffect = isRecord(record.releaseEffect) ? record.releaseEffect : {};
+  const current = numberField(budget.current) ?? fallback.current;
+  const maxAllowed = numberField(budget.maxAllowed) ?? fallback.maxAllowed ?? current;
+  const nextMaxAllowed = numberField(budget.nextMaxAllowed) ?? fallback.nextMaxAllowed ?? Math.max(0, maxAllowed - 1);
+  const target = numberField(budget.target) ?? fallback.target ?? Math.min(nextMaxAllowed, maxAllowed);
+  return clawDebtControlSchema.parse({
+    ownerArea: stringField(record.ownerArea) ?? fallback.ownerArea,
+    expiresAt: stringField(record.expiresAt) ?? fallback.expiresAt ?? "2099-12-31",
+    severity: parseSeverity(stringField(record.severity), fallback.severity ?? "P2"),
+    budget: {
+      metric: stringField(budget.metric) ?? fallback.metric,
+      unit: stringField(budget.unit) ?? fallback.unit,
+      current,
+      maxAllowed,
+      nextMaxAllowed,
+      target,
+      cadence: stringField(budget.cadence) ?? fallback.cadence ?? "expiry",
+    },
+    releaseEffect: {
+      mode: parseReleaseEffect(stringField(releaseEffect.mode), fallback.releaseEffectMode ?? "blocks_growth"),
+      targets: stringArray(releaseEffect.targets).length > 0 ? stringArray(releaseEffect.targets) : fallback.releaseTargets ?? [],
+      gate: stringField(releaseEffect.gate) ?? fallback.releaseGate ?? "claw debt audit --strict",
+      reason: stringField(releaseEffect.reason) ?? fallback.releaseReason ?? "Debt baseline must shrink or block growth.",
+    },
+  });
+}
+
+function collectStrictDebtControlFailures(entries: ClawDebtLedgerEntry[], generatedAt: string): ClawDebtLedgerAudit["strictFailures"] {
+  const failures: ClawDebtLedgerAudit["strictFailures"] = [];
+  for (const entry of entries) {
+    const control = entry.debtControl;
+    const label = {
+      repo: entry.repo,
+      id: entry.id,
+      sourceType: entry.sourceType,
+      canonicalSource: entry.canonicalSource,
+      severity: control.severity,
+    };
+    if (control.expiresAt < generatedAt.slice(0, 10)) {
+      failures.push({ ...label, reason: `debtControl expired on ${control.expiresAt}` });
+    }
+    if (control.budget.nextMaxAllowed >= control.budget.maxAllowed) {
+      failures.push({ ...label, reason: "debtControl budget.nextMaxAllowed must be lower than budget.maxAllowed" });
+    }
+    if ((control.severity === "P0" || control.severity === "P1") && !["blocks_release", "blocks_growth"].includes(control.releaseEffect.mode)) {
+      failures.push({ ...label, reason: "P0/P1 debtControl releaseEffect.mode must block release or growth" });
+    }
+    if (control.releaseEffect.mode === "blocks_release" && control.releaseEffect.targets.length === 0) {
+      failures.push({ ...label, reason: "blocks_release debtControl must list release targets" });
+    }
+  }
+  return failures;
 }
 
 function collectUnindexedCandidates(repositories: ClawDebtLedgerRepositoryRoot[], entries: ClawDebtLedgerEntry[]): ClawDebtLedgerAudit["unindexedCandidates"] {
@@ -558,7 +839,7 @@ function priority(entry: ClawDebtLedgerEntry): number {
   return 1;
 }
 
-function fingerprintEntry(repo: string, input: Omit<ClawDebtLedgerEntry, "repo" | "fingerprint">): string {
+function fingerprintEntry(repo: string, input: Pick<ClawDebtLedgerEntry, "sourceType" | "classification" | "canonicalSource" | "summary">): string {
   return createHash("sha256").update([
     repo,
     input.sourceType,
@@ -590,6 +871,7 @@ export function debtLedgerMissingActionabilityFields(entry: ClawDebtLedgerEntry,
   if (!entry.reentryCondition) missing.push("reentryCondition");
   if (!entry.reentryCommand) missing.push("reentryCommand");
   if (!entry.validation) missing.push("validation");
+  if (!entry.debtControl) missing.push("debtControl");
   if (isExpired(entry, generatedAt)) missing.push("review_expired");
   return missing;
 }
@@ -619,8 +901,31 @@ function stringField(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function numberField(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0) : [];
+}
+
+function parseSeverity(value: string | undefined, fallback: ClawDebtControlSeverity): ClawDebtControlSeverity {
+  return (CLAW_DEBT_CONTROL_SEVERITIES as readonly string[]).includes(value ?? "") ? value as ClawDebtControlSeverity : fallback;
+}
+
+function parseReleaseEffect(value: string | undefined, fallback: ClawDebtControlReleaseEffect): ClawDebtControlReleaseEffect {
+  return (CLAW_DEBT_CONTROL_RELEASE_EFFECTS as readonly string[]).includes(value ?? "") ? value as ClawDebtControlReleaseEffect : fallback;
+}
+
+function aggregateEntryCount(entry: Record<string, unknown>): number {
+  let total = 0;
+  for (const value of Object.values(entry)) {
+    if (!isRecord(value)) continue;
+    for (const nested of Object.values(value)) {
+      if (isRecord(nested) && typeof nested.count === "number" && Number.isFinite(nested.count)) total += nested.count;
+    }
+  }
+  return Math.max(1, total);
 }
 
 function compact(value: string): string {

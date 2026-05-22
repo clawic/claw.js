@@ -9,237 +9,1513 @@
   "files": {
     "apps/host/Sources/ClawHostKit/MacControl.swift": {
       "lines": 2009,
-      "reason": "Mac Control broker crossed the 2000-line boundary while adding signed-host audio volume and display brightness execution; extract action planning, native runners, and audit helpers before expanding more host capabilities."
+      "reason": "Mac Control broker crossed the 2000-line boundary while adding signed-host audio volume and display brightness execution; extract action planning, native runners, and audit helpers before expanding more host capabilities.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2009,
+          "maxAllowed": 2009,
+          "nextMaxAllowed": 2008,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "apps/host/Sources/ClawHostKit/MacControl.swift is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift": {
       "lines": 1583,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "reason": "Existing broad test coverage; split by scenario before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1583,
+          "maxAllowed": 1583,
+          "nextMaxAllowed": 1582,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "content/src/server/db.ts": {
       "lines": 1419,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1419,
+          "maxAllowed": 1419,
+          "nextMaxAllowed": 1418,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "content/src/server/db.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "database/public/app.js": {
       "lines": 1557,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1557,
+          "maxAllowed": 1557,
+          "nextMaxAllowed": 1556,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "database/public/app.js is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "drive/src/server/db.ts": {
       "lines": 1568,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1568,
+          "maxAllowed": 1568,
+          "nextMaxAllowed": 1567,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "drive/src/server/db.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/api/chat/route.ts": {
       "lines": 1311,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1311,
+          "maxAllowed": 1311,
+          "nextMaxAllowed": 1310,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/api/chat/route.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/api/tasks/route.ts": {
       "lines": 1477,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1477,
+          "maxAllowed": 1477,
+          "nextMaxAllowed": 1476,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/api/tasks/route.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/calendar/page.tsx": {
       "lines": 1428,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1428,
+          "maxAllowed": 1428,
+          "nextMaxAllowed": 1427,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/calendar/page.tsx is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/page.tsx": {
       "lines": 2299,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2299,
+          "maxAllowed": 2299,
+          "nextMaxAllowed": 2298,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/page.tsx is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/settings/page.tsx": {
       "lines": 1996,
-      "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding."
+      "reason": "Settings page shell after extracting persona, profile, advanced, OpenClaw, integrations, and tools tabs; route-level state/wiring only, split new tabs before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1996,
+          "maxAllowed": 1996,
+          "nextMaxAllowed": 1995,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/settings/page.tsx is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/settings/settings-integrations-tab.tsx": {
       "lines": 1308,
-      "reason": "Integrations settings tab extracted from settings page; keep provider-specific modal flows split out before expanding further."
+      "reason": "Integrations settings tab extracted from settings page; keep provider-specific modal flows split out before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1308,
+          "maxAllowed": 1308,
+          "nextMaxAllowed": 1307,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/settings/settings-integrations-tab.tsx is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/app/tasks/page.tsx": {
       "lines": 2029,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2029,
+          "maxAllowed": 2029,
+          "nextMaxAllowed": 2028,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/app/tasks/page.tsx is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/components/onboarding.tsx": {
       "lines": 1768,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1768,
+          "maxAllowed": 1768,
+          "nextMaxAllowed": 1767,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/components/onboarding.tsx is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/lib/e2e.ts": {
       "lines": 1953,
-      "reason": "Showcase E2E fixture runtime after type extraction; keep fixture types and large seed groups separate before expanding."
+      "reason": "Showcase E2E fixture runtime after type extraction; keep fixture types and large seed groups separate before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1953,
+          "maxAllowed": 1953,
+          "nextMaxAllowed": 1952,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/lib/e2e.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "examples/showcase/src/lib/i18n/messages.ts": {
       "lines": 1267,
-      "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules."
+      "reason": "English locale, locale registry, and brand override assembly after locale table extraction; add new translations in locale-specific modules.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1267,
+          "maxAllowed": 1267,
+          "nextMaxAllowed": 1266,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "examples/showcase/src/lib/i18n/messages.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "memory/src/service.ts": {
       "lines": 1886,
-      "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding."
+      "reason": "Memory service orchestration after note validation extraction; split persistence, indexing, and active memory helpers before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1886,
+          "maxAllowed": 1886,
+          "nextMaxAllowed": 1885,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "memory/src/service.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "modules/erp/src/server/db.ts": {
       "lines": 1950,
-      "reason": "ERP database store after SQL prefix/helper extraction; keep database helpers outside the store before expanding."
+      "reason": "ERP database store after SQL prefix/helper extraction; keep database helpers outside the store before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1950,
+          "maxAllowed": 1950,
+          "nextMaxAllowed": 1949,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "modules/erp/src/server/db.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "notify/src/server/db.ts": {
       "lines": 1707,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1707,
+          "maxAllowed": 1707,
+          "nextMaxAllowed": 1706,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "notify/src/server/db.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-core/src/agents-v1.ts": {
       "lines": 2225,
-      "reason": "Agents V1 runtime model after autonomy, supervisor, memory, budget, access, routing, and projection gates; split new policy families into focused modules before expanding further."
+      "reason": "Agents V1 runtime model after autonomy, supervisor, memory, budget, access, routing, and projection gates; split new policy families into focused modules before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2225,
+          "maxAllowed": 2225,
+          "nextMaxAllowed": 2224,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/agents-v1.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-core/src/index.test.ts": {
       "lines": 2038,
-      "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test."
+      "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2038,
+          "maxAllowed": 2038,
+          "nextMaxAllowed": 2037,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/index.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-core/src/remote-sync.ts": {
       "lines": 2062,
-      "reason": "Remote Gateway/Sync contract schemas and builders after provider/device E2E validation plan expansion; split validation-plan and receipt families before adding more remote contract domains."
+      "reason": "Remote Gateway/Sync contract schemas and builders after provider/device E2E validation plan expansion; split validation-plan and receipt families before adding more remote contract domains.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2062,
+          "maxAllowed": 2062,
+          "nextMaxAllowed": 2061,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/remote-sync.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-core/src/schemas.ts": {
       "lines": 1500,
-      "reason": "Canonical schema surface after workspace schema extraction; split new contract domains into focused schema modules before expanding."
+      "reason": "Canonical schema surface after workspace schema extraction; split new contract domains into focused schema modules before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1500,
+          "maxAllowed": 1500,
+          "nextMaxAllowed": 1499,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/schemas.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-core/src/surface-registry.ts": {
       "lines": 1589,
-      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, report governance state, stable package/native/format surfaces, and registered DDL sources; split route families and compatibility categories into focused modules before expanding further."
+      "reason": "Stable surface registry after cross-surface enforcement expansion for routes, events, app/browser storage keys, report governance state, stable package/native/format surfaces, and registered DDL sources; split route families and compatibility categories into focused modules before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1589,
+          "maxAllowed": 1589,
+          "nextMaxAllowed": 1588,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/surface-registry.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-core/src/types.ts": {
       "lines": 1348,
-      "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding."
+      "reason": "Canonical type surface after workspace, human, and library/rules type extraction; split new contract domains into focused type modules before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1348,
+          "maxAllowed": 1348,
+          "nextMaxAllowed": 1347,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/types.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-integrations/src/discord-operation-executor.ts": {
       "lines": 1870,
-      "reason": "Discord request planner switch after value helper extraction; split operation families before expanding."
+      "reason": "Discord request planner switch after value helper extraction; split operation families before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1870,
+          "maxAllowed": 1870,
+          "nextMaxAllowed": 1869,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-integrations/src/discord-operation-executor.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-integrations/src/openapi-runtime.test.ts": {
       "lines": 1850,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "reason": "Existing broad test coverage; split by scenario before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1850,
+          "maxAllowed": 1850,
+          "nextMaxAllowed": 1849,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-integrations/src/openapi-runtime.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-integrations/src/runtime-coverage.test.ts": {
       "lines": 1767,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "reason": "Existing broad test coverage; split by scenario before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1767,
+          "maxAllowed": 1767,
+          "nextMaxAllowed": 1766,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-integrations/src/runtime-coverage.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-integrations/src/runtime-registry.ts": {
       "lines": 1606,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1606,
+          "maxAllowed": 1606,
+          "nextMaxAllowed": 1605,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-integrations/src/runtime-registry.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-integrations/src/stripe-operation-executor.test.ts": {
       "lines": 1738,
-      "reason": "Existing broad test coverage; split by scenario before expanding."
+      "reason": "Existing broad test coverage; split by scenario before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1738,
+          "maxAllowed": 1738,
+          "nextMaxAllowed": 1737,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-integrations/src/stripe-operation-executor.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-node/src/code/index.ts": {
       "lines": 1704,
-      "reason": "Code ledger and global index implementation after public type extraction; keep type contracts in code-types before expanding."
+      "reason": "Code ledger and global index implementation after public type extraction; keep type contracts in code-types before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1704,
+          "maxAllowed": 1704,
+          "nextMaxAllowed": 1703,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-node/src/code/index.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-node/src/create-claw.test.ts": {
       "lines": 1994,
-      "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly."
+      "reason": "Remaining Claw SDK integration tests after helper and Telegram scenario split; add new scenario files instead of expanding broadly.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1994,
+          "maxAllowed": 1994,
+          "nextMaxAllowed": 1993,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-node/src/create-claw.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-node/src/create-claw.ts": {
       "lines": 1964,
-      "reason": "Claw runtime assembly after extracting runtime/workspace, intent, capability, session, data/watch, content/IoT, media/session, generation/image, skill/provider, and channel helpers; keep under 2000 by splitting new public facades before expanding."
+      "reason": "Claw runtime assembly after extracting runtime/workspace, intent, capability, session, data/watch, content/IoT, media/session, generation/image, skill/provider, and channel helpers; keep under 2000 by splitting new public facades before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1964,
+          "maxAllowed": 1964,
+          "nextMaxAllowed": 1963,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-node/src/create-claw.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-search/src/store.ts": {
       "lines": 2185,
-      "reason": "Search SQLite store after shard-scoped reset support; split source, shard, cache, and query persistence helpers before expanding further."
+      "reason": "Search SQLite store after shard-scoped reset support; split source, shard, cache, and query persistence helpers before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2185,
+          "maxAllowed": 2185,
+          "nextMaxAllowed": 2184,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-search/src/store.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-workspace/src/index.ts": {
       "lines": 1977,
-      "reason": "Workspace runtime shell after indexing, human activity, context, work session, productivity, and instance assembly extraction; split new domains before expanding."
+      "reason": "Workspace runtime shell after indexing, human activity, context, work session, productivity, and instance assembly extraction; split new domains before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1977,
+          "maxAllowed": 1977,
+          "nextMaxAllowed": 1976,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-workspace/src/index.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-workspace/src/workspace-contracts.ts": {
       "lines": 1628,
-      "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding."
+      "reason": "Extracted public workspace contract surface; keep as capped exception and split by domain before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1628,
+          "maxAllowed": 1628,
+          "nextMaxAllowed": 1627,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-workspace/src/workspace-contracts.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs-workspace/src/workspace-core-productivity-facades.ts": {
       "lines": 1389,
-      "reason": "Core productivity facade extracted from workspace index; grouped by tightly coupled task/project/list APIs pending further domain splits."
+      "reason": "Core productivity facade extracted from workspace index; grouped by tightly coupled task/project/list APIs pending further domain splits.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1389,
+          "maxAllowed": 1389,
+          "nextMaxAllowed": 1388,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-workspace/src/workspace-core-productivity-facades.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/cli-dense-data-command.ts": {
       "lines": 2876,
-      "reason": "Dense-data CLI router after first-wave timeline and nested route graduation through government/public-case routes; split materialized timeline builders and route mapping tables before adding more dense domains."
+      "reason": "Dense-data CLI router after first-wave timeline and nested route graduation through government/public-case routes; split materialized timeline builders and route mapping tables before adding more dense domains.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2876,
+          "maxAllowed": 2876,
+          "nextMaxAllowed": 2875,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-dense-data-command.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/cli-discovery.test.ts": {
       "lines": 2055,
-      "reason": "Broad CLI discovery integration coverage after dense-domain direct noun graduation; split new domain route scenarios into focused test files before expanding further."
+      "reason": "Broad CLI discovery integration coverage after dense-domain direct noun graduation; split new domain route scenarios into focused test files before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2055,
+          "maxAllowed": 2055,
+          "nextMaxAllowed": 2054,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-discovery.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/cli-productivity-extended-command.ts": {
       "lines": 1583,
-      "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding."
+      "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1583,
+          "maxAllowed": 1583,
+          "nextMaxAllowed": 1582,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-productivity-extended-command.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/cli-search-heavy-command.ts": {
       "lines": 4984,
       "blockGrowth": true,
-      "reason": "Search CLI heavy implementation after extracting search document builders, row types, parsers, and local discovery helpers into cli-search-document-* owner modules; future growth is blocked except for further extraction, deletion, or compatibility-preserving split work."
+      "reason": "Search CLI heavy implementation after extracting search document builders, row types, parsers, and local discovery helpers into cli-search-document-* owner modules; future growth is blocked except for further extraction, deletion, or compatibility-preserving split work.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P1",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 4984,
+          "maxAllowed": 4984,
+          "nextMaxAllowed": 4983,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_release",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-search-heavy-command.ts is over the emergency growth threshold; release/growth must stay blocked until the file shrinks."
+        }
+      }
     },
     "packages/clawjs/src/cli-search-index.test.ts": {
       "lines": 5248,
       "blockGrowth": true,
-      "reason": "Emergency search index integration coverage after local semantic embedding, shard, design-resource, indexing workflow, and brokered action-access expansion; future growth is blocked except for extraction, deletion, or compatibility-preserving split work."
+      "reason": "Emergency search index integration coverage after local semantic embedding, shard, design-resource, indexing workflow, and brokered action-access expansion; future growth is blocked except for extraction, deletion, or compatibility-preserving split work.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P1",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 5248,
+          "maxAllowed": 5248,
+          "nextMaxAllowed": 5247,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_release",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-search-index.test.ts is over the emergency growth threshold; release/growth must stay blocked until the file shrinks."
+        }
+      }
     },
     "packages/clawjs/src/index-data.test.ts": {
       "lines": 2043,
-      "reason": "Dense Data and persistent surface integration coverage after remote/source QA evidence expansion; split new data route scenarios into focused test files before expanding further."
+      "reason": "Dense Data and persistent surface integration coverage after remote/source QA evidence expansion; split new data route scenarios into focused test files before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2043,
+          "maxAllowed": 2043,
+          "nextMaxAllowed": 2042,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/index-data.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/index.test.ts": {
       "lines": 1580,
-      "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly."
+      "reason": "Remaining CLI smoke and integration test surface after scenario split; add new scenario files instead of expanding broadly.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1580,
+          "maxAllowed": 1580,
+          "nextMaxAllowed": 1579,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/index.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/index.ts": {
       "lines": 1999,
-      "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules."
+      "reason": "Public CLI routing after delegated domain, temporal, productivity, and knowledge-tail command extraction; keep under 2000 by splitting new domains into modules.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1999,
+          "maxAllowed": 1999,
+          "nextMaxAllowed": 1998,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/index.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/slides.ts": {
       "lines": 1486,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1486,
+          "maxAllowed": 1486,
+          "nextMaxAllowed": 1485,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/slides.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/v1-data-core.ts": {
       "lines": 1587,
-      "reason": "V1 data maintenance, sidecar, page, search, MCP, and formatting helpers extracted from CLI routing; split by helper domain before expanding."
+      "reason": "V1 data maintenance, sidecar, page, search, MCP, and formatting helpers extracted from CLI routing; split by helper domain before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1587,
+          "maxAllowed": 1587,
+          "nextMaxAllowed": 1586,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/v1-data-core.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/v1-data-surface.ts": {
       "lines": 1315,
-      "reason": "Extracted canonical v1 data schema and persistent surface contract; split tables, codecs, and fixtures before expanding."
+      "reason": "Extracted canonical v1 data schema and persistent surface contract; split tables, codecs, and fixtures before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1315,
+          "maxAllowed": 1315,
+          "nextMaxAllowed": 1314,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/v1-data-surface.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "packages/clawjs/src/v1-data.ts": {
       "lines": 1738,
-      "reason": "V1 data CLI routing and command handlers after data helper extraction; keep persistence helpers in v1-data-core before expanding."
+      "reason": "V1 data CLI routing and command handlers after data helper extraction; keep persistence helpers in v1-data-core before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1738,
+          "maxAllowed": 1738,
+          "nextMaxAllowed": 1737,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/v1-data.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "relay/src/connector/runtime.ts": {
       "lines": 1614,
-      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1614,
+          "maxAllowed": 1614,
+          "nextMaxAllowed": 1613,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "relay/src/connector/runtime.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "relay/src/server/app.ts": {
       "lines": 1674,
-      "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction."
+      "reason": "Relay application assembly and remaining auth/service/admin/browser routes after helper, monitor, and workspace route extraction.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1674,
+          "maxAllowed": 1674,
+          "nextMaxAllowed": 1673,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "relay/src/server/app.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "relay/src/server/db.ts": {
       "lines": 1982,
-      "reason": "Relay database persistence class after schema and helper extraction; keep schema/migrations/helpers outside the class before expanding."
+      "reason": "Relay database persistence class after schema and helper extraction; keep schema/migrations/helpers outside the class before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1982,
+          "maxAllowed": 1982,
+          "nextMaxAllowed": 1981,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "relay/src/server/db.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "relay/src/server/workspace-routes.ts": {
       "lines": 1815,
-      "reason": "Workspace, chat, document, content, image, and skill route registration extracted from relay app; split by route domain before expanding."
+      "reason": "Workspace, chat, document, content, image, and skill route registration extracted from relay app; split by route domain before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1815,
+          "maxAllowed": 1815,
+          "nextMaxAllowed": 1814,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "relay/src/server/workspace-routes.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "relay/tests/e2e/relay.e2e.test.ts": {
       "lines": 1416,
-      "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding."
+      "reason": "Relay E2E scenarios after fake connector utility extraction; split new scenario groups into separate tests before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1416,
+          "maxAllowed": 1416,
+          "nextMaxAllowed": 1415,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "relay/tests/e2e/relay.e2e.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "scripts/extract-component-catalog.mjs": {
       "lines": 1233,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1233,
+          "maxAllowed": 1233,
+          "nextMaxAllowed": 1232,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "scripts/extract-component-catalog.mjs is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "scripts/verify-component-catalog.mjs": {
       "lines": 1777,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1777,
+          "maxAllowed": 1777,
+          "nextMaxAllowed": 1776,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "scripts/verify-component-catalog.mjs is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "scripts/verify-remote-sync-goal.mjs": {
       "lines": 2004,
-      "reason": "Remote Gateway/Sync closure verifier after source-session, artifact-bound approval, and fail-closed physical/provider gates; split source-QA, external-validation, and route-contract assertions before expanding further."
+      "reason": "Remote Gateway/Sync closure verifier after source-session, artifact-bound approval, and fail-closed physical/provider gates; split source-QA, external-validation, and route-contract assertions before expanding further.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2004,
+          "maxAllowed": 2004,
+          "nextMaxAllowed": 2003,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "scripts/verify-remote-sync-goal.mjs is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "secrets/src/server/app.ts": {
       "lines": 1264,
-      "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding."
+      "reason": "Existing secrets server app after broker redirect handling; split routes, auth helpers, and response serializers before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1264,
+          "maxAllowed": 1264,
+          "nextMaxAllowed": 1263,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "secrets/src/server/app.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     },
     "tests/e2e/telegram-codex-bridge.spec.ts": {
       "lines": 1325,
-      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 1325,
+          "maxAllowed": 1325,
+          "nextMaxAllowed": 1324,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "tests/e2e/telegram-codex-bridge.spec.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
     }
   }
 }
