@@ -1,6 +1,8 @@
 import os from "node:os";
 import path from "node:path";
 
+import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
+
 export interface PublishingConfig {
   host: string;
   port: number;
@@ -63,10 +65,9 @@ export function loadConfig(overrides: Partial<PublishingConfig> = {}): Publishin
 
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw")), "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(explicit ? { dataDir: explicit } : {}),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
 }

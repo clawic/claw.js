@@ -1,6 +1,6 @@
 import path from "node:path";
 import os from "node:os";
-import { clawStorageFiles, clawGlobalHomeLayout } from "@clawjs/core";
+import { clawStorageFiles, resolveClawGlobalDataStorageDir } from "@clawjs/core";
 
 export interface DatabaseServiceConfig {
   host: string;
@@ -61,12 +61,11 @@ export function loadDatabaseConfig(overrides: Partial<DatabaseServiceConfig> = {
 
 function defaultDataDir(): string {
   const explicit = process.env.CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return path.join(expandHome(process.env.CLAW_HOME ?? clawGlobalHomeLayout.root), "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(explicit ? { dataDir: explicit } : {}),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
 }
 
 function parsePositiveInteger(value: unknown, fallback: number): number {

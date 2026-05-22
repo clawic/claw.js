@@ -1,4 +1,4 @@
-import { clawDefaultStreamingBackpressurePolicy, clawGlobalHomeLayout } from "@clawjs/core";
+import { clawDefaultStreamingBackpressurePolicy, resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import path from "node:path";
 import os from "node:os";
 
@@ -59,12 +59,11 @@ export function loadSessionsConfig(overrides: Partial<SessionsServiceConfig> = {
 
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  return process.env.CLAW_HOME ? path.join(expandHome(process.env.CLAW_HOME), "data") : expandHome(clawGlobalHomeLayout.data);
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(explicit ? { dataDir: explicit } : {}),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
 }
 
 function parsePositiveInteger(value: unknown, fallback: number): number {

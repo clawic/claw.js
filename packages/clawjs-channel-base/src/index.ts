@@ -1,5 +1,5 @@
 // @clawjs-persistent-surface-ddl-source
-import { clawApiPath, resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { clawApiPath, resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -116,13 +116,11 @@ export function loadChannelConfig(channelName: string, overrides: Partial<Channe
 
 function defaultClawjsDataRoot(): string {
   const explicit = process.env.CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  const home = process.env.CLAW_HOME ? expandHome(process.env.CLAW_HOME) : expandHome(resolveClawPersistentSurfacePath("claw.global.root"));
-  return path.join(home, "data");
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(explicit ? { dataDir: explicit } : {}),
+    ...(process.env.CLAW_HOME ? { clawHome: process.env.CLAW_HOME } : {}),
+  });
 }
 
 interface AccountRow {

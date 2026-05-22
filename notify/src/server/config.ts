@@ -1,7 +1,7 @@
 import path from "node:path";
 import os from "node:os";
 
-import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 
 export interface NotifyServiceConfig {
   host: string;
@@ -28,12 +28,11 @@ export function loadNotifyConfig(overrides: Partial<NotifyServiceConfig> = {}): 
 }
 
 function defaultClawjsDataRoot(): string {
-  const explicit = process.env.CLAW_DATA_DIR;
-  if (explicit) return expandHome(explicit);
-  if (process.env.CLAW_HOME) return path.join(expandHome(process.env.CLAW_HOME), "data");
-  return expandHome(resolveClawPersistentSurfacePath("claw.global.data"));
-}
-
-function expandHome(value: string): string {
-  return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+  const dataDir = process.env.CLAW_DATA_DIR;
+  const clawHome = process.env.CLAW_HOME;
+  return resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(dataDir ? { dataDir } : {}),
+    ...(clawHome ? { clawHome } : {}),
+  });
 }

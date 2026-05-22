@@ -13,6 +13,7 @@
     "test:adapters": "tsx --test tests/e2e/adapters/*.test.ts"
   },
   "dependencies": {
+    "@clawjs/core": "0.1.2",
     "@fastify/cors": "^11.1.0",
     "@fastify/multipart": "^9.2.1",
     "@fastify/websocket": "^11.2.0",
