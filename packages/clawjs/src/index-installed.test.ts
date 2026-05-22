@@ -1,6 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -239,7 +240,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.equal(magicSchema.exists, true);
   assert.equal(magicSchema.collection.name, "leads");
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+  assert.equal(fs.existsSync(registeredDatabasePath(dataRoot, "claw.database.core")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 
@@ -719,7 +720,7 @@ test("published CLI tarballs install with npm and manage local-first productivit
   assert.match(dbTask.stderr, /Using local database for this project/);
   assert.match(dbTask.stdout, /Created task \S+ "Magic fallback"/);
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+  assert.equal(fs.existsSync(registeredDatabasePath(dataRoot, "claw.database.core")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", installRoot, "database.sqlite")), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", installRoot, "workspace.manifest.json")), false);
 });

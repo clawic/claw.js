@@ -2,6 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
+import {
+  resolveClawGlobalDataDir,
+  resolveClawModulesConfigPath,
+  resolveClawWorkspaceModulesConfigPath,
+} from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
@@ -235,15 +240,15 @@ export const BASIC_PRODUCTIVITY_COLLECTION_NAMES = new Set([
 ]);
 
 function clawHome(flags: Record<string, string>): string {
-  return path.resolve(flags["claw-home"] ? flags["claw-home"].replace(/^~(?=$|\/)/, os.homedir()) : process.env.CLAW_HOME ?? path.join(os.homedir(), ".claw"));
+  return path.resolve(flags["claw-home"] ? flags["claw-home"].replace(/^~(?=$|\/)/, os.homedir()) : process.env.CLAW_HOME ?? resolveClawGlobalDataDir({ homeDir: os.homedir() }));
 }
 
 function globalConfigPath(flags: Record<string, string>): string {
-  return path.join(clawHome(flags), "config", "modules.json");
+  return resolveClawModulesConfigPath(clawHome(flags));
 }
 
 function workspaceConfigPath(flags: Record<string, string>, cwd: string): string {
-  return path.join(path.resolve(cwd, flags.workspace ?? "."), ".claw", "config", "modules.json");
+  return resolveClawWorkspaceModulesConfigPath(path.resolve(cwd, flags.workspace ?? "."));
 }
 
 function defaultConfig(mode: SetupModeId = "minimal"): ClawModulesConfig {

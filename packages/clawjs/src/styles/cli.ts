@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+
 import { builtinStyleManifests } from "./builtins.ts";
 import {
   exportStyle,
@@ -191,7 +193,7 @@ function scheduleStyleSearchEvent(options: StyleCliOptions, operation: "upsert" 
 }
 
 function searchEventDataDir(options: StyleCliOptions): string {
-  return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? path.join(options.workspaceRoot, ".claw", "data");
+  return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.workspace.data", options.workspaceRoot);
 }
 
 function writeUsage(context: StyleCliContext): void {

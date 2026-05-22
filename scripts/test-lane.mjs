@@ -50,6 +50,10 @@ function evolutionGate() {
   npmRun("test:evolution");
 }
 
+function scaleLab(profile) {
+  npmRun("scale:lab", ["--profile", profile]);
+}
+
 function fast(args = []) {
   npmRun("privacy:check");
   npmRun("privacy:test");
@@ -60,6 +64,7 @@ function fast(args = []) {
   evolutionGate();
   npmRun("code-hygiene:check");
   npmRun("code-hygiene:self-test");
+  scaleLab("smoke");
   vitest(args);
   npmRun("test:types");
 }
@@ -105,6 +110,7 @@ function changed() {
 
 function integration() {
   fast();
+  scaleLab("medium");
   for (const script of [
     "database:test",
     "audio:test",

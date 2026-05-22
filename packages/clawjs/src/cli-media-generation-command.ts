@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import type { ClawInstance, VoiceNoteStatus } from "@clawjs/claw";
-import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin, RuntimeAdapterId } from "@clawjs/core";
+import { resolveClawPersistentSurfacePath, type MediaDirection, type MediaKind, type MediaListInput, type MediaOrigin, type RuntimeAdapterId } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
@@ -34,7 +34,11 @@ type CliMediaClaw = ClawInstance & {
 };
 
 function searchEventDataDir(workspaceRoot: string, flags: Record<string, string>): string {
-  return path.resolve(flags["data-dir"] ?? path.join(workspaceRoot, ".claw", "data"));
+  return path.resolve(flags["data-dir"] ?? resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot));
+}
+
+function mediaCollectionDir(workspaceRoot: string): string {
+  return resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "collections", "media");
 }
 
 function scheduleImageRecordSearchEvent(input: {
@@ -77,7 +81,7 @@ function scheduleGenerationRecordSearchEvent(input: {
 }
 
 function mediaIdsForGeneration(workspaceRoot: string, generationId: string): string[] {
-  const dir = path.join(workspaceRoot, ".claw", "data", "collections", "media");
+  const dir = mediaCollectionDir(workspaceRoot);
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });

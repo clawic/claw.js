@@ -1,4 +1,5 @@
 import { clawProfessionalRecordsAcceptanceFixture, clawProfessionalRecordsOsRegistry, findClawProfessionalRecordsSystem, listClawProfessionalRecordsSemanticViewEntries, resolveBuiltinCollectionName, resolveClawProfessionalRecordsIntent } from "@clawjs/core/catalogs";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "fs";
 import path from "path";
 
@@ -170,7 +171,7 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
 
 function writeEmptyDenseListIfStoreMissing(input: ProfessionalRecordsCliInput, collectionName: string, action: string, invokedCommand: string): number | null {
   if (action !== "list") return null;
-  const dbPath = path.join(input.workspaceRoot, ".claw", "data", "core.sqlite");
+  const dbPath = resolveClawPersistentSurfacePath("claw.workspace.data", input.workspaceRoot, "core.sqlite");
   if (fs.existsSync(dbPath)) return null;
   if (input.wantsJson) {
     writeJsonOk(input.context.stdout, [], {
@@ -190,7 +191,7 @@ function writeEmptyDenseListIfStoreMissing(input: ProfessionalRecordsCliInput, c
 function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: string): number | null {
   if (action !== "seed") return null;
   const namespaceId = input.flags.namespace ?? "main";
-  const dataDir = path.join(input.workspaceRoot, ".claw", "data");
+  const dataDir = resolveClawPersistentSurfacePath("claw.workspace.data", input.workspaceRoot);
   fs.mkdirSync(dataDir, { recursive: true });
   const store = openMainDataStore({
     ...process.env,

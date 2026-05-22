@@ -1250,7 +1250,7 @@ function scheduleSlideDeckSearchDelete(options: SlidesCliOptions, deckId: string
 }
 
 function searchEventDataDir(workspaceRoot: string, flags: Record<string, string>): string {
-  return path.resolve(flags["data-dir"] ?? path.join(workspaceRoot, ".claw", "data"));
+  return flags["data-dir"] ? path.resolve(flags["data-dir"]) : resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot);
 }
 
 function readDeckByRef(workspaceRoot: string, cwd: string, ref: string): { path: string; deck: SlideDeckManifest } {

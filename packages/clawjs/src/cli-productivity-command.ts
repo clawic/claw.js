@@ -14,7 +14,7 @@ import type {
   OutcomeStatus,
   RuntimeAdapterId,
 } from "@clawjs/core";
-import path from "node:path";
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -249,7 +249,7 @@ function scheduleCoreWorkSearchEventIfNeeded(input: {
     namespaceId: input.flags.namespace ?? "main",
     collectionName: input.collectionName,
     recordId: input.recordId,
-    dataDir: input.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? path.join(input.workspaceRoot, ".claw", "data"),
+    dataDir: input.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.workspace.data", input.workspaceRoot),
     flags: input.flags,
   });
 }

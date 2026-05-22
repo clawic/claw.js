@@ -1,6 +1,6 @@
 import fs from "fs";
-import path from "path";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { listClawProfessionalRecordsSemanticViewEntries, resolveClawProfessionalRecordsIntent } from "@clawjs/core/catalogs";
 
 import { openMainDataStore } from "./v1-data.ts";
@@ -53,7 +53,7 @@ export function personLabel(record: Record<string, unknown>): string {
 
 export function openProfessionalRecordsStore(workspaceRoot: string) {
   const root = fs.realpathSync.native(workspaceRoot);
-  const dataDir = path.join(root, ".claw", "data");
+  const dataDir = resolveClawPersistentSurfacePath("claw.workspace.data", root);
   fs.mkdirSync(dataDir, { recursive: true });
   const previousDataDir = process.env.CLAW_DATA_DIR;
   process.env.CLAW_DATA_DIR = dataDir;

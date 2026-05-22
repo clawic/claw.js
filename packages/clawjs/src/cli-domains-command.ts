@@ -1,6 +1,5 @@
 import fs from "fs";
 import http from "http";
-import os from "os";
 import path from "path";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -19,6 +18,7 @@ import {
   domainsProxyConfigPath,
   domainsProxyScriptPath,
   domainsServiceDir,
+  domainsTempPath,
   readDomainsStatus,
   replaceDomainHostsBlock,
 } from "./cli-domains-config.ts";
@@ -70,10 +70,10 @@ export async function runDomainsCli(input: {
       fs.writeFileSync(domainsProxyScriptPath(input.flags), proxyScript);
       fs.writeFileSync(domainsProxyConfigPath(input.flags), serviceConfig);
     } else {
-      const tempHosts = path.join(os.tmpdir(), `claw-domains-hosts-${process.pid}`);
-      const tempPlist = path.join(os.tmpdir(), `claw-domains-${process.pid}.plist`);
-      const tempProxy = path.join(os.tmpdir(), `claw-domains-proxy-${process.pid}.mjs`);
-      const tempConfig = path.join(os.tmpdir(), `claw-domains-config-${process.pid}.json`);
+      const tempHosts = domainsTempPath(`claw-domains-hosts-${process.pid}`);
+      const tempPlist = domainsTempPath(`claw-domains-${process.pid}.plist`);
+      const tempProxy = domainsTempPath(`claw-domains-proxy-${process.pid}.mjs`);
+      const tempConfig = domainsTempPath(`claw-domains-config-${process.pid}.json`);
       fs.writeFileSync(tempHosts, nextHosts);
       fs.writeFileSync(tempPlist, plist);
       fs.writeFileSync(tempProxy, proxyScript);
@@ -119,7 +119,7 @@ export async function runDomainsCli(input: {
       fs.rmSync(plan.plistFile, { force: true });
       fs.rmSync(domainsServiceDir(input.flags), { force: true, recursive: true });
     } else {
-      const tempHosts = path.join(os.tmpdir(), `claw-domains-hosts-${process.pid}`);
+      const tempHosts = domainsTempPath(`claw-domains-hosts-${process.pid}`);
       fs.writeFileSync(tempHosts, nextHosts);
       runPrivilegedScript([
         `launchctl bootout system/${CLAW_DOMAINS_LABEL} >/dev/null 2>&1 || true`,

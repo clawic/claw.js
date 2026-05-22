@@ -140,10 +140,48 @@ const rules = [
   },
 ];
 
-function isBuilderFile(filePath, body) {
-  return body.includes("@persistent-surface-wrapper")
-    || /(?:clawPersistentSurface|clawStableSurface|ClawixPersistentSurface|PersistentSurfaceRegistry|StableSurfaceRegistry)/.test(body)
-    || filePath.endsWith("persistent-surface-guard.mjs");
+function isBuilderFile(filePath) {
+  const relative = path.relative(rootDir, filePath).replaceAll(path.sep, "/");
+  return [
+    "scripts/persistent-surface-guard.mjs",
+    "packages/clawjs-core/src/surface-contracts.ts",
+    "packages/clawjs-core/src/surface-registry-contracts.ts",
+    "packages/clawjs-core/src/surface-registry-graph.ts",
+    "packages/clawjs-core/src/surface-registry.ts",
+    "packages/clawjs/src/v1-data-surface.ts",
+    "packages/clawjs/src/v1-data-agent-surfaces.ts",
+  ].includes(relative)
+    || relative.endsWith("/PersistentSurfaceRegistry.swift");
+}
+
+function isTestFile(filePath) {
+  const relative = path.relative(rootDir, filePath).replaceAll(path.sep, "/");
+  return /(?:^|\/)tests\//.test(relative)
+    || /(?:\.test|\.spec)\.[A-Za-z0-9]+$/.test(relative);
+}
+
+function requiresBuilderUseForFile(filePath) {
+  return isTestFile(filePath);
+}
+
+function requiresBuilderUseInTests(ruleId) {
+  return [
+    "ts.direct-api-route",
+    "ts.direct-private-api-route",
+    "ts.direct-database-path",
+  ].includes(ruleId);
+}
+
+function isNonCanonicalFixtureFile(filePath) {
+  const relative = path.relative(rootDir, filePath).replaceAll(path.sep, "/");
+  return relative === "scripts/scale-lab.ts";
+}
+
+function isDdlSurfaceModule(filePath) {
+  const relative = path.relative(rootDir, filePath).replaceAll(path.sep, "/");
+  return relative.endsWith("/surface.ts")
+    || relative.endsWith("-surface.ts")
+    || relative.endsWith("/workspace-sqlite-surface.ts");
 }
 
 function isRegisteredDdlSource(filePath, body, registryBody) {
@@ -232,11 +270,15 @@ function registeredRuleValue(rule, match, body, registryBody) {
   }
 
   if (rule.id === "ts.direct-database-path") {
+    if (isNonCanonicalFixtureFile(match.inputPath ?? "")) return true;
     return quoted.some((value) => /\.sqlite$/.test(value) && quotedRegistryContains(registryBody, value));
   }
 
   if (rule.id === "ts.ddl-literal") {
-    return isRegisteredDdlSource(match.inputPath ?? "", body, registryBody);
+    const inputPath = match.inputPath ?? "";
+    if (isNonCanonicalFixtureFile(inputPath)) return true;
+    return isRegisteredDdlSource(inputPath, body, registryBody)
+      || (isDdlSurfaceModule(inputPath) && ddlObjectRegistered(ddlObjectFromMatch(match), `${body}\n${registryBody}`));
   }
 
   return false;
@@ -463,7 +505,7 @@ function readRegistrySources(filePaths) {
 function scanFile(filePath, registryBody = "", exceptions = { entries: [] }) {
   const ext = path.extname(filePath);
   const body = fs.readFileSync(filePath, "utf8");
-  if (isBuilderFile(filePath, body)) return [];
+  if (isBuilderFile(filePath)) return [];
 
   const findings = [];
   for (const rule of rules) {
@@ -505,6 +547,7 @@ function runSelfTest() {
   const badSwift = path.join(tempRoot, "Bad.swift");
   const badKt = path.join(tempRoot, "Bad.kt");
   const badCs = path.join(tempRoot, "Bad.cs");
+  const registeredTestTs = path.join(tempRoot, "registered.test.ts");
   const builderSwift = path.join(tempRoot, "PersistentSurfaceRegistry.swift");
   fs.writeFileSync(badTs, [
     "const db = new Database(path.join(home, '.claw', 'data', 'core.sqlite'));",
@@ -539,6 +582,10 @@ function runSelfTest() {
     "const string Route = \"/v1/mesh/jobs\";",
     "[JsonPropertyName(\"schemaVersion\")] public int SchemaVersion { get; set; }",
   ].join("\n"));
+  fs.writeFileSync(registeredTestTs, [
+    "const route = '/v1/events';",
+    "const db = new Database(path.join(dataRoot, 'search.sqlite'));",
+  ].join("\n"));
 
   const findings = [...scanFile(badTs), ...scanFile(badSwift, "registeredKey"), ...scanFile(badKt), ...scanFile(badCs), ...scanFile(builderSwift)];
   const foundRules = new Set(findings.map((finding) => finding.rule));
@@ -549,6 +596,10 @@ function runSelfTest() {
   }
   if (findings.some((finding) => finding.file.endsWith("PersistentSurfaceRegistry.swift"))) {
     throw new Error("self-test incorrectly flagged builder registry file");
+  }
+  const registeredTestFindings = scanFile(registeredTestTs, "'/v1/events'\n'search.sqlite'");
+  if (registeredTestFindings.some((finding) => finding.rule === "ts.direct-api-route" || finding.rule === "ts.direct-database-path")) {
+    throw new Error("self-test incorrectly rejected registered fixture literals in tests");
   }
   const ddlException = {
     id: "self-test-ddl-exception",

@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { registeredDatabasePath, registeredSearchDatabasePath } from "../../../tests/helpers/stable-surface-test-builders.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -176,7 +177,7 @@ test.sequential("runCli zero-config productivity commands bootstrap local sqlite
   assert.equal(schema.collection.name, "leads");
   assert.equal(schema.collection.fields.some((field) => field.name === "title"), true);
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+  assert.equal(fs.existsSync(registeredDatabasePath(dataRoot, "claw.database.core")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "database.sqlite")), false);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", workspaceRoot, "workspace.manifest.json")), false);
 
@@ -804,7 +805,7 @@ test.sequential("runCli zero-config productivity commands bootstrap local sqlite
   }), CLI_EXIT_OK);
   assert.match(inspectStdout.getOutput(), new RegExp(`"${clawSharedJsonFields.schemaVersion}": 6`));
 
-  assert.equal(fs.existsSync(path.join(dataRoot, "core.sqlite")), true);
+  assert.equal(fs.existsSync(registeredDatabasePath(dataRoot, "claw.database.core")), true);
   assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace", workspaceRoot, "workspace.manifest.json")), false);
   assert.ok(note.id);
 });

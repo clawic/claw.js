@@ -4,10 +4,29 @@ import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { test } from "vitest";
+import {
+  resolveClawGlobalModulesConfigPath,
+  resolveClawModulesConfigPath,
+  resolveClawWorkspaceModulesConfigPath,
+} from "@clawjs/core";
 
 import { CLI_EXIT_OK } from "./cli-errors.ts";
 import { runCli } from "./index.ts";
 import { captureStream, runCliCapture } from "./index-test-utils.ts";
+
+test("modules config paths use Core storage helpers", () => {
+  assert.equal(resolveClawModulesConfigPath("/Users/demo/.claw"), "/Users/demo/.claw/config/modules.json");
+  assert.equal(resolveClawGlobalModulesConfigPath({ homeDir: "/Users/demo", platform: "darwin" }), "/Users/demo/.claw/config/modules.json");
+  assert.equal(resolveClawWorkspaceModulesConfigPath("/Users/demo/project"), "/Users/demo/project/.claw/config/modules.json");
+
+  const source = fs.readFileSync(new URL("./cli-modules-command.ts", import.meta.url), "utf8");
+  assert.match(source, /resolveClawGlobalDataDir\(\{ homeDir: os\.homedir\(\) \}\)/);
+  assert.match(source, /resolveClawModulesConfigPath\(clawHome\(flags\)\)/);
+  assert.match(source, /resolveClawWorkspaceModulesConfigPath\(path\.resolve/);
+  assert.equal(source.includes('path.join(os.homedir(), ".claw")'), false);
+  assert.equal(source.includes('path.join(clawHome(flags), "config", "modules.json")'), false);
+  assert.equal(source.includes('path.join(path.resolve(cwd, flags.workspace ?? "."), ".claw", "config", "modules.json")'), false);
+});
 
 test("setup previews progressive mode without writing until apply", async () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-home-"));
