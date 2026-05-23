@@ -227,7 +227,7 @@ test("Codex import stores structured tool, patch, compaction and unknown events"
       type: "function_call_output",
       call_id: "call_exec",
       turn_id: "turn_1",
-      output: "Process exited with code 1\nOutput:\nboom failure",
+      output: "Process exited with code 1\nOutput:\nboom failure authorization=Bearer abc123secret token=visible-secret sk-testsecret123456",
     },
   });
   appendRolloutLine(filePath, {
@@ -295,7 +295,11 @@ test("Codex import stores structured tool, patch, compaction and unknown events"
   ]);
   assert.equal(events.find((event) => event.callId === "call_exec")?.eventType, "response_item.function_call");
   assert.equal(events.find((event) => event.eventKind === "tool_output")?.searchableText?.includes("boom failure"), true);
+  assert.equal(events.find((event) => event.eventKind === "tool_output")?.searchableText?.includes("abc123secret"), false);
+  assert.equal(events.find((event) => event.eventKind === "tool_output")?.searchableText?.includes("visible-secret"), false);
+  assert.equal(events.find((event) => event.eventKind === "tool_output")?.searchableText?.includes("sk-testsecret123456"), false);
   assert.equal(store.searchSessionEvents({ query: "boom", eventKind: "tool_output" }).length, 1);
+  assert.equal(store.searchSessionEvents({ query: "abc123secret", eventKind: "tool_output" }).length, 0);
   const projection = store.rebuildSessionProjection(THREAD_A);
   assert.equal(projection.meta.projectionStatus, "current");
   assert.equal(projection.meta.eventCount, events.length);

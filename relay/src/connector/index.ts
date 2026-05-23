@@ -5,7 +5,8 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
-import type { CancelEnvelope, ConnectorInboundEnvelope, ConnectorOutboundEnvelope, EnrollmentResult, InvokeEnvelope } from "../shared/protocol.ts";
+import type { EnrollmentResult } from "../shared/protocol.ts";
+import { parseConnectorOutboundEnvelope } from "../shared/protocol.ts";
 import { RelayConnectorRuntime, type RelayConnectorOptions, type RelayConnectorServiceConfig } from "./runtime.ts";
 
 function normalizeServiceId(value: string): string {
@@ -314,7 +315,18 @@ async function runOnce(options: RelayConnectorOptions): Promise<void> {
   const activeRequests = new Map<string, AbortController>();
 
   socket.on("message", async (buffer) => {
-    const message = JSON.parse(buffer.toString()) as ConnectorInboundEnvelope | InvokeEnvelope | CancelEnvelope;
+    const parsed = parseConnectorOutboundEnvelope(buffer instanceof Buffer ? buffer : Buffer.from(buffer.toString()));
+    if (!parsed.ok) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: "error",
+          code: parsed.error.code,
+          message: parsed.error.message,
+        }));
+      }
+      return;
+    }
+    const message = parsed.frame;
 
     if (message.type === "cancel") {
       const controller = activeRequests.get(message.requestId);

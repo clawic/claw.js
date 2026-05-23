@@ -17,6 +17,7 @@ import type {
   HelloEnvelope,
   StreamEnvelope,
 } from "../shared/protocol.ts";
+import { parseConnectorInboundEnvelope } from "../shared/protocol.ts";
 import type { RelayDatabase } from "./db.ts";
 import type { RelayLogger } from "./logger.ts";
 
@@ -68,13 +69,12 @@ export class ConnectorRegistry {
     const sessionId = randomUUID();
 
     socket.on("message", (buffer) => {
-      try {
-        const raw = buffer.toString();
-        const message = JSON.parse(raw) as ConnectorInboundEnvelope;
-        this.handleMessage(socket, sessionId, auth, message);
-      } catch (error) {
-        this.logger.error(`Failed to parse connector frame: ${error instanceof Error ? error.message : String(error)}`);
+      const parsed = parseConnectorInboundEnvelope(buffer instanceof Buffer ? buffer : Buffer.from(buffer.toString()));
+      if (!parsed.ok) {
+        this.logger.error(`Failed to parse connector frame: ${parsed.error.code}: ${parsed.error.message}`);
+        return;
       }
+      this.handleMessage(socket, sessionId, auth, parsed.frame);
     });
 
     socket.on("close", () => {

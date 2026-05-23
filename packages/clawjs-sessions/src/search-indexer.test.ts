@@ -31,8 +31,15 @@ test("indexSessionsForSearch indexes messages and structured events with session
       id: "message-1",
       sessionId: "session-1",
       role: "user",
-      contentText: "visible transcript needle",
+      contentText: "visible transcript needle authorization=Bearer searchsecret token=hidden-token",
       timestamp: 10,
+    });
+    sessionsStore.appendMessage({
+      id: "message-2",
+      sessionId: "session-1",
+      role: "assistant",
+      contentText: "visible transcript needle later",
+      timestamp: 30,
     });
     sessionsStore.appendSessionEvent({
       sessionId: "session-1",
@@ -62,9 +69,9 @@ test("indexSessionsForSearch indexes messages and structured events with session
 
     assert.deepEqual(result, {
       sessionsIndexed: 1,
-      messagesIndexed: 1,
+      messagesIndexed: 2,
       eventsIndexed: 2,
-      documentsIndexed: 3,
+      documentsIndexed: 4,
     });
 
     const chatSearch = searchStore.query({
@@ -74,6 +81,22 @@ test("indexSessionsForSearch indexes messages and structured events with session
     });
     assert.equal(chatSearch.results.length, 1);
     assert.equal(chatSearch.results[0]?.source, "sessions.chats");
+    assert.equal(JSON.stringify(chatSearch.results[0]).includes("searchsecret"), false);
+    assert.equal(JSON.stringify(chatSearch.results[0]).includes("hidden-token"), false);
+    assert.equal(chatSearch.results[0]?.permissions?.redacted, true);
+
+    const secretSearch = searchStore.query({
+      query: "searchsecret",
+      sources: ["sessions.chats"],
+    });
+    assert.equal(secretSearch.results.length, 0);
+
+    const dateRangeSearch = searchStore.query({
+      query: "needle",
+      sources: ["sessions.chats"],
+      filters: { dateRange: { from: new Date(20).toISOString() } },
+    });
+    assert.deepEqual(dateRangeSearch.results.map((result) => result.id), ["sessions.chats:message-2"]);
 
     const failedToolSearch = searchStore.query({
       query: "boom",

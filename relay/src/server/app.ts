@@ -98,8 +98,12 @@ export async function buildRelayApp(options: RelayAppOptions = {}) {
   const monitor = new MonitorBus();
   const registry = new ConnectorRegistry(db, logger, config.requestTimeoutMs);
   const rateLimiter = new MemoryRateLimiter();
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: false, bodyLimit: 16 * 1024 * 1024 });
 
+  app.removeContentTypeParser("application/json");
+  app.addContentTypeParser("application/json", { parseAs: "buffer" }, (_request, body, done) => {
+    done(null, body);
+  });
   app.addContentTypeParser("*", { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });

@@ -216,6 +216,94 @@ test("sessions runtime CLI enqueues project-scoped projection rebuild jobs", asy
   });
 });
 
+test("sessions runtime CLI enqueues memory-base extraction jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-sessions-runtime-memory-cli-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+  const projectPath = path.join(workspaceRoot, "project-memory");
+  fs.mkdirSync(dataRoot, { recursive: true });
+  const seed = new SessionsServiceStore(sessionsDbPath);
+  try {
+    seed.createProject({ id: "project-memory", path: projectPath, displayName: "Project Memory" });
+    seed.createSession({ id: "session-memory-cli", agent: "codex", title: "Memory", projectId: "project-memory", projectPath });
+    seed.appendSessionEvent({
+      sessionId: "session-memory-cli",
+      turnId: "turn-memory-cli",
+      eventKind: "message",
+      eventType: "event_msg.user_message",
+      role: "user",
+      timestamp: 10,
+      sourceNativeId: "session-memory-cli:line:1",
+      payloadJson: { message: "memory cli needle" },
+      renderedSummary: "memory cli needle",
+      searchableText: "memory cli needle",
+    });
+    seed.rebuildSessionProjection("session-memory-cli");
+  } finally {
+    seed.close();
+  }
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+    CLAW_SESSIONS_DATA_DIR: undefined,
+  }, async () => {
+    const enqueue = await runCliCapture([
+      "sessions",
+      "runtime",
+      "enqueue",
+      "extract-memory-base",
+      "--project-id",
+      "project-memory",
+      "--max-sessions",
+      "1",
+      "--data-dir",
+      dataRoot,
+      "--id",
+      "job-memory-base",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(enqueue.code, CLI_EXIT_OK, enqueue.stderr || enqueue.stdout);
+    const enqueuePayload = JSON.parse(enqueue.stdout) as { data: { item: { id: string; kind: string; resourceId: string } } };
+    assert.equal(enqueuePayload.data.item.id, "job-memory-base");
+    assert.equal(enqueuePayload.data.item.kind, "sessions.extract_memory_base");
+    assert.equal(enqueuePayload.data.item.resourceId, "project-memory");
+
+    const run = await runCliCapture([
+      "sessions",
+      "runtime",
+      "run-once",
+      "--data-dir",
+      dataRoot,
+      "--max-jobs",
+      "1",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(run.code, CLI_EXIT_OK, run.stderr || run.stdout);
+    const runPayload = JSON.parse(run.stdout) as {
+      data: {
+        worker: { completed: number; items: Array<{ kind: string; result: { sessionsProcessed: number; sessionIds: string[] } }> };
+      };
+    };
+    assert.equal(runPayload.data.worker.completed, 1);
+    assert.equal(runPayload.data.worker.items[0]?.kind, "sessions.extract_memory_base");
+    assert.equal(runPayload.data.worker.items[0]?.result.sessionsProcessed, 1);
+
+    const check = new SessionsServiceStore(sessionsDbPath);
+    try {
+      const sessionId = runPayload.data.worker.items[0]?.result.sessionIds[0];
+      assert.equal(check.getSessionMemoryExtract(sessionId ?? "")?.status, "current");
+      assert.equal(check.listPendingSessionMemoryExtractions({ projectId: "project-memory" }).total, 0);
+    } finally {
+      check.close();
+    }
+  });
+});
+
 function writeRollout(rootDir: string, threadId: string, message: string): void {
   const dir = path.join(rootDir, "2026", "05", "23");
   fs.mkdirSync(dir, { recursive: true });

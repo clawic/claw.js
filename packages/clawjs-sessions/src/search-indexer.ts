@@ -5,6 +5,7 @@ import type {
   SessionStructuredEventRecord,
 } from "./types.ts";
 import type { SessionsServiceStore } from "./store.ts";
+import { indexedTextWasRedacted, redactSearchableText } from "./redaction.ts";
 
 export const SESSIONS_CHATS_SEARCH_SOURCE = "sessions.chats";
 export const SESSIONS_EVENTS_SEARCH_SOURCE = "sessions.events";
@@ -124,6 +125,8 @@ function *listEventDocumentBatches(
 }
 
 function messageSearchDocument(session: SessionRecord, message: SessionMessageRecord): SessionSearchDocumentInput {
+  const indexedText = redactSearchableText(message.contentText);
+  const redacted = indexedTextWasRedacted(message.contentText, indexedText);
   return {
     id: `${SESSIONS_CHATS_SEARCH_SOURCE}:${message.id}`,
     source: SESSIONS_CHATS_SEARCH_SOURCE,
@@ -133,8 +136,8 @@ function messageSearchDocument(session: SessionRecord, message: SessionMessageRe
     resourceId: session.id,
     title: session.title,
     subtitle: message.role,
-    snippet: message.contentText,
-    body: message.contentText,
+    snippet: indexedText,
+    body: indexedText,
     path: `session:${session.id}`,
     updatedAt: new Date(message.timestamp).toISOString(),
     metadata: {
@@ -146,7 +149,7 @@ function messageSearchDocument(session: SessionRecord, message: SessionMessageRe
       runtime: session.runtime,
       role: message.role,
     },
-    permissions: { canOpen: true, canPreview: true, redacted: false },
+    permissions: { canOpen: true, canPreview: true, redacted },
   };
 }
 

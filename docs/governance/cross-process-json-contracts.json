@@ -107,10 +107,10 @@
         "valid": { "status": "covered", "evidence": ["packages/clawjs-mcp/src/control-plane.test.ts", "packages/clawjs-core/src/agents-v1-runtime.ts"] },
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-mcp/src/control-plane.ts", "packages/clawjs-mcp/src/control-plane.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/agents-v1-runtime.ts", "packages/clawjs-core/src/agents-v1.test.ts"] },
-        "versioning": { "status": "blocked", "absenceReason": "MCP assignment payloads are registered as v1 route contracts but do not expose a dedicated schemaVersion field in every tool response.", "producer": "MCP assignment tools", "consumer": "runtime assignment broker", "risk": "Future MCP response evolution may rely on tool name rather than an explicit schema field." },
-        "extraFields": { "status": "blocked", "absenceReason": "No strict unknown-key fixture is declared for MCP assignment payloads.", "producer": "MCP tools", "consumer": "runtime", "risk": "Model hosts may send arguments that are ignored instead of rejected." },
-        "oversized": { "status": "blocked", "absenceReason": "No MCP argument/result byte limit is declared for this contract.", "producer": "MCP hosts", "consumer": "claw MCP server", "risk": "Large tool arguments or results can bypass route-level boundedness expectations." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated JSON-RPC fixture is declared for MCP assignment calls.", "producer": "MCP host", "consumer": "claw MCP server", "risk": "Transport interruption may not return a stable JSON-RPC error envelope." },
+        "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-mcp/src/control-plane.test.ts"] }
       }
     },
@@ -125,10 +125,10 @@
         "valid": { "status": "covered", "evidence": ["packages/clawjs-core/src/agents-v1-runtime.ts", "packages/clawjs-core/src/agents-v1.test.ts"] },
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/agents-v1-runtime.ts", "packages/clawjs-core/src/agents-v1.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/agents-v1.test.ts"] },
-        "versioning": { "status": "blocked", "absenceReason": "The route contract is v1, but assignment handoff fixtures do not all carry an explicit schemaVersion field.", "producer": "assignment broker", "consumer": "runtime", "risk": "Runtime adapters may diverge on pre-V1 additive fields." },
-        "extraFields": { "status": "blocked", "absenceReason": "No unknown-field rejection fixture is declared for runtime assignment handoff.", "producer": "assignment broker", "consumer": "runtime", "risk": "Ignored grants or budgets could be mistaken as applied." },
-        "oversized": { "status": "blocked", "absenceReason": "No max assignment payload size is declared.", "producer": "assignment broker", "consumer": "runtime", "risk": "Large assignment state could block runtime startup." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated handoff fixture exists.", "producer": "assignment broker", "consumer": "runtime", "risk": "Partial assignment JSON could fall back to defaults without a clear error." },
+        "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/agents-v1.test.ts"] }
       }
     },
@@ -144,9 +144,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs/src/cli-unknown-command.ts", "packages/clawjs/src/cli-commands.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/cli-command-intents.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/cli-command-intents.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No strict unknown-key fixture exists for persisted command-intent ledger entries.", "producer": "CLI resolver", "consumer": "workspace ledger readers", "risk": "Future agent demand metadata could be silently ignored." },
-        "oversized": { "status": "blocked", "absenceReason": "No byte or item limit is declared for command intent ledger entries.", "producer": "CLI resolver", "consumer": "ledger readers", "risk": "Large attempted-command metadata could create unbounded workspace files." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated ledger fixture exists.", "producer": "CLI resolver", "consumer": "ledger readers", "risk": "Partial ledger JSON may lose command-demand evidence." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs/src/cli-needs.test.ts", "packages/clawjs/src/cli-report.test.ts"] }
       }
     },
@@ -162,9 +162,9 @@
         "parseableError": { "status": "covered", "evidence": ["relay/tests/e2e/relay.e2e.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/remote-sync-schemas.ts", "packages/clawjs-core/src/index-remote-contracts.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/remote-sync-schemas.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No route-specific unknown-field rejection fixture is declared for Relay remote frames.", "producer": "remote client", "consumer": "Relay", "risk": "Remote clients could rely on fields the Relay ignores." },
-        "oversized": { "status": "blocked", "absenceReason": "No max remote frame size is registered in the route contract.", "producer": "remote client", "consumer": "Relay", "risk": "Remote traffic can exceed local boundedness assumptions." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated WebSocket frame fixture is declared.", "producer": "remote client or Relay", "consumer": "Relay or remote client peer", "risk": "Disconnects can map to unstable client errors." },
+        "extraFields": { "status": "covered", "evidence": ["relay/src/server/remote-sync-routes.ts", "relay/src/server/remote-sync-routes.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["relay/src/server/remote-sync-routes.ts", "relay/src/server/remote-sync-routes.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["relay/src/server/remote-sync-routes.ts", "relay/src/server/remote-sync-routes.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["docs/governance/remote-gateway-sync/completion.md", "packages/clawjs-core/src/remote-sync-schemas.ts"] }
       }
     },
@@ -180,9 +180,9 @@
         "parseableError": { "status": "covered", "evidence": ["relay/tests/e2e/codex-connector.e2e.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/remote-sync-schemas.ts", "packages/clawjs-core/src/index-remote-contracts.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/remote-sync-schemas.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No connector-frame unknown-field fixture is declared.", "producer": "workspace connector", "consumer": "Relay", "risk": "Connector may emit local-only fields that remote policy does not understand." },
-        "oversized": { "status": "blocked", "absenceReason": "No max connector frame size is registered.", "producer": "workspace connector", "consumer": "Relay", "risk": "Large workspace projections can overload Relay routes." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated connector frame fixture is declared.", "producer": "Relay or connector", "consumer": "Relay or connector peer", "risk": "Partial local execution receipts may be misread as missing work." },
+        "extraFields": { "status": "covered", "evidence": ["relay/src/shared/protocol.ts", "relay/src/shared/protocol.test.ts", "relay/src/server/connector-registry.ts", "relay/src/connector/index.ts"] },
+        "oversized": { "status": "covered", "evidence": ["relay/src/shared/protocol.ts", "relay/src/shared/protocol.test.ts", "relay/src/server/connector-registry.ts", "relay/src/connector/index.ts"] },
+        "truncated": { "status": "covered", "evidence": ["relay/src/shared/protocol.ts", "relay/src/shared/protocol.test.ts", "relay/src/server/connector-registry.ts", "relay/src/connector/index.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["docs/governance/remote-gateway-sync/completion.md"] }
       }
     },
@@ -308,12 +308,12 @@
       },
       "coverage": {
         "valid": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/realistic-fixtures.test.ts", "packages/clawjs-sessions/src/session-schema.test.ts"] },
-        "parseableError": { "status": "blocked", "absenceReason": "No single JSON decoder owns all sessions projections.", "producer": "sessions service/runtime", "consumer": "bridge/Relay/API clients", "risk": "Different consumers can disagree on parseable error shape." },
+        "parseableError": { "status": "blocked", "absenceReason": "A canonical sessions JSON projection decoder now exists, but no single decoder yet owns every sessions API, Bridge, Relay, and Sync projection named by this database contract.", "producer": "sessions service/runtime", "consumer": "bridge/Relay/API/Sync clients", "risk": "Consumers can still disagree on parseable error shape outside the canonical projection fixture." },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/session-schema.test.ts"] },
-        "versioning": { "status": "blocked", "absenceReason": "Sessions storage schema and wire projection versions are not one declared JSON contract.", "producer": "sessions service/runtime", "consumer": "bridge/Relay/API clients", "risk": "Storage migrations may be mistaken for wire compatibility." },
-        "extraFields": { "status": "blocked", "absenceReason": "No unified unknown-field policy exists for sessions projections.", "producer": "sessions service/runtime", "consumer": "bridge/Relay/API clients", "risk": "Additive fields may be ignored by some clients and required by others." },
-        "oversized": { "status": "blocked", "absenceReason": "Bridge has frame size and pagination, but sessions API/Relay projection limits are not unified under this contract.", "producer": "sessions service/runtime", "consumer": "bridge/Relay/API clients", "risk": "Large transcripts can cross an unbounded path outside BridgeV1." },
-        "truncated": { "status": "blocked", "absenceReason": "No sessions projection truncated JSON fixture is registered.", "producer": "sessions service/runtime", "consumer": "bridge/Relay/API clients", "risk": "Partial transcript projections can be treated differently per consumer." },
+        "versioning": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts"] },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/session-hydration.test.ts", "packages/clawjs-sessions/src/realistic-fixtures.test.ts"] }
       }
     },
@@ -331,12 +331,12 @@
       },
       "coverage": {
         "valid": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/realistic-fixtures.test.ts", "clawix:packages/ClawixCore/Fixtures/BridgeV1/015-messageAppended.json"] },
-        "parseableError": { "status": "blocked", "absenceReason": "No single event decoder owns all sessions.message.appended JSON projections.", "producer": "sessions service/runtime event projector", "consumer": "bridge and Relay clients", "risk": "A malformed event can fail differently in local bridge and remote Relay consumers." },
+        "parseableError": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts", "packages/clawjs-sessions/src/client.ts"] },
         "incomplete": { "status": "covered", "evidence": ["clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeProtocolContractValidatorTests.swift"] },
-        "versioning": { "status": "blocked", "absenceReason": "Event topic stability is registered, but the event JSON body does not carry its own schemaVersion separate from bridge/Relay envelopes.", "producer": "sessions service/runtime event projector", "consumer": "bridge and Relay clients", "risk": "Event body evolution can be conflated with transport envelope evolution." },
-        "extraFields": { "status": "blocked", "absenceReason": "No event-body unknown-field fixture exists outside BridgeV1.", "producer": "sessions service/runtime event projector", "consumer": "bridge and Relay clients", "risk": "Additive event fields may be ignored by one route and interpreted by another." },
-        "oversized": { "status": "blocked", "absenceReason": "Bridge frame size is covered, but the session event topic itself has no shared byte limit across Relay and service projections.", "producer": "sessions service/runtime event projector", "consumer": "bridge and Relay clients", "risk": "Large message events can exceed non-bridge consumers." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated session event fixture exists.", "producer": "sessions service/runtime event projector", "consumer": "bridge and Relay clients", "risk": "Partial event JSON can leave streamed message state ambiguous." },
+        "versioning": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts", "packages/clawjs-sessions/src/app.ts"] },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts", "packages/clawjs-sessions/src/sse-broadcaster.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-sessions/src/json-contracts.ts", "packages/clawjs-sessions/src/json-contracts.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["clawix:packages/ClawixCore/Fixtures/BridgeV1/017-errorEvent.json", "packages/clawjs-sessions/src/session-hydration.test.ts"] }
       }
     }

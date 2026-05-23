@@ -1,4 +1,5 @@
 import { clawApiPath } from "@clawjs/core";
+import { parseSessionServiceEventJson } from "./json-contracts.ts";
 import type {
   AppendMessageInput,
   CreateProjectInput,
@@ -6,12 +7,16 @@ import type {
   HydrateSessionInput,
   HydratedSessionResult,
   ListSessionDynamicToolsOptions,
+  ListPendingSessionMemoryExtractionsInput,
   ListProjectsFilter,
   ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
   ListSessionEventsFilter,
   ProjectRecord,
+  PendingSessionMemoryExtractionRecord,
+  RebuildSessionMemoryExtractsInput,
+  RebuildSessionMemoryExtractsResult,
   RebuildSessionProjectionsInput,
   RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
@@ -21,6 +26,7 @@ import type {
   SessionDynamicToolRecord,
   SessionEvent,
   SessionEventSearchHit,
+  SessionMemoryExtractRecord,
   SessionMessageRecord,
   SessionProjectionMetaRecord,
   SessionRecord,
@@ -179,6 +185,8 @@ export class SessionsApiClient {
       agent: input.agent,
       projectId: input.projectId,
       projectPath: input.projectPath,
+      fromTimestamp: input.fromTimestamp,
+      toTimestamp: input.toTimestamp,
       limit: input.limit,
     })}`));
   }
@@ -189,6 +197,15 @@ export class SessionsApiClient {
       sessionId: input.sessionId,
       eventKind: input.eventKind,
       eventType: input.eventType,
+      toolName: input.toolName,
+      status: input.status,
+      hasDiff: input.hasDiff,
+      hasFailedTool: input.hasFailedTool,
+      hasWebSearch: input.hasWebSearch,
+      hasCompaction: input.hasCompaction,
+      hasGoal: input.hasGoal,
+      fromTimestamp: input.fromTimestamp,
+      toTimestamp: input.toTimestamp,
       limit: input.limit,
     })}`));
   }
@@ -250,6 +267,27 @@ export class SessionsApiClient {
     return this.call("POST", clawApiPath("sessions/projection/rebuild"), input);
   }
 
+  listPendingMemoryExtractions(input: ListPendingSessionMemoryExtractionsInput = {}): Promise<{ items: PendingSessionMemoryExtractionRecord[]; total: number }> {
+    return this.call("GET", clawApiPath(`sessions/memory/pending${buildQuery({
+      projectId: input.projectId,
+      projectPath: input.projectPath,
+      limit: input.limit,
+      offset: input.offset,
+    })}`));
+  }
+
+  getMemoryExtract(sessionId: string): Promise<{ extract: SessionMemoryExtractRecord | null }> {
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/memory-extract`));
+  }
+
+  rebuildMemoryExtract(sessionId: string): Promise<SessionMemoryExtractRecord> {
+    return this.call("POST", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/memory-extract/rebuild`), {});
+  }
+
+  rebuildMemoryExtracts(input: RebuildSessionMemoryExtractsInput = {}): Promise<RebuildSessionMemoryExtractsResult> {
+    return this.call("POST", clawApiPath("sessions/memory-extract/rebuild"), input);
+  }
+
   importCodex(input: {
     dir?: string;
     forceReimport?: boolean;
@@ -296,7 +334,11 @@ export class SessionsApiClient {
         const frame = buffer.slice(0, boundary);
         buffer = buffer.slice(boundary + 2);
         const dataLine = frame.split("\n").find((line) => line.startsWith("data: "));
-        if (dataLine) yield JSON.parse(dataLine.slice(6)) as SessionEvent;
+        if (dataLine) {
+          const parsed = parseSessionServiceEventJson(dataLine.slice(6));
+          if (!parsed.ok) throw new Error(`sessions event JSON error: ${parsed.error.code}: ${parsed.error.message}`);
+          yield parsed.value;
+        }
         boundary = buffer.indexOf("\n\n");
       }
     }

@@ -45,7 +45,29 @@ import {
   type SyncDriver,
   type SyncObjectSnapshot,
 } from "@clawjs/core";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+
+export const RELAY_REMOTE_HTTP_BODY_MAX_BYTES = 1024 * 1024;
+
+type RelayRemoteHttpBodyErrorCode =
+  | "relay_remote_body_oversized"
+  | "relay_remote_body_truncated"
+  | "relay_remote_body_malformed"
+  | "relay_remote_body_unknown_fields"
+  | "relay_remote_body_invalid";
+
+type RelayRemoteHttpBodyParseResult =
+  | { ok: true; byteLength: number; body: Record<string, unknown> }
+  | {
+    ok: false;
+    byteLength: number;
+    error: {
+      code: RelayRemoteHttpBodyErrorCode;
+      message: string;
+      maxBytes?: number;
+      fields?: string[];
+    };
+  };
 
 function routeIds(): string[] {
   return (clawPersistentSurfaceRegistry.routes ?? []).map((route) => route.id);
@@ -271,6 +293,96 @@ function remoteLayerNodesPayload() {
     "claw.remote.classification",
   ]);
   return { nodes: clawPersistentSurfaceRegistry.nodes.filter((node) => layerIds.has(node.id)) };
+}
+
+function isRemoteBodyTruncationError(error: unknown, text: string): boolean {
+  const trimmed = text.trim();
+  const looksCutOff = (trimmed.startsWith("{") && !/[}\]]$/.test(trimmed))
+    || (trimmed.startsWith("[") && !/[\]}]$/.test(trimmed));
+  return error instanceof SyntaxError
+    && (looksCutOff || /unexpected end|unterminated|end of json input|after property value in json|after array element in json/i.test(error.message));
+}
+
+function parseRelayRemoteHttpBody(
+  rawBody: unknown,
+  allowedTopLevelKeys?: readonly string[],
+  maxBytes = RELAY_REMOTE_HTTP_BODY_MAX_BYTES,
+): RelayRemoteHttpBodyParseResult {
+  if (!rawBody) return { ok: true, byteLength: 0, body: {} };
+  let parsed: unknown = rawBody;
+  const byteLength = Buffer.isBuffer(rawBody)
+    ? rawBody.byteLength
+    : typeof rawBody === "string"
+      ? Buffer.byteLength(rawBody)
+      : Buffer.byteLength(JSON.stringify(rawBody));
+  if (byteLength > maxBytes) {
+    return {
+      ok: false,
+      byteLength,
+      error: {
+        code: "relay_remote_body_oversized",
+        message: `Relay remote JSON body exceeds ${maxBytes} bytes`,
+        maxBytes,
+      },
+    };
+  }
+  if (Buffer.isBuffer(rawBody) || typeof rawBody === "string") {
+    const text = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : rawBody;
+    if (!text.trim()) return { ok: true, byteLength, body: {} };
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch (error) {
+      return {
+        ok: false,
+        byteLength,
+        error: {
+          code: isRemoteBodyTruncationError(error, text) ? "relay_remote_body_truncated" : "relay_remote_body_malformed",
+          message: error instanceof Error ? error.message : "Relay remote JSON body is malformed.",
+        },
+      };
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      ok: false,
+      byteLength,
+      error: {
+        code: "relay_remote_body_invalid",
+        message: "Relay remote JSON body must be an object.",
+      },
+    };
+  }
+  const body = parsed as Record<string, unknown>;
+  if (allowedTopLevelKeys) {
+    const allowed = new Set(allowedTopLevelKeys);
+    const fields = Object.keys(body).filter((key) => !allowed.has(key));
+    if (fields.length > 0) {
+      return {
+        ok: false,
+        byteLength,
+        error: {
+          code: "relay_remote_body_unknown_fields",
+          message: "Relay remote JSON body contains unsupported top-level fields.",
+          fields,
+        },
+      };
+    }
+  }
+  return { ok: true, byteLength, body };
+}
+
+async function readRemoteBody(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  allowedTopLevelKeys?: readonly string[],
+): Promise<Record<string, unknown> | null> {
+  const parsed = parseRelayRemoteHttpBody(request.body, allowedTopLevelKeys);
+  if (parsed.ok) return parsed.body;
+  await reply.code(parsed.error.code === "relay_remote_body_oversized" ? 413 : 400).send({
+    ok: false,
+    error: parsed.error,
+  });
+  return null;
 }
 
 function readBody(request: FastifyRequest): Record<string, unknown> {
@@ -534,11 +646,28 @@ function gatewayAuditReceiptFromInput(input: Record<string, unknown>) {
 export function registerRemoteSyncRoutes(app: FastifyInstance): void {
   app.get(clawApiPath("remote/classifications"), async () => remoteClassificationsPayload());
 
-  app.post(clawApiPath("remote/classifications/receipts"), async (request) => ({
-    status: "dry_run_only",
-    receipt: remoteClassificationReceiptFromInput(readBody(request)),
-    writes: false,
-  }));
+  app.post(clawApiPath("remote/classifications/receipts"), async (request, reply) => {
+    const body = await readRemoteBody(request, reply, [
+      "capabilityId",
+      "capability-id",
+      "classification",
+      "routeId",
+      "route-id",
+      "policyRef",
+      "policy-ref",
+      "testRefs",
+      "test-refs",
+      "reason",
+      "createdAt",
+      "now",
+    ]);
+    if (!body) return;
+    return {
+      status: "dry_run_only",
+      receipt: remoteClassificationReceiptFromInput(body),
+      writes: false,
+    };
+  });
 
   app.get(clawApiPath("remote/conformance"), async () => remoteConformancePayload());
 

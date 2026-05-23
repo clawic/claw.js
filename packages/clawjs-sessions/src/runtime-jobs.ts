@@ -486,7 +486,7 @@ export async function runSessionsRuntimeJobs(input: RunSessionsRuntimeJobsInput)
         now: input.now,
         leaseMs: input.leaseMs,
         owner: input.owner,
-        kinds: ["sessions.import_codex", "sessions.rebuild_projection", "sessions.rebuild_projections"],
+        kinds: ["sessions.import_codex", "sessions.rebuild_projection", "sessions.rebuild_projections", "sessions.extract_memory_base"],
       });
       if (!job) break;
       claimed += 1;
@@ -528,6 +528,14 @@ function sessionChangedEventsForJob(job: SessionsRuntimeJobRecord, result: unkno
       jobId: job.id,
       jobKind: job.kind,
       reason: "rebuild_projection",
+    }));
+  }
+  if (job.kind === "sessions.extract_memory_base") {
+    return payloadStringArray(result, "sessionIds").map((sessionId) => ({
+      sessionId,
+      jobId: job.id,
+      jobKind: job.kind,
+      reason: "memory_extract",
     }));
   }
   if (job.kind !== "sessions.import_codex") return [];
@@ -587,6 +595,14 @@ async function runOneSessionsJob(job: SessionsRuntimeJobRecord, store: SessionsS
         maxSessions: typeof payload.maxSessions === "number" ? payload.maxSessions : undefined,
         budgetMs: typeof payload.budgetMs === "number" ? payload.budgetMs : undefined,
         batchSize: typeof payload.batchSize === "number" ? payload.batchSize : undefined,
+      });
+    case "sessions.extract_memory_base":
+      return store.rebuildSessionMemoryExtracts({
+        projectId: typeof payload.projectId === "string" ? payload.projectId : undefined,
+        projectPath: typeof payload.projectPath === "string" ? payload.projectPath : undefined,
+        offset: typeof payload.offset === "number" ? payload.offset : undefined,
+        maxSessions: typeof payload.maxSessions === "number" ? payload.maxSessions : undefined,
+        budgetMs: typeof payload.budgetMs === "number" ? payload.budgetMs : undefined,
       });
     default:
       throw new Error(`unsupported sessions runtime job kind: ${job.kind}`);

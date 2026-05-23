@@ -308,3 +308,72 @@ test("runSessionsRuntimeJobs rebuilds projections by project with session budget
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("runSessionsRuntimeJobs extracts base memory from current session projections", async () => {
+  const rootDir = tempRoot("clawjs-sessions-runtime-memory-");
+  const runtimeDbPath = path.join(rootDir, "runtime.sqlite");
+  const sessionsDbPath = path.join(rootDir, "sessions.sqlite");
+  const sessions = new SessionsServiceStore(sessionsDbPath);
+  try {
+    for (const id of ["session-memory-a", "session-memory-b"]) {
+      sessions.createSession({ id, agent: "codex", title: id });
+      sessions.appendSessionEvent({
+        sessionId: id,
+        turnId: `turn-${id}`,
+        eventKind: "message",
+        eventType: "event_msg.user_message",
+        role: "user",
+        timestamp: 10,
+        sourceNativeId: `${id}:line:1`,
+        payloadJson: { message: id },
+        renderedSummary: id,
+        searchableText: id,
+      });
+      sessions.rebuildSessionProjection(id);
+    }
+  } finally {
+    sessions.close();
+  }
+  const jobs = new SessionsRuntimeJobStore(runtimeDbPath);
+  try {
+    jobs.enqueueJob({
+      id: "job-memory",
+      kind: "sessions.extract_memory_base",
+      priority: 20,
+      payload: { maxSessions: 1 },
+      scheduledAt: "2026-05-23T10:00:00.000Z",
+    });
+  } finally {
+    jobs.close();
+  }
+
+  const changed: string[] = [];
+  const run = await runSessionsRuntimeJobs({
+    runtimeDbPath,
+    sessionsDbPath,
+    maxJobs: 1,
+    now: "2026-05-23T10:00:01.000Z",
+    onSessionChanged: (event) => {
+      changed.push(`${event.reason}:${event.sessionId}`);
+    },
+  });
+  assert.equal(run.claimed, 1);
+  assert.equal(run.completed, 1);
+  assert.equal(run.items[0]?.kind, "sessions.extract_memory_base");
+  const result = run.items[0]?.result as { sessionsProcessed: number; sessionIds: string[]; totalPending: number; stopReason: string };
+  assert.equal(result.sessionsProcessed, 1);
+  assert.equal(result.totalPending, 2);
+  assert.equal(result.stopReason, "max_sessions");
+  assert.deepEqual(changed, result.sessionIds.map((sessionId) => `memory_extract:${sessionId}`));
+
+  const projected = new SessionsServiceStore(sessionsDbPath);
+  try {
+    const extract = projected.getSessionMemoryExtract(result.sessionIds[0] ?? "");
+    assert.equal(extract?.status, "current");
+    assert.equal(extract?.lastExtractedEventCount, 1);
+    assert.equal(projected.listPendingSessionMemoryExtractions().total, 1);
+  } finally {
+    projected.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});

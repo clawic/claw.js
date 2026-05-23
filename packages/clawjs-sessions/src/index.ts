@@ -2,6 +2,7 @@ export * from "./app.ts";
 export * from "./async-store.ts";
 export * from "./client.ts";
 export * from "./config.ts";
+export * from "./json-contracts.ts";
 export * from "./realistic-fixtures.ts";
 export * from "./runtime-jobs.ts";
 export * from "./search-indexer.ts";

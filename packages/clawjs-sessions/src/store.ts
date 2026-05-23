@@ -24,11 +24,16 @@ import type {
   RebuildSessionProjectionsInput,
   RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
+  RebuildSessionMemoryExtractsInput,
+  RebuildSessionMemoryExtractsResult,
   SearchSessionsInput,
   SearchSessionEventsInput,
   SidebarBootstrapResult,
   SessionDynamicToolRecord,
   SessionEventSearchHit,
+  SessionMemoryExtractRecord,
+  ListPendingSessionMemoryExtractionsInput,
+  PendingSessionMemoryExtractionRecord,
   SessionMessageRecord,
   SessionOriginRecord,
   SessionProjectionMetaRecord,
@@ -45,6 +50,7 @@ import type {
   ExportTrajectoryOptions,
   ImportSessionBatchInput,
 } from "./types.ts";
+import { redactSearchableText } from "./redaction.ts";
 
 const DEFAULT_MESSAGE_LIST_LIMIT = 200;
 const MAX_MESSAGE_LIST_LIMIT = 1000;
@@ -112,6 +118,7 @@ const SCHEMA_DDL = `
     session_id         TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     role               TEXT NOT NULL CHECK (role IN ('user','assistant','system','tool')),
     content_text       TEXT NOT NULL,
+    searchable_text    TEXT,
     content_blocks     TEXT,
     timestamp          INTEGER NOT NULL,
     tool_calls         TEXT,
@@ -254,6 +261,22 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_session_projection_meta_status
     ON session_projection_meta(projection_status, updated_at DESC);
 
+  CREATE TABLE IF NOT EXISTS session_memory_extracts (
+    session_id                  TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    summary_version             INTEGER NOT NULL DEFAULT 1,
+    status                      TEXT NOT NULL DEFAULT 'stale',
+    last_extracted_at           INTEGER,
+    last_extracted_event_count  INTEGER NOT NULL DEFAULT 0,
+    last_projected_at           INTEGER,
+    summary_json                TEXT,
+    last_error                  TEXT,
+    updated_at                  INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_session_memory_extracts_status
+    ON session_memory_extracts(status, updated_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_session_memory_extracts_extracted
+    ON session_memory_extracts(last_extracted_at, last_extracted_event_count);
+
   CREATE TABLE IF NOT EXISTS session_dynamic_tools (
     session_id          TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     position            INTEGER NOT NULL,
@@ -275,26 +298,10 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_session_dynamic_tools_schema_hash
     ON session_dynamic_tools(schema_hash);
 
-  CREATE VIRTUAL TABLE IF NOT EXISTS fts_messages USING fts5(
-    content_text,
-    content='session_messages',
-    content_rowid='rowid',
-    tokenize='porter unicode61'
-  );
-
-  CREATE TRIGGER IF NOT EXISTS session_messages_ai AFTER INSERT ON session_messages BEGIN
-    INSERT INTO fts_messages(rowid, content_text) VALUES (new.rowid, new.content_text);
-  END;
-  CREATE TRIGGER IF NOT EXISTS session_messages_ad AFTER DELETE ON session_messages BEGIN
-    INSERT INTO fts_messages(fts_messages, rowid, content_text) VALUES('delete', old.rowid, old.content_text);
-  END;
-  CREATE TRIGGER IF NOT EXISTS session_messages_au AFTER UPDATE ON session_messages BEGIN
-    INSERT INTO fts_messages(fts_messages, rowid, content_text) VALUES('delete', old.rowid, old.content_text);
-    INSERT INTO fts_messages(rowid, content_text) VALUES (new.rowid, new.content_text);
-  END;
 `;
 const SESSIONS_SCHEMA_META_TABLE = "sessions_service_schema_meta";
-const SESSIONS_SCHEMA_VERSION = 4;
+const SESSIONS_SCHEMA_VERSION = 6;
+const SESSION_MEMORY_SUMMARY_VERSION = 1;
 
 interface SessionRow {
   id: string;
@@ -324,6 +331,7 @@ interface MessageRow {
   session_id: string;
   role: MessageRole;
   content_text: string;
+  searchable_text: string | null;
   content_blocks: string | null;
   timestamp: number;
   tool_calls: string | null;
@@ -431,6 +439,18 @@ interface ProjectionMetaRow {
   projected_at: number | null;
   stale_reason: string | null;
   error: string | null;
+  last_error: string | null;
+  updated_at: number;
+}
+
+interface MemoryExtractRow {
+  session_id: string;
+  summary_version: number;
+  status: SessionMemoryExtractRecord["status"];
+  last_extracted_at: number | null;
+  last_extracted_event_count: number;
+  last_projected_at: number | null;
+  summary_json: string | null;
   last_error: string | null;
   updated_at: number;
 }
@@ -629,6 +649,20 @@ function rowToProjectionMeta(row: ProjectionMetaRow): SessionProjectionMetaRecor
   };
 }
 
+function rowToMemoryExtract(row: MemoryExtractRow): SessionMemoryExtractRecord {
+  return {
+    sessionId: row.session_id,
+    summaryVersion: row.summary_version,
+    status: row.status,
+    lastExtractedAt: row.last_extracted_at,
+    lastExtractedEventCount: row.last_extracted_event_count,
+    lastProjectedAt: row.last_projected_at,
+    summaryJson: parseJson<unknown>(row.summary_json),
+    lastError: row.last_error,
+    updatedAt: row.updated_at,
+  };
+}
+
 function rowToDynamicTool(row: DynamicToolRow, includeSchema: boolean): SessionDynamicToolRecord {
   const deferLoading = row.defer_loading === 1;
   return {
@@ -749,6 +783,7 @@ export class SessionsServiceStore {
     this.db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL").run();
     this.ensureColumn("session_messages", "timeline", "TEXT");
     this.ensureColumn("session_messages", "streaming_state", "TEXT");
+    this.ensureColumn("session_messages", "searchable_text", "TEXT");
     this.ensureColumn("session_origins", "source_mtime_ms", "REAL");
     this.ensureColumn("session_origins", "source_size", "INTEGER");
     this.ensureColumn("session_origins", "source_ino", "INTEGER");
@@ -777,6 +812,55 @@ export class SessionsServiceStore {
     this.ensureColumn("session_projection_meta", "last_projected_at", "INTEGER");
     this.ensureColumn("session_projection_meta", "projection_version", "INTEGER NOT NULL DEFAULT 1");
     this.ensureColumn("session_projection_meta", "last_error", "TEXT");
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_session_memory_extracts_status ON session_memory_extracts(status, updated_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_session_memory_extracts_extracted ON session_memory_extracts(last_extracted_at, last_extracted_event_count)").run();
+    this.ensureMessageSearchIndex();
+  }
+
+  private ensureMessageSearchIndex(): void {
+    this.db.exec(`
+      DROP TRIGGER IF EXISTS session_messages_ai;
+      DROP TRIGGER IF EXISTS session_messages_ad;
+      DROP TRIGGER IF EXISTS session_messages_au;
+      DROP TABLE IF EXISTS fts_messages;
+    `);
+    this.db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS fts_session_messages USING fts5(
+        message_id UNINDEXED,
+        searchable_text,
+        tokenize='porter unicode61'
+      );
+    `);
+    const rows = this.db.prepare("SELECT id, content_text, searchable_text FROM session_messages").all() as Array<{
+      id: string;
+      content_text: string;
+      searchable_text: string | null;
+    }>;
+    const update = this.db.prepare("UPDATE session_messages SET searchable_text = ? WHERE id = ?");
+    for (const row of rows) {
+      const redacted = redactSearchableText(row.content_text);
+      if (row.searchable_text !== redacted) update.run(redacted, row.id);
+    }
+    this.db.prepare("DELETE FROM fts_session_messages").run();
+    this.db.prepare(`
+      INSERT INTO fts_session_messages(rowid, message_id, searchable_text)
+      SELECT rowid, id, COALESCE(searchable_text, content_text)
+      FROM session_messages
+    `).run();
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS session_messages_search_ai AFTER INSERT ON session_messages BEGIN
+        INSERT INTO fts_session_messages(rowid, message_id, searchable_text)
+        VALUES (new.rowid, new.id, COALESCE(new.searchable_text, new.content_text));
+      END;
+      CREATE TRIGGER IF NOT EXISTS session_messages_search_ad AFTER DELETE ON session_messages BEGIN
+        DELETE FROM fts_session_messages WHERE rowid = old.rowid;
+      END;
+      CREATE TRIGGER IF NOT EXISTS session_messages_search_au AFTER UPDATE ON session_messages BEGIN
+        DELETE FROM fts_session_messages WHERE rowid = old.rowid;
+        INSERT INTO fts_session_messages(rowid, message_id, searchable_text)
+        VALUES (new.rowid, new.id, COALESCE(new.searchable_text, new.content_text));
+      END;
+    `);
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -1166,10 +1250,10 @@ export class SessionsServiceStore {
       }
       this.db.prepare(`
         INSERT INTO session_messages (
-          id, session_id, role, content_text, content_blocks, timestamp,
+          id, session_id, role, content_text, searchable_text, content_blocks, timestamp,
           tool_calls, timeline, work_summary, streaming_state, audio_ref, attachments, source_native_id
         ) VALUES (
-          @id, @session_id, @role, @content_text, @content_blocks, @timestamp,
+          @id, @session_id, @role, @content_text, @searchable_text, @content_blocks, @timestamp,
           @tool_calls, @timeline, @work_summary, @streaming_state, @audio_ref, @attachments, @source_native_id
         )
       `).run({
@@ -1177,6 +1261,7 @@ export class SessionsServiceStore {
         session_id: input.sessionId,
         role: input.role,
         content_text: input.contentText,
+        searchable_text: redactSearchableText(input.contentText),
         content_blocks: input.contentBlocks ? JSON.stringify(input.contentBlocks) : null,
         timestamp,
         tool_calls: input.toolCalls ? JSON.stringify(input.toolCalls) : null,
@@ -1219,10 +1304,10 @@ export class SessionsServiceStore {
         }
         this.db.prepare(`
           INSERT INTO session_messages (
-            id, session_id, role, content_text, content_blocks, timestamp,
+            id, session_id, role, content_text, searchable_text, content_blocks, timestamp,
             tool_calls, timeline, work_summary, streaming_state, audio_ref, attachments, source_native_id
           ) VALUES (
-            @id, @session_id, @role, @content_text, @content_blocks, @timestamp,
+            @id, @session_id, @role, @content_text, @searchable_text, @content_blocks, @timestamp,
             @tool_calls, @timeline, @work_summary, @streaming_state, @audio_ref, @attachments, @source_native_id
           )
         `).run({
@@ -1230,6 +1315,7 @@ export class SessionsServiceStore {
           session_id: message.sessionId,
           role: message.role,
           content_text: message.contentText,
+          searchable_text: redactSearchableText(message.contentText),
           content_blocks: message.contentBlocks ? JSON.stringify(message.contentBlocks) : null,
           timestamp,
           tool_calls: message.toolCalls ? JSON.stringify(message.toolCalls) : null,
@@ -1335,6 +1421,9 @@ export class SessionsServiceStore {
     const next = {
       id,
       content_text: patch.contentText ?? row.content_text,
+      searchable_text: patch.contentText !== undefined
+        ? redactSearchableText(patch.contentText)
+        : row.searchable_text ?? redactSearchableText(row.content_text),
       content_blocks: patch.contentBlocks !== undefined ? JSON.stringify(patch.contentBlocks) : row.content_blocks,
       tool_calls: patch.toolCalls !== undefined ? JSON.stringify(patch.toolCalls) : row.tool_calls,
       timeline: patch.timeline !== undefined ? JSON.stringify(patch.timeline) : row.timeline,
@@ -1345,6 +1434,7 @@ export class SessionsServiceStore {
     this.db.prepare(`
       UPDATE session_messages
       SET content_text = @content_text,
+          searchable_text = @searchable_text,
           content_blocks = @content_blocks,
           tool_calls = @tool_calls,
           timeline = @timeline,
@@ -1379,15 +1469,18 @@ export class SessionsServiceStore {
     if (input.agent) { conditions.push("s.agent = @agent"); params.agent = input.agent; }
     if (input.projectId) { conditions.push("s.project_id = @project_id"); params.project_id = input.projectId; }
     if (input.projectPath) { conditions.push("s.project_path = @project_path"); params.project_path = input.projectPath; }
+    if (input.fromTimestamp !== undefined) { conditions.push("m.timestamp >= @from_timestamp"); params.from_timestamp = input.fromTimestamp; }
+    if (input.toTimestamp !== undefined) { conditions.push("m.timestamp <= @to_timestamp"); params.to_timestamp = input.toTimestamp; }
     const extra = conditions.length ? `AND ${conditions.join(" AND ")}` : "";
 
     const rows = this.db.prepare(
       `SELECT
               m.id AS message_id,
               m.session_id AS message_session_id,
-              m.role AS message_role,
-              m.content_text AS message_content_text,
-              m.content_blocks AS message_content_blocks,
+	              m.role AS message_role,
+	              m.content_text AS message_content_text,
+	              m.searchable_text AS message_searchable_text,
+	              m.content_blocks AS message_content_blocks,
               m.timestamp AS message_timestamp,
               m.tool_calls AS message_tool_calls,
               m.timeline AS message_timeline,
@@ -1397,21 +1490,22 @@ export class SessionsServiceStore {
               m.attachments AS message_attachments,
               m.source_native_id AS message_source_native_id,
               s.*,
-              snippet(fts_messages, 0, '<<', '>>', '...', 32) AS snippet,
-              bm25(fts_messages) AS rank
-       FROM fts_messages
-       JOIN session_messages m ON m.rowid = fts_messages.rowid
+              snippet(fts_session_messages, 1, '<<', '>>', '...', 32) AS snippet,
+              bm25(fts_session_messages) AS rank
+       FROM fts_session_messages
+       JOIN session_messages m ON m.rowid = fts_session_messages.rowid
        JOIN sessions s         ON s.id = m.session_id
-       WHERE fts_messages MATCH @query
+       WHERE fts_session_messages MATCH @query
        ${extra}
        ORDER BY rank ASC
        LIMIT @limit`,
     ).all(params) as Array<SessionRow & {
       message_id: string;
       message_session_id: string;
-      message_role: MessageRole;
-      message_content_text: string;
-      message_content_blocks: string | null;
+	      message_role: MessageRole;
+	      message_content_text: string;
+	      message_searchable_text: string | null;
+	      message_content_blocks: string | null;
       message_timestamp: number;
       message_tool_calls: string | null;
       message_timeline: string | null;
@@ -1429,9 +1523,10 @@ export class SessionsServiceStore {
       message: rowToMessage({
         id: row.message_id,
         session_id: row.message_session_id,
-        role: row.message_role,
-        content_text: row.message_content_text,
-        content_blocks: row.message_content_blocks,
+	        role: row.message_role,
+	        content_text: row.message_content_text,
+	        searchable_text: row.message_searchable_text,
+	        content_blocks: row.message_content_blocks,
         timestamp: row.message_timestamp,
         tool_calls: row.message_tool_calls,
         timeline: row.message_timeline,
@@ -1454,6 +1549,29 @@ export class SessionsServiceStore {
     if (input.sessionId) { conditions.push("e.session_id = @session_id"); params.session_id = input.sessionId; }
     if (input.eventKind) { conditions.push("e.event_kind = @event_kind"); params.event_kind = input.eventKind; }
     if (input.eventType) { conditions.push("e.event_type = @event_type"); params.event_type = input.eventType; }
+    if (input.toolName) { conditions.push("json_extract(e.payload_json, '$.name') = @tool_name"); params.tool_name = input.toolName; }
+    if (input.status) { conditions.push("json_extract(e.payload_json, '$.status') = @status"); params.status = input.status; }
+    if (input.hasDiff !== undefined) conditions.push(input.hasDiff ? "e.event_kind = 'patch'" : "e.event_kind != 'patch'");
+    if (input.hasWebSearch !== undefined) conditions.push(input.hasWebSearch ? "e.event_kind = 'search'" : "e.event_kind != 'search'");
+    if (input.hasCompaction !== undefined) conditions.push(input.hasCompaction ? "e.event_kind = 'compaction'" : "e.event_kind != 'compaction'");
+    if (input.hasGoal !== undefined) conditions.push(input.hasGoal ? "e.event_kind = 'goal'" : "e.event_kind != 'goal'");
+    if (input.hasFailedTool !== undefined) {
+      const failedToolCondition = `(
+        e.event_kind = 'tool_output'
+        AND (
+          lower(COALESCE(json_extract(e.payload_json, '$.status'), '')) IN ('failed', 'error')
+          OR json_extract(e.payload_json, '$.error') IS NOT NULL
+          OR lower(COALESCE(e.searchable_text, '') || ' ' || COALESCE(e.rendered_summary, '')) LIKE '%exit code 1%'
+          OR lower(COALESCE(e.searchable_text, '') || ' ' || COALESCE(e.rendered_summary, '')) LIKE '%error%'
+          OR lower(COALESCE(e.searchable_text, '') || ' ' || COALESCE(e.rendered_summary, '')) LIKE '%failed%'
+          OR lower(COALESCE(e.searchable_text, '') || ' ' || COALESCE(e.rendered_summary, '')) LIKE '%failure%'
+          OR lower(COALESCE(e.searchable_text, '') || ' ' || COALESCE(e.rendered_summary, '')) LIKE '%traceback%'
+        )
+      )`;
+      conditions.push(input.hasFailedTool ? failedToolCondition : `NOT ${failedToolCondition}`);
+    }
+    if (input.fromTimestamp !== undefined) { conditions.push("e.timestamp >= @from_timestamp"); params.from_timestamp = input.fromTimestamp; }
+    if (input.toTimestamp !== undefined) { conditions.push("e.timestamp <= @to_timestamp"); params.to_timestamp = input.toTimestamp; }
     const extra = conditions.length ? `AND ${conditions.join(" AND ")}` : "";
     const rows = this.db.prepare(`
       SELECT e.*,
@@ -1750,6 +1868,20 @@ export class SessionsServiceStore {
         projected_at: now,
         updated_at: now,
       });
+      this.db.prepare(`
+        UPDATE session_memory_extracts
+        SET status='stale', updated_at=@updated_at
+        WHERE session_id=@session_id
+          AND (
+            last_extracted_event_count != @event_count
+            OR COALESCE(last_projected_at, 0) < @projected_at
+          )
+      `).run({
+        session_id: sessionId,
+        event_count: events.length,
+        projected_at: now,
+        updated_at: now,
+      });
     });
     tx();
 
@@ -1812,6 +1944,216 @@ export class SessionsServiceStore {
       budgetExhausted,
       stopReason,
       nextOffset: stopReason === "drained" ? null : offset,
+    };
+  }
+
+  getSessionMemoryExtract(sessionId: string): SessionMemoryExtractRecord | null {
+    const row = this.db.prepare("SELECT * FROM session_memory_extracts WHERE session_id = ?").get(sessionId) as MemoryExtractRow | undefined;
+    return row ? rowToMemoryExtract(row) : null;
+  }
+
+  listPendingSessionMemoryExtractions(input: ListPendingSessionMemoryExtractionsInput = {}): { items: PendingSessionMemoryExtractionRecord[]; total: number } {
+    const limit = clampInt(input.limit, 1, 500, 100);
+    const offset = clampInt(input.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+    const conditions = [
+      "pm.projection_status = 'current'",
+      "pm.summary_count > 0",
+      `(
+        me.session_id IS NULL
+        OR me.status != 'current'
+        OR pm.event_count != me.last_extracted_event_count
+        OR COALESCE(pm.projected_at, pm.updated_at, 0) > COALESCE(me.last_extracted_at, 0)
+      )`,
+    ];
+    const params: Record<string, unknown> = { limit, offset };
+    if (input.projectId) {
+      conditions.push("s.project_id = @project_id");
+      params.project_id = input.projectId;
+    }
+    if (input.projectPath) {
+      conditions.push("s.project_path = @project_path");
+      params.project_path = normalizeProjectPath(input.projectPath);
+    }
+    const where = conditions.join(" AND ");
+    const total = (this.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM session_projection_meta pm
+      JOIN sessions s ON s.id = pm.session_id
+      LEFT JOIN session_memory_extracts me ON me.session_id = pm.session_id
+      WHERE ${where}
+    `).get(params) as { count: number }).count;
+    const rows = this.db.prepare(`
+      SELECT pm.session_id AS session_id,
+        CASE
+          WHEN me.session_id IS NULL THEN 'never_extracted'
+          WHEN pm.event_count != me.last_extracted_event_count THEN 'event_count_changed'
+          ELSE 'projection_newer'
+        END AS reason
+      FROM session_projection_meta pm
+      JOIN sessions s ON s.id = pm.session_id
+      LEFT JOIN session_memory_extracts me ON me.session_id = pm.session_id
+      WHERE ${where}
+      ORDER BY COALESCE(pm.projected_at, pm.updated_at, 0) ASC, pm.session_id ASC
+      LIMIT @limit OFFSET @offset
+    `).all(params) as Array<{ session_id: string; reason: PendingSessionMemoryExtractionRecord["reason"] }>;
+    return {
+      total,
+      items: rows.map((row) => {
+        const session = this.getSession(row.session_id);
+        const projectionMeta = this.getProjectionMeta(row.session_id);
+        if (!session || !projectionMeta) throw new Error(`pending memory extraction referenced missing session ${row.session_id}`);
+        return {
+          session,
+          projectionMeta,
+          extract: this.getSessionMemoryExtract(row.session_id),
+          reason: row.reason,
+        };
+      }),
+    };
+  }
+
+  rebuildSessionMemoryExtract(sessionId: string): SessionMemoryExtractRecord {
+    const session = this.getSession(sessionId);
+    if (!session) throw new Error(`session not found: ${sessionId}`);
+    const meta = this.getProjectionMeta(sessionId);
+    if (!meta || meta.projectionStatus !== "current") {
+      throw new Error(`session projection is not current: ${sessionId}`);
+    }
+    const summaries = this.listTurnSummaries(sessionId);
+    const now = Date.now();
+    const summary = {
+      session: {
+        id: session.id,
+        title: session.title,
+        agent: session.agent,
+        runtime: session.runtime,
+        projectId: session.projectId,
+        projectPath: session.projectPath,
+        cwd: session.cwd,
+        branch: session.branch,
+        createdAt: session.createdAt,
+        lastMessageAt: session.lastMessageAt,
+      },
+      projection: {
+        eventCount: meta.eventCount,
+        summaryCount: meta.summaryCount,
+        projectedAt: meta.projectedAt,
+        parserVersion: meta.parserVersion,
+      },
+      totals: {
+        turns: summaries.length,
+        toolCalls: summaries.reduce((sum, item) => sum + item.toolCallCount, 0),
+        failedToolCalls: summaries.reduce((sum, item) => sum + item.failedToolCallCount, 0),
+        diffFiles: summaries.reduce((sum, item) => sum + item.diffFileCount, 0),
+        webSearches: summaries.reduce((sum, item) => sum + item.webSearchCount, 0),
+        subagents: summaries.reduce((sum, item) => sum + item.subagentCount, 0),
+        compactedTurns: summaries.filter((item) => item.compacted).length,
+        interruptedTurns: summaries.filter((item) => item.interrupted).length,
+        abortedTurns: summaries.filter((item) => item.aborted).length,
+      },
+      turns: summaries.map((summary) => ({
+        turnId: summary.turnId,
+        startedAt: summary.startedAt,
+        completedAt: summary.completedAt,
+        status: summary.status,
+        title: summary.title,
+        promptPreview: summary.promptPreview,
+        responsePreview: summary.responsePreview,
+        toolCallCount: summary.toolCallCount,
+        failedToolCallCount: summary.failedToolCallCount,
+        diffFileCount: summary.diffFileCount,
+        webSearchCount: summary.webSearchCount,
+        subagentCount: summary.subagentCount,
+        compacted: summary.compacted,
+        tokenUsage: summary.tokenUsage,
+      })),
+    };
+    this.db.prepare(`
+      INSERT INTO session_memory_extracts (
+        session_id, summary_version, status, last_extracted_at,
+        last_extracted_event_count, last_projected_at, summary_json,
+        last_error, updated_at
+      ) VALUES (
+        @session_id, @summary_version, 'current', @last_extracted_at,
+        @last_extracted_event_count, @last_projected_at, @summary_json,
+        NULL, @updated_at
+      )
+      ON CONFLICT(session_id) DO UPDATE SET
+        summary_version=excluded.summary_version,
+        status='current',
+        last_extracted_at=excluded.last_extracted_at,
+        last_extracted_event_count=excluded.last_extracted_event_count,
+        last_projected_at=excluded.last_projected_at,
+        summary_json=excluded.summary_json,
+        last_error=NULL,
+        updated_at=excluded.updated_at
+    `).run({
+      session_id: sessionId,
+      summary_version: SESSION_MEMORY_SUMMARY_VERSION,
+      last_extracted_at: now,
+      last_extracted_event_count: meta.eventCount,
+      last_projected_at: meta.projectedAt ?? meta.updatedAt,
+      summary_json: JSON.stringify(summary),
+      updated_at: now,
+    });
+    const extract = this.getSessionMemoryExtract(sessionId);
+    if (!extract) throw new Error(`rebuildSessionMemoryExtract: failed to read back ${sessionId}`);
+    return extract;
+  }
+
+  rebuildSessionMemoryExtracts(input: RebuildSessionMemoryExtractsInput = {}): RebuildSessionMemoryExtractsResult {
+    const start = performance.now();
+    const maxSessions = optionalBoundedInt(input.maxSessions, 1, 1_000_000);
+    const budgetMs = optionalBoundedInt(input.budgetMs, 1, 10 * 60 * 1000);
+    const sessionIds: string[] = [];
+    let totalPending = 0;
+    let budgetExhausted = false;
+    let stopReason: RebuildSessionMemoryExtractsResult["stopReason"] = "drained";
+    let offset = clampInt(input.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+
+    while (true) {
+      if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
+        budgetExhausted = true;
+        stopReason = "budget_ms";
+        break;
+      }
+      if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
+        stopReason = "max_sessions";
+        break;
+      }
+      const remaining = maxSessions === undefined ? 100 : Math.max(1, Math.min(100, maxSessions - sessionIds.length));
+      const page = this.listPendingSessionMemoryExtractions({
+        projectId: input.projectId,
+        projectPath: input.projectPath,
+        limit: remaining,
+        offset,
+      });
+      totalPending = Math.max(totalPending, page.total + sessionIds.length);
+      if (page.items.length === 0) break;
+      for (const item of page.items) {
+        if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
+          budgetExhausted = true;
+          stopReason = "budget_ms";
+          break;
+        }
+        if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
+          stopReason = "max_sessions";
+          break;
+        }
+        this.rebuildSessionMemoryExtract(item.session.id);
+        sessionIds.push(item.session.id);
+      }
+      offset = 0;
+      if (stopReason !== "drained") break;
+    }
+
+    return {
+      sessionsProcessed: sessionIds.length,
+      sessionIds,
+      totalPending,
+      budgetExhausted,
+      stopReason,
+      nextOffset: stopReason === "drained" ? null : 0,
     };
   }
 

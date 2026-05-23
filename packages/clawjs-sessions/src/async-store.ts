@@ -10,17 +10,22 @@ import type {
   HydratedSessionResult,
   ListSessionDynamicToolsOptions,
   ListSessionEventsFilter,
+  ListPendingSessionMemoryExtractionsInput,
   ListProjectsFilter,
   ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
   ProjectRecord,
+  PendingSessionMemoryExtractionRecord,
+  RebuildSessionMemoryExtractsInput,
+  RebuildSessionMemoryExtractsResult,
   RebuildSessionProjectionsInput,
   RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
   SearchSessionsInput,
   SearchSessionEventsInput,
   SessionEventSearchHit,
+  SessionMemoryExtractRecord,
   SessionMessageRecord,
   SessionOriginRecord,
   SessionProjectionMetaRecord,
@@ -214,6 +219,22 @@ export class AsyncSessionsServiceStore {
 
   rebuildSessionProjections(input: RebuildSessionProjectionsInput = {}): Promise<RebuildSessionProjectionsResult> {
     return this.call("rebuildSessionProjections", input);
+  }
+
+  getSessionMemoryExtract(sessionId: string): Promise<SessionMemoryExtractRecord | null> {
+    return this.call("getSessionMemoryExtract", sessionId);
+  }
+
+  listPendingSessionMemoryExtractions(input: ListPendingSessionMemoryExtractionsInput = {}): Promise<{ items: PendingSessionMemoryExtractionRecord[]; total: number }> {
+    return this.call("listPendingSessionMemoryExtractions", input);
+  }
+
+  rebuildSessionMemoryExtract(sessionId: string): Promise<SessionMemoryExtractRecord> {
+    return this.call("rebuildSessionMemoryExtract", sessionId);
+  }
+
+  rebuildSessionMemoryExtracts(input: RebuildSessionMemoryExtractsInput = {}): Promise<RebuildSessionMemoryExtractsResult> {
+    return this.call("rebuildSessionMemoryExtracts", input);
   }
 
   upsertOrigin(input: UpsertOriginInput): Promise<SessionOriginRecord> {

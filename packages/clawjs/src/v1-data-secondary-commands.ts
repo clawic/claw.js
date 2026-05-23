@@ -687,10 +687,34 @@ async function runSessionsRuntimeCommand(input: V1DataCliInput): Promise<number>
         writeSuccess(input, { item: job, paths: publicSessionsRuntimePaths(paths) });
         return V1_DATA_EXIT_OK;
       }
+      if (jobType === "extract-memory-base" || jobType === "memory-base" || jobType === "sessions.extract_memory_base") {
+        const projectId = input.flags["project-id"];
+        const projectPath = input.flags["project-path"];
+        const resourceId = input.flags["resource-id"] ?? projectId ?? projectPath ?? "all";
+        const job = store.enqueueJob({
+          id: input.flags.id,
+          kind: "sessions.extract_memory_base",
+          title: input.flags.title,
+          resourceId,
+          priority: numberFlag(input.flags.priority, 6),
+          scheduledAt: input.flags["scheduled-at"] || input.flags["run-at"],
+          maxAttempts: numberFlag(input.flags["max-attempts"], 3),
+          payload: {
+            projectId,
+            projectPath,
+            maxSessions: optionalNumberFlag(input.flags["max-sessions"]),
+            budgetMs: optionalNumberFlag(input.flags["budget-ms"]),
+            offset: optionalNumberFlag(input.flags.offset),
+          },
+        });
+        scheduleRuntimeJobSearch(input, job.id);
+        writeSuccess(input, { item: job, paths: publicSessionsRuntimePaths(paths) });
+        return V1_DATA_EXIT_OK;
+      }
     } finally {
       store.close();
     }
-    return usageError(input, `Usage: ${input.binName} sessions runtime enqueue import-codex|rebuild-projection|rebuild-projections [--json]`);
+    return usageError(input, `Usage: ${input.binName} sessions runtime enqueue import-codex|rebuild-projection|rebuild-projections|extract-memory-base [--json]`);
   }
   if (action === "run-once") {
     const searchEvents: unknown[] = [];

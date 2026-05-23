@@ -56,7 +56,7 @@
     "code-hygiene:check": "node ./scripts/code-hygiene-check.mjs",
     "code-hygiene:self-test": "node ./scripts/code-hygiene-check.mjs --self-test",
     "test:policy": "node ./scripts/verify-testing-policy.mjs && node --import tsx ./scripts/verify-cli-registry-router-parity.mjs && node ./scripts/verify-cli-json-envelope-debt.mjs",
-    "test:cross-process-json-contracts": "node ./scripts/cross-process-json-contracts-check.mjs && node ./scripts/cross-process-json-contracts-check.mjs --self-test && vitest run packages/clawjs-core/src/cross-process-json-boundary.test.ts packages/clawjs/src/cli-json.test.ts",
+    "test:cross-process-json-contracts": "node ./scripts/cross-process-json-contracts-check.mjs && node ./scripts/cross-process-json-contracts-check.mjs --self-test && vitest run packages/clawjs-core/src/cross-process-json-boundary.test.ts packages/clawjs/src/cli-json.test.ts packages/clawjs-sessions/src/json-contracts.test.ts && npm --prefix relay run test -- src/shared/protocol.test.ts src/server/remote-sync-routes.test.ts",
     "test:runtime-ecosystem": "node ./scripts/verify-runtime-ecosystem-integration.mjs",
     "test:evolution": "node ./scripts/evolution-governance-check.mjs && node ./scripts/evolution-governance-check.mjs --self-test && node --import tsx ./packages/clawjs/bin/claw.mjs evolution verify --json",
     "test:domain-surface-registry": "node --import tsx ./scripts/domain-surface-registry-guard.mjs",

@@ -4,6 +4,8 @@ import { test } from "vitest";
 import {
   clawContractVersionV1,
   clawCrossProcessJsonContractLimits,
+  parseAgentAssignmentRuntimeHandoffJson,
+  parseClawCommandIntentLedgerJson,
   parseClawHostCommandRequestJson,
   parseClawProjectManifestJson,
   parseCrossProcessJsonContract,
@@ -11,6 +13,7 @@ import {
   parseMacActionReceiptJson,
   parseMacActionRequestJson,
   parseMacPermissionStateJson,
+  parseMcpAgentAssignmentPolicyJson,
   parseSyncResourceManifestJson,
 } from "./index.ts";
 import { clawCommandRequestSchema } from "./host-contracts.ts";
@@ -126,6 +129,78 @@ const validSyncResourceManifest = {
   },
 };
 
+const validCommandIntentLedger = {
+  schemaVersion: 1,
+  updatedAt: "2026-05-23T00:00:00.000Z",
+  intents: [{
+    schemaVersion: 1,
+    id: "cmd_intent_test_fixture",
+    phrase: "test fixture command",
+    normalizedPhrase: "test fixture command",
+    language: "en",
+    purpose: "Exercise command intent ledger JSON boundaries.",
+    status: "gap",
+    source: "ledger",
+    relatedCommands: ["commands"],
+    risk: ["local_read"],
+    evidence: ["fixture"],
+    nextSteps: ["record intentionally"],
+    reportTarget: "github_discussions_ideas",
+    createdAt: "2026-05-23T00:00:00.000Z",
+    updatedAt: "2026-05-23T00:00:00.000Z",
+  }],
+};
+
+const validAgentAssignmentRuntimeHandoff = {
+  schemaVersion: 1,
+  route: {
+    assignment: {
+      id: "assignment.mcp",
+      agentId: "agent.support",
+      kind: "mcp_api",
+      status: "active",
+      channel: "mcp",
+      endpointRef: "mcp://srv_fixture/echo",
+      privacyPolicy: "hashed",
+      externalDisclosure: "transparent_agent",
+    },
+    kind: "mcp_api",
+    channel: "mcp",
+    endpointRef: "mcp://srv_fixture/echo",
+    now: "2026-05-23T00:00:00.000Z",
+  },
+};
+
+const allowMcpGrant = (id: string) => ({
+  id,
+  resourceType: "mcp_tool",
+  resourceId: "srv_fixture:echo",
+  action: "invoke",
+  scopeType: "mcp_server",
+  scopeId: "srv_fixture",
+});
+
+const validMcpAgentAssignmentPolicy = {
+  schemaVersion: 1,
+  route: validAgentAssignmentRuntimeHandoff.route,
+  access: {
+    requested: {
+      resourceType: "mcp_tool",
+      resourceId: "srv_fixture:echo",
+      action: "invoke",
+      scopeType: "mcp_server",
+      scopeId: "srv_fixture",
+    },
+    agentGrants: [allowMcpGrant("agent")],
+    assignmentGrants: [allowMcpGrant("assignment")],
+    executionProfileGrants: [allowMcpGrant("execution")],
+    connectorGrants: [allowMcpGrant("connector")],
+    hostGrants: [allowMcpGrant("host")],
+    runScopeGrants: [allowMcpGrant("run")],
+    now: "2026-05-23T00:00:00.000Z",
+  },
+};
+
 const boundaryFixtures = [
   {
     contractId: "claw.protocol.hostCommand.v1",
@@ -176,6 +251,27 @@ const boundaryFixtures = [
     maxBytes: clawCrossProcessJsonContractLimits["claw.api.sync.manifests"],
     requiredField: "resourceId",
   },
+  {
+    contractId: "claw.schema.commandIntents.v1",
+    parse: parseClawCommandIntentLedgerJson,
+    valid: validCommandIntentLedger,
+    maxBytes: clawCrossProcessJsonContractLimits["claw.schema.commandIntents.v1"],
+    requiredField: "intents",
+  },
+  {
+    contractId: "claw.agent_assignment.runtime.v1",
+    parse: parseAgentAssignmentRuntimeHandoffJson,
+    valid: validAgentAssignmentRuntimeHandoff,
+    maxBytes: clawCrossProcessJsonContractLimits["claw.agent_assignment.runtime.v1"],
+    requiredField: "route",
+  },
+  {
+    contractId: "claw.mcp.agents.v1",
+    parse: parseMcpAgentAssignmentPolicyJson,
+    valid: validMcpAgentAssignmentPolicy,
+    maxBytes: clawCrossProcessJsonContractLimits["claw.mcp.agents.v1"],
+    requiredField: "access",
+  },
 ] as const;
 
 function encode(value: unknown): string {
@@ -220,6 +316,22 @@ test("cross-process JSON boundary parsers reject unknown top-level fields before
       assert.equal(result.error.code, "json_contract_unknown_fields");
       assert.deepEqual(result.error.fields, ["unexpectedAuthority"]);
     }
+  }
+});
+
+test("command intent ledger parser rejects unknown entry fields", () => {
+  const result = parseClawCommandIntentLedgerJson(encode({
+    ...validCommandIntentLedger,
+    intents: [{
+      ...validCommandIntentLedger.intents[0],
+      proposedAliasExecutes: true,
+    }],
+  }));
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.error.code, "json_contract_schema_invalid");
+    assert.equal(result.error.issues?.some((issue) => issue.path === "intents.0" && issue.code === "unrecognized_keys"), true);
   }
 });
 

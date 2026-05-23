@@ -11,6 +11,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import { AsyncSessionsServiceStore } from "./async-store.ts";
 import { loadSessionsConfig, type SessionsServiceConfig } from "./config.ts";
 import { createLazyResource, createLazyResourceProxy } from "./lazy-resource.ts";
+import { SESSION_JSON_CONTRACT_VERSION } from "./json-contracts.ts";
 import { SessionEventBroadcaster } from "./sse-broadcaster.ts";
 import type {
   AppendMessageInput,
@@ -22,6 +23,7 @@ import type {
   ListProjectsFilter,
   ListSessionsFilter,
   MessageRole,
+  RebuildSessionMemoryExtractsInput,
   RebuildSessionProjectionsInput,
   SearchSessionsInput,
   SearchSessionEventsInput,
@@ -139,8 +141,8 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
   });
   const interruptedTurns = new Set<string>();
 
-  function publish(event: Omit<SessionEvent, "at">): SessionEvent {
-    const resolved: SessionEvent = { ...event, at: Date.now() };
+  function publish(event: Omit<SessionEvent, "at" | "schemaVersion"> & Partial<Pick<SessionEvent, "schemaVersion">>): SessionEvent {
+    const resolved: SessionEvent = { schemaVersion: SESSION_JSON_CONTRACT_VERSION, ...event, at: Date.now() };
     events.publish(resolved);
     return resolved;
   }
@@ -205,7 +207,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       "cache-control": "no-cache, no-transform",
       connection: "keep-alive",
     });
-    subscription.enqueue({ type: clawSessionEvents.updated, at: Date.now(), payload: { ready: true } });
+    subscription.enqueue({ schemaVersion: SESSION_JSON_CONTRACT_VERSION, type: clawSessionEvents.updated, at: Date.now(), payload: { ready: true } });
     request.raw.on("close", () => {
       subscription.close();
     });
@@ -405,6 +407,8 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       agent: asString(query.agent),
       projectId: asString(query.projectId),
       projectPath: asString(query.projectPath),
+      fromTimestamp: asNumber(query.fromTimestamp),
+      toTimestamp: asNumber(query.toTimestamp),
       limit: asNumber(query.limit),
     };
     return { items: await store.searchMessages(input) };
@@ -420,6 +424,15 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       sessionId: asString(query.sessionId),
       eventKind: asString(query.eventKind) as SearchSessionEventsInput["eventKind"],
       eventType: asString(query.eventType),
+      toolName: asString(query.toolName),
+      status: asString(query.status),
+      hasDiff: asBool(query.hasDiff),
+      hasFailedTool: asBool(query.hasFailedTool),
+      hasWebSearch: asBool(query.hasWebSearch),
+      hasCompaction: asBool(query.hasCompaction),
+      hasGoal: asBool(query.hasGoal),
+      fromTimestamp: asNumber(query.fromTimestamp),
+      toTimestamp: asNumber(query.toTimestamp),
       limit: asNumber(query.limit),
     };
     return { items: await store.searchSessionEvents(input) };
@@ -516,6 +529,52 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { meta: await store.getProjectionMeta(params.id) };
+  });
+
+  app.get(clawApiPath("sessions/memory/pending"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    return await store.listPendingSessionMemoryExtractions({
+      projectId: asString(query.projectId),
+      projectPath: asString(query.projectPath),
+      limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
+    });
+  });
+
+  app.get(clawApiPath("sessions/:id/memory-extract"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const session = await store.getSession(params.id);
+    if (!session) return await reply.code(404).send({ error: "session_not_found" });
+    return { extract: await store.getSessionMemoryExtract(params.id) };
+  });
+
+  app.post(clawApiPath("sessions/memory-extract/rebuild"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const body = readBody(request);
+      const input: RebuildSessionMemoryExtractsInput = {
+        projectId: asString(body.projectId),
+        projectPath: asString(body.projectPath),
+        offset: asNumber(body.offset),
+        maxSessions: asNumber(body.maxSessions),
+        budgetMs: asNumber(body.budgetMs),
+      };
+      return await store.rebuildSessionMemoryExtracts(input);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post(clawApiPath("sessions/:id/memory-extract/rebuild"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const params = request.params as { id: string };
+      return await store.rebuildSessionMemoryExtract(params.id);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   app.post(clawApiPath("sessions/projection/rebuild"), async (request, reply) => {

@@ -622,6 +622,19 @@ export function applySearchFilters(clauses: string[], params: unknown[], filters
       case "path":
         addInClause(clauses, params, "d.path", value);
         break;
+      case "dateRange":
+        addDateRangeClause(clauses, params, value);
+        break;
+      case "fromUpdatedAt":
+      case "updatedFrom":
+      case "dateFrom":
+        addUpdatedAtLowerBound(clauses, params, value);
+        break;
+      case "toUpdatedAt":
+      case "updatedTo":
+      case "dateTo":
+        addUpdatedAtUpperBound(clauses, params, value);
+        break;
       case "canOpen":
       case "canPreview":
       case "redacted":
@@ -632,6 +645,46 @@ export function applySearchFilters(clauses: string[], params: unknown[], filters
         break;
     }
   }
+}
+
+function addDateRangeClause(clauses: string[], params: unknown[], value: unknown): void {
+  if (Array.isArray(value)) {
+    addUpdatedAtLowerBound(clauses, params, value[0]);
+    addUpdatedAtUpperBound(clauses, params, value[1]);
+    return;
+  }
+  if (typeof value !== "object" || value === null) return;
+  const range = value as Record<string, unknown>;
+  addUpdatedAtLowerBound(clauses, params, range.from ?? range.start ?? range.gte ?? range.after);
+  addUpdatedAtUpperBound(clauses, params, range.to ?? range.end ?? range.lte ?? range.before);
+}
+
+function addUpdatedAtLowerBound(clauses: string[], params: unknown[], value: unknown): void {
+  const normalized = normalizeUpdatedAtFilterValue(value);
+  if (!normalized) return;
+  clauses.push("d.updated_at >= ?");
+  params.push(normalized);
+}
+
+function addUpdatedAtUpperBound(clauses: string[], params: unknown[], value: unknown): void {
+  const normalized = normalizeUpdatedAtFilterValue(value);
+  if (!normalized) return;
+  clauses.push("d.updated_at <= ?");
+  params.push(normalized);
+}
+
+function normalizeUpdatedAtFilterValue(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString();
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^\d+$/.test(trimmed)) return new Date(Number(trimmed)).toISOString();
+    const parsed = Date.parse(trimmed);
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : trimmed;
+  }
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString();
+  return null;
 }
 
 export function addInClause(clauses: string[], params: unknown[], column: string, value: unknown): void {

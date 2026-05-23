@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import {
+  AGENT_ASSIGNMENT_KINDS,
+  AGENT_ASSIGNMENT_STATUSES,
+} from "./agents-v1-types.ts";
+import {
   clawCommandRequestSchema,
 } from "./host-contracts.ts";
 import {
@@ -20,6 +24,9 @@ export const clawCrossProcessJsonContractLimits = {
   "claw.mac.permissionState.v1": 64 * 1024,
   "claw.workspace.manifest": 256 * 1024,
   "claw.api.sync.manifests": 256 * 1024,
+  "claw.schema.commandIntents.v1": 512 * 1024,
+  "claw.agent_assignment.runtime.v1": 128 * 1024,
+  "claw.mcp.agents.v1": 256 * 1024,
 } as const;
 
 export type ClawCrossProcessJsonContractId = keyof typeof clawCrossProcessJsonContractLimits;
@@ -86,6 +93,111 @@ function zodIssues(error: z.ZodError): Array<{ path: string; message: string; co
     code: issue.code,
   }));
 }
+
+const clawCommandIntentEntrySchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().min(1),
+  phrase: z.string().min(1),
+  normalizedPhrase: z.string().min(1),
+  language: z.string().min(1),
+  purpose: z.string().min(1),
+  status: z.enum(["covered", "candidate_alias", "gap", "future", "blocked", "external_pending"]),
+  source: z.enum(["registry", "ledger"]),
+  mappedCommand: z.string().min(1).optional(),
+  relatedCommands: z.array(z.string().min(1)),
+  risk: z.array(z.enum(["local_read", "local_write", "destructive", "cost", "native_permission", "secret", "physical_world", "external_service"])),
+  evidence: z.array(z.string().min(1)),
+  nextSteps: z.array(z.string().min(1)),
+  reportTarget: z.string().min(1),
+  createdAt: z.string().min(1).optional(),
+  updatedAt: z.string().min(1).optional(),
+}).strict();
+
+const clawCommandIntentLedgerSchema = z.object({
+  schemaVersion: z.literal(1),
+  intents: z.array(clawCommandIntentEntrySchema),
+  updatedAt: z.string().min(1),
+}).strict();
+
+const agentAssignmentRouteSchema = z.object({
+  id: z.string().min(1),
+  agentId: z.string().min(1),
+  kind: z.enum(AGENT_ASSIGNMENT_KINDS),
+  status: z.enum(AGENT_ASSIGNMENT_STATUSES),
+  channel: z.string().min(1).optional(),
+  endpointRef: z.string().min(1).optional(),
+  privacyPolicy: z.enum(["off", "hashed", "raw_with_retention"]).optional(),
+  telemetryRetentionDays: z.number().int().positive().optional(),
+  externalDisclosure: z.enum(["transparent_agent", "custom_agent_wording"]).optional(),
+  startsAt: z.string().min(1).optional(),
+  expiresAt: z.string().min(1).optional(),
+  scopeType: z.string().min(1).optional(),
+  scopeId: z.string().min(1).optional(),
+  respondOnlyDefault: z.boolean().optional(),
+}).strict();
+
+const agentAssignmentRouteRequestSchema = z.object({
+  assignment: agentAssignmentRouteSchema.nullable().optional(),
+  kind: z.enum(AGENT_ASSIGNMENT_KINDS),
+  channel: z.string().min(1).optional(),
+  endpointRef: z.string().min(1).optional(),
+  now: z.string().min(1).optional(),
+}).strict();
+
+const agentAssignmentRuntimeHandoffSchema = z.object({
+  schemaVersion: z.literal(1),
+  route: agentAssignmentRouteRequestSchema,
+}).strict();
+
+const agentResourceActionSchema = z.enum([
+  "read",
+  "write",
+  "create",
+  "update",
+  "delete",
+  "execute",
+  "invoke",
+  "lease_secret",
+  "approve",
+  "*",
+]);
+
+const agentResourceGrantSchema = z.object({
+  id: z.string().min(1).optional(),
+  resourceType: z.string().min(1),
+  resourceId: z.string().min(1).optional(),
+  action: agentResourceActionSchema,
+  scopeType: z.string().min(1).optional(),
+  scopeId: z.string().min(1).optional(),
+  effect: z.enum(["allow", "deny"]).optional(),
+  expiresAt: z.string().min(1).optional(),
+}).strict();
+
+const agentAccessRequestSchema = z.object({
+  resourceType: z.string().min(1),
+  resourceId: z.string().min(1).optional(),
+  action: agentResourceActionSchema,
+  scopeType: z.string().min(1).optional(),
+  scopeId: z.string().min(1).optional(),
+  regulatedSafety: z.record(z.unknown()).optional(),
+}).strict();
+
+const agentEffectiveAccessInputSchema = z.object({
+  requested: agentAccessRequestSchema,
+  agentGrants: z.array(agentResourceGrantSchema).optional(),
+  assignmentGrants: z.array(agentResourceGrantSchema).optional(),
+  executionProfileGrants: z.array(agentResourceGrantSchema).optional(),
+  connectorGrants: z.array(agentResourceGrantSchema).optional(),
+  hostGrants: z.array(agentResourceGrantSchema).optional(),
+  runScopeGrants: z.array(agentResourceGrantSchema).optional(),
+  now: z.string().min(1).optional(),
+}).strict();
+
+const mcpAgentAssignmentPolicySchema = z.object({
+  schemaVersion: z.literal(1),
+  route: agentAssignmentRouteRequestSchema,
+  access: agentEffectiveAccessInputSchema,
+}).strict();
 
 export function parseCrossProcessJsonContract<T>(
   input: string | Uint8Array,
@@ -312,6 +424,41 @@ export function parseSyncResourceManifestJson(input: string | Uint8Array) {
       "allowedPeerNodeIds",
       "routeIds",
       "secretPolicy",
+    ],
+  });
+}
+
+export function parseClawCommandIntentLedgerJson(input: string | Uint8Array) {
+  return parseCrossProcessJsonContract(input, clawCommandIntentLedgerSchema, {
+    contractId: "claw.schema.commandIntents.v1",
+    maxBytes: clawCrossProcessJsonContractLimits["claw.schema.commandIntents.v1"],
+    allowedTopLevelKeys: [
+      "schemaVersion",
+      "intents",
+      "updatedAt",
+    ],
+  });
+}
+
+export function parseAgentAssignmentRuntimeHandoffJson(input: string | Uint8Array) {
+  return parseCrossProcessJsonContract(input, agentAssignmentRuntimeHandoffSchema, {
+    contractId: "claw.agent_assignment.runtime.v1",
+    maxBytes: clawCrossProcessJsonContractLimits["claw.agent_assignment.runtime.v1"],
+    allowedTopLevelKeys: [
+      "schemaVersion",
+      "route",
+    ],
+  });
+}
+
+export function parseMcpAgentAssignmentPolicyJson(input: string | Uint8Array) {
+  return parseCrossProcessJsonContract(input, mcpAgentAssignmentPolicySchema, {
+    contractId: "claw.mcp.agents.v1",
+    maxBytes: clawCrossProcessJsonContractLimits["claw.mcp.agents.v1"],
+    allowedTopLevelKeys: [
+      "schemaVersion",
+      "route",
+      "access",
     ],
   });
 }

@@ -926,6 +926,7 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "agent", label: "Agent", type: "string" },
         { id: "runtime", label: "Runtime", type: "string" },
         { id: "role", label: "Role", type: "enum", values: ["user", "assistant", "system", "tool"] },
+        { id: "dateRange", label: "Date range", type: "date" },
       ],
     }),
     createFrameworkSearchSourceManifest({
@@ -948,6 +949,7 @@ export function createBuiltinSearchSourceManifests(): SearchSourceManifest[] {
         { id: "hasWebSearch", label: "Web search", type: "boolean" },
         { id: "hasCompaction", label: "Compaction", type: "boolean" },
         { id: "hasGoal", label: "Goal", type: "boolean" },
+        { id: "dateRange", label: "Date range", type: "date" },
       ],
     }),
     createFrameworkSearchSourceManifest({

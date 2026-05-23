@@ -139,6 +139,15 @@ export interface SearchSessionEventsInput {
   sessionId?: string;
   eventKind?: SessionStructuredEventKind;
   eventType?: string;
+  toolName?: string;
+  status?: string;
+  hasDiff?: boolean;
+  hasFailedTool?: boolean;
+  hasWebSearch?: boolean;
+  hasCompaction?: boolean;
+  hasGoal?: boolean;
+  fromTimestamp?: number;
+  toTimestamp?: number;
   limit?: number;
 }
 
@@ -230,6 +239,51 @@ export interface RebuildSessionProjectionsResult {
   nextOffset: number | null;
 }
 
+export type SessionMemoryExtractStatus = "current" | "stale" | "failed";
+
+export interface SessionMemoryExtractRecord {
+  sessionId: string;
+  summaryVersion: number;
+  status: SessionMemoryExtractStatus;
+  lastExtractedAt: number | null;
+  lastExtractedEventCount: number;
+  lastProjectedAt: number | null;
+  summaryJson: unknown | null;
+  lastError: string | null;
+  updatedAt: number;
+}
+
+export interface PendingSessionMemoryExtractionRecord {
+  session: SessionRecord;
+  projectionMeta: SessionProjectionMetaRecord;
+  extract: SessionMemoryExtractRecord | null;
+  reason: "never_extracted" | "event_count_changed" | "projection_newer";
+}
+
+export interface ListPendingSessionMemoryExtractionsInput {
+  projectId?: string;
+  projectPath?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface RebuildSessionMemoryExtractsInput {
+  projectId?: string;
+  projectPath?: string;
+  offset?: number;
+  maxSessions?: number;
+  budgetMs?: number;
+}
+
+export interface RebuildSessionMemoryExtractsResult {
+  sessionsProcessed: number;
+  sessionIds: string[];
+  totalPending: number;
+  budgetExhausted: boolean;
+  stopReason: "drained" | "max_sessions" | "budget_ms";
+  nextOffset: number | null;
+}
+
 export interface SessionDynamicToolRecord {
   sessionId: string;
   position: number;
@@ -296,6 +350,8 @@ export interface SearchSessionsInput {
   agent?: SessionAgent;
   projectId?: string;
   projectPath?: string;
+  fromTimestamp?: number;
+  toTimestamp?: number;
   limit?: number;
 }
 
@@ -411,6 +467,7 @@ export interface SessionMessageUpdatedPayload {
 }
 
 export interface SessionEvent {
+  schemaVersion?: 1;
   type: SessionEventType;
   sessionId?: string;
   projectId?: string;
@@ -494,7 +551,7 @@ export interface SessionsRuntimeJobRecord {
 
 export interface EnqueueSessionsRuntimeJobInput {
   id?: string;
-  kind: "sessions.import_codex" | "sessions.rebuild_projection" | "sessions.rebuild_projections" | string;
+  kind: "sessions.import_codex" | "sessions.rebuild_projection" | "sessions.rebuild_projections" | "sessions.extract_memory_base" | string;
   title?: string;
   resourceId?: string | null;
   priority?: number;
@@ -529,7 +586,7 @@ export interface SessionsRuntimeSessionChangedEvent {
   sessionId: string;
   jobId: string;
   jobKind: string;
-  reason: "import_codex" | "rebuild_projection";
+  reason: "import_codex" | "rebuild_projection" | "memory_extract";
 }
 
 export interface RunSessionsRuntimeJobsResult {

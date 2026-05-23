@@ -280,3 +280,90 @@ test("sessions projection rebuild endpoint rebuilds project-scoped windows with 
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("sessions memory extract endpoints expose pending state and bounded rebuild", async () => {
+  const rootDir = tempRoot("clawjs-session-memory-api-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const projectPath = path.join(rootDir, "project-memory");
+  const seed = new SessionsServiceStore(dbPath);
+  try {
+    seed.createProject({ id: "project-memory", path: projectPath, displayName: "Project Memory" });
+    for (const id of ["session-memory-a", "session-memory-b", "session-memory-other"]) {
+      seed.createSession({
+        id,
+        agent: "codex",
+        title: id,
+        projectId: id === "session-memory-other" ? undefined : "project-memory",
+        projectPath: id === "session-memory-other" ? undefined : projectPath,
+      });
+      seed.appendSessionEvent({
+        sessionId: id,
+        turnId: `turn-${id}`,
+        eventKind: "message",
+        eventType: "event_msg.user_message",
+        role: "user",
+        timestamp: 10,
+        sourceNativeId: `${id}:line:1`,
+        payloadJson: { message: `memory ${id}` },
+        renderedSummary: `memory ${id}`,
+        searchableText: `memory ${id}`,
+      });
+      seed.rebuildSessionProjection(id);
+    }
+  } finally {
+    seed.close();
+  }
+
+  const { app } = buildSessionsApp({
+    config: {
+      sharedSecret: "test-secret",
+      dataDir: path.join(rootDir, "data"),
+      dbPath,
+    },
+  });
+  try {
+    const pendingResponse = await app.inject({
+      method: "GET",
+      url: "/v1/sessions/memory/pending?projectId=project-memory",
+      headers: { authorization: "Bearer test-secret" },
+    });
+    assert.equal(pendingResponse.statusCode, 200);
+    const pendingBody = JSON.parse(pendingResponse.body) as { total: number; items: Array<{ session: { id: string }; reason: string }> };
+    assert.equal(pendingBody.total, 2);
+    assert.deepEqual(pendingBody.items.map((item) => item.reason), ["never_extracted", "never_extracted"]);
+
+    const rebuildResponse = await app.inject({
+      method: "POST",
+      url: "/v1/sessions/memory-extract/rebuild",
+      headers: { authorization: "Bearer test-secret" },
+      payload: { projectId: "project-memory", maxSessions: 1 },
+    });
+    assert.equal(rebuildResponse.statusCode, 200);
+    const rebuildBody = JSON.parse(rebuildResponse.body) as { sessionsProcessed: number; totalPending: number; stopReason: string; sessionIds: string[] };
+    assert.equal(rebuildBody.sessionsProcessed, 1);
+    assert.equal(rebuildBody.totalPending, 2);
+    assert.equal(rebuildBody.stopReason, "max_sessions");
+
+    const extractResponse = await app.inject({
+      method: "GET",
+      url: `/v1/sessions/${encodeURIComponent(rebuildBody.sessionIds[0] ?? "")}/memory-extract`,
+      headers: { authorization: "Bearer test-secret" },
+    });
+    assert.equal(extractResponse.statusCode, 200);
+    const extractBody = JSON.parse(extractResponse.body) as { extract: { status: string; lastExtractedEventCount: number; summaryJson: unknown } | null };
+    assert.equal(extractBody.extract?.status, "current");
+    assert.equal(extractBody.extract?.lastExtractedEventCount, 1);
+    assert.match(JSON.stringify(extractBody.extract?.summaryJson), /memory session-memory/);
+
+    const remainingResponse = await app.inject({
+      method: "GET",
+      url: "/v1/sessions/memory/pending?projectId=project-memory",
+      headers: { authorization: "Bearer test-secret" },
+    });
+    assert.equal(remainingResponse.statusCode, 200);
+    assert.equal((JSON.parse(remainingResponse.body) as { total: number }).total, 1);
+  } finally {
+    await app.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});

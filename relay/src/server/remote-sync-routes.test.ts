@@ -745,6 +745,41 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(classificationReceiptPayload.receipt.writes, false);
     assert.equal(classificationReceiptPayload.writes, false);
 
+    const classificationReceiptWithExtraField = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/classifications/receipts",
+      headers: { "content-type": "application/json" },
+      payload: JSON.stringify({
+        capabilityId: "claw.gateway",
+        classification: "remote-safe",
+        routeId: "remote.chatGateway",
+        policyRef: "docs/adr/0022-remote-gateway-sync-redesign.md",
+        testRefs: ["relay/src/server/remote-sync-routes.test.ts"],
+        ignoredByRelay: true,
+      }),
+    });
+    assert.equal(classificationReceiptWithExtraField.statusCode, 400);
+    assert.equal(classificationReceiptWithExtraField.json().error.code, "relay_remote_body_unknown_fields");
+    assert.deepEqual(classificationReceiptWithExtraField.json().error.fields, ["ignoredByRelay"]);
+
+    const truncatedClassificationReceipt = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/classifications/receipts",
+      headers: { "content-type": "application/json" },
+      payload: "{\"capabilityId\":\"claw.gateway\"",
+    });
+    assert.equal(truncatedClassificationReceipt.statusCode, 400);
+    assert.equal(truncatedClassificationReceipt.json().error.code, "relay_remote_body_truncated");
+
+    const oversizedClassificationReceipt = await built.app.inject({
+      method: "POST",
+      url: "/v1/remote/classifications/receipts",
+      headers: { "content-type": "application/json" },
+      payload: " ".repeat(1024 * 1024 + 1),
+    });
+    assert.equal(oversizedClassificationReceipt.statusCode, 413);
+    assert.equal(oversizedClassificationReceipt.json().error.code, "relay_remote_body_oversized");
+
     const gateway = await built.app.inject({ method: "GET", url: "/v1/gateway/conformance" });
     assert.equal(gateway.statusCode, 200);
     const gatewayPayload = gateway.json() as { gateway: { contract: string; hostedSelfHostedParity: string } };

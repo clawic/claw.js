@@ -4,6 +4,7 @@ import { createInterface } from "node:readline";
 import { createHash } from "node:crypto";
 
 import type { SessionsServiceStore } from "../store.ts";
+import { redactIndexedText } from "../redaction.ts";
 import type {
   AppendSessionEventInput,
   CreateSessionInput,
@@ -276,7 +277,7 @@ function appendStructuredEvent(
   },
 ): void {
   const eventType = eventTypeFor(input.topLevelType, input.payload);
-  const summary = summarizePayload(input.payload, eventType);
+  const summary = redactIndexedText(summarizePayload(input.payload, eventType));
   batch.events.push({
     sessionId: input.sessionId,
     turnId: stringField(input.payload, ["turn_id", "turnId"]),
