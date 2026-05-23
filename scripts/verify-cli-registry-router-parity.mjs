@@ -8,8 +8,11 @@ import {
   GENERATED_CLI_COMMANDS,
   GENERATED_CLI_ROUTE_GROUPS,
 } from "../packages/clawjs/src/cli-router.generated.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--self-test"]);
 
 const removedPublicCommands = new Set([
   "data",
@@ -63,6 +66,130 @@ function readRelative(relativePath) {
 
 function symbolPattern(symbol) {
   return new RegExp(`\\b${symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+}
+
+function cliParityDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("cli_registry_router_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/verify-cli-registry-router-parity.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node --import tsx scripts/verify-cli-registry-router-parity.mjs with a supported argument.",
+    });
+  }
+  if (failure.startsWith("duplicate command name") || failure.includes("removed legacy command") || failure.includes("missing summary") || failure.includes("invalid kind") || failure.includes("schemaVersion") || failure.includes("jsonSchemaId") || failure.includes("support declaration") || failure.includes("security policy")) {
+    return createDiagnostic("cli_registry_entry_invalid", failure, {
+      location: "packages/clawjs-core/src/cli-command-registry.ts",
+      suggestion: "Fix the CLI registry entry shape before regenerating router metadata.",
+      safeNextStep: "Update the named command registry entry, then rerun this parity check.",
+    });
+  }
+  if (failure.includes("target") || failure.includes("alias") && failure.includes("collides")) {
+    return createDiagnostic("cli_registry_alias_invalid", failure, {
+      location: "packages/clawjs-core/src/cli-command-registry.ts",
+      suggestion: "Point aliases and targets at a canonical command or explicit router-backed route.",
+      safeNextStep: "Fix the alias/target entry, then rerun node --import tsx scripts/verify-cli-registry-router-parity.mjs.",
+    });
+  }
+  if (failure.includes("missing router evidence")) {
+    return createDiagnostic("cli_registry_router_evidence_missing", failure, {
+      location: "packages/clawjs/src",
+      suggestion: "Add router evidence for the command or mark it as a portal/alias with a public decision.",
+      safeNextStep: "Wire the command route or source symbol, then rerun this parity check.",
+    });
+  }
+  if (failure.includes("generated CLI command metadata is stale") || failure.includes("generated summary is stale") || failure.includes("generated route group") || failure.includes("route group map")) {
+    return createDiagnostic("cli_generated_router_stale", failure, {
+      location: "packages/clawjs/src/cli-router.generated.ts",
+      suggestion: "Regenerate the CLI router metadata from the registry.",
+      safeNextStep: "Run node --import tsx scripts/generate-cli-router.mjs, review the generated diff, then rerun this parity check.",
+    });
+  }
+  if (failure.startsWith("alias ") && failure.includes("resolves to both")) {
+    return createDiagnostic("cli_alias_resolution_ambiguous", failure, {
+      location: "packages/clawjs-core/src/cli-command-registry.ts",
+      suggestion: "Make each alias resolve to exactly one canonical command.",
+      safeNextStep: "Remove or rename the conflicting alias, then rerun this parity check.",
+    });
+  }
+  if (failure.includes("missing doc ref") || failure.includes("missing ADR ref") || failure.includes("missing test ref") || failure.includes("missing required CLI decision/doc ref") || failure.includes("missing test refs")) {
+    return createDiagnostic("cli_registry_reference_missing", failure, {
+      location: "packages/clawjs-core/src/cli-command-registry.ts",
+      suggestion: "Add existing public docs, ADRs, and tests to the command registry evidence.",
+      safeNextStep: "Restore the missing reference or update the registry entry, then rerun this parity check.",
+    });
+  }
+  if (failure.includes("missing source file") || failure.includes("source symbol")) {
+    return createDiagnostic("cli_registry_source_missing", failure, {
+      location: "packages/clawjs-core/src/cli-command-registry.ts",
+      suggestion: "Point the command registry source to a committed file and exported symbol.",
+      safeNextStep: "Fix the source file/symbol entry, then rerun node --import tsx scripts/verify-cli-registry-router-parity.mjs.",
+    });
+  }
+  if (failure.includes("help exited") || failure.includes("help output")) {
+    return createDiagnostic("cli_help_parity_failed", failure, {
+      location: "packages/clawjs/src/index.ts",
+      suggestion: "Keep command help generated from registry metadata, including summary, support state, and security policy.",
+      safeNextStep: "Fix the command help path, then rerun this parity check.",
+    });
+  }
+  return createDiagnostic("cli_registry_router_parity_failed", failure, {
+    location: "scripts/verify-cli-registry-router-parity.mjs",
+    suggestion: "Inspect the CLI registry/router invariant and restore command parity.",
+    safeNextStep: "Fix the reported CLI parity issue, then rerun node --import tsx scripts/verify-cli-registry-router-parity.mjs.",
+  });
+}
+
+function printFailures(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "CLI registry/router parity check failed:",
+    diagnostics: items.map(cliParityDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printFailures([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "duplicate command name: inspect",
+    "inspect: alias ls collides with a registered command; declare it as an alias command instead",
+    "inspect: missing router evidence in packages/clawjs/src",
+    "generated CLI command metadata is stale relative to clawCliCommandRegistry",
+    "alias ls resolves to both list and inspect",
+    "inspect: missing doc ref /Users/example/private.md",
+    "inspect: missing source file <none>",
+    "inspect: help exited with 1; stderr=token sk-test-secret-123456",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "cli_registry_router_usage_error",
+    "cli_registry_entry_invalid",
+    "cli_registry_alias_invalid",
+    "cli_registry_router_evidence_missing",
+    "cli_generated_router_stale",
+    "cli_alias_resolution_ambiguous",
+    "cli_registry_reference_missing",
+    "cli_registry_source_missing",
+    "cli_help_parity_failed",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Keep command help")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printFailures([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
+if (args.has("--self-test")) {
+  runSelfTest();
+  console.log("CLI registry/router parity self-test passed");
+  process.exit(0);
 }
 
 function hasRouterEvidence(entry, commandsByName) {
@@ -198,8 +325,7 @@ checkReferences(failures);
 await checkHelpParity(failures);
 
 if (failures.length > 0) {
-  console.error("CLI registry/router parity check failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures(failures);
   process.exit(1);
 }
 
