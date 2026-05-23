@@ -32,6 +32,10 @@ The ClawJS public coordination manifest is
 `qa/agent-coordination.manifest.json`. Each check declares its lane command,
 cost class, real-service risk, path/fingerprint inputs, required resources,
 reuse policy, external-pending policy, failure action, and repair policy.
+Matching valid `passed` results may be reused only when the check explicitly
+allows result reuse. Matching failed results are failure evidence, not passing
+validation. Failed runs create repair ownership for the check fingerprint so
+other agents do not rerun the same failing work while a repair owner is active.
 
 ## Boundaries
 

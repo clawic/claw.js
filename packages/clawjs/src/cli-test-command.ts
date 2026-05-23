@@ -6,7 +6,16 @@ import path from "node:path";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { openAgentCoordinationStore, publicDemand, publicLease, resolveAgentCoordinationPaths } from "./agent-coordination-store.ts";
+import {
+  openAgentCoordinationStore,
+  publicDemand,
+  publicLease,
+  publicRepairOwnership,
+  publicWorkResult,
+  resolveAgentCoordinationPaths,
+  type AgentCoordinationStore,
+  type AgentWorkResultRow,
+} from "./agent-coordination-store.ts";
 
 interface TestCliInput {
   positionals: string[];
@@ -82,9 +91,31 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
     });
     const acquisitions = selected.map((check) => {
       const resource = `test:${repoFingerprint(repo)}:${check.id}`;
+      const fingerprint = fingerprintForCheck(repo, check, input);
+      const reusable = reusableResult(store, repo, check, fingerprint);
+      if (reusable?.status === "passed") {
+        return { check, resource, fingerprint, reused: reusable, result: null, repair: null };
+      }
+      const repair = store.activeRepairOwnership({ checkId: check.id, fingerprint });
+      if (repair && repair.owner_intent_id !== intent.id) {
+        const demand = store.waitlist({
+          resourceId: resource,
+          intentId: intent.id,
+          agentId: input.flags.agent,
+          reason: `repair active for ${check.id}`,
+          metadata: { command: "claw test require", lane: check.lane, fingerprint, repairId: repair.id },
+        });
+        return { check, resource, fingerprint, reused: reusable, result: { status: "pending" as const, demand, conflicts: [] }, repair };
+      }
+      if (reusable && reusable.status !== "passed") {
+        return { check, resource, fingerprint, reused: reusable, result: null, repair: null };
+      }
       return {
         check,
         resource,
+        fingerprint,
+        reused: null,
+        repair: null,
         result: store.acquire({
           resourceId: resource,
           mode: "exclusive",
@@ -95,23 +126,37 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
           ttlSeconds: check.timeoutSeconds,
           resourceKind: "test",
           reason: `test result required for ${check.id}`,
-          metadata: { command: check.command, lane: check.lane },
+          metadata: { command: check.command, lane: check.lane, fingerprint },
         }),
       };
     });
-    const pending = acquisitions.filter((entry) => entry.result.status === "pending");
+    const pending = acquisitions.filter((entry) => entry.result?.status === "pending");
+    const failedEvidence = acquisitions.filter((entry) => entry.reused && entry.reused.status !== "passed");
+    const acquired = acquisitions.filter((entry) => entry.result?.status === "acquired");
+    const satisfied = acquisitions.filter((entry) => entry.reused?.status === "passed");
+    const status = pending.length > 0 ? "PENDING"
+      : failedEvidence.length > 0 ? "FAILED_EVIDENCE"
+        : acquired.length > 0 ? "ACQUIRED"
+          : "SATISFIED";
     return ok(input, {
-      status: pending.length > 0 ? "PENDING" : "ACQUIRED",
+      status,
       intent: { id: intent.id, repo, lane },
       checks: acquisitions.map((entry) => ({
         id: entry.check.id,
         resource: entry.resource,
-        status: entry.result.status === "pending" ? "PENDING" : "ACQUIRED",
-        lease: entry.result.lease ? publicLease(entry.result.lease) : null,
-        demand: entry.result.demand ? publicDemand(entry.result.demand) : null,
-        conflicts: entry.result.conflicts.map(publicLease),
+        fingerprint: entry.fingerprint,
+        status: entry.result?.status === "pending" ? "PENDING"
+          : entry.result?.status === "acquired" ? "ACQUIRED"
+            : entry.reused?.status === "passed" ? "SATISFIED"
+              : entry.reused ? "FAILED_EVIDENCE"
+                : "UNKNOWN",
+        lease: entry.result?.lease ? publicLease(entry.result.lease) : null,
+        demand: entry.result?.demand ? publicDemand(entry.result.demand) : null,
+        conflicts: entry.result?.conflicts.map(publicLease) ?? [],
+        reusableResult: entry.reused ? publicWorkResult(entry.reused) : null,
+        repair: entry.repair ? publicRepairOwnership(entry.repair) : null,
       })),
-    }, { subcommand: command, lane }, pending.length > 0 ? CLI_EXIT_DEGRADED : CLI_EXIT_OK);
+    }, { subcommand: command, lane }, pending.length > 0 || failedEvidence.length > 0 ? CLI_EXIT_DEGRADED : CLI_EXIT_OK);
   }
 
   if (command === "run") {
@@ -126,6 +171,35 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
       purpose: `test run ${check.id}`,
       metadata: { command: "claw test run", lane, check: check.id },
     });
+    const fingerprint = fingerprintForCheck(repo, check, input);
+    const reusable = reusableResult(store, repo, check, fingerprint);
+    if (reusable?.status === "passed") {
+      return ok(input, {
+        status: "REUSED",
+        intent: { id: intent.id, repo, lane },
+        check: check.id,
+        fingerprint,
+        result: publicWorkResult(reusable),
+      }, { subcommand: command, lane });
+    }
+    const repair = store.activeRepairOwnership({ checkId: check.id, fingerprint });
+    if (repair && repair.owner_intent_id !== intent.id) {
+      const demand = store.waitlist({
+        resourceId: `test:${repoFingerprint(repo)}:${check.id}`,
+        intentId: intent.id,
+        agentId: input.flags.agent,
+        reason: `repair active for ${check.id}`,
+        metadata: { command: "claw test run", lane, fingerprint, repairId: repair.id },
+      });
+      return ok(input, {
+        status: "PENDING",
+        intent: { id: intent.id, repo, lane },
+        check: check.id,
+        fingerprint,
+        demand: publicDemand(demand),
+        repair: publicRepairOwnership(repair),
+      }, { subcommand: command, lane }, CLI_EXIT_DEGRADED);
+    }
     const acquisition = store.acquire({
       resourceId: `test:${repoFingerprint(repo)}:${check.id}`,
       mode: "exclusive",
@@ -136,13 +210,14 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
       ttlSeconds: check.timeoutSeconds,
       resourceKind: "test",
       reason: `test run ${check.id}`,
-      metadata: { command: check.command, lane: check.lane },
+      metadata: { command: check.command, lane: check.lane, fingerprint },
     });
     if (acquisition.status === "pending") {
       return ok(input, {
         status: "PENDING",
         intent: { id: intent.id, repo, lane },
         check: check.id,
+        fingerprint,
         demand: acquisition.demand ? publicDemand(acquisition.demand) : null,
         conflicts: acquisition.conflicts.map(publicLease),
       }, { subcommand: command, lane }, CLI_EXIT_DEGRADED);
@@ -156,13 +231,16 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         checkId: check.id,
         repo,
         lane,
+        fingerprint,
         metadata: { dryRun: true, command: check.command },
       });
+      store.releaseRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: intent.id });
       if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${acquisition.lease.id}.`, CLI_EXIT_DEGRADED);
       return ok(input, {
         status: "DRY_RUN",
         intent: { id: intent.id, repo, lane },
         check: check.id,
+        fingerprint,
         lease: publicLease(released),
         command: check.command,
       }, { subcommand: command, lane });
@@ -181,15 +259,23 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
       checkId: check.id,
       repo,
       lane,
+      fingerprint,
+      failureAction: check.failureAction ?? null,
       metadata: { command: check.command, exitCode: result.status ?? null, signal: result.signal ?? null },
     });
+    const repairOwnership = status === "failed"
+      ? store.claimRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: intent.id, ownerAgentId: input.flags.agent || process.env.CLAW_AGENT_ID || process.env.USER || "agent", ttlSeconds: check.timeoutSeconds })
+      : null;
+    if (status === "passed") store.releaseRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: null });
     if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${acquisition.lease.id}.`, CLI_EXIT_DEGRADED);
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "test", {
         status: status === "passed" ? "PASS" : "FAIL",
         intent: { id: intent.id, repo, lane },
         check: check.id,
+        fingerprint,
         lease: publicLease(released),
+        repair: repairOwnership ? publicRepairOwnership(repairOwnership) : null,
         command: check.command,
         exitCode: result.status ?? 1,
       }, { subcommand: command, lane });
@@ -255,6 +341,78 @@ function validateCheck(check: CoordinationCheck, index: number, manifestPath: st
 
 function findCheck(checks: CoordinationCheck[], repo: string, id: string, lane: string): CoordinationCheck {
   return checks.find((check) => check.id === id) ?? defaultCheck(repo, id, lane);
+}
+
+function reusableResult(store: AgentCoordinationStore, repo: string, check: CoordinationCheck, fingerprint: string): AgentWorkResultRow | null {
+  if (!check.resultReuse?.allowed) return null;
+  return store.latestResult({
+    repo,
+    checkId: check.id,
+    fingerprint,
+    maxAgeSeconds: check.resultReuse.validForSeconds,
+  });
+}
+
+function fingerprintForCheck(repo: string, check: CoordinationCheck, input: TestCliInput): string {
+  if (input.flags.fingerprint) return input.flags.fingerprint;
+  const hash = createHash("sha256");
+  hash.update(JSON.stringify({
+    repo,
+    id: check.id,
+    lane: check.lane,
+    command: check.command,
+    inputs: check.fingerprintInputs ?? [],
+    git: gitFingerprintEvidence(repo, check.fingerprintInputs ?? []),
+    files: filesystemFingerprintEvidence(repo, check.fingerprintInputs ?? []),
+  }));
+  return hash.digest("hex").slice(0, 16);
+}
+
+function gitFingerprintEvidence(repo: string, inputs: string[]): Record<string, unknown> | null {
+  if (!fs.existsSync(path.join(repo, ".git"))) return null;
+  const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" });
+  const status = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all", "--", ...pathspecRoots(inputs)], { cwd: repo, encoding: "utf8" });
+  return {
+    head: head.status === 0 ? head.stdout.trim() : null,
+    status: status.status === 0 ? status.stdout.trim() : null,
+  };
+}
+
+function filesystemFingerprintEvidence(repo: string, inputs: string[]): Array<{ path: string; size: number; mtimeMs: number }> {
+  const roots = pathspecRoots(inputs.length > 0 ? inputs : ["."]);
+  const files = new Map<string, { path: string; size: number; mtimeMs: number }>();
+  for (const root of roots) {
+    const absolute = path.join(repo, root);
+    if (!fs.existsSync(absolute)) continue;
+    collectFileStats(repo, absolute, files, 250);
+    if (files.size >= 250) break;
+  }
+  return [...files.values()].sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function pathspecRoots(inputs: string[]): string[] {
+  const roots = inputs.map((input) => input.replace(/\\/g, "/").replace(/^\.\//, "").split("**")[0].replace(/\/$/, "") || ".")
+    .map((input) => input.includes("*") ? path.dirname(input) : input)
+    .map((input) => input === "." ? "." : input.replace(/\/$/, ""))
+    .filter(Boolean);
+  return [...new Set(roots.length > 0 ? roots : ["."])];
+}
+
+function collectFileStats(repo: string, absolute: string, files: Map<string, { path: string; size: number; mtimeMs: number }>, limit: number): void {
+  if (files.size >= limit) return;
+  const stat = fs.statSync(absolute);
+  if (stat.isDirectory()) {
+    const name = path.basename(absolute);
+    if ([".git", "node_modules", "dist", "coverage", "test-results", "artifacts"].includes(name)) return;
+    for (const entry of fs.readdirSync(absolute)) {
+      collectFileStats(repo, path.join(absolute, entry), files, limit);
+      if (files.size >= limit) return;
+    }
+    return;
+  }
+  if (!stat.isFile()) return;
+  const relative = path.relative(repo, absolute).replace(/\\/g, "/");
+  files.set(relative, { path: relative, size: stat.size, mtimeMs: Math.round(stat.mtimeMs) });
 }
 
 function defaultCheck(repo: string, id: string, lane: string): CoordinationCheck {

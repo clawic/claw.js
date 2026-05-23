@@ -98,6 +98,17 @@ export interface AgentRepairOwnershipRow {
   status: "repairing" | "released" | "stale";
 }
 
+export interface AgentCoordinationAuditRow {
+  id: string;
+  event_type: string;
+  created_at: string;
+  agent_id: string | null;
+  intent_id: string | null;
+  resource_id: string | null;
+  lease_id: string | null;
+  payload_json: string;
+}
+
 export interface AgentCoordinationAcquireInput {
   resourceId: string;
   mode: AgentResourceLeaseMode;
@@ -530,6 +541,15 @@ export class AgentCoordinationStore {
     return result.changes;
   }
 
+  recordBypass(input: { intentId: string; agentId?: string | null; resourceId?: string | null; reason: string; metadata?: Record<string, unknown> }): AgentCoordinationAuditRow {
+    return this.audit("coordination.bypassed", {
+      agentId: input.agentId || defaultAgentId(),
+      intentId: input.intentId,
+      resourceId: input.resourceId ?? null,
+      payload: { reason: input.reason, cleanValidation: false, ...(input.metadata ?? {}) },
+    });
+  }
+
   private activeLeases(): AgentResourceLeaseRow[] {
     return (this.sqlite.prepare(`
       SELECT * FROM resource_leases
@@ -549,11 +569,22 @@ export class AgentCoordinationStore {
       .filter((lease) => ACTIVE_LEASE_STATUSES.has(lease.status) && leasesConflict(lease.mode, requested));
   }
 
-  private audit(eventType: string, input: { agentId?: string | null; intentId?: string | null; resourceId?: string | null; leaseId?: string | null; payload?: unknown }): void {
+  private audit(eventType: string, input: { agentId?: string | null; intentId?: string | null; resourceId?: string | null; leaseId?: string | null; payload?: unknown }): AgentCoordinationAuditRow {
+    const row: AgentCoordinationAuditRow = {
+      id: `audit-${randomUUID()}`,
+      event_type: eventType,
+      created_at: nowIso(),
+      agent_id: input.agentId ?? null,
+      intent_id: input.intentId ?? null,
+      resource_id: input.resourceId ?? null,
+      lease_id: input.leaseId ?? null,
+      payload_json: JSON.stringify(input.payload ?? {}),
+    };
     this.sqlite.prepare(`
       INSERT INTO coordination_audit (id, event_type, created_at, agent_id, intent_id, resource_id, lease_id, payload_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(`audit-${randomUUID()}`, eventType, nowIso(), input.agentId ?? null, input.intentId ?? null, input.resourceId ?? null, input.leaseId ?? null, JSON.stringify(input.payload ?? {}));
+    `).run(row.id, row.event_type, row.created_at, row.agent_id, row.intent_id, row.resource_id, row.lease_id, row.payload_json);
+    return row;
   }
 
   private isDeadLocalProcess(lease: AgentResourceLeaseRow): boolean {
@@ -628,6 +659,19 @@ export function publicRepairOwnership(repair: AgentRepairOwnershipRow): Record<s
     heartbeatAt: repair.heartbeat_at,
     expiresAt: repair.expires_at,
     status: repair.status,
+  };
+}
+
+export function publicAuditEvent(audit: AgentCoordinationAuditRow): Record<string, unknown> {
+  return {
+    id: audit.id,
+    eventType: audit.event_type,
+    createdAt: audit.created_at,
+    agentId: audit.agent_id,
+    intentId: audit.intent_id,
+    resourceId: audit.resource_id,
+    leaseId: audit.lease_id,
+    payload: parseJsonObject(audit.payload_json),
   };
 }
 

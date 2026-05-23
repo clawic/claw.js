@@ -4,6 +4,7 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHa
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import {
   openAgentCoordinationStore,
+  publicAuditEvent,
   publicDemand,
   publicLease,
   resolveAgentCoordinationPaths,
@@ -141,6 +142,19 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
     return ok(input, { reaped: result.reaped.map(publicLease) }, { subcommand: command });
   }
 
+  if (command === "bypass") {
+    const intent = requiredFlag(input, "intent", command);
+    const reason = requiredFlag(input, "reason", command);
+    const audit = store.recordBypass({
+      intentId: intent,
+      agentId: input.flags.agent,
+      resourceId: input.flags.resource || null,
+      reason,
+      metadata: { command: "agent-resource bypass" },
+    });
+    return ok(input, { status: "BYPASS_AUDITED", cleanValidation: false, audit: publicAuditEvent(audit) }, { subcommand: command }, CLI_EXIT_DEGRADED);
+  }
+
   return fail(input, command, "unknown_agent_resource_command", `Unknown agent-resource command: ${command}`, CLI_EXIT_USAGE);
 }
 
@@ -156,6 +170,7 @@ function writeHelp(input: AgentResourceCliInput): number {
     "  agent-resource status --json",
     "  agent-resource waitlist --resource <id> --intent <id> --json",
     "  agent-resource reap --json",
+    "  agent-resource bypass --intent <id> --reason <text> [--resource <id>] --json",
   ].join("\n");
   input.context.stdout.write(`${text}\n`);
   return CLI_EXIT_OK;
