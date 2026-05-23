@@ -21,6 +21,7 @@ export interface V1DataCliInput {
   wantsJson: boolean;
   binName: string;
   cwd: string;
+  homeDir: string;
 }
 
 export type JsonRecord = Record<string, unknown>;

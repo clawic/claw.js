@@ -537,6 +537,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       wantsJson,
       binName,
       cwd: context.cwd,
+      homeDir: os.homedir(),
     });
     if (v1DataExitCode !== null) return v1DataExitCode;
   }
@@ -656,6 +657,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       wantsJson,
       binName,
       cwd: context.cwd,
+      homeDir: os.homedir(),
     });
     if (v1DataExitCode !== null) return v1DataExitCode;
   }

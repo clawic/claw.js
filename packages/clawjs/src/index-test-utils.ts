@@ -144,6 +144,7 @@ export async function runInternalV1Cli(args: string[], options: { stdout: NodeJS
     wantsJson: args.includes("--json"),
     binName: "claw",
     cwd: options.cwd,
+    homeDir: os.homedir(),
   });
   return result ?? CLI_EXIT_USAGE;
 }

@@ -1,3 +1,4 @@
+import os from "node:os";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { extractPositionals, parseFlags } from "./cli-flag-parsers.ts";
@@ -339,6 +340,7 @@ async function runV1DataRouteIfPossible(input: {
     wantsJson: input.wantsJson,
     binName: input.binName,
     cwd: input.context.cwd,
+    homeDir: os.homedir(),
   });
 }
 
