@@ -1477,10 +1477,10 @@ export class SessionsServiceStore {
       `SELECT
               m.id AS message_id,
               m.session_id AS message_session_id,
-	              m.role AS message_role,
-	              m.content_text AS message_content_text,
-	              m.searchable_text AS message_searchable_text,
-	              m.content_blocks AS message_content_blocks,
+              m.role AS message_role,
+              m.content_text AS message_content_text,
+              m.searchable_text AS message_searchable_text,
+              m.content_blocks AS message_content_blocks,
               m.timestamp AS message_timestamp,
               m.tool_calls AS message_tool_calls,
               m.timeline AS message_timeline,
@@ -1502,10 +1502,10 @@ export class SessionsServiceStore {
     ).all(params) as Array<SessionRow & {
       message_id: string;
       message_session_id: string;
-	      message_role: MessageRole;
-	      message_content_text: string;
-	      message_searchable_text: string | null;
-	      message_content_blocks: string | null;
+      message_role: MessageRole;
+      message_content_text: string;
+      message_searchable_text: string | null;
+      message_content_blocks: string | null;
       message_timestamp: number;
       message_tool_calls: string | null;
       message_timeline: string | null;
@@ -1523,10 +1523,10 @@ export class SessionsServiceStore {
       message: rowToMessage({
         id: row.message_id,
         session_id: row.message_session_id,
-	        role: row.message_role,
-	        content_text: row.message_content_text,
-	        searchable_text: row.message_searchable_text,
-	        content_blocks: row.message_content_blocks,
+        role: row.message_role,
+        content_text: row.message_content_text,
+        searchable_text: row.message_searchable_text,
+        content_blocks: row.message_content_blocks,
         timestamp: row.message_timestamp,
         tool_calls: row.message_tool_calls,
         timeline: row.message_timeline,
