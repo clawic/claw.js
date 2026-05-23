@@ -3,8 +3,65 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const defaultRootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const baselinePath = "docs/hot-path-baseline.json";
+
+function hotPathDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("hot_path_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/hot-path-guard.mjs",
+      suggestion: "Use --self-test or --root <repo>.",
+      safeNextStep: "Rerun node scripts/hot-path-guard.mjs with a supported flag.",
+    });
+  }
+  const finding = failure.match(/^(.+):(\d+) ([^ ]+) needs/);
+  if (finding) {
+    return createDiagnostic("hot_path_unbounded_operation", failure, {
+      location: `${finding[1]}:${finding[2]}`,
+      suggestion: "Add an inline hot-path-ok marker with maxBytes/maxItems/maxPixels and a reason, or add a reviewed baseline entry.",
+      safeNextStep: `Fix ${finding[1]} or update docs/hot-path-baseline.json, then rerun node scripts/hot-path-guard.mjs.`,
+    });
+  }
+  if (failure.startsWith(`missing ${baselinePath}`)) {
+    return createDiagnostic("hot_path_baseline_missing", failure, {
+      location: baselinePath,
+      suggestion: "Restore the hot-path baseline before accepting historical hot-path exceptions.",
+      safeNextStep: "Add docs/hot-path-baseline.json, then rerun node scripts/hot-path-guard.mjs.",
+    });
+  }
+  if (failure.includes(baselinePath) || failure.includes("expired") || failure.includes("duplicates hot-path baseline key")) {
+    return createDiagnostic("hot_path_baseline_invalid", failure, {
+      location: baselinePath,
+      suggestion: "Fix baseline schema, owner, limit, expiry, duplicate key, or stale linePattern.",
+      safeNextStep: "Repair docs/hot-path-baseline.json, then rerun node scripts/hot-path-guard.mjs.",
+    });
+  }
+  const missingSnippet = failure.match(/^(missing .+|.+ must include .+)$/);
+  if (missingSnippet) {
+    const location = failure.startsWith("missing ") ? failure.replace(/^missing /, "") : failure.split(" must include ")[0];
+    return createDiagnostic("hot_path_policy_missing", failure, {
+      location,
+      suggestion: "Restore the hot-path governance hook before trusting the scan.",
+      safeNextStep: `Update ${location}, then rerun node scripts/hot-path-guard.mjs.`,
+    });
+  }
+  return createDiagnostic("hot_path_guard_failed", failure, {
+    location: "scripts/hot-path-guard.mjs",
+    suggestion: "Inspect the hot-path invariant and restore the expected bound, marker, or baseline.",
+    safeNextStep: "Fix the reported hot-path issue, then rerun node scripts/hot-path-guard.mjs.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "hot-path guard failed:",
+    diagnostics: failures.map(hotPathDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
 
 function parseArgs(argv) {
   const args = { rootDir: defaultRootDir, selfTest: false };
@@ -12,13 +69,15 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === "--root") args.rootDir = path.resolve(argv[++index]);
     else if (arg === "--self-test") args.selfTest = true;
-    else throw new Error(`unknown argument ${arg}`);
+    else {
+      printFailures([`unknown argument ${arg}`]);
+      process.exit(64);
+    }
   }
   return args;
 }
 
 const args = parseArgs(process.argv.slice(2));
-const baselinePath = "docs/hot-path-baseline.json";
 const hotPathMarker = /\bhot-path-ok\b/u;
 const boundMarker = /\bmax(?:Bytes|Items|Pixels)\s*[:=]\s*[1-9][0-9_]*\b/u;
 const reasonMarker = /\b(?:why|reason)\s*[:=]\s*\S+/u;
@@ -255,6 +314,10 @@ function runSelfTest() {
     fixtureDocs(tempRoot);
     writeFixture(tempRoot, "relay/src/server/app.ts", "app.post('/upload', async (request) => {\n  const body = Buffer.concat(chunks);\n});\n");
     expectFailure(tempRoot, "buffer-concat-hot-path");
+    {
+      const result = spawnSync(process.execPath, [new URL(import.meta.url).pathname, "--root", tempRoot], { encoding: "utf8" });
+      if (!String(result.stderr).includes("code: hot_path_unbounded_operation")) throw new Error("self-test missed hot-path diagnostic code");
+    }
     writeFixture(tempRoot, "relay/src/server/app.ts", "app.post('/upload', async (request) => {\n  // hot-path-ok maxBytes=65536 reason=route body parser caps request size\n  const body = Buffer.concat(chunks);\n});\n");
     expectPass(tempRoot);
     writeFixture(tempRoot, "monitor/src/server/routes.ts", "app.get('/db', async () => {\n  const db = new Database(path);\n  return db.prepare('select * from rows').all();\n});\n");
@@ -283,6 +346,17 @@ function runSelfTest() {
       blocksRelease: true,
     }]);
     expectFailure(tempRoot, "expired");
+    const chunks = [];
+    printFailures([
+      "/Users/example/private/relay/src/server/app.ts:2 buffer-concat-hot-path needs hot-path-ok token sk-test-secret-123456",
+      "expired-buffer-concat expired on 2000-01-01",
+    ], { stream: { write: (chunk) => chunks.push(chunk) } });
+    const output = chunks.join("");
+    if (!output.includes("code: hot_path_unbounded_operation")) throw new Error("self-test missing hot path code");
+    if (!output.includes("code: hot_path_baseline_invalid")) throw new Error("self-test missing baseline code");
+    if (!output.includes("suggestion: Add an inline hot-path-ok marker")) throw new Error("self-test missing suggestion");
+    if (!output.includes("next: Fix ~/private/relay/src/server/app.ts")) throw new Error("self-test missing redacted next step");
+    if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -296,8 +370,7 @@ if (args.selfTest) {
 
 const result = checkRoot(args.rootDir);
 if (result.failures.length > 0) {
-  console.error("hot-path guard failed:");
-  for (const failure of result.failures) console.error(`- ${failure}`);
+  printFailures(result.failures);
   process.exit(1);
 }
 
