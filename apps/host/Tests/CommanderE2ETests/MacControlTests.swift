@@ -300,6 +300,102 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(events.first?.outcome, "approved")
     }
 
+    func testAudioMuteStatusAndSetUseCoreAudioNativeBrokerSteps() throws {
+        let statusPlan = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_audio_mute_status",
+            capabilityId: "mac.audio.mute.status",
+            actorId: "owner",
+            origin: .ownerCLI
+        ))
+        XCTAssertEqual(statusPlan.risk, .read)
+        XCTAssertFalse(statusPlan.requiresApproval)
+        XCTAssertEqual(statusPlan.steps.first?.kind, .native)
+        XCTAssertEqual(statusPlan.steps.first?.executable, "coreaudio.output_mute_status")
+
+        let runner = RecordingMacControlRunner()
+        let setRequest = MacControlActionRequest(
+            requestId: "macreq_test_audio_mute_set",
+            capabilityId: "mac.audio.mute.set",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["muted": "true"],
+            approved: true
+        )
+        let setPlan = try MacControlActionBroker.plan(for: setRequest)
+        XCTAssertEqual(setPlan.risk, .medium)
+        XCTAssertTrue(setPlan.requiresApproval)
+        XCTAssertEqual(setPlan.steps.first?.executable, "coreaudio.output_mute")
+        XCTAssertEqual(setPlan.steps.first?.arguments, ["true"])
+
+        let receipt = MacControlActionBroker.evaluate(setRequest, defaults: try makeDefaults(), runner: runner)
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.nativeCalls, [
+            RecordingMacControlRunner.NativeCall(action: "coreaudio.output_mute", arguments: ["true"]),
+        ])
+
+        let blocked = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_audio_mute_blocked",
+            capabilityId: "mac.audio.mute.set",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["muted": "maybe"]
+        ))
+        XCTAssertEqual(blocked.blockedReason, "Audio mute set requires a boolean muted argument.")
+    }
+
+    func testMediaPlaybackControlsRequireApprovedTargetsAndAuditExecution() throws {
+        let missingApp = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_media_missing",
+            capabilityId: "mac.media.playback.pause",
+            actorId: "owner",
+            origin: .ownerCLI
+        ))
+        XCTAssertEqual(missingApp.blockedReason, "Media playback control requires an explicit approved app target: Music, Podcasts, or TV.")
+
+        let unsupportedApp = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_media_unsupported",
+            capabilityId: "mac.media.playback.pause",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["app": "UnreviewedPlayer"]
+        ))
+        XCTAssertEqual(unsupportedApp.blockedReason, "Media playback control requires an explicit approved app target: Music, Podcasts, or TV.")
+
+        let statusPlan = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_media_status",
+            capabilityId: "mac.media.playback.status",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["app": "Music"]
+        ))
+        XCTAssertEqual(statusPlan.risk, .read)
+        XCTAssertEqual(statusPlan.requiredPermissionIds, [.automationAppleEvents])
+        XCTAssertEqual(statusPlan.steps.first?.kind, .appleScript)
+        XCTAssertEqual(statusPlan.steps.first?.redacted, true)
+        XCTAssertTrue(statusPlan.steps.first?.script?.contains("player state") == true)
+
+        let runner = RecordingMacControlRunner()
+        let request = MacControlActionRequest(
+            requestId: "macreq_test_media_pause",
+            capabilityId: "mac.media.playback.pause",
+            actorId: "owner",
+            origin: .ownerCLI,
+            arguments: ["app": "Music"],
+            approved: true
+        )
+        let pausePlan = try MacControlActionBroker.plan(for: request)
+        XCTAssertEqual(pausePlan.risk, .medium)
+        XCTAssertTrue(pausePlan.requiresApproval)
+        XCTAssertEqual(pausePlan.requiredPermissionIds, [.automationAppleEvents])
+        XCTAssertEqual(pausePlan.steps.first?.preview, "Pause media playback in <app:5 chars>")
+        XCTAssertEqual(pausePlan.steps.first?.redacted, true)
+
+        let receipt = MacControlActionBroker.evaluate(request, defaults: try makeDefaults(), runner: runner)
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.appleScriptCalls.count, 1)
+        XCTAssertTrue(runner.appleScriptCalls.first?.contains("pause") == true)
+    }
+
     func testDryRunDoesNotExecuteNativeSteps() throws {
         let runner = RecordingMacControlRunner()
         let defaults = try makeDefaults()

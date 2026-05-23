@@ -792,6 +792,12 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
             let value = try percentValue(from: arguments, label: "volume")
             try setDefaultOutputVolume(Float32(value) / 100)
             return "output volume set to \(value)%"
+        case "coreaudio.output_mute_status":
+            return try isDefaultOutputMuted() ? "muted" : "unmuted"
+        case "coreaudio.output_mute":
+            let muted = try booleanValue(from: arguments, label: "muted")
+            try setDefaultOutputMuted(muted)
+            return muted ? "output muted" : "output unmuted"
         case "display.brightness":
             let value = try percentValue(from: arguments, label: "brightness")
             try setMainDisplayBrightness(Float(value) / 100)
@@ -808,7 +814,21 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
         return value
     }
 
-    private func setDefaultOutputVolume(_ volume: Float32) throws {
+    private func booleanValue(from arguments: [String], label: String) throws -> Bool {
+        guard let raw = arguments.first?.lowercased() else {
+            throw MacControlError.commandFailed("\(label) must be true or false.")
+        }
+        switch raw {
+        case "true", "1", "yes", "on":
+            return true
+        case "false", "0", "no", "off":
+            return false
+        default:
+            throw MacControlError.commandFailed("\(label) must be true or false.")
+        }
+    }
+
+    private func defaultOutputDeviceID() throws -> AudioDeviceID {
         var deviceID = AudioDeviceID(0)
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,
@@ -827,6 +847,11 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
         guard deviceStatus == noErr, deviceID != 0 else {
             throw MacControlError.commandFailed("Default output device was not available.")
         }
+        return deviceID
+    }
+
+    private func setDefaultOutputVolume(_ volume: Float32) throws {
+        let deviceID = try defaultOutputDeviceID()
 
         var outputVolume = volume
         var volumeAddress = AudioObjectPropertyAddress(
@@ -867,6 +892,56 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
         }
         guard didSetChannel else {
             throw MacControlError.commandFailed("Output volume is not writable on the current device.")
+        }
+    }
+
+    private func isDefaultOutputMuted() throws -> Bool {
+        let deviceID = try defaultOutputDeviceID()
+        for element in [kAudioObjectPropertyElementMain, UInt32(1), UInt32(2)] {
+            var muted = UInt32(0)
+            var muteAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyMute,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: element
+            )
+            guard AudioObjectHasProperty(deviceID, &muteAddress) else { continue }
+            var size = UInt32(MemoryLayout<UInt32>.size)
+            let status = AudioObjectGetPropertyData(
+                deviceID,
+                &muteAddress,
+                0,
+                nil,
+                &size,
+                &muted
+            )
+            if status == noErr { return muted != 0 }
+        }
+        throw MacControlError.commandFailed("Output mute state is not readable on the current device.")
+    }
+
+    private func setDefaultOutputMuted(_ muted: Bool) throws {
+        let deviceID = try defaultOutputDeviceID()
+        var didSetMute = false
+        for element in [kAudioObjectPropertyElementMain, UInt32(1), UInt32(2)] {
+            var value = muted ? UInt32(1) : UInt32(0)
+            var muteAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyMute,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: element
+            )
+            guard AudioObjectHasProperty(deviceID, &muteAddress) else { continue }
+            let status = AudioObjectSetPropertyData(
+                deviceID,
+                &muteAddress,
+                0,
+                nil,
+                UInt32(MemoryLayout<UInt32>.size),
+                &value
+            )
+            didSetMute = didSetMute || status == noErr
+        }
+        guard didSetMute else {
+            throw MacControlError.commandFailed("Output mute state is not writable on the current device.")
         }
     }
 
@@ -1162,6 +1237,68 @@ public enum MacControlActionBroker {
                 revertLevel: .none,
                 blockedReason: blockedReason
             )
+        case "mac.audio.mute.status":
+            return processPlan(
+                request,
+                risk: .read,
+                permissions: [],
+                steps: [.native("coreaudio.output_mute_status", [], "Read output mute state")],
+                blockedReason: blockedReason
+            )
+        case "mac.audio.mute.set":
+            guard let muted = booleanArgument("muted", from: request) else {
+                return blockedPlan(request, reason: "Audio mute set requires a boolean muted argument.")
+            }
+            return processPlan(
+                request,
+                risk: .medium,
+                permissions: [],
+                steps: [.native("coreaudio.output_mute", [String(muted)], muted ? "Mute output audio" : "Unmute output audio")],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.media.playback.status":
+            guard let app = mediaAppName(from: request) else {
+                return blockedPlan(request, reason: mediaAppRequiredReason)
+            }
+            return appleScriptPlan(
+                request,
+                risk: .read,
+                permissions: [.automationAppleEvents],
+                script: mediaPlaybackStatusScript(app: app),
+                preview: "Read media playback state in \(redactedName("app", app))",
+                redacted: true,
+                blockedReason: blockedReason
+            )
+        case "mac.media.playback.pause":
+            guard let app = mediaAppName(from: request) else {
+                return blockedPlan(request, reason: mediaAppRequiredReason)
+            }
+            return appleScriptPlan(
+                request,
+                risk: .medium,
+                permissions: [.automationAppleEvents],
+                script: mediaPlaybackCommandScript(app: app, command: "pause"),
+                preview: "Pause media playback in \(redactedName("app", app))",
+                requiresApproval: true,
+                redacted: true,
+                blockedReason: blockedReason
+            )
+        case "mac.media.playback.resume":
+            guard let app = mediaAppName(from: request) else {
+                return blockedPlan(request, reason: mediaAppRequiredReason)
+            }
+            return appleScriptPlan(
+                request,
+                risk: .medium,
+                permissions: [.automationAppleEvents],
+                script: mediaPlaybackCommandScript(app: app, command: "play"),
+                preview: "Resume media playback in \(redactedName("app", app))",
+                requiresApproval: true,
+                redacted: true,
+                blockedReason: blockedReason
+            )
         case "mac.display.brightness":
             guard let value = percentArgument("value", from: request) else {
                 return blockedPlan(request, reason: "Display brightness requires a numeric value from 0 to 100.")
@@ -1301,13 +1438,14 @@ public enum MacControlActionBroker {
         preview: String,
         requiresApproval: Bool = false,
         revertLevel: MacControlActionPlan.RevertLevel = .none,
+        redacted: Bool = false,
         blockedReason: String? = nil
     ) -> MacControlActionPlan {
         processPlan(
             request,
             risk: risk,
             permissions: permissions,
-            steps: [MacControlActionPlan.Step(kind: .appleScript, executable: nil, arguments: [], script: script, preview: preview, redacted: false)],
+            steps: [MacControlActionPlan.Step(kind: .appleScript, executable: nil, arguments: [], script: script, preview: preview, redacted: redacted)],
             requiresApproval: requiresApproval,
             revertLevel: revertLevel,
             blockedReason: blockedReason
@@ -1447,6 +1585,18 @@ public enum MacControlActionBroker {
         return value
     }
 
+    private static func booleanArgument(_ name: String, from request: MacControlActionRequest) -> Bool? {
+        guard let value = request.arguments[name]?.lowercased(), !value.isEmpty else { return nil }
+        switch value {
+        case "true", "1", "yes", "on":
+            return true
+        case "false", "0", "no", "off":
+            return false
+        default:
+            return nil
+        }
+    }
+
     private static func redactedName(_ label: String, _ value: String) -> String {
         value.isEmpty ? "<\(label)>" : "<\(label):\(value.count) chars>"
     }
@@ -1480,6 +1630,38 @@ public enum MacControlActionBroker {
             return "\(verb) window titled \(redactedName("title", title))"
         }
         return "\(verb) the focused window"
+    }
+
+    private static let approvedMediaApps = Set(["Music", "Podcasts", "TV"])
+    private static let mediaAppRequiredReason = "Media playback control requires an explicit approved app target: Music, Podcasts, or TV."
+
+    private static func mediaAppName(from request: MacControlActionRequest) -> String? {
+        guard let app = request.arguments["app"], approvedMediaApps.contains(app) else { return nil }
+        return app
+    }
+
+    private static func mediaPlaybackStatusScript(app: String) -> String {
+        let appLiteral = appleScriptString(app)
+        return """
+        tell application "System Events"
+            if not (exists application process \(appLiteral)) then return "not_running"
+        end tell
+        tell application \(appLiteral)
+            return (player state as text)
+        end tell
+        """
+    }
+
+    private static func mediaPlaybackCommandScript(app: String, command: String) -> String {
+        let appLiteral = appleScriptString(app)
+        return """
+        tell application "System Events"
+            if not (exists application process \(appLiteral)) then error "Approved media app is not running."
+        end tell
+        tell application \(appLiteral)
+            \(command)
+        end tell
+        """
     }
 
     private static func selectedWindowScriptPrelude(for request: MacControlActionRequest) -> String {
