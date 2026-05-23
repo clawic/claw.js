@@ -3,26 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
-const {
-  ConnectorRuntimeCoverageError,
-  normalizeConnectorCatalog,
-  verifyConnectorRuntimeCoverage,
-} = await loadIntegrationRuntimeCoverage();
-
-const args = parseArgs(process.argv.slice(2));
 const rootDir = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const sourceRoot = path.resolve(args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR ?? "");
-const catalogPath = path.resolve(args.catalog ?? process.env.CLAW_CONNECTOR_CATALOG_PATH ?? "");
-const maxErrors = Number.parseInt(args["max-errors"] ?? "50", 10);
-const allowUnsupportedRuntime = args["allow-unsupported-runtime"] === true || args["allow-unsupported-runtime"] === "true";
-
-if (!sourceRoot || !fs.existsSync(sourceRoot) || !catalogPath || !fs.existsSync(catalogPath)) {
-  console.error("Usage: node scripts/verify-component-catalog.mjs --source <checkout> --catalog <catalog.json>");
-  process.exit(1);
-}
-const componentsDir = path.join(sourceRoot, "components");
-if (!fs.existsSync(componentsDir)) throw new Error(`Missing components directory: ${componentsDir}`);
+const SCRIPT_PATH = "scripts/verify-component-catalog.mjs";
+const VALID_OPTIONS = new Set(["source", "catalog", "max-errors", "allow-unsupported-runtime", "self-test"]);
+let ConnectorRuntimeCoverageError;
+let normalizeConnectorCatalog;
+let verifyConnectorRuntimeCoverage;
+let activeSourceRoot = "";
+let activeComponentsDir = "";
 
 const fieldNames = (fields) => Array.isArray(fields) ? fields.filter(isRecord).map((field) => field.name).filter((name) => typeof name === "string") : [];
 const names = (fields) => new Set(fields.map((field) => field.name));
@@ -41,9 +31,22 @@ const readPackageJson = (filePath) => {
     return null;
   }
 };
+const readCatalog = (filePath) => {
+  try {
+    return JSON.parse(readText(filePath));
+  } catch (error) {
+    throw Object.assign(new Error("Catalog JSON could not be parsed."), {
+      code: "COMPONENT_CATALOG_JSON_INVALID",
+      cause: error,
+    });
+  }
+};
 const readRevision = (root) => {
   try {
-    return execFileSync("git", ["-C", root, "rev-parse", "--short=12", "HEAD"], { encoding: "utf8" }).trim();
+    return execFileSync("git", ["-C", root, "rev-parse", "--short=12", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return undefined;
   }
@@ -65,22 +68,227 @@ const countSynced = (fields) => Array.isArray(fields) ? fields.filter((field) =>
 const countCustomResponse = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && field.customResponse === true).length : 0;
 const countPropDefinitions = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.propDefinition)).length : 0;
 const countContextualProps = (fields) => Array.isArray(fields) ? fields.filter((field) => isRecord(field) && isRecord(field.propDefinition) && Array.isArray(field.propDefinition.contextKeys) && field.propDefinition.contextKeys.length > 0).length : 0;
-const expected = readExpected(componentsDir);
-const catalog = JSON.parse(readText(catalogPath));
-const errors = [
-  ...verify(catalog, expected),
-  ...verifyRuntimeCoverage(catalog, { allowUnsupportedRuntime }),
-];
-const summary = summarize(catalog.apps ?? []);
 
-for (const error of errors.slice(0, maxErrors)) console.error(`FAIL ${error}`);
-if (errors.length > maxErrors) console.error(`FAIL ... ${errors.length - maxErrors} additional errors hidden`);
-console.error(`apps=${summary.apps} versionedApps=${summary.versionedApps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} alerts=${summary.alertFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} sampleEvents=${summary.sampleEventSources} eventSummarySources=${summary.eventSummarySources} eventSummaryTemplates=${summary.eventSummaryTemplates} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`);
-if (errors.length > 0) {
-  console.error(`catalog verification failed with ${errors.length} error(s)`);
-  process.exit(1);
+await main();
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args["self-test"] === true) {
+    runSelfTest();
+    return;
+  }
+  const usageDiagnostics = validateArgs(args);
+  if (usageDiagnostics.length > 0) {
+    printActionableFailureReport({
+      title: "component catalog verification usage failed:",
+      diagnostics: usageDiagnostics,
+    });
+    process.exit(64);
+  }
+  try {
+    await loadRuntimeCoverageOrThrow();
+    runVerification(args);
+  } catch (error) {
+    printActionableFailureReport({
+      title: "component catalog verification failed:",
+      diagnostics: [diagnosticFromError(error)],
+    });
+    process.exit(1);
+  }
 }
-console.error("catalog verification passed");
+
+async function loadRuntimeCoverageOrThrow() {
+  ({
+    ConnectorRuntimeCoverageError,
+    normalizeConnectorCatalog,
+    verifyConnectorRuntimeCoverage,
+  } = await loadIntegrationRuntimeCoverage());
+}
+
+function validateArgs(args) {
+  const diagnostics = [];
+  for (const message of args.__errors ?? []) {
+    diagnostics.push(createDiagnostic("component_catalog_verify_usage_error", message, {
+      status: "USAGE",
+      location: SCRIPT_PATH,
+      suggestion: "Use only --source, --catalog, --max-errors, --allow-unsupported-runtime, or --self-test.",
+      safeNextStep: `Run node ${SCRIPT_PATH} --source <checkout> --catalog <catalog.json>.`,
+    }));
+  }
+  const sourceValue = args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR;
+  const sourceRoot = sourceValue ? path.resolve(sourceValue) : "";
+  if (!sourceValue || !fs.existsSync(sourceRoot)) {
+    diagnostics.push(createDiagnostic("component_catalog_verify_source_missing", "Source checkout does not exist or is not readable.", {
+      status: "USAGE",
+      location: "--source",
+      suggestion: "Pass the root of the component checkout or set CLAW_COMPONENTS_SOURCE_DIR.",
+      safeNextStep: `Run node ${SCRIPT_PATH} --source <checkout> --catalog <catalog.json>.`,
+    }));
+  }
+  const catalogValue = args.catalog ?? process.env.CLAW_CONNECTOR_CATALOG_PATH;
+  const catalogPath = catalogValue ? path.resolve(catalogValue) : "";
+  if (!catalogValue || !fs.existsSync(catalogPath)) {
+    diagnostics.push(createDiagnostic("component_catalog_verify_catalog_missing", "Catalog JSON does not exist or is not readable.", {
+      status: "USAGE",
+      location: "--catalog",
+      suggestion: "Generate the catalog or pass the current catalog path.",
+      safeNextStep: `Run node scripts/extract-component-catalog.mjs --source <checkout> --out <catalog.json>, then rerun node ${SCRIPT_PATH}.`,
+    }));
+  }
+  const maxErrors = Number.parseInt(args["max-errors"] ?? "50", 10);
+  if (!Number.isFinite(maxErrors) || maxErrors < 1) {
+    diagnostics.push(createDiagnostic("component_catalog_verify_max_errors_invalid", "Invalid --max-errors value.", {
+      status: "USAGE",
+      location: "--max-errors",
+      suggestion: "Use a positive integer for --max-errors.",
+      safeNextStep: `Rerun node ${SCRIPT_PATH} with --max-errors 50 or omit the flag.`,
+    }));
+  }
+  return diagnostics;
+}
+
+function runVerification(args) {
+  const sourceRoot = path.resolve(args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR);
+  const catalogPath = path.resolve(args.catalog ?? process.env.CLAW_CONNECTOR_CATALOG_PATH);
+  const maxErrors = Number.parseInt(args["max-errors"] ?? "50", 10);
+  const allowUnsupportedRuntime = args["allow-unsupported-runtime"] === true || args["allow-unsupported-runtime"] === "true";
+  const componentsDir = path.join(sourceRoot, "components");
+  if (!fs.existsSync(componentsDir)) {
+    throw Object.assign(new Error("Missing components directory under --source."), {
+      code: "COMPONENT_CATALOG_COMPONENTS_MISSING",
+    });
+  }
+  activeSourceRoot = sourceRoot;
+  activeComponentsDir = componentsDir;
+  const expected = readExpected(componentsDir);
+  const catalog = readCatalog(catalogPath);
+  const errors = [
+    ...verify(catalog, expected),
+    ...verifyRuntimeCoverage(catalog, { allowUnsupportedRuntime }),
+  ];
+  const summary = summarize(catalog.apps ?? []);
+
+  if (errors.length > 0) {
+    printActionableFailureReport({
+      title: "component catalog verification mismatches:",
+      diagnostics: verificationDiagnostics(errors, maxErrors),
+    });
+    if (errors.length > maxErrors) {
+      console.error(`additionalErrors=${errors.length - maxErrors}`);
+    }
+    console.error(summaryLine(summary));
+    process.exit(1);
+  }
+  console.error(summaryLine(summary));
+  console.error("catalog verification passed");
+}
+
+function verificationDiagnostics(errors, maxErrors) {
+  return errors.slice(0, maxErrors).map((error) => createDiagnostic(
+    "component_catalog_verify_mismatch",
+    error,
+    {
+      location: "component-catalog",
+      suggestion: "Regenerate the catalog from the same checkout or update the source metadata that produced this mismatch.",
+      safeNextStep: `Run node scripts/extract-component-catalog.mjs --source <checkout> --out <catalog.json>, then rerun node ${SCRIPT_PATH}.`,
+    },
+  ));
+}
+
+function summaryLine(summary) {
+  return `apps=${summary.apps} versionedApps=${summary.versionedApps} actions=${summary.actions} sources=${summary.sources} fields=${summary.fields} authFields=${summary.authFields} managedFields=${summary.managedFields} defaults=${summary.defaults} options=${summary.options} hidden=${summary.hiddenFields} disabled=${summary.disabledFields} reload=${summary.reloadFields} bounded=${summary.boundedFields} placeholders=${summary.placeholderFields} query=${summary.queryFields} labels=${summary.labelFields} alerts=${summary.alertFields} readAccess=${summary.readAccessFields} writeAccess=${summary.writeAccessFields} synced=${summary.syncedFields} customResponse=${summary.customResponseFields} propDefinitions=${summary.propDefinitionFields} contextualProps=${summary.contextualPropFields} dynamicOptions=${summary.dynamicOptionFields} sampleEvents=${summary.sampleEventSources} eventSummarySources=${summary.eventSummarySources} eventSummaryTemplates=${summary.eventSummaryTemplates} annotations=${summary.annotatedOperations} destructive=${summary.destructiveOperations} readOnly=${summary.readOnlyOperations} openWorld=${summary.openWorldOperations} runnable=${summary.runnableOperations} hooks=${summary.hookSources} dedupe=${summary.dedupedSources} polling=${summary.pollingSources} webhooks=${summary.webhookSources} hybrid=${summary.hybridSources} stateful=${summary.statefulSources} dynamicProps=${summary.dynamicPropOperations} dynamicPropFields=${summary.dynamicPropFields} methods=${summary.methodOperations}`;
+}
+
+function diagnosticFromError(error) {
+  if (error?.code === "COMPONENT_CATALOG_COMPONENTS_MISSING") {
+    return createDiagnostic("component_catalog_verify_components_missing", "Missing components directory under --source.", {
+      location: "components/",
+      suggestion: "Use a checkout whose root contains a components directory.",
+      safeNextStep: `Rerun node ${SCRIPT_PATH} with --source pointing at the checkout root, not a nested app folder.`,
+    });
+  }
+  if (error?.code === "COMPONENT_CATALOG_JSON_INVALID") {
+    return createDiagnostic("component_catalog_verify_json_invalid", "Catalog JSON could not be parsed.", {
+      location: "--catalog",
+      suggestion: "Regenerate the catalog JSON instead of editing it by hand.",
+      safeNextStep: `Run node scripts/extract-component-catalog.mjs --source <checkout> --out <catalog.json>, then rerun node ${SCRIPT_PATH}.`,
+    });
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("Missing @clawjs/integrations dist build")) {
+    return createDiagnostic("component_catalog_verify_runtime_missing", "Missing @clawjs/integrations dist build.", {
+      location: "packages/clawjs-integrations/dist/index.js",
+      suggestion: "Build the integrations package before verifying runtime coverage.",
+      safeNextStep: `Run npm --workspace @clawjs/integrations run build, then rerun node ${SCRIPT_PATH}.`,
+    });
+  }
+  if (message.includes("Unsupported catalog version")) {
+    return createDiagnostic("component_catalog_verify_version_unsupported", message, {
+      location: "catalog.version",
+      suggestion: "Regenerate the catalog with the current extractor so the schema version matches the verifier.",
+      safeNextStep: `Run node scripts/extract-component-catalog.mjs --source <checkout> --out <catalog.json>, then rerun node ${SCRIPT_PATH}.`,
+    });
+  }
+  return createDiagnostic("component_catalog_verify_failed", `Catalog verification crashed: ${redactLocalPaths(message)}`, {
+    location: SCRIPT_PATH,
+    suggestion: "Fix the uncaught verifier error before trusting catalog coverage.",
+    safeNextStep: `Rerun node ${SCRIPT_PATH} after the script-level crash is fixed.`,
+  });
+}
+
+function redactLocalPaths(value) {
+  return String(value).replace(/(?:^|[\s'"])(\/(?:[^/\s'"]+\/)+[^/\s'"]*)/g, (match) => {
+    const prefix = /^[\s'"]/.test(match) ? match[0] : "";
+    return `${prefix}<path>`;
+  });
+}
+
+function runSelfTest() {
+  const args = parseArgs([
+    "--source",
+    "/Users/example/private/sk-test-secret-123456",
+    "--catalog",
+    "/Users/example/private/catalog.json",
+    "--bad-token",
+    "sk-test-secret-123456",
+    "--max-errors",
+    "0",
+  ]);
+  const chunks = [];
+  printActionableFailureReport({
+    title: "component catalog verification failed for /Users/example/private",
+    diagnostics: [
+      ...validateArgs(args),
+      ...verificationDiagnostics(["app count 1 expected 2 with token sk-test-secret-123456"], 1),
+      diagnosticFromError(Object.assign(new Error("Catalog JSON could not be parsed: /Users/example/private/catalog.json"), {
+        code: "COMPONENT_CATALOG_JSON_INVALID",
+      })),
+      diagnosticFromError(new Error("Unsupported catalog version: 2")),
+      diagnosticFromError(new Error("ENOENT: open /Users/example/private/sk-test-secret-123456/cache.db")),
+    ],
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  for (const code of [
+    "component_catalog_verify_usage_error",
+    "component_catalog_verify_source_missing",
+    "component_catalog_verify_catalog_missing",
+    "component_catalog_verify_max_errors_invalid",
+    "component_catalog_verify_mismatch",
+    "component_catalog_verify_json_invalid",
+    "component_catalog_verify_version_unsupported",
+    "component_catalog_verify_failed",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion:") || !output.includes("next:")) {
+    throw new Error("self-test missing operator guidance");
+  }
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) {
+    throw new Error("self-test leaked private data");
+  }
+  console.log("component catalog verification self-test passed");
+}
 
 function readExpected(root) {
   const apps = new Map();
@@ -155,7 +363,7 @@ function verify(catalog, expectedApps) {
   const actualPaths = new Set();
   const actualSummary = summarize(catalog.apps ?? []);
   const expectedSummary = summarizeExpected(expectedApps);
-  const expectedRevision = readRevision(sourceRoot);
+  const expectedRevision = readRevision(activeSourceRoot);
   const forbidden = new RegExp(String.fromCharCode(80, 105, 112, 101, 100, 114, 101, 97, 109), "i");
   if (forbidden.test(JSON.stringify(catalog))) errors.push("catalog contains forbidden upstream brand text");
   if (catalog.version !== 1) errors.push(`catalog version ${catalog.version ?? "<missing>"} expected 1`);
@@ -1309,7 +1517,7 @@ function resolveExternalComponentImport(specifier) {
   if (!specifier.startsWith(scope)) return null;
   const [componentId, ...subpath] = specifier.slice(scope.length).split("/");
   if (!componentId || componentId === "platform" || componentId === "types") return null;
-  const componentDir = path.join(componentsDir, componentId);
+  const componentDir = path.join(activeComponentsDir, componentId);
   if (!fs.existsSync(componentDir)) return null;
   if (!subpath.length) return findAppFile(componentDir);
   const base = path.join(componentDir, ...subpath);
@@ -1756,17 +1964,31 @@ function isOperationFile(file) {
 }
 
 function parseArgs(argv) {
-  const parsed = {};
+  const parsed = { __errors: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
-    if (!token?.startsWith("--")) continue;
-    const value = argv[index + 1];
-    if (value && !value.startsWith("--")) {
-      parsed[token.slice(2)] = value;
-      index += 1;
-    } else {
-      parsed[token.slice(2)] = true;
+    if (!token?.startsWith("--")) {
+      parsed.__errors.push(`Unexpected positional argument: ${token ?? "<empty>"}`);
+      continue;
     }
+    const key = token.slice(2);
+    if (!VALID_OPTIONS.has(key)) {
+      parsed.__errors.push(`Unknown option: --${key}`);
+      const maybeValue = argv[index + 1];
+      if (maybeValue && !maybeValue.startsWith("--")) index += 1;
+      continue;
+    }
+    if (key === "self-test" || key === "allow-unsupported-runtime") {
+      parsed[key] = true;
+      continue;
+    }
+    const value = argv[index + 1];
+    if (!value || value.startsWith("--")) {
+      parsed.__errors.push(`Missing value for --${key}`);
+      continue;
+    }
+    parsed[key] = value;
+    index += 1;
   }
   return parsed;
 }
