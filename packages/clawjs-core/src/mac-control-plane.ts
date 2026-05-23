@@ -734,6 +734,43 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     uiPack: "windows",
     testRefs: ["packages/clawjs-core/src/mac-control-plane.test.ts"],
   })),
+  // Computer Use: Accessibility-driven control of any app by name + element
+  // index (get_app_state / click / type_text / press_key / scroll / set_value /
+  // perform_action / list). The signed host performs all of these through
+  // AXUIElement + per-process CGEvent posting, so the system cursor never moves
+  // and the target app stays in the background.
+  ...([
+    { action: "list", label: "List running apps", summary: "List running regular applications for Computer Use targeting.", risk: "read", mutatesState: false, permissions: [] as string[], usage: "claw app list" },
+    { action: "state", label: "Read app accessibility state", summary: "Read the indexed Accessibility element tree of a running app for Computer Use.", risk: "read", mutatesState: false, permissions: ["mac.permission.accessibility"], usage: "claw app state --app <app>" },
+    { action: "click", label: "Click app element", summary: "Press a UI element by Computer Use element index through Accessibility.", risk: "low", mutatesState: true, permissions: ["mac.permission.accessibility"], usage: "claw app click --app <app> --element-index <n>" },
+    { action: "type", label: "Type text in app", summary: "Type text into the focused field of a running app for Computer Use.", risk: "medium", mutatesState: true, permissions: ["mac.permission.accessibility"], usage: "claw app type --app <app> --text <text>" },
+    { action: "key", label: "Press key in app", summary: "Send a key chord to a running app for Computer Use.", risk: "medium", mutatesState: true, permissions: ["mac.permission.accessibility"], usage: "claw app key --app <app> --key <chord>" },
+    { action: "scroll", label: "Scroll app", summary: "Scroll a running app by a pixel delta for Computer Use.", risk: "low", mutatesState: true, permissions: ["mac.permission.accessibility"], usage: "claw app scroll --app <app> --delta-y <n>" },
+    { action: "set_value", label: "Set app element value", summary: "Set the value attribute of a UI element for Computer Use.", risk: "medium", mutatesState: true, permissions: ["mac.permission.accessibility"], usage: "claw app set-value --app <app> --element-index <n> --value <value>" },
+    { action: "action", label: "Perform app element action", summary: "Perform a named Accessibility action on a UI element for Computer Use.", risk: "medium", mutatesState: true, permissions: ["mac.permission.accessibility"], usage: "claw app action --app <app> --element-index <n> --ax-action <AXAction>" },
+  ] as const).map(({ action, label, summary, risk, mutatesState, permissions, usage }) => capability({
+    id: `mac.app.${action}`,
+    family: "apps",
+    action,
+    label,
+    summary,
+    portableFamily: `computer_use.app.${action}`,
+    platforms: ["darwin"],
+    coverageState: "executable",
+    sourceConfidence: "official",
+    sources: [{ label: "AXUIElement", url: appleAx }, { label: "Protected Resources", url: appleProtectedResources }],
+    backend: {
+      strategy: action === "list" ? "appkit" : "accessibility_ax",
+      notes: "Signed host walks the AXUIElement tree and posts CGEvents to the target process; no cursor movement, target stays backgrounded.",
+    },
+    permissions: [...permissions],
+    risk,
+    mutatesState,
+    revert: "none",
+    cli: { root: "app", canonicalUsage: usage, relatedSurfaces: ["claw apps", "claw window"] },
+    uiPack: "windows",
+    testRefs: ["packages/clawjs-core/src/mac-control-plane.test.ts", "apps/host/Tests/CommanderE2ETests/MacControlTests.swift"],
+  })),
   ...["list", "show", "run"].map((action) => capability({
     id: `mac.shortcut.${action}`,
     family: "shortcut",

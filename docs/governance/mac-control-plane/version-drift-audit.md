@@ -37,7 +37,8 @@ public Apple documentation.
 | `networksetup` | 3 | Stable wrapper for Wi-Fi join and power state. | No V1 drift recorded. | No V1 drift recorded. | Continue using wrapper only through Mac Action Broker. |
 | `corewlan` | 1 | Official CoreWLAN surface for Wi-Fi interface control. | No V1 drift recorded. | No V1 drift recorded. | Keep signed-host native action and continuity breaker. |
 | `cgwindow_observation` | 1 | Observation-only screen/window inventory; Screen Recording permission applies. | No V1 drift recorded. | No V1 drift recorded. | Read-only observation; no control mutation. |
-| `accessibility_ax` | 5 | AX-backed control requires Accessibility trust. | No V1 drift recorded. | No V1 drift recorded. | Keep selector validation, permission broker check, and signed-host execution. |
+| `accessibility_ax` | 11 | AX-backed control requires Accessibility trust. | No V1 drift recorded. | No V1 drift recorded. | Keep selector validation, permission broker check, and signed-host execution. |
+| `appkit` | 1 | AppKit `NSWorkspace` running-app inventory for Computer Use targeting. | No V1 drift recorded. | No V1 drift recorded. | Read-only inventory; no native mutation. |
 | `shortcuts_cli` | 3 | `/usr/bin/shortcuts` list/view/run is documented. | No V1 drift recorded. | No V1 drift recorded. | Keep typed input/output plan and broker risk profile. |
 | `coreaudio` | 2 | Default output mute properties are broker-owned through the signed host. | No V1 drift recorded. | No V1 drift recorded. | Keep bounded boolean arguments and isolated host tests before real-device closure. |
 | `apple_events` | 3 | Apple Events automation requires explicit target validation and TCC ownership. | No V1 drift recorded. | No V1 drift recorded. | Keep approved media-app allowlist and Automation permission routing in the broker. |
@@ -59,6 +60,14 @@ public Apple documentation.
 | `mac.window.resize` | `accessibility_ax` | executable | AX-backed control; selectors and dimensions remain broker-validated. |
 | `mac.window.close` | `accessibility_ax` | executable | AX-backed control; app-level `quit` remains separate. |
 | `mac.window.minimize` | `accessibility_ax` | executable | AX-backed control; best-effort revert remains declared. |
+| `mac.app.list` | `appkit` | executable | AppKit running-app inventory; read-only Computer Use targeting. |
+| `mac.app.state` | `accessibility_ax` | executable | AX tree read (`get_app_state`); Accessibility permission remains broker-owned. |
+| `mac.app.click` | `accessibility_ax` | executable | AX press by element index; per-app approval remains host-owned. |
+| `mac.app.type` | `accessibility_ax` | executable | Per-process CGEvent text posting; text stays redacted in audit. |
+| `mac.app.key` | `accessibility_ax` | executable | Per-process CGEvent key chord posting; chord parsing stays broker-validated. |
+| `mac.app.scroll` | `accessibility_ax` | executable | Per-process CGEvent scroll posting; delta stays broker-validated. |
+| `mac.app.set_value` | `accessibility_ax` | executable | AX value attribute write; element index stays broker-validated. |
+| `mac.app.action` | `accessibility_ax` | executable | Named AX action by element index; action name stays broker-validated. |
 | `mac.shortcut.list` | `shortcuts_cli` | executable | `/usr/bin/shortcuts list` remains the documented wrapper path. |
 | `mac.shortcut.show` | `shortcuts_cli` | executable | `/usr/bin/shortcuts view` remains the documented inspection path. |
 | `mac.shortcut.run` | `shortcuts_cli` | executable | `/usr/bin/shortcuts run` remains documented; input/output typing stays broker-planned. |

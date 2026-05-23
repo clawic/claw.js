@@ -802,9 +802,79 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
             let value = try percentValue(from: arguments, label: "brightness")
             try setMainDisplayBrightness(Float(value) / 100)
             return "display brightness set to \(value)%"
+        case "ax.list_apps":
+            return try jsonString(MacAXEngine.listApps())
+        case "ax.app_state":
+            let app = try axArgument(arguments, 0, label: "app")
+            let maxDepth = arguments.count > 1 ? Int(arguments[1]) : nil
+            let maxElements = arguments.count > 2 ? Int(arguments[2]) : nil
+            let state = try MacAXEngine.appState(
+                appIdentifier: app,
+                maxDepth: maxDepth ?? MacAXEngine.defaultMaxDepth,
+                maxElements: maxElements ?? MacAXEngine.defaultMaxElements
+            )
+            return try jsonString(state)
+        case "ax.click":
+            let app = try axArgument(arguments, 0, label: "app")
+            let index = try axIntArgument(arguments, 1, label: "element_index")
+            try MacAXEngine.click(appIdentifier: app, elementIndex: index)
+            return "clicked element \(index) in \(app)"
+        case "ax.type":
+            let app = try axArgument(arguments, 0, label: "app")
+            let text = try axArgument(arguments, 1, label: "text")
+            try MacAXEngine.typeText(appIdentifier: app, text: text)
+            return "typed \(text.count) characters in \(app)"
+        case "ax.key":
+            let app = try axArgument(arguments, 0, label: "app")
+            let key = try axArgument(arguments, 1, label: "key")
+            try MacAXEngine.pressKey(appIdentifier: app, chord: key)
+            return "pressed \(key) in \(app)"
+        case "ax.scroll":
+            let app = try axArgument(arguments, 0, label: "app")
+            let deltaX = try axIntArgument(arguments, 1, label: "delta_x")
+            let deltaY = try axIntArgument(arguments, 2, label: "delta_y")
+            try MacAXEngine.scroll(appIdentifier: app, deltaX: deltaX, deltaY: deltaY)
+            return "scrolled \(app) by (\(deltaX), \(deltaY))"
+        case "ax.set_value":
+            let app = try axArgument(arguments, 0, label: "app")
+            let index = try axIntArgument(arguments, 1, label: "element_index")
+            let value = try axArgument(arguments, 2, label: "value")
+            try MacAXEngine.setValue(appIdentifier: app, elementIndex: index, value: value)
+            return "set value of element \(index) in \(app)"
+        case "ax.action":
+            let app = try axArgument(arguments, 0, label: "app")
+            let index = try axIntArgument(arguments, 1, label: "element_index")
+            let axAction = try axArgument(arguments, 2, label: "ax_action")
+            try MacAXEngine.performAction(appIdentifier: app, elementIndex: index, action: axAction)
+            return "performed \(axAction) on element \(index) in \(app)"
         default:
             throw MacControlError.commandFailed("Unsupported native Mac Control action \(action).")
         }
+    }
+
+    private func axArgument(_ arguments: [String], _ index: Int, label: String) throws -> String {
+        guard index < arguments.count else {
+            throw MacControlError.commandFailed("Computer Use action missing \(label) argument.")
+        }
+        let value = arguments[index]
+        guard !value.isEmpty else {
+            throw MacControlError.commandFailed("Computer Use action requires a non-empty \(label).")
+        }
+        return value
+    }
+
+    private func axIntArgument(_ arguments: [String], _ index: Int, label: String) throws -> Int {
+        guard index < arguments.count, let value = Int(arguments[index]) else {
+            throw MacControlError.commandFailed("Computer Use action requires an integer \(label).")
+        }
+        return value
+    }
+
+    private func jsonString<T: Encodable>(_ value: T) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(value)
+        return String(data: data, encoding: .utf8) ?? "{}"
     }
 
     private func percentValue(from arguments: [String], label: String) throws -> Int {
@@ -1312,6 +1382,131 @@ public enum MacControlActionBroker {
                 revertLevel: .none,
                 blockedReason: blockedReason
             )
+        case "mac.app.list":
+            return processPlan(
+                request,
+                risk: .read,
+                permissions: [],
+                steps: [.native("ax.list_apps", [], "List running applications")],
+                blockedReason: blockedReason
+            )
+        case "mac.app.state":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use get_app_state requires an app name.")
+            }
+            let depth = integerArgument("max_depth", from: request).map(String.init) ?? ""
+            let elements = integerArgument("max_elements", from: request).map(String.init) ?? ""
+            return processPlan(
+                request,
+                risk: .read,
+                permissions: [.accessibility],
+                steps: [.native("ax.app_state", [app, depth, elements], "Read the accessibility state of app \(redactedName("app", app))", redacted: true)],
+                blockedReason: blockedReason
+            )
+        case "mac.app.click":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use click requires an app name.")
+            }
+            guard let index = integerArgument("element_index", from: request), index >= 0 else {
+                return blockedPlan(request, reason: "Computer Use click requires a non-negative element_index.")
+            }
+            return processPlan(
+                request,
+                risk: .low,
+                permissions: [.accessibility],
+                steps: [.native("ax.click", [app, String(index)], "Click element \(index) in app \(redactedName("app", app))", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.app.type":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use type_text requires an app name.")
+            }
+            guard let text = request.arguments["text"], !text.isEmpty else {
+                return blockedPlan(request, reason: "Computer Use type_text requires non-empty text.")
+            }
+            return processPlan(
+                request,
+                risk: .medium,
+                permissions: [.accessibility],
+                steps: [.native("ax.type", [app, text], "Type text in app \(redactedName("app", app))", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.app.key":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use press_key requires an app name.")
+            }
+            guard let key = request.arguments["key"], !key.isEmpty else {
+                return blockedPlan(request, reason: "Computer Use press_key requires a key chord.")
+            }
+            return processPlan(
+                request,
+                risk: .medium,
+                permissions: [.accessibility],
+                steps: [.native("ax.key", [app, key], "Press key \(key) in app \(redactedName("app", app))", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.app.scroll":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use scroll requires an app name.")
+            }
+            let deltaX = integerArgument("delta_x", from: request) ?? 0
+            let deltaY = integerArgument("delta_y", from: request) ?? 0
+            if deltaX == 0, deltaY == 0 {
+                return blockedPlan(request, reason: "Computer Use scroll requires a non-zero delta_x or delta_y.")
+            }
+            return processPlan(
+                request,
+                risk: .low,
+                permissions: [.accessibility],
+                steps: [.native("ax.scroll", [app, String(deltaX), String(deltaY)], "Scroll app \(redactedName("app", app))", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.app.set_value":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use set_value requires an app name.")
+            }
+            guard let index = integerArgument("element_index", from: request), index >= 0 else {
+                return blockedPlan(request, reason: "Computer Use set_value requires a non-negative element_index.")
+            }
+            guard let value = request.arguments["value"] else {
+                return blockedPlan(request, reason: "Computer Use set_value requires a value argument.")
+            }
+            return processPlan(
+                request,
+                risk: .medium,
+                permissions: [.accessibility],
+                steps: [.native("ax.set_value", [app, String(index), value], "Set value of element \(index) in app \(redactedName("app", app))", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
+        case "mac.app.action":
+            guard let app = appArgument(from: request) else {
+                return blockedPlan(request, reason: "Computer Use perform_action requires an app name.")
+            }
+            guard let index = integerArgument("element_index", from: request), index >= 0 else {
+                return blockedPlan(request, reason: "Computer Use perform_action requires a non-negative element_index.")
+            }
+            guard let axAction = request.arguments["ax_action"] ?? request.arguments["action"], !axAction.isEmpty else {
+                return blockedPlan(request, reason: "Computer Use perform_action requires an ax_action argument.")
+            }
+            return processPlan(
+                request,
+                risk: .medium,
+                permissions: [.accessibility],
+                steps: [.native("ax.action", [app, String(index), axAction], "Perform \(axAction) on element \(index) in app \(redactedName("app", app))", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .none,
+                blockedReason: blockedReason
+            )
         default:
             throw MacControlError.unsupportedCapability(request.capabilityId)
         }
@@ -1595,6 +1790,13 @@ public enum MacControlActionBroker {
         default:
             return nil
         }
+    }
+
+    private static func appArgument(from request: MacControlActionRequest) -> String? {
+        guard let app = request.arguments["app"]?.trimmingCharacters(in: .whitespacesAndNewlines), !app.isEmpty else {
+            return nil
+        }
+        return app
     }
 
     private static func redactedName(_ label: String, _ value: String) -> String {
@@ -1962,6 +2164,10 @@ public struct MacControlWireReceipt: Codable, Equatable, Sendable {
     public var secretRefs: [String]
     public var redaction: MacControlWireRedaction
     public var createdAt: String
+    /// Read/action outputs produced by the executed plan steps (e.g. the
+    /// Computer Use accessibility tree from `get_app_state`). Optional so older
+    /// receipts without it still decode.
+    public var outputs: [String]?
 }
 
 public struct MacControlWireAuditEvent: Codable, Equatable, Sendable {
@@ -2098,7 +2304,8 @@ public enum MacControlWire {
             revert: rollback,
             secretRefs: secretRefs(from: request.arguments),
             redaction: redaction,
-            createdAt: createdAt
+            createdAt: createdAt,
+            outputs: receipt.outputs.isEmpty ? nil : receipt.outputs
         )
         let auditEvent = MacControlWireAuditEvent(
             schemaVersion: schemaVersion,

@@ -167,6 +167,14 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
+    "mac.app.list",
+    "mac.app.state",
+    "mac.app.click",
+    "mac.app.type",
+    "mac.app.key",
+    "mac.app.scroll",
+    "mac.app.set_value",
+    "mac.app.action",
     "mac.shortcut.list",
     "mac.shortcut.show",
     "mac.shortcut.run",
@@ -192,6 +200,14 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.window.resize",
     "mac.window.close",
     "mac.window.minimize",
+    "mac.app.list",
+    "mac.app.state",
+    "mac.app.click",
+    "mac.app.type",
+    "mac.app.key",
+    "mac.app.scroll",
+    "mac.app.set_value",
+    "mac.app.action",
     "mac.shortcut.list",
     "mac.shortcut.show",
     "mac.shortcut.run",
@@ -205,6 +221,12 @@ test("Mac V1 executable slice is fully declared", () => {
   ]) {
     assert.ok(executableIds.includes(id), `missing executable ${id}`);
   }
+
+  assert.equal(findMacAtlasCapability("mac.app.state")?.backend.strategy, "accessibility_ax");
+  assert.equal(findMacAtlasCapability("mac.app.state")?.risk, "read");
+  assert.equal(findMacAtlasCapability("mac.app.list")?.backend.strategy, "appkit");
+  assert.equal(findMacAtlasCapability("mac.app.type")?.risk, "medium");
+  assert.deepEqual(findMacAtlasCapability("mac.app.click")?.permissions, ["mac.permission.accessibility"]);
 
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.backend.strategy, "networksetup");
   assert.equal(findMacAtlasCapability("mac.wifi.connect")?.backend.executablePath, "/usr/sbin/networksetup");

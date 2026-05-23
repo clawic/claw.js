@@ -11,7 +11,7 @@ extension MacControlWireRequest {
             actorRole: actor.role,
             assignmentId: actor.assignmentId,
             runId: actor.runId,
-            arguments: arguments.compactMapValues(\.stringValue),
+            arguments: arguments.compactMapValues(\.coercedStringValue),
             dryRun: dryRun,
             approved: approved ?? false
         )

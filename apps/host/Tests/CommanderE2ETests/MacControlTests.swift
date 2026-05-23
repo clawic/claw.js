@@ -829,6 +829,206 @@ final class MacControlTests: XCTestCase {
         )
         return try JSONEncoder().encode(request)
     }
+
+    // MARK: - Computer Use (mac.app.* accessibility capabilities)
+
+    func testComputerUseListPlanIsReadOnly() throws {
+        let request = MacControlActionRequest(
+            requestId: "macreq_cu_list",
+            capabilityId: "mac.app.list",
+            actorId: "agent_test",
+            origin: .agent
+        )
+        let plan = try MacControlActionBroker.plan(for: request)
+        XCTAssertEqual(plan.risk, .read)
+        XCTAssertFalse(plan.requiresApproval)
+        XCTAssertEqual(plan.requiredPermissionIds, [])
+        XCTAssertEqual(plan.steps.first?.kind, .native)
+        XCTAssertEqual(plan.steps.first?.executable, "ax.list_apps")
+        XCTAssertNil(plan.blockedReason)
+    }
+
+    func testComputerUseStatePlanRequiresAppAndAccessibility() throws {
+        let missing = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_state_missing",
+            capabilityId: "mac.app.state",
+            actorId: "agent_test",
+            origin: .agent
+        ))
+        XCTAssertEqual(missing.blockedReason, "Computer Use get_app_state requires an app name.")
+
+        let plan = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_state",
+            capabilityId: "mac.app.state",
+            actorId: "agent_test",
+            origin: .agent,
+            arguments: ["app": "TextEdit", "max_depth": "8", "max_elements": "120"]
+        ))
+        XCTAssertEqual(plan.risk, .read)
+        XCTAssertFalse(plan.requiresApproval)
+        XCTAssertEqual(plan.requiredPermissionIds, [.accessibility])
+        XCTAssertEqual(plan.steps.first?.executable, "ax.app_state")
+        XCTAssertEqual(plan.steps.first?.arguments, ["TextEdit", "8", "120"])
+        XCTAssertEqual(plan.steps.first?.preview, "Read the accessibility state of app <app:8 chars>")
+    }
+
+    func testComputerUseClickPlanValidatesArgsAndRequiresApproval() throws {
+        let missingApp = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_click_noapp",
+            capabilityId: "mac.app.click",
+            actorId: "agent_test",
+            origin: .agent,
+            arguments: ["element_index": "2"]
+        ))
+        XCTAssertEqual(missingApp.blockedReason, "Computer Use click requires an app name.")
+
+        let missingIndex = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_click_noindex",
+            capabilityId: "mac.app.click",
+            actorId: "agent_test",
+            origin: .agent,
+            arguments: ["app": "TextEdit"]
+        ))
+        XCTAssertEqual(missingIndex.blockedReason, "Computer Use click requires a non-negative element_index.")
+
+        let plan = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_click",
+            capabilityId: "mac.app.click",
+            actorId: "agent_test",
+            origin: .agent,
+            arguments: ["app": "TextEdit", "element_index": "5"]
+        ))
+        XCTAssertEqual(plan.risk, .low)
+        XCTAssertTrue(plan.requiresApproval)
+        XCTAssertEqual(plan.requiredPermissionIds, [.accessibility])
+        XCTAssertEqual(plan.steps.first?.executable, "ax.click")
+        XCTAssertEqual(plan.steps.first?.arguments, ["TextEdit", "5"])
+    }
+
+    func testComputerUseTypePlanRedactsTextAndRequiresApproval() throws {
+        let plan = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_type",
+            capabilityId: "mac.app.type",
+            actorId: "agent_test",
+            origin: .agent,
+            arguments: ["app": "TextEdit", "text": "hello world"]
+        ))
+        XCTAssertEqual(plan.risk, .medium)
+        XCTAssertTrue(plan.requiresApproval)
+        XCTAssertEqual(plan.steps.first?.executable, "ax.type")
+        XCTAssertEqual(plan.steps.first?.arguments, ["TextEdit", "hello world"])
+        XCTAssertEqual(plan.steps.first?.preview, "Type text in app <app:8 chars>")
+        XCTAssertTrue(plan.steps.first?.redacted ?? false)
+    }
+
+    func testComputerUseKeyScrollSetValueActionPlans() throws {
+        let key = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_key", capabilityId: "mac.app.key", actorId: "agent_test", origin: .agent,
+            arguments: ["app": "TextEdit", "key": "cmd+n"]
+        ))
+        XCTAssertEqual(key.steps.first?.executable, "ax.key")
+        XCTAssertEqual(key.steps.first?.arguments, ["TextEdit", "cmd+n"])
+        XCTAssertEqual(key.risk, .medium)
+
+        let scrollBlocked = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_scroll_zero", capabilityId: "mac.app.scroll", actorId: "agent_test", origin: .agent,
+            arguments: ["app": "TextEdit", "delta_x": "0", "delta_y": "0"]
+        ))
+        XCTAssertEqual(scrollBlocked.blockedReason, "Computer Use scroll requires a non-zero delta_x or delta_y.")
+
+        let scroll = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_scroll", capabilityId: "mac.app.scroll", actorId: "agent_test", origin: .agent,
+            arguments: ["app": "TextEdit", "delta_y": "-120"]
+        ))
+        XCTAssertEqual(scroll.steps.first?.arguments, ["TextEdit", "0", "-120"])
+        XCTAssertEqual(scroll.risk, .low)
+
+        let setValue = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_setvalue", capabilityId: "mac.app.set_value", actorId: "agent_test", origin: .agent,
+            arguments: ["app": "TextEdit", "element_index": "3", "value": "name"]
+        ))
+        XCTAssertEqual(setValue.steps.first?.executable, "ax.set_value")
+        XCTAssertEqual(setValue.steps.first?.arguments, ["TextEdit", "3", "name"])
+
+        let action = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_cu_action", capabilityId: "mac.app.action", actorId: "agent_test", origin: .agent,
+            arguments: ["app": "TextEdit", "element_index": "1", "ax_action": "AXShowMenu"]
+        ))
+        XCTAssertEqual(action.steps.first?.executable, "ax.action")
+        XCTAssertEqual(action.steps.first?.arguments, ["TextEdit", "1", "AXShowMenu"])
+    }
+
+    func testComputerUseClickRequiresApprovalForAgentOrigin() throws {
+        let auditURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cu-audit-\(UUID().uuidString).jsonl")
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_cu_click_unapproved",
+                capabilityId: "mac.app.click",
+                actorId: "agent_test",
+                origin: .agent,
+                arguments: ["app": "TextEdit", "element_index": "2"]
+            ),
+            auditURL: auditURL,
+            runner: RecordingMacControlRunner()
+        )
+        XCTAssertEqual(receipt.outcome, .approvalRequired)
+    }
+
+    func testComputerUseClickExecutesThroughBrokerWhenApproved() throws {
+        let runner = RecordingMacControlRunner()
+        let auditURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cu-audit-\(UUID().uuidString).jsonl")
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_cu_click_ok",
+                capabilityId: "mac.app.click",
+                actorId: "agent_test",
+                origin: .agent,
+                arguments: ["app": "TextEdit", "element_index": "5"],
+                approved: true
+            ),
+            auditURL: auditURL,
+            runner: runner
+        )
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.nativeCalls.map(\.action), ["ax.click"])
+        XCTAssertEqual(runner.nativeCalls.first?.arguments, ["TextEdit", "5"])
+        XCTAssertEqual(receipt.outputs, ["ok"])
+    }
+
+    func testComputerUseChordParserMapsModifiersAndKeys() throws {
+        let cmdN = try MacAXEngine.parseChord("cmd+n")
+        XCTAssertEqual(cmdN.keyCode, 45)
+        XCTAssertTrue(cmdN.flags.contains(.maskCommand))
+
+        let superSpace = try MacAXEngine.parseChord("super+space")
+        XCTAssertEqual(superSpace.keyCode, 49)
+        XCTAssertTrue(superSpace.flags.contains(.maskCommand))
+
+        let shiftTab = try MacAXEngine.parseChord("shift+tab")
+        XCTAssertEqual(shiftTab.keyCode, 48)
+        XCTAssertTrue(shiftTab.flags.contains(.maskShift))
+        XCTAssertFalse(shiftTab.flags.contains(.maskCommand))
+
+        let combo = try MacAXEngine.parseChord("ctrl+opt+a")
+        XCTAssertEqual(combo.keyCode, 0)
+        XCTAssertTrue(combo.flags.contains(.maskControl))
+        XCTAssertTrue(combo.flags.contains(.maskAlternate))
+
+        XCTAssertThrowsError(try MacAXEngine.parseChord(""))
+        XCTAssertThrowsError(try MacAXEngine.parseChord("cmd+unknownkey"))
+        XCTAssertThrowsError(try MacAXEngine.parseChord("a+b"))
+    }
+
+    func testJSONValueCoercedStringValuePreservesScalars() {
+        XCTAssertEqual(JSONValue.integer(5).coercedStringValue, "5")
+        XCTAssertEqual(JSONValue.number(3.0).coercedStringValue, "3")
+        XCTAssertEqual(JSONValue.number(2.5).coercedStringValue, "2.5")
+        XCTAssertEqual(JSONValue.bool(true).coercedStringValue, "true")
+        XCTAssertEqual(JSONValue.string("x").coercedStringValue, "x")
+        XCTAssertNil(JSONValue.null.coercedStringValue)
+    }
 }
 
 final class RecordingMacControlRunner: MacControlCommandRunning {

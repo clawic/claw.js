@@ -40,6 +40,14 @@ non-executable.
 | `mac.window.resize` | executable | `claw window resize --focused|--id &lt;id&gt;|--app &lt;app&gt;|--title &lt;title&gt;` | `resize` maps to size changes and keeps selectors explicit. |
 | `mac.window.close` | executable | `claw window close --focused|--id &lt;id&gt;|--app &lt;app&gt;|--title &lt;title&gt;` | `close` targets the selected window, not the whole app; `quit` stays an alias only. |
 | `mac.window.minimize` | executable | `claw window minimize --focused|--id &lt;id&gt;|--app &lt;app&gt;|--title &lt;title&gt;` | `minimize` is the user-visible window state change. |
+| `mac.app.list` | executable | `claw app list` | `list` enumerates running apps so Computer Use can target one by name. |
+| `mac.app.state` | executable | `claw app state --app &lt;app&gt;` | `state` reads the indexed Accessibility element tree (`get_app_state`); read-only. |
+| `mac.app.click` | executable | `claw app click --app &lt;app&gt; --element-index &lt;n&gt;` | `click` presses an element by Computer Use index through the Accessibility press action. |
+| `mac.app.type` | executable | `claw app type --app &lt;app&gt; --text &lt;text&gt;` | `type` posts text to the target process focus; text is redacted in previews and audit. |
+| `mac.app.key` | executable | `claw app key --app &lt;app&gt; --key &lt;chord&gt;` | `key` sends a key chord (e.g. `cmd+n`) to the target process. |
+| `mac.app.scroll` | executable | `claw app scroll --app &lt;app&gt; --delta-y &lt;n&gt;` | `scroll` posts a pixel scroll delta to the target process. |
+| `mac.app.set_value` | executable | `claw app set-value --app &lt;app&gt; --element-index &lt;n&gt; --value &lt;value&gt;` | `set_value` writes a value to an element via the Accessibility value attribute. |
+| `mac.app.action` | executable | `claw app action --app &lt;app&gt; --element-index &lt;n&gt; --ax-action &lt;AXAction&gt;` | `action` performs a named Accessibility action (e.g. `AXShowMenu`) on an element. |
 | `mac.shortcut.list` | executable | `claw shortcut list` | `list` mirrors `/usr/bin/shortcuts list`. |
 | `mac.shortcut.show` | executable | `claw shortcut show` | `show` is inspect/read semantics for one shortcut definition. |
 | `mac.shortcut.run` | executable | `claw shortcut run &lt;name-or-id&gt; --input text|json|file --output text|json` | `run` mirrors Shortcuts terminology and carries higher risk. |
