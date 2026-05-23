@@ -13,8 +13,11 @@ import {
   findClawDomainSurfaceEntry,
   listClawDomainSurfaceEntries,
 } from "../packages/clawjs-core/src/catalogs.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--self-test"]);
 
 const failures = [];
 
@@ -36,6 +39,148 @@ function listFiles(targetPath, predicate) {
     if (entry.isDirectory()) return listFiles(next, predicate);
     return predicate(next) ? [next] : [];
   });
+}
+
+function domainSurfaceDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("domain_surface_registry_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/domain-surface-registry-guard.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node --import tsx scripts/domain-surface-registry-guard.mjs with a supported argument.",
+    });
+  }
+  if (failure.startsWith("duplicate surface id")) {
+    return createDiagnostic("domain_surface_duplicate_id", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Give every domain surface registry entry a unique id.",
+      safeNextStep: "Rename or merge the duplicate entry, then rerun this guard.",
+    });
+  }
+  if (failure.includes(": missing name") || failure.includes(": missing label") || failure.includes(": missing source file")) {
+    return createDiagnostic("domain_surface_entry_shape_invalid", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Complete the required name, label, and source metadata for the surface entry.",
+      safeNextStep: "Fill the missing registry field, then rerun node --import tsx scripts/domain-surface-registry-guard.mjs.",
+    });
+  }
+  if (failure.includes("source file does not exist") || failure.includes("fixture evidence does not exist") || failure.includes("references missing")) {
+    return createDiagnostic("domain_surface_evidence_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Point registry evidence at a committed public file, fixture, or documented anchor.",
+      safeNextStep: "Restore the evidence file or correct the path, then rerun this guard.",
+    });
+  }
+  if (failure.includes("collections must be") || failure.includes("missing core database ownership") || failure.includes("missing claw db") || failure.includes("missing claw collections")) {
+    return createDiagnostic("domain_surface_collection_contract_invalid", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Keep collection surfaces hidden until approved and prove database plus CLI CRUD/schema routes.",
+      safeNextStep: "Fix the collection surface contract, then rerun this guard.",
+    });
+  }
+  if (failure.includes("missing service runtime surface entry")) {
+    return createDiagnostic("domain_surface_service_runtime_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Add the service runtime surface entry for every owned domain.",
+      safeNextStep: "Register the missing service surface, then rerun node --import tsx scripts/domain-surface-registry-guard.mjs.",
+    });
+  }
+  if (failure.includes("missing CLI surface entry") || failure.includes("missing v1 CLI route") || failure.includes("retired content portal") || failure.includes("stale CLI route")) {
+    return createDiagnostic("domain_surface_cli_contract_invalid", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Keep public CLI registry and domain surface entries aligned, without retired command portals.",
+      safeNextStep: "Add or remove the named CLI surface entry, then rerun this guard.",
+    });
+  }
+  if (failure.includes("minimum contract")) {
+    return createDiagnostic("domain_surface_minimum_contract_invalid", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Complete the v1 minimum contract arrays for resource types, API shape, events, fixtures, matrix rows, and validation.",
+      safeNextStep: "Fill the missing minimum contract field, then rerun node --import tsx scripts/domain-surface-registry-guard.mjs.",
+    });
+  }
+  if (failure.includes("missing storage surface entry")) {
+    return createDiagnostic("domain_surface_storage_entry_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Register storage surfaces for database, sidecar, table, and index nodes.",
+      safeNextStep: "Add the missing storage surface entry, then rerun this guard.",
+    });
+  }
+  if (failure.includes("conceptual module manifests")) {
+    return createDiagnostic("domain_surface_conceptual_manifest_invalid", failure, {
+      location: "modules",
+      suggestion: "Keep conceptual module manifests free of package APIs and CLI routes until promoted.",
+      safeNextStep: "Remove package/CLI declarations from the conceptual manifest, then rerun this guard.",
+    });
+  }
+  if (failure.includes("package wrapper for a conceptual module")) {
+    return createDiagnostic("domain_surface_conceptual_package_wrapper", failure, {
+      location: "modules",
+      suggestion: "Do not ship package wrappers for conceptual modules unless they are allowlisted or promoted.",
+      safeNextStep: "Remove the package wrapper or add a reviewed allowlist entry, then rerun this guard.",
+    });
+  }
+  return createDiagnostic("domain_surface_registry_failed", failure, {
+    location: "packages/clawjs-core/src/catalogs.ts",
+    suggestion: "Inspect the domain surface registry invariant and restore the missing ownership evidence.",
+    safeNextStep: "Fix the reported registry issue, then rerun node --import tsx scripts/domain-surface-registry-guard.mjs.",
+  });
+}
+
+function printFailures(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "Domain surface registry guard failed:",
+    diagnostics: items.map(domainSurfaceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printFailures([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "duplicate surface id: service.demo",
+    "service.demo: missing source file",
+    "service.demo: source file does not exist: /Users/example/private/source.ts",
+    "collection:tasks: missing claw db CRUD route",
+    "missing service runtime surface entry for tasks",
+    "missing CLI surface entry for tasks",
+    "tasks: minimum contract missing fixtures",
+    "missing storage surface entry for claw.database.core.table.tasks",
+    "module:demo: conceptual module manifests must not declare CLI routes",
+    "modules/demo/package.json is still a package wrapper for a conceptual module",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "domain_surface_registry_usage_error",
+    "domain_surface_duplicate_id",
+    "domain_surface_entry_shape_invalid",
+    "domain_surface_evidence_missing",
+    "domain_surface_collection_contract_invalid",
+    "domain_surface_service_runtime_missing",
+    "domain_surface_cli_contract_invalid",
+    "domain_surface_minimum_contract_invalid",
+    "domain_surface_storage_entry_missing",
+    "domain_surface_conceptual_manifest_invalid",
+    "domain_surface_conceptual_package_wrapper",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Keep public CLI registry")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printFailures([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
+if (args.has("--self-test")) {
+  runSelfTest();
+  console.log("Domain surface registry guard self-test passed");
+  process.exit(0);
 }
 
 try {
@@ -153,8 +298,7 @@ for (const file of modulePackageFiles) {
 }
 
 if (failures.length > 0) {
-  console.error("Domain surface registry guard failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures(failures);
   process.exit(1);
 }
 
