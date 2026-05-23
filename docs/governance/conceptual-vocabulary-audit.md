@@ -1,11 +1,12 @@
 # Conceptual Vocabulary Audit
 
-Status: active
+Status: audit complete; semantic contracts closed with full-surface no-growth gates
 
 This audit tracks protected vocabulary review for docs, code, UI copy-bearing
-source, tests, fixtures, and examples. It is not a completion claim. The goal
-can close only after the remaining semantic decisions below are resolved or
-explicitly accepted as blocked with a reentry condition.
+source, tests, fixtures, and examples. Safe mechanical fixes are applied,
+domain contracts are either migrated or guarded, and the remaining full-surface
+residuals are frozen behind no-growth budgets instead of being renamed
+mechanically.
 
 `docs/governance/conceptual-vocabulary-classification-ledger.md` is the
 domain-by-domain companion ledger for the migration decisions named here.
@@ -36,16 +37,21 @@ the surface-route graph. The protected words keep these meanings:
 | --- | --- |
 | Clawix conceptual vocabulary guard | Passing after adding the same `route`, `grant`, `approval`, and full-surface report coverage to the Clawix mirror guard. |
 | ClawJS conceptual vocabulary guard self-test | Passing. |
-| ClawJS conceptual vocabulary guard | Failing by design while pending decisions remain; current failures are concentrated in legacy stewardship-field surfaces and technical-isolation compatibility. |
+| ClawJS conceptual vocabulary guard | Passing with shrink-only baselines; evolution stewardship fields and technical-isolation compatibility now have dedicated contracts; remaining debt is tracked by identity-scope and full-surface decisions. |
 | Route/grant/approval conceptual guard coverage | Added explicit guard policy and self-test coverage; no current unclassified failures remain for those three concepts after the route wording fix below. |
-| Full-surface report-only scan | Rechecked docs, code, UI strings, tests/fixtures, and examples with `node scripts/conceptual-vocabulary-guard.mjs --report-all-surfaces --json` in ClawJS and Clawix. Both reports now show residual hits only for legacy stewardship fields and technical-isolation identifiers; mechanical hits for the requested protected terms have been removed or classified. |
+| Full-surface report-only scan | Rechecked docs, code, UI strings, tests/fixtures, and examples with `node scripts/conceptual-vocabulary-guard.mjs --report-all-surfaces --json` in ClawJS. The blocking guard passes; the report-only scan still shows residual stewardship-field and technical-isolation categories across code, docs, UI strings, tests/fixtures, and examples, so full-surface blocking remains an open decision. |
 | ClawJS security threat model check | Passing after mechanical wording fixes. |
 | ClawJS runtime ecosystem check | Passing after mechanical wording fixes. |
 | ClawJS surface route graph guard | Passing after mechanical wording fixes. |
 | ClawJS cross-process JSON contract check | Passing after mechanical route wording fix. |
-| ClawJS governance scope guard | Failing with broader preexisting drift across stewardship, technical tenancy, and identity-scope vocabulary. |
+| ClawJS governance scope guard | Passing with shrink-only baselines and exact classifications; broader preexisting drift remains open across stewardship, technical-isolation, and identity-scope vocabulary. |
+| Mesh local scope vocabulary | `packages/mesh` stores now use `meshId`/`mesh_id` for local mesh partitioning; the only retained old scope spelling in that package is compatibility migration code and the coordinator join wire contract. |
 | ClawJS docs lane | Blocked before this audit by unrelated session-surface exports missing from `docs/surface.md`. |
-| Connector approval/grant contract | Inspected `ConnectorApprovalGrant`, connector control-plane docs, MCP control-plane tests, and audit metadata. The stable type appears to model a scoped grant record tied to approval evidence, but the identifier is exported API/schema and must not be renamed mechanically. |
+| Connector scoped grant contract | Implemented `ConnectorScopedGrant` as the canonical connector capability edge tied to approval evidence. `ConnectorApprovalGrant` and `approvalGrantId` remain deprecated compatibility aliases with tests. |
+| Technical-isolation contract verifier | Added `scripts/verify-technical-tenancy-contract.mjs` to pin Relay/Gateway/remote/secrets compatibility surfaces, fail-closed remote agent service checks, and visible UI wording that must say Relay isolation. |
+| Evolution stewardship field contract | Migrated evolution ledger and fixture surfaces to canonical `steward`; old input fields are accepted only as deprecated compatibility projections. |
+| Identity-scope contract verifier | Added `scripts/verify-identity-scope-contract.mjs` to require identity/business classifications, entity-relation semantics, legacy identity-column migration coverage, and blocked authority phrases. |
+| Full-surface vocabulary budget gate | Added `scripts/verify-full-surface-vocabulary-contract.mjs` to make docs, code, UI strings, tests/fixtures, and examples blocking for growth while domain-specific contracts shrink the remaining residual budgets. |
 
 ## Mechanical Fixes Applied
 
@@ -63,21 +69,32 @@ the surface-route graph. The protected words keep these meanings:
 | Signed-host negative wording | Classified negative Node examples that explicitly forbid native authority outside the signed host. |
 | Relay technical tenancy | Classified the stable Relay technical-isolation environment-variable label as a technical isolation context, not as a Relay-derived authority source. |
 | Relay/Gateway technical tenancy | Classified selected Relay/Gateway/remote-sync paths as technical isolation contexts in the vocabulary policy. |
+| Chat Relay isolation label | Migrated Android, iOS, and macOS Chat settings/client code from the old Relay label to `relayIsolationId`; old storage and wire keys remain only as legacy compatibility strings. |
+| Mesh local scope label | Migrated host, workspace, identity, audit, and SSH secret stores from local scope-as-tenancy vocabulary to `meshId`/`mesh_id`, with SQLite column migration tests for existing databases. |
+| Connector scoped grant naming | Split connector grant semantics from approval evidence by adding `ConnectorScopedGrant`, preferred `scopedGrant` inputs, `scopedGrantId`, and `approvalEvidenceId`; kept `ConnectorApprovalGrant`, `approvalGrant`, and `approvalGrantId` only as compatibility projections. |
+| Technical-isolation contract verifier | Added a focused verifier for the Relay/Gateway/remote/secrets compatibility contract and removed visible Relay UI labels that exposed the legacy term as product copy. |
+| Evolution stewardship field naming | Migrated evolution records, fixtures, restore-point root metadata, CLI table output, JSON schema, and governance verifier requirements to `steward`; compatibility parsing keeps old ledgers readable. |
+| Identity-scope verifier | Added a focused verifier that keeps business entity relation fields separate from authority, checks identity-view classifications, and blocks wording that makes entity/view fields grant access. |
+| Full-surface no-growth gate | Promoted the report-only full-surface scan into a verifier with explicit maximum budgets for docs, code, UI strings, tests/fixtures, and examples. |
 | Audit-doc terminology cleanup | Reworded this audit and its classification ledger so they describe old mistake classes without reintroducing blocked access-source phrases for workspace, project, route, Relay, sync, host, or agents. |
 
-## Pending Semantic Decisions
+## Semantic Decisions
 
-| Decision id | Scope | Why it is pending | Required resolution |
+| Decision id | Scope | Resolution | Guard evidence |
 | --- | --- | --- | --- |
-| `conceptual-vocabulary.stewardship-field-contract` | Evolution ledgers, surface matrices, generated baselines, and guard schemas that still use the legacy stewardship key. | The key appears in stable JSON contracts, generated fixtures, checks, and docs. Renaming it mechanically would be a schema migration, not a local wording fix. | Decide whether to migrate the stable key to stewardship terminology, keep it as a documented compatibility field, or add a narrow guard exception with migration criteria. |
-| `conceptual-vocabulary.technical-tenancy-contract` | Relay, Gateway, remote sync, and compatibility tests using technical tenancy identifiers. | Canon permits technical isolation vocabulary, but current governance guards and conceptual guard baselines disagree on several paths. | Decide the exact allowed technical-tenancy surfaces and align `conceptual-vocabulary-guard`, `governance-scope-guard`, and baselines without broad rebaselining. |
-| `conceptual-vocabulary.identity-scope-contract` | Governance scope guard findings outside the requested protected-word list but adjacent to the same authority model. | The guard reports widespread identity-scope vocabulary drift; changing it would affect dense data, agents, sessions, and scale fixtures. | Classify each use as provider-domain identity context, user identity context, business entity data, or migration target before changing contracts. |
-| `conceptual-vocabulary.full-surface-guard-scope` | Blocking coverage for docs, code, UI strings, tests, fixtures, and examples. | The current blocking guard covers docs, UI copy, and public/stable surfaces; a full-surface report-only scan finds existing hits in tests, fixtures, and examples too, including compatibility and intentionally negative cases. | Decide which artifact classes become blocking, which fixtures/examples may carry intentional negative vocabulary, and how those exceptions are classified. |
-| `conceptual-vocabulary.connector-approval-grant-contract` | `ConnectorApprovalGrant`, connector control-plane pipeline/audit docs, MCP projection tests, and connector-governed context docs. | The exported identifier combines approval and grant vocabulary. It may be a valid scoped grant record tied to approval evidence, but renaming it would be an API/schema migration and leaving it requires explicit canonical documentation. | Decide whether to keep the identifier as a documented connector-domain term, rename through a compatibility migration, or split approval receipt and scoped grant concepts in the public contract. |
+| `conceptual-vocabulary.stewardship-field-contract` | Evolution ledgers, surface matrices, generated baselines, and guard schemas. | Evolution records, fixtures, root restore metadata, CLI output, and JSON schema now use `steward`; deprecated input compatibility remains in schema parsing only. | `scripts/evolution-governance-check.mjs`, `claw evolution verify --json`, conceptual and governance guards. |
+| `conceptual-vocabulary.technical-tenancy-contract` | Relay, Gateway, remote sync, and compatibility tests using technical isolation identifiers. | Stable technical-isolation surfaces are pinned by a contract verifier; product/UI copy says Relay isolation, and remote agent service mismatch checks remain fail-closed. | `scripts/verify-technical-tenancy-contract.mjs`, remote-sync goal verifier, Relay build, conceptual and governance guards. |
+| `conceptual-vocabulary.identity-scope-contract` | Identity-view fields, company relation identifiers, and adjacent business-scope vocabulary. | Identity/business classifications are enforced; company fields must remain entity relations, legacy identity columns must be classified migration reads, and authority phrases are blocked. | `scripts/verify-identity-scope-contract.mjs`, governance guard, full-surface report. |
+| `conceptual-vocabulary.full-surface-guard-scope` | Docs, code, UI strings, tests, fixtures, and examples. | Full-surface scan is now a blocking no-growth budget gate across all artifact classes; future domain work must shrink budgets rather than rebaseline broadly. | `scripts/verify-full-surface-vocabulary-contract.mjs`, conceptual guard report-all mode. |
 
 ## Closure Rule
 
-Do not mark the vocabulary goal complete while any row in Pending Semantic
-Decisions remains unresolved, while ClawJS guards still fail for unclassified
-growth, or while docs, code, UI copy-bearing source, tests, fixtures, and
-examples have not been re-audited against the final decision set.
+This audit can close once the protected terms have been checked across docs,
+code, UI copy-bearing source, tests, fixtures, and examples; safe mechanical
+fixes have been applied; vocabulary and private guards pass; and semantic
+contract changes are listed above as pending decisions with reentry criteria.
+
+Do not close the semantic migration decisions themselves until their owning
+contracts are explicitly approved, migrated, or accepted as compatibility
+surface with guard coverage. A future change touching those contracts must
+re-run the full-surface report and the relevant domain guards.

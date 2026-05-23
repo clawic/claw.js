@@ -24,7 +24,7 @@
   "$defs": {
     "record": {
       "type": "object",
-      "required": ["id", "title", "class", "status", "owner", "surfaces", "tests", "createdAt"],
+      "required": ["id", "title", "class", "status", "steward", "surfaces", "tests", "createdAt"],
       "properties": {
         "id": { "type": "string", "pattern": "^evo_[a-z0-9_]+$" },
         "title": { "type": "string", "minLength": 1 },
@@ -34,7 +34,8 @@
         "status": {
           "enum": ["draft", "active", "superseded", "blocked", "retired_runtime_adapter"]
         },
-        "owner": { "type": "string", "minLength": 1 },
+        "steward": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1, "deprecated": true },
         "surfaces": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

@@ -22,7 +22,7 @@
       "title": "Evolution and rescue backbone foundation",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "docs/evolution",
         "docs/evolution/fixtures",
@@ -54,7 +54,7 @@
       "title": "Agent-readable repair and report package",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "@clawjs/core evolution repair report API",
         "claw evolution repair",
@@ -78,7 +78,7 @@
       "title": "System telemetry API surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.api.system.snapshot",
         "claw.api.system.metrics",
@@ -100,7 +100,7 @@
       "title": "Remote gateway and mesh API surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.api.gateway.agentServiceExecutions",
         "claw.api.gateway.auditReceipts",
@@ -126,7 +126,7 @@
       "title": "Remote validation read API surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.api.remote.closureGateRead",
         "claw.api.remote.compatibilityAdaptersCreate",
@@ -156,7 +156,7 @@
       "title": "Media docs and sheets CLI surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.cli.command.connectors",
         "claw.cli.command.docs",
@@ -178,7 +178,7 @@
       "title": "Progressive modularity CLI surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.cli.command.setup",
         "claw.cli.command.modules"
@@ -197,7 +197,7 @@
       "title": "Portable archive contract surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.cli.command.archive",
         "claw.api.archives.plans",
@@ -226,7 +226,7 @@
       "title": "Stable guard surface coverage",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.env.actorAssertion",
         "claw.env.actorHostId",
@@ -300,7 +300,7 @@
       "title": "Surface route graph, Mac Care, and runtime stable surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.api.sessionsExport",
         "claw.cli.command.mac-care",
@@ -338,7 +338,7 @@
       "title": "Agent resource and test CLI surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.cli.command.agent-resource",
         "claw.cli.command.test"
@@ -358,7 +358,7 @@
       "title": "Agent coordination storage surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.database.agentCoordination",
         "claw.global.agentCoordinationRun",
@@ -381,7 +381,7 @@
       "title": "Agent coordination and sessions contract surfaces",
       "class": "additive",
       "status": "active",
-      "owner": "claw",
+      "steward": "claw",
       "surfaces": [
         "claw.api.sessions.dynamicTools",
         "claw.api.sessions.memoryExtractRebuild",

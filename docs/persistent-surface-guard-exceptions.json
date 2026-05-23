@@ -339,6 +339,104 @@
       "tests": [
         "node scripts/persistent-surface-guard.mjs --self-test"
       ]
+    },
+    {
+      "id": "ddl-fixture-mesh-audit-legacy-scope-audit-events",
+      "path": "packages/mesh/src/audit-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "audit_events",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/audit-store.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-mesh-host-legacy-scope-schema-version",
+      "path": "packages/mesh/src/host-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "mesh_schema_version",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/host-store.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-mesh-host-legacy-scope-hosts",
+      "path": "packages/mesh/src/host-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "hosts",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/host-store.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-mesh-host-legacy-scope-host-endpoints",
+      "path": "packages/mesh/src/host-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "host_endpoints",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/host-store.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-mesh-identity-legacy-scope-node-identity",
+      "path": "packages/mesh/src/identity-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "node_identity",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/identity-store.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-mesh-ssh-secret-legacy-scope-ssh-secrets",
+      "path": "packages/mesh/src/ssh-secret-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "ssh_secrets",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/ssh-secret-store.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-mesh-workspace-legacy-scope-local-workspaces",
+      "path": "packages/mesh/src/workspace-store.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "local_workspaces",
+      "steward": "clawjs-mesh",
+      "reason": "Hermetic in-memory legacy mesh migration fixture used to verify scope-to-mesh_id upgrades without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/mesh/src/workspace-store.test.ts"
+      ]
     }
   ]
 }

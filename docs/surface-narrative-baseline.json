@@ -4,7 +4,7 @@
     {
       "id": "clawjs.existing-surfaces-without-narrative",
       "classification": "lateral_debt",
-      "owner": "claw",
+      "steward": "claw",
       "reason": "Initial bounded baseline for stable surfaces that predate the surfaceNarrative contract.",
       "risk": "Existing surfaces remain inspectable, but their conceptual authorization is not yet machine-checkable.",
       "expires": "2026-08-18",

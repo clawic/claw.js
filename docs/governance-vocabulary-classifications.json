@@ -169,7 +169,7 @@
       "classification": "legacySchemaReadOnly",
       "rationale": "Self-test fixture preserves existing baseline schema compatibility; active baseline field is steward.",
       "canonicalDoc": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
-      "maxOccurrences": 1,
+      "maxOccurrences": 0,
       "steward": "clawjs-surfaces"
     },
     {
@@ -533,9 +533,9 @@
       "path": "packages/clawjs-sessions/src/runtime-jobs.test.ts",
       "pattern": "owner_field",
       "classification": "legacySchemaReadOnly",
-      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "rationale": "Runtime job tests exercise the existing worker lease owner API; it identifies a lease holder, not framework authority.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 4,
+      "maxOccurrences": 5,
       "steward": "clawjs-sessions"
     },
     {
@@ -653,9 +653,9 @@
       "path": "docs/cli.md",
       "pattern": "ownership_relation",
       "classification": "governancePolicyReference",
-      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "rationale": "This path no longer uses the old repair wording; kept as an exact zero-count regression check for repair stewardship terminology.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 1,
+      "maxOccurrences": 0,
       "steward": "clawjs-docs"
     },
     {
@@ -693,9 +693,9 @@
       "path": "docs/testing.md",
       "pattern": "ownership_relation",
       "classification": "governancePolicyReference",
-      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "rationale": "This path no longer uses the old repair wording; kept as an exact zero-count regression check for repair stewardship terminology.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 1,
+      "maxOccurrences": 0,
       "steward": "clawjs-docs"
     },
     {
@@ -703,9 +703,9 @@
       "path": "packages/clawjs/src/cli-agent-resource-command.test.ts",
       "pattern": "ownership_relation",
       "classification": "governancePolicyReference",
-      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "rationale": "The agent-resource test now uses repair stewardship wording; kept as an exact zero-count regression check.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 1,
+      "maxOccurrences": 0,
       "steward": "clawjs-cli"
     },
     {
@@ -733,9 +733,9 @@
       "path": "qa/agent-coordination.manifest.json",
       "pattern": "ownership_relation",
       "classification": "governancePolicyReference",
-      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "rationale": "This path no longer uses the old repair wording; kept as an exact zero-count regression check for repair stewardship terminology.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 5,
+      "maxOccurrences": 0,
       "steward": "clawjs-qa"
     },
     {
@@ -1202,10 +1202,10 @@
       "id": "current-profile-scripts-no-irreversible-data-loss-check",
       "path": "scripts/no-irreversible-data-loss-check.mjs",
       "pattern": "profile",
-      "classification": "domainProfile",
-      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "classification": "behaviorProfile",
+      "rationale": "This guard uses profile only as a repo behavior selector for ClawJS versus Clawix validation paths, not as identity or authority.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 8,
+      "maxOccurrences": 14,
       "steward": "clawjs-governance"
     },
     {
@@ -1242,10 +1242,10 @@
       "id": "current-profile-scripts-security-threat-model-check",
       "path": "scripts/security-threat-model-check.mjs",
       "pattern": "profile",
-      "classification": "domainProfile",
-      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "classification": "behaviorProfile",
+      "rationale": "This guard uses profile only as a repo behavior selector for ClawJS versus Clawix validation paths, not as identity or authority.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 9,
+      "maxOccurrences": 15,
       "steward": "clawjs-governance"
     },
     {

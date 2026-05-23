@@ -797,6 +797,24 @@
       "expiresAt": "2026-08-19"
     },
     {
+      "id": "claw-test-command-resource-heartbeat",
+      "surface": "Claw test command resource leases",
+      "ownerArea": "packages",
+      "path": "packages/clawjs/src/cli-test-command.ts",
+      "mechanism": "protocol-heartbeat,timeout",
+      "activation": "Only while `claw test run` is executing a child command under an acquired agent-resource lease.",
+      "visibleOnly": false,
+      "inactivityShutdown": "Heartbeat and timeout timers are cleared on child error or close; release remains authoritative for every acquired lease.",
+      "backoff": "Bounded active lease heartbeat with manifest-provided heartbeatSeconds and timeoutSeconds; no retry loop is scheduled.",
+      "sharedTimer": "dedicated protocol lease timer with test-resource coordination rationale.",
+      "diagnosticsOptIn": false,
+      "releaseBehavior": "Enabled only during an active `claw test run` child process with acquired leases.",
+      "debugBehavior": "Debug runs may inspect emitted lease metadata and child output without extending the timer lifecycle.",
+      "evidence": "runCheckCommandWithHeartbeat calls heartbeat immediately, schedules one interval and one timeout, and clears both on child error or close.",
+      "blocksRelease": false,
+      "expiresAt": null
+    },
+    {
       "id": "existing-packages-clawjs-src-cli-channel-listener",
       "surface": "Existing runtime surface packages/clawjs/src/cli-channel-listener.ts",
       "ownerArea": "packages",
@@ -1227,6 +1245,24 @@
       "evidence": "scheduleRestart guards stopping state and a single pending restartTimer.",
       "blocksRelease": false,
       "expiresAt": "2026-08-19"
+    },
+    {
+      "id": "host-mac-control-text-injection-one-shot",
+      "surface": "Host Mac control text injection",
+      "ownerArea": "host",
+      "path": "apps/host/Sources/ClawHostKit/MacControl.swift",
+      "mechanism": "timeout",
+      "activation": "Only after an explicitly approved mac.text.inject action runs through the host broker.",
+      "visibleOnly": true,
+      "inactivityShutdown": "One-shot timers fire once to post optional Return and restore the pasteboard snapshot; they are not retry loops or background pollers.",
+      "backoff": "Bounded one-shot UI event timing with caller-provided restore delay clamped at zero.",
+      "sharedTimer": "dedicated one-shot timers tied to a single text injection request.",
+      "diagnosticsOptIn": false,
+      "releaseBehavior": "Enabled only for the approved native text injection action and completes after pasteboard restore or optional auto-send.",
+      "debugBehavior": "Same lifecycle with host action audit available through the broker.",
+      "evidence": "injectText schedules one optional Return after 0.15s and one optional pasteboard restore after restoreAfter; neither reschedules itself.",
+      "blocksRelease": false,
+      "expiresAt": null
     },
     {
       "id": "relay-monitor-sse-refresh",

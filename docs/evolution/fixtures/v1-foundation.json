@@ -9,7 +9,7 @@
     {
       "id": "claw.database.core.records.v1",
       "kind": "database",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "snapshot_before_mutation",
       "payload": { "collection": "tasks", "record": { "id": "fixture_task_v1", "title": "Fixture task", "status": "open" } },
       "expectedCurrent": { "collection": "tasks", "recordId": "fixture_task_v1", "status": "open" }
@@ -17,7 +17,7 @@
     {
       "id": "claw.workspace.dotclaw.state.v1",
       "kind": "workspace_file",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "path": ".claw/state.json", "keys": ["workspaceId", "agents"] },
       "expectedCurrent": { "path": ".claw/state.json", "preserveKeys": ["workspaceId", "agents"] }
@@ -25,7 +25,7 @@
     {
       "id": "clawix.global.home.state.v1",
       "kind": "global_file",
-      "owner": "clawix",
+      "steward": "clawix",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "path": "~/.clawix/state.json", "keys": ["hostId", "lastOpenedWorkspace"] },
       "expectedCurrent": { "path": "~/.clawix/state.json", "preserveKeys": ["hostId", "lastOpenedWorkspace"] }
@@ -33,7 +33,7 @@
     {
       "id": "claw.bridge.protocol.chat.v1",
       "kind": "protocol",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "route": "agent.chat.send", "request": { "text": "synthetic fixture" } },
       "expectedCurrent": { "route": "agent.chat.send", "degradeTo": "ephemeral_chat" }
@@ -41,7 +41,7 @@
     {
       "id": "claw.cli.json.evolution.v1",
       "kind": "cli_json",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "command": "claw evolution verify --json", "ok": true },
       "expectedCurrent": { "json": true, "schemaVersion": 1 }
@@ -49,7 +49,7 @@
     {
       "id": "claw.package.export.evolution.v1",
       "kind": "package_export",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "package": "@clawjs/core", "exports": ["clawEvolutionPolicy", "runEvolutionMigratorLab"] },
       "expectedCurrent": { "package": "@clawjs/core", "exportsRemainTyped": true }
@@ -57,7 +57,7 @@
     {
       "id": "claw.agent.instructions.compatibility.v1",
       "kind": "agent_instruction",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "instruction": "Use evolution ledger before stable surface changes." },
       "expectedCurrent": { "instruction": "Keep current code clean; legacy only in migrators/adapters/receipts/fixtures." }
@@ -65,7 +65,7 @@
     {
       "id": "claw.skill.compatibility_evolution_work.v1",
       "kind": "skill",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "skill": "compatibility-evolution-work" },
       "expectedCurrent": { "skill": "compatibility-evolution-work", "projectedToClawix": true }
@@ -73,7 +73,7 @@
     {
       "id": "claw.route.evolution.doctor.v1",
       "kind": "route",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "command": "claw evolution doctor --json" },
       "expectedCurrent": { "command": "claw evolution doctor --json", "survivesPartialMigration": true }
@@ -81,7 +81,7 @@
     {
       "id": "claw.schema.evolution_record.v1",
       "kind": "schema",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "snapshot_before_mutation",
       "payload": { "schema": "docs/evolution/schema.json" },
       "expectedCurrent": { "schemaVersion": 1, "sourceOfTruth": "clawjs" }
@@ -89,7 +89,7 @@
     {
       "id": "claw.backup.policy.v1",
       "kind": "backup",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "snapshot_before_mutation",
       "payload": { "thresholdBytes": 1073741824, "thresholdFiles": 10000, "retentionDays": 30 },
       "expectedCurrent": { "overrideRequiredPastThreshold": true, "retentionDays": 30 }
@@ -97,7 +97,7 @@
     {
       "id": "claw.search.index.rebuild.v1",
       "kind": "search_index",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "rebuildable_no_canonical_backup",
       "payload": { "index": "search.sqlite", "source": "core.sqlite" },
       "expectedCurrent": { "rebuildFromCanonical": true }
@@ -105,7 +105,7 @@
     {
       "id": "claw.permission.grant.audit.v1",
       "kind": "permission",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "snapshot_before_mutation",
       "payload": { "grant": "fixture_safe_read", "approval": "fixture_approval" },
       "expectedCurrent": { "grantPreserved": true, "approvalRequiredForRisk": true }
@@ -113,7 +113,7 @@
     {
       "id": "claw.audit.receipt.redacted.v1",
       "kind": "audit",
-      "owner": "clawjs",
+      "steward": "clawjs",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "receipt": "redacted", "externalSubmission": "explicit_approval_only" },
       "expectedCurrent": { "promptsIncluded": false, "secretsIncluded": false, "fullLocalPathsIncluded": false }
@@ -121,7 +121,7 @@
     {
       "id": "clawix.rescue.launch_chat_repair.v1",
       "kind": "rescue",
-      "owner": "clawix",
+      "steward": "clawix",
       "backupStrategy": "touched_objects_metadata",
       "payload": { "startup": "degraded", "chat": "ephemeral", "repair": "available" },
       "expectedCurrent": { "launch": true, "chat": true, "repair": true }

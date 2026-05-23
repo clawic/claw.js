@@ -1321,6 +1321,8 @@ flowchart TD
   claw_contracts_config --> claw_env_testLive
   claw_env_testLivePackage["test live package environment variable\nenvVar"]
   claw_contracts_config --> claw_env_testLivePackage
+  claw_env_testReuseToken["test reuse token environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_testReuseToken
   claw_env_testWorkspace["test workspace environment variable\nenvVar"]
   claw_contracts_config --> claw_env_testWorkspace
   claw_env_timeDataDir["time data dir environment variable\nenvVar"]
@@ -3423,6 +3425,7 @@ flowchart TD
 | `claw.env.templateDisableBrowser` | envVar | config | claw |  |  |  |  |  | `CLAW_TEMPLATE_DISABLE_BROWSER` |
 | `claw.env.testLive` | envVar | config | claw |  |  |  |  |  | `CLAW_TEST_LIVE` |
 | `claw.env.testLivePackage` | envVar | config | claw |  |  |  |  |  | `CLAW_TEST_LIVE_PACKAGE` |
+| `claw.env.testReuseToken` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_TEST_REUSE_TOKEN` |
 | `claw.env.testWorkspace` | envVar | config | claw |  |  |  |  |  | `CLAW_TEST_WORKSPACE` |
 | `claw.env.timeDataDir` | envVar | config | claw |  |  |  |  |  | `CLAW_TIME_DATA_DIR` |
 | `claw.env.timeDbFile` | envVar | config | claw |  |  |  |  |  | `CLAW_TIME_DB_FILE` |

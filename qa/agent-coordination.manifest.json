@@ -10,16 +10,53 @@
       "timeoutSeconds": 900,
       "costClass": "light",
       "realServices": false,
-      "pathPatterns": ["**/*"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
-      "resources": [
-        { "id": "repo:clawjs:worktree", "mode": "read" },
-        { "id": "cpu:global:light", "mode": "read" }
+      "pathPatterns": [
+        "**/*"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**",
+        "qa/**"
+      ],
+      "resources": [
+        {
+          "id": "repo:clawjs:worktree",
+          "mode": "read"
+        },
+        {
+          "id": "cpu:global:light",
+          "mode": "read"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "report",
-      "failureAction": "Inspect the focused changed-lane output and repair the owning change before rerunning the same fingerprint.",
-      "repairPolicy": "Claim repair ownership for the failing check before broad repair work."
+      "failureAction": "Inspect the focused changed-lane output and repair the responsible change before rerunning the same fingerprint.",
+      "repairPolicy": "Claim repair stewardship for the failing check before broad repair work.",
+      "consumes": [
+        "repo:clawjs:worktree",
+        "cpu:global:light"
+      ],
+      "produces": [
+        "test-result:clawjs:changed"
+      ],
+      "mutates": [],
+      "exclusiveResources": [],
+      "canRunWith": [],
+      "cannotRunWith": [],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 900,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "fast",
@@ -29,16 +66,55 @@
       "timeoutSeconds": 1800,
       "costClass": "heavy",
       "realServices": false,
-      "pathPatterns": ["**/*"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
-      "resources": [
-        { "id": "repo:clawjs:worktree", "mode": "read" },
-        { "id": "cpu:global:heavy", "mode": "write" }
+      "pathPatterns": [
+        "**/*"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**",
+        "qa/**"
+      ],
+      "resources": [
+        {
+          "id": "repo:clawjs:worktree",
+          "mode": "read"
+        },
+        {
+          "id": "cpu:global:heavy",
+          "mode": "write"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "report",
-      "failureAction": "Inspect the fast-lane failure and repair the owning package or guardrail.",
-      "repairPolicy": "Claim repair ownership for the failing check before rerunning the full fast lane."
+      "failureAction": "Inspect the fast-lane failure and repair the responsible package or guardrail.",
+      "repairPolicy": "Claim repair stewardship for the failing check before rerunning the full fast lane.",
+      "consumes": [
+        "repo:clawjs:worktree",
+        "cpu:global:heavy"
+      ],
+      "produces": [
+        "test-result:clawjs:fast"
+      ],
+      "mutates": [
+        "cpu:global:heavy"
+      ],
+      "exclusiveResources": [],
+      "canRunWith": [],
+      "cannotRunWith": [],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 1800,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "integration",
@@ -48,16 +124,55 @@
       "timeoutSeconds": 3600,
       "costClass": "heavy",
       "realServices": false,
-      "pathPatterns": ["**/*"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
-      "resources": [
-        { "id": "repo:clawjs:worktree", "mode": "read" },
-        { "id": "cpu:global:heavy", "mode": "write" }
+      "pathPatterns": [
+        "**/*"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**",
+        "qa/**"
+      ],
+      "resources": [
+        {
+          "id": "repo:clawjs:worktree",
+          "mode": "read"
+        },
+        {
+          "id": "cpu:global:heavy",
+          "mode": "write"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "report",
       "failureAction": "Inspect integration-package output and repair the failing boundary.",
-      "repairPolicy": "Claim repair ownership for the failing integration boundary before rerun."
+      "repairPolicy": "Claim repair stewardship for the failing integration boundary before rerun.",
+      "consumes": [
+        "repo:clawjs:worktree",
+        "cpu:global:heavy"
+      ],
+      "produces": [
+        "test-result:clawjs:integration"
+      ],
+      "mutates": [
+        "cpu:global:heavy"
+      ],
+      "exclusiveResources": [],
+      "canRunWith": [],
+      "cannotRunWith": [],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 3600,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "e2e",
@@ -67,17 +182,68 @@
       "timeoutSeconds": 3600,
       "costClass": "saturating",
       "realServices": false,
-      "pathPatterns": ["tests/e2e/**", "examples/**", "packages/**"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "tests/e2e/**", "examples/**", "packages/**"],
-      "resources": [
-        { "id": "repo:clawjs:worktree", "mode": "read" },
-        { "id": "browser:playwright:local", "mode": "exclusive" },
-        { "id": "cpu:global:heavy", "mode": "write" }
+      "pathPatterns": [
+        "tests/e2e/**",
+        "examples/**",
+        "packages/**"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "tests/e2e/**",
+        "examples/**",
+        "packages/**"
+      ],
+      "resources": [
+        {
+          "id": "repo:clawjs:worktree",
+          "mode": "read"
+        },
+        {
+          "id": "browser:playwright:local",
+          "mode": "exclusive"
+        },
+        {
+          "id": "cpu:global:heavy",
+          "mode": "write"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "report",
       "failureAction": "Inspect the local E2E report and repair the failing browser path.",
-      "repairPolicy": "Claim repair ownership for the failing E2E path before rerun."
+      "repairPolicy": "Claim repair stewardship for the failing E2E path before rerun.",
+      "consumes": [
+        "repo:clawjs:worktree",
+        "browser:playwright:local",
+        "cpu:global:heavy"
+      ],
+      "produces": [
+        "test-result:clawjs:e2e"
+      ],
+      "mutates": [
+        "browser:playwright:local",
+        "cpu:global:heavy"
+      ],
+      "exclusiveResources": [
+        "browser:playwright:local"
+      ],
+      "canRunWith": [],
+      "cannotRunWith": [
+        "browser:playwright:local",
+        "cpu:global:heavy"
+      ],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 3600,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "host",
@@ -87,15 +253,56 @@
       "timeoutSeconds": 1800,
       "costClass": "interactive",
       "realServices": false,
-      "pathPatterns": ["packages/**", "docs/**", "scripts/**"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**"],
-      "resources": [
-        { "id": "host:signed:local", "mode": "exclusive" }
+      "pathPatterns": [
+        "packages/**",
+        "docs/**",
+        "scripts/**"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**"
+      ],
+      "resources": [
+        {
+          "id": "host:signed:local",
+          "mode": "exclusive"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "external_pending_without_CLAW_HOST_TEST_COMMAND",
       "failureAction": "Report EXTERNAL PENDING unless a signed-host command hook is configured.",
-      "repairPolicy": "Do not emulate signed-host validation with framework-only tests."
+      "repairPolicy": "Do not emulate signed-host validation with framework-only tests.",
+      "consumes": [
+        "host:signed:local"
+      ],
+      "produces": [
+        "test-result:clawjs:host"
+      ],
+      "mutates": [
+        "host:signed:local"
+      ],
+      "exclusiveResources": [
+        "host:signed:local"
+      ],
+      "canRunWith": [],
+      "cannotRunWith": [
+        "host:signed:local",
+        "computer-use:shared-targets"
+      ],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 1800,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "device",
@@ -105,15 +312,56 @@
       "timeoutSeconds": 1800,
       "costClass": "interactive",
       "realServices": false,
-      "pathPatterns": ["packages/**", "docs/**", "scripts/**"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**"],
-      "resources": [
-        { "id": "device:local", "mode": "exclusive" }
+      "pathPatterns": [
+        "packages/**",
+        "docs/**",
+        "scripts/**"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**"
+      ],
+      "resources": [
+        {
+          "id": "device:local",
+          "mode": "exclusive"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "external_pending_without_CLAW_DEVICE_TEST_COMMAND",
       "failureAction": "Report EXTERNAL PENDING unless a device command hook is configured.",
-      "repairPolicy": "Do not emulate physical-device validation with framework-only tests."
+      "repairPolicy": "Do not emulate physical-device validation with framework-only tests.",
+      "consumes": [
+        "device:local"
+      ],
+      "produces": [
+        "test-result:clawjs:device"
+      ],
+      "mutates": [
+        "device:local"
+      ],
+      "exclusiveResources": [
+        "device:local"
+      ],
+      "canRunWith": [],
+      "cannotRunWith": [
+        "device:local",
+        "computer-use:shared-targets"
+      ],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 1800,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "live",
@@ -123,15 +371,56 @@
       "timeoutSeconds": 3600,
       "costClass": "interactive",
       "realServices": true,
-      "pathPatterns": ["packages/**", "docs/**", "scripts/**"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**"],
-      "resources": [
-        { "id": "external:live-services", "mode": "exclusive" }
+      "pathPatterns": [
+        "packages/**",
+        "docs/**",
+        "scripts/**"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**"
+      ],
+      "resources": [
+        {
+          "id": "external:live-services",
+          "mode": "exclusive"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "blocked_without_CLAW_TEST_LIVE",
       "failureAction": "Live checks require explicit opt-in and approved disposable external state.",
-      "repairPolicy": "Do not run live checks while repairing unrelated local failures."
+      "repairPolicy": "Do not run live checks while repairing unrelated local failures.",
+      "consumes": [
+        "external:live-services"
+      ],
+      "produces": [
+        "test-result:clawjs:live"
+      ],
+      "mutates": [
+        "external:live-services"
+      ],
+      "exclusiveResources": [
+        "external:live-services"
+      ],
+      "canRunWith": [],
+      "cannotRunWith": [
+        "external:live-services",
+        "computer-use:shared-targets"
+      ],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 3600,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     },
     {
       "id": "release",
@@ -141,17 +430,70 @@
       "timeoutSeconds": 7200,
       "costClass": "saturating",
       "realServices": false,
-      "pathPatterns": ["**/*"],
-      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**", "tests/**", "examples/**"],
-      "resources": [
-        { "id": "repo:clawjs:worktree", "mode": "read" },
-        { "id": "browser:playwright:local", "mode": "exclusive" },
-        { "id": "cpu:global:saturating", "mode": "exclusive" }
+      "pathPatterns": [
+        "**/*"
       ],
-      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "fingerprintInputs": [
+        "package.json",
+        "package-lock.json",
+        "scripts/**",
+        "packages/**",
+        "docs/**",
+        "qa/**",
+        "tests/**",
+        "examples/**"
+      ],
+      "resources": [
+        {
+          "id": "repo:clawjs:worktree",
+          "mode": "read"
+        },
+        {
+          "id": "browser:playwright:local",
+          "mode": "exclusive"
+        },
+        {
+          "id": "cpu:global:saturating",
+          "mode": "exclusive"
+        }
+      ],
+      "resultReuse": {
+        "allowed": false,
+        "validForSeconds": 0
+      },
       "externalPendingPolicy": "report_host_or_device_gaps",
       "failureAction": "Inspect the release lane and repair the first failing boundary before rerunning.",
-      "repairPolicy": "Claim repair ownership for the failing release boundary; do not use release as a tight repair loop."
+      "repairPolicy": "Claim repair stewardship for the failing release boundary; do not use release as a tight repair loop.",
+      "consumes": [
+        "repo:clawjs:worktree",
+        "browser:playwright:local",
+        "cpu:global:saturating"
+      ],
+      "produces": [
+        "test-result:clawjs:release"
+      ],
+      "mutates": [
+        "browser:playwright:local",
+        "cpu:global:saturating"
+      ],
+      "exclusiveResources": [
+        "browser:playwright:local",
+        "cpu:global:saturating"
+      ],
+      "canRunWith": [],
+      "cannotRunWith": [
+        "browser:playwright:local",
+        "cpu:global:saturating",
+        "cpu:global:heavy"
+      ],
+      "heartbeatSeconds": 30,
+      "ttlSeconds": 7200,
+      "cleanup": "release all acquired leases; record only the primary check result; clean temporary artifacts owned by the lane",
+      "ownerObligations": [
+        "record pending demand instead of waiting on busy resources",
+        "inspect the first failure before rerunning the same fingerprint",
+        "release every acquired resource lease with passed, failed, partial, external_pending, blocked, or abandoned status"
+      ]
     }
   ]
 }

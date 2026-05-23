@@ -37,299 +37,842 @@
   "routes": [
     {
       "id": "chat.localDesktop",
-      "owner": "claw",
-      "hostOwner": "clawix",
-      "inputContracts": ["clawix.protocol.bridge.v1", "claw.protocol.hostCommand.v1"],
-      "outputContracts": ["claw.database.sessions", "claw.event.sessions.message.appended", "clawix.protocol.bridge.v1"],
+      "inputContracts": [
+        "clawix.protocol.bridge.v1",
+        "claw.protocol.hostCommand.v1"
+      ],
+      "outputContracts": [
+        "claw.database.sessions",
+        "claw.event.sessions.message.appended",
+        "clawix.protocol.bridge.v1"
+      ],
       "edges": {
-        "consumes": ["claw.edge.chat.ui.consumes.bridge"],
-        "owns": ["claw.edge.runtime.owns.sessions"],
-        "exposes": ["claw.edge.sessions.exposes.bridge", "claw.edge.bridge.exposes.ui"],
-        "brokers": ["claw.edge.bridge.brokers.daemon", "claw.edge.daemon.brokers.runtime"]
+        "consumes": [
+          "claw.edge.chat.ui.consumes.bridge"
+        ],
+        "owns": [
+          "claw.edge.runtime.owns.sessions"
+        ],
+        "exposes": [
+          "claw.edge.sessions.exposes.bridge",
+          "claw.edge.bridge.exposes.ui"
+        ],
+        "brokers": [
+          "claw.edge.bridge.brokers.daemon",
+          "claw.edge.daemon.brokers.runtime"
+        ]
       },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"],
+      "fixtures": [
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"
+      ],
       "hermeticValidation": "Fixture and inspect coverage prove the local UI to bridge to daemon to runtime to sessions route shape without live prompts or paid providers.",
-      "debt": { "status": "complete", "evidence": "Route has surfaceNarrative and resourceContract in the registry." }
+      "debt": {
+        "status": "complete",
+        "evidence": "Route has surfaceNarrative and resourceContract in the registry."
+      },
+      "steward": "claw",
+      "hostSteward": "clawix"
     },
     {
       "id": "chat.companionBridge",
-      "owner": "claw",
-      "hostOwner": "clawix",
-      "inputContracts": ["clawix.protocol.bridge.v1", "claw.protocol.hostCommand.v1"],
-      "outputContracts": ["claw.database.sessions", "claw.event.sessions.message.appended", "clawix.protocol.bridge.v1"],
+      "inputContracts": [
+        "clawix.protocol.bridge.v1",
+        "claw.protocol.hostCommand.v1"
+      ],
+      "outputContracts": [
+        "claw.database.sessions",
+        "claw.event.sessions.message.appended",
+        "clawix.protocol.bridge.v1"
+      ],
       "edges": {
-        "consumes": ["claw.edge.companion.consumes.bridge"],
-        "owns": ["claw.edge.runtime.owns.sessions"],
-        "exposes": ["claw.edge.sessions.exposes.bridge", "claw.edge.bridge.exposes.companion"],
-        "brokers": ["claw.edge.bridge.brokers.daemon", "claw.edge.daemon.brokers.runtime"]
+        "consumes": [
+          "claw.edge.companion.consumes.bridge"
+        ],
+        "owns": [
+          "claw.edge.runtime.owns.sessions"
+        ],
+        "exposes": [
+          "claw.edge.sessions.exposes.bridge",
+          "claw.edge.bridge.exposes.companion"
+        ],
+        "brokers": [
+          "claw.edge.bridge.brokers.daemon",
+          "claw.edge.daemon.brokers.runtime"
+        ]
       },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"],
+      "fixtures": [
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"
+      ],
       "hermeticValidation": "Inspect coverage and bridge frame tests prove the companion WebSocket route shape without requiring a physical companion device.",
-      "debt": { "status": "complete", "evidence": "Route has surfaceNarrative and resourceContract in the registry." }
+      "debt": {
+        "status": "complete",
+        "evidence": "Route has surfaceNarrative and resourceContract in the registry."
+      },
+      "steward": "claw",
+      "hostSteward": "clawix"
     },
     {
       "id": "chat.remoteRelay",
-      "owner": "claw",
-      "inputContracts": ["claw.api.relay.remote", "claw.api.relay.connector", "claw.workspace.manifest", "claw.protocol.hostCommand.v1"],
-      "outputContracts": ["claw.database.sessions", "claw.event.sessions.message.appended", "claw.api.relay.remote"],
+      "inputContracts": [
+        "claw.api.relay.remote",
+        "claw.api.relay.connector",
+        "claw.workspace.manifest",
+        "claw.protocol.hostCommand.v1"
+      ],
+      "outputContracts": [
+        "claw.database.sessions",
+        "claw.event.sessions.message.appended",
+        "claw.api.relay.remote"
+      ],
       "edges": {
-        "consumes": ["claw.edge.remote.consumes.relay"],
-        "owns": ["claw.edge.runtime.owns.sessions"],
-        "exposes": ["claw.edge.sessions.exposes.relay", "claw.edge.relay.exposes.remote"],
-        "brokers": ["claw.edge.relay.brokers.connector", "claw.edge.connector.brokers.workspace", "claw.edge.connector.brokers.runtime"]
+        "consumes": [
+          "claw.edge.remote.consumes.relay"
+        ],
+        "owns": [
+          "claw.edge.runtime.owns.sessions"
+        ],
+        "exposes": [
+          "claw.edge.sessions.exposes.relay",
+          "claw.edge.relay.exposes.remote"
+        ],
+        "brokers": [
+          "claw.edge.relay.brokers.connector",
+          "claw.edge.connector.brokers.workspace",
+          "claw.edge.connector.brokers.runtime"
+        ]
       },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "relay/tests/e2e/relay.e2e.test.ts", "relay/tests/e2e/codex-connector.e2e.test.ts"],
+      "fixtures": [
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "relay/tests/e2e/relay.e2e.test.ts",
+        "relay/tests/e2e/codex-connector.e2e.test.ts"
+      ],
       "hermeticValidation": "Relay and connector E2E fixtures prove the remote route shape without production Relay or provider services.",
-      "debt": { "status": "complete", "evidence": "Route has surfaceNarrative and resourceContract in the registry; physical/provider validation is tracked separately." }
+      "debt": {
+        "status": "complete",
+        "evidence": "Route has surfaceNarrative and resourceContract in the registry; physical/provider validation is tracked separately."
+      },
+      "steward": "claw"
     },
     {
       "id": "remote.chatGateway",
-      "owner": "claw",
-      "inputContracts": ["claw.api.nodes", "claw.api.remote.conformance", "claw.api.remote.classifications", "claw.protocol.hostCommand.v1"],
-      "outputContracts": ["claw.database.sessions"],
+      "inputContracts": [
+        "claw.api.nodes",
+        "claw.api.remote.conformance",
+        "claw.api.remote.classifications",
+        "claw.protocol.hostCommand.v1"
+      ],
+      "outputContracts": [
+        "claw.database.sessions"
+      ],
       "edges": {
-        "consumes": ["claw.edge.remote.consumes.coordinator"],
-        "owns": ["claw.edge.runtime.owns.sessions"],
+        "consumes": [
+          "claw.edge.remote.consumes.coordinator"
+        ],
+        "owns": [
+          "claw.edge.runtime.owns.sessions"
+        ],
         "exposes": [],
-        "brokers": ["claw.edge.coordinator.brokers.gateway", "claw.edge.gateway.brokers.connector", "claw.edge.connector.brokers.runtime.hostAdapter"]
+        "brokers": [
+          "claw.edge.coordinator.brokers.gateway",
+          "claw.edge.gateway.brokers.connector",
+          "claw.edge.connector.brokers.runtime.hostAdapter"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Remote conformance and inspect fixtures cover the Gateway route contract.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.remote.chatGateway.narrative-resource", "remote.physical-provider-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.remote.chatGateway.narrative-resource",
+          "remote.physical-provider-validation"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "agents.mcpApiAssignment",
-      "owner": "claw",
-      "inputContracts": ["claw.mcp.agents.v1", "claw.database.core.table.agent_resource_grants"],
-      "outputContracts": ["claw.agent_assignment.runtime.v1"],
+      "inputContracts": [
+        "claw.mcp.agents.v1",
+        "claw.database.core.table.agent_resource_grants"
+      ],
+      "outputContracts": [
+        "claw.agent_assignment.runtime.v1"
+      ],
       "edges": {
-        "consumes": ["claw.edge.mcp.consumes.assignments"],
-        "owns": ["claw.edge.agents.owns.resourceGrants"],
+        "consumes": [
+          "claw.edge.mcp.consumes.assignments"
+        ],
+        "owns": [
+          "claw.edge.agents.owns.resourceGrants"
+        ],
         "exposes": [],
-        "brokers": ["claw.edge.assignments.brokers.runtime"]
+        "brokers": [
+          "claw.edge.assignments.brokers.runtime"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/agents-v1.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": [
+        "packages/clawjs-core/src/agents-v1.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Agents V1 and inspect fixtures cover MCP/API assignment routing.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.agents.mcpApiAssignment.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.agents.mcpApiAssignment.narrative-resource"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "cli.commandIntentResolution",
-      "owner": "claw",
-      "inputContracts": ["claw.schema.commandIntents.v1"],
-      "outputContracts": ["claw.workspace.command_intents.ledger", "claw.cli.command.needs", "claw.cli.command.report"],
+      "inputContracts": [
+        "claw.schema.commandIntents.v1"
+      ],
+      "outputContracts": [
+        "claw.workspace.command_intents.ledger",
+        "claw.cli.command.needs",
+        "claw.cli.command.report"
+      ],
       "edges": {
-        "consumes": ["claw.edge.commands.consumes.intentSchema"],
-        "owns": ["claw.edge.commands.owns.intentLedger"],
+        "consumes": [
+          "claw.edge.commands.consumes.intentSchema"
+        ],
+        "owns": [
+          "claw.edge.commands.owns.intentLedger"
+        ],
         "exposes": [],
-        "brokers": ["claw.edge.commands.brokers.needs", "claw.edge.commands.brokers.report"]
+        "brokers": [
+          "claw.edge.commands.brokers.needs",
+          "claw.edge.commands.brokers.report"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/cli-command-intents.test.ts", "packages/clawjs/src/cli-commands.test.ts", "packages/clawjs/src/cli-discovery.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": [
+        "packages/clawjs-core/src/cli-command-intents.test.ts",
+        "packages/clawjs/src/cli-commands.test.ts",
+        "packages/clawjs/src/cli-discovery.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "CLI command-intent fixtures and inspect tests cover command resolution routing.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.cli.commandIntentResolution.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.cli.commandIntentResolution.narrative-resource"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "mac.directCliAction",
-      "owner": "claw",
-      "hostOwner": "active signed host",
-      "inputContracts": ["claw.mac.actionRequest.v1", "claw.mac.permissionState.v1", "claw.mac.actionPlan.v1"],
-      "outputContracts": ["claw.mac.actionReceipt.v1"],
+      "inputContracts": [
+        "claw.mac.actionRequest.v1",
+        "claw.mac.permissionState.v1",
+        "claw.mac.actionPlan.v1"
+      ],
+      "outputContracts": [
+        "claw.mac.actionReceipt.v1"
+      ],
       "edges": {
-        "consumes": ["claw.edge.mac.control.consumes.atlas"],
-        "owns": ["claw.edge.mac.action.owns.audit"],
-        "exposes": ["claw.edge.mac.directWifi.exposes.controlPlane"],
-        "brokers": ["claw.edge.mac.control.brokers.permission", "claw.edge.mac.permission.brokers.hostPermissions", "claw.edge.mac.control.brokers.action", "claw.edge.mac.action.brokers.host"]
+        "consumes": [
+          "claw.edge.mac.control.consumes.atlas"
+        ],
+        "owns": [
+          "claw.edge.mac.action.owns.audit"
+        ],
+        "exposes": [
+          "claw.edge.mac.directWifi.exposes.controlPlane"
+        ],
+        "brokers": [
+          "claw.edge.mac.control.brokers.permission",
+          "claw.edge.mac.permission.brokers.hostPermissions",
+          "claw.edge.mac.control.brokers.action",
+          "claw.edge.mac.action.brokers.host"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "scripts/verify-host-permission-contract.mjs"],
+      "fixtures": [
+        "packages/clawjs-core/src/mac-control-plane.test.ts",
+        "packages/clawjs/src/cli-mac-control-command.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "scripts/verify-host-permission-contract.mjs"
+      ],
       "hermeticValidation": "Mac control and host-permission contract tests cover the plan and receipt shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.mac.directCliAction.narrative-resource", "signed-host.native-action-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.mac.directCliAction.narrative-resource",
+          "signed-host.native-action-validation"
+        ]
+      },
+      "steward": "claw",
+      "hostSteward": "active signed host"
     },
     {
       "id": "mac.permissionLifecycle",
-      "owner": "claw",
-      "hostOwner": "active signed host",
-      "inputContracts": ["claw.mac.permissionState.v1"],
-      "outputContracts": ["claw.mac.permissionState.v1"],
+      "inputContracts": [
+        "claw.mac.permissionState.v1"
+      ],
+      "outputContracts": [
+        "claw.mac.permissionState.v1"
+      ],
       "edges": {
         "consumes": [],
-        "owns": ["claw.edge.mac.permission.owns.audit"],
-        "exposes": ["claw.edge.mac.permissionsCli.exposes.permissionBroker"],
-        "brokers": ["claw.edge.mac.permission.brokers.hostPermissions"]
+        "owns": [
+          "claw.edge.mac.permission.owns.audit"
+        ],
+        "exposes": [
+          "claw.edge.mac.permissionsCli.exposes.permissionBroker"
+        ],
+        "brokers": [
+          "claw.edge.mac.permission.brokers.hostPermissions"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "scripts/verify-host-permission-contract.mjs"],
+      "fixtures": [
+        "packages/clawjs-core/src/mac-control-plane.test.ts",
+        "packages/clawjs/src/cli-mac-control-command.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "scripts/verify-host-permission-contract.mjs"
+      ],
       "hermeticValidation": "Mac permission and host-permission contract tests cover the lifecycle contract shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.mac.permissionLifecycle.narrative-resource", "signed-host.permission-prompt-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.mac.permissionLifecycle.narrative-resource",
+          "signed-host.permission-prompt-validation"
+        ]
+      },
+      "steward": "claw",
+      "hostSteward": "active signed host"
     },
     {
       "id": "gateway.headlessAgentHost",
-      "owner": "claw",
-      "inputContracts": ["claw.api.gateway.conformance"],
-      "outputContracts": ["claw.protocol.hostCommand.v1"],
+      "inputContracts": [
+        "claw.api.gateway.conformance"
+      ],
+      "outputContracts": [
+        "claw.protocol.hostCommand.v1"
+      ],
       "edges": {
         "consumes": [],
         "owns": [],
-        "exposes": ["claw.edge.gateway.exposes.headlessHost"],
-        "brokers": ["claw.edge.connector.brokers.runtime.hostAdapter"]
+        "exposes": [
+          "claw.edge.gateway.exposes.headlessHost"
+        ],
+        "brokers": [
+          "claw.edge.connector.brokers.runtime.hostAdapter"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Gateway conformance and inspect fixtures cover the headless-host route contract.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.gateway.headlessAgentHost.narrative-resource", "remote.physical-provider-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.gateway.headlessAgentHost.narrative-resource",
+          "remote.physical-provider-validation"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "sync.sessions",
-      "owner": "claw",
-      "inputContracts": ["claw.api.sync.manifests"],
-      "outputContracts": ["claw.api.sync.manifests"],
+      "inputContracts": [
+        "claw.api.sync.manifests"
+      ],
+      "outputContracts": [
+        "claw.api.sync.manifests"
+      ],
       "edges": {
         "consumes": [],
-        "owns": ["claw.edge.sync.owns.sessions"],
+        "owns": [
+          "claw.edge.sync.owns.sessions"
+        ],
         "exposes": [],
-        "brokers": ["claw.edge.connector.brokers.sync"]
+        "brokers": [
+          "claw.edge.connector.brokers.sync"
+        ]
       },
-      "fixtures": ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Sync route and inspect fixtures cover the sessions sync contract shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["route.sync.sessions.narrative-resource", "remote.physical-sync-driver-application"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "route.sync.sessions.narrative-resource",
+          "remote.physical-sync-driver-application"
+        ]
+      },
+      "steward": "claw"
     }
   ],
   "surfaces": [
     {
       "id": "clawix.ui.chat",
-      "owner": "clawix",
-      "inputContracts": ["clawix.protocol.bridge.v1"],
-      "outputContracts": ["clawix.protocol.bridge.v1", "claw.agent_assignment.internal_mac.v1"],
-      "edges": { "consumes": ["claw.edge.chat.ui.consumes.bridge", "claw.edge.chat.ui.consumes.assignment"], "owns": [], "exposes": [], "brokers": [] },
-      "fixtures": ["clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "clawix.protocol.bridge.v1"
+      ],
+      "outputContracts": [
+        "clawix.protocol.bridge.v1",
+        "claw.agent_assignment.internal_mac.v1"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.chat.ui.consumes.bridge",
+          "claw.edge.chat.ui.consumes.assignment"
+        ],
+        "owns": [],
+        "exposes": [],
+        "brokers": []
+      },
+      "fixtures": [
+        "clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Route fixtures cover UI ingress through local bridge and assignment selection.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.clawix.ui.chat.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.clawix.ui.chat.narrative-resource"
+        ]
+      },
+      "steward": "clawix"
     },
     {
       "id": "clawix.companion.client",
-      "owner": "clawix",
-      "inputContracts": ["clawix.protocol.bridge.v1"],
-      "outputContracts": ["clawix.protocol.bridge.v1"],
-      "edges": { "consumes": ["claw.edge.companion.consumes.bridge"], "owns": [], "exposes": [], "brokers": [] },
-      "fixtures": ["clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "clawix.protocol.bridge.v1"
+      ],
+      "outputContracts": [
+        "clawix.protocol.bridge.v1"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.companion.consumes.bridge"
+        ],
+        "owns": [],
+        "exposes": [],
+        "brokers": []
+      },
+      "fixtures": [
+        "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Bridge frame fixtures cover companion frame contracts.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.clawix.companion.client.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.clawix.companion.client.narrative-resource"
+        ]
+      },
+      "steward": "clawix"
     },
     {
       "id": "clawix.bridge.local",
-      "owner": "clawix",
-      "inputContracts": ["clawix.protocol.bridge.v1", "claw.event.sessions.message.appended"],
-      "outputContracts": ["claw.protocol.hostCommand.v1", "clawix.protocol.bridge.v1"],
-      "edges": { "consumes": ["claw.edge.chat.ui.consumes.bridge", "claw.edge.companion.consumes.bridge"], "owns": [], "exposes": ["claw.edge.bridge.exposes.ui", "claw.edge.bridge.exposes.companion"], "brokers": ["claw.edge.bridge.brokers.daemon"] },
-      "fixtures": ["clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py", "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "clawix.protocol.bridge.v1",
+        "claw.event.sessions.message.appended"
+      ],
+      "outputContracts": [
+        "claw.protocol.hostCommand.v1",
+        "clawix.protocol.bridge.v1"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.chat.ui.consumes.bridge",
+          "claw.edge.companion.consumes.bridge"
+        ],
+        "owns": [],
+        "exposes": [
+          "claw.edge.bridge.exposes.ui",
+          "claw.edge.bridge.exposes.companion"
+        ],
+        "brokers": [
+          "claw.edge.bridge.brokers.daemon"
+        ]
+      },
+      "fixtures": [
+        "clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py",
+        "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Bridge E2E and frame fixtures cover local bridge contracts.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.clawix.bridge.local.narrative-resource", "signed-host.clawix-real-app-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.clawix.bridge.local.narrative-resource",
+          "signed-host.clawix-real-app-validation"
+        ]
+      },
+      "steward": "clawix"
     },
     {
       "id": "claw.daemon.local",
-      "owner": "claw",
-      "inputContracts": ["claw.protocol.hostCommand.v1"],
-      "outputContracts": ["claw.protocol.hostCommand.v1"],
-      "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.daemon.brokers.runtime"] },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "claw.protocol.hostCommand.v1"
+      ],
+      "outputContracts": [
+        "claw.protocol.hostCommand.v1"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [],
+        "exposes": [],
+        "brokers": [
+          "claw.edge.daemon.brokers.runtime"
+        ]
+      },
+      "fixtures": [
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Inspect route fixtures cover daemon to runtime brokerage.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.daemon.local.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.daemon.local.narrative-resource"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.runtime.agent",
-      "owner": "claw",
-      "inputContracts": ["claw.protocol.hostCommand.v1", "claw.agent_assignment.runtime.v1"],
-      "outputContracts": ["claw.database.sessions", "claw.database.core.table.agent_runs"],
-      "edges": { "consumes": [], "owns": ["claw.edge.runtime.owns.sessions", "claw.edge.runtime.owns.agentRuns"], "exposes": [], "brokers": [] },
-      "fixtures": ["packages/clawjs-core/src/agents-v1.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "claw.protocol.hostCommand.v1",
+        "claw.agent_assignment.runtime.v1"
+      ],
+      "outputContracts": [
+        "claw.database.sessions",
+        "claw.database.core.table.agent_runs"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [
+          "claw.edge.runtime.owns.sessions",
+          "claw.edge.runtime.owns.agentRuns"
+        ],
+        "exposes": [],
+        "brokers": []
+      },
+      "fixtures": [
+        "packages/clawjs-core/src/agents-v1.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Runtime route and Agents V1 fixtures cover runtime ownership of sessions/runs.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.runtime.agent.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.runtime.agent.narrative-resource"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.sessions",
-      "owner": "claw",
-      "inputContracts": ["claw.database.sessions", "claw.api.sync.manifests"],
-      "outputContracts": ["claw.event.sessions.message.appended"],
-      "edges": { "consumes": [], "owns": [], "exposes": ["claw.edge.sessions.exposes.bridge", "claw.edge.sessions.exposes.relay"], "brokers": [] },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "relay/tests/e2e/relay.e2e.test.ts"],
+      "inputContracts": [
+        "claw.database.sessions",
+        "claw.api.sync.manifests"
+      ],
+      "outputContracts": [
+        "claw.event.sessions.message.appended"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [],
+        "exposes": [
+          "claw.edge.sessions.exposes.bridge",
+          "claw.edge.sessions.exposes.relay"
+        ],
+        "brokers": []
+      },
+      "fixtures": [
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "relay/tests/e2e/relay.e2e.test.ts"
+      ],
       "hermeticValidation": "Session route, Relay, and inspect fixtures cover event projection contracts.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.sessions.narrative-resource", "remote.physical-sync-driver-application"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.sessions.narrative-resource",
+          "remote.physical-sync-driver-application"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.remote.client",
-      "owner": "claw",
-      "inputContracts": ["claw.api.relay.remote", "claw.api.nodes"],
-      "outputContracts": ["claw.api.relay.remote", "claw.api.nodes"],
-      "edges": { "consumes": ["claw.edge.remote.consumes.relay", "claw.edge.remote.consumes.coordinator"], "owns": [], "exposes": [], "brokers": [] },
-      "fixtures": ["relay/tests/e2e/relay.e2e.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "claw.api.relay.remote",
+        "claw.api.nodes"
+      ],
+      "outputContracts": [
+        "claw.api.relay.remote",
+        "claw.api.nodes"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.remote.consumes.relay",
+          "claw.edge.remote.consumes.coordinator"
+        ],
+        "owns": [],
+        "exposes": [],
+        "brokers": []
+      },
+      "fixtures": [
+        "relay/tests/e2e/relay.e2e.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Relay and inspect fixtures cover remote-client route ingress.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.remote.client.narrative-resource", "remote.physical-provider-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.remote.client.narrative-resource",
+          "remote.physical-provider-validation"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.relay",
-      "owner": "claw",
-      "inputContracts": ["claw.api.relay.remote", "claw.event.sessions.message.appended"],
-      "outputContracts": ["claw.api.relay.connector", "claw.agent_assignment.external.v1", "claw.api.relay.remote"],
-      "edges": { "consumes": ["claw.edge.remote.consumes.relay"], "owns": [], "exposes": ["claw.edge.relay.exposes.remote"], "brokers": ["claw.edge.relay.brokers.connector", "claw.edge.relay.brokers.assignments"] },
-      "fixtures": ["relay/tests/e2e/relay.e2e.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "claw.api.relay.remote",
+        "claw.event.sessions.message.appended"
+      ],
+      "outputContracts": [
+        "claw.api.relay.connector",
+        "claw.agent_assignment.external.v1",
+        "claw.api.relay.remote"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.remote.consumes.relay"
+        ],
+        "owns": [],
+        "exposes": [
+          "claw.edge.relay.exposes.remote"
+        ],
+        "brokers": [
+          "claw.edge.relay.brokers.connector",
+          "claw.edge.relay.brokers.assignments"
+        ]
+      },
+      "fixtures": [
+        "relay/tests/e2e/relay.e2e.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Relay E2E and inspect fixtures cover the critical Relay control-plane route shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.relay.narrative-resource", "remote.physical-provider-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.relay.narrative-resource",
+          "remote.physical-provider-validation"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.relay.connector",
-      "owner": "claw",
-      "inputContracts": ["claw.api.relay.connector"],
-      "outputContracts": ["claw.workspace.manifest", "claw.protocol.hostCommand.v1"],
-      "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.connector.brokers.workspace", "claw.edge.connector.brokers.runtime"] },
-      "fixtures": ["relay/tests/e2e/codex-connector.e2e.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
+      "inputContracts": [
+        "claw.api.relay.connector"
+      ],
+      "outputContracts": [
+        "claw.workspace.manifest",
+        "claw.protocol.hostCommand.v1"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [],
+        "exposes": [],
+        "brokers": [
+          "claw.edge.connector.brokers.workspace",
+          "claw.edge.connector.brokers.runtime"
+        ]
+      },
+      "fixtures": [
+        "relay/tests/e2e/codex-connector.e2e.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts"
+      ],
       "hermeticValidation": "Connector E2E and inspect fixtures cover connector to workspace/runtime brokerage.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.relay.connector.narrative-resource", "remote.physical-provider-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.relay.connector.narrative-resource",
+          "remote.physical-provider-validation"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.mcp.surface",
-      "owner": "claw",
-      "inputContracts": ["claw.mcp.agents.v1", "claw.systemTelemetry.v1"],
-      "outputContracts": ["claw.agent_assignment.runtime.v1", "claw.systemTelemetry.v1"],
-      "edges": { "consumes": ["claw.edge.mcp.consumes.assignments"], "owns": [], "exposes": ["claw.edge.system.mcp.exposes.telemetry"], "brokers": [] },
-      "fixtures": ["packages/clawjs-core/src/agents-v1.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "packages/clawjs-mcp/src/control-plane.test.ts"],
+      "inputContracts": [
+        "claw.mcp.agents.v1",
+        "claw.systemTelemetry.v1"
+      ],
+      "outputContracts": [
+        "claw.agent_assignment.runtime.v1",
+        "claw.systemTelemetry.v1"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.mcp.consumes.assignments"
+        ],
+        "owns": [],
+        "exposes": [
+          "claw.edge.system.mcp.exposes.telemetry"
+        ],
+        "brokers": []
+      },
+      "fixtures": [
+        "packages/clawjs-core/src/agents-v1.test.ts",
+        "packages/clawjs/src/inspect-cli.test.ts",
+        "packages/clawjs-mcp/src/control-plane.test.ts"
+      ],
       "hermeticValidation": "Agents V1, MCP, and inspect tests cover MCP policy-gated ingress.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.mcp.surface.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.mcp.surface.narrative-resource"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.cli.command.commands",
-      "owner": "claw",
-      "inputContracts": ["claw.schema.commandIntents.v1"],
-      "outputContracts": ["claw.workspace.command_intents.ledger", "claw.cli.command.needs", "claw.cli.command.report"],
-      "edges": { "consumes": ["claw.edge.commands.consumes.intentSchema"], "owns": ["claw.edge.commands.owns.intentLedger"], "exposes": [], "brokers": ["claw.edge.commands.brokers.needs", "claw.edge.commands.brokers.report"] },
-      "fixtures": ["packages/clawjs-core/src/cli-command-intents.test.ts", "packages/clawjs/src/cli-commands.test.ts", "packages/clawjs/src/cli-discovery.test.ts"],
+      "inputContracts": [
+        "claw.schema.commandIntents.v1"
+      ],
+      "outputContracts": [
+        "claw.workspace.command_intents.ledger",
+        "claw.cli.command.needs",
+        "claw.cli.command.report"
+      ],
+      "edges": {
+        "consumes": [
+          "claw.edge.commands.consumes.intentSchema"
+        ],
+        "owns": [
+          "claw.edge.commands.owns.intentLedger"
+        ],
+        "exposes": [],
+        "brokers": [
+          "claw.edge.commands.brokers.needs",
+          "claw.edge.commands.brokers.report"
+        ]
+      },
+      "fixtures": [
+        "packages/clawjs-core/src/cli-command-intents.test.ts",
+        "packages/clawjs/src/cli-commands.test.ts",
+        "packages/clawjs/src/cli-discovery.test.ts"
+      ],
       "hermeticValidation": "CLI command-intent fixtures cover command routing contracts.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.cli.command.commands.narrative-resource"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.cli.command.commands.narrative-resource"
+        ]
+      },
+      "steward": "claw"
     },
     {
       "id": "claw.host.signed",
-      "owner": "active signed host",
-      "inputContracts": ["claw.mac.actionReceipt.v1", "claw.systemTelemetry.hostSnapshot.v1"],
-      "outputContracts": ["native execution receipts"],
-      "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.mac.action.brokers.host", "claw.edge.system.telemetry.brokers.host"] },
-      "fixtures": ["scripts/verify-host-permission-contract.mjs", "packages/clawjs-core/src/mac-control-plane.test.ts"],
+      "inputContracts": [
+        "claw.mac.actionReceipt.v1",
+        "claw.systemTelemetry.hostSnapshot.v1"
+      ],
+      "outputContracts": [
+        "native execution receipts"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [],
+        "exposes": [],
+        "brokers": [
+          "claw.edge.mac.action.brokers.host",
+          "claw.edge.system.telemetry.brokers.host"
+        ]
+      },
+      "fixtures": [
+        "scripts/verify-host-permission-contract.mjs",
+        "packages/clawjs-core/src/mac-control-plane.test.ts"
+      ],
       "hermeticValidation": "Hermetic checks prove host command/receipt shape only.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.host.signed.narrative-resource", "signed-host.native-action-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.host.signed.narrative-resource",
+          "signed-host.native-action-validation"
+        ]
+      },
+      "steward": "active signed host"
     },
     {
       "id": "claw.host.permissions",
-      "owner": "active signed host",
-      "inputContracts": ["claw.mac.permissionState.v1"],
-      "outputContracts": ["OS permission state/request guidance"],
-      "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.mac.permission.brokers.hostPermissions"] },
-      "fixtures": ["scripts/verify-host-permission-contract.mjs", "packages/clawjs-core/src/mac-control-plane.test.ts"],
+      "inputContracts": [
+        "claw.mac.permissionState.v1"
+      ],
+      "outputContracts": [
+        "OS permission state/request guidance"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [],
+        "exposes": [],
+        "brokers": [
+          "claw.edge.mac.permission.brokers.hostPermissions"
+        ]
+      },
+      "fixtures": [
+        "scripts/verify-host-permission-contract.mjs",
+        "packages/clawjs-core/src/mac-control-plane.test.ts"
+      ],
       "hermeticValidation": "Hermetic checks prove permission broker contract shape only.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.host.permissions.narrative-resource", "signed-host.permission-prompt-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.host.permissions.narrative-resource",
+          "signed-host.permission-prompt-validation"
+        ]
+      },
+      "steward": "active signed host"
     },
     {
       "id": "claw.host.audit",
-      "owner": "active signed host",
-      "inputContracts": ["claw.mac.permissionState.v1", "claw.mac.actionReceipt.v1", "claw.systemTelemetry.audit.v1"],
-      "outputContracts": ["redacted host audit records"],
-      "edges": { "consumes": [], "owns": ["claw.edge.mac.permission.owns.audit", "claw.edge.mac.action.owns.audit", "claw.edge.system.telemetry.owns.audit"], "exposes": [], "brokers": [] },
-      "fixtures": ["scripts/verify-host-permission-contract.mjs", "packages/clawjs-core/src/mac-control-plane.test.ts"],
+      "inputContracts": [
+        "claw.mac.permissionState.v1",
+        "claw.mac.actionReceipt.v1",
+        "claw.systemTelemetry.audit.v1"
+      ],
+      "outputContracts": [
+        "redacted host audit records"
+      ],
+      "edges": {
+        "consumes": [],
+        "owns": [
+          "claw.edge.mac.permission.owns.audit",
+          "claw.edge.mac.action.owns.audit",
+          "claw.edge.system.telemetry.owns.audit"
+        ],
+        "exposes": [],
+        "brokers": []
+      },
+      "fixtures": [
+        "scripts/verify-host-permission-contract.mjs",
+        "packages/clawjs-core/src/mac-control-plane.test.ts"
+      ],
       "hermeticValidation": "Hermetic checks prove audit receipt shape only.",
-      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.host.audit.narrative-resource", "signed-host.audit-persistence-validation"] }
+      "debt": {
+        "status": "blocked",
+        "blockedGapIds": [
+          "surface.claw.host.audit.narrative-resource",
+          "signed-host.audit-persistence-validation"
+        ]
+      },
+      "steward": "active signed host"
     }
   ],
   "blockedGaps": [
