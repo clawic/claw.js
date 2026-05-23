@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
 import { v1MainSchemaSurfaceNodes } from "../packages/clawjs/src/v1-data-surface.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const baselinePath = path.join(rootDir, "docs/surface-narrative-baseline.json");
@@ -174,6 +175,43 @@ function validateSurfaceNarratives(registry = clawPersistentSurfaceRegistry, bas
   return failures;
 }
 
+function narrativeDiagnostic(failure) {
+  if (failure.includes("baseline drift")) {
+    return createDiagnostic("surface_narrative_baseline_drift", failure, {
+      location: "docs/surface-narrative-baseline.json",
+      suggestion: "Backfill surfaceNarrative on new surfaces, or intentionally update the baseline after classifying the debt.",
+      safeNextStep: "Run node --import tsx scripts/surface-narrative-guard.mjs --print-baseline only after documenting owner, risk, expiry, and reentry condition.",
+    });
+  }
+  if (failure.includes("surfaceNarrative.")) {
+    return createDiagnostic("surface_narrative_field_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Complete concept, authorizingDecision, completingSurface, and nonInference before claiming the surface is inspectable.",
+      safeNextStep: "Add the missing surfaceNarrative field, then rerun node --import tsx scripts/surface-narrative-guard.mjs.",
+    });
+  }
+  if (failure.includes("baseline") || failure.includes("missingNarrative")) {
+    return createDiagnostic("surface_narrative_baseline_invalid", failure, {
+      location: "docs/surface-narrative-baseline.json",
+      suggestion: "Fix the baseline envelope, sorted ids, count, hash, expiry, or classification.",
+      safeNextStep: "Repair docs/surface-narrative-baseline.json, then rerun node --import tsx scripts/surface-narrative-guard.mjs.",
+    });
+  }
+  return createDiagnostic("surface_narrative_guard_failed", failure, {
+    location: "scripts/surface-narrative-guard.mjs",
+    suggestion: "Inspect the surface narrative guard and restore the expected invariant.",
+    safeNextStep: "Fix the reported surface narrative issue, then rerun node --import tsx scripts/surface-narrative-guard.mjs.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "surface narrative guard failed:",
+    diagnostics: failures.map(narrativeDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function buildBaseline(registry = clawPersistentSurfaceRegistry) {
   const { nodes, routes } = inspectableRegistry(registry);
   const missingNodes = missingNarrativeIds(nodes);
@@ -245,6 +283,21 @@ function runSelfTest() {
     nodes: [{ id: "self.node.invalid", surfaceNarrative: { ...validNarrative, authorizingDecision: { ref: "missing", path: "docs/missing.md" } } }, registry.nodes[1]],
   }, baseline);
   assert.match(invalidNarrativeFailures.join("\n"), /authorizingDecision\.path does not exist/);
+
+  const chunks = [];
+  printFailures([
+    "/Users/example/private node self.node surfaceNarrative.concept must be a non-empty string",
+    "nodes without surfaceNarrative baseline drift: expected 1/abc, got 2/def (added nodes: self.node.new)",
+    "entry.missingNarrative.nodes.ids must be sorted",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: surface_narrative_field_missing/);
+  assert.match(output, /code: surface_narrative_baseline_drift/);
+  assert.match(output, /code: surface_narrative_baseline_invalid/);
+  assert.match(output, /location: docs\/surface-narrative-baseline\.json/);
+  assert.match(output, /suggestion: Backfill surfaceNarrative on new surfaces/);
+  assert.match(output, /next: Add the missing surfaceNarrative field/);
+  assert.doesNotMatch(output, /\/Users\/example/);
 }
 
 if (process.argv.includes("--self-test")) {
@@ -260,8 +313,7 @@ if (process.argv.includes("--print-baseline")) {
 
 const failures = validateSurfaceNarratives();
 if (failures.length > 0) {
-  console.error("surface narrative guard failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures(failures);
   process.exit(1);
 }
 
