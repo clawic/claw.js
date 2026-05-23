@@ -13,6 +13,7 @@ import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
+import { createLauncherDiagnostic, printLauncherFailure } from "./launcher-diagnostics.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -70,11 +71,44 @@ function writeStatusFile(filePath, payload) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
   } catch (err) {
-    console.error(`[database] could not write status file: ${err?.message ?? err}`);
+    printOpenDatabaseFailure(createLauncherDiagnostic(
+      "claw_open_database_status_file_write_failed",
+      "Could not write the database status file.",
+      {
+        location: "--status-file",
+        suggestion: "Choose a writable status-file path or fix directory permissions.",
+        safeNextStep: "Rerun claw open database with a writable --status-file path.",
+      },
+    ));
   }
 }
 
+function printOpenDatabaseFailure(diagnostic) {
+  printLauncherFailure("claw open database failed:", [diagnostic]);
+}
+
+function runOpenDatabaseSelfTest() {
+  const chunks = [];
+  printLauncherFailure("claw open database failed for /Users/example/private", [
+    createLauncherDiagnostic("claw_open_database_listen_failed", "token: sk-test-secret-123456", {
+      location: "/Users/example/private/database",
+      suggestion: "Choose a free --port or fix host binding.",
+      safeNextStep: "Rerun claw open database --port <free-port>.",
+    }),
+  ], { write: (chunk) => chunks.push(chunk) });
+  const output = chunks.join("");
+  if (!output.includes("code: claw_open_database_listen_failed")) throw new Error("self-test missing stable code");
+  if (!output.includes("suggestion: Choose a free --port or fix host binding.")) throw new Error("self-test missing suggestion");
+  if (!output.includes("next: Rerun claw open database --port <free-port>.")) throw new Error("self-test missing next step");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+  console.log("database launcher diagnostics self-test passed");
+}
+
 export async function runOpenDatabase(args) {
+  if (args.includes("--self-test")) {
+    runOpenDatabaseSelfTest();
+    return 0;
+  }
   const flags = parseFlags(args);
   const bootstrap = await readLocalAdminBootstrap();
 
@@ -93,8 +127,15 @@ export async function runOpenDatabase(args) {
 
   const buildDatabaseApp = await loadBuildDatabaseApp();
   if (!buildDatabaseApp) {
-    console.error("[claw open database] could not locate buildDatabaseApp().");
-    console.error("Tried @clawjs/database and the workspace fallback paths.");
+    printOpenDatabaseFailure(createLauncherDiagnostic(
+      "claw_open_database_build_app_missing",
+      "Could not locate buildDatabaseApp().",
+      {
+        location: "@clawjs/database",
+        suggestion: "Build or bundle the database package so buildDatabaseApp is importable.",
+        safeNextStep: "Run npm --workspace @clawjs/database run build, then rerun claw open database.",
+      },
+    ));
     return 1;
   }
 
@@ -116,11 +157,19 @@ export async function runOpenDatabase(args) {
   try {
     await app.listen({ host: config.host, port: config.port });
   } catch (err) {
-    console.error(`[claw open database] failed to listen on ${config.host}:${config.port}: ${err?.message ?? err}`);
+    printOpenDatabaseFailure(createLauncherDiagnostic(
+      "claw_open_database_listen_failed",
+      "Database server failed to listen on the requested host and port.",
+      {
+        location: `database:${config.host}:${config.port}`,
+        suggestion: "Check whether the port is already in use or the host binding is unavailable.",
+        safeNextStep: "Choose a free --port or stop the process using the current database port, then rerun claw open database.",
+      },
+    ));
     writeStatusFile(statusFile, {
       service: "database",
       ready: false,
-      error: String(err?.message ?? err),
+      error: "claw_open_database_listen_failed",
       pid: process.pid,
       at: new Date().toISOString(),
     });
@@ -147,7 +196,15 @@ export async function runOpenDatabase(args) {
     try {
       await app.close();
     } catch (err) {
-      console.error(`[database] error during shutdown: ${err?.message ?? err}`);
+      printOpenDatabaseFailure(createLauncherDiagnostic(
+        "claw_open_database_shutdown_failed",
+        "Database server shutdown failed.",
+        {
+          location: "database.shutdown",
+          suggestion: "Inspect local database server logs before restarting.",
+          safeNextStep: "Stop any remaining database process, then rerun claw open database.",
+        },
+      ));
     }
     writeStatusFile(statusFile, {
       service: "database",
