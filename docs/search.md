@@ -61,6 +61,7 @@ backfill jobs.
 | --- | --- | --- | --- |
 | `commands` | `commands` | command registry projected into `search.sqlite` | implemented |
 | `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` with per-session refresh jobs | implemented |
+| `sessions.events` | `sessions` | structured session events from `sessions.sqlite` projected into `search.sqlite` with per-session refresh jobs | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
 | `work.items` | `work` | tasks, projects, goals, people, inbox, events, decisions, assignments, handoffs, approvals, and related work records from `core.sqlite` | implemented initial adapter |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |

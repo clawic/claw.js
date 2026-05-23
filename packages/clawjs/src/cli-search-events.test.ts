@@ -30,6 +30,12 @@ test("Search event schedulers create hot event-driven upsert and delete jobs for
       schedule: (operation) => searchEvents.scheduleSessionChatSearchEvent({ operation, sessionId: "session-alpha", dataDir, observedAt }),
     },
     {
+      label: "sessions.events",
+      source: "sessions.events",
+      resourceId: "session-alpha",
+      schedule: (operation) => searchEvents.scheduleSessionEventsSearchEvent({ operation, sessionId: "session-alpha", dataDir, observedAt }),
+    },
+    {
       label: "database.records",
       source: "database.records",
       resourceId: "main:contacts:ada",

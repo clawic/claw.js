@@ -15,6 +15,7 @@ const failures = [];
 const requiredSources = [
   "commands",
   "sessions.chats",
+  "sessions.events",
   "database.records",
   "work.items",
   "documents.blocks",
@@ -87,6 +88,7 @@ const requiredEntrypoints = {
 
 const requiredResourceHandlers = {
   "sessions.chats": "ensureSessionChatResourceIndexed",
+  "sessions.events": "ensureSessionEventsResourceIndexed",
   "database.records": "ensureDatabaseRecordResourceIndexed",
   "work.items": "ensureWorkItemResourceIndexed",
   "documents.blocks": "ensureDocumentBlocksResourceIndexed",
@@ -125,6 +127,7 @@ const requiredResourceHandlers = {
 
 const requiredEventSchedulers = {
   "sessions.chats": "scheduleSessionChatSearchEvent",
+  "sessions.events": "scheduleSessionEventsSearchEvent",
   "database.records": "scheduleDatabaseRecordSearchEvent",
   "work.items": "scheduleWorkItemsSearchEvent",
   "documents.blocks": "scheduleDocumentBlocksSearchEvent",
@@ -206,6 +209,40 @@ function readCliSearchSourceText() {
 function requireCliSearchSnippet(snippet) {
   if (!readCliSearchSourceText().includes(snippet)) {
     failures.push(`packages/clawjs/src/cli-search-*.ts: missing ${JSON.stringify(snippet)}`);
+  }
+}
+
+let v1DataSourceText = null;
+function readV1DataSourceText() {
+  if (v1DataSourceText !== null) return v1DataSourceText;
+  const sourceDir = path.join(rootDir, "packages/clawjs/src");
+  v1DataSourceText = fs.readdirSync(sourceDir)
+    .filter((entry) => /^v1-data.*\.ts$/u.test(entry))
+    .map((entry) => fs.readFileSync(path.join(sourceDir, entry), "utf8"))
+    .join("\n");
+  return v1DataSourceText;
+}
+
+function requireV1DataSnippet(snippet) {
+  if (!readV1DataSourceText().includes(snippet)) {
+    failures.push(`packages/clawjs/src/v1-data*.ts: missing ${JSON.stringify(snippet)}`);
+  }
+}
+
+let searchPackageSourceText = null;
+function readSearchPackageSourceText() {
+  if (searchPackageSourceText !== null) return searchPackageSourceText;
+  const sourceDir = path.join(rootDir, "packages/clawjs-search/src");
+  searchPackageSourceText = fs.readdirSync(sourceDir)
+    .filter((entry) => /\.ts$/u.test(entry))
+    .map((entry) => fs.readFileSync(path.join(sourceDir, entry), "utf8"))
+    .join("\n");
+  return searchPackageSourceText;
+}
+
+function requireSearchPackageSnippet(snippet) {
+  if (!readSearchPackageSourceText().includes(snippet)) {
+    failures.push(`packages/clawjs-search/src/*.ts: missing ${JSON.stringify(snippet)}`);
   }
 }
 
@@ -1012,12 +1049,12 @@ for (const source of requiredSources) {
 }
 
 for (const source of requiredIndexJobSources) {
-  requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", `case "${source}":`);
+  requireCliSearchSnippet(`case "${source}":`);
 }
 
 for (const [source, handler] of Object.entries(requiredResourceHandlers)) {
-  requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", `case "${source}":`);
-  requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", handler);
+  requireCliSearchSnippet(`case "${source}":`);
+  requireCliSearchSnippet(handler);
 }
 
 for (const [source, scheduler] of Object.entries(requiredEventSchedulers)) {
@@ -1091,7 +1128,7 @@ for (const snippet of [
   "resultForId(resultId: string, access",
   "searchAclAllows(action.permissions_json",
 ]) {
-  requireSnippet("packages/clawjs-search/src/store.ts", snippet);
+  requireSearchPackageSnippet(snippet);
 }
 
 for (const snippet of [
@@ -1114,7 +1151,7 @@ for (const snippet of [
   "legalOutputLabels: FINANCE_SEARCH_LEGAL_OUTPUT_LABELS",
   "legalOutputLabels: ELN_SEARCH_LEGAL_OUTPUT_LABELS",
 ]) {
-  requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", snippet);
+  requireCliSearchSnippet(snippet);
 }
 
 for (const snippet of [
@@ -1167,10 +1204,10 @@ for (const snippet of [
 ]) {
   requireCliSearchSnippet(snippet);
 }
-requireSnippet("packages/clawjs/src/v1-data.ts", "knowledge: new Set([\"entity\", \"fact\", \"list\", \"search\", \"promote\", \"delete\", \"help\"])");
-requireSnippet("packages/clawjs/src/v1-data.ts", "Usage: claw knowledge delete ID [--kind fact|entity] [--json]");
-requireSnippet("packages/clawjs/src/v1-data.ts", "apps: new Set([\"list\", \"upsert\", \"delete\", \"help\"])");
-requireSnippet("packages/clawjs/src/v1-data.ts", "Usage: claw apps delete APP_ID [--json]");
+requireV1DataSnippet("knowledge: new Set([\"entity\", \"fact\", \"list\", \"search\", \"promote\", \"delete\", \"help\"])");
+requireV1DataSnippet("Usage: claw knowledge delete ID [--kind fact|entity] [--json]");
+requireV1DataSnippet("apps: new Set([\"list\", \"upsert\", \"delete\", \"help\"])");
+requireV1DataSnippet("Usage: claw apps delete APP_ID [--json]");
 requireCliSearchSnippet("apps and design writes enqueue and index section fast paths");
 requireCliSearchSnippet("\"apps\",");
 requireCliSearchSnippet("\"delete\",");
@@ -1180,8 +1217,8 @@ requireCliSearchSnippet("app-manifest-fragment-needle");
 requireCliSearchSnippet("app-manifest-secret-never-index");
 requireCliSearchSnippet("app-permissions-fragment-needle");
 requireCliSearchSnippet("app-permission-secret-never-index");
-requireSnippet("packages/clawjs/src/v1-data.ts", "design: new Set([\"list\", \"upsert\", \"delete\", \"help\"])");
-requireSnippet("packages/clawjs/src/v1-data.ts", "Usage: claw design delete RESOURCE_ID [--json]");
+requireV1DataSnippet("design: new Set([\"list\", \"upsert\", \"delete\", \"help\"])");
+requireV1DataSnippet("Usage: claw design delete RESOURCE_ID [--json]");
 requireCliSearchSnippet("designDeleteRunItem?.operation");
 requireCliSearchSnippet("source: \"design.resources\", operation: \"delete\", status: \"done\", indexed: 1");
 requireCliSearchSnippet("design-manifest-fragment-needle");
@@ -1191,10 +1228,10 @@ requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation 
 requireSnippet("packages/clawjs/src/cli-work-search-events.test.ts", "operation === \"delete\"");
 requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "search query rejects provider embedding model derivation");
 requireSnippet("packages/clawjs/src/cli-search-query-embedding-gate.test.ts", "search saved create rejects provider embedding model derivation");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "localSearchEmbeddingModel(model)");
+requireCliSearchSnippet("localSearchEmbeddingModel(model)");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "provider semantic query");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "saved-provider-semantic");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "searchWorkerErrorMessage");
+requireCliSearchSnippet("searchWorkerErrorMessage");
 requireCliSearchSnippet("job:documents:provider-embed");
 requireCliSearchSnippet("SEARCH_EMBEDDING_PROVIDER_PENDING");
 requireSnippet("docs/search.md", "Embedded `embed` jobs\nfail closed with `SEARCH_EMBEDDING_PROVIDER_PENDING`");
@@ -1206,7 +1243,7 @@ requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "regulated_domain
 requireSnippet("packages/clawjs/src/cli-search-monitor-audit.test.ts", "search monitor run records sensitive query audit events");
 requireSnippet("packages/clawjs/src/cli-search-monitor-agent-budget.test.ts", "search monitor run preserves saved search agent budgets");
 requireSnippet("packages/clawjs-search-mcp/src/monitor-agent-budget.test.ts", "Search MCP monitor evaluation preserves saved search agent budgets");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "monitorId: monitor.id");
+requireCliSearchSnippet("monitorId: monitor.id");
 requireSnippet("packages/clawjs-search-mcp/src/index.test.ts", "Search MCP monitor evaluation records sensitive audit events");
 
 for (const snippet of [
@@ -1223,20 +1260,20 @@ requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSea
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages\"");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSessionChatSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"sessions.chats\"");
-requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleSessionChatSearchEvent");
-requireSnippet("packages/clawjs/src/v1-data.ts", "indexSessionRoots(store.sqlite, roots");
-requireSnippet("packages/clawjs/src/v1-data.ts", "operation: archived ? \"delete\" : \"upsert\"");
+requireV1DataSnippet("scheduleSessionChatSearchEvent");
+requireV1DataSnippet("indexSessionRoots(store.sqlite, roots");
+requireV1DataSnippet("operation: archived ? \"delete\" : \"upsert\"");
 requireSnippet("packages/clawjs/src/v1-data-core.ts", "onIndexed?: (sessionId: string, archived: boolean)");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "ensureSessionChatResourceIndexed");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleSessionChatSearchEvent({");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "--source sessions.chats --session-id <session-id>");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleDocsPagesSearchEvent({");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "--source docs.pages --workspace <workspace-root> --path <file>");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleSheetsWorkbookSearchEvent({");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "--source sheets.workbooks --workbook-id <workbook-id>");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleCodeSymbolsSearchEvent({");
+requireCliSearchSnippet("ensureSessionChatResourceIndexed");
+requireCliSearchSnippet("scheduleSessionChatSearchEvent({");
+requireCliSearchSnippet("--source sessions.chats --session-id <session-id>");
+requireCliSearchSnippet("scheduleDocsPagesSearchEvent({");
+requireCliSearchSnippet("--source docs.pages --workspace <workspace-root> --path <file>");
+requireCliSearchSnippet("scheduleSheetsWorkbookSearchEvent({");
+requireCliSearchSnippet("--source sheets.workbooks --workbook-id <workbook-id>");
+requireCliSearchSnippet("scheduleCodeSymbolsSearchEvent({");
 requireCliSearchSnippet("\"search\", \"changes\", \"schedule\", \"upsert\", \"--source\", \"code.symbols\"");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scanSearchChangedSourceFiles");
+requireCliSearchSnippet("scanSearchChangedSourceFiles");
 requireSnippet("packages/clawjs/src/cli-search-changes-scan.ts", "shard: \"changes\"");
 requireSnippet("packages/clawjs-search-mcp/src/index.ts", "\"sessions.chats\"");
 requireSnippet("packages/clawjs-search-mcp/src/index.ts", "\"docs.pages\"");
@@ -1265,22 +1302,22 @@ requireSnippet("docs/cli.md", "claw search changes schedule upsert --source docs
 requireSnippet("docs/cli.md", "claw search changes schedule upsert --source sheets.workbooks --workbook-id forecast-q2 --workspace . --json");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleLocalFileSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"local.files\"");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleLocalFileSearchEvent({");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "ensureLocalFileResourceIndexed");
+requireCliSearchSnippet("scheduleLocalFileSearchEvent({");
+requireCliSearchSnippet("ensureLocalFileResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-local-files-test-utils.ts", "\"search\", \"changes\", \"schedule\", \"upsert\", \"--source\", \"local.files\"");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleWebIngestedSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"web.ingested\"");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleWebIngestedSearchEvent({");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "ensureWebIngestedResourceIndexed");
+requireCliSearchSnippet("scheduleWebIngestedSearchEvent({");
+requireCliSearchSnippet("ensureWebIngestedResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-web-external-test-utils.ts", "\"search\", \"changes\", \"schedule\", \"upsert\", \"--source\", \"web.ingested\"");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleExternalCacheSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"external.cache\"");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleExternalCacheSearchEvent({");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "ensureExternalCacheResourceIndexed");
+requireCliSearchSnippet("scheduleExternalCacheSearchEvent({");
+requireCliSearchSnippet("ensureExternalCacheResourceIndexed");
 requireSnippet("packages/clawjs/src/cli-search-web-external-test-utils.ts", "\"search\", \"changes\", \"schedule\", \"upsert\", \"--source\", \"external.cache\"");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSurfaceRouteSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"surfaces.routes\"");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "scheduleSurfaceRouteSearchEvent({");
+requireCliSearchSnippet("scheduleSurfaceRouteSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "\"search\", \"changes\", \"schedule\", \"upsert\", \"--source\", \"surfaces.routes\"");
 requireSnippet("packages/clawjs-search-mcp/src/index.ts", "search.changes.schedule");
 requireSnippet("packages/clawjs-search-mcp/src/index.ts", "search.changes.scan");
@@ -1310,7 +1347,7 @@ requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "source: \"business.records\", operation: \"delete\", status: \"done\", indexed: 1");
 requireCliSearchSnippet("afterSkillDelete");
 requireCliSearchSnippet("source: \"skills.registry\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "id: `skills.registry:${row.slug}:metadata`");
+requireCliSearchSnippet("id: `skills.registry:${row.slug}:metadata`");
 requireCliSearchSnippet("skills-metadata-fragment-needle");
 requireCliSearchSnippet("skills-metadata-secret-never-index");
 requireSnippet("docs/search.md", "redacted skill metadata fragments");
@@ -1318,7 +1355,7 @@ requireCliSearchSnippet("afterDatabaseDelete");
 requireCliSearchSnippet("source: \"database.records\", operation: \"delete\", status: \"done\", indexed: 1");
 requireCliSearchSnippet("afterNotesDelete");
 requireCliSearchSnippet("source: \"notes.pages\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "id: `notes.pages:${row.id}:properties`");
+requireCliSearchSnippet("id: `notes.pages:${row.id}:properties`");
 requireCliSearchSnippet("notes-properties-fragment-needle");
 requireCliSearchSnippet("notes-properties-secret-never-index");
 requireSnippet("docs/search.md", "redacted\nproperties fragments");
@@ -1346,18 +1383,18 @@ requireCliSearchSnippet("source: \"calendar.events\", operation: \"delete\", sta
 requireCliSearchSnippet("calendar-metadata-fragment-needle");
 requireCliSearchSnippet("calendar-secret-never-index");
 requireSnippet("packages/clawjs/src/cli-temporal-command.ts", "scheduleLocalCalendarSearchEvent");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "FROM temporal_items");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "temporalCalendarEventSearchDocument");
+requireCliSearchSnippet("FROM temporal_items");
+requireCliSearchSnippet("temporalCalendarEventSearchDocument");
 requireCliSearchSnippet("afterFinanceRecordDelete");
 requireCliSearchSnippet("afterFinanceLocalDelete");
 requireCliSearchSnippet("source: \"finance.records\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "const metadataText = redactedStructuredText(metadata);");
+requireCliSearchSnippet("const metadataText = redactedStructuredText(metadata);");
 requireCliSearchSnippet("finance-metadata-fragment-needle");
 requireCliSearchSnippet("finance-metadata-secret-never-index");
 requireCliSearchSnippet("finance-local-metadata-fragment-needle");
 requireCliSearchSnippet("finance-local-metadata-secret-never-index");
 requireSnippet("docs/search.md", "Searchable\nfinance metadata is redacted before indexing");
-requireSnippet("packages/clawjs-search/src/store.ts", ".flatMap((term) => term.replace");
+requireSearchPackageSnippet(".flatMap((term) => term.replace");
 requireSnippet("packages/clawjs-search/src/index.test.ts", "SearchStore tokenizes hyphenated query terms for FTS");
 requireSnippet("docs/search.md", "hyphenated and punctuation-delimited query\ntokens are split before FTS");
 requireCliSearchSnippet("afterElnDelete");
@@ -1406,29 +1443,29 @@ requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheet
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets-content-secret-never-index");
 requireSnippet("docs/search.md", "redacted workbook metadata fragments");
 requireSnippet("docs/search.md", "Secret-like keys inside nested sheet");
-requireSnippet("packages/clawjs/src/v1-data.ts", "case \"sheets\"");
-requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleSheetsWorkbookSearchEvent({");
+requireV1DataSnippet("case \"sheets\"");
+requireV1DataSnippet("scheduleSheetsWorkbookSearchEvent({");
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "sheets workbook writes enqueue and tombstone workbook search events");
 requireSnippet("docs/search.md", "`claw sheets workbook upsert|delete` writes local workbook manifests");
 requireCliSearchSnippet("afterConnectorDelete");
 requireCliSearchSnippet("source: \"connectors.catalog\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "id: `connectors.catalog:${row.id}:metadata`");
+requireCliSearchSnippet("id: `connectors.catalog:${row.id}:metadata`");
 requireCliSearchSnippet("connectors-metadata-fragment-needle");
 requireCliSearchSnippet("connectors-metadata-secret-never-index");
 requireSnippet("docs/search.md", "Operation metadata is exposed through redacted\nmetadata fragments");
-requireSnippet("packages/clawjs/src/v1-data.ts", "case \"connectors\"");
-requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleConnectorCatalogSearchEvent({");
+requireV1DataSnippet("case \"connectors\"");
+requireV1DataSnippet("scheduleConnectorCatalogSearchEvent({");
 requireSnippet("packages/clawjs-core/src/cli-command-registry.ts", "operation|operations|context|ctx");
 requireCliSearchSnippet("connector operation writes enqueue and tombstone connectors catalog search events");
 requireSnippet("docs/search.md", "`claw connectors operation upsert|delete` writes emit hot `connectors.catalog`");
 requireSnippet("docs/connector-control-plane.md", "claw connectors operation upsert openai.images.edit --provider openai");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "workspace_records");
+requireCliSearchSnippet("workspace_records");
 requireCliSearchSnippet("afterWorkDelete");
 requireCliSearchSnippet("source: \"work.items\", operation: \"delete\", status: \"done\", indexed: 1");
 requireCliSearchSnippet("afterMcpDelete");
 requireCliSearchSnippet("source: \"mcp.servers\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "id: `mcp.servers:${server.id}:redacted-config`");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "metadata: { redactedValues: true }");
+requireCliSearchSnippet("id: `mcp.servers:${server.id}:redacted-config`");
+requireCliSearchSnippet("metadata: { redactedValues: true }");
 requireCliSearchSnippet("redactedConfigFragment");
 requireCliSearchSnippet("Bearer super-secret-header-value");
 requireSnippet("docs/search.md", "redacted config fragments");
@@ -1442,7 +1479,7 @@ requireCliSearchSnippet("operational-metadata-fragment-needle");
 requireCliSearchSnippet("operational-secret-never-index");
 requireCliSearchSnippet("afterDocumentDelete");
 requireCliSearchSnippet("source: \"documents.blocks\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "id: `documents.blocks:${row.namespace_id}:${row.id}:content-data`");
+requireCliSearchSnippet("id: `documents.blocks:${row.namespace_id}:${row.id}:content-data`");
 requireCliSearchSnippet("documents-content-data-fragment-needle");
 requireCliSearchSnippet("documents-content-data-secret-never-index");
 requireSnippet("docs/search.md", "redacted structured\ncontent-data");
@@ -1460,15 +1497,15 @@ requireCliSearchSnippet("constant typedSearchLimit");
 requireCliSearchSnippet("test renders local result");
 requireSnippet("docs/search.md", "TypeScript classes, interfaces, type aliases");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "source: \"docs.pages\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/v1-data.ts", "case \"docs\"");
-requireSnippet("packages/clawjs/src/v1-data.ts", "scheduleDocsPagesSearchEvent({");
+requireV1DataSnippet("case \"docs\"");
+requireV1DataSnippet("scheduleDocsPagesSearchEvent({");
 requireCliSearchSnippet("docs page writes enqueue and tombstone docs page search events");
 requireSnippet("docs/search.md", "`claw docs page upsert|delete` writes public Markdown pages");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "extractMarkdownFrontmatter");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-source.ts", "frontmatterDescription");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "docs-pages-frontmatter-description-needle");
 requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "Frontmatter Search Fixture");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "redactedStructuredText");
+requireCliSearchSnippet("redactedStructuredText");
 requireSnippet("packages/clawjs/src/cli-search-web-external-source.ts", "redactExternalCacheValue");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "provider-secret-never-index");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "setting-secret-never-index");
@@ -1501,7 +1538,7 @@ requireSnippet("docs/search.md", "vertical metadata, variable definitions");
 requireSnippet("docs/search.md", "Entity properties/provenance and fact scope/provenance");
 requireSnippet("packages/clawjs/src/cli-search-surface-routes-test-utils.ts", "source: \"surfaces.routes\", operation: \"delete\", status: \"done\", indexed: 1");
 requireSnippet("packages/clawjs/src/cli-search-local-files-test-utils.ts", "source: \"local.files\", operation: \"delete\", status: \"done\", indexed: 1");
-requireSnippet("packages/clawjs/src/cli-search-heavy-command.ts", "config.instructionsFreeText");
+requireCliSearchSnippet("config.instructionsFreeText");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "ops-agent-config-fragment-needle");
 requireSnippet("packages/clawjs/src/cli-search-framework-fast-path-test-utils.ts", "fragment.title === \"scopes\"");
 requireSnippet("docs/search.md", "Agent configuration and connection scopes are exposed as redacted");
