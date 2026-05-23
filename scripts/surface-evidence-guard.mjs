@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
 import { createBuiltinSearchSourceManifests } from "../packages/clawjs-search/src/index.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const requiredSearchSourceIds = new Set(["surfaces.routes", "surfaces.registry"]);
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
@@ -102,6 +103,50 @@ function validateSurfaceEvidence(registry, baseline = readBaseline()) {
   return errors;
 }
 
+function surfaceEvidenceDiagnostic(error) {
+  if (error.includes("baseline")) {
+    return createDiagnostic("surface_evidence_baseline_invalid", error, {
+      location: "docs/surface-evidence-baseline.json",
+      suggestion: "Fix the baseline row or remove stale debt only after the referenced surface is registered.",
+      safeNextStep: "Update docs/surface-evidence-baseline.json, then rerun node --import tsx scripts/surface-evidence-guard.mjs.",
+    });
+  }
+  if (error.includes("references missing")) {
+    return createDiagnostic("surface_evidence_reference_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Register the missing surface node or add a temporary baseline entry with steward, risk, expiry, and reentry condition.",
+      safeNextStep: "Fix the referenced node id in the surface registry, then rerun the surface evidence guard.",
+    });
+  }
+  if (error.includes("source.file")) {
+    return createDiagnostic("surface_evidence_source_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Add source.file for the registered surface node or route.",
+      safeNextStep: "Point source.file at the owning public file, then rerun node --import tsx scripts/surface-evidence-guard.mjs.",
+    });
+  }
+  if (error.includes("missing builtin search source")) {
+    return createDiagnostic("surface_evidence_search_source_missing", error, {
+      location: "packages/clawjs-search/src/index.ts",
+      suggestion: "Restore the builtin search source manifest for routes and registry discovery.",
+      safeNextStep: "Add the missing search source id, then rerun node --import tsx scripts/surface-evidence-guard.mjs.",
+    });
+  }
+  return createDiagnostic("surface_evidence_metadata_missing", error, {
+    location: "packages/clawjs-core/src/catalogs.ts",
+    suggestion: "Complete route docs, tests, ADRs, validation, and route-step metadata before claiming closure.",
+    safeNextStep: "Fill the missing surface evidence field, then rerun node --import tsx scripts/surface-evidence-guard.mjs.",
+  });
+}
+
+function printSurfaceEvidenceFailures(errors, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "surface evidence guard failed:",
+    diagnostics: errors.map(surfaceEvidenceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function cloneRegistry() {
   return JSON.parse(JSON.stringify(clawPersistentSurfaceRegistry));
 }
@@ -136,6 +181,21 @@ function runSelfTest() {
       reentryCondition: "self-test",
     }],
   }).join("\n"), /missing\.contract/);
+
+  const chunks = [];
+  printSurfaceEvidenceFailures([
+    "/Users/example/private/node is missing source.file",
+    "route.steps[0] references missing toId missing.surface",
+    "missing builtin search source surfaces.routes",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: surface_evidence_source_missing/);
+  assert.match(output, /code: surface_evidence_reference_missing/);
+  assert.match(output, /code: surface_evidence_search_source_missing/);
+  assert.match(output, /location: packages\/clawjs-core\/src\/catalogs\.ts/);
+  assert.match(output, /suggestion: Register the missing surface node/);
+  assert.match(output, /next: Add the missing search source id/);
+  assert.doesNotMatch(output, /\/Users\/example/);
 }
 
 if (process.argv.includes("--self-test")) {
@@ -146,8 +206,7 @@ if (process.argv.includes("--self-test")) {
 
 const errors = validateSurfaceEvidence(clawPersistentSurfaceRegistry);
 if (errors.length > 0) {
-  console.error("surface evidence guard failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printSurfaceEvidenceFailures(errors);
   process.exit(1);
 }
 
