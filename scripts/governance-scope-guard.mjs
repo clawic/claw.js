@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const baselinePath = path.join(rootDir, "docs/governance-vocabulary-baseline.json");
@@ -264,6 +265,57 @@ function summaryFor(countsByPattern) {
   );
 }
 
+function governanceDiagnostic(failure) {
+  if (failure.includes("required governance snippet") || failure.endsWith(" is missing")) {
+    return createDiagnostic("governance_scope_required_doc_missing", failure, {
+      location: "docs/",
+      suggestion: "Restore the required governance identity, workspace, or naming canon before trusting vocabulary counts.",
+      safeNextStep: "Update the named governance doc, then rerun node scripts/governance-scope-guard.mjs.",
+    });
+  }
+  if (failure.includes("classifications.json") || failure.includes("classification") || failure.includes("maxOccurrences")) {
+    return createDiagnostic("governance_scope_classification_invalid", failure, {
+      location: "docs/governance-vocabulary-classifications.json",
+      suggestion: "Fix the classification row schema, allowed classification, exact count, steward, or evidence path.",
+      safeNextStep: "Update docs/governance-vocabulary-classifications.json, then rerun node scripts/governance-scope-guard.mjs.",
+    });
+  }
+  if (failure.includes("baseline update cannot increase governance debt")) {
+    return createDiagnostic("governance_scope_baseline_increase_blocked", failure, {
+      location: "docs/governance-vocabulary-baseline.json",
+      suggestion: "Do not grow the baseline; remove the new vocabulary debt or classify it with exact rationale.",
+      safeNextStep: "Remove the new occurrence or add a reviewed classification entry, then rerun the guard.",
+    });
+  }
+  if (failure.includes("governance vocabulary debt")) {
+    return createDiagnostic("governance_scope_debt_increase", failure, {
+      location: "governance vocabulary scan",
+      suggestion: "Remove the new authority/profile/isolation wording or classify it with exact count and rationale.",
+      safeNextStep: "Fix the named file or add a reviewed classification entry, then rerun node scripts/governance-scope-guard.mjs.",
+    });
+  }
+  if (failure.includes("baseline")) {
+    return createDiagnostic("governance_scope_baseline_invalid", failure, {
+      location: "docs/governance-vocabulary-baseline.json",
+      suggestion: "Restore the baseline or run a reviewed shrink-only baseline update.",
+      safeNextStep: "Run node scripts/governance-scope-guard.mjs --update-baseline only after confirming the debt shrank.",
+    });
+  }
+  return createDiagnostic("governance_scope_guard_failed", failure, {
+    location: "scripts/governance-scope-guard.mjs",
+    suggestion: "Inspect the named governance file or vocabulary count before retrying.",
+    safeNextStep: "Fix the reported governance issue, then rerun node scripts/governance-scope-guard.mjs.",
+  });
+}
+
+function printGovernanceFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "governance scope guard failed:",
+    diagnostics: failures.map(governanceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function shrinkBaseline(existingBaseline, adjustedCounts) {
   const nextCounts = Object.fromEntries(trackedPatterns.map((pattern) => [pattern.id, {}]));
   const increases = [];
@@ -308,6 +360,23 @@ function runSelfTest() {
   if ((adjusted.tenantId?.["src/a.ts"] ?? 0) !== 0) throw new Error("classification self-test expected allowance subtraction");
   const shrink = shrinkBaseline({ counts: { ownerId: {}, tenantId: {}, profile: {}, companyId: {} } }, fixtureCounts);
   if (!shrink.increases.some((entry) => entry.includes("ownerId"))) throw new Error("baseline self-test expected increase rejection");
+
+  const chunks = [];
+  printGovernanceFailures([
+    "/Users/example/private/docs/decision-map.md is missing required governance snippet: token sk-test-secret-123456",
+    "bad has invalid classification invalid",
+    "src/a.ts adds governance vocabulary debt for ownerId: 1 current, 0 baselined",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "governance_scope_required_doc_missing",
+    "governance_scope_classification_invalid",
+    "governance_scope_debt_increase",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion:") || !output.includes("next:")) throw new Error("self-test missing guidance");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
 }
 
 if (selfTest) {
@@ -380,8 +449,7 @@ if (json) {
 } else {
   if (updateBaseline && failures.length === 0) console.log("governance scope baseline shrunk");
   if (failures.length) {
-    console.error("governance scope guard failed:");
-    for (const failure of failures) console.error(`- ${failure}`);
+    printGovernanceFailures(failures);
   }
   console.log(`governance scope guard ${failures.length ? "failed" : "passed"}`);
 }
