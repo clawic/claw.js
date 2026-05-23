@@ -55,8 +55,11 @@ const allowedBroadSymbolPhrases = [
   ["Data", "Dir"],
   ["Data", "Directory"],
   ["Data", "Path"],
+  ["Data", "Payload"],
   ["Data", "Store"],
+  ["Data", "Storage"],
   ["Data", "Table"],
+  ["Domain", "Data"],
   ["Form", "Data"],
   ["Test", "Data"],
 ];
