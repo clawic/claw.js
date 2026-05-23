@@ -567,6 +567,11 @@ The docs check script validates that every current export from
     SessionProjectionStatus
     SessionRecord
     SessionRecordAlias
+    SessionRenderDisclosureMode
+    SessionRenderFixture
+    SessionRenderMatrixRow
+    SessionRenderOutcome
+    SessionRenderState
     SessionRuntime
     SessionSearchDocumentInput
     SessionSearchHit
@@ -1019,6 +1024,7 @@ The docs check script validates that every current export from
     renderSettingsTemplate
     repairOpenClawRuntime
     repairWorkspace
+    requiredSessionRenderFixtureIds
     requiresExplicitProviderEnable
     resetWorkspace
     resolveAttachmentDocumentRefs
@@ -1076,6 +1082,10 @@ The docs check script validates that every current export from
     saveAuthStore
     saveProviderApiKey
     seedRealisticSessionsFixture
+    sessionRenderFixtures
+    sessionRenderMatrix
+    sessionRenderMatrixRowFor
+    sessionRenderMatrixRows
     setDefaultModel
     setupOpenClawWorkspace
     signActorAssertion

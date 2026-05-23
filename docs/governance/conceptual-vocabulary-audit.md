@@ -45,6 +45,7 @@ the surface-route graph. The protected words keep these meanings:
 | ClawJS cross-process JSON contract check | Passing after mechanical route wording fix. |
 | ClawJS governance scope guard | Failing with broader preexisting drift across stewardship, technical tenancy, and identity-scope vocabulary. |
 | ClawJS docs lane | Blocked before this audit by unrelated session-surface exports missing from `docs/surface.md`. |
+| Connector approval/grant contract | Inspected `ConnectorApprovalGrant`, connector control-plane docs, MCP control-plane tests, and audit metadata. The stable type appears to model a scoped grant record tied to approval evidence, but the identifier is exported API/schema and must not be renamed mechanically. |
 
 ## Mechanical Fixes Applied
 
@@ -62,6 +63,7 @@ the surface-route graph. The protected words keep these meanings:
 | Signed-host negative wording | Classified negative Node examples that explicitly forbid native authority outside the signed host. |
 | Relay technical tenancy | Classified the stable Relay technical-isolation environment-variable label as a technical isolation context, not as a Relay-derived authority source. |
 | Relay/Gateway technical tenancy | Classified selected Relay/Gateway/remote-sync paths as technical isolation contexts in the vocabulary policy. |
+| Audit-doc terminology cleanup | Reworded this audit and its classification ledger so they describe old mistake classes without reintroducing blocked phrases for workspace, project, route, Relay, sync, host, or agent authority. |
 
 ## Pending Semantic Decisions
 
@@ -71,6 +73,7 @@ the surface-route graph. The protected words keep these meanings:
 | `conceptual-vocabulary.technical-tenancy-contract` | Relay, Gateway, remote sync, and compatibility tests using technical tenancy identifiers. | Canon permits technical isolation vocabulary, but current governance guards and conceptual guard baselines disagree on several paths. | Decide the exact allowed technical-tenancy surfaces and align `conceptual-vocabulary-guard`, `governance-scope-guard`, and baselines without broad rebaselining. |
 | `conceptual-vocabulary.identity-scope-contract` | Governance scope guard findings outside the requested protected-word list but adjacent to the same authority model. | The guard reports widespread identity-scope vocabulary drift; changing it would affect dense data, agents, sessions, and scale fixtures. | Classify each use as provider-domain identity context, user identity context, business entity data, or migration target before changing contracts. |
 | `conceptual-vocabulary.full-surface-guard-scope` | Blocking coverage for docs, code, UI strings, tests, fixtures, and examples. | The current blocking guard covers docs, UI copy, and public/stable surfaces; a full-surface report-only scan finds existing hits in tests, fixtures, and examples too, including compatibility and intentionally negative cases. | Decide which artifact classes become blocking, which fixtures/examples may carry intentional negative vocabulary, and how those exceptions are classified. |
+| `conceptual-vocabulary.connector-approval-grant-contract` | `ConnectorApprovalGrant`, connector control-plane pipeline/audit docs, MCP projection tests, and connector-governed context docs. | The exported identifier combines approval and grant vocabulary. It may be a valid scoped grant record tied to approval evidence, but renaming it would be an API/schema migration and leaving it requires explicit canonical documentation. | Decide whether to keep the identifier as a documented connector-domain term, rename through a compatibility migration, or split approval receipt and scoped grant concepts in the public contract. |
 
 ## Closure Rule
 
