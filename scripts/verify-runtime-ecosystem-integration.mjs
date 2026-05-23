@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const selfTest = process.argv.includes("--self-test");
 const manifestPath = path.join(rootDir, "docs/runtime-ecosystem-integration.manifest.json");
 const standardPath = path.join(rootDir, "docs/runtime-ecosystem-integration-standard.md");
 const adrPath = path.join(rootDir, "docs/adr/0047-runtime-ecosystem-integration-standard.md");
@@ -69,6 +71,63 @@ function hasAllDomains(rows, label, errors) {
   }
 }
 
+function runtimeDiagnostic(error) {
+  const message = String(error);
+  const location = message.match(/^missing required file (.+)$/u)?.[1]
+    ?? message.match(/^([^ ]+)/u)?.[1]
+    ?? "docs/runtime-ecosystem-integration.manifest.json";
+  if (message.startsWith("missing required file ")) {
+    return createDiagnostic("runtime_ecosystem_required_file_missing", message, {
+      location,
+      suggestion: "Restore the required runtime ecosystem manifest, doc, ADR, registry, or command source.",
+      safeNextStep: "Restore the named file, then rerun node scripts/verify-runtime-ecosystem-integration.mjs.",
+    });
+  }
+  if (/read|parse|not valid JSON|Unexpected token|ENOENT/iu.test(message)) {
+    return createDiagnostic("runtime_ecosystem_input_read_failed", message, {
+      location,
+      suggestion: "Repair the named JSON, manifest, or source file so the verifier can read it.",
+      safeNextStep: "Fix the readable input file, then rerun node scripts/verify-runtime-ecosystem-integration.mjs.",
+    });
+  }
+  return createDiagnostic("runtime_ecosystem_contract_mismatch", message, {
+    location,
+    suggestion: "Align the named runtime ecosystem artifact with the required manifest, support matrix, or command-intent contract.",
+    safeNextStep: "Fix the named runtime ecosystem artifact, then rerun node scripts/verify-runtime-ecosystem-integration.mjs.",
+  });
+}
+
+function printRuntimeFailures(errors, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "Runtime ecosystem integration check failed:",
+    diagnostics: errors.map(runtimeDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function assertSelfTest(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printRuntimeFailures([
+    "missing required file /Users/example/private/runtime.json",
+    "manifest schemaVersion must be 1 token: sk-test-secret-123456",
+  ], {
+    title: "Runtime ecosystem integration check failed for /Users/example/private:",
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assertSelfTest(output.includes("code: runtime_ecosystem_required_file_missing"), "self-test missing missing-file code");
+  assertSelfTest(output.includes("code: runtime_ecosystem_contract_mismatch"), "self-test missing contract-mismatch code");
+  assertSelfTest(output.includes("suggestion:"), "self-test missing suggestion");
+  assertSelfTest(output.includes("next:"), "self-test missing next step");
+  assertSelfTest(!output.includes("/Users/example"), "self-test leaked private path");
+  assertSelfTest(!output.includes("sk-test-secret-123456"), "self-test leaked token-like text");
+  console.log("runtime ecosystem integration check self-test passed");
+}
+
 function claimRank(claim) {
   return [...allowedClaims].indexOf(claim);
 }
@@ -88,7 +147,7 @@ function main() {
     if (!fs.existsSync(file)) errors.push(`missing required file ${path.relative(rootDir, file)}`);
   }
   if (errors.length > 0) {
-    for (const error of errors) console.error(`- ${error}`);
+    printRuntimeFailures(errors);
     process.exit(1);
   }
 
@@ -320,11 +379,19 @@ function main() {
   }
 
   if (errors.length > 0) {
-    console.error("Runtime ecosystem integration check failed:");
-    for (const error of errors) console.error(`- ${error}`);
+    printRuntimeFailures(errors);
     process.exit(1);
   }
   console.log("runtime ecosystem integration check passed");
 }
 
-main();
+if (selfTest) {
+  runSelfTest();
+} else {
+  try {
+    main();
+  } catch (error) {
+    printRuntimeFailures([error instanceof Error ? error.message : String(error)]);
+    process.exit(1);
+  }
+}
