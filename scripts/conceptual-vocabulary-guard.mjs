@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createDiagnostic, normalizeDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
@@ -321,6 +322,47 @@ function compareToBaseline(baseDir, findings, counts) {
   return [...new Set(failures)];
 }
 
+function diagnosticForFailure(failure) {
+  const message = String(failure);
+  const locationMatch = message.match(/^([^:\n]+)(?::(\d+))?/u);
+  const location = locationMatch?.[1]
+    ? `${locationMatch[1]}${locationMatch[2] ? `:${locationMatch[2]}` : ""}`
+    : baselineRelativePath;
+  if (message.includes("adds conceptual vocabulary debt")) {
+    const suggestion = message.includes("; ")
+      ? message.slice(message.indexOf("; ") + 2)
+      : "Remove the added conceptual vocabulary debt or update the reviewed baseline with rationale.";
+    return createDiagnostic("conceptual_vocabulary_debt_increase", message, {
+      location,
+      suggestion,
+      safeNextStep: "Edit the named file to use approved vocabulary, then rerun node scripts/conceptual-vocabulary-guard.mjs.",
+    });
+  }
+  if (message.includes(`${baselineRelativePath} is missing`)) {
+    return createDiagnostic("conceptual_vocabulary_baseline_missing", message, {
+      location: baselineRelativePath,
+      suggestion: "Restore the reviewed conceptual vocabulary baseline or regenerate it after review.",
+      safeNextStep: "Run node scripts/conceptual-vocabulary-guard.mjs --update-baseline only after the vocabulary debt is reviewed.",
+    });
+  }
+  if (message.includes(registryRelativePath)) {
+    return createDiagnostic("conceptual_vocabulary_registry_invalid", message, {
+      location: registryRelativePath,
+      suggestion: "Repair the vocabulary registry so conceptualGuard.terms defines protected concepts.",
+      safeNextStep: "Fix docs/vocabulary.registry.json, then rerun node scripts/conceptual-vocabulary-guard.mjs.",
+    });
+  }
+  return createDiagnostic("conceptual_vocabulary_guard_failed", message, {
+    location,
+    suggestion: "Inspect the named vocabulary policy, baseline, or scanned file before retrying.",
+    safeNextStep: "Fix the reported input, then rerun node scripts/conceptual-vocabulary-guard.mjs.",
+  });
+}
+
+function diagnosticsForFailures(failures) {
+  return failures.map((failure) => normalizeDiagnostic(diagnosticForFailure(failure)));
+}
+
 function writeBaseline(baseDir, policy, counts) {
   const baseline = {
     schemaVersion: 1,
@@ -483,6 +525,21 @@ function runSelfTest() {
     fs.writeFileSync(path.join(tempRoot, "docs/bad.md"), "The provider tenant remains a technical tenant.\n");
     const shrunk = run(tempRoot);
     assertSelfTest(shrunk.failures.length === 0, "self-test baseline shrink must pass");
+
+    const chunks = [];
+    printActionableFailureReport({
+      title: "Conceptual vocabulary guard failed for /Users/example/private:",
+      diagnostics: diagnosticsForFailures([
+        "/Users/example/private/docs/bad.md:1 adds conceptual vocabulary debt owner/generic-owner-authority via \"sk-test-secret-123456\"; Use approved vocabulary.",
+      ]),
+      stream: { write: (chunk) => chunks.push(chunk) },
+    });
+    const output = chunks.join("");
+    assertSelfTest(output.includes("code: conceptual_vocabulary_debt_increase"), "self-test must print a stable diagnostic code");
+    assertSelfTest(output.includes("suggestion: Use approved vocabulary."), "self-test must print a concrete suggestion");
+    assertSelfTest(output.includes("next: Edit the named file to use approved vocabulary"), "self-test must print a safe next step");
+    assertSelfTest(!output.includes("/Users/example"), "self-test must redact private paths");
+    assertSelfTest(!output.includes("sk-test-secret-123456"), "self-test must redact token-like text");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -497,13 +554,16 @@ try {
 }
 
 if (json) {
-  console.log(JSON.stringify(result, null, 2));
+  const diagnostics = diagnosticsForFailures(result.failures);
+  console.log(JSON.stringify({ ...result, failures: diagnostics.map((diagnostic) => diagnostic.message), diagnostics }, null, 2));
 } else {
   if (result.baselineUpdated) console.log("conceptual vocabulary baseline updated");
   if (result.selfTest) console.log("conceptual vocabulary guard self-test passed");
   if (result.failures.length) {
-    console.error("conceptual vocabulary guard failed:");
-    for (const failure of result.failures) console.error(`- ${failure}`);
+    printActionableFailureReport({
+      title: "Conceptual vocabulary guard failed:",
+      diagnostics: diagnosticsForFailures(result.failures),
+    });
   }
   console.log(`conceptual vocabulary guard ${result.failures.length ? "failed" : "passed"}`);
 }
