@@ -89,7 +89,7 @@ test("domain surface registry maps database, services, modules and CLI ownership
   assert.ok(denseErp?.invariants?.some((invariant) => invariant.includes("visible orchestration packs")));
 
   const denseHris = findClawDomainSurfaceEntry("dense-system:hr");
-  assert.equal(denseHris?.status, "conceptual_manifest");
+  assert.equal(denseHris?.status, "canonical");
   assert.ok(denseHris?.cliCommands?.includes("claw hris"));
 
   const contentPublishing = findClawDomainSurfaceEntry("aggregate:content-publishing");

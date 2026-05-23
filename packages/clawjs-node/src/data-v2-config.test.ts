@@ -131,6 +131,7 @@ test("V2 workspace collections and context memory use the main DB", () => {
     assert.equal(context.items.some((item) => item.source === "memory" && item.sourceId === "fact_language"), true);
 
     const storage = createLocalStorageStore({ workspaceDir, agentId: "agent_1" });
+    storage.list({ prefix: "" });
     storage.close();
     assert.equal(fs.existsSync(path.join(root, "drive.sqlite")), true);
     assert.equal(fs.existsSync(path.join(root, "blobs")), true);

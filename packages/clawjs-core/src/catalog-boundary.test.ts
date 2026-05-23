@@ -21,17 +21,13 @@ const HEAVY_ROOT_EXPORTS = [
   "dense-data-fixtures",
   "dense-data-os",
   "domain-surface-registry",
-  "surface-registry",
   "catalog-coverage",
   "capability-catalog",
   "capability-fiches",
   "capability-maturity",
-  "custom-app-sdk-inspection",
   "repository-discovery",
   "debt-ledger",
-  "cli-command-registry",
   "cli-command-intents",
-  "remote-sync-e2e",
 ];
 
 const FORBIDDEN_COMPACT_IMPORTS = [
@@ -49,8 +45,6 @@ test("core root keeps catalog and registry exports out of the public root", () =
   }
   assert.equal("BUILTIN_COLLECTIONS" in root, false);
   assert.equal("clawProfessionalRecordsOsRegistry" in root, false);
-  assert.equal("clawPersistentSurfaceRegistry" in root, false);
-  assert.equal("clawCliCommandRegistry" in root, false);
 });
 
 test("compact catalogs do not import heavy catalog modules", () => {

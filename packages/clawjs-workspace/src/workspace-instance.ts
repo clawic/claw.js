@@ -87,9 +87,20 @@ export function createWorkspaceInstance(input: {
       });
     },
   };
+  const time = claw.time.configured ? claw.time : {
+    ...claw.time,
+    get: async (id: string) => {
+      const reminder = await remindersApi.get(id);
+      if (reminder) return { item: { ...reminder, kind: "reminder", nextRunAt: reminder.triggerAt } };
+      const deadline = await deadlinesApi.get(id);
+      if (deadline) return { item: { ...deadline, kind: "deadline", nextRunAt: deadline.dueAt } };
+      return null;
+    },
+  };
 
   return {
     ...claw,
+    time,
     workspace: {
       ...claw.workspace,
       tools: {

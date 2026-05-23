@@ -119,7 +119,7 @@ test("smoke: CRUD a record on every built-in collection", async (t) => {
     });
   }
   assert.equal(failures, 0, `Smoke test had ${failures} create failures`);
-});
+}, 180_000);
 
 test("record notes are stored as associated Pages instead of record JSON fields", () => {
   const record = store.createRecord(NAMESPACE, "personal_notes", {

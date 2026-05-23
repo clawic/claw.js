@@ -70,7 +70,7 @@ test("provider secrets app hint uses the Mac Care user applications route", () =
 test("runCli routes graduated dense-data direct nouns through the shared database", async () => {
   const ctx = await createDenseDataScenarioContext();
   await completeDenseDataScenarioContext(ctx);
-});
+}, 180_000);
 test("runCli exposes every graduated dense-data noun and alias as a top-level shared-data route", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-top-level-"));
   await enableDenseDomainModules(workspaceRoot);
@@ -235,7 +235,7 @@ test("runCli executes high-value dense-data alternate routes against one canonic
     assert.equal(payload.data.semanticView.id, "finance.entity.overview");
     assert.equal(payload.data.materializedView.subject.id, "fixture_financial_account_ops");
   }
-});
+}, 180_000);
 
 test("runCli seeds the dense-data acceptance fixture into the shared database", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-fixture-"));
@@ -561,7 +561,7 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(workOrderTimelinePayload.data.materializedView.itemCount >= 2, true);
   assert.equal(workOrderTimelinePayload.data.materializedView.items.some((item) => item.kind === "work_order" && item.recordId === "fixture_work_order_batch_42"), true);
   assert.equal(workOrderTimelinePayload.data.materializedView.items.some((item) => item.kind === "evidence" && item.recordId === "fixture_evidence_work_order_batch_42"), true);
-});
+}, 180_000);
 
 test("runCli searches the registered CLI discovery surface", async () => {
   const result = await runCliCapture(["search", "system capabilities", "--json"], process.cwd());

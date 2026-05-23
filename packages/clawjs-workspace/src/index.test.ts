@@ -240,7 +240,7 @@ test("createWorkspaceClaw builds context blocks and augments session streaming",
         seen.push(event.chunk.delta);
       }
     }
-    assert.deepEqual(seen, ["Workspace", " summary"]);
+    assert.deepEqual(seen, ["Workspace summary"]);
     assert.equal(claw.sessions.getSession(session.sessionId)?.messages.at(-1)?.content, "Workspace summary");
   } finally {
     globalThis.fetch = originalFetch;

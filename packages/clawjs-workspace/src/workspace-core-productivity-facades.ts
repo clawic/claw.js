@@ -57,6 +57,7 @@ export function createWorkspaceCoreProductivityFacades(input: {
     remindersCollection,
     syncAreaIndex,
     syncTaskIndex,
+    syncReminderIndex,
     syncGoalIndex,
     syncProjectIndex,
     syncMilestoneIndex,
@@ -439,6 +440,18 @@ export function createWorkspaceCoreProductivityFacades(input: {
       tasksCollection.put(id, task);
       if (current.status !== "done" && task.status === "done" && useTimeService) {
         await claw.time.signalAnchor({ anchorId: id, signal: "task_completed" });
+      }
+      if (current.status !== "done" && task.status === "done" && !useTimeService) {
+        for (const reminder of remindersCollection.list()) {
+          if (reminder.anchorType !== "task" || reminder.anchorId !== id || reminder.status === "done" || reminder.status === "cancelled") continue;
+          const cancelledReminder = {
+            ...reminder,
+            status: "cancelled",
+            updatedAt: nowIso(),
+          };
+          remindersCollection.put(reminder.id, cancelledReminder);
+          await syncReminderIndex(cancelledReminder);
+        }
       }
       if (current.status !== "done" && task.status === "done" && !task.completedAt) {
         task.completedAt = nowIso();

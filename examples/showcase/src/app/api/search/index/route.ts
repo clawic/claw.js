@@ -10,10 +10,13 @@ import {
   type SearchSourceState,
   type SearchSourceStatus,
 } from "@clawjs/search";
-import { isE2EEnabled } from "@/lib/e2e";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function isE2EEnabled(): boolean {
+  return process.env.CLAW_E2E === "1";
+}
 
 type SearchIndexAction = "enable" | "pause" | "exclude" | "resume" | "rebuild" | "onboard";
 type SearchSourceSetupKind = "ready" | "local_root" | "web_cache" | "provider_cache" | "signed_host";

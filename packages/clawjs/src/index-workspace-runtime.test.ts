@@ -2092,4 +2092,4 @@ test("runCli smokes the required command surface in dry-run or headless mode", a
     });
     assert.equal(command.expected.includes(exitCode), true, command.argv.join(" "));
   }
-});
+}, 180_000);

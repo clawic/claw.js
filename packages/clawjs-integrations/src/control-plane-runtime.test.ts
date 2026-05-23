@@ -171,6 +171,10 @@ describe("connector runtime control plane", () => {
           policyId: "paid-ai-egress",
           egressProfileId: "egress_paid_ai",
           vpnProfileId: "vpn_paid_ai",
+          networkEvaluation: {
+            decision: "allow",
+            matchedRuleIds: [],
+          },
         },
       },
       executor: {

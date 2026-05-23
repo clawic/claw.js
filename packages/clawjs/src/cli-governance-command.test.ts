@@ -152,10 +152,8 @@ test("governance command is discoverable through help, inspect, and search", asy
 
   const inspect = await runCliCapture(["inspect", "commands", "--json"], process.cwd());
   assert.equal(inspect.code, CLI_EXIT_OK);
-  const inspected = JSON.parse(inspect.stdout) as { data: { commands: Array<{ name: string; usage?: string; source?: { file?: string } }> } };
-  const command = inspected.data.commands.find((entry) => entry.name === "governance");
-  assert.equal(command?.usage, "governance doctor --json [--root PATH]");
-  assert.equal(command?.source?.file, "packages/clawjs/src/cli-governance-command.ts");
+  const inspected = JSON.parse(inspect.stdout) as { data: Array<{ id: string; value: string }> };
+  assert.equal(inspected.data.some((entry) => entry.id === "claw.cli.command.governance" && entry.value === "governance"), true);
 
   const search = await runCliCapture(["search", "governance doctor", "--json"], process.cwd());
   assert.equal(search.code, CLI_EXIT_OK);

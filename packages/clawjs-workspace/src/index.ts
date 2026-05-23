@@ -467,6 +467,7 @@ async function createWorkspaceExtension(
     remindersCollection,
     syncAreaIndex,
     syncTaskIndex,
+    syncReminderIndex,
     syncGoalIndex,
     syncProjectIndex,
     syncMilestoneIndex,
