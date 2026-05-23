@@ -11,6 +11,7 @@ import type {
   AppendMessageInput,
   MessageRole,
   SessionStructuredEventKind,
+  UpsertSessionDynamicToolInput,
 } from "../types.ts";
 
 const NATIVE_FORMAT = "codex-rollout-jsonl-v1";
@@ -144,6 +145,7 @@ interface CodexImportBatch {
   sessions: CreateSessionInput[];
   messages: AppendMessageInput[];
   events: AppendSessionEventInput[];
+  dynamicTools: UpsertSessionDynamicToolInput[];
 }
 
 interface StreamImportState {
@@ -264,6 +266,78 @@ function truncateSearchableText(text: string | null): string | null {
   return text.length > max ? text.slice(0, max) : text;
 }
 
+function dynamicToolsFromPayload(
+  sessionId: string,
+  payload: Record<string, unknown>,
+  timestamp: number,
+): UpsertSessionDynamicToolInput[] {
+  const tools = firstArrayField(payload, ["tools", "available_tools", "tool_specs", "mcp_tools"]);
+  if (!tools) return [];
+  return tools.flatMap((tool, index) => {
+    if (typeof tool !== "object" || tool === null || Array.isArray(tool)) return [];
+    const record = tool as Record<string, unknown>;
+    const functionRecord = objectField(record, "function");
+    const rawName = stringValue(record.name)
+      ?? stringValue(record.id)
+      ?? stringValue(functionRecord?.name)
+      ?? stringValue(record.tool_name)
+      ?? stringValue(record.toolName);
+    if (!rawName) return [];
+    const namespace = stringValue(record.namespace)
+      ?? stringValue(record.server)
+      ?? stringValue(record.server_name)
+      ?? stringValue(record.tool_namespace)
+      ?? namespaceFromName(rawName);
+    const name = namespace && rawName.startsWith(`${namespace}.`) ? rawName.slice(namespace.length + 1) : rawName;
+    const description = stringValue(record.description)
+      ?? stringValue(functionRecord?.description)
+      ?? "";
+    const inputSchemaJson = record.input_schema
+      ?? record.inputSchema
+      ?? record.parameters
+      ?? record.schema
+      ?? functionRecord?.parameters
+      ?? {};
+    const schemaText = JSON.stringify(inputSchemaJson ?? {});
+    return [{
+      sessionId,
+      position: index,
+      name,
+      namespace,
+      description,
+      inputSchemaJson,
+      deferLoading: schemaText.length > 4096 || Boolean(record.defer_loading) || Boolean(record.deferLoading),
+      source: "codex.turn_context",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }];
+  });
+}
+
+function firstArrayField(payload: Record<string, unknown>, keys: string[]): unknown[] | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (Array.isArray(value)) return value;
+  }
+  return null;
+}
+
+function objectField(payload: Record<string, unknown>, key: string): Record<string, unknown> | null {
+  const value = payload[key];
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function namespaceFromName(name: string): string | null {
+  const dot = name.indexOf(".");
+  return dot > 0 ? name.slice(0, dot) : null;
+}
+
 function appendStructuredEvent(
   batch: CodexImportBatch,
   input: {
@@ -350,6 +424,10 @@ function parseRolloutLineToBatch(
     payload,
   });
 
+  if (type === "turn_context") {
+    batch.dynamicTools.push(...dynamicToolsFromPayload(state.sessionId, payload, lineTimestamp));
+  }
+
   if (type === "response_item") {
     const item = payload as ResponseMessagePayload;
     if (item.type !== "message") return;
@@ -383,15 +461,19 @@ function parseRolloutLineToBatch(
 }
 
 function shouldFlush(batch: CodexImportBatch, batchSize: number): boolean {
-  return batch.messages.length >= batchSize || batch.sessions.length >= batchSize || batch.events.length >= batchSize;
+  return batch.messages.length >= batchSize
+    || batch.sessions.length >= batchSize
+    || batch.events.length >= batchSize
+    || batch.dynamicTools.length >= batchSize;
 }
 
 function flushBatch(store: SessionsServiceStore, batch: CodexImportBatch): number {
-  if (batch.sessions.length === 0 && batch.messages.length === 0 && batch.events.length === 0) return 0;
+  if (batch.sessions.length === 0 && batch.messages.length === 0 && batch.events.length === 0 && batch.dynamicTools.length === 0) return 0;
   const result = store.importSessionBatch({
     sessions: batch.sessions.splice(0),
     messages: batch.messages.splice(0),
     events: batch.events.splice(0),
+    dynamicTools: batch.dynamicTools.splice(0),
   });
   return result.messagesInserted;
 }
@@ -407,7 +489,7 @@ async function streamCodexRolloutFile(
   const hash = createHash("sha1");
   const prefixHash = cursor ? createHash("sha1") : null;
   const batchSize = Math.max(1, Math.floor(options.batchSize ?? DEFAULT_IMPORT_BATCH_SIZE));
-  const batch: CodexImportBatch = { sessions: [], messages: [], events: [] };
+  const batch: CodexImportBatch = { sessions: [], messages: [], events: [], dynamicTools: [] };
   const state: StreamImportState = {
     sessionId: cursor ? store.findOriginByPath(filePath)?.sessionId ?? rolloutSessionIdFromName(filePath) : rolloutSessionIdFromName(filePath),
     sessionInitialized: cursor ? true : false,

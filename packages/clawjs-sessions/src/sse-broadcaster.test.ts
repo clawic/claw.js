@@ -10,6 +10,7 @@ import { clawDefaultStreamingBackpressurePolicy, clawSessionEvents, estimateUtf8
 import { buildSessionsApp } from "./app.ts";
 import { SessionsApiClient } from "./client.ts";
 import { loadSessionsConfig } from "./config.ts";
+import { SESSION_JSON_CONTRACT_VERSION } from "./json-contracts.ts";
 import {
   SessionEventBroadcaster,
   type SessionSseWritable,
@@ -34,7 +35,7 @@ class FakeSseRaw extends EventEmitter implements SessionSseWritable {
 }
 
 function event(input: Omit<SessionEvent, "at" | "payload"> & { payload?: unknown }): SessionEvent {
-  return { at: Date.now(), payload: {}, ...input };
+  return { schemaVersion: SESSION_JSON_CONTRACT_VERSION, at: Date.now(), payload: {}, ...input };
 }
 
 function decoded(raw: FakeSseRaw): SessionEvent[] {

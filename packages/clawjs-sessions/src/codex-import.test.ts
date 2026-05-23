@@ -322,6 +322,58 @@ test("Codex import stores structured tool, patch, compaction and unknown events"
   store.close();
 });
 
+test("Codex import persists dynamic tools from turn context with deferred schemas", async () => {
+  const rootDir = tempRoot("clawjs-codex-dynamic-tools-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const codexDir = path.join(rootDir, "codex-sessions");
+  const filePath = writeRollout(codexDir, THREAD_A, "first message");
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:02.000Z",
+    type: "turn_context",
+    payload: {
+      turn_id: "turn-tools",
+      tools: [
+        {
+          name: "exec_command",
+          namespace: "functions",
+          description: "Run a command",
+          input_schema: {
+            type: "object",
+            properties: {
+              cmd: { type: "string" },
+            },
+          },
+        },
+        {
+          name: "mcp__large.tool",
+          description: "Large deferred tool",
+          input_schema: {
+            type: "object",
+            description: "x".repeat(5000),
+          },
+        },
+      ],
+    },
+  });
+  const store = new SessionsServiceStore(dbPath);
+
+  await importCodexSessionsDir(store, codexDir);
+
+  const tools = store.listSessionDynamicTools(THREAD_A);
+  assert.deepEqual(tools.map((tool) => [tool.position, tool.namespace, tool.name, tool.deferLoading]), [
+    [0, "functions", "exec_command", false],
+    [1, "mcp__large", "tool", true],
+  ]);
+  assert.equal(tools[0]?.inputSchemaJson && typeof tools[0].inputSchemaJson === "object", true);
+  assert.equal(tools[1]?.inputSchemaJson, null);
+  assert.equal(tools[1]?.source, "codex.turn_context");
+
+  const expanded = store.listSessionDynamicTools(THREAD_A, { includeDeferredSchemas: true });
+  assert.equal(typeof (expanded[1]?.inputSchemaJson as { description?: string } | null)?.description, "string");
+  assert.equal(store.hydrateSession({ sessionId: THREAD_A, messageLimit: 10 })?.dynamicTools.length, 2);
+  store.close();
+});
+
 test("Codex import and projection rebuild leave the source rollout tree read-only", async () => {
   const rootDir = tempRoot("clawjs-codex-readonly-");
   const dbPath = path.join(rootDir, "sessions.sqlite");

@@ -221,6 +221,70 @@ test("search rebuild indexes sessions.chats from the sessions sidecar", async ()
     assert.equal(sessionsCursor?.watermark, sessionsCursor?.metadata.updatedAt);
   });
 });
+test("sessions.chats rebuild reads the current sessions schema with redacted message text", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-current-sessions-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+    const sessionId = "66666666-7777-4888-9999-aaaaaaaaaaaa";
+    const sessionsStore = new SessionsServiceStore(sessionsDbPath);
+    try {
+      sessionsStore.createSession({
+        id: sessionId,
+        agent: "codex",
+        runtime: "codex-cli",
+        title: "Current schema chat",
+        cwd: workspaceRoot,
+        createdAt: Date.parse("2026-05-20T10:00:00.000Z"),
+      });
+      sessionsStore.appendMessage({
+        id: "current-chat-message-1",
+        sessionId,
+        role: "user",
+        contentText: "current-schema-chat-needle authorization=Bearer searchsecret token=hidden-token",
+        timestamp: Date.parse("2026-05-20T10:01:00.000Z"),
+      });
+      sessionsStore.appendMessage({
+        id: "current-chat-message-2",
+        sessionId,
+        role: "assistant",
+        contentText: "current schema reply stays searchable",
+        timestamp: Date.parse("2026-05-20T10:02:00.000Z"),
+      });
+    } finally {
+      sessionsStore.close();
+    }
+
+    const rebuild = await runCliCapture(["search", "rebuild", "--source", "sessions.chats", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json"], workspaceRoot);
+    assert.equal(rebuild.code, CLI_EXIT_OK, rebuild.stderr || rebuild.stdout);
+    const rebuildPayload = JSON.parse(rebuild.stdout) as {
+      data: { indexedBySource: { "sessions.chats": number } };
+    };
+    assert.equal(rebuildPayload.data.indexedBySource["sessions.chats"], 1);
+
+    const searchStore = new SearchStore(registeredSearchDatabasePath(dataRoot));
+    try {
+      const needle = searchStore.query({ query: "current-schema-chat-needle", sources: ["sessions.chats"] });
+      assert.equal(needle.results.length, 1);
+      assert.equal(needle.results[0]?.id, `sessions.chats:${sessionId}`);
+      assert.equal(needle.results[0]?.resourceId, sessionId);
+      assert.equal(needle.results[0]?.permissions?.redacted, true);
+      assert.equal(JSON.stringify(needle.results[0]).includes("searchsecret"), false);
+      assert.equal(JSON.stringify(needle.results[0]).includes("hidden-token"), false);
+      assert.equal(searchStore.query({ query: "searchsecret", sources: ["sessions.chats"] }).results.length, 0);
+      assert.equal(searchStore.query({ query: "hidden-token", sources: ["sessions.chats"] }).results.length, 0);
+    } finally {
+      searchStore.close();
+    }
+  });
+});
 test("sessions.chats rebuild paginates ties by updated_at and session_id", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-sessions-ties-"));
   const dataRoot = path.join(workspaceRoot, "data");
@@ -442,6 +506,8 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     assert.equal(result?.fragments?.some((fragment) => fragment.snippet?.includes("session-event-refresh-needle")), true);
     const sessionsDb = new Database(sessionsDbPath);
     try {
+      const hasCurrentSessions = sessionsDb.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get("sessions");
+      if (hasCurrentSessions) sessionsDb.prepare("UPDATE sessions SET archived = 1 WHERE id = ?").run(sessionId);
       sessionsDb.prepare("UPDATE conversation_sessions SET archived = 1 WHERE session_id = ?").run(sessionId);
     } finally {
       sessionsDb.close();
@@ -537,6 +603,79 @@ test("sessions.events service jobs index structured event facets from sessions.s
     const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.events", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
     assert.equal(deleteRun.code, CLI_EXIT_OK, deleteRun.stderr || deleteRun.stdout);
     const afterDelete = await runCliCapture(["search", "query", "structured-event-boom", "--source", "sessions.events", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
+  });
+});
+
+test("sessions.turns service jobs index turn summaries from sessions.sqlite", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-session-turn-docs-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+    const sessionsStore = new SessionsServiceStore(sessionsDbPath);
+    const sessionId = "55555555-6666-4777-8888-999999999999";
+    try {
+      sessionsStore.createSession({ id: sessionId, agent: "codex", runtime: "codex-cli", title: "Turn Search" });
+      sessionsStore.appendSessionEvent({
+        sessionId,
+        turnId: "turn-failed",
+        callId: "call-1",
+        eventKind: "tool_output",
+        eventType: "response_item.function_call_output",
+        timestamp: Date.parse("2026-05-18T10:00:00.000Z"),
+        sourceNativeId: "rollout::line:20",
+        payloadJson: { name: "exec_command", status: "failed", output: "turn-summary-boom" },
+        renderedSummary: "turn-summary-boom",
+        searchableText: "turn-summary-boom exit code 1",
+      });
+      sessionsStore.rebuildSessionProjection(sessionId);
+    } finally {
+      sessionsStore.close();
+    }
+
+    const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "sessions.turns", "--session-id", sessionId, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { sessionId?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item?.source, "sessions.turns");
+    assert.equal(scheduledPayload.data.item?.operation, "upsert");
+    assert.equal(scheduledPayload.data.item?.resourceId, sessionId);
+    assert.equal(scheduledPayload.data.item?.payload?.sessionId, sessionId);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.turns", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK, serviceRun.stderr || serviceRun.stdout);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.deepEqual(
+      serviceRunPayload.data.worker?.items.map((entry) => ({ source: entry.source, operation: entry.operation, status: entry.status, indexed: entry.indexed })),
+      [{ source: "sessions.turns", operation: "upsert", status: "done", indexed: 1 }],
+    );
+
+    const query = await runCliCapture(["search", "query", "failed", "--source", "sessions.turns", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK, query.stderr || query.stdout);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; resourceId?: string; metadata?: { turnId?: string; status?: string; hasFailedTool?: boolean } }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === sessionId);
+    assert.equal(result?.source, "sessions.turns");
+    assert.equal(result?.metadata?.turnId, "turn-failed");
+    assert.equal(result?.metadata?.status, "failed");
+    assert.equal(result?.metadata?.hasFailedTool, true);
+
+    const deleted = await runCliCapture(["search", "changes", "schedule", "delete", "--source", "sessions.turns", "--session-id", sessionId, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.turns", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK, deleteRun.stderr || deleteRun.stdout);
+    const afterDelete = await runCliCapture(["search", "query", "failed", "--source", "sessions.turns", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
   });
 });

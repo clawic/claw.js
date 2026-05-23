@@ -3,12 +3,14 @@ import type {
   SessionMessageRecord,
   SessionRecord,
   SessionStructuredEventRecord,
+  SessionTurnSummaryRecord,
 } from "./types.ts";
 import type { SessionsServiceStore } from "./store.ts";
 import { indexedTextWasRedacted, redactSearchableText } from "./redaction.ts";
 
 export const SESSIONS_CHATS_SEARCH_SOURCE = "sessions.chats";
 export const SESSIONS_EVENTS_SEARCH_SOURCE = "sessions.events";
+export const SESSIONS_TURNS_SEARCH_SOURCE = "sessions.turns";
 
 export interface SessionSearchDocumentInput {
   id: string;
@@ -37,11 +39,12 @@ export interface SessionSearchWritableStore {
 }
 
 export interface IndexSessionsForSearchInput {
-  sessionsStore: Pick<SessionsServiceStore, "getSession" | "listSessions" | "listMessages" | "listSessionEvents">;
+  sessionsStore: Pick<SessionsServiceStore, "getSession" | "listSessions" | "listMessages" | "listSessionEvents" | "listTurnSummaries">;
   searchStore: SessionSearchWritableStore;
   sessionId?: string;
   includeChats?: boolean;
   includeEvents?: boolean;
+  includeTurns?: boolean;
   batchSize?: number;
 }
 
@@ -49,18 +52,21 @@ export interface IndexSessionsForSearchResult {
   sessionsIndexed: number;
   messagesIndexed: number;
   eventsIndexed: number;
+  turnsIndexed: number;
   documentsIndexed: number;
 }
 
 export function indexSessionsForSearch(input: IndexSessionsForSearchInput): IndexSessionsForSearchResult {
   const includeChats = input.includeChats !== false;
   const includeEvents = input.includeEvents !== false;
+  const includeTurns = input.includeTurns !== false;
   const batchSize = clampBatchSize(input.batchSize);
   const sessions = input.sessionId
     ? [input.sessionsStore.getSession(input.sessionId)].filter((session): session is SessionRecord => Boolean(session))
     : listAllSessions(input.sessionsStore, batchSize);
   let messagesIndexed = 0;
   let eventsIndexed = 0;
+  let turnsIndexed = 0;
   let documentsIndexed = 0;
 
   for (const session of sessions) {
@@ -76,11 +82,19 @@ export function indexSessionsForSearch(input: IndexSessionsForSearchInput): Inde
         eventsIndexed += batch.length;
       }
     }
+    if (includeTurns) {
+      const turns = input.sessionsStore.listTurnSummaries(session.id);
+      if (turns.length) {
+        documentsIndexed += input.searchStore.upsertDocuments(turns.map((turn) => turnSearchDocument(session, turn)));
+        turnsIndexed += turns.length;
+      }
+    }
   }
   return {
     sessionsIndexed: sessions.length,
     messagesIndexed,
     eventsIndexed,
+    turnsIndexed,
     documentsIndexed,
   };
 }
@@ -195,6 +209,59 @@ function eventSearchDocument(session: SessionRecord, event: SessionStructuredEve
     },
     permissions: { canOpen: true, canPreview: true, redacted: false },
     rankingHints: hasFailedTool ? { importance: 2 } : undefined,
+  };
+}
+
+function turnSearchDocument(session: SessionRecord, turn: SessionTurnSummaryRecord): SessionSearchDocumentInput {
+  const rawBody = [
+    turn.title,
+    turn.status,
+    turn.promptPreview,
+    turn.responsePreview,
+    turn.summary ? JSON.stringify(turn.summary) : null,
+    turn.failedToolCallCount > 0 ? "failed tool" : null,
+    turn.diffFileCount > 0 ? "diff patch" : null,
+    turn.webSearchCount > 0 ? "web search" : null,
+    turn.compacted || turn.hasCompaction ? "compaction" : null,
+  ].filter(Boolean).join("\n");
+  const body = redactSearchableText(rawBody);
+  const redacted = indexedTextWasRedacted(rawBody, body);
+  return {
+    id: `${SESSIONS_TURNS_SEARCH_SOURCE}:${session.id}:${turn.turnId}`,
+    source: SESSIONS_TURNS_SEARCH_SOURCE,
+    shard: session.projectId ?? session.projectPath ?? "default",
+    domain: "sessions",
+    type: "turn",
+    resourceId: session.id,
+    title: turn.title ?? session.title,
+    subtitle: turn.status,
+    snippet: body || undefined,
+    body,
+    path: `session:${session.id}`,
+    updatedAt: new Date(turn.completedAt ?? turn.startedAt).toISOString(),
+    metadata: {
+      sessionId: session.id,
+      turnId: turn.turnId,
+      projectId: session.projectId,
+      projectPath: session.projectPath,
+      agent: session.agent,
+      runtime: session.runtime,
+      status: turn.status,
+      hasDiff: turn.diffFileCount > 0,
+      hasFailedTool: turn.failedToolCallCount > 0,
+      hasWebSearch: turn.webSearchCount > 0,
+      hasCompaction: turn.hasCompaction || turn.compacted,
+      toolCallCount: turn.toolCallCount,
+      failedToolCallCount: turn.failedToolCallCount,
+      diffFileCount: turn.diffFileCount,
+      webSearchCount: turn.webSearchCount,
+      subagentCount: turn.subagentCount,
+      compacted: turn.compacted,
+      aborted: turn.aborted,
+      interrupted: turn.interrupted,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted },
+    rankingHints: turn.failedToolCallCount > 0 ? { importance: 2 } : undefined,
   };
 }
 

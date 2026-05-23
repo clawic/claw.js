@@ -62,6 +62,7 @@ backfill jobs.
 | `commands` | `commands` | command registry projected into `search.sqlite` | implemented |
 | `sessions.chats` | `sessions` | `sessions.sqlite` projected into `search.sqlite` with per-session refresh jobs | implemented |
 | `sessions.events` | `sessions` | structured session events from `sessions.sqlite` projected into `search.sqlite` with per-session refresh jobs | implemented |
+| `sessions.turns` | `sessions` | turn summaries from `sessions.sqlite` projected into `search.sqlite` with per-session refresh jobs | implemented |
 | `database.records` | `database` | `core.sqlite` records projected into `search.sqlite` | implemented |
 | `work.items` | `work` | tasks, projects, goals, people, inbox, events, decisions, assignments, handoffs, approvals, and related work records from `core.sqlite` | implemented initial adapter |
 | `documents.blocks` | `documents` | `core.sqlite` documents and document blocks projected into `search.sqlite` | implemented initial adapter |
@@ -98,6 +99,43 @@ backfill jobs.
 | `native.system` | `native` | signed-host native app/system snapshots with brokered actions | implemented opt-in snapshot adapter, `full`, off by default; no direct native access from framework |
 | `web.ingested` | `web` | bounded explicit web cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
 | `external.cache` | `external` | bounded local provider cache ingestion with per-cache-file refresh jobs and text section fragments | implemented opt-in adapter, `full`, off by default |
+
+## Session Search Sources
+
+`sessions.chats`, `sessions.events`, and `sessions.turns` are rebuildable Search projections from
+`sessions.sqlite`; they do not index external rollout/session files directly.
+Per-session refresh jobs tombstone stale documents for that session and then
+reinsert the current message/event/turn projection.
+
+`sessions.chats` indexes visible messages using redacted searchable text, while
+the canonical visible transcript remains in the session service. Facets include
+`sessionId`, `projectId`, `projectPath`, `agent`, `runtime`, `role`, and
+`dateRange`.
+
+`sessions.events` indexes structured events from `session_events`, including
+tool outputs, patches, web/search lifecycle events, compaction, goals, and
+unknown events. Facets include `sessionId`, `projectId`, `projectPath`,
+`agent`, `runtime`, `eventKind`, `eventType`, `toolName`, `status`, `hasDiff`,
+`hasFailedTool`, `hasWebSearch`, `hasCompaction`, `hasGoal`, and `dateRange`.
+
+The direct session service search endpoints support the same core constraints
+for sessions:
+
+- Message search: `projectId`, `projectPath`, `agent`, `fromTimestamp`,
+  `toTimestamp`, and `limit`.
+- Event search: `sessionId`, `eventKind`, `eventType`, `toolName`, `status`,
+  `hasDiff`, `hasFailedTool`, `hasWebSearch`, `hasCompaction`, `hasGoal`,
+  `fromTimestamp`, `toTimestamp`, and `limit`.
+
+Root Search accepts `dateRange` filters over document `updatedAt` for these
+sources. Supported forms are `{ from, to }`, `[from, to]`, and the aliases
+`fromUpdatedAt`/`updatedFrom`/`dateFrom` and
+`toUpdatedAt`/`updatedTo`/`dateTo`.
+
+`sessions.turns` indexes `session_turn_summaries` so Root Search can retrieve
+turn-level summaries without scanning all events. Facets include `sessionId`,
+`projectId`, `projectPath`, `agent`, `runtime`, `status`, `hasDiff`,
+`hasFailedTool`, `hasWebSearch`, `hasCompaction`, and `dateRange`.
 
 ## CLI
 

@@ -2,6 +2,24 @@
 
 Multi-agent session mirror with FTS5 search, native-storage adapters, and HTTP service for ClawJS.
 
+## Sidecar model
+
+`sessions.sqlite` is the fast local mirror for session headers, visible
+messages, structured events, turn summaries, sidebar bootstrap, Search
+projection, and deterministic memory-base extracts. External runtime transcript
+files are read-only import sources; rebuilds mirror or reproject data into the
+sidecar and must not write back to the external source tree.
+
+Visible message text is preserved in `session_messages.content_text`.
+Search uses separate redacted text (`session_messages.searchable_text`,
+`fts_session_messages`, and redacted event summaries) so previews and FTS do
+not need to index common credential patterns.
+
+Sidebar, project-scoped session lists, transcript hydration, and turn-event
+expansion are guarded as hot-path query contracts. Keep those reads
+index-backed and bounded; `src/session-query-contract.test.ts` verifies the
+expected SQLite plans and fails on temporary b-tree sorts in those paths.
+
 ## Realistic fixtures
 
 `seedRealisticSessionsFixture(store, { profile: "large" })` in

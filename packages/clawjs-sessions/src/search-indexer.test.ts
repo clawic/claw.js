@@ -64,6 +64,7 @@ test("indexSessionsForSearch indexes messages and structured events with session
       renderedSummary: "patched file",
       searchableText: "patched file",
     });
+    sessionsStore.rebuildSessionProjection("session-1");
 
     const result = indexSessionsForSearch({ sessionsStore, searchStore, batchSize: 2 });
 
@@ -71,7 +72,8 @@ test("indexSessionsForSearch indexes messages and structured events with session
       sessionsIndexed: 1,
       messagesIndexed: 2,
       eventsIndexed: 2,
-      documentsIndexed: 4,
+      turnsIndexed: 1,
+      documentsIndexed: 5,
     });
 
     const chatSearch = searchStore.query({
@@ -116,6 +118,15 @@ test("indexSessionsForSearch indexes messages and structured events with session
 
     const facets = searchStore.query({ query: "boom", sources: ["sessions.events"] }).facets ?? [];
     assert.equal(facets.some((facet) => facet.id === "eventKind"), true);
+
+    const turnSearch = searchStore.query({
+      query: "failed",
+      sources: ["sessions.turns"],
+      filters: { status: "failed", hasFailedTool: true },
+    });
+    assert.equal(turnSearch.results.length, 1);
+    assert.equal(turnSearch.results[0]?.metadata?.turnId, "turn-1");
+    assert.equal(turnSearch.results[0]?.metadata?.hasFailedTool, true);
   } finally {
     sessionsStore.close();
     searchStore.close();

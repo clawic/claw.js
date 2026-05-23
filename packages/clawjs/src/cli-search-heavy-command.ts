@@ -60,6 +60,7 @@ import {
   scheduleRuntimeEventsSearchEvent,
   scheduleSessionChatSearchEvent,
   scheduleSessionEventsSearchEvent,
+  scheduleSessionTurnsSearchEvent,
   scheduleSheetsWorkbookSearchEvent,
   scheduleSignalsObservationsSearchEvent,
   scheduleSkillsRegistrySearchEvent,
@@ -147,8 +148,10 @@ import {
   ensureNotesPagesSourceIndexed,
   ensureSessionChatResourceIndexed,
   ensureSessionEventsResourceIndexed,
+  ensureSessionTurnsResourceIndexed,
   ensureSessionsEventsSourceIndexed,
   ensureSessionsChatsSourceIndexed,
+  ensureSessionsTurnsSourceIndexed,
   ensureSignalsObservationsResourceIndexed,
   ensureSignalsObservationsSourceIndexed,
   ensureWorkItemResourceIndexed,
@@ -298,6 +301,7 @@ export async function runSearchRebuildCli(input: {
   const commandsIndexed = rebuildsSource("commands") ? importedEnsureCommandSourceIndexed(store) : 0;
   const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
   const sessionEventsIndexed = rebuildsSource("sessions.events") ? ensureSessionsEventsSourceIndexed(store, input.flags) : 0;
+  const sessionTurnsIndexed = rebuildsSource("sessions.turns") ? ensureSessionsTurnsSourceIndexed(store, input.flags) : 0;
   const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const workIndexed = rebuildsSource("work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
     const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
@@ -340,6 +344,7 @@ export async function runSearchRebuildCli(input: {
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
       ...(sessionEventsIndexed > 0 ? ["sessions.events"] : []),
+      ...(sessionTurnsIndexed > 0 ? ["sessions.turns"] : []),
       ...(databaseIndexed > 0 ? ["database.records"] : []),
       ...(workIndexed > 0 ? ["work.items"] : []),
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
@@ -387,7 +392,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + sessionEventsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + surfaceRegistryIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + sessionEventsIndexed + sessionTurnsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + surfaceRegistryIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
       embeddings: 0,
       sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -396,6 +401,7 @@ export async function runSearchRebuildCli(input: {
         commands: commandsIndexed,
         "sessions.chats": sessionsIndexed,
         "sessions.events": sessionEventsIndexed,
+        "sessions.turns": sessionTurnsIndexed,
         "database.records": databaseIndexed,
         "work.items": workIndexed,
         "documents.blocks": documentsIndexed,
@@ -706,6 +712,17 @@ export function scheduleSearchChangedSourceEvent(input: {
       const sessionId = input.flags["session-id"] ?? input.flags["resource-id"] ?? input.flags.session ?? input.positionals[5];
       if (!sessionId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sessions.events --session-id <session-id>" };
       return scheduleSessionEventsSearchEvent({
+        operation: input.operation,
+        sessionId,
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
+    case "sessions.turns": {
+      const sessionId = input.flags["session-id"] ?? input.flags["resource-id"] ?? input.flags.session ?? input.positionals[5];
+      if (!sessionId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sessions.turns --session-id <session-id>" };
+      return scheduleSessionTurnsSearchEvent({
         operation: input.operation,
         sessionId,
         dataDir,
@@ -1086,6 +1103,7 @@ function typedChangedSourceList(): string {
   return [
     "sessions.chats",
     "sessions.events",
+    "sessions.turns",
     "docs.pages",
     "sheets.workbooks",
     "code.symbols",
@@ -1183,6 +1201,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return ensureSessionsChatsSourceIndexed(store, jobFlags);
     case "sessions.events":
       return ensureSessionsEventsSourceIndexed(store, jobFlags);
+    case "sessions.turns":
+      return ensureSessionsTurnsSourceIndexed(store, jobFlags);
     case "database.records":
       return ensureDatabaseRecordsSourceIndexed(store, jobFlags);
     case "work.items":
@@ -1272,6 +1292,8 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
       return indexJobResource(job, "sessionId", (sessionId) => ensureSessionChatResourceIndexed(store, flags, sessionId));
     case "sessions.events":
       return indexJobResource(job, "sessionId", (sessionId) => ensureSessionEventsResourceIndexed(store, flags, sessionId));
+    case "sessions.turns":
+      return indexJobResource(job, "sessionId", (sessionId) => ensureSessionTurnsResourceIndexed(store, flags, sessionId));
     case "database.records":
       return ensureDatabaseRecordResourceIndexed(store, flags, job);
     case "work.items":

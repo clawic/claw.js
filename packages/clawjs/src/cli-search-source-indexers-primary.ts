@@ -130,6 +130,7 @@ import { resolveMainDbPath, resolveSessionsDbPath } from "./cli-search-source-in
 
 export const SESSIONS_CHATS_INDEX_CURSOR_VERSION = 2;
 export const SESSIONS_EVENTS_INDEX_CURSOR_VERSION = 1;
+export const SESSIONS_TURNS_INDEX_CURSOR_VERSION = 1;
 
 export interface SessionsChatsIndexCursor {
   updatedAt: string;
@@ -139,6 +140,45 @@ export interface SessionsChatsIndexCursor {
 export interface SessionsEventsIndexCursor {
   timestamp: number;
   eventId: string;
+}
+
+export interface SessionsTurnsIndexCursor {
+  updatedAt: number;
+  sessionId: string;
+  turnId: string;
+}
+
+interface CurrentSessionChatRow {
+  id: string;
+  agent: string;
+  runtime: string | null;
+  runtime_adapter: string | null;
+  runtime_session_id: string | null;
+  machine: string | null;
+  workspace_id: string | null;
+  project_id: string | null;
+  project_path: string | null;
+  title: string;
+  created_at: number;
+  last_message_at: number | null;
+  updated_at_ms: number;
+  message_count: number;
+  pinned: number;
+  archived: number;
+  sidebar_visible: number;
+  branch: string | null;
+  cwd: string | null;
+  status: string;
+  custom_metadata: string | null;
+}
+
+interface CurrentSessionChatMessageRow {
+  id: string;
+  role: string;
+  content_text: string;
+  searchable_text: string | null;
+  timestamp: number;
+  source_native_id: string | null;
 }
 
 export function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
@@ -152,10 +192,13 @@ export function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Reco
   }
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
+    if (SearchDocuments.hasTable(db, "sessions") && SearchDocuments.hasTable(db, "session_messages")) {
+      return ensureCurrentSessionsChatsSourceIndexed(db, store, flags);
+    }
     if (!SearchDocuments.hasTable(db, "conversation_sessions")) {
       store.setSourceState("sessions.chats", "degraded", {
         backlog: 0,
-        error: "sessions sidecar does not contain conversation_sessions",
+        error: "sessions sidecar does not contain sessions/session_messages or conversation_sessions",
         lastIndexedAt: new Date().toISOString(),
       });
       return 0;
@@ -217,6 +260,61 @@ export function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Reco
   }
 }
 
+function ensureCurrentSessionsChatsSourceIndexed(db: Database.Database, store: SearchStore, flags: Record<string, string>): number {
+  const batchSize = SearchDocuments.boundedNumberFlag(flags["sessions-index-batch-size"], 100, 1, 1000);
+  const sessionsAfterCursor = db.prepare(`
+    SELECT *, COALESCE(last_message_at, created_at) AS updated_at_ms
+    FROM sessions
+    WHERE archived = 0
+      AND (
+        COALESCE(last_message_at, created_at) > ?
+        OR (COALESCE(last_message_at, created_at) = ? AND id > ?)
+      )
+    ORDER BY COALESCE(last_message_at, created_at) ASC, id ASC
+    LIMIT ?
+  `);
+  const sessionsFromStart = db.prepare(`
+    SELECT *, COALESCE(last_message_at, created_at) AS updated_at_ms
+    FROM sessions
+    WHERE archived = 0
+    ORDER BY COALESCE(last_message_at, created_at) ASC, id ASC
+    LIMIT ?
+  `);
+  const hasSearchableText = hasColumn(db, "session_messages", "searchable_text");
+  const messageRows = db.prepare(`
+    SELECT id, role, content_text, ${hasSearchableText ? "searchable_text" : "NULL AS searchable_text"}, timestamp, source_native_id
+    FROM session_messages
+    WHERE session_id = ?
+    ORDER BY timestamp ASC, rowid ASC
+    LIMIT 50
+  `);
+  let indexed = 0;
+  let cursor = sessionsChatsIndexCursor(store);
+  while (true) {
+    const cursorUpdatedAt = cursor ? Date.parse(cursor.updatedAt) : NaN;
+    const sessions = cursor && Number.isFinite(cursorUpdatedAt)
+      ? sessionsAfterCursor.all(cursorUpdatedAt, cursorUpdatedAt, cursor.sessionId, batchSize) as CurrentSessionChatRow[]
+      : sessionsFromStart.all(batchSize) as CurrentSessionChatRow[];
+    if (sessions.length === 0) break;
+    for (const session of sessions) {
+      const messages = messageRows.all(session.id) as CurrentSessionChatMessageRow[];
+      store.upsertDocument(currentSessionChatSearchDocument(session, messages));
+    }
+    const lastSession = sessions.at(-1);
+    if (lastSession) {
+      cursor = { updatedAt: new Date(lastSession.updated_at_ms).toISOString(), sessionId: lastSession.id };
+      store.setCursor(sessionsChatsCursorInput(cursor, batchSize));
+    }
+    indexed += sessions.length;
+  }
+  store.setSourceState("sessions.chats", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return indexed;
+}
+
 export function sessionsChatsIndexCursor(store: SearchStore): SessionsChatsIndexCursor | null {
   const cursor = store.getCursor("sessions.chats");
   const metadata = cursor?.metadata ?? {};
@@ -250,6 +348,9 @@ export function ensureSessionChatResourceIndexed(store: SearchStore, flags: Reco
   if (!fs.existsSync(dbPath)) return 0;
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   try {
+    if (SearchDocuments.hasTable(db, "sessions") && SearchDocuments.hasTable(db, "session_messages")) {
+      return ensureCurrentSessionChatResourceIndexed(db, store, sessionId);
+    }
     if (!SearchDocuments.hasTable(db, "conversation_sessions")) return 0;
     const session = db.prepare(`
       SELECT session_id, source, artifact_path, title, cwd, updated_at, snippet, metadata_json, archived, pinned
@@ -280,6 +381,119 @@ export function ensureSessionChatResourceIndexed(store: SearchStore, flags: Reco
   } finally {
     db.close();
   }
+}
+
+function ensureCurrentSessionChatResourceIndexed(db: Database.Database, store: SearchStore, sessionId: string): number {
+  const session = db.prepare(`
+    SELECT *, COALESCE(last_message_at, created_at) AS updated_at_ms
+    FROM sessions
+    WHERE id = ?
+    LIMIT 1
+  `).get(sessionId) as CurrentSessionChatRow | undefined;
+  if (!session || session.archived === 1) {
+    store.tombstone({ source: "sessions.chats", resourceId: sessionId, reason: "session chat missing during Search event refresh" });
+    store.setSourceState("sessions.chats", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 1;
+  }
+  const hasSearchableText = hasColumn(db, "session_messages", "searchable_text");
+  const messages = db.prepare(`
+    SELECT id, role, content_text, ${hasSearchableText ? "searchable_text" : "NULL AS searchable_text"}, timestamp, source_native_id
+    FROM session_messages
+    WHERE session_id = ?
+    ORDER BY timestamp ASC, rowid ASC
+    LIMIT 50
+  `).all(sessionId) as CurrentSessionChatMessageRow[];
+  store.upsertDocument(currentSessionChatSearchDocument(session, messages));
+  store.setSourceState("sessions.chats", "enabled", {
+    backlog: 0,
+    error: null,
+    lastIndexedAt: new Date().toISOString(),
+  });
+  return 1;
+}
+
+function currentSessionChatSearchDocument(session: CurrentSessionChatRow, messages: CurrentSessionChatMessageRow[]): SearchDocumentInput {
+  const metadata = SearchDocuments.parseJsonRecord(session.custom_metadata);
+  const messageTexts = messages.map(currentSessionChatMessageText);
+  const redacted = messages.some((message) => message.searchable_text !== null && message.searchable_text !== message.content_text);
+  const body = [
+    session.title,
+    session.cwd,
+    session.project_path,
+    ...messages.map((message, index) => `${message.role}: ${messageTexts[index] ?? ""}`),
+  ].filter(Boolean).join("\n");
+  const firstMessageText = messageTexts.find((text) => text.trim().length > 0);
+  return {
+    id: `sessions.chats:${session.id}`,
+    source: "sessions.chats",
+    domain: "sessions",
+    type: "chat",
+    resourceId: session.id,
+    title: session.title || `Session ${session.id}`,
+    subtitle: session.cwd ?? session.project_path ?? session.agent,
+    snippet: firstMessageText ?? session.title,
+    body,
+    path: `session:${session.id}`,
+    updatedAt: new Date(session.updated_at_ms).toISOString(),
+    metadata: {
+      ...metadata,
+      sessionId: session.id,
+      projectId: session.project_id,
+      projectPath: session.project_path,
+      workspaceId: session.workspace_id,
+      source: session.agent,
+      agent: session.agent,
+      runtime: session.runtime,
+      runtimeAdapter: session.runtime_adapter,
+      runtimeSessionId: session.runtime_session_id,
+      machine: session.machine,
+      branch: session.branch,
+      cwd: session.cwd,
+      status: session.status,
+      archived: session.archived === 1,
+      pinned: session.pinned === 1,
+      sidebarVisible: session.sidebar_visible === 1,
+      messageCount: session.message_count,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted },
+    rankingHints: {
+      fastPath: 1,
+      pinned: session.pinned === 1 ? 0.2 : 0,
+    },
+    fragments: messages.slice(0, 25).map((message, index) => {
+      const text = messageTexts[index] ?? "";
+      return {
+        id: `sessions.chats:${session.id}:message:${message.id}`,
+        title: message.role,
+        body: text,
+        snippet: text.slice(0, 180),
+        sortOrder: message.timestamp,
+        metadata: {
+          role: message.role,
+          createdAt: new Date(message.timestamp).toISOString(),
+          sourceNativeId: message.source_native_id,
+          redacted: message.searchable_text !== null && message.searchable_text !== message.content_text,
+        },
+      };
+    }),
+    actions: [
+      { id: "open", kind: "open", label: "Open chat", requiresApproval: false },
+      { id: "copy-reference", kind: "copy", label: "Copy chat reference", requiresApproval: false },
+    ],
+  };
+}
+
+function currentSessionChatMessageText(message: CurrentSessionChatMessageRow): string {
+  return message.searchable_text ?? message.content_text;
+}
+
+function hasColumn(db: Database.Database, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
 }
 
 interface SessionEventIndexRow {
@@ -475,6 +689,210 @@ function looksLikeFailedSessionEvent(event: SessionEventIndexRow, payload: Recor
   if (typeof payload.error === "string" && payload.error.trim()) return true;
   const text = `${event.rendered_summary ?? ""}\n${event.searchable_text ?? ""}`.toLowerCase();
   return /\b(exit code|code)\s+([1-9]\d*)\b/.test(text) || /\b(error|failed|failure|traceback)\b/.test(text);
+}
+
+interface SessionTurnIndexRow {
+  session_id: string;
+  turn_id: string;
+  started_at: number;
+  completed_at: number | null;
+  status: string;
+  title: string;
+  session_title: string;
+  prompt_preview: string | null;
+  response_preview: string | null;
+  tool_call_count: number;
+  failed_tool_call_count: number;
+  diff_file_count: number;
+  web_search_count: number;
+  subagent_count: number;
+  compacted: number;
+  has_compaction: number;
+  aborted: number;
+  interrupted: number;
+  event_count: number;
+  updated_at: number;
+  agent: string;
+  runtime: string | null;
+  project_id: string | null;
+  project_path: string | null;
+}
+
+export function ensureSessionsTurnsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveSessionsDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("sessions.turns", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!SearchDocuments.hasTable(db, "session_turn_summaries") || !SearchDocuments.hasTable(db, "sessions")) {
+      store.setSourceState("sessions.turns", "degraded", {
+        backlog: 0,
+        error: "sessions sidecar does not contain session_turn_summaries and sessions",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const batchSize = SearchDocuments.boundedNumberFlag(flags["sessions-index-batch-size"], 100, 1, 1000);
+    const turnsAfterCursor = db.prepare(`
+      SELECT t.*, COALESCE(t.title, s.title) AS title, s.title AS session_title, s.agent, s.runtime, s.project_id, s.project_path
+      FROM session_turn_summaries t
+      JOIN sessions s ON s.id = t.session_id
+      WHERE t.updated_at > ?
+        OR (t.updated_at = ? AND t.session_id > ?)
+        OR (t.updated_at = ? AND t.session_id = ? AND t.turn_id > ?)
+      ORDER BY t.updated_at ASC, t.session_id ASC, t.turn_id ASC
+      LIMIT ?
+    `);
+    const turnsFromStart = db.prepare(`
+      SELECT t.*, COALESCE(t.title, s.title) AS title, s.title AS session_title, s.agent, s.runtime, s.project_id, s.project_path
+      FROM session_turn_summaries t
+      JOIN sessions s ON s.id = t.session_id
+      ORDER BY t.updated_at ASC, t.session_id ASC, t.turn_id ASC
+      LIMIT ?
+    `);
+    let indexed = 0;
+    let cursor = sessionsTurnsIndexCursor(store);
+    while (true) {
+      const turns = cursor
+        ? turnsAfterCursor.all(cursor.updatedAt, cursor.updatedAt, cursor.sessionId, cursor.updatedAt, cursor.sessionId, cursor.turnId, batchSize) as SessionTurnIndexRow[]
+        : turnsFromStart.all(batchSize) as SessionTurnIndexRow[];
+      if (turns.length === 0) break;
+      store.upsertDocuments(turns.map(sessionTurnSearchDocument));
+      const lastTurn = turns.at(-1);
+      if (lastTurn) {
+        cursor = { updatedAt: lastTurn.updated_at, sessionId: lastTurn.session_id, turnId: lastTurn.turn_id };
+        store.setCursor(sessionsTurnsCursorInput(cursor, batchSize));
+      }
+      indexed += turns.length;
+    }
+    store.setSourceState("sessions.turns", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+export function sessionsTurnsIndexCursor(store: SearchStore): SessionsTurnsIndexCursor | null {
+  const cursor = store.getCursor("sessions.turns");
+  const metadata = cursor?.metadata ?? {};
+  if (
+    metadata.version === SESSIONS_TURNS_INDEX_CURSOR_VERSION
+    && typeof metadata.updatedAt === "number"
+    && typeof metadata.sessionId === "string"
+    && typeof metadata.turnId === "string"
+  ) {
+    return { updatedAt: metadata.updatedAt, sessionId: metadata.sessionId, turnId: metadata.turnId };
+  }
+  return null;
+}
+
+export function sessionsTurnsCursorInput(cursor: SessionsTurnsIndexCursor, batchSize: number): { source: string; cursor: string; watermark: string; metadata: Record<string, unknown> } {
+  return {
+    source: "sessions.turns",
+    cursor: `v${SESSIONS_TURNS_INDEX_CURSOR_VERSION}:${cursor.updatedAt}:${cursor.sessionId}:${cursor.turnId}`,
+    watermark: new Date(cursor.updatedAt).toISOString(),
+    metadata: {
+      sidecar: "sessions.sqlite",
+      version: SESSIONS_TURNS_INDEX_CURSOR_VERSION,
+      updatedAt: cursor.updatedAt,
+      sessionId: cursor.sessionId,
+      turnId: cursor.turnId,
+      batchSize,
+    },
+  };
+}
+
+export function ensureSessionTurnsResourceIndexed(store: SearchStore, flags: Record<string, string>, sessionId: string): number {
+  const dbPath = resolveSessionsDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!SearchDocuments.hasTable(db, "session_turn_summaries") || !SearchDocuments.hasTable(db, "sessions")) return 0;
+    const turns = db.prepare(`
+      SELECT t.*, COALESCE(t.title, s.title) AS title, s.title AS session_title, s.agent, s.runtime, s.project_id, s.project_path
+      FROM session_turn_summaries t
+      JOIN sessions s ON s.id = t.session_id
+      WHERE t.session_id = ?
+      ORDER BY t.started_at ASC, t.turn_id ASC
+    `).all(sessionId) as SessionTurnIndexRow[];
+    store.tombstone({ source: "sessions.turns", resourceId: sessionId, reason: "session turns refresh" });
+    if (!turns.length) {
+      store.setSourceState("sessions.turns", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 1;
+    }
+    store.upsertDocuments(turns.map(sessionTurnSearchDocument));
+    store.setSourceState("sessions.turns", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return turns.length;
+  } finally {
+    db.close();
+  }
+}
+
+function sessionTurnSearchDocument(turn: SessionTurnIndexRow): SearchDocumentInput {
+  const body = [
+    turn.title,
+    turn.status,
+    turn.prompt_preview,
+    turn.response_preview,
+    turn.failed_tool_call_count > 0 ? "failed tool" : null,
+    turn.diff_file_count > 0 ? "diff patch" : null,
+    turn.web_search_count > 0 ? "web search" : null,
+    turn.compacted === 1 || turn.has_compaction === 1 ? "compaction" : null,
+  ].filter(Boolean).join("\n");
+  return {
+    id: `sessions.turns:${turn.session_id}:${turn.turn_id}`,
+    source: "sessions.turns",
+    domain: "sessions",
+    type: "turn",
+    resourceId: turn.session_id,
+    title: turn.title || turn.session_title,
+    subtitle: turn.status,
+    snippet: body || undefined,
+    body,
+    path: `session:${turn.session_id}`,
+    updatedAt: new Date(turn.completed_at ?? turn.started_at).toISOString(),
+    metadata: {
+      sessionId: turn.session_id,
+      turnId: turn.turn_id,
+      projectId: turn.project_id,
+      projectPath: turn.project_path,
+      agent: turn.agent,
+      runtime: turn.runtime,
+      status: turn.status,
+      hasDiff: turn.diff_file_count > 0,
+      hasFailedTool: turn.failed_tool_call_count > 0,
+      hasWebSearch: turn.web_search_count > 0,
+      hasCompaction: turn.has_compaction === 1 || turn.compacted === 1,
+      toolCallCount: turn.tool_call_count,
+      failedToolCallCount: turn.failed_tool_call_count,
+      diffFileCount: turn.diff_file_count,
+      webSearchCount: turn.web_search_count,
+      subagentCount: turn.subagent_count,
+      compacted: turn.compacted === 1,
+      aborted: turn.aborted === 1,
+      interrupted: turn.interrupted === 1,
+      eventCount: turn.event_count,
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: turn.failed_tool_call_count > 0 ? { importance: 2 } : undefined,
+  };
 }
 
 export function ensureDatabaseRecordsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {

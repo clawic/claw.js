@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import { resolveClawPersistentSurfacePath, resolveCodexConfigPath, resolveCodexProjectConfigPath } from "@clawjs/core";
 import { DatabaseServiceStore } from "@clawjs/database";
 import { loadSessionsConfig, runSessionsRuntimeJobs, SessionsRuntimeJobStore, type SessionsRuntimeSessionChangedEvent } from "@clawjs/sessions";
-import { scheduleAppsCatalogSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleDesignResourcesSearchEvent, scheduleMcpServersSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSessionChatSearchEvent, scheduleSessionEventsSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { scheduleAppsCatalogSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleDesignResourcesSearchEvent, scheduleMcpServersSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSessionChatSearchEvent, scheduleSessionEventsSearchEvent, scheduleSessionTurnsSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 import {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
@@ -842,6 +842,16 @@ function scheduleSessionChangedSearchEvents(input: V1DataCliInput, paths: Sessio
       source: "sessions.events",
       sessionId: event.sessionId,
       result: scheduleSessionEventsSearchEvent({
+        operation: "upsert",
+        sessionId: event.sessionId,
+        dataDir: paths.dataDir,
+        flags,
+      }),
+    },
+    {
+      source: "sessions.turns",
+      sessionId: event.sessionId,
+      result: scheduleSessionTurnsSearchEvent({
         operation: "upsert",
         sessionId: event.sessionId,
         dataDir: paths.dataDir,

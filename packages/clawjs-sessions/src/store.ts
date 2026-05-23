@@ -110,6 +110,8 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_sessions_status         ON sessions(status, last_message_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_bootstrap
     ON sessions(archived, sidebar_visible, pinned, last_message_at DESC, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_recent_order
+    ON sessions(archived, sidebar_visible, pinned DESC, COALESCE(last_message_at, created_at) DESC, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_agent_runtime_recent
     ON sessions(agent, runtime, last_message_at DESC);
 
@@ -300,7 +302,7 @@ const SCHEMA_DDL = `
 
 `;
 const SESSIONS_SCHEMA_META_TABLE = "sessions_service_schema_meta";
-const SESSIONS_SCHEMA_VERSION = 6;
+const SESSIONS_SCHEMA_VERSION = 7;
 const SESSION_MEMORY_SUMMARY_VERSION = 1;
 
 interface SessionRow {
@@ -777,6 +779,8 @@ export class SessionsServiceStore {
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_runtime_adapter ON sessions(runtime_adapter)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_bootstrap ON sessions(archived, sidebar_visible, pinned, last_message_at DESC, created_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_recent_order ON sessions(archived, sidebar_visible, pinned DESC, COALESCE(last_message_at, created_at) DESC, created_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_project_recent_order ON sessions(archived, sidebar_visible, project_id, pinned DESC, COALESCE(last_message_at, created_at) DESC, created_at DESC)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_project_recent ON sessions(archived, sidebar_visible, project_id, last_message_at DESC, created_at DESC)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_project_active_recent ON sessions(project_id, archived, sidebar_visible, last_message_at DESC)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_agent_runtime_recent ON sessions(agent, runtime, last_message_at DESC)").run();
@@ -1339,6 +1343,9 @@ export class SessionsServiceStore {
       }
       for (const event of input.events ?? []) {
         this.appendSessionEventResult(event);
+      }
+      for (const tool of input.dynamicTools ?? []) {
+        this.upsertSessionDynamicTool(tool);
       }
       if (input.origin) this.upsertOrigin(input.origin);
       return { messagesInserted };

@@ -7,6 +7,51 @@ description: Session storage, normalized stream events, and adapter-aware transp
 
 Session data lives in `.claw/sessions/<session-id>.jsonl`. The store keeps session headers and message events in a line-delimited format, independent of the selected runtime adapter.
 
+## Local Session Service Sidecar
+
+The session service also maintains `sessions.sqlite` as the fast local mirror for
+conversation history, sidebar bootstrap, structured events, turn summaries,
+Search projection, and memory-base extraction. External runtime logs and
+rollout/session files are treated as read-only import sources: the service may
+mirror, index, and rebuild from them, but rebuilds must not modify the external
+source tree.
+
+The hot path is:
+
+- `sessions` for chat headers, sidebar grouping, pinned state, project mapping,
+  archive state, and timestamps.
+- `session_messages` for visible transcript text.
+- `session_messages.searchable_text` plus `fts_session_messages` for redacted
+  local message search.
+- `session_events` plus `fts_session_events` for structured tool, lifecycle,
+  search, goal, compaction, patch, usage, and unknown events.
+- `session_turn_summaries` for bounded turn-level UI and memory inputs.
+- `session_projection_meta` for import/rebuild freshness and partial/failure
+  state.
+- `session_memory_extracts` for deterministic local memory-base summaries.
+- `session_dynamic_tools` for replay/hydration of historical tool
+  capabilities, with deferred schema loading.
+
+Chat opening should use bounded hydration from the service instead of reading a
+whole external transcript. A normal initial open requests a recent message
+window, visible turn summaries, projection metadata, and no full event timeline
+unless the caller explicitly expands events. Older history is loaded with
+offset/limit windows.
+
+The sidebar and transcript hot paths are query-plan contracts, not best-effort
+optimizations. Initial sidebar reads must stay index-backed for active visible
+sessions, project-scoped session lists, and pinned/recent ordering. Transcript
+hydration must clamp caller-provided windows to the service maximum and page
+through `session_messages` by `(session_id, timestamp)`. Turn expansion must
+page through `session_events` by `(session_id, turn_id, timestamp, source_line)`.
+`packages/clawjs-sessions/src/session-query-contract.test.ts` guards these
+contracts with `EXPLAIN QUERY PLAN` checks and fails if a critical query starts
+sorting through a temporary b-tree.
+
+Searchable text is intentionally separate from visible transcript text. The
+service preserves transcript `content_text` for display and reconstruction, but
+indexes redacted message/event text for FTS and Root Search previews.
+
 ## Which Surface To Use
 
 | Need | Use | Why |

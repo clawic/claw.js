@@ -112,13 +112,15 @@ test("sessions schema migrates v2 stores idempotently and adds event projection 
   assert.equal(store.getSessionWithMessages("legacy-session")?.messages[0]?.contentText, "kept authorization=Bearer legacysecret");
   assert.equal(
     (db.prepare("SELECT version FROM sessions_service_schema_meta WHERE id = 'schema'").get() as { version: number }).version,
-    6,
+    7,
   );
 
   assert.deepEqual(["session_events", "fts_session_events", "session_turn_summaries", "session_projection_meta", "session_memory_extracts", "session_dynamic_tools", "fts_session_messages"].every((name) => objectNames(db, "table").includes(name)), true);
   assert.equal(objectNames(db, "table").includes("fts_messages"), false);
   assert.deepEqual([
     "idx_sessions_sidebar_bootstrap",
+    "idx_sessions_sidebar_recent_order",
+    "idx_sessions_sidebar_project_recent_order",
     "idx_sessions_sidebar_project_recent",
     "idx_sessions_project_active_recent",
     "idx_sessions_agent_runtime_recent",
@@ -194,7 +196,7 @@ test("sessions schema migrates v2 stores idempotently and adds event projection 
   const reopened = new SessionsServiceStore(dbPath);
   assert.equal(
     (rawDb(reopened).prepare("SELECT version FROM sessions_service_schema_meta WHERE id = 'schema'").get() as { version: number }).version,
-    6,
+    7,
   );
   assert.equal(reopened.getSessionWithMessages("legacy-session")?.messages.length, 1);
   reopened.close();

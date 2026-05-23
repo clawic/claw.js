@@ -77,6 +77,26 @@ export function scheduleSessionEventsSearchEvent(input: {
   });
 }
 
+export function scheduleSessionTurnsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  sessionId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "sessions.turns",
+    operation: input.operation,
+    resourceId: input.sessionId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      sessionId: input.sessionId,
+    },
+  });
+}
+
 export function scheduleDocumentBlocksSearchEvent(input: {
   operation: "upsert" | "delete";
   namespaceId: string;

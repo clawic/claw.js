@@ -493,6 +493,7 @@ export interface ImportSessionBatchInput {
   sessions?: CreateSessionInput[];
   messages?: AppendMessageInput[];
   events?: AppendSessionEventInput[];
+  dynamicTools?: UpsertSessionDynamicToolInput[];
   origin?: UpsertOriginInput | null;
 }
 

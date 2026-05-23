@@ -70,6 +70,7 @@ test("sessions runtime CLI runs Codex import jobs and emits session Search inval
     assert.equal(runPayload.data.worker.items[0]?.status, "done");
     assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.chats" && event.sessionId === THREAD_ID && event.result.ok), true);
     assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.events" && event.sessionId === THREAD_ID && event.result.ok), true);
+    assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.turns" && event.sessionId === THREAD_ID && event.result.ok), true);
 
     const runtimeEvents = await runCliCapture([
       "sessions",
@@ -213,6 +214,7 @@ test("sessions runtime CLI enqueues project-scoped projection rebuild jobs", asy
     assert.equal(runPayload.data.worker.items[0]?.kind, "sessions.rebuild_projections");
     assert.equal(runPayload.data.worker.items[0]?.result.sessionsProcessed, 1);
     assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.events" && event.sessionId === "session-rebuild-cli" && event.result.ok), true);
+    assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.turns" && event.sessionId === "session-rebuild-cli" && event.result.ok), true);
   });
 });
 
