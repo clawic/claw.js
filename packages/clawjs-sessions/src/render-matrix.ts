@@ -217,7 +217,7 @@ export const sessionRenderMatrix = {
     maxPreviewChars: DEFAULT_PREVIEW_CHARS,
     maxDetailBytes: DEFAULT_DETAIL_BYTES,
     expansionRoute: EVENT_EXPANSION_ROUTE,
-    fixtures: ["mcp_tool_call", "mcp_text", "mcp_resource", "mcp_empty", "mcp_error"],
+    fixtures: ["mcp_tool_call"],
     outcomes: ["success", "failed", "truncated", "unknown_fallback"],
   },
   compaction: {

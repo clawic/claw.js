@@ -339,6 +339,7 @@ The docs check script validates that every current export from
     ListAudioResult
     ListGlobalAudioFilter
     ListKanbanFilter
+    ListPendingSessionMemoryExtractionsInput
     ListProjectsFilter
     ListProjectsResult
     ListRecordsOptions
@@ -425,6 +426,7 @@ The docs check script validates that every current export from
     OutcomeStoreOptions
     OutcomeWriteContext
     PROVIDER_STATE_FILE
+    PendingSessionMemoryExtractionRecord
     PersistProviderApiKeyOptions
     PersistProviderApiKeyResult
     PollWatchOptions
@@ -441,6 +443,8 @@ The docs check script validates that every current export from
     RealtimeHubMetrics
     RealtimeHubOptions
     RebuildSessionProjectionResult
+    RebuildSessionMemoryExtractsInput
+    RebuildSessionMemoryExtractsResult
     RebuildSessionProjectionsInput
     RebuildSessionProjectionsResult
     RecordChangeEvent
@@ -507,7 +511,11 @@ The docs check script validates that every current export from
     SESSIONS_DEFAULT_EVENTS_QUEUE_LIMIT
     SESSIONS_DEFAULT_PORT
     SESSIONS_EVENTS_SEARCH_SOURCE
+    SESSIONS_TURNS_SEARCH_SOURCE
+    SESSION_DATABASE_JSON_MAX_BYTES
     SESSION_FILE_EXTENSION
+    SESSION_JSON_CONTRACT_VERSION
+    SESSION_MESSAGE_APPENDED_EVENT_MAX_BYTES
     SKILLS_CONFIG_FILE
     SKILLS_DIR
     SKILLS_HOME_DIR
@@ -545,9 +553,15 @@ The docs check script validates that every current export from
     SessionEventType
     SessionGatewayDescriptor
     SessionMessage
+    SessionDatabaseJsonProjection
+    SessionJsonContractErrorCode
+    SessionJsonContractId
+    SessionJsonParseResult
     SessionMessageRecord
     SessionMessageUpdatedDelta
     SessionMessageUpdatedPayload
+    SessionMemoryExtractRecord
+    SessionMemoryExtractStatus
     SessionOriginRecord
     SessionProjectionMetaRecord
     SessionProjectionStatus
@@ -957,6 +971,9 @@ The docs check script validates that every current export from
     parseOpenClawMemorySearch
     parseOpenClawModelsStatus
     parseOpenClawVersion
+    parseSessionDatabaseProjectionJson
+    parseSessionMessageAppendedEventJson
+    parseSessionServiceEventJson
     parseTranscriptLine
     parseYaml
     patchIntentDomain

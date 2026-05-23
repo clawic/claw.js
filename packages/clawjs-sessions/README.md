@@ -20,6 +20,12 @@ expansion are guarded as hot-path query contracts. Keep those reads
 index-backed and bounded; `src/session-query-contract.test.ts` verifies the
 expected SQLite plans and fails on temporary b-tree sorts in those paths.
 
+`sessionRenderMatrix` is the public render contract for structured session
+events. It maps every event kind to collapsed, active, expanded, everyday, and
+coding disclosure states, with localization keys, payload caps, expansion
+routes, outcomes, and fixtures. `src/render-matrix.test.ts` keeps the matrix
+exhaustive and ensures unknown events render through a visible capped fallback.
+
 ## Realistic fixtures
 
 `seedRealisticSessionsFixture(store, { profile: "large" })` in

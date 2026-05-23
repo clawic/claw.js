@@ -52,6 +52,23 @@ Searchable text is intentionally separate from visible transcript text. The
 service preserves transcript `content_text` for display and reconstruction, but
 indexes redacted message/event text for FTS and Root Search previews.
 
+## Session Render Matrix
+
+Structured session events must render through the exported
+`sessionRenderMatrix` from `@clawjs/sessions`. The matrix covers every
+`SessionStructuredEventKind` and records the producer, payload schema,
+collapsed/active/expanded states, everyday and coding disclosure modes,
+localization keys, preview/detail caps, expansion route, supported outcomes, and
+fixtures. It is intentionally data-first so Clawix can render the same event
+taxonomy without scattering case logic across transcript views.
+
+Unknown events are first-class rows, not dropped data. They render as a visible
+unsupported-event fallback with capped raw payload expansion. Adding a new
+event kind without a matrix row fails TypeScript, and
+`packages/clawjs-sessions/src/render-matrix.test.ts` verifies fixture coverage,
+bounded payload caps, localization-key registration shape, expansion routing,
+and unknown-event fallback behavior.
+
 ## Which Surface To Use
 
 | Need | Use | Why |
