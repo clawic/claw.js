@@ -16,7 +16,7 @@ Native macOS chat client for ClawJS, a port of the iOS app under `apps/chat/ios`
 - Xcode 16 or newer on macOS 26+
 - A running ClawJS Relay reachable from the local machine. Defaults:
   - `relayBaseURL` = `http://127.0.0.1:4410`
-  - `relayTenantId` = `demo-tenant`
+  - `relayIsolationId` = `demo-tenant` legacy compatibility value
   - `relayEmail` = `user@relay.local`
   - `relayPassword` = `relay-user`
 

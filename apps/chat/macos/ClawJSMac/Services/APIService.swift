@@ -61,7 +61,7 @@ final class APIService {
     struct HealthResponse: Codable {
         let status: String
         let relayUrl: String
-        let tenantId: String
+        let relayIsolationId: String
     }
 
     func bootstrap() async throws -> BootstrapPayload {
@@ -69,7 +69,7 @@ final class APIService {
         let token = try await accessToken(for: config)
 
         let projectResponse: RelayProjectsResponse = try await requestJSON(
-            path: tenantPath(config.tenantId, suffix: "/projects"),
+            path: relayIsolationPath(config.relayIsolationId, suffix: "/projects"),
             token: token,
             config: config
         )
@@ -82,7 +82,7 @@ final class APIService {
         for project in projectResponse.projects {
             let projectId = project.projectId
             let projectAgentsResponse: RelayProjectAgentsResponse = try await requestJSON(
-                path: tenantPath(config.tenantId, suffix: "/projects/\(encode(projectId))/agents"),
+                path: relayIsolationPath(config.relayIsolationId, suffix: "/projects/\(encode(projectId))/agents"),
                 token: token,
                 config: config
             )
@@ -115,8 +115,8 @@ final class APIService {
 
             for agentId in agentIds {
                 let projectSessionsResponse: RelaySessionsResponse = try await requestJSON(
-                    path: tenantPath(
-                        config.tenantId,
+                    path: relayIsolationPath(
+                        config.relayIsolationId,
                         suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions"
                     ),
                     token: token,
@@ -169,8 +169,8 @@ final class APIService {
         let config = relayConfig()
         let token = try await accessToken(for: config)
         let response: RelaySessionRecordResponse = try await requestJSON(
-            path: tenantPath(
-                config.tenantId,
+            path: relayIsolationPath(
+                config.relayIsolationId,
                 suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions"
             ),
             method: "POST",
@@ -187,8 +187,8 @@ final class APIService {
         let config = relayConfig()
         let token = try await accessToken(for: config)
         let response: RelaySessionRecordResponse = try await requestJSON(
-            path: tenantPath(
-                config.tenantId,
+            path: relayIsolationPath(
+                config.relayIsolationId,
                 suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions/\(encode(id))"
             ),
             token: token,
@@ -204,8 +204,8 @@ final class APIService {
                     let config = relayConfig()
                     let token = try await accessToken(for: config)
                     var components = URLComponents(url: try makeURL(
-                        tenantPath(
-                            config.tenantId,
+                        relayIsolationPath(
+                            config.relayIsolationId,
                             suffix: "/projects/\(encode(projectId))/agents/\(encode(agentId))/sessions/\(encode(sessionId))/stream"
                         ),
                         config: config
@@ -280,7 +280,7 @@ final class APIService {
         return HealthResponse(
             status: response.status,
             relayUrl: config.baseURL,
-            tenantId: config.tenantId
+            relayIsolationId: config.relayIsolationId
         )
     }
 
@@ -309,10 +309,11 @@ final class APIService {
         var request = URLRequest(url: try makeURL(PersistentSurfaceKeys.apiPath("auth/login"), config: config))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Relay wire compatibility: this legacy field names remote isolation.
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "email": config.email,
             "password": config.password,
-            "tenantId": config.tenantId,
+            "tenantId": config.relayIsolationId,
         ])
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -358,8 +359,8 @@ final class APIService {
         return url
     }
 
-    private func tenantPath(_ tenantId: String, suffix: String) -> String {
-        "/v1/tenants/\(encode(tenantId))\(suffix)"
+    private func relayIsolationPath(_ relayIsolationId: String, suffix: String) -> String {
+        "/v1/tenants/\(encode(relayIsolationId))\(suffix)"
     }
 
     private func encode(_ value: String) -> String {
@@ -370,7 +371,8 @@ final class APIService {
         let defaults = UserDefaults.standard
         return RelayConfig(
             baseURL: defaults.string(forKey: PersistentSurfaceKeys.relayBaseURL) ?? "http://127.0.0.1:4410",
-            tenantId: defaults.string(forKey: PersistentSurfaceKeys.relayTenantId) ?? "demo-tenant",
+            // Relay compatibility default for the legacy remote isolation namespace.
+            relayIsolationId: defaults.string(forKey: PersistentSurfaceKeys.relayIsolationId) ?? "demo-tenant",
             email: defaults.string(forKey: PersistentSurfaceKeys.relayEmail) ?? "user@relay.local",
             password: defaults.string(forKey: PersistentSurfaceKeys.relayPassword) ?? "relay-user"
         )
@@ -379,7 +381,7 @@ final class APIService {
 
 private struct RelayConfig {
     let baseURL: String
-    let tenantId: String
+    let relayIsolationId: String
     let email: String
     let password: String
 }

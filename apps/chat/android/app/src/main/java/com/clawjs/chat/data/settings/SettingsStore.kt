@@ -22,7 +22,8 @@ class SettingsStore(private val context: Context) {
 
     private object Keys {
         val RELAY_BASE_URL = stringPreferencesKey("relayBaseURL")
-        val RELAY_TENANT_ID = stringPreferencesKey("relayTenantId")
+        // Stored key remains the legacy Relay setting; app code uses isolation vocabulary.
+        val RELAY_ISOLATION_ID = stringPreferencesKey("relayTenantId")
         val RELAY_EMAIL = stringPreferencesKey("relayEmail")
         val RELAY_PASSWORD = stringPreferencesKey("relayPassword")
         val APP_LANGUAGE = stringPreferencesKey("appLanguage")
@@ -43,8 +44,8 @@ class SettingsStore(private val context: Context) {
     suspend fun updateRelayBaseUrl(value: String) =
         context.dataStore.edit { it[Keys.RELAY_BASE_URL] = value }
 
-    suspend fun updateRelayTenantId(value: String) =
-        context.dataStore.edit { it[Keys.RELAY_TENANT_ID] = value }
+    suspend fun updateRelayIsolationId(value: String) =
+        context.dataStore.edit { it[Keys.RELAY_ISOLATION_ID] = value }
 
     suspend fun updateRelayEmail(value: String) =
         context.dataStore.edit { it[Keys.RELAY_EMAIL] = value }
@@ -69,7 +70,7 @@ class SettingsStore(private val context: Context) {
 
     private fun Preferences.toSnapshot() = SettingsSnapshot(
         relayBaseUrl = this[Keys.RELAY_BASE_URL] ?: RelayConfig.DEFAULT_BASE_URL,
-        relayTenantId = this[Keys.RELAY_TENANT_ID] ?: RelayConfig.DEFAULT_TENANT_ID,
+        relayIsolationId = this[Keys.RELAY_ISOLATION_ID] ?: RelayConfig.DEFAULT_RELAY_ISOLATION_ID,
         relayEmail = this[Keys.RELAY_EMAIL] ?: RelayConfig.DEFAULT_EMAIL,
         relayPassword = this[Keys.RELAY_PASSWORD] ?: RelayConfig.DEFAULT_PASSWORD,
         appLanguage = this[Keys.APP_LANGUAGE] ?: "",
@@ -82,7 +83,7 @@ class SettingsStore(private val context: Context) {
 
 data class SettingsSnapshot(
     val relayBaseUrl: String = RelayConfig.DEFAULT_BASE_URL,
-    val relayTenantId: String = RelayConfig.DEFAULT_TENANT_ID,
+    val relayIsolationId: String = RelayConfig.DEFAULT_RELAY_ISOLATION_ID,
     val relayEmail: String = RelayConfig.DEFAULT_EMAIL,
     val relayPassword: String = RelayConfig.DEFAULT_PASSWORD,
     val appLanguage: String = "",
@@ -92,5 +93,5 @@ data class SettingsSnapshot(
     val hapticEnabled: Boolean = true,
 ) {
     val relayConfig: RelayConfig
-        get() = RelayConfig(relayBaseUrl, relayTenantId, relayEmail, relayPassword)
+        get() = RelayConfig(relayBaseUrl, relayIsolationId, relayEmail, relayPassword)
 }

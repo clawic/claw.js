@@ -52,7 +52,7 @@ class ApiClient(
 
         val projectsResponse: RelayProjectsResponse = getJson(
             config, token,
-            tenantPath(config.tenantId, "/projects"),
+            relayIsolationPath(config.relayIsolationId, "/projects"),
             RelayProjectsResponse.serializer(),
         )
 
@@ -65,7 +65,7 @@ class ApiClient(
             val projectId = project.projectId
             val projectAgentsResponse: RelayProjectAgentsResponse = getJson(
                 config, token,
-                tenantPath(config.tenantId, "/projects/${encode(projectId)}/agents"),
+                relayIsolationPath(config.relayIsolationId, "/projects/${encode(projectId)}/agents"),
                 RelayProjectAgentsResponse.serializer(),
             )
 
@@ -98,8 +98,8 @@ class ApiClient(
             for (agentId in agentIds) {
                 val sessionsResponse: RelaySessionsResponse = getJson(
                     config, token,
-                    tenantPath(
-                        config.tenantId,
+                    relayIsolationPath(
+                        config.relayIsolationId,
                         "/projects/${encode(projectId)}/agents/${encode(agentId)}/sessions",
                     ),
                     RelaySessionsResponse.serializer(),
@@ -147,8 +147,8 @@ class ApiClient(
         val token = accessToken(config)
         val response: RelaySessionRecordResponse = postJson(
             config, token,
-            tenantPath(
-                config.tenantId,
+            relayIsolationPath(
+                config.relayIsolationId,
                 "/projects/${encode(projectId)}/agents/${encode(agentId)}/sessions",
             ),
             body = RelayCreateSessionRequest(title = title),
@@ -167,8 +167,8 @@ class ApiClient(
         val token = accessToken(config)
         val response: RelaySessionRecordResponse = getJson(
             config, token,
-            tenantPath(
-                config.tenantId,
+            relayIsolationPath(
+                config.relayIsolationId,
                 "/projects/${encode(projectId)}/agents/${encode(agentId)}/sessions/${encode(sessionId)}",
             ),
             RelaySessionRecordResponse.serializer(),
@@ -185,8 +185,8 @@ class ApiClient(
     ): Flow<String> = callbackFlow {
         val config = settingsStore.currentConfig()
         val token = accessToken(config)
-        val url = (config.baseUrl.trimEnd('/') + tenantPath(
-            config.tenantId,
+        val url = (config.baseUrl.trimEnd('/') + relayIsolationPath(
+            config.relayIsolationId,
             "/projects/${encode(projectId)}/agents/${encode(agentId)}/sessions/${encode(sessionId)}/stream",
         ))
             .toHttpUrl()
@@ -273,7 +273,7 @@ class ApiClient(
                     RelayAuthRequest(
                         email = config.email,
                         password = config.password,
-                        tenantId = config.tenantId,
+                        relayIsolationId = config.relayIsolationId,
                     ),
                 ).toRequestBody(jsonMediaType)
             )
@@ -349,8 +349,8 @@ class ApiClient(
             })
         }
 
-    private fun tenantPath(tenantId: String, suffix: String): String =
-        apiPath("tenants/${encode(tenantId)}$suffix")
+    private fun relayIsolationPath(relayIsolationId: String, suffix: String): String =
+        apiPath("tenants/${encode(relayIsolationId)}$suffix")
 
     private fun encode(value: String): String =
         URLEncoder.encode(value, Charsets.UTF_8).replace("+", "%20")

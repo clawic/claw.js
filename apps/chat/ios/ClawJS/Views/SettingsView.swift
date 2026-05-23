@@ -9,7 +9,8 @@ struct SettingsView: View {
     @AppStorage(PersistentSurfaceKeys.appLanguage) private var appLanguage = ""
 
     @AppStorage(PersistentSurfaceKeys.relayBaseURL) private var relayBaseURL = "http://localhost:4410"
-    @AppStorage(PersistentSurfaceKeys.relayTenantId) private var relayTenantId = "demo-tenant"
+    // Relay compatibility default for the legacy remote isolation namespace.
+    @AppStorage(PersistentSurfaceKeys.relayIsolationId) private var relayIsolationId = "demo-tenant"
     @AppStorage(PersistentSurfaceKeys.relayEmail) private var relayEmail = "user@relay.local"
     @AppStorage(PersistentSurfaceKeys.relayPassword) private var relayPassword = "relay-user"
 
@@ -105,13 +106,12 @@ struct SettingsView: View {
                 )
                 Divider().padding(.leading, 52)
 
-                // Tenant field
                 relayField(
                     icon: "building.2.fill",
                     color: .indigo,
-                    label: L10n.Relay.tenant,
-                    text: $relayTenantId,
-                    placeholder: "demo-tenant"
+                    label: L10n.Relay.isolation,
+                    text: $relayIsolationId,
+                    placeholder: "demo-relay-isolation"
                 )
                 Divider().padding(.leading, 52)
 
@@ -248,7 +248,8 @@ struct SettingsView: View {
             return
         }
         relayBaseURL = url
-        if let tenant = json["tenantId"] as? String { relayTenantId = tenant }
+        // Relay wire compatibility: QR payloads may still carry the legacy isolation field.
+        if let isolation = json["tenantId"] as? String { relayIsolationId = isolation }
         if let email = json["email"] as? String { relayEmail = email }
         if let password = json["password"] as? String { relayPassword = password }
         qrStatus = .success

@@ -9,7 +9,8 @@ enum PersistentSurfaceKeys {
     static let soundEnabled = "soundEnabled"
     static let hapticEnabled = "hapticEnabled"
     static let relayBaseURL = "relayBaseURL"
-    static let relayTenantId = "relayTenantId"
+    // Stored key remains the legacy Relay setting; app code uses isolation vocabulary.
+    static let relayIsolationId = "relayTenantId"
     static let relayEmail = "relayEmail"
     static let relayPassword = "relayPassword"
 

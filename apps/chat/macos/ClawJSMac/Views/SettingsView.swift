@@ -6,7 +6,8 @@ struct SettingsView: View {
     @AppStorage(PersistentSurfaceKeys.soundEnabled) private var soundEnabled = true
     @AppStorage(PersistentSurfaceKeys.appLanguage) private var appLanguage = ""
     @AppStorage(PersistentSurfaceKeys.relayBaseURL) private var relayBaseURL = "http://127.0.0.1:4410"
-    @AppStorage(PersistentSurfaceKeys.relayTenantId) private var relayTenantId = "demo-tenant"
+    // Relay compatibility default for the legacy remote isolation namespace.
+    @AppStorage(PersistentSurfaceKeys.relayIsolationId) private var relayIsolationId = "demo-tenant"
     @AppStorage(PersistentSurfaceKeys.relayEmail) private var relayEmail = "user@relay.local"
     @AppStorage(PersistentSurfaceKeys.relayPassword) private var relayPassword = "relay-user"
 
@@ -74,7 +75,7 @@ struct SettingsView: View {
         Form {
             Section("Relay endpoint") {
                 TextField("Base URL", text: $relayBaseURL)
-                TextField("Tenant ID", text: $relayTenantId)
+                TextField("Relay isolation ID", text: $relayIsolationId)
             }
             Section("Credentials") {
                 TextField("Email", text: $relayEmail)

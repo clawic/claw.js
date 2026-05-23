@@ -127,7 +127,7 @@ enum L10n {
     enum Relay {
         static var title: String { tr("relay.title", "Relay Connection") }
         static var url: String { tr("relay.url", "Relay URL") }
-        static var tenant: String { tr("relay.tenant", "Tenant ID") }
+        static var isolation: String { tr("relay.isolation", "Relay isolation ID") }
         static var email: String { tr("relay.email", "Email") }
         static var password: String { tr("relay.password", "Password") }
         static var scanQR: String { tr("relay.scan_qr", "Scan QR Code") }

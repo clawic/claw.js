@@ -10,7 +10,9 @@ import kotlinx.serialization.Serializable
 data class RelayAuthRequest(
     val email: String,
     val password: String,
-    val tenantId: String,
+    // Relay wire compatibility: this legacy field names remote isolation.
+    @SerialName("tenantId")
+    val relayIsolationId: String,
 )
 
 @Serializable

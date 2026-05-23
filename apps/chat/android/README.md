@@ -35,7 +35,7 @@ Defaults match the iOS app:
 | Setting       | Default                 |
 | ------------- | ----------------------- |
 | Base URL      | `http://10.0.2.2:4410`  |
-| Tenant ID     | `demo-tenant`           |
+| Relay isolation ID | `demo-tenant` legacy compatibility value |
 | Email         | `user@relay.local`      |
 | Password      | `relay-user`            |
 

@@ -140,9 +140,9 @@ fun SettingsScreen(container: AppContainer, onBack: () -> Unit) {
                     onChange = { scope.launch { store.updateRelayBaseUrl(it) } },
                 )
                 InlineTextField(
-                    label = "Tenant ID",
-                    value = snapshot.relayTenantId,
-                    onChange = { scope.launch { store.updateRelayTenantId(it) } },
+                    label = "Relay isolation ID",
+                    value = snapshot.relayIsolationId,
+                    onChange = { scope.launch { store.updateRelayIsolationId(it) } },
                 )
                 InlineTextField(
                     label = "Email",
