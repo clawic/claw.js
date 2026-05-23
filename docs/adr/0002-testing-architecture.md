@@ -23,6 +23,9 @@ choices.
   `device`, `live`, and `release`.
 - A normal blocking check uses the `changed` lane. Release uses the `release`
   lane.
+- Canonical runners acquire agent coordination leases before touching shared
+  test resources. Busy resources return `PENDING` quickly and record demand
+  instead of launching duplicate work or blocking idle agents.
 - `live` tests are strict opt-in and must never spend money, send real prompts,
   mutate production data, or contact real services unless the operator sets an
   explicit environment variable for that lane.
@@ -72,6 +75,11 @@ The lane model adds validation work, but it protects everyday performance by kee
 - ClawJS uses Vitest for TypeScript unit and integration tests.
 - Playwright remains the browser and web workflow E2E runner.
 - The public command surface is `npm run test:<lane>`.
+- `scripts/test-lane.mjs` enters through `claw test require` before running a
+  lane and releases the lease with the lane result.
+- `qa/agent-coordination.manifest.json` declares lane commands, resource
+  leases, cost class, fingerprint inputs, external-pending policy, failure
+  actions, and repair policy.
 - Root package tests may remain colocated with source when they are pure unit
   tests. Cross-package, protocol, CLI, storage, daemon, and browser tests live
   under lane-specific test roots.

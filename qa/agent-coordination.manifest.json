@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "repo": "clawjs",
+  "checks": [
+    {
+      "id": "changed",
+      "repo": "clawjs",
+      "lane": "changed",
+      "command": "npm run test:changed",
+      "timeoutSeconds": 900,
+      "costClass": "light",
+      "realServices": false,
+      "pathPatterns": ["**/*"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
+      "resources": [
+        { "id": "repo:clawjs:worktree", "mode": "read" },
+        { "id": "cpu:global:light", "mode": "read" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "report",
+      "failureAction": "Inspect the focused changed-lane output and repair the owning change before rerunning the same fingerprint.",
+      "repairPolicy": "Claim repair ownership for the failing check before broad repair work."
+    },
+    {
+      "id": "fast",
+      "repo": "clawjs",
+      "lane": "fast",
+      "command": "npm run test:fast",
+      "timeoutSeconds": 1800,
+      "costClass": "heavy",
+      "realServices": false,
+      "pathPatterns": ["**/*"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
+      "resources": [
+        { "id": "repo:clawjs:worktree", "mode": "read" },
+        { "id": "cpu:global:heavy", "mode": "write" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "report",
+      "failureAction": "Inspect the fast-lane failure and repair the owning package or guardrail.",
+      "repairPolicy": "Claim repair ownership for the failing check before rerunning the full fast lane."
+    },
+    {
+      "id": "integration",
+      "repo": "clawjs",
+      "lane": "integration",
+      "command": "npm run test:integration",
+      "timeoutSeconds": 3600,
+      "costClass": "heavy",
+      "realServices": false,
+      "pathPatterns": ["**/*"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
+      "resources": [
+        { "id": "repo:clawjs:worktree", "mode": "read" },
+        { "id": "cpu:global:heavy", "mode": "write" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "report",
+      "failureAction": "Inspect integration-package output and repair the failing boundary.",
+      "repairPolicy": "Claim repair ownership for the failing integration boundary before rerun."
+    },
+    {
+      "id": "e2e",
+      "repo": "clawjs",
+      "lane": "e2e",
+      "command": "npm run test:e2e",
+      "timeoutSeconds": 3600,
+      "costClass": "saturating",
+      "realServices": false,
+      "pathPatterns": ["tests/e2e/**", "examples/**", "packages/**"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "tests/e2e/**", "examples/**", "packages/**"],
+      "resources": [
+        { "id": "repo:clawjs:worktree", "mode": "read" },
+        { "id": "browser:playwright:local", "mode": "exclusive" },
+        { "id": "cpu:global:heavy", "mode": "write" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "report",
+      "failureAction": "Inspect the local E2E report and repair the failing browser path.",
+      "repairPolicy": "Claim repair ownership for the failing E2E path before rerun."
+    },
+    {
+      "id": "host",
+      "repo": "clawjs",
+      "lane": "host",
+      "command": "npm run test:host",
+      "timeoutSeconds": 1800,
+      "costClass": "interactive",
+      "realServices": false,
+      "pathPatterns": ["packages/**", "docs/**", "scripts/**"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**"],
+      "resources": [
+        { "id": "host:signed:local", "mode": "exclusive" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "external_pending_without_CLAW_HOST_TEST_COMMAND",
+      "failureAction": "Report EXTERNAL PENDING unless a signed-host command hook is configured.",
+      "repairPolicy": "Do not emulate signed-host validation with framework-only tests."
+    },
+    {
+      "id": "device",
+      "repo": "clawjs",
+      "lane": "device",
+      "command": "npm run test:device",
+      "timeoutSeconds": 1800,
+      "costClass": "interactive",
+      "realServices": false,
+      "pathPatterns": ["packages/**", "docs/**", "scripts/**"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**"],
+      "resources": [
+        { "id": "device:local", "mode": "exclusive" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "external_pending_without_CLAW_DEVICE_TEST_COMMAND",
+      "failureAction": "Report EXTERNAL PENDING unless a device command hook is configured.",
+      "repairPolicy": "Do not emulate physical-device validation with framework-only tests."
+    },
+    {
+      "id": "live",
+      "repo": "clawjs",
+      "lane": "live",
+      "command": "npm run test:live",
+      "timeoutSeconds": 3600,
+      "costClass": "interactive",
+      "realServices": true,
+      "pathPatterns": ["packages/**", "docs/**", "scripts/**"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**"],
+      "resources": [
+        { "id": "external:live-services", "mode": "exclusive" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "blocked_without_CLAW_TEST_LIVE",
+      "failureAction": "Live checks require explicit opt-in and approved disposable external state.",
+      "repairPolicy": "Do not run live checks while repairing unrelated local failures."
+    },
+    {
+      "id": "release",
+      "repo": "clawjs",
+      "lane": "release",
+      "command": "npm run test:release",
+      "timeoutSeconds": 7200,
+      "costClass": "saturating",
+      "realServices": false,
+      "pathPatterns": ["**/*"],
+      "fingerprintInputs": ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**", "tests/**", "examples/**"],
+      "resources": [
+        { "id": "repo:clawjs:worktree", "mode": "read" },
+        { "id": "browser:playwright:local", "mode": "exclusive" },
+        { "id": "cpu:global:saturating", "mode": "exclusive" }
+      ],
+      "resultReuse": { "allowed": false, "validForSeconds": 0 },
+      "externalPendingPolicy": "report_host_or_device_gaps",
+      "failureAction": "Inspect the release lane and repair the first failing boundary before rerunning.",
+      "repairPolicy": "Claim repair ownership for the failing release boundary; do not use release as a tight repair loop."
+    }
+  ]
+}

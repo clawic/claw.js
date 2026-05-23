@@ -50,6 +50,40 @@ Pre-V1 raw JSON responses that predate the registry are migration debt. New or
 materially changed stable commands must use the envelope and include command
 schema/version metadata.
 
+## Agent Resource Coordination
+
+`claw agent-resource` is the shared local ledger for resources that agents can
+otherwise accidentally duplicate or fight over: test lanes, app launches,
+fixture data, ports, CPU-heavy lanes, signed-host validation, and interactive
+surfaces. It records intent, compatible leases, pending demand, heartbeats,
+release status, and recent results in the standard JSON envelope.
+
+```bash
+claw agent-resource plan --repo . --intent my-work --json
+claw agent-resource acquire --resource test:clawjs:changed --mode exclusive --intent my-work --json
+claw agent-resource heartbeat --lease <lease-id> --status running --json
+claw agent-resource release --lease <lease-id> --status passed --json
+claw agent-resource status --json
+claw agent-resource waitlist --resource test:clawjs:changed --intent my-work --json
+claw agent-resource reap --json
+```
+
+`claw test` is a test-specific facade over the same ledger. It does not own
+separate state. `plan` reads `qa/agent-coordination.manifest.json`, `require`
+acquires exclusive check leases, `run` acquires a lease before executing the
+manifest command, and `status` reports the underlying resource ledger.
+
+```bash
+claw test plan --repo . --lane changed --json
+claw test require --repo . --lane changed --checks changed --json
+claw test run --repo . --lane changed --json
+claw test status --repo . --json
+```
+
+If a resource is busy, commands return `PENDING` quickly and record a demand
+instead of spinning. Canonical `npm run test:<lane>` paths call this broker
+before running the lane.
+
 ## Progressive Setup
 
 The base CLI follows [ADR 0031](./adr/0031-progressive-modularity-and-zero-surprise-install.md):
@@ -488,7 +522,7 @@ The plan also names required topology targets: Mac host, Linux host, Windows
 host, headless server, VPS host, mobile client, browser client, self-hosted
 Gateway, and hosted Gateway.
 `inspect remote` is the read-only inspection view that puts remote
-classification, Sync authority/drivers, transport, route contracts, tests,
+classification, authority model for Sync and drivers, transport, route contracts, tests,
 gaps, decision-review status, validation readiness, approval-request readiness,
 closure blockers, and conformance in one JSON payload. The default text output
 also surfaces those closure gates so operators do not need `--json` to see
@@ -783,7 +817,7 @@ Agents V1 ([ADR 0020](./adr/0020-agents-v1-refactor.md)) treats `agents` as the 
 `agent_assignments` as the places where an agent acts: Mac chat, web chat,
 Telegram, support inbox, workflow, automation, subagent, MCP/API, Relay, or a
 custom channel. New agents start with an empty sandbox. Effective access is the
-intersection of agent grants, assignment grants, execution profile sandbox,
+intersection of grants for agents, assignment grants, execution profile sandbox,
 connector policy, host policy, and run scope.
 
 External channels must pass `route-check` before runtime dispatch. External

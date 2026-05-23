@@ -7,6 +7,11 @@ fixtures are synthetic, and any missing physical dependency is recorded in
 Coverage budgets live in `qa/coverage-budgets.json` and are enforced by
 `npm run test:policy`.
 
+Coordination resources live in `qa/agent-coordination.manifest.json` and are
+enforced by the canonical `scripts/test-lane.mjs` runner. A row that requires a
+shared resource must declare it in that manifest before agents use the lane for
+closure evidence.
+
 | Boundary | Primary lane | Release lane | Evidence |
 | --- | --- | --- | --- |
 | Contracts and schemas | `test:fast` | `test:release` | Vitest tests under `packages/*/src`, type tests, generated fixtures |

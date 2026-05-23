@@ -112,6 +112,16 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runVerifyCli({ argv, context, wantsJson });
   }
 
+  if (group === "agent-resource") {
+    const { runAgentResourceCli } = await import("./cli-agent-resource-command.ts");
+    return await runAgentResourceCli({ positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "test") {
+    const { runTestCli } = await import("./cli-test-command.ts");
+    return await runTestCli({ positionals, flags, context, wantsJson, binName });
+  }
+
   if (group === "mac-care") {
     const { runMacCareCli } = await import("./cli-mac-care-command.ts");
     return await runMacCareCli({ argv, positionals, flags, context, wantsJson, binName });

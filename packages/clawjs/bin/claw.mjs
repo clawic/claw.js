@@ -34,6 +34,7 @@ const LOCAL_DATA_LEGACY_GROUPS = new Set([
 ]);
 const RUNTIME_GROUPS = new Set(["chat", "provider", "code", "runtime", "workspace"]);
 const DENSE_GROUP_MODULES = new Map([["patient", "health"], ["patients", "health"], ["health", "health"], ["legal", "legal"], ["erp", "erp"], ["iot", "iot"], ["construction", "construction"], ["labs", "labs-pharma"], ["lab", "labs-pharma"], ["pharma", "labs-pharma"]]);
+const DIRECT_ROUTER_GROUPS = new Set(["agent-resource", "test"]);
 
 function wantsJson() {
   return args.includes("--json");
@@ -224,7 +225,7 @@ if (first === "catalog") {
   const { runCatalogCli } = await import("./catalog-commands.mjs");
   process.exit(await runCatalogCli(args));
 }
-if (first && !DENSE_GROUP_MODULES.has(first) && first !== "domains" && first !== "memory" && first !== "user") {
+if (first && !DIRECT_ROUTER_GROUPS.has(first) && !DENSE_GROUP_MODULES.has(first) && first !== "domains" && first !== "memory" && first !== "user") {
   const { isStableClawCliCommandName, resolveBuiltinCollectionAlias } = await importCoreCompactCatalogs();
   if (!isStableClawCliCommandName(first)) {
   const canonical = resolveBuiltinCollectionAlias(first);

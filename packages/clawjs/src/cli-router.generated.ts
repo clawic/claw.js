@@ -268,6 +268,74 @@ export const GENERATED_CLI_COMMANDS = [
     routeGroup: "host-system-network"
   },
   {
+    name: "agent-resource",
+    kind: "canonical",
+    summary: "Agent coordination ledger for shared tests, app launches, fixture data, CPU budgets, and interactive resources.",
+    usage: "agent-resource plan|acquire|heartbeat|release|status|waitlist|reap",
+    family: "agent",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.agent-resource.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw agent-resource --help"
+    },
+    securityPolicy: "local_write",
+    docs: [
+      "docs/cli.md",
+      "docs/adr/0002-testing-architecture.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0002-testing-architecture.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-agent-resource-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-agent-resource-command.ts",
+      symbol: "runAgentResourceCli"
+    },
+    routeGroup: "inspect-search-governance"
+  },
+  {
+    name: "test",
+    kind: "canonical",
+    summary: "Coordination-aware test planning and requirement acquisition over the shared agent resource ledger.",
+    usage: "test plan|require|status|reap",
+    family: "diagnostics",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.test.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw test --help"
+    },
+    securityPolicy: "local_write",
+    docs: [
+      "docs/cli.md",
+      "docs/testing.md",
+      "docs/testing-matrix.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0002-testing-architecture.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-agent-resource-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-test-command.ts",
+      symbol: "runTestCli"
+    },
+    routeGroup: "inspect-search-governance"
+  },
+  {
     name: "mac",
     kind: "canonical",
     summary: "Mac atlas, coverage, doctor, audit, planning and revert portal.",
@@ -5625,6 +5693,8 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   system: "host-system-network",
   network: "host-system-network",
   "mac-care": "host-system-network",
+  "agent-resource": "inspect-search-governance",
+  test: "inspect-search-governance",
   mac: "host-system-network",
   permissions: "host-system-network",
   wifi: "host-system-network",
@@ -5799,6 +5869,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "accessibility",
   "accounts",
   "agenda",
+  "agent-resource",
   "agents",
   "app",
   "approvals",
@@ -5941,6 +6012,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "team-work",
   "telegram",
   "templates",
+  "test",
   "time",
   "timeline",
   "trackpad",
@@ -7659,6 +7731,7 @@ export const GENERATED_PUBLIC_PORTAL_HELP_ONLY = [
   "accounts"
 ] as const;
 export const GENERATED_JSON_HELP_REQUIRED_COMMANDS = [
+  "agent-resource",
   "audio",
   "code",
   "commitments",
@@ -7691,6 +7764,7 @@ export const GENERATED_JSON_HELP_REQUIRED_COMMANDS = [
   "styles",
   "sync",
   "templates",
+  "test",
   "nodes",
   "gateway"
 ] as const;

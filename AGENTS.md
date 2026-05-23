@@ -113,6 +113,11 @@ npm run test:e2e
 npm run ci
 ```
 
+Canonical test lanes are coordination-aware. Before starting a manual shared
+test, inspect `claw test plan --lane <lane> --json`; if the runner reports
+`PENDING`, do not wait idly or launch the same lane yourself. Record the
+pending status and continue with non-conflicting work until the lease clears.
+
 ## Public Hygiene And Commits
 
 Public repositories must not contain maintainer-private paths, source session or

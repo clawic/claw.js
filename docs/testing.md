@@ -22,6 +22,17 @@ ClawJS uses boundary-based test lanes. The canonical policy is
 - `npm run test:release`: privacy, fast, integration, build, docs, pack, and
   E2E release gate.
 
+Canonical `npm run test:<lane>` commands enter through the agent coordination
+ledger before running. A busy lane returns `PENDING` quickly and records demand
+instead of running a duplicate suite or waiting in a spin loop. Use
+`claw test plan --lane <lane> --json` to inspect the declared checks and
+`claw test status --json` to inspect active leases.
+
+The ClawJS public coordination manifest is
+`qa/agent-coordination.manifest.json`. Each check declares its lane command,
+cost class, real-service risk, path/fingerprint inputs, required resources,
+reuse policy, external-pending policy, failure action, and repair policy.
+
 ## Boundaries
 
 Prefer the narrowest real boundary that proves behavior:
