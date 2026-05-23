@@ -1,6 +1,6 @@
 # Report Governance V1 Checklist
 
-Reference conversation: `019e2733-e325-7d00-921a-75d6a0f7734b`.
+Reference conversation: `source:report-governance-v1`.
 
 This checklist maps the accepted decisions to implementation, documentation,
 and tests. Items marked `EXTERNAL PENDING` require a real GitHub/host

@@ -1,8 +1,8 @@
 # Remote Gateway And Sync Source Decision Audit
 
-Source conversation: `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8`
+Source conversation: `source:remote-gateway-sync`
 
-Reference plan item: `019e3732-c90e-7491-9217-37020c43217e-plan`
+Reference plan item: `plan:remote-gateway-sync`
 
 This audit is the privacy-safe public enumeration of the source decisions for
 ADR 0022. It intentionally records conversation and plan identifiers, not local

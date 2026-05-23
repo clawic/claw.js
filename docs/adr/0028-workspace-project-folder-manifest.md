@@ -24,8 +24,8 @@ shared.
 
 `Project` is the collaborable human work scope. A project has a stable
 `projectId`, a display name, a primary folder, optional referenced folders, and
-resource bindings. A project may exist without an organization. Direct project
-grants are valid.
+resource bindings. A project may exist without an organization. Direct grants
+for project scopes are valid.
 
 `Folder` is a filesystem locator. Folder path and folder name are mutable and
 never grant authority. Moving or renaming a folder must not change the project
@@ -60,7 +60,7 @@ explicit attach, fork, or replace decision.
 The managed project `AGENTS.md` should help tools outside Claw understand that
 the folder belongs to a Claw project and where to look for local instructions.
 It may reference the manifest and safe exported context, but it must not copy
-secret material, sensitive memory, or hidden workspace authority.
+secret material, sensitive memory, or hidden authority from workspace placement.
 
 `claw project attach` on an existing folder must preview detected files,
 manifest state, generated shims, duplicate ids, and proposed writes before the

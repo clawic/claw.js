@@ -70,8 +70,8 @@ import {
 } from "../packages/clawjs-core/src/catalogs.ts";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const sourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
-const sourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
+const sourceConversationId = "source:remote-gateway-sync";
+const sourcePlanId = "plan:remote-gateway-sync";
 
 const requiredDocs = "CONSTITUTION.md docs/adr/0022-remote-gateway-sync-redesign.md docs/governance/remote-gateway-sync/source-audit.md docs/governance/remote-gateway-sync/source-review.json docs/governance/remote-gateway-sync/external-validation-evidence.json docs/governance/remote-gateway-sync/completion.md docs/governance/remote-gateway-sync/decision-matrix.md docs/relay.md docs/decision-map.md docs/interface-matrix.md docs/cli.md".split(" ");
 
@@ -204,7 +204,7 @@ for (const [relativePath, text] of docTexts) {
     fail(`${relativePath} must not include private local session paths`);
   }
 }
-for (const snippet of ["Remote framework access is organized as Coordinator, Gateway, Connector, and", "Gateway projects registered local SDK/service/CLI contracts under", "Iroh is the preferred v1 transport adapter", "External physical/provider validation is explicit", "artifact-bound", "source-bound and approval-request-bound evidence artifact"]) requireText("constitution remote mesh principle", docTexts.get("CONSTITUTION.md") ?? "", snippet);
+for (const snippet of ["Remote framework access is organized as Coordinator, Gateway, Connector, and", "Gateway projects registered local SDK/service/CLI contracts under", "Iroh is the preferred v1 transport adapter", "External physical/provider validation is explicit", "artifact-bound", "source-bound and", "approval-request-bound evidence artifact"]) requireText("constitution remote mesh principle", docTexts.get("CONSTITUTION.md") ?? "", snippet);
 
 for (const snippet of [sourceConversationId, sourcePlanId]) {
   requireText("source decision audit", docTexts.get("docs/governance/remote-gateway-sync/source-audit.md") ?? "", snippet);
@@ -1703,14 +1703,14 @@ const syncAuthorityHandoffReceipt = createSyncAuthorityHandoffReceipt({
   requestedAuthority: "primary",
   createdAt: "2026-05-17T10:05:45.000Z",
 });
-if (!syncAuthorityHandoffReceiptSchema.safeParse(syncAuthorityHandoffReceipt).success) fail("sync authority handoff receipt contract must validate");
-if (syncAuthorityHandoffReceipt.status !== "signed_pending_authority_handoff") fail("sync authority handoff must stay pending without physical authority transfer");
-if (!syncAuthorityHandoffReceipt.externalPending.includes("physical_authority_handoff")) fail("sync authority handoff must mark physical authority transfer external pending");
-if (syncAuthorityHandoffReceipt.physicalAuthorityApplied !== false) fail("sync authority handoff must not claim physical authority transfer by default");
-if (syncAuthorityHandoffReceipt.writes !== false) fail("sync authority handoff receipt must be a no-write contract");
-if (!syncAuthorityHandoffReceipt.requestedResidency.includes("node.server")) fail("sync authority handoff must include target node in requested residency");
-if (syncAuthorityHandoffReceipt.previousAuthority !== manifest.authority) fail("sync authority handoff must record previous manifest authority");
-if (syncAuthorityHandoffReceipt.fromNodeId !== manifest.ownerNodeId) fail("sync authority handoff must record source owner node");
+if (!syncAuthorityHandoffReceiptSchema.safeParse(syncAuthorityHandoffReceipt).success) fail("authority handoff receipt for sync must validate");
+if (syncAuthorityHandoffReceipt.status !== "signed_pending_authority_handoff") fail("authority handoff for sync must stay pending without physical authority transfer");
+if (!syncAuthorityHandoffReceipt.externalPending.includes("physical_authority_handoff")) fail("authority handoff for sync must mark physical authority transfer external pending");
+if (syncAuthorityHandoffReceipt.physicalAuthorityApplied !== false) fail("authority handoff for sync must not claim physical authority transfer by default");
+if (syncAuthorityHandoffReceipt.writes !== false) fail("authority handoff receipt for sync must be a no-write contract");
+if (!syncAuthorityHandoffReceipt.requestedResidency.includes("node.server")) fail("authority handoff for sync must include target node in requested residency");
+if (syncAuthorityHandoffReceipt.previousAuthority !== manifest.authority) fail("authority handoff for sync must record previous manifest authority");
+if (syncAuthorityHandoffReceipt.fromNodeId !== manifest.ownerNodeId) fail("authority handoff for sync must record source owner node");
 
 const offlineCommand = buildRemoteOfflineCommandResult({
   routeId: "remote.chatGateway",

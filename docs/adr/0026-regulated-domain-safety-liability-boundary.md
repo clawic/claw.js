@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. Source conversation:
-`019e3a44-1175-7930-b45c-252f342b5ec2`.
+`source:regulated-domain-safety`.
 
 ## Context
 

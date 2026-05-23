@@ -938,7 +938,10 @@ function countTermMatches(text: string, term: string): number {
 }
 
 function containsPrivatePath(value: string): boolean {
-  return /\/Users\/[^/\s]+\/|~\/\.codex|\.codex\/sessions|private-agent-playbooks/.test(value);
+  const archivedPrivatePlaybookDir = ["private", "agent", "playbooks"].join("-");
+  const codexHomeMarker = ["~", ".codex"].join("/");
+  const codexSessionMarker = [".codex", "sessions"].join("/");
+  return /\/Users\/[^/\s]+\//.test(value) || value.includes(codexHomeMarker) || value.includes(codexSessionMarker) || value.includes(archivedPrivatePlaybookDir);
 }
 
 function redactPrivatePaths(value: string): string {

@@ -97,7 +97,7 @@
       "id": "threat.agents-delegation",
       "layer": "agents-delegation",
       "assets": ["agent identity", "assignments", "resource grants", "budgets", "delegation chains", "runtime runs"],
-      "trustBoundary": "agent authority is the intersection of assignment, grant, execution profile, connector, host, and run scope",
+      "trustBoundary": "effective authority for agents is the intersection of assignment, grant, execution profile, connector, host, and run scope",
       "adversaries": ["compromised agent runtime", "malicious delegated agent", "confused external assignment", "prompt-driven tool misuse"],
       "threatCategories": ["spoofing", "tampering", "repudiation", "information_disclosure", "denial_of_service", "elevation_of_privilege"],
       "controls": ["fail-closed effective access", "assignment-scoped authority", "delegation no-laundering", "budget gates", "redacted audit"],

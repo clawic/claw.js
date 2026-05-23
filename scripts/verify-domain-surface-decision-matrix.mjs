@@ -9,7 +9,7 @@ const text = fs.readFileSync(matrixPath, "utf8");
 const requiredDecisionIds = Array.from({ length: 20 }, (_, index) => `DEC-${String(index + 1).padStart(3, "0")}`);
 const failures = [];
 
-if (!text.includes("019e2b29-7765-78d0-aa05-636f7038f812")) {
+if (!text.includes("source:domain-surface-registry")) {
   failures.push("matrix must cite the source conversation id");
 }
 

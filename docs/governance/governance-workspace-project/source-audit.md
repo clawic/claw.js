@@ -1,6 +1,6 @@
 # Governance, Workspace, And Project Source Decision Audit
 
-Source conversation: `019e3a47-6485-7430-a5a9-97d32166f255`
+Source conversation: `source:governance-workspace-project`
 
 This audit is the public-safe source decision map for the governance,
 workspace/project, and project-folder handoff reset. It records conversation
@@ -30,7 +30,7 @@ review against every `GQ-001` through `GQ-084` row.
 | GQ-005 | `tenant_policy` | `tenant` means technical isolation only. | GOV |
 | GQ-006 | `owner_policy` | Prohibit generic `owner` as an authority field. | GOV |
 | GQ-007 | `company_anchor` | Prefer `organizationId`; keep company terms as business/domain aliases. | GOV |
-| GQ-008 | `agent_owner_refactor` | Replace agent owner authority with `steward` plus `scope`. | AGENT |
+| GQ-008 | `agent_owner_refactor` | Replace authority derived from legacy agent compatibility fields with `steward` plus `scope`. | AGENT |
 | GQ-009 | `scope_model` | Use typed scopes. | GOV |
 | GQ-010 | `profile_policy` | Prohibit bare `profile`; require precise profile vocabulary. | GOV |
 | GQ-011 | `enforcement_level` | Use fail-hard guardrails. | GOV |
@@ -70,7 +70,7 @@ review against every `GQ-001` through `GQ-084` row.
 | GQ-045 | `entity_scope_capability` | Only declared entity types can become scopes. | GOV |
 | GQ-046 | `membership_authority_semantics` | Membership alone is not enough for access. | GOV |
 | GQ-047 | `authority_inheritance` | Authority edges can grant with explicit limits. | GOV |
-| GQ-048 | `orgless_collaboration` | Direct Project grants are valid without an Organization. | GOV |
+| GQ-048 | `orgless_collaboration` | Direct grants for Project scopes are valid without an Organization. | GOV |
 | GQ-049 | `agent_identity_model` | Agents are reusable resources. | AGENT |
 | GQ-050 | `agent_assignment_scope` | Assignment plus grants defines where an agent acts. | AGENT |
 | GQ-051 | `agent_memory_layers` | Agent memory is layered by scope. | AGENT |
@@ -92,7 +92,7 @@ review against every `GQ-001` through `GQ-084` row.
 | GQ-067 | `copied_project_identity` | Preserve copied Project identity but detach it. | HANDOFF |
 | GQ-068 | `manifest_workspace_binding` | Manifest binds by workspace ID, without absolute workspace paths. | HANDOFF |
 | GQ-069 | `external_agent_without_claw` | External agents work from the safe snapshot. | HANDOFF |
-| GQ-070 | `project_folder_authority` | Being inside a Project folder grants no extra authority. | GOV |
+| GQ-070 | `project_folder_authority` | Folder placement inside a Project does not grant extra authority. | GOV |
 | GQ-071 | `handoff_snapshot_refresh` | Refresh/sync handoff in a controlled way. | HANDOFF |
 | GQ-072 | `handoff_snapshot_sensitivity` | Snapshot contains only safe summaries. | HANDOFF |
 | GQ-073 | `duplicate_project_manifest` | One active copy plus detached duplicate. | HANDOFF |

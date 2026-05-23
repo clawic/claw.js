@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. Extended 2026-05-14 by conversation
-`019e25c1-b831-73f2-a717-5690b171d0d4`.
+`source:persistent-surface-registry`.
 
 ## Context
 
@@ -18,7 +18,7 @@ namespaces, deep links, hostnames, ports, and future table/field metadata.
 Generated Markdown and Mermaid views are useful, but they must be renderings
 of programmatic definitions rather than a second source of truth.
 
-The user decision log for conversation `019e25c1-b831-73f2-a717-5690b171d0d4` requires strict enforcement:
+The user decision log for conversation `source:persistent-surface-registry` requires strict enforcement:
 
 - The original scope is all persistent surfaces, not only database schema.
 - The extended scope is all owned and cross-version stable surfaces: any name,

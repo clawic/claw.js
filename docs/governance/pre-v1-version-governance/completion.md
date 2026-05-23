@@ -1,6 +1,6 @@
 # Pre-V1 Version Governance Completion Audit
 
-Source conversation: `019e2b82-6118-7d52-9237-71a3e9ba4e41`.
+Source conversation: `source:pre-v1-version-governance`.
 
 Source session: private session, not published. The active Codex goal contains
 the local session path and requires the source Q/A review before closure.

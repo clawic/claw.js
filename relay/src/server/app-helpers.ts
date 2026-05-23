@@ -74,7 +74,7 @@ function authorizeWorkspace(claims: AuthClaims, params: WorkspaceParams): void {
 export function ensureWorkspaceAccess(claims: AuthClaims, params: WorkspaceParams, db: RelayDatabase): void {
   authorizeWorkspace(claims, params);
   if (claims.deviceId && !db.deviceHasWorkspaceAccess(params.tenantId, claims.deviceId, params.agentId, params.workspaceId)) {
-    throw new Error("Forbidden: workspace grant mismatch");
+    throw new Error("Forbidden: workspace-scoped grant mismatch");
   }
 }
 

@@ -215,7 +215,7 @@ function fixtureBase(overrides = {}) {
   const baseRow = {
     id: "threat.agents",
     layer: "agents-delegation",
-    assets: ["agent grants"],
+    assets: ["grants for agents"],
     trustBoundary: "assignment and grant intersection",
     adversaries: ["malicious agent"],
     threatCategories: ["spoofing", "tampering"],
@@ -274,7 +274,7 @@ function runSelfTest() {
       rows: [{
         id: "threat.agents",
         layer: "agents-delegation",
-        assets: ["agent grants"],
+        assets: ["grants for agents"],
         trustBoundary: "assignment and grant intersection",
         adversaries: ["malicious agent"],
         threatCategories: ["spoofing", "tampering"],

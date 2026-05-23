@@ -13,8 +13,8 @@ import {
 } from "../packages/clawjs-core/src/index.ts";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
-const sourceConversationId = "019e3a54-4629-7c90-b85e-927bf34c4d1b";
-const sourcePlanId = "019e3a65-edb8-7350-ba56-1c5d4e097677-plan";
+const sourceConversationId = "source:connector-governed-context";
+const sourcePlanId = "plan:connector-governed-context";
 
 const requiredDecisionKeys = [
   "scope_shape",

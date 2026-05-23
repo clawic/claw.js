@@ -1,8 +1,8 @@
 # Connector Governed Context Completion Audit
 
-Source conversation: `019e3a54-4629-7c90-b85e-927bf34c4d1b`
+Source conversation: `source:connector-governed-context`
 
-Reference plan item: `019e3a65-edb8-7350-ba56-1c5d4e097677-plan`
+Reference plan item: `plan:connector-governed-context`
 
 Closure state: `complete_with_external_pending`
 

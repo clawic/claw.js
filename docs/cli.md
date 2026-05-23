@@ -66,6 +66,7 @@ claw agent-resource release --lease <lease-id> --status passed --json
 claw agent-resource status --json
 claw agent-resource waitlist --resource test:clawjs:changed --intent my-work --json
 claw agent-resource reap --json
+claw agent-resource bypass --intent my-work --reason "approved partial validation" --resource test:clawjs:changed --json
 ```
 
 `claw test` is a test-specific facade over the same ledger. It does not own
@@ -81,8 +82,18 @@ claw test status --repo . --json
 ```
 
 If a resource is busy, commands return `PENDING` quickly and record a demand
-instead of spinning. Canonical `npm run test:<lane>` paths call this broker
-before running the lane.
+instead of spinning. If a check has `resultReuse.allowed`, a matching valid
+`passed` result satisfies `claw test require` without taking a new lease. A
+matching failed result is returned only as `FAILED_EVIDENCE`; it never satisfies
+passing validation. Failed `claw test run` executions claim repair ownership for
+that check fingerprint, so other agents record pending demand until the owner
+repairs, releases, or goes stale. Canonical `npm run test:<lane>` paths call
+this broker before running the lane.
+
+Bypass is deliberately degraded evidence: `agent-resource bypass` writes an
+audit event with `cleanValidation: false`, and lane runners require
+`CLAW_AGENT_COORDINATION_BYPASS_REASON` before they proceed under
+`CLAW_AGENT_COORDINATION_BYPASS=1`.
 
 ## Progressive Setup
 
@@ -1540,6 +1551,7 @@ claw search query "release notes" --domains web --source-set full --web-root ./w
 claw search sources enable external.cache --source-set full --json
 claw search query "provider thread" --domains external --source-set full --external-root ./provider-cache --json
 claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
+claw search changes schedule upsert --source sessions.turns --session-id <session-id> --json
 claw search changes schedule upsert --source docs.pages --workspace . --path docs/guide.md --json
 claw search changes schedule upsert --source sheets.workbooks --workbook-id forecast-q2 --workspace . --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json

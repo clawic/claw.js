@@ -499,7 +499,7 @@ for (const [relativePath, snippets] of [
     "packages/clawjs-core/src/regulated-domain-safety.test.ts",
   ]],
   ["docs/governance/legal/source-audit.md", [
-    "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
+    "Source conversation: `source:regulated-domain-safety`",
     "Closure state: `active_goal_not_complete`",
     "33 structured decisions",
     "LC-001",
@@ -510,7 +510,7 @@ for (const [relativePath, snippets] of [
     "docs/governance/legal/external-pending.md",
   ]],
   ["docs/governance/legal/external-pending.md", [
-    "Source conversation: `019e3a44-1175-7930-b45c-252f342b5ec2`",
+    "Source conversation: `source:regulated-domain-safety`",
     "Status: `active_goal_not_complete`",
     "LEGAL-EXT-001",
     "all 36 publishable packages",

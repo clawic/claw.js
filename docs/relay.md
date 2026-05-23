@@ -188,7 +188,7 @@ silently widening the external surface.
 External dependencies are represented by `RemoteExternalPendingRegister` and
 the Relay `/v1/remote/external-pending` endpoint. It is a no-write completion
 audit register for physical Iroh, device trust, peer trust, physical Sync
-drivers, physical Sync authority handoff, signed host audit persistence, client
+drivers, physical authority handoff for Sync, signed host audit persistence, client
 storage, provider retrieval, self-hosted and hosted deployment, runtime
 execution, billing meters, and provider/device end-to-end validation.
 The Relay `/v1/remote/external-validation-checklist` endpoint and
@@ -321,7 +321,7 @@ at `/v1/remote/route-contracts` and `claw remote contracts`. Each required
 route binds canonical local contract references to remote entrypoints, keeps
 `parityRequired: true`, and keeps `parallelApiAllowed: false`.
 `claw inspect remote` gives operators and agents the read-only inspection view
-for remote classification, Sync authority/drivers, transport, route contracts,
+for remote classification, authority model for Sync and drivers, transport, route contracts,
 tests, gaps, decision-review status, validation readiness, approval-request
 readiness, closure blockers, and conformance without mutating the Coordinator
 ledger. Its text output includes those closure gates; its default view remains
@@ -426,7 +426,7 @@ The relay persists control-plane metadata only:
 - tenants
 - users and memberships
 - refresh tokens
-- devices, workspace grants, connector pairings, connector enrollments, and connector credentials
+- devices, grants for workspaces, connector pairings, connector enrollments, and connector credentials
 - logical agents, projects, and project-agent assignments
 - registered workspaces discovered from connector `hello` or created as assignments
 - connector connection state
@@ -474,7 +474,7 @@ The materialized workspace remains the execution target. A project is not a work
 
 | Identifier | Owned by | Meaning |
 | --- | --- | --- |
-| `tenantId` | Relay control plane | Tenant boundary for users, connectors, projects, agents, and workspace grants. |
+| `tenantId` | Relay control plane | Tenant boundary for users, connectors, projects, agents, and grants for workspaces. |
 | `projectId` | Relay product model | Shared product or business context exposed through project-scoped routes. |
 | `agentId` | Relay product model | Reusable logical agent role and connector identity. |
 | `assignment` | Relay product model | Concrete `projectId + agentId` pairing that materializes into one runtime workspace. |

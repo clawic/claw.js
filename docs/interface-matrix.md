@@ -382,7 +382,7 @@ local CLI or the SDK instance surface.
 | Project-agent assignments | `-` | `-` | `POST`, `GET`, `DELETE` under `/v1/tenants/:tenantId/projects/:projectId/agents/:agentId...` |
 | Reverse agent-project lookup | `-` | `-` | `GET /v1/tenants/:tenantId/agents/:agentId/projects` |
 | IoT homes / state / actions | `-` | `-` | `GET /v1/tenants/:tenantId/homes`, `GET /v1/tenants/:tenantId/homes/:homeId/state`, `POST /v1/tenants/:tenantId/homes/:homeId/actions` |
-| Workspace grants | `-` | `-` | `POST /v1/admin/tenants/:tenantId/workspace-grants` |
+| Grants for workspaces | `-` | `-` | `POST /v1/admin/tenants/:tenantId/workspace-grants` |
 | Activity / usage telemetry | `-` | `-` | `GET WS/activity`, `GET WS/usage`, admin delete routes |
 
 ### Relay Resource Routes

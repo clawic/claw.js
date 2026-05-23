@@ -87,6 +87,15 @@ function coordinationCommandFailedDiagnostic(action, status) {
   });
 }
 
+function coordinationBypassReasonMissingDiagnostic() {
+  return createDiagnostic("test_lane_coordination_bypass_reason_missing", "CLAW_AGENT_COORDINATION_BYPASS_REASON is required when bypassing the coordination ledger.", {
+    status: "USAGE",
+    location: `scripts/test-lane.mjs:${lane}`,
+    suggestion: "Bypass is allowed only for explicitly marked partial validation.",
+    safeNextStep: "Set CLAW_AGENT_COORDINATION_BYPASS_REASON to a concrete reason or rerun without bypass.",
+  });
+}
+
 function unexpectedFailureDiagnostic(error) {
   return createDiagnostic("test_lane_unexpected_failure", error?.message ?? "unexpected test lane failure", {
     location: `scripts/test-lane.mjs:${lane}`,
@@ -345,8 +354,27 @@ function coordinationPathFlags() {
 function acquireLaneLease() {
   if (coordinationActive) return null;
   if (coordinationBypass) {
+    const reason = process.env.CLAW_AGENT_COORDINATION_BYPASS_REASON;
+    if (!reason) {
+      printTestLaneReport([coordinationBypassReasonMissingDiagnostic()]);
+      throw new LaneExit(2);
+    }
+    const result = runClawJson([
+      "agent-resource",
+      "bypass",
+      "--intent",
+      `test-lane-bypass-${process.pid}`,
+      "--resource",
+      `test-lane:${lane}`,
+      "--reason",
+      reason,
+      ...coordinationPathFlags(),
+    ]);
+    if (result.payload?.data?.status !== "BYPASS_AUDITED") {
+      printTestLaneReport([coordinationCommandFailedDiagnostic("record bypass audit", result.status)]);
+      throw new LaneExit(result.status);
+    }
     console.error("WARNING: CLAW_AGENT_COORDINATION_BYPASS=1; this validation will not count as clean coordinated evidence.");
-    if (!process.env.CLAW_AGENT_COORDINATION_BYPASS_REASON) console.error("WARNING: CLAW_AGENT_COORDINATION_BYPASS_REASON is missing.");
     return null;
   }
   const result = runClawJson([

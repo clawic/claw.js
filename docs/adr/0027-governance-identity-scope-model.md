@@ -113,8 +113,8 @@ The governance graph adds more concepts than a flat owner field, but the default
 - **Validation**: `scripts/governance-scope-guard.mjs` fails missing canonical
   snippets and any unbaselined increase in prohibited governance vocabulary.
   Future implementation checks must cover effective grants, restriction
-  inheritance, delegation intersection, control-without-read, and direct project
-  grants without an organization.
+  inheritance, delegation intersection, control-without-read, and direct grants
+  for project scopes without an organization.
 
 ## Discovery Route
 

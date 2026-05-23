@@ -1,4 +1,4 @@
-// Agent grants: short-lived `svagt_<base64url>` tokens that authorize an
+// Grants for agents: short-lived `svagt_<base64url>` tokens that authorize an
 // agent (CLI, daemon, plugin) to use a specific secret with a specific
 // BusinessCapability and a set of SecretsCapabilities. Token value is shown
 // to the issuer ONCE; only the SHA-256 hash is persisted.

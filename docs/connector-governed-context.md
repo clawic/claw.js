@@ -83,7 +83,7 @@ secret reference value or resolved credential.
 The V1 schema catalog covers Discord, GitLab, GitHub, Google, Airtable,
 Salesforce, HubSpot, Stripe, Notion, Slack, Telegram Bot API, WhatsApp, Apple
 App Store Connect, Amazon Appstore, and RevenueCat. Google Play is modeled as a
-Google subprofile because it shares Google account and project authority.
+Google subprofile because it shares Google account and explicit project-scoped authority.
 
 The store-oriented source references are official provider documentation:
 

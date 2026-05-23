@@ -8,7 +8,7 @@ Accepted.
 
 Secrets is the framework vault for credentials, tokens, private keys, recovery
 material, and connector credentials. The decision thread
-`019e26c5-ab74-7d02-80ce-c0d8d051c676` requires a V1 design closer to a
+`source:secrets-security-v1` requires a V1 design closer to a
 password-manager security model than a permissions-only store. Local processes,
 plugins, connectors, public CLI commands, and agents are not trusted with
 plaintext secrets by default.

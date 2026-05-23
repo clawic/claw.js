@@ -6,7 +6,7 @@ description: Decision-to-evidence matrix for the database-to-CLI domain surface 
 # Domain Surface Decision Matrix
 
 This matrix is the completion ledger for conversation
-`019e2b29-7765-78d0-aa05-636f7038f812`. It records each user decision that
+`source:domain-surface-registry`. It records each user decision that
 defines the database-to-CLI plan and maps it to implementation and validation
 evidence. The private Codex session source stays outside the public repository;
 the conversation id is enough for public traceability.

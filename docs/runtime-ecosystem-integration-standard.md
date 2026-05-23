@@ -42,7 +42,7 @@ All official surface that is visible in the snapshot must be classified. A
 domain can be unsupported, read-only, local-overlay-only, external-pending, or
 blocked, but it cannot be omitted when the runtime exposes it.
 
-## Authority And Sync
+## Authority Model And Replication
 
 Authority is per field and per action:
 

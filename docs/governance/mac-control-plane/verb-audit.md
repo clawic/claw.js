@@ -1,6 +1,6 @@
 # Mac Control Plane Verb Audit
 
-Source conversation: `019e366f-8e14-7e51-8817-9820d2914dc4`
+Source conversation: `source:mac-control-plane`
 
 This audit closes the V1 verb-review requirement for `MCQ-011`. The user
 explicitly rejected treating example verbs as fixed. Each atlas capability must

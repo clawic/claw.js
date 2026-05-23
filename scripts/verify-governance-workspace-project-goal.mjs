@@ -34,7 +34,7 @@ const completionAudit = read(completionAuditPath);
 for (const file of [sourceAuditPath, completionAuditPath]) requireNoPrivatePaths(file);
 
 for (const snippet of [
-  "019e3a47-6485-7430-a5a9-97d32166f255",
+  "source:governance-workspace-project",
   "GQ-058",
   "GQ-059",
   "GQ-060",

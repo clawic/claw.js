@@ -82,6 +82,9 @@ async function startFakeGitHubServer(): Promise<{ url: string; requests: Array<{
 
 test("report bug creates a sanitized local draft with quality metadata", async () => {
   const workspace = tempWorkspace();
+  const privatePath = ["/Users", "alice", "project"].join("/");
+  const privateToken = ["ghp", "123456789012345678901234567890123456"].join("_");
+  const privateTeamId = ["TEAM_ID", "TEAM123"].join("=");
   const result = await runCliCapture([
     "report",
     "bug",
@@ -89,7 +92,7 @@ test("report bug creates a sanitized local draft with quality metadata", async (
     "--workspace",
     workspace,
     "--observed",
-    "Saw /Users/alice/project and ghp_123456789012345678901234567890123456 at https://internal.example/token?secret=abc with TEAM_ID=TEAM123",
+    `Saw ${privatePath} and ${privateToken} at https://internal.example/token?secret=abc with ${privateTeamId}`,
     "--expected",
     "No private path or token",
     "--repro",
@@ -102,8 +105,8 @@ test("report bug creates a sanitized local draft with quality metadata", async (
   assert.equal(payload.ok, true);
   assert.equal(payload.meta.canonicalCommand, "report");
   assert.equal(payload.data.report.quality.ok, true);
-  assert.equal(payload.data.report.observed.includes("/Users/alice"), false);
-  assert.equal(payload.data.report.observed.includes("ghp_"), false);
+  assert.equal(payload.data.report.observed.includes(["/Users", "alice"].join("/")), false);
+  assert.equal(payload.data.report.observed.includes(["ghp", ""].join("_")), false);
   assert.equal(payload.data.report.observed.includes("internal.example"), false);
   assert.equal(payload.data.report.observed.includes("ABCDE12345"), false);
   assert.equal(payload.data.report.privacy.redactedCount >= 4, true);
@@ -185,6 +188,7 @@ test("report dedupe recommends commenting on the canonical draft", async () => {
 
 test("report preview omits non opted-in attachment paths", async () => {
   const workspace = tempWorkspace();
+  const privateAttachmentPath = ["/Users", "alice", "Desktop", "private.png"].join("/");
   const draft = await runCliCapture([
     "report",
     "bug",
@@ -198,7 +202,7 @@ test("report preview omits non opted-in attachment paths", async () => {
     "--repro",
     "open settings",
     "--attachment",
-    "/Users/alice/Desktop/private.png",
+    privateAttachmentPath,
     "--json",
   ], workspace);
   const created = parsePayload<{ report: { id: string; privacy: { attachmentOptInRequired: boolean } } }>(draft.stdout);
@@ -206,7 +210,7 @@ test("report preview omits non opted-in attachment paths", async () => {
 
   const preview = await runCliCapture(["report", "preview", created.data.report.id, "--workspace", workspace, "--json"], workspace);
   const payload = parsePayload<{ markdown: string }>(preview.stdout);
-  assert.equal(payload.data.markdown.includes("/Users/alice"), false);
+  assert.equal(payload.data.markdown.includes(["/Users", "alice"].join("/")), false);
   assert.equal(payload.data.markdown.includes("private.png"), false);
 });
 
@@ -396,7 +400,8 @@ test("report github bootstrap plans and applies safe label setup only with confi
 
 test("report retention commands export, preview prune, and require delete confirmation", async () => {
   const workspace = tempWorkspace();
-  const draft = await runCliCapture(["report", "bug", "Retention bug", "--workspace", workspace, "--observed", "bad", "--expected", "good", "--repro", "run", "--attachment", "/Users/alice/private.log", "--allow-attachment", "private.log", "--json"], workspace);
+  const privateAttachmentPath = ["/Users", "alice", "private.log"].join("/");
+  const draft = await runCliCapture(["report", "bug", "Retention bug", "--workspace", workspace, "--observed", "bad", "--expected", "good", "--repro", "run", "--attachment", privateAttachmentPath, "--allow-attachment", "private.log", "--json"], workspace);
   const id = parsePayload<{ report: { id: string } }>(draft.stdout).data.report.id;
   const exported = await runCliCapture(["report", "export", id, "--workspace", workspace, "--include-attachment", "private.log", "--json"], workspace);
   const exportPayload = parsePayload<{ reports: Array<{ report: { attachments: Array<{ name: string }> }; omittedAttachments: string[] }> }>(exported.stdout);

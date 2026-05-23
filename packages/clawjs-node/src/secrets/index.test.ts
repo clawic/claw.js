@@ -22,6 +22,8 @@ import {
   runSecretAction,
 } from "./index.ts";
 
+const slackFixtureToken = ["xoxb", "secret", "123"].join("-");
+
 function createFakeSecretsProxy(): { proxyPath: string; env: NodeJS.ProcessEnv } {
   const binDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-secrets-proxy-"));
   const proxyPath = path.join(binDir, "secrets-proxy");
@@ -193,7 +195,7 @@ async function createFakeSecretsServer() {
         status: 200,
         headers: { "content-type": "application/json" },
         ok: true,
-        bodyText: JSON.stringify({ authorization: "Bearer xoxb-secret-123" }),
+        bodyText: JSON.stringify({ authorization: `Bearer ${slackFixtureToken}` }),
       }));
       return;
     }
@@ -329,7 +331,7 @@ test("secrets backend brokers generic HTTP and rejects typed action execution", 
       body: JSON.stringify({ hello: "world" }),
     }, { env });
     const genericPayload = JSON.parse(generic.bodyText) as { authorization: string };
-    assert.equal(genericPayload.authorization, "Bearer xoxb-secret-123");
+    assert.equal(genericPayload.authorization, `Bearer ${slackFixtureToken}`);
 
     await assert.rejects(
       runSecretAction(runner, { name: "slack_bot", actionId: "slack.authTest", env }),

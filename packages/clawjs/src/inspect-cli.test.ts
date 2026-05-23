@@ -623,8 +623,8 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.externalValidationReport.items.every((entry) => !entry.clearable && entry.status === "external_pending" && !entry.writes), true);
   assert.equal(remoteInspectPayload.sourceQaReviewTemplate.status, "incomplete");
   assert.equal(remoteInspectPayload.sourceQaReviewTemplate.writes, false);
-  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
-  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.sourceConversationId, "source:remote-gateway-sync");
+  assert.equal(remoteInspectPayload.sourceQaReviewTemplate.sourcePlanId, "plan:remote-gateway-sync");
   assert.equal(remoteInspectPayload.sourceQaReviewTemplate.reviewCount, 23);
   assert.equal(remoteInspectPayload.sourceQaReviewTemplate.requiredSourceQaIds.length, 23);
   assert.deepEqual(remoteInspectPayload.sourceQaReviewTemplate.externalPendingRequiredSourceQaIds, ["QA-002", "QA-004", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
@@ -801,8 +801,8 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   const remoteValidationArtifactPayload = parseCliJson<{ status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; approvalRequestId: string; evidence: Array<{ requirementId: string; approvedRun: boolean; artifactRefs: string[]; acceptedCriteria: string[]; plaintextMaterialIncluded: boolean; writes: boolean }> }>(remoteValidationArtifact.stdout).data;
   assert.equal(remoteValidationArtifactPayload.status, "external_pending");
   assert.equal(remoteValidationArtifactPayload.writes, false);
-  assert.equal(remoteValidationArtifactPayload.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
-  assert.equal(remoteValidationArtifactPayload.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(remoteValidationArtifactPayload.sourceConversationId, "source:remote-gateway-sync");
+  assert.equal(remoteValidationArtifactPayload.sourcePlanId, "plan:remote-gateway-sync");
   assert.equal(remoteValidationArtifactPayload.approvalRequestId, "remote_external_validation_approval_request_request_2026_05_17t10_13_17_000z");
   assert.deepEqual(remoteValidationArtifactPayload.evidence.map((entry) => entry.requirementId), remotePendingRequirementIds);
   assert.equal(remoteValidationArtifactPayload.evidence.every((entry) => !entry.approvedRun && entry.artifactRefs.length === 0 && entry.acceptedCriteria.length === 0 && entry.plaintextMaterialIncluded === false && !entry.writes), true);
@@ -902,8 +902,8 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   const remoteSourceQaTemplatePayload = parseCliJson<{ status: string; writes: boolean; sourceConversationId: string; sourcePlanId: string; requiredSourceQaIds: string[]; externalPendingRequiredSourceQaIds: string[]; reviewCount: number; submissionCommand: string; items: Array<{ qaId: string; decisionKey: string; requirementId: string; reviewed: boolean; disposition: null; evidenceRefs: string[]; reviewedAt: null; writes: boolean }> }>(remoteSourceQaTemplate.stdout).data;
   assert.equal(remoteSourceQaTemplatePayload.status, "incomplete");
   assert.equal(remoteSourceQaTemplatePayload.writes, false);
-  assert.equal(remoteSourceQaTemplatePayload.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
-  assert.equal(remoteSourceQaTemplatePayload.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(remoteSourceQaTemplatePayload.sourceConversationId, "source:remote-gateway-sync");
+  assert.equal(remoteSourceQaTemplatePayload.sourcePlanId, "plan:remote-gateway-sync");
   assert.equal(remoteSourceQaTemplatePayload.reviewCount, 23);
   assert.equal(remoteSourceQaTemplatePayload.requiredSourceQaIds.length, 23);
   assert.deepEqual(remoteSourceQaTemplatePayload.externalPendingRequiredSourceQaIds, ["QA-002", "QA-004", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);

@@ -1,6 +1,6 @@
 // Stores for the Clawix-grade schema. Each Store wraps one or two tables
 // and exposes a typed CRUD surface used by the Secrets resolver and HTTP
-// handlers. Audit and agent grants live in their own files because they
+// handlers. Audit and grants for agents live in their own files because they
 // have heavier behaviour (chain hashing, scoped capabilities).
 
 import {

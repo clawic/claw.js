@@ -1,6 +1,6 @@
 # Mac Control Plane Source Decision Audit
 
-Source conversation: `019e366f-8e14-7e51-8817-9820d2914dc4`
+Source conversation: `source:mac-control-plane`
 
 Private source session and goal references live in the maintainer's local
 Codex goal state. Public docs record only the conversation id and redacted

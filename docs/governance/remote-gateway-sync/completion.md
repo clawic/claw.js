@@ -1,8 +1,8 @@
 # Remote Gateway And Sync Completion Audit
 
-Source conversation: `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8`
+Source conversation: `source:remote-gateway-sync`
 
-Reference plan item: `019e3732-c90e-7491-9217-37020c43217e-plan`
+Reference plan item: `plan:remote-gateway-sync`
 
 Closure state: `active_goal_not_complete`
 
@@ -25,7 +25,7 @@ is implemented, validated, or explicitly blocked as `EXTERNAL PENDING`.
 | RQ-002 | `server_trust_model` | external_pending | Trust modes are modeled in conformance and node trust receipts. | Physical device acceptance remains `device_trust_acceptance` `EXTERNAL PENDING`. |
 | RQ-003 | `remote_surface_parity` | implemented | Registry-wide Relay classification guard, `RemoteSurfaceClassificationReceipt`, `claw remote classify`, Relay classification routes, and executable `claw inspect remote` classify every surfaced node as `remote-safe` or explicit `local-only`, with no `pending` Relay classifications. | None beyond final source-session reread. |
 | RQ-004 | `topology_priority` | external_pending | Personal mesh, personal host/server topology, headless host, self-hosted Gateway, hosted project manifests, Mac host, Linux host, Windows host, VPS host, mobile client, and browser client are explicit provider/device topology targets under one contract. | Real hosted/self-hosted deployment and physical multi-device validation remain `self_hosted_deployment`, `hosted_deployment`, `physical_iroh_handshake`, and `device_trust_acceptance` `EXTERNAL PENDING`. |
-| RQ-005 | `sync_authority_model` | external_pending | `SyncResourceManifest`, `SyncAuthorityHandoffReceipt`, CLI `sync handoff`, and Relay authority handoff route exist. | Physical authority transfer remains `physical_authority_handoff`/provider validation pending. |
+| RQ-005 | `sync_authority_model` | external_pending | `SyncResourceManifest`, `SyncAuthorityHandoffReceipt`, CLI `sync handoff`, and the Relay route for authority handoff exist. | Physical authority transfer remains `physical_authority_handoff`/provider validation pending. |
 | RQ-006 | `remote_secrets_model` | external_pending | Secret references, broker leases, provider receipts, and no-plaintext contracts exist. | Real provider retrieval remains `provider_secret_retrieval` `EXTERNAL PENDING`. |
 | RQ-007 | `transport_contract` | external_pending | Iroh is modeled as v1 adapter while conformance remains transport-agnostic. | Real multi-node Iroh handshake remains `physical_iroh_handshake` `EXTERNAL PENDING`. |
 | RQ-008 | `remote_api_shape` | implemented | `RemoteRouteContractCatalog`, `claw remote contracts`, and Relay route contracts forbid parallel APIs, bind local refs to remote entrypoints, and Relay HTTP tests compare the exact contract route IDs against the core catalog. | Expand per-domain remote-safe conformance as each domain graduates. |
@@ -196,7 +196,7 @@ The goal may be closed only after a final pass confirms:
 1. Every `RQ-001` through `RQ-022` row is implemented, validated, or explicitly
    accepted as `EXTERNAL PENDING`.
 2. The source session for conversation
-   `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8` is re-read one decision-bearing
+   `source:remote-gateway-sync` is re-read one decision-bearing
    answer at a time, and
    `docs/governance/remote-gateway-sync/source-review.json` records disposition and
    evidence refs for `QA-001` through `QA-023`; duplicate Q/A rows are rejected

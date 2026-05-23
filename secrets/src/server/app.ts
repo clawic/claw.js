@@ -5,7 +5,7 @@ import { clawApiPath } from "@clawjs/core";
 //   - Doctor: health + capability map with status granular per area.
 //   - Container CRUD (folders).
 //   - Secret CRUD + versions + fields + notes + attachments.
-//   - Agent grants + leases + policies + ephemeral authorizations.
+//   - Grants for agents + leases + policies + ephemeral authorizations.
 //   - Brokered execute (broker.http and any registered executor).
 //   - Brand sync.
 //   - Audit query + integrity verify.
@@ -978,7 +978,7 @@ async function buildSecretsApp(deps: AppDeps): Promise<FastifyInstance> {
     });
   });
 
-  // ---------- Agent grants ----------
+  // ---------- Grants for agents ----------
 
   app.post(clawApiPath("tenants/:tenantId/grants"), async (req, reply) => {
     await requirePrincipalOrUser(req, reply);

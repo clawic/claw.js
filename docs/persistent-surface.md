@@ -291,7 +291,7 @@ flowchart TD
   claw_contracts_api --> claw_api_sync_conflicts
   claw_api_sync_applications["Sync driver application receipt contract\napiRoute"]
   claw_contracts_api --> claw_api_sync_applications
-  claw_api_sync_authorityHandoffs["Sync authority handoff receipt contract\napiRoute"]
+  claw_api_sync_authorityHandoffs["Authority handoff receipt contract for sync routes\napiRoute"]
   claw_contracts_api --> claw_api_sync_authorityHandoffs
   claw_api_nodes["Node identity and trust contract\napiRoute"]
   claw_contracts_api --> claw_api_nodes
@@ -1477,6 +1477,12 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_system
   claw_cli_command_network["network\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_network
+  claw_cli_command_mac_care["mac-care\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_mac_care
+  claw_cli_command_agent_resource["agent-resource\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_agent_resource
+  claw_cli_command_test["test\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_test
   claw_cli_command_mac["mac\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_mac
   claw_cli_command_permissions["permissions\ncliCommand"]
@@ -1667,6 +1673,10 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_timeline
   claw_cli_command_review["review\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_review
+  claw_cli_command_my_work["my-work\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_my_work
+  claw_cli_command_team_work["team-work\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_team_work
   claw_cli_command_channels["channels\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_channels
   claw_cli_command_telegram["telegram\ncliCommand"]
@@ -1948,6 +1958,8 @@ flowchart TD
   claw_global --> claw_database_audio
   claw_database_search["Search sidecar database\nsidecar"]
   claw_global --> claw_database_search
+  claw_database_macCare["Mac Care sidecar database\nsidecar"]
+  claw_global --> claw_database_macCare
   claw_database_search_table_search_source_sets["search_source_sets\ntable"]
   claw_database_search --> claw_database_search_table_search_source_sets
   claw_database_search_table_search_profiles["search_profiles\ntable"]
@@ -2096,6 +2108,10 @@ flowchart TD
   claw_workspace_command_intents --> claw_workspace_command_intents_ledger
   claw_workspace_slides["slides\nfolder"]
   claw_workspace --> claw_workspace_slides
+  claw_workspace_sheets["sheets\nfolder"]
+  claw_workspace --> claw_workspace_sheets
+  claw_workspace_storage["storage\nfolder"]
+  claw_workspace --> claw_workspace_storage
   claw_workspace_dashboard_database["dashboard-database\nfolder"]
   claw_workspace --> claw_workspace_dashboard_database
   claw_workspace_channel_run["channel run state\nfolder"]
@@ -2558,8 +2574,8 @@ flowchart TD
 | `agents.internalMacAssignment` | `clawix.ui.chat` | `claw.sessions` | internal | Fixture + hermetic E2E for internal Mac assignment |  |  |
 | `agents.externalSupportAssignment` | `claw.remote.client` | `claw.support.inbox` | external | Fake external support assignment fixture |  |  |
 | `agents.mcpApiAssignment` | `claw.mcp.surface` | `claw.runtime.agent` | public | Inspect route and Agents V1 policy tests |  |  |
-| `chat.companionBridge` | `clawix.companion.client` | `claw.sessions` | public | Fixture + hermetic E2E for companion bridge traffic |  |  |
-| `chat.remoteRelay` | `claw.remote.client` | `claw.sessions` | external | Fixture + hermetic Relay E2E without production services |  |  |
+| `chat.companionBridge` | `clawix.companion.client` | `claw.sessions` | public | Fixture + hermetic E2E for companion bridge traffic | Companion chat route from paired companion clients through the Clawix bridge into the framework runtime and sessions service. | packages/clawjs/src/inspect-cli.test.ts and packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift |
+| `chat.remoteRelay` | `claw.remote.client` | `claw.sessions` | external | Fixture + hermetic Relay E2E without production services | Remote chat route from a remote client through Relay and the workspace connector into the same framework runtime and sessions service. | packages/clawjs/src/inspect-cli.test.ts, relay/tests/e2e/relay.e2e.test.ts, and relay/tests/e2e/codex-connector.e2e.test.ts |
 | `remote.chatGateway` | `claw.remote.client` | `claw.sessions` | external | Remote conformance, inspect, and hermetic chat tests |  |  |
 | `remote.searchGateway` | `claw.remote.client` | `claw.search` | external | Remote search conformance tests |  |  |
 | `remote.secretBrokeredOperation` | `claw.remote.client` | `claw.secrets.broker` | external | Secret ref rejection and broker lease acceptance tests |  |  |
@@ -2583,7 +2599,7 @@ flowchart TD
 | --- | --- | --- | --- | --- | --- |
 | `chat.localDesktop` | chat | `chat.localDesktop` | `clawix.ui.chat`<br>`clawix.bridge.local`<br>`claw.daemon.local`<br>`claw.runtime.agent`<br>`claw.sessions` | local bridge access<br>runtime policy<br>session write authority |  |
 | `chat.companionBridge` | chat | `chat.companionBridge` | `clawix.companion.client`<br>`clawix.bridge.local`<br>`claw.daemon.local`<br>`claw.runtime.agent`<br>`claw.sessions` | companion bridge trust<br>local WebSocket access<br>session write authority |  |
-| `chat.remoteRelay` | chat | `chat.remoteRelay` | `claw.remote.client`<br>`claw.relay`<br>`claw.relay.connector`<br>`claw.workspace`<br>`claw.runtime.agent`<br>`claw.sessions` | Relay auth<br>connector workspace authority<br>remote-safe session classification | live external validation:external_pending |
+| `chat.remoteRelay` | chat | `chat.remoteRelay` | `claw.remote.client`<br>`claw.relay`<br>`claw.relay.connector`<br>`claw.workspace`<br>`claw.runtime.agent`<br>`claw.sessions` | Relay auth<br>connector authority for workspace scope<br>remote-safe session classification | live external validation:external_pending |
 | `remote.chatGateway` | remote | `remote.chatGateway` | `claw.remote.client`<br>`claw.coordinator`<br>`claw.gateway`<br>`claw.connector`<br>`claw.runtime.agent`<br>`claw.sessions` | node trust<br>Gateway policy<br>connector runtime authority | live external validation:external_pending |
 | `remote.searchGateway` | remote | `remote.searchGateway` | `claw.remote.client`<br>`claw.coordinator`<br>`claw.gateway`<br>`claw.connector`<br>`claw.search` | remote-safe search classification<br>connector search authority<br>redaction policy | live external validation:external_pending |
 | `remote.secretBrokeredOperation` | remote | `remote.secretBrokeredOperation` | `claw.remote.client`<br>`claw.gateway`<br>`claw.connector`<br>`claw.secrets.broker` | secret reference grant<br>broker approval<br>Gateway policy | live external validation:external_pending |
@@ -2603,6 +2619,10 @@ flowchart TD
 | `system.telemetrySignedHostControl` | system | `system.telemetrySignedHostControl` | `claw.cli.command.system`<br>`claw.systemTelemetry`<br>`claw.host.signed`<br>`claw.host.audit` | approval required<br>signed-host native control<br>audit policy | live external validation:external_pending |
 | `system.telemetry.snapshot` | system | `system.telemetryAgentContext` | `claw.systemTelemetry` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
 | `system.telemetry.history` | system | `system.telemetryAgentContext` | `claw.systemTelemetry`<br>`claw.database.monitor` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `system.telemetry.metrics` | system | `system.telemetryAgentContext` | `claw.systemTelemetry` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `system.telemetry.widgets` | system | `system.telemetryAgentContext` | `claw.systemTelemetry` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `system.telemetry.providers` | system | `system.telemetryAgentContext` | `claw.systemTelemetry`<br>`claw.systemTelemetry.contextProviders` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
+| `system.telemetry.control.plan` | system | `system.telemetrySignedHostControl` | `claw.systemTelemetry`<br>`claw.host.signed` | approval required<br>host audit receipt | live external validation:external_pending |
 | `search.query` | search | `remote.searchGateway` | `claw.search` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
 | `db.query` | database | `sync.sqliteResources` | `claw.database.core` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
 | `resources.list` | resources | `sync.driveFiles` | `claw.workspace`<br>`claw.drive.files` | custom-app declaration<br>host bridge policy<br>redaction policy |  |
@@ -2610,9 +2630,9 @@ flowchart TD
 | `jobs.list` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | custom-app declaration<br>host bridge policy<br>redaction policy | registered route:deferred<br>public CLI:blocked |
 | `jobs.get` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | custom-app declaration<br>host bridge policy<br>redaction policy | registered route:deferred<br>public CLI:blocked |
 | `jobs.events` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | custom-app declaration<br>host bridge policy<br>redaction policy | live stream:deferred<br>public CLI:blocked |
-| `jobs.stream` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | local-wide read<br>shared redaction policy |  |
-| `jobs.start` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | approval required<br>host audit receipt |  |
-| `jobs.cancel` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | approval required<br>host audit receipt |  |
+| `jobs.stream` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | local-wide read<br>shared redaction policy | registered route:deferred<br>public CLI:blocked |
+| `jobs.start` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | approval required<br>host audit receipt | registered route:deferred<br>public CLI:blocked |
+| `jobs.cancel` | jobs |  | `claw.runtime.agent`<br>`claw.agents.runs` | approval required<br>host audit receipt | registered route:deferred<br>public CLI:blocked |
 | `actions.invoke` | actions |  | `claw.runtime.agent`<br>`claw.host.audit` | approval required<br>policy grant<br>audit receipt | generic runner:deferred |
 | `secrets.broker` | secrets | `remote.secretBrokeredOperation` | `claw.secrets.broker` | approval required<br>secret reference grant<br>no plaintext lease without broker | plaintext access:blocked |
 | `iot.device.action.invoke` | iot |  | `claw.cli.command.iot`<br>`claw.env.iotBaseUrl`<br>`claw.env.iotDir` | approval required<br>host IoT adapter policy<br>physical-world action review | live external validation:external_pending |
@@ -3453,6 +3473,9 @@ flowchart TD
 | `claw.cli.command.host` | cliCommand | cli | claw |  |  |  |  |  | `host` |
 | `claw.cli.command.system` | cliCommand | cli | claw |  |  |  |  |  | `system` |
 | `claw.cli.command.network` | cliCommand | cli | claw |  |  |  |  |  | `network` |
+| `claw.cli.command.mac-care` | cliCommand | cli | claw |  |  |  |  |  | `mac-care` |
+| `claw.cli.command.agent-resource` | cliCommand | cli | claw |  |  |  |  |  | `agent-resource` |
+| `claw.cli.command.test` | cliCommand | cli | claw |  |  |  |  |  | `test` |
 | `claw.cli.command.mac` | cliCommand | cli | claw |  |  |  |  |  | `mac` |
 | `claw.cli.command.permissions` | cliCommand | cli | claw |  |  |  |  |  | `permissions` |
 | `claw.cli.command.wifi` | cliCommand | cli | claw |  |  |  |  |  | `wifi` |
@@ -3548,6 +3571,8 @@ flowchart TD
 | `claw.cli.command.agenda` | cliCommand | cli | claw |  |  |  |  |  | `agenda` |
 | `claw.cli.command.timeline` | cliCommand | cli | claw |  |  |  |  |  | `timeline` |
 | `claw.cli.command.review` | cliCommand | cli | claw |  |  |  |  |  | `review` |
+| `claw.cli.command.my-work` | cliCommand | cli | claw |  |  |  |  |  | `my-work` |
+| `claw.cli.command.team-work` | cliCommand | cli | claw |  |  |  |  |  | `team-work` |
 | `claw.cli.command.channels` | cliCommand | cli | claw |  |  |  |  |  | `channels` |
 | `claw.cli.command.telegram` | cliCommand | cli | claw |  |  |  |  |  | `telegram` |
 | `claw.cli.command.notify` | cliCommand | cli | claw |  |  |  |  |  | `notify` |
@@ -3690,6 +3715,7 @@ flowchart TD
 | `claw.database.sessions` | sidecar | persistent | claw |  |  |  |  |  | `~/.claw/data/sessions.sqlite` |
 | `claw.database.audio` | sidecar | persistent | claw |  |  |  |  |  | `~/.claw/data/audio.sqlite` |
 | `claw.database.search` | sidecar | persistent | claw |  |  |  |  |  | `~/.claw/data/search.sqlite` |
+| `claw.database.macCare` | sidecar | persistent | claw |  |  |  |  |  | `~/.claw/data/mac_care.sqlite` |
 | `claw.database.search.table.search_source_sets` | table | persistent | claw |  |  |  |  |  | `` |
 | `claw.database.search.table.search_profiles` | table | persistent | claw |  |  |  |  |  | `` |
 | `claw.database.search.table.search_sources` | table | persistent | claw |  |  |  |  |  | `` |
@@ -3764,6 +3790,8 @@ flowchart TD
 | `claw.workspace.command_intents` | folder | persistent | claw |  |  |  |  |  | `.claw/command-intents` |
 | `claw.workspace.command_intents.ledger` | file | persistent | claw |  |  |  |  |  | `.claw/command-intents/command-intents.json` |
 | `claw.workspace.slides` | folder | persistent | claw |  |  |  |  |  | `.claw/slides` |
+| `claw.workspace.sheets` | folder | persistent | claw |  |  |  |  |  | `.claw/sheets` |
+| `claw.workspace.storage` | folder | persistent | claw |  |  |  |  |  | `.claw/storage` |
 | `claw.workspace.dashboard_database` | folder | persistent | claw |  |  |  |  |  | `.claw/dashboard-database` |
 | `claw.workspace.channel_run` | folder | persistent | claw |  |  |  |  |  | `.claw/run/channels` |
 | `claw.workspace.telegram_codex_bridge_state` | file | persistent | claw |  |  |  |  |  | `.claw/telegram-codex-bridge.json` |

@@ -1,6 +1,6 @@
 # Mac Control Plane Version Drift Audit
 
-Source conversation: `019e366f-8e14-7e51-8817-9820d2914dc4`
+Source conversation: `source:mac-control-plane`
 
 This audit closes the macOS 14+ source and drift requirement for `MCQ-002` and
 `MCQ-004`. It records the current major-version review for every Mac Control

@@ -47,7 +47,16 @@
             "id": "tenant-as-product-scope",
             "pattern": "\\btenant(?:Id|_id)?\\b",
             "suggestion": "Tenant is technical isolation only. Use workspace, project, entity, scope, principal, or provider tenant.",
-            "allowedPathIncludes": ["packages/clawjs/src/cli-legacy.ts"],
+            "allowedPathIncludes": [
+              "packages/clawjs/src/cli-legacy.ts",
+              "packages/clawjs/src/cli-legacy-open.ts",
+              "packages/clawjs-core/src/remote-sync-schemas.ts",
+              "packages/clawjs-core/src/index-remote-contracts.test.ts",
+              "relay/src/shared/protocol.ts",
+              "relay/src/shared/protocol.test.ts",
+              "relay/tests/e2e/relay.e2e.test.ts",
+              "docs/persistent-surface.md"
+            ],
             "allowedContextPhrases": ["technical tenant", "provider tenant", "hosted tenant", "remote tenant", "tenant isolation", "tenant semantics", "multi-tenant", "multitenant", "compatibility tenant"]
           }
         ]
@@ -101,6 +110,18 @@
         ]
       },
       {
+        "term": "route",
+        "canonicalMeaning": "Registered route graph path with explicit edge semantics; a route never grants authority by existing.",
+        "replacementGuidance": "Use route for graph paths and transport edges; use grants, restrictions, and authority edges for access.",
+        "blockedPatterns": [
+          {
+            "id": "route-implies-authority",
+            "pattern": "\\broute\\s+(?:owner|grants? access|permissions?|access control)\\b|\\broute\\s+implies\\s+authority\\b",
+            "suggestion": "Routes describe graph paths and transport edges. Use explicit grants, restrictions, and authority edges for access."
+          }
+        ]
+      },
+      {
         "term": "host",
         "canonicalMeaning": "Signed native owner of sensitive capabilities and host-specific operational state.",
         "replacementGuidance": "Use signed host for native authority; do not move native authority to Node or Relay.",
@@ -108,7 +129,8 @@
           {
             "id": "node-native-owner",
             "pattern": "\\bnode owner\\b|\\bnode-owned\\b|\\brelay-owned\\s+(?:permission|secret|approval|grant|native)\\b",
-            "suggestion": "Sensitive native authority belongs to the signed host."
+            "suggestion": "Sensitive native authority belongs to the signed host.",
+            "allowedContextPhrases": ["without claiming node-owned", "forbids node-owned"]
           }
         ]
       },
@@ -120,7 +142,8 @@
           {
             "id": "relay-implies-authority",
             "pattern": "\\brelay\\s+(?:owner|authority|grant|grants|permission|permissions|tenant)\\b",
-            "suggestion": "Relay may broker routes, but authority must remain explicit in host/framework governance."
+            "suggestion": "Relay may broker routes, but authority must remain explicit in host/framework governance.",
+            "allowedContextPhrases": ["relay tenant id environment variable"]
           }
         ]
       },
@@ -134,6 +157,30 @@
             "pattern": "\\b(?:plugin|integration) account\\b|\\bplugin credential\\b",
             "suggestion": "Use connector account or connector credential for configured external accounts.",
             "allowedContextPhrases": ["broader integration account domain", "integration account domain"]
+          }
+        ]
+      },
+      {
+        "term": "grant",
+        "canonicalMeaning": "Explicit capability edge scoped to a principal, resource, action, and governing domain.",
+        "replacementGuidance": "Use grant for scoped capability edges; use approval for review/consent gates.",
+        "blockedPatterns": [
+          {
+            "id": "grant-as-approval",
+            "pattern": "\\bgrant\\s+(?:is|as)\\s+(?:approval|consent)\\b|\\bgrant\\s+implies\\s+approval\\b|\\bgrant\\s+without\\s+(?:scope|principal)\\b",
+            "suggestion": "A grant is a scoped capability edge. Use approval for review/consent and include principal plus scope for grants."
+          }
+        ]
+      },
+      {
+        "term": "approval",
+        "canonicalMeaning": "Explicit review or consent gate; approval alone is not a durable access grant.",
+        "replacementGuidance": "Use approval for review/consent gates and grant/lease for scoped durable access.",
+        "blockedPatterns": [
+          {
+            "id": "approval-implies-access",
+            "pattern": "\\bapproval\\s+(?:implies|grants)\\s+(?:access|authority|permission|permissions)\\b|\\bapproval\\s+(?:token|credential|secret|lease)\\b",
+            "suggestion": "Approval is a review or consent gate. Use explicit grant, lease, or credential reference for durable access."
           }
         ]
       },

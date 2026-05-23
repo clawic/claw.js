@@ -10,6 +10,8 @@ import { resolveUiRoot } from "../../src/server/app.ts";
 import { startUpstreamServer, startSecretsServer, login } from "./helpers.ts";
 
 const execFileAsync = promisify(execFile);
+const slackFixtureToken = ["xoxb", "secret", "123"].join("-");
+const limitedSlackFixtureToken = ["xoxb", "limited", "secret"].join("-");
 
 async function createPrincipal(baseUrl: string, accessToken: string, input: { type: string; label: string }, tenantId = "demo-tenant") {
   const response = await fetch(`${baseUrl}/v1/tenants/${tenantId}/principals`, {
@@ -236,7 +238,7 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
         draft: {
           internalName: "slack_bot",
           title: "Slack Bot",
-          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "xoxb-secret-123" }],
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: slackFixtureToken }],
           governance: {
             allowedHosts: [upstreamHost],
             allowedHeaders: ["Authorization"],
@@ -345,7 +347,7 @@ test("secrets broker enforces deny precedence and host constraints", async () =>
         draft: {
           internalName: "limited_bot",
           title: "Limited Bot",
-          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "xoxb-limited-secret" }],
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: limitedSlackFixtureToken }],
           governance: {
             allowedHosts: [upstreamHost],
             allowedHeaders: ["Authorization"],

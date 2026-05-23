@@ -1,8 +1,8 @@
 # Dense Data Operating System Decision Matrix
 
-Source conversation: `019e35a1-06bb-77f2-a712-92ed2646bd15`
+Source conversation: `source:dense-data`
 
-Reference plan item: `019e3659-0335-7811-9cda-c9d176e91515-plan`
+Reference plan item: `plan:dense-data`
 
 This matrix is the public, privacy-safe acceptance ledger for the dense data
 operating system. It must be updated before the goal can close. Private session

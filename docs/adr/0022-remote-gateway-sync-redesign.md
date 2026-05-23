@@ -9,7 +9,7 @@ Status: Accepted
 
 Date: 2026-05-17
 
-Source conversation: `019e36a3-c2e6-73b3-a3fe-f3e7340e42c8`
+Source conversation: `source:remote-gateway-sync`
 
 Private goal reference: the maintainer-local goal file for the same source
 conversation. Public docs must not publish machine-local paths.
@@ -39,7 +39,7 @@ The binding decisions from the source conversation are:
 - Classify every stable local capability as `remote-safe`, `local-only`,
   `blocked`, or `pending`.
 - Cover personal devices and servers with the same architecture.
-- Assign sync authority per resource.
+- Assign explicit authority metadata for each synced resource.
 - Replicate secret references only; operations use brokered leases and audit.
 - Keep the remote contract transport-agnostic; Iroh is the recommended v1
   adapter.

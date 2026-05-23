@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "sourceConversationId": "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
-  "sourcePlanId": "019e3732-c90e-7491-9217-37020c43217e-plan",
+  "sourceConversationId": "source:remote-gateway-sync",
+  "sourcePlanId": "plan:remote-gateway-sync",
   "reviewedAt": "2026-05-18T11:20:00.000Z",
   "status": "complete_with_external_pending",
   "items": [
@@ -416,8 +416,8 @@
         "docs/governance/remote-gateway-sync/source-review.json",
         "docs/governance/remote-gateway-sync/completion.md#closure-rule",
         "scripts/verify-remote-sync-goal.mjs",
-        "sourceConversationId:019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
-        "sourcePlanId:019e3732-c90e-7491-9217-37020c43217e-plan",
+        "sourceConversationId:source:remote-gateway-sync",
+        "sourcePlanId:plan:remote-gateway-sync",
         "claw remote closure-gate",
         "docs/governance/remote-gateway-sync/external-validation-evidence.json",
         "EXTERNAL PENDING"

@@ -21,7 +21,7 @@ export interface ClawProfessionalRecordsAcceptanceFixture {
 
 export const clawProfessionalRecordsAcceptanceFixture: ClawProfessionalRecordsAcceptanceFixture = {
   schemaVersion: 1,
-  sourceConversationId: "019e35a1-06bb-77f2-a712-92ed2646bd15",
+  sourceConversationId: "source:dense-data",
   fixtureSetId: "dense-data-acceptance-v1",
   records: [
     {

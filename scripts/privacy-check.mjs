@@ -55,9 +55,24 @@ const patterns = [
     regex: /\b(?:codex|rollout|session|sourceSession|thread)[^\n]{0,100}\b[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi,
   },
   {
+    id: "private-goal-or-session-id",
+    description: "private goal or session identifier",
+    regex: /\b019e[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-plan)?\b/gi,
+  },
+  {
+    id: "private-source-reference",
+    description: "private source conversation or plan reference",
+    regex: /\b(?:Source conversation|sourceConversationId|conversationId|sourcePlanId|planId|Reference plan item|Binding plan item|Plan item|source session|sourceSession)[^\n]{0,160}\b019e[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-plan)?\b/gi,
+  },
+  {
     id: "contextual-team-id",
     description: "private Team ID in signing or release context",
     regex: /\b(?:DEVELOPMENT_TEAM|TEAM_ID|team_id|teamId|Team ID|team identifier)\b[^\n]{0,60}\b[A-Z0-9]{10}\b/g,
+  },
+  {
+    id: "secret-looking-literal",
+    description: "secret-looking literal",
+    regex: /\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16})\b/g,
   },
   {
     id: "private-bundle-id",
@@ -146,8 +161,47 @@ export function scanRepository() {
   return findings;
 }
 
+function readBaseline() {
+  const baselinePath = path.join(repoRoot, "docs/privacy-check-baseline.json");
+  if (!fs.existsSync(baselinePath)) return { entries: [] };
+  return JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+}
+
+function findingKey(finding) {
+  return `${finding.filePath}\0${finding.rule}`;
+}
+
+export function applyBaseline(findings, baseline = readBaseline()) {
+  const allowedCounts = new Map();
+  for (const entry of baseline.entries ?? []) {
+    allowedCounts.set(`${entry.filePath}\0${entry.rule}`, entry.count ?? 0);
+  }
+  const seenCounts = new Map();
+  const unbaselined = [];
+  for (const finding of findings) {
+    const key = findingKey(finding);
+    const count = (seenCounts.get(key) ?? 0) + 1;
+    seenCounts.set(key, count);
+    if (count > (allowedCounts.get(key) ?? 0)) unbaselined.push(finding);
+  }
+  for (const [key, allowedCount] of allowedCounts) {
+    const seenCount = seenCounts.get(key) ?? 0;
+    if (seenCount > allowedCount) continue;
+    if (seenCount < allowedCount) {
+      const [filePath, rule] = key.split("\0");
+      unbaselined.push({
+        filePath,
+        line: 0,
+        rule,
+        description: `baseline expected ${allowedCount} finding(s), found ${seenCount}`,
+      });
+    }
+  }
+  return unbaselined;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const findings = scanRepository();
+  const findings = applyBaseline(scanRepository());
   if (findings.length > 0) {
     console.error("Privacy check failed. Replace real/private data with synthetic fixtures:");
     for (const finding of findings) {

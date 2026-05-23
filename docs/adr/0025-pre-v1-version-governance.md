@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. Source conversation:
-`019e2b82-6118-7d52-9237-71a3e9ba4e41`.
+`source:pre-v1-version-governance`.
 
 ## Context
 

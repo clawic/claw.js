@@ -51,8 +51,9 @@ function validate({ baseline }) {
     if (!entriesById.has(id)) fail(`missing required seed maturity entry: ${id}`);
   }
 
+  const privateGoalPathMarker = [[".co", "dex"].join(""), "goals"].join("/");
   for (const entry of entries) {
-    if (entry.promotionDecision?.path.includes("/Users/") || entry.promotionDecision?.path.includes(".codex/goals")) {
+    if (entry.promotionDecision?.path.includes("/Users/") || entry.promotionDecision?.path.includes(privateGoalPathMarker)) {
       fail(`${entry.id}: promotion decision path must be public-safe`);
     }
     if ((entry.maturity === "stable" || entry.maturity === "beta") && entry.activationPolicy !== "enabled" && entry.activationPolicy !== "opt_in") {

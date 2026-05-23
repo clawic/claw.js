@@ -59,7 +59,7 @@ them as controls and checks; it does not duplicate their detailed policies.
 ## Threat Model Impact
 
 This ADR creates the threat modeling gate. The protected assets are user data,
-agent authority, secrets, signed host authority, remote route authority, local
+effective authority for agents, secrets, signed host authority, remote route authority, local
 storage, package/update trust, approvals, audit logs, and external side effects.
 The assumed adversaries are malicious local processes, malicious or buggy
 plugins and sub-apps, compromised runtimes, hostile network peers, compromised

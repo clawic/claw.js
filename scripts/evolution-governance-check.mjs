@@ -98,8 +98,8 @@ for (const snippet of [
 
 for (const snippet of [
   "source-audit.md",
-  "Source conversation: `019e3b2e-3f4a-7753-a2ce-c92fce7c4436`",
-  "Binding plan item: `019e3b8a-fab7-75e0-8a23-a49524afe727-plan`",
+  "Source conversation: `source:evolution-rescue-backbone`",
+  "Binding plan item: `plan:evolution-rescue-backbone`",
   "Status: `verified`",
   "## Superseded Prompts",
   "The active goal must not be closed while any row is `partial` or `blocked`.",

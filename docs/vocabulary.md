@@ -56,7 +56,7 @@ reconciliation maps. Do not use it as the primary ClawJS session key.
 
 Use `host` for the signed native owner of sensitive capabilities and
 host-specific operational state. Sensitive native permissions, approvals,
-grants, secrets, and destructive actions are host-owned, not Node-owned.
+grants, secrets, and destructive actions are host-owned, not owned by Node.
 
 ## Connector
 

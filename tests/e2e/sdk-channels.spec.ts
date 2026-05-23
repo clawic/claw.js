@@ -495,7 +495,7 @@ process.stdin.on("end", () => {
       <main style="font-family: Menlo, Monaco, monospace; padding: 32px; min-height: 100vh; background: #f7f7f4; color: #17202a;">
         <section style="max-width: 980px; margin: 0 auto;">
           <h1 style="margin: 0 0 16px; font-size: 30px;">Channels E2E</h1>
-          <p style="font-size: 16px; line-height: 1.6;">Telegram accounts, topic targets, agent permissions, inbound sync, outbound send, and commands all resolved through the workspace channel registry.</p>
+          <p style="font-size: 16px; line-height: 1.6;">Channel accounts, topic targets, permissions for agents, inbound sync, outbound send, and commands all resolved through the workspace channel registry.</p>
           <pre style="white-space: pre-wrap; border: 1px solid #d7d7d0; border-radius: 8px; background: white; padding: 18px; font-size: 13px; line-height: 1.5;">${JSON.stringify(visualPayload, null, 2)}</pre>
         </section>
       </main>

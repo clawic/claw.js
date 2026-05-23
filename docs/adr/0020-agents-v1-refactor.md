@@ -57,7 +57,7 @@ an agent/AI, and GDPR-grade local-first with per-assignment visitor telemetry
 policy. `raw_with_retention` telemetry is invalid without an explicit positive
 `telemetryRetentionDays` policy on the assignment.
 
-Effective access is fail-closed and is the intersection of agent grants,
+Effective access is fail-closed and is the intersection of grants for agents,
 assignment grants, execution profile sandbox, connector control plane, host
 policy, and current run scope. Secrets are never exposed as plaintext to
 agents; agents may only request operation-scoped broker leases with audit and

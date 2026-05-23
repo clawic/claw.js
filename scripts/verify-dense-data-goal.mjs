@@ -20,8 +20,8 @@ import {
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const sourceConversationId = "019e35a1-06bb-77f2-a712-92ed2646bd15";
-const sourcePlanId = "019e3659-0335-7811-9cda-c9d176e91515-plan";
+const sourceConversationId = "source:dense-data";
+const sourcePlanId = "plan:dense-data";
 
 const requiredDocs = [
   "docs/governance/dense-data/completion.md",

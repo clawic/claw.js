@@ -1,6 +1,6 @@
 # Governance, Workspace, And Project Completion Audit
 
-Source conversation: `019e3a47-6485-7430-a5a9-97d32166f255`
+Source conversation: `source:governance-workspace-project`
 
 Closure state: `ready_for_close_with_external_pending`
 
@@ -22,7 +22,7 @@ excluded from this public file.
 | GWA-001 | Every source Q/A row is enumerated and the three blank structured answers are resolved. | validated | Source audit rows `GQ-001` through `GQ-084`; the final source-session re-read confirmed `GQ-058` through `GQ-060` are superseded by later `.claw/`, manifest, footprint, and portability decisions. | None for local closure. |
 | GWA-002 | Canonical vocabulary separates principal, entity, scope, steward, grants, restrictions, tenant, namespace, owner, profile, and company terms. | validated | ADR 0027, naming style guide, data-storage boundary, governance guard, baseline file, `evaluateGovernanceAccess`, and governance tests. | Current vocabulary debt is baselined; future closure must confirm no unreviewed growth. |
 | GWA-003 | Governance access obeys explicit grants, inherited restrictions, control-without-read, strict delegation, and lightweight local defaults. | validated | `packages/clawjs-core/src/governance.ts`, `governance.test.ts`, `claw inspect governance`, and `scripts/governance-scope-guard.mjs`. | Future persistence-backed effective-grant caches must keep the same semantics. |
-| GWA-004 | Agents use stewardship and scope rather than owner authority. | validated | ADR 0020, Agents V1 code/tests, `inspect agent` projection, session scope fields, and legacy owner compatibility kept out of canonical authority. | Remove or reclassify remaining compatibility vocabulary when no longer needed. |
+| GWA-004 | Agents use stewardship and scope rather than authority derived from legacy compatibility fields. | validated | ADR 0020, Agents V1 code/tests, `inspect agent` projection, session scope fields, and legacy compatibility fields kept out of canonical authority. | Remove or reclassify remaining compatibility vocabulary when no longer needed. |
 | GWA-005 | Workspace is the isolated context and Project is a collaborable scope with stable identity and mutable path locator. | validated | ADR 0028, `docs/workspace.md`, Clawix sidebar/session project-id migration, ClawJS app-state `project_id`, and Clawix storage/interface guards. | Additional folder move/repair UI can build on the same identity model. |
 | GWA-006 | Project primary folder is mandatory, auto-created when omitted, and may reference extra folders. | validated | Clawix `ProjectFolderPathResolver`, `AppState.createProject`, `ProjectEditorSheet`, `ProjectFolderStateTests`, and `clawProjectFolderRefSchema` cover default Workspace-contained folders, unique names, and explicit read/write/sync policy defaults for referenced folders. | Rich UI for referenced folder permissions remains future surface work. |
 | GWA-007 | Project folder handoff uses universal v1 `claw.project.json`, managed `AGENTS.md`, and `CLAUDE.md`, without copying full `.claw/`. | validated | ADR 0028, `project-manifest.ts`, referenced-folder access/sync manifest tests, `claw project attach/inspect/detach/export/import/sync-handoff`, CLI project tests, and Clawix handoff client tests. | Safe snapshot contents should expand only through reviewed fields. |

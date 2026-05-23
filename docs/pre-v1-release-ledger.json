@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "program": "pre-v1-version-governance",
   "phase": "pre_v1_mutable",
-  "sourceConversationId": "019e2b82-6118-7d52-9237-71a3e9ba4e41",
+  "sourceConversationId": "source:pre-v1-version-governance",
   "policySurfaceId": "claw.versionGovernance.preV1",
   "changesets": {
     "mode": "frozen_until_v1_freeze",

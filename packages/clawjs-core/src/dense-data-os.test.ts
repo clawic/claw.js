@@ -19,8 +19,8 @@ import { evaluateRegulatedAction } from "./regulated-domain-safety.ts";
 
 test("dense data OS keeps the source conversation and plan as binding metadata", () => {
   assert.equal(clawProfessionalRecordsOsRegistry.schemaVersion, 1);
-  assert.equal(clawProfessionalRecordsOsRegistry.sourceConversationId, "019e35a1-06bb-77f2-a712-92ed2646bd15");
-  assert.equal(clawProfessionalRecordsOsRegistry.sourcePlanId, "019e3659-0335-7811-9cda-c9d176e91515-plan");
+  assert.equal(clawProfessionalRecordsOsRegistry.sourceConversationId, "source:dense-data");
+  assert.equal(clawProfessionalRecordsOsRegistry.sourcePlanId, "plan:dense-data");
   assert.equal(clawProfessionalRecordsOsRegistry.privateGoalReference, "claw-dense-data-os-plan-2026-05-17");
 });
 
@@ -190,7 +190,7 @@ test("dense data OS acceptance fixture covers required first-wave records and ga
   const ids = new Set(records.map((record) => record.id));
   const covered = new Set(records.flatMap((record) => record.covers));
 
-  assert.equal(clawProfessionalRecordsAcceptanceFixture.sourceConversationId, "019e35a1-06bb-77f2-a712-92ed2646bd15");
+  assert.equal(clawProfessionalRecordsAcceptanceFixture.sourceConversationId, "source:dense-data");
   assert.equal(ids.size, records.length, "fixture ids must be unique");
   for (const record of records) {
     assert.ok(canonicalCollectionNames.has(record.collectionName), `${record.collectionName} must be canonical`);

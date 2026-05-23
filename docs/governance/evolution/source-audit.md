@@ -1,8 +1,8 @@
 # Backbone Source Decision Audit
 
-Source conversation: `019e3b2e-3f4a-7753-a2ce-c92fce7c4436`
+Source conversation: `source:evolution-rescue-backbone`
 
-Binding plan item: `019e3b8a-fab7-75e0-8a23-a49524afe727-plan`
+Binding plan item: `plan:evolution-rescue-backbone`
 
 Audit file: `docs/governance/evolution/source-audit.md`
 

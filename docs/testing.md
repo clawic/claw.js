@@ -36,6 +36,8 @@ Matching valid `passed` results may be reused only when the check explicitly
 allows result reuse. Matching failed results are failure evidence, not passing
 validation. Failed runs create repair ownership for the check fingerprint so
 other agents do not rerun the same failing work while a repair owner is active.
+Bypass requires `CLAW_AGENT_COORDINATION_BYPASS_REASON` and records an audit row
+with `cleanValidation: false`; it must be reported as partial/degraded evidence.
 
 ## Boundaries
 

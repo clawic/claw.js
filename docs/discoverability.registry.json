@@ -3784,6 +3784,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-storage-boundary-guard",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/storage-boundary-guard.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "storage-boundary-guard",
+        "Storage Boundary Guard"
+      ],
+      "searchQueries": [
+        {
+          "query": "storage-boundary-guard",
+          "expectPath": "scripts/storage-boundary-guard.mjs"
+        }
+      ],
+      "guard": "scripts/storage-boundary-guard.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-streaming-backpressure-contract-check",
       "kind": "guardrail",
       "steward": "claw",
@@ -5074,7 +5099,7 @@
       "discoveryTerms": [
         "approval grant authority matrix",
         "approvals grants authority",
-        "grant domain owner",
+        "grant domain steward",
         "fail-closed authority matrix"
       ],
       "searchQueries": [
@@ -5087,6 +5112,33 @@
       "status": "enforced",
       "reviewDate": "2026-08-18",
       "canonicalName": "approval-grant-authority-matrix",
+      "steward": "claw"
+    },
+    {
+      "id": "conceptual-vocabulary-audit",
+      "kind": "docs-page",
+      "canonicalSource": "docs/governance/conceptual-vocabulary-audit.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "conceptual vocabulary audit",
+        "protected vocabulary pending decisions",
+        "vocabulary semantic decision ledger"
+      ],
+      "searchQueries": [
+        {
+          "query": "conceptual vocabulary audit",
+          "expectPath": "docs/governance/conceptual-vocabulary-audit.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "conceptual-vocabulary-audit",
       "steward": "claw"
     },
     {

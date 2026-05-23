@@ -1,6 +1,6 @@
 # Mac Control Plane Closure Audit
 
-Source conversation: `019e366f-8e14-7e51-8817-9820d2914dc4`
+Source conversation: `source:mac-control-plane`
 
 Closure state: `active_goal_not_complete`
 

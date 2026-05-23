@@ -159,7 +159,7 @@ function parseAuthority(value: string | undefined): SyncAuthority | undefined {
     || value === "mirror"
     || value === "joint"
   ) return value;
-  throw new Error(`Invalid sync authority: ${value}`);
+  throw new Error(`Invalid authority value for sync: ${value}`);
 }
 
 function parseOfflineReason(value: string | undefined): "connector_offline" | "node_unreachable" | "transport_unavailable" | undefined {

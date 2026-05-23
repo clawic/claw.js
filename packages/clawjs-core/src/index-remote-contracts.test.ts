@@ -419,8 +419,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
 
   const externalValidationEvidenceArtifact = {
     schemaVersion: 1,
-    sourceConversationId: "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
-    sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    sourceConversationId: "source:remote-gateway-sync",
+    sourcePlanId: "plan:remote-gateway-sync",
     approvalRequestId: "remote_external_validation_approval_request_request_2026_05_17t10_13_17_000z",
     generatedAt: "2026-05-17T10:13:17.000Z",
     status: "external_pending",
@@ -433,8 +433,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.deepEqual(parseRemoteExternalValidationEvidenceInput(externalValidationEvidenceArtifact), externalValidationEvidenceTemplate.evidence);
   const generatedExternalValidationEvidenceArtifact = buildRemoteExternalValidationEvidenceArtifact({ generatedAt: "2026-05-17T10:13:17.000Z" });
   assert.equal(remoteExternalValidationEvidenceArtifactSchema.safeParse(generatedExternalValidationEvidenceArtifact).success, true);
-  assert.equal(generatedExternalValidationEvidenceArtifact.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
-  assert.equal(generatedExternalValidationEvidenceArtifact.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(generatedExternalValidationEvidenceArtifact.sourceConversationId, "source:remote-gateway-sync");
+  assert.equal(generatedExternalValidationEvidenceArtifact.sourcePlanId, "plan:remote-gateway-sync");
   assert.equal(generatedExternalValidationEvidenceArtifact.approvalRequestId, "remote_external_validation_approval_request_request_2026_05_17t10_13_17_000z");
   assert.equal(generatedExternalValidationEvidenceArtifact.status, "external_pending");
   assert.equal(generatedExternalValidationEvidenceArtifact.writes, false);
@@ -573,8 +573,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(remoteSourceQaReviewTemplateSchema.safeParse(sourceQaReviewTemplate).success, true);
   assert.equal(sourceQaReviewTemplate.status, "incomplete");
   assert.equal(sourceQaReviewTemplate.writes, false);
-  assert.equal(sourceQaReviewTemplate.sourceConversationId, "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8");
-  assert.equal(sourceQaReviewTemplate.sourcePlanId, "019e3732-c90e-7491-9217-37020c43217e-plan");
+  assert.equal(sourceQaReviewTemplate.sourceConversationId, "source:remote-gateway-sync");
+  assert.equal(sourceQaReviewTemplate.sourcePlanId, "plan:remote-gateway-sync");
   assert.equal(sourceQaReviewTemplate.reviewCount, 23);
   assert.deepEqual(sourceQaReviewTemplate.requiredSourceQaIds, remoteGoalClosureRequiredSourceQaIds);
   assert.deepEqual(sourceQaReviewTemplate.externalPendingRequiredSourceQaIds, ["QA-002", "QA-004", "QA-005", "QA-006", "QA-007", "QA-010", "QA-012", "QA-013", "QA-015", "QA-018", "QA-020", "QA-021"]);
@@ -658,8 +658,8 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(completeDecisionReview.items.some((entry) => entry.qaId === "QA-023" && entry.decisionId === "goal_closure_gate" && entry.conformanceStatus === null), true);
   const parsedSourceQaReviewItems = parseRemoteSourceQaReviewInput({
     schemaVersion: 1,
-    sourceConversationId: "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8",
-    sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    sourceConversationId: "source:remote-gateway-sync",
+    sourcePlanId: "plan:remote-gateway-sync",
     reviewedAt: "2026-05-17T10:13:26.500Z",
     status: "complete_with_external_pending",
     items: completeSourceQaReviewReport.items,
@@ -669,7 +669,7 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.throws(() => parseRemoteSourceQaReviewInput({
     schemaVersion: 1,
     sourceConversationId: "wrong-source-conversation",
-    sourcePlanId: "019e3732-c90e-7491-9217-37020c43217e-plan",
+    sourcePlanId: "plan:remote-gateway-sync",
     reviewedAt: "2026-05-17T10:13:26.500Z",
     status: "complete_with_external_pending",
     items: completeSourceQaReviewReport.items,

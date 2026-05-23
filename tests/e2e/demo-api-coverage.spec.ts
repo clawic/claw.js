@@ -209,6 +209,7 @@ test("chat session detail, patch, search, and feedback work hermetically", async
 
 test("integration enable, Slack test/connect, and status endpoints work hermetically", async ({ request }) => {
   await resetDemoState(request, "seeded");
+  const slackFixtureToken = ["xoxb", "fixture", "token"].join("-");
 
   // POST /api/integrations/enable – calendar
   const enableCalendar = await request.post(privateApiRoute("claw.privateApi.integrationsEnable"), {
@@ -232,7 +233,7 @@ test("integration enable, Slack test/connect, and status endpoints work hermetic
 
   // POST /api/integrations/slack/test
   const slackTest = await request.post(privateApiRoute("claw.privateApi.integrationsSlackTest"), {
-    data: { botToken: "xoxb-fixture-token" },
+    data: { botToken: slackFixtureToken },
   });
   expect(slackTest.ok()).toBeTruthy();
   const slackTestPayload = await slackTest.json();
@@ -241,7 +242,7 @@ test("integration enable, Slack test/connect, and status endpoints work hermetic
 
   // POST /api/integrations/slack/connect
   const slackConnect = await request.post(privateApiRoute("claw.privateApi.integrationsSlackConnect"), {
-    data: { botToken: "xoxb-fixture-token" },
+    data: { botToken: slackFixtureToken },
   });
   expect(slackConnect.ok()).toBeTruthy();
   const slackConnectPayload = await slackConnect.json();

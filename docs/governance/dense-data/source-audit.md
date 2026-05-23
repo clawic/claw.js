@@ -1,8 +1,8 @@
 # Dense Data Source Decision Audit
 
-Source conversation: `019e35a1-06bb-77f2-a712-92ed2646bd15`
+Source conversation: `source:dense-data`
 
-Reference plan item: `019e3659-0335-7811-9cda-c9d176e91515-plan`
+Reference plan item: `plan:dense-data`
 
 This audit enumerates the unique decision-bearing user messages from the source
 conversation. The private JSONL stores some user turns twice, once as a

@@ -85,7 +85,7 @@ const fieldTable = logicalBackup.tables.find((table) => table.name === "secret_f
 if (fieldTable?.rows.some((row) => row.field_name === "token" && row.value_ciphertext && !("secretValue" in row))) ok("backup decrypts to encrypted field rows");
 else ko("backup decrypts to encrypted field rows", fieldTable);
 
-// Issue agent grant.
+// Issue grant for runtime actor.
 const grant = resolver.grants.issue({
   tenantId: "clawix-local",
   agent: "claude-code",

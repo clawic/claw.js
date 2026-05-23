@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "artifactId": "system-telemetry-external-approval-fixtures",
   "status": "synthetic_templates_not_approval",
-  "conversationId": "019e359b-c0ab-7dc1-ba94-11a49d11dc76",
-  "planId": "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan",
+  "conversationId": "source:system-telemetry",
+  "planId": "plan:system-telemetry",
   "schemaPath": "docs/governance/system-telemetry/external-approval.schema.json",
   "validatorPath": "scripts/validate-system-telemetry-external-approval.mjs",
   "validSyntheticPackets": [
     {
       "schemaVersion": 1,
-      "conversationId": "019e359b-c0ab-7dc1-ba94-11a49d11dc76",
-      "planId": "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan",
+      "conversationId": "source:system-telemetry",
+      "planId": "plan:system-telemetry",
       "repoScope": "framework",
       "laneId": "SYS-TEL-EXT-001",
       "approval": {
@@ -65,8 +65,8 @@
     },
     {
       "schemaVersion": 1,
-      "conversationId": "019e359b-c0ab-7dc1-ba94-11a49d11dc76",
-      "planId": "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan",
+      "conversationId": "source:system-telemetry",
+      "planId": "plan:system-telemetry",
       "repoScope": "framework",
       "laneId": "SYS-TEL-EXT-002",
       "approval": {
@@ -121,8 +121,8 @@
     },
     {
       "schemaVersion": 1,
-      "conversationId": "019e359b-c0ab-7dc1-ba94-11a49d11dc76",
-      "planId": "019e3b6c-3dd8-76d2-bf1e-f50a23db7b07-plan",
+      "conversationId": "source:system-telemetry",
+      "planId": "plan:system-telemetry",
       "repoScope": "framework",
       "laneId": "SYS-TEL-EXT-003",
       "approval": {

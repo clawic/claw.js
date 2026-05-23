@@ -2,7 +2,7 @@
 
 This audit records how existing ClawJS data surfaces are integrated into the
 dense data operating system. It is an acceptance artifact for the source
-conversation `019e35a1-06bb-77f2-a712-92ed2646bd15`: no dense-data pack may
+conversation `source:dense-data`: no dense-data pack may
 close by creating a second catalog, graph, evidence model, CRM, billing, ERP,
 or ops model that ignores the current framework surface.
 

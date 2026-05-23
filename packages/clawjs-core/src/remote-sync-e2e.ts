@@ -636,8 +636,8 @@ function remoteGoalClosureGateId(parts: string[]): string {
   return `remote_goal_closure_gate_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
-export const remoteSourceConversationId = "019e36a3-c2e6-73b3-a3fe-f3e7340e42c8";
-export const remoteSourcePlanId = "019e3732-c90e-7491-9217-37020c43217e-plan";
+export const remoteSourceConversationId = "source:remote-gateway-sync";
+export const remoteSourcePlanId = "plan:remote-gateway-sync";
 export const remoteGoalClosureRequiredSourceQaIds = Array.from({ length: 23 }, (_, index) => `QA-${String(index + 1).padStart(3, "0")}`);
 export const remoteSourceSessionRereadCommand = "REMOTE_SYNC_SOURCE_SESSION=<local-source-session-jsonl> npm run test:remote-sync-source-session";
 

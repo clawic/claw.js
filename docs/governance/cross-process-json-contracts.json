@@ -84,7 +84,7 @@
       "producer": "CLI, daemon, Relay connector, signed-host adapters",
       "consumer": "active signed host and runtime command brokers",
       "boundaryFamilies": ["daemon", "cli", "runtime"],
-      "risk": "Host command requests can route permissions, native actions, validation mode, and runtime work.",
+      "risk": "Host command requests can broker permission requests, native actions, validation mode, and runtime work.",
       "coverage": {
         "valid": { "status": "covered", "evidence": ["packages/clawjs-core/src/host-contracts.ts", "packages/clawjs-core/src/index.test.ts"] },
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/host-contracts.ts", "packages/clawjs/src/cli-host-command.ts"] },

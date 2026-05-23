@@ -234,7 +234,7 @@ function checkCapabilityMaturityReleaseGate() {
 function checkCompletionAudit() {
   const audit = read("docs/governance/pre-v1-version-governance/completion.md");
   for (const snippet of [
-    "Source conversation: `019e2b82-6118-7d52-9237-71a3e9ba4e41`",
+    "Source conversation: `source:pre-v1-version-governance`",
     "private session, not published",
     "3 `request_user_input` prompts",
     "8 binding answers",

@@ -162,8 +162,8 @@ export const clawProfessionalRecordsIntentStatuses: ClawProfessionalRecordsInten
 
 export const clawProfessionalRecordsOsRegistry: ClawProfessionalRecordsOsRegistry = {
   schemaVersion: 1,
-  sourceConversationId: "019e35a1-06bb-77f2-a712-92ed2646bd15",
-  sourcePlanId: "019e3659-0335-7811-9cda-c9d176e91515-plan",
+  sourceConversationId: "source:dense-data",
+  sourcePlanId: "plan:dense-data",
   privateGoalReference: "claw-dense-data-os-plan-2026-05-17",
   foundationPrimitives: [
     "identity_base",

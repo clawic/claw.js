@@ -12,7 +12,7 @@ services, module folders, aliases, docs, and runtime implementations. Some
 folders were real systems, some were conceptual groupings for agents, and some
 looked like packages without owning a runtime boundary.
 
-The durable decision from conversation `019e2b29-7765-78d0-aa05-636f7038f812`
+The durable decision from conversation `source:domain-surface-registry`
 is that the route from stored data to CLI must be explicit. Agents should be
 able to answer, for every stored thing, which collection or table owns it,
 which aggregate or system may orchestrate it, whether there is a package/API
@@ -112,4 +112,4 @@ must not infer package or runtime boundaries from conceptual grouping alone.
 
 Final acceptance for the database-to-CLI plan requires a decision matrix that
 maps every user decision in conversation
-`019e2b29-7765-78d0-aa05-636f7038f812` to implementation and test evidence.
+`source:domain-surface-registry` to implementation and test evidence.
