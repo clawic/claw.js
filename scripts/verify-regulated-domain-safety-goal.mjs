@@ -533,7 +533,7 @@ for (const [relativePath, snippets] of [
     "`authorized_automation`",
     "`automationAuthorized`",
   ]],
-  ["packages/clawjs-core/src/agents-v1.ts", [
+  ["packages/clawjs-core/src/agents-v1-runtime.ts", [
     "evaluateRegulatedAction",
     "regulated_safety:${regulatedDomain}:${code}",
   ]],

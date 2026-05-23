@@ -985,6 +985,43 @@ test("persistent surface registry exposes framework and host storage nodes", () 
   assert.deepEqual(remoteApiMethodRoutes, expectedRemoteRegistryMethodRoutes);
 });
 
+test("remote regulated shares require review and provider topology coverage", () => {
+  const manifest = createSyncResourceManifest({
+    resourceId: "health:patient:123",
+    kind: "health-record",
+    ownerNodeId: "node.mac",
+    driver: "sqlite_tables",
+  });
+  const invitation = createMeshInvitation({
+    issuerMeshId: "mesh.local",
+    coordinatorNodeId: "node.mac",
+    recipientMeshId: "mesh.remote",
+    allowedResourceIds: ["health:patient:123"],
+    allowedActions: ["read", "execute", "lease_secret"],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    expiresAt: "2026-01-02T00:00:00.000Z",
+  });
+
+  assert.throws(
+    () => createMeshResourceShare({
+      invitation,
+      toMeshId: "mesh.remote",
+      manifest,
+      actions: ["read", "execute", "lease_secret"],
+      secretRefs: ["vault:health-record-export-key"],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: "2026-01-02T00:00:00.000Z",
+    }),
+    /Regulated remote shares require explicit review.*sensitive_export_review_required/,
+  );
+
+  const providerPlan = buildRemoteProviderDeviceE2EValidationPlan({
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  assert.equal(providerPlan.requiredTopologyTargets.includes("hosted_gateway"), true);
+  assert.equal(providerPlan.requiredTopologyTargets.includes("self_hosted_gateway"), true);
+});
+
 test("stable contract catalogs feed the persistent surface registry", () => {
   const registryNodeIds = new Set(clawPersistentSurfaceRegistry.nodes.map((node) => node.id));
   const catalogNodeIds = Object.values(clawStableContractCatalogs).flatMap((catalog) => catalog.nodes.map((node) => node.id));
