@@ -274,7 +274,10 @@ test("database HTTP listRecords is SQL-paged, rejects unsupported filters, and e
     });
     assert.equal(socket.readyState, WebSocket.OPEN);
     assert.equal((await listPromise).statusCode, 200);
-    socket.close();
+    await new Promise<void>((resolve) => {
+      socket.once("close", resolve);
+      socket.close();
+    });
 
     const metrics = await app.inject({
       method: "GET",
