@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 
 import type { SessionsServiceStore } from "../store.ts";
 import { redactIndexedText } from "../redaction.ts";
+import { capSessionRenderPreview } from "../render-caps.ts";
 import type {
   AppendSessionEventInput,
   CreateSessionInput,
@@ -351,21 +352,23 @@ function appendStructuredEvent(
   },
 ): void {
   const eventType = eventTypeFor(input.topLevelType, input.payload);
+  const eventKind = eventKindFor(input.topLevelType, input.payload, eventType);
   const summary = redactIndexedText(summarizePayload(input.payload, eventType));
+  const renderedSummary = summary ? capSessionRenderPreview(eventKind, summary).text : null;
   batch.events.push({
     sessionId: input.sessionId,
     turnId: stringField(input.payload, ["turn_id", "turnId"]),
     itemId: stringField(input.payload, ["item_id", "itemId", "id"]),
     callId: stringField(input.payload, ["call_id", "callId"]),
-    eventKind: eventKindFor(input.topLevelType, input.payload, eventType),
+    eventKind,
     eventType,
     role: stringField(input.payload, ["role"]),
     timestamp: input.timestamp,
     sourceNativeId: input.sourceNativeId,
     sourceLine: input.lineIndex,
     payloadJson: input.payload,
-    renderedSummary: summary,
-    searchableText: truncateSearchableText(summary),
+    renderedSummary,
+    searchableText: truncateSearchableText(renderedSummary),
   });
 }
 

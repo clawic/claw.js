@@ -28,6 +28,10 @@ exhaustive and ensures unknown events render through a visible capped fallback.
 Use `capSessionRenderPreview()` and `capSessionRenderDetailPayload()` to apply
 those caps consistently without mutating the canonical stored payload.
 
+Session SSE publishes `SESSION_EVENTS_STREAMING_POLICY_ID` and includes the
+effective policy id plus queue/frame limits in its metrics and overflow
+diagnostics.
+
 ## Realistic fixtures
 
 `seedRealisticSessionsFixture(store, { profile: "large" })` in

@@ -1,5 +1,6 @@
 import {
   clawDefaultStreamingBackpressurePolicy,
+  clawStreamingBackpressurePolicyId,
   clawSessionEvents,
   estimateUtf8Bytes,
   splitStreamingTextDelta,
@@ -18,6 +19,7 @@ export interface SessionSseWritable {
 }
 
 export interface SessionEventBroadcasterOptions {
+  streamingPolicyId?: string;
   hardQueueLimit?: number;
   maxQueuedBytes?: number;
   maxFrameBytes?: number;
@@ -26,6 +28,10 @@ export interface SessionEventBroadcasterOptions {
 }
 
 export interface SessionEventBroadcasterMetrics {
+  streamingPolicyId: string;
+  maxFrameBytes: number;
+  hardQueueLimit: number;
+  maxQueuedBytesLimit: number;
   subscribers: number;
   queuedEvents: number;
   queuedBytes: number;
@@ -39,6 +45,13 @@ export interface SessionEventBroadcasterMetrics {
   closedSlowClients: number;
   rejectedSubscribers: number;
 }
+
+export const SESSION_EVENTS_STREAMING_POLICY_ID = clawStreamingBackpressurePolicyId;
+
+type MutableSessionEventBroadcasterMetrics = Omit<
+  SessionEventBroadcasterMetrics,
+  "streamingPolicyId" | "maxFrameBytes" | "hardQueueLimit" | "maxQueuedBytesLimit" | "subscribers" | "queuedEvents" | "queuedBytes"
+>;
 
 interface QueuedSessionEvent {
   event: SessionEvent;
@@ -69,7 +82,7 @@ class SessionEventClient implements SessionEventSubscription {
   private readonly coalesced = new Map<string, QueuedSessionEvent>();
   private readonly raw: SessionSseWritable;
   private readonly options: Required<SessionEventBroadcasterOptions>;
-  private readonly metrics: Omit<SessionEventBroadcasterMetrics, "subscribers" | "queuedEvents" | "queuedBytes">;
+  private readonly metrics: MutableSessionEventBroadcasterMetrics;
   private readonly onClose: (client: SessionEventClient) => void;
   private flushing = false;
   private waitingForDrain = false;
@@ -78,7 +91,7 @@ class SessionEventClient implements SessionEventSubscription {
   constructor(
     raw: SessionSseWritable,
     options: Required<SessionEventBroadcasterOptions>,
-    metrics: Omit<SessionEventBroadcasterMetrics, "subscribers" | "queuedEvents" | "queuedBytes">,
+    metrics: MutableSessionEventBroadcasterMetrics,
     onClose: (client: SessionEventClient) => void,
   ) {
     this.raw = raw;
@@ -165,6 +178,10 @@ class SessionEventClient implements SessionEventSubscription {
       at: this.options.now(),
       payload: {
         error: "session_event_stream_overflow",
+        streamingPolicyId: this.options.streamingPolicyId,
+        maxFrameBytes: this.options.maxFrameBytes,
+        hardQueueLimit: this.options.hardQueueLimit,
+        maxQueuedBytes: this.options.maxQueuedBytes,
         dropped,
         droppedBytes,
         triggerType: triggerEvent.type,
@@ -232,6 +249,7 @@ export class SessionEventBroadcaster {
 
   constructor(options: SessionEventBroadcasterOptions = {}) {
     this.options = {
+      streamingPolicyId: options.streamingPolicyId ?? SESSION_EVENTS_STREAMING_POLICY_ID,
       hardQueueLimit: options.hardQueueLimit ?? clawDefaultStreamingBackpressurePolicy.maxQueuedFrames,
       maxQueuedBytes: options.maxQueuedBytes ?? clawDefaultStreamingBackpressurePolicy.maxQueuedBytes,
       maxFrameBytes: options.maxFrameBytes ?? clawDefaultStreamingBackpressurePolicy.maxFrameBytes,
@@ -278,6 +296,10 @@ export class SessionEventBroadcaster {
       queuedBytes += client.queuedBytes;
     }
     return {
+      streamingPolicyId: this.options.streamingPolicyId,
+      maxFrameBytes: this.options.maxFrameBytes,
+      hardQueueLimit: this.options.hardQueueLimit,
+      maxQueuedBytesLimit: this.options.maxQueuedBytes,
       subscribers: this.clients.size,
       queuedEvents,
       queuedBytes,

@@ -74,6 +74,11 @@ Renderers should apply those limits through `capSessionRenderPreview()` and
 use the matrix row for the event kind, preserve the canonical stored payload,
 and fall back to the unknown-event caps for provider-specific event types.
 
+Session SSE uses `SESSION_EVENTS_STREAMING_POLICY_ID`, which currently resolves
+to the default ClawJS streaming policy. `/v1/storage/metrics` includes the
+effective policy id and queue/frame limits so slow-client closures and overflow
+diagnostics can be tied back to the governing contract.
+
 ## Which Surface To Use
 
 | Need | Use | Why |

@@ -7,6 +7,7 @@ import { test, vi } from "vitest";
 
 import { buildSessionsApp } from "./app.ts";
 import { importCodexSessionsDir } from "./adapters/codex.ts";
+import { SESSION_RENDER_TRUNCATION_MARKER, sessionRenderCapPolicyFor } from "./render-caps.ts";
 import { SessionsServiceStore } from "./store.ts";
 
 const THREAD_A = ["019e2b9c", "bfc0", "7ed2", "ad43", "a81cf8904302"].join("-");
@@ -319,6 +320,35 @@ test("Codex import stores structured tool, patch, compaction and unknown events"
   const reimport = await importCodexSessionsDir(store, codexDir, { forceReimport: true });
   assert.equal(reimport.imported[0]?.messagesImported, 0);
   assert.equal(store.listSessionEvents({ sessionId: THREAD_A }).length, events.length);
+  store.close();
+});
+
+test("Codex import caps rendered event summaries without truncating raw payloads", async () => {
+  const rootDir = tempRoot("clawjs-codex-capped-summary-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const codexDir = path.join(rootDir, "codex-sessions");
+  const filePath = writeRollout(codexDir, THREAD_A, "first message");
+  const output = `${"huge shell output\n".repeat(1000)}raw-tail-preserved`;
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:02.000Z",
+    type: "response_item",
+    payload: {
+      type: "function_call_output",
+      call_id: "call_large_output",
+      turn_id: "turn_large_output",
+      output,
+    },
+  });
+  const store = new SessionsServiceStore(dbPath);
+
+  await importCodexSessionsDir(store, codexDir);
+
+  const event = store.listSessionEvents({ sessionId: THREAD_A, eventKind: "tool_output" })[0];
+  const payload = event?.payloadJson as { output?: string } | undefined;
+  assert.equal(payload?.output, output);
+  assert.equal(event?.renderedSummary?.includes(SESSION_RENDER_TRUNCATION_MARKER), true);
+  assert.ok((event?.renderedSummary?.length ?? 0) <= sessionRenderCapPolicyFor("tool_output").maxPreviewChars);
+  assert.equal(event?.renderedSummary?.includes("raw-tail-preserved"), false);
   store.close();
 });
 

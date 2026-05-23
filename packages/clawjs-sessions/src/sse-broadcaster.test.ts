@@ -12,6 +12,7 @@ import { SessionsApiClient } from "./client.ts";
 import { loadSessionsConfig } from "./config.ts";
 import { SESSION_JSON_CONTRACT_VERSION } from "./json-contracts.ts";
 import {
+  SESSION_EVENTS_STREAMING_POLICY_ID,
   SessionEventBroadcaster,
   type SessionSseWritable,
 } from "./sse-broadcaster.ts";
@@ -165,7 +166,18 @@ test("SessionEventBroadcaster closes only the slow client on hard queue overflow
   assert.equal(broadcaster.snapshotMetrics().closedSlowClients, 1);
   assert.equal(broadcaster.snapshotMetrics().droppedEvents, 3);
   assert.equal(broadcaster.snapshotMetrics().overflowCount, 1);
-  assert.equal(decoded(slow).at(-1)?.type, "error");
+  const diagnostic = decoded(slow).at(-1);
+  assert.equal(diagnostic?.type, "error");
+  assert.deepEqual(diagnostic?.payload, {
+    error: "session_event_stream_overflow",
+    streamingPolicyId: SESSION_EVENTS_STREAMING_POLICY_ID,
+    maxFrameBytes: clawDefaultStreamingBackpressurePolicy.maxFrameBytes,
+    hardQueueLimit: 2,
+    maxQueuedBytes: clawDefaultStreamingBackpressurePolicy.maxQueuedBytes,
+    dropped: 3,
+    droppedBytes: broadcaster.snapshotMetrics().droppedBytes,
+    triggerType: clawSessionEvents.projectUpdated,
+  });
 });
 
 test("SessionEventBroadcaster splits oversized message updates below max frame bytes", () => {
@@ -219,6 +231,26 @@ test("SessionEventBroadcaster rejects subscribers past the configured limit", ()
   assert.equal(broadcaster.trySubscribe(second), null);
   assert.equal(broadcaster.snapshotMetrics().subscribers, 1);
   assert.equal(broadcaster.snapshotMetrics().rejectedSubscribers, 1);
+});
+
+test("SessionEventBroadcaster metrics expose the streaming policy and effective limits", () => {
+  const broadcaster = new SessionEventBroadcaster({
+    hardQueueLimit: 9,
+    maxQueuedBytes: 10_000,
+    maxFrameBytes: 2_048,
+  });
+
+  assert.deepEqual({
+    streamingPolicyId: broadcaster.snapshotMetrics().streamingPolicyId,
+    hardQueueLimit: broadcaster.snapshotMetrics().hardQueueLimit,
+    maxQueuedBytesLimit: broadcaster.snapshotMetrics().maxQueuedBytesLimit,
+    maxFrameBytes: broadcaster.snapshotMetrics().maxFrameBytes,
+  }, {
+    streamingPolicyId: SESSION_EVENTS_STREAMING_POLICY_ID,
+    hardQueueLimit: 9,
+    maxQueuedBytesLimit: 10_000,
+    maxFrameBytes: 2_048,
+  });
 });
 
 test("loadSessionsConfig reads SSE backpressure limits from env", () => {
