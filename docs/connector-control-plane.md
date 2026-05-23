@@ -3,7 +3,7 @@
 The connector control plane is the framework contract for deciding whether an
 external connector operation may run. It is local and deterministic: it checks
 provider state, operation support, credential bindings, policy rules, budgets,
-network proof, approval-bound grant records, and audit requirements before any runtime is
+network proof, scoped connector grant records tied to approval evidence, and audit requirements before any runtime is
 called.
 
 Use `connectors` for the strict control plane. Integration packages provide
@@ -20,7 +20,7 @@ Connector execution follows these stages:
 4. policy
 5. budget
 6. network
-7. approval-bound grant check
+7. scoped connector grant check
 8. credential broker lease
 9. runtime
 10. redaction
@@ -104,8 +104,13 @@ refs, and raw traces.
 - `reasons`: stable reason codes for blocks or approval requirements;
 - `audit`: redacted audit declaration with provider, operation, actor/request
   ids when available, selected governed context refs, selected field refs,
-  secret refs, default context refs, applied fallback rule ids, approval-bound grant
-  id, and redacted reason codes.
+  secret refs, default context refs, applied fallback rule ids, scoped connector
+  grant id, approval evidence id, and redacted reason codes.
+
+The canonical TypeScript contract is `ConnectorScopedGrant`. The legacy
+`ConnectorApprovalGrant` type and `approvalGrantId` audit field remain as
+compatibility aliases only; approval evidence is review metadata, while the
+scoped grant is the capability edge evaluated by the control plane.
 
 Supported block reasons include missing context, disabled providers,
 unsupported operations, credential scope mismatch, policy denial, missing or

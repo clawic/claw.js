@@ -76,6 +76,14 @@ Adapter availability alone is not a support claim for the whole ecosystem.
 | `repair()` | Run adapter-specific repair/doctor actions. |
 | `setupWorkspace()` | Register or initialize the current workspace for that adapter. |
 
+## Queryable Runtime Logs
+
+The runtime service keeps redacted diagnostic logs in `runtime.sqlite`.
+Normal UI and feedback paths should query `GET /v1/runtime/logs` by session,
+job, process, subsystem, level, and time range instead of scanning full log
+files. `POST /v1/runtime/logs/prune` applies bounded retention, and runtime job
+events are mirrored into the log table under subsystem `runtime.jobs`.
+
 ## Workspace contracts
 
 Runtime-facing files are defined per adapter, not globally. Examples:

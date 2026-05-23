@@ -62,7 +62,7 @@ resolves the reference back to redacted governed context.
 Control-plane audit declarations include the joined governed-context and
 Secrets decision surface: provider, operation, actor/request ids when
 available, selected context refs, selected field refs, secret refs, default
-context refs, applied fallback rule ids, approval-bound grant id, and redacted reason
+context refs, applied fallback rule ids, scoped connector grant id, approval evidence id, and redacted reason
 codes. The audit declaration is metadata only; it does not include private
 field values or plaintext credentials.
 

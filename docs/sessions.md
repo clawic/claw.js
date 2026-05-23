@@ -39,18 +39,37 @@ unless the caller explicitly expands events. Older history is loaded with
 offset/limit windows.
 
 The sidebar and transcript hot paths are query-plan contracts, not best-effort
-optimizations. Initial sidebar reads must stay index-backed for active visible
-sessions, project-scoped session lists, and pinned/recent ordering. Transcript
-hydration must clamp caller-provided windows to the service maximum and page
-through `session_messages` by `(session_id, timestamp)`. Turn expansion must
-page through `session_events` by `(session_id, turn_id, timestamp, source_line)`.
-`packages/clawjs-sessions/src/session-query-contract.test.ts` guards these
-contracts with `EXPLAIN QUERY PLAN` checks and fails if a critical query starts
-sorting through a temporary b-tree.
+optimizations. Initial sidebar reads and quick switch reads must stay
+index-backed for active visible sessions, project-scoped session lists, and
+pinned/recent ordering. Quick switch is a header-only surface:
+`quickSwitchSessions()` and `/v1/sidebar/quick-switch` search session title,
+cwd, branch, project path, and runtime session id only; they do not read
+messages, events, or FTS tables. Transcript hydration must clamp caller-provided
+windows to the service maximum and page through `session_messages` by
+`(session_id, timestamp)`. Turn expansion must page through `session_events` by
+`(session_id, turn_id, timestamp, source_line)`.
+`packages/clawjs-sessions/src/session-query-contract.test.ts` and
+`packages/clawjs-sessions/src/quick-switcher.test.ts` guard these contracts with
+`EXPLAIN QUERY PLAN` checks and fail if a critical query starts sorting through a
+temporary b-tree.
 
 Searchable text is intentionally separate from visible transcript text. The
 service preserves transcript `content_text` for display and reconstruction, but
 indexes redacted message/event text for FTS and Root Search previews.
+Deep session and event search is explicit and paged: `/v1/sessions/search` and
+`/v1/sessions/events/search` accept `limit` and `offset`, return snippets and
+source records, and remain separate from quick switch.
+
+Dynamic tool records carry namespace, source, deferred-schema state, and a
+SHA-256 schema hash. Writers may provide the hash, but the session store
+recomputes it from the stored schema JSON and rejects mismatches before the
+capability is persisted.
+
+Runtime jobs expose a bounded background-work projection through
+`SessionsRuntimeJobStore.listBackgroundWork()`. It returns active, awaiting, and
+failed job summaries by default, can filter by session id, and only includes
+resolved jobs when the caller asks for them. UI badges and side panels should
+use that projection instead of deriving job state from runtime logs.
 
 ## Session Render Matrix
 

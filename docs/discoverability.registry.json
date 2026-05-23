@@ -4238,6 +4238,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-full-surface-vocabulary-contract",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-full-surface-vocabulary-contract.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-full-surface-vocabulary-contract",
+        "Verify Full Surface Vocabulary Contract"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-full-surface-vocabulary-contract",
+          "expectPath": "scripts/verify-full-surface-vocabulary-contract.mjs"
+        }
+      ],
+      "guard": "scripts/verify-full-surface-vocabulary-contract.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-governance-workspace-project-goal",
       "kind": "guardrail",
       "steward": "claw",
@@ -4284,6 +4309,31 @@
         }
       ],
       "guard": "scripts/verify-host-permission-contract.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-identity-scope-contract",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-identity-scope-contract.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-identity-scope-contract",
+        "Verify Identity Scope Contract"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-identity-scope-contract",
+          "expectPath": "scripts/verify-identity-scope-contract.mjs"
+        }
+      ],
+      "guard": "scripts/verify-identity-scope-contract.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -4621,6 +4671,31 @@
         }
       ],
       "guard": "scripts/verify-system-telemetry-search-discoverability.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-verify-technical-tenancy-contract",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-technical-tenancy-contract.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-technical-tenancy-contract",
+        "Verify Technical Tenancy Contract"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-technical-tenancy-contract",
+          "expectPath": "scripts/verify-technical-tenancy-contract.mjs"
+        }
+      ],
+      "guard": "scripts/verify-technical-tenancy-contract.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },

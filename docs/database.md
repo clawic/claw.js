@@ -117,6 +117,22 @@ files.
 database and sessions services. It reports worker queue depth and per-operation
 count/error/p50/p95/p99/max timings without record payloads or secrets.
 
+## Record Query Contracts
+
+Record listing is a hot path for dense custom collections. `listRecords()` and
+`GET /v1/namespaces/:namespaceId/collections/:collectionName/records` must stay
+SQL-paged and index-backed:
+
+- default newest-first reads use `records_collection_created_idx`;
+- updated-first reads use `records_collection_updated_idx`;
+- filtered custom reads must use an explicit collection index declared in the
+  collection schema;
+- unsupported filters and sorts fail instead of falling back to full scans;
+- the HTTP API clamps oversized page requests to its service limit.
+
+`packages/clawjs-database/src/database-query-plan.test.ts` guards those
+contracts with `EXPLAIN QUERY PLAN` checks and a 650-row API clamp fixture.
+
 File uploads default to a 100 MiB per-file limit. Override it with
 `CLAW_DATABASE_MAX_UPLOAD_BYTES` or `DatabaseServiceConfig.maxUploadFileBytes`
 when embedding `buildDatabaseApp()`.

@@ -343,8 +343,11 @@ The docs check script validates that every current export from
     ListProjectsFilter
     ListProjectsResult
     ListRecordsOptions
+    ListRuntimeLogsFilter
     ListSessionDynamicToolsOptions
     ListSessionEventsFilter
+    ListSessionsBackgroundWorkInput
+    ListSessionsBackgroundWorkResult
     ListSessionsFilter
     ListSessionsResult
     LocalGuidanceStore
@@ -432,6 +435,8 @@ The docs check script validates that every current export from
     PollWatchOptions
     PreserveManagedBlocksWriteOptions
     ProjectRecord
+    QuickSwitchSessionsInput
+    QuickSwitchSessionsResult
     QuietHoursPolicy
     RESOURCES_STATE_FILE
     RULES_STATE_FILE
@@ -450,6 +455,7 @@ The docs check script validates that every current export from
     RecordChangeEvent
     RecordChannelEventInput
     RecordEnvelope
+    RecordRuntimeLogInput
     RegisterAudioInput
     RegisterChannelProcessorInput
     RegisterChannelTargetInput
@@ -486,6 +492,9 @@ The docs check script validates that every current export from
     RuntimeJobStartInput
     RuntimeJobStartResult
     RuntimeJobStatus
+    RuntimeLogLevel
+    RuntimeLogRecord
+    RuntimeLogRetentionResult
     RuntimeOperation
     RuntimeOperationHandlers
     RuntimeProbeStatus
@@ -598,6 +607,8 @@ The docs check script validates that every current export from
     SessionWithMessages
     SessionsApiClient
     SessionsApiClientOptions
+    SessionsBackgroundWorkItem
+    SessionsBackgroundWorkStatus
     SessionsRuntimeDiagnosticBundleRecord
     SessionsRuntimeEventRecord
     SessionsRuntimeJobRecord

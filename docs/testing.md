@@ -23,19 +23,29 @@ ClawJS uses boundary-based test lanes. The canonical policy is
   E2E release gate.
 
 Canonical `npm run test:<lane>` commands enter through the agent coordination
-ledger before running. A busy lane returns `PENDING` quickly and records demand
-instead of running a duplicate suite or waiting in a spin loop. Use
+ledger before running. The broker takes the primary check lease and every
+resource declared by that check as one all-or-nothing acquisition. A busy lane
+or resource returns `PENDING` quickly and records demand instead of running a
+duplicate suite, mutating shared fixtures, or waiting in a spin loop. Use
 `claw test plan --lane <lane> --json` to inspect the declared checks and
 `claw test status --json` to inspect active leases.
+Canonical runners heartbeat every acquired lease while child commands are
+running, then release the primary lease with the result and non-primary resource
+leases without duplicate result rows.
 
 The ClawJS public coordination manifest is
 `qa/agent-coordination.manifest.json`. Each check declares its lane command,
 cost class, real-service risk, path/fingerprint inputs, required resources,
 reuse policy, external-pending policy, failure action, and repair policy.
 Matching valid `passed` results may be reused only when the check explicitly
-allows result reuse. Matching failed results are failure evidence, not passing
-validation. Failed runs create repair ownership for the check fingerprint so
-other agents do not rerun the same failing work while a repair owner is active.
+allows result reuse. The fingerprint includes the relevant repo evidence,
+declared environment inputs, real-service flag, cost class, and resource
+dependencies, so reuse is invalidated when a check's environment-sensitive or
+resource-state dependencies change. Duplicate check requests with the same
+check id and fingerprint are deduplicated before resource acquisition. Matching
+failed results are failure evidence, not passing validation. Failed runs create
+repair stewardship for the check fingerprint so other agents do not rerun the
+same failing work while a repair steward is active.
 Bypass requires `CLAW_AGENT_COORDINATION_BYPASS_REASON` and records an audit row
 with `cleanValidation: false`; it must be reported as partial/degraded evidence.
 
@@ -59,5 +69,6 @@ physical or external and the local contract is still covered by tests.
 
 ## Quarantine
 
-Quarantines live in `qa/quarantine.json`. Each entry needs `id`, `owner`,
-`reason`, `repair`, and `expires`. Expired entries fail `npm run test:policy`.
+Quarantines live in `qa/quarantine.json`. Each entry needs `id`, assigned
+maintainer, `reason`, `repair`, and `expires`. Expired entries fail
+`npm run test:policy`.

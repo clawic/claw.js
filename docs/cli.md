@@ -63,6 +63,7 @@ claw agent-resource plan --repo . --intent my-work --json
 claw agent-resource acquire --resource test:clawjs:changed --mode exclusive --intent my-work --json
 claw agent-resource heartbeat --lease <lease-id> --status running --json
 claw agent-resource release --lease <lease-id> --status passed --json
+claw agent-resource release --lease <resource-lease-id> --status passed --no-result true --json
 claw agent-resource status --json
 claw agent-resource waitlist --resource test:clawjs:changed --intent my-work --json
 claw agent-resource reap --json
@@ -71,8 +72,9 @@ claw agent-resource bypass --intent my-work --reason "approved partial validatio
 
 `claw test` is a test-specific facade over the same ledger. It does not own
 separate state. `plan` reads `qa/agent-coordination.manifest.json`, `require`
-acquires exclusive check leases, `run` acquires a lease before executing the
-manifest command, and `status` reports the underlying resource ledger.
+atomically acquires the primary check lease plus every declared resource lease,
+`run` acquires the same resource set before executing the manifest command, and
+`status` reports the underlying resource ledger.
 
 ```bash
 claw test plan --repo . --lane changed --json
@@ -81,14 +83,22 @@ claw test run --repo . --lane changed --json
 claw test status --repo . --json
 ```
 
-If a resource is busy, commands return `PENDING` quickly and record a demand
-instead of spinning. If a check has `resultReuse.allowed`, a matching valid
-`passed` result satisfies `claw test require` without taking a new lease. A
-matching failed result is returned only as `FAILED_EVIDENCE`; it never satisfies
-passing validation. Failed `claw test run` executions claim repair ownership for
-that check fingerprint, so other agents record pending demand until the owner
-repairs, releases, or goes stale. Canonical `npm run test:<lane>` paths call
-this broker before running the lane.
+If any declared resource is busy, commands return `PENDING` quickly and record a
+demand without taking partial leases or spinning. Runners release non-primary
+resource leases with `--no-result true` so only the primary check lease records
+the reusable work result. If a check has `resultReuse.allowed`, a matching valid
+`passed` result satisfies `claw test require` without taking a new lease only
+when the computed fingerprint still matches. The fingerprint includes repo
+inputs, dirty status for those inputs, declared environment inputs, real-service
+flag, cost class, and resource dependencies. Duplicate check requests with the
+same check id and fingerprint are collapsed into one acquisition and reported
+with `deduplicated: true` on the repeated entries. A matching failed result is
+returned only as `FAILED_EVIDENCE`; it never satisfies passing validation.
+Failed `claw test run` executions claim repair stewardship for that check
+fingerprint, so other agents record pending demand until the owner repairs,
+releases, or goes stale. Canonical `npm run test:<lane>` paths call this broker
+before running the lane and heartbeat acquired leases while the lane command is
+active.
 
 Bypass is deliberately degraded evidence: `agent-resource bypass` writes an
 audit event with `cleanValidation: false`, and lane runners require
@@ -380,7 +390,7 @@ claw sync cache --resource-id skills:default --driver skills --object-ref skill.
 claw nodes list --json
 claw nodes pair --dry-run --json
 claw nodes trust --dry-run --json
-claw nodes trust --target-node vps.server --owner-node mac.home --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+claw nodes trust --target-node vps.server --node-id mac.home --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 claw nodes revoke --dry-run --json
 claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --json
 claw nodes accept --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed-resources skills:default --actions read,sync --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
@@ -390,7 +400,7 @@ claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed
 claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --state-dir .claw/remote-sync --record true --json
 claw nodes revoke --target-type share --target-id mesh_share_1 --state-dir .claw/remote-sync --record true --json
 claw nodes heartbeat --json
-claw nodes heartbeat --transport iroh --owner-node mac.home --peer-node vps.server --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+claw nodes heartbeat --transport iroh --node-id mac.home --peer-node vps.server --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 
 claw gateway serve --dry-run --json
 claw gateway serve --state-dir .claw/remote-sync --record true --gateway-node gateway.self --coordinator-node coord.home --bind-address 127.0.0.1:24102 --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
@@ -404,7 +414,7 @@ claw gateway secret-lease --state-dir .claw/remote-sync --secret-ref vault://age
 claw gateway secret-provider --state-dir .claw/remote-sync --secret-ref vault://agents/support --resource-id skills:default --provider-id provider.1password --credential-binding-id credential.support --agent-id agent.support --assignment-id assignment.service --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
 ```
 
-`remote-safe` means the capability has a route, owner, policy, and tests.
+`remote-safe` means the capability has a route, steward, policy, and tests.
 `local-only`, `blocked`, and `pending` are explicit states, not silent gaps.
 `remote classify --capability-id ... --record true` records a signed
 `RemoteSurfaceClassificationReceipt`; a `remote-safe` receipt requires a route
@@ -812,7 +822,7 @@ claw agents control-panel --record '{"surface":"external_channel","agent":{"id":
 claw agents privacy-plan --record '{"operation":"export","subject":{"scopeType":"external_user","scopeId":"external_user_1"},"agent":{"id":"agent.ops","name":"Ops"},"supportMessages":[{"id":"message.1","externalUserId":"external_user_1","body":"Need help"}]}' --json
 claw agents paperclip-import --record '{"packageId":"paperclip.ops","agentsMd":"# Ops Reviewer\nRole: reviewer\nSkills: skill.review@1\nInstructions: Review safely.","package":{"skills":[{"ref":"skill.shared","version":"1"}]}}' --json
 claw agents surface-projection --record '{"surface":"relay","agent":{"id":"agent.ops","name":"Ops","secretAllowlist":["vault://agents/ops"]},"assignments":[{"id":"assignment.relay","agentId":"agent.ops","kind":"relay","status":"active","channel":"relay"}],"budgets":[{"id":"budget.relay","exceededBehavior":"deny_action","limits":[{"dimension":"external_actions","limit":10}]}]}' --json
-claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.owner","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
+claw agents config-revision --record '{"agentId":"agent.ops","revision":2,"actorId":"actor.steward","reason":"Tighten MCP assignment","configSnapshot":{"name":"Ops","secretAllowlist":["vault://agents/ops"]}}' --json
 claw agents incident --record '{"agentId":"agent.ops","assignmentId":"assignment.relay","severity":"high","summary":"Unsafe route blocked","metadata":{"rawTraceRef":"trace:redacted"}}' --json
 claw agents activity-feed --record '{"agentId":"agent.ops","runs":[{"id":"run.1","status":"completed","startedAt":"2026-05-17T09:00:00.000Z"}],"incidents":[{"id":"incident.1","severity":"high","summary":"Unsafe route blocked","detectedAt":"2026-05-17T10:00:00.000Z"}],"limit":10}' --json
 claw agents blueprint --record '{"name":"Support blueprint","agencyMode":"support","skillBindings":[{"ref":"skill.support","version":"1","requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}],"template":{"role":"Support","secretAllowlist":["vault://agents/ops"]},"requiredResourceGrants":[{"resourceType":"collection","resourceId":"support_conversations","action":"read"}]}' --json
@@ -1214,7 +1224,7 @@ claw reminders list
 claw deadlines list
 claw routines every "3h" "check deployment health"
 claw schedule after "30m" "check build"
-claw watch thread:thread-42 --if-no reply --after 24h --then remind "ping owner"
+claw watch thread:thread-42 --if-no reply --after 24h --then remind "ping maintainer"
 claw agenda --json
 claw timeline week --json
 claw review daily --json
