@@ -476,7 +476,7 @@ export interface SessionsRuntimeJobRecord {
 
 export interface EnqueueSessionsRuntimeJobInput {
   id?: string;
-  kind: "sessions.import_codex" | "sessions.rebuild_projection" | string;
+  kind: "sessions.import_codex" | "sessions.rebuild_projection" | "sessions.rebuild_projections" | string;
   title?: string;
   resourceId?: string | null;
   priority?: number;

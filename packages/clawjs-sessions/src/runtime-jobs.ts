@@ -486,7 +486,7 @@ export async function runSessionsRuntimeJobs(input: RunSessionsRuntimeJobsInput)
         now: input.now,
         leaseMs: input.leaseMs,
         owner: input.owner,
-        kinds: ["sessions.import_codex", "sessions.rebuild_projection"],
+        kinds: ["sessions.import_codex", "sessions.rebuild_projection", "sessions.rebuild_projections"],
       });
       if (!job) break;
       claimed += 1;
@@ -522,6 +522,14 @@ function sessionChangedEventsForJob(job: SessionsRuntimeJobRecord, result: unkno
     const sessionId = job.resourceId ?? (typeof payload.sessionId === "string" ? payload.sessionId : null);
     return sessionId ? [{ sessionId, jobId: job.id, jobKind: job.kind, reason: "rebuild_projection" }] : [];
   }
+  if (job.kind === "sessions.rebuild_projections") {
+    return payloadStringArray(result, "sessionIds").map((sessionId) => ({
+      sessionId,
+      jobId: job.id,
+      jobKind: job.kind,
+      reason: "rebuild_projection",
+    }));
+  }
   if (job.kind !== "sessions.import_codex") return [];
   const imported = payloadRecordArray(result, "imported");
   const sessionIds = new Set<string>();
@@ -545,6 +553,12 @@ function payloadRecordArray(value: unknown, key: string): Record<string, unknown
     : [];
 }
 
+function payloadStringArray(value: unknown, key: string): string[] {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return [];
+  const maybeArray = (value as Record<string, unknown>)[key];
+  return Array.isArray(maybeArray) ? maybeArray.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+}
+
 async function runOneSessionsJob(job: SessionsRuntimeJobRecord, store: SessionsServiceStore, defaultCodexSessionsDir?: string): Promise<unknown> {
   const payload = payloadRecord(job.payloadJson);
   switch (job.kind) {
@@ -565,9 +579,73 @@ async function runOneSessionsJob(job: SessionsRuntimeJobRecord, store: SessionsS
       if (!sessionId) throw new Error("sessions.rebuild_projection requires resourceId or payload.sessionId");
       return store.rebuildSessionProjection(sessionId);
     }
+    case "sessions.rebuild_projections": {
+      return rebuildSessionProjections(store, payload);
+    }
     default:
       throw new Error(`unsupported sessions runtime job kind: ${job.kind}`);
   }
+}
+
+function rebuildSessionProjections(store: SessionsServiceStore, payload: Record<string, unknown>): {
+  sessionsProcessed: number;
+  sessionIds: string[];
+  totalMatched: number;
+  budgetExhausted: boolean;
+  stopReason: "drained" | "max_sessions" | "budget_ms";
+  nextOffset: number | null;
+} {
+  const start = performance.now();
+  const maxSessions = boundedOptionalInt(payload.maxSessions, 1, 1_000_000);
+  const budgetMs = boundedOptionalInt(payload.budgetMs, 1, 10 * 60 * 1000);
+  const batchSize = boundedInt(payload.batchSize, 1, 500, 50);
+  let offset = boundedInt(payload.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+  const filter = {
+    projectId: typeof payload.projectId === "string" ? payload.projectId : undefined,
+    projectPath: typeof payload.projectPath === "string" ? payload.projectPath : undefined,
+  };
+  const sessionIds: string[] = [];
+  let totalMatched = 0;
+  let budgetExhausted = false;
+  let stopReason: "drained" | "max_sessions" | "budget_ms" = "drained";
+  while (true) {
+    if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
+      budgetExhausted = true;
+      stopReason = "budget_ms";
+      break;
+    }
+    if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
+      stopReason = "max_sessions";
+      break;
+    }
+    const page = store.listSessions({ ...filter, limit: batchSize, offset });
+    totalMatched = page.total;
+    if (page.items.length === 0) break;
+    for (const session of page.items) {
+      if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
+        budgetExhausted = true;
+        stopReason = "budget_ms";
+        break;
+      }
+      if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
+        stopReason = "max_sessions";
+        break;
+      }
+      store.rebuildSessionProjection(session.id);
+      sessionIds.push(session.id);
+    }
+    offset += page.items.length;
+    if (stopReason !== "drained") break;
+    if (offset >= page.total) break;
+  }
+  return {
+    sessionsProcessed: sessionIds.length,
+    sessionIds,
+    totalMatched,
+    budgetExhausted,
+    stopReason,
+    nextOffset: stopReason === "drained" ? null : offset,
+  };
 }
 
 function rowToJob(row: RuntimeJobRow): SessionsRuntimeJobRecord {
@@ -746,5 +824,12 @@ function titleForJob(kind: string, resourceId: string | null | undefined): strin
 function boundedInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+function boundedOptionalInt(value: unknown, min: number, max: number): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return undefined;
   return Math.min(max, Math.max(min, Math.floor(n)));
 }

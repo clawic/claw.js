@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+import { SessionsServiceStore } from "../../clawjs-sessions/src/store.ts";
 
 const THREAD_ID = ["019e5236", "7e72", "77e3", "aef2", "bfe4c2628c72"].join("-");
 
@@ -132,6 +133,86 @@ test("sessions runtime CLI runs Codex import jobs and emits session Search inval
       && result.resourceId === THREAD_ID
       && result.metadata.sessionId === THREAD_ID
     )), true);
+  });
+});
+
+test("sessions runtime CLI enqueues project-scoped projection rebuild jobs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-sessions-runtime-rebuild-cli-"));
+  const dataRoot = path.join(workspaceRoot, ".claw", "data");
+  const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+  const projectPath = path.join(workspaceRoot, "project-a");
+  fs.mkdirSync(dataRoot, { recursive: true });
+  const seed = new SessionsServiceStore(sessionsDbPath);
+  try {
+    seed.createProject({ id: "project-a", path: projectPath, displayName: "Project A" });
+    seed.createSession({ id: "session-rebuild-cli", agent: "codex", title: "Rebuild", projectId: "project-a", projectPath });
+    seed.appendSessionEvent({
+      sessionId: "session-rebuild-cli",
+      turnId: "turn-rebuild-cli",
+      eventKind: "message",
+      eventType: "event_msg.user_message",
+      role: "user",
+      timestamp: 10,
+      sourceNativeId: "session-rebuild-cli:line:1",
+      payloadJson: { message: "rebuild cli needle" },
+      renderedSummary: "rebuild cli needle",
+      searchableText: "rebuild cli needle",
+    });
+  } finally {
+    seed.close();
+  }
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+    CLAW_SESSIONS_DATA_DIR: undefined,
+  }, async () => {
+    const enqueue = await runCliCapture([
+      "sessions",
+      "runtime",
+      "enqueue",
+      "rebuild-projections",
+      "--project-id",
+      "project-a",
+      "--max-sessions",
+      "5",
+      "--data-dir",
+      dataRoot,
+      "--id",
+      "job-rebuild-project",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(enqueue.code, CLI_EXIT_OK, enqueue.stderr || enqueue.stdout);
+    const enqueuePayload = JSON.parse(enqueue.stdout) as { data: { item: { id: string; kind: string; resourceId: string } } };
+    assert.equal(enqueuePayload.data.item.id, "job-rebuild-project");
+    assert.equal(enqueuePayload.data.item.kind, "sessions.rebuild_projections");
+    assert.equal(enqueuePayload.data.item.resourceId, "project-a");
+
+    const run = await runCliCapture([
+      "sessions",
+      "runtime",
+      "run-once",
+      "--data-dir",
+      dataRoot,
+      "--max-jobs",
+      "1",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(run.code, CLI_EXIT_OK, run.stderr || run.stdout);
+    const runPayload = JSON.parse(run.stdout) as {
+      data: {
+        worker: { completed: number; items: Array<{ kind: string; result: { sessionsProcessed: number } }> };
+        searchEvents: Array<{ source: string; sessionId: string; result: { ok: boolean } }>;
+      };
+    };
+    assert.equal(runPayload.data.worker.completed, 1);
+    assert.equal(runPayload.data.worker.items[0]?.kind, "sessions.rebuild_projections");
+    assert.equal(runPayload.data.worker.items[0]?.result.sessionsProcessed, 1);
+    assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.events" && event.sessionId === "session-rebuild-cli" && event.result.ok), true);
   });
 });
 

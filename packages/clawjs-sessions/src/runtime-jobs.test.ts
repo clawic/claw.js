@@ -234,3 +234,77 @@ test("runSessionsRuntimeJobs processes import and projection jobs with budgets",
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("runSessionsRuntimeJobs rebuilds projections by project with session budgets", async () => {
+  const rootDir = tempRoot("clawjs-sessions-runtime-rebuild-all-");
+  const runtimeDbPath = path.join(rootDir, "runtime.sqlite");
+  const sessionsDbPath = path.join(rootDir, "sessions.sqlite");
+  const projectPath = path.join(rootDir, "project-a");
+  const sessions = new SessionsServiceStore(sessionsDbPath);
+  try {
+    sessions.createProject({ id: "project-a", path: projectPath, displayName: "Project A" });
+    for (const id of ["session-a", "session-b", "session-other"]) {
+      sessions.createSession({
+        id,
+        agent: "codex",
+        title: id,
+        projectId: id === "session-other" ? undefined : "project-a",
+        projectPath: id === "session-other" ? undefined : projectPath,
+      });
+      sessions.appendSessionEvent({
+        sessionId: id,
+        turnId: `turn-${id}`,
+        eventKind: "message",
+        eventType: "event_msg.user_message",
+        role: "user",
+        timestamp: 10,
+        sourceNativeId: `${id}:line:1`,
+        payloadJson: { message: id },
+        renderedSummary: id,
+        searchableText: id,
+      });
+    }
+  } finally {
+    sessions.close();
+  }
+  const jobs = new SessionsRuntimeJobStore(runtimeDbPath);
+  try {
+    jobs.enqueueJob({
+      id: "job-rebuild-project",
+      kind: "sessions.rebuild_projections",
+      resourceId: "project-a",
+      payload: { projectId: "project-a", maxSessions: 1, batchSize: 1 },
+      scheduledAt: "2026-05-23T10:00:00.000Z",
+    });
+  } finally {
+    jobs.close();
+  }
+
+  const changed: string[] = [];
+  const run = await runSessionsRuntimeJobs({
+    runtimeDbPath,
+    sessionsDbPath,
+    maxJobs: 1,
+    now: "2026-05-23T10:00:01.000Z",
+    onSessionChanged: (event) => {
+      changed.push(event.sessionId);
+    },
+  });
+  assert.equal(run.completed, 1);
+  assert.equal(run.items[0]?.kind, "sessions.rebuild_projections");
+  const result = run.items[0]?.result as { sessionsProcessed: number; sessionIds: string[]; totalMatched: number; stopReason: string; nextOffset: number | null };
+  assert.equal(result.sessionsProcessed, 1);
+  assert.equal(result.totalMatched, 2);
+  assert.equal(result.stopReason, "max_sessions");
+  assert.equal(result.nextOffset, 1);
+  assert.deepEqual(changed, result.sessionIds);
+
+  const projected = new SessionsServiceStore(sessionsDbPath);
+  try {
+    assert.equal(result.sessionIds.every((id) => projected.getProjectionMeta(id)?.projectionStatus === "current"), true);
+    assert.equal(projected.getProjectionMeta("session-other"), null);
+  } finally {
+    projected.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});

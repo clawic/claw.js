@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SessionsApiClient, buildSessionsApp, stableProjectIdFromPath } from "@clawjs/sessions";
+import { SessionsApiClient, SessionsServiceStore, buildSessionsApp, stableProjectIdFromPath } from "@clawjs/sessions";
 import type { FastifyInstance } from "fastify";
 
 const SECRET = "sessions-canonical-secret";
@@ -196,29 +196,15 @@ test("CLI seed-realistic creates a reusable hermetic sessions dataset", async ()
     assert.ok(seedReport.coverage.toolEvents > 0);
     assert.ok(seedReport.coverage.recoverableCorruptions > 0);
 
-    const { app } = buildSessionsApp({
-      config: {
-        host: "127.0.0.1",
-        port: 0,
-        dataDir: tmpDir,
-        dbPath,
-        sharedSecret: SECRET,
-        codexSessionsDir: path.join(tmpDir, "codex"),
-      },
-    });
-    const client = new SessionsApiClient({
-      baseUrl: "http://sessions.test",
-      token: SECRET,
-      fetchImpl: injectFetch(app),
-    });
+    const store = new SessionsServiceStore(dbPath);
     try {
-      const listed = await client.list({ limit: 20 });
+      const listed = store.listSessions({ limit: 20 });
       assert.equal(listed.total, 12);
-      const markdownHits = await client.search({ query: "Regression Packet", limit: 10 });
-      assert.ok(markdownHits.items.length > 0);
-      assert.ok(markdownHits.items.some((hit) => hit.message.contentBlocks && hit.message.contentBlocks.length > 0));
+      const markdownHits = store.searchMessages({ query: "Regression Packet", limit: 10 });
+      assert.ok(markdownHits.length > 0);
+      assert.ok(markdownHits.some((hit) => hit.message.contentBlocks && hit.message.contentBlocks.length > 0));
     } finally {
-      await app.close();
+      store.close();
     }
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
