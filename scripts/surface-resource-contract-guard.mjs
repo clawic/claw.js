@@ -64,7 +64,7 @@ function validateBaselineEnvelope(baseline) {
   if (baseline.version !== 1) failures.push("surface resource contract baseline version must be 1");
   for (const [index, entry] of (baseline.entries ?? []).entries()) {
     const label = entry.id ?? `<entry ${index + 1}>`;
-    for (const field of ["id", "classification", "owner", "reason", "risk", "expires", "nextPhase", "reentryCondition"]) {
+    for (const field of ["id", "classification", "steward", "reason", "risk", "expires", "nextPhase", "reentryCondition"]) {
       if (!entry[field]) failures.push(`${label} is missing ${field}`);
     }
     if (!["lateral_debt", "pre_existing_dirty"].includes(entry.classification)) {
@@ -164,7 +164,7 @@ function buildBaseline(registry = clawPersistentSurfaceRegistry) {
       {
         id: "clawjs.existing-surfaces-without-resource-contract",
         classification: "lateral_debt",
-        owner: "claw",
+        steward: "claw",
         reason: "Initial bounded baseline for stable surfaces that predate the resourceContract requirement.",
         risk: "Existing surfaces remain inspectable, but their startup, idle, memory, streaming, storage, hot-path, scale, and validation contract is not yet machine-checkable.",
         expires: "2026-08-18",

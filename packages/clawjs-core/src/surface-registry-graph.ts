@@ -1435,7 +1435,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
     clawPersistentSurface.database({
       id: "claw.database.agentCoordination",
       name: "Agent coordination ledger database",
-      path: clawGlobalHomeLayout.agentCoordinationState,
+      path: `${clawGlobalHomeLayout.state}/${clawStorageFiles.agentCoordinationDatabase}`,
       parentId: "claw.global",
       source: registrySource,
       envOverrides: ["CLAW_AGENT_COORDINATION_STATE_DIR", "CLAW_HOME"],
@@ -1455,7 +1455,7 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       id: "claw.run.agentCoordination",
       kind: "folder",
       name: "Agent coordination heartbeat run directory",
-      path: clawGlobalHomeLayout.agentCoordinationRun,
+      path: `${clawGlobalHomeLayout.run}/agent-coordination`,
       parentId: "claw.global",
       storageClass: "persistentTemp",
       canonicality: "canonical",

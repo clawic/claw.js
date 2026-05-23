@@ -730,11 +730,9 @@ export const clawGlobalHomeLayout = {
   config: "~/.claw/config.yaml",
   data: "~/.claw/data",
   state: "~/.claw/state",
-  agentCoordinationState: "~/.claw/state/agent-coordination.sqlite",
   cache: "~/.claw/cache",
   logs: "~/.claw/logs",
   run: "~/.claw/run",
-  agentCoordinationRun: "~/.claw/run/agent-coordination",
   tmp: "~/.claw/tmp",
   skills: "~/.claw/skills",
 } as const;
@@ -1504,6 +1502,29 @@ export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>>
 
 export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliCommands.map((command) => {
   const surfaceNarrative = cliCommandNarratives[command];
+  const resourceContract = command === "agent-resource"
+    ? {
+        startup: "Runs only when invoked from the CLI; importing ClawJS does not open the coordination ledger.",
+        idle: "No daemon or background wait loop is started by the command.",
+        memory: "Each invocation loads bounded ledger rows for the requested acquire/status/reap operation.",
+        streaming: "No stream is exposed; heartbeat is an explicit command and JSON heartbeat file update.",
+        storage: "Writes agent intents, leases, demands, work results, repair ownership, and bypass audit rows to the registered coordination SQLite database.",
+        hotPath: "Agent automation/control-plane path only; user-facing app hot paths must not depend on it.",
+        scale: "Indexed lease and demand lookups are designed for concurrent local agents and bounded recent status output.",
+        validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
+      }
+    : command === "test"
+      ? {
+          startup: "Runs only when invoked from the CLI and reads the repo manifest on demand.",
+          idle: "No background runner is created; busy checks record pending demand and return.",
+          memory: "Plans and selected checks are bounded to the requested repo/lane/check IDs.",
+          streaming: "The test facade does not stream; underlying test commands own their stdout/stderr.",
+          storage: "Uses the shared coordination ledger for leases and reusable work results instead of separate state.",
+          hotPath: "Validation path only; application runtime must not synchronously call it.",
+          scale: "Designed for repo-local manifests with targeted lanes and result fingerprint reuse.",
+          validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
+        }
+      : undefined;
   return [command, clawStableContractCatalogEntry({
     ...contractDefaults,
     id: `claw.cli.command.${command}`,
@@ -1514,6 +1535,7 @@ export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliC
     surfaceClass: "cli",
     direction: "inbound",
     ...(surfaceNarrative ? { surfaceNarrative } : {}),
+    ...(resourceContract ? { resourceContract } : {}),
   })];
 }));
 

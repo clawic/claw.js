@@ -4,7 +4,7 @@
     {
       "id": "clawjs.existing-surfaces-without-resource-contract",
       "classification": "lateral_debt",
-      "owner": "claw",
+      "steward": "claw",
       "reason": "Initial bounded baseline for stable surfaces that predate the resourceContract requirement.",
       "risk": "Existing surfaces remain inspectable, but their startup, idle, memory, streaming, storage, hot-path, scale, and validation contract is not yet machine-checkable.",
       "expires": "2026-08-18",
