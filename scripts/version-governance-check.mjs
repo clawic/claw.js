@@ -3,9 +3,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--release-gate", "--self-test"]);
 const errors = [];
 const releaseApprovalTargets = {
   "release:version": "release-version",
@@ -18,6 +20,103 @@ const publishScriptNames = ["publish:dry-run", "publish:packages"];
 
 function fail(message) {
   errors.push(message);
+}
+
+function governanceDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("version_governance_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/version-governance-check.mjs",
+      suggestion: "Use --self-test, --release-gate, or no arguments.",
+      safeNextStep: "Rerun node scripts/version-governance-check.mjs with a supported argument.",
+    });
+  }
+  if (error.includes("CLAW_ALLOW_PRE_V1_RELEASE=1")) {
+    return createDiagnostic("version_governance_release_not_approved", error, {
+      status: "BLOCKED",
+      location: "environment.CLAW_ALLOW_PRE_V1_RELEASE",
+      suggestion: "Do not publish or mutate versions without explicit current user approval for this release action.",
+      safeNextStep: "Get explicit approval, set CLAW_ALLOW_PRE_V1_RELEASE=1 for that command only, then rerun the release gate.",
+    });
+  }
+  if (error.includes("CLAW_RELEASE_APPROVED_FOR=")) {
+    return createDiagnostic("version_governance_release_target_mismatch", error, {
+      status: "BLOCKED",
+      location: "environment.CLAW_RELEASE_APPROVED_FOR",
+      suggestion: "Set the approval target to exactly the lifecycle action being attempted.",
+      safeNextStep: "Use the CLAW_RELEASE_APPROVED_FOR value printed in this error, then rerun the release gate.",
+    });
+  }
+  if (error.startsWith("capability maturity release gate failed")) {
+    return createDiagnostic("version_governance_capability_gate_failed", error, {
+      location: "scripts/capability-maturity-guard.mjs",
+      suggestion: "Fix the nested capability maturity diagnostic before release work can proceed.",
+      safeNextStep: "Run node scripts/capability-maturity-guard.mjs and address its first reported failure.",
+    });
+  }
+  if (error.startsWith("regulated-domain legal release gate failed")) {
+    return createDiagnostic("version_governance_legal_gate_failed", error, {
+      location: "scripts/verify-regulated-domain-safety-goal.mjs",
+      suggestion: "Fix the nested regulated-domain safety diagnostic before release mutation or publish.",
+      safeNextStep: "Run node --import tsx scripts/verify-regulated-domain-safety-goal.mjs and address its first failure.",
+    });
+  }
+  if (error.startsWith("owned version drift:")) {
+    const location = error.match(/^owned version drift: ([^:]+:\d+)/)?.[1] ?? "docs/governance/pre-v1-version-governance";
+    return createDiagnostic("version_governance_owned_version_drift", error, {
+      location,
+      suggestion: "Remove owned v2+ or schema/protocol version drift unless a public pre-v1 decision allows it.",
+      safeNextStep: "Edit the named file to stay pre-v1 compatible, then rerun node scripts/version-governance-check.mjs.",
+    });
+  }
+  if (error.includes("baseline") || error.includes("ledger") || error.includes("digest") || error.includes("package version file count")) {
+    return createDiagnostic("version_governance_ledger_drift", error, {
+      location: "docs/pre-v1-release-ledger.json",
+      suggestion: "Refresh or justify the release ledger when changesets or package versions intentionally change.",
+      safeNextStep: "Update docs/pre-v1-release-ledger.json with reviewed values, then rerun the check.",
+    });
+  }
+  if (error.includes("must run") || error.includes("must include") || error.includes("must have an exact approval target") || error.includes("must build publishable package")) {
+    return createDiagnostic("version_governance_release_script_invalid", error, {
+      location: error.startsWith("RELEASING.md") ? "RELEASING.md" : "package.json",
+      suggestion: "Restore the required release, publish, build, and approval gates in scripts and release docs.",
+      safeNextStep: "Fix the named script or RELEASING.md entry, then rerun node scripts/version-governance-check.mjs.",
+    });
+  }
+  if (error.startsWith("completion audit is missing")) {
+    return createDiagnostic("version_governance_completion_audit_incomplete", error, {
+      location: "docs/governance/pre-v1-version-governance/completion.md",
+      suggestion: "Document the missing decision binding in the public completion audit.",
+      safeNextStep: "Update the completion audit, then rerun node scripts/version-governance-check.mjs.",
+    });
+  }
+  if (error.startsWith("version-governance policy is missing")) {
+    return createDiagnostic("version_governance_policy_export_missing", error, {
+      location: "packages/clawjs-core/src/version-governance.ts",
+      suggestion: "Restore the exported version governance policy field expected by downstream checks.",
+      safeNextStep: "Fix packages/clawjs-core/src/version-governance.ts, then rerun this check.",
+    });
+  }
+  if (error.includes("self-test mismatch")) {
+    return createDiagnostic("version_governance_self_test_failed", error, {
+      location: "scripts/version-governance-check.mjs",
+      suggestion: "Fix the version drift or approval-target detector before trusting the guard.",
+      safeNextStep: "Update the detector logic, then rerun node scripts/version-governance-check.mjs --self-test.",
+    });
+  }
+  return createDiagnostic("version_governance_check_failed", error, {
+    location: "scripts/version-governance-check.mjs",
+    suggestion: "Inspect the named release governance invariant and restore the expected contract.",
+    safeNextStep: "Fix the reported governance issue, then rerun node scripts/version-governance-check.mjs.",
+  });
+}
+
+function printErrors(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "Version governance check failed:",
+    diagnostics: items.map(governanceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
 }
 
 function read(relativePath) {
@@ -327,6 +426,43 @@ function selfTest() {
     const actual = expectedReleaseApprovalTarget(entry.env);
     if (actual !== entry.expected) fail(`release approval self-test mismatch for ${stableJson(entry)}: got ${actual}`);
   }
+  const chunks = [];
+  printErrors([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "pre_v1_mutable blocks release/version/publish flows without CLAW_ALLOW_PRE_V1_RELEASE=1 and explicit user approval",
+    "pre_v1_mutable requires exact release approval CLAW_RELEASE_APPROVED_FOR=release-publish",
+    "capability maturity release gate failed: /Users/example/private token: sk-test-secret-123456",
+    "regulated-domain legal release gate failed: nested failure",
+    "owned version drift: docs/api.md:12: route: \"/v2/messages\"",
+    "changeset baseline count drifted: expected 1, found 2",
+    "release:publish must run the pre-v1 release approval gate",
+    "completion audit is missing \"source_of_truth\"",
+    "version-governance policy is missing \"phase\"",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "version_governance_usage_error",
+    "version_governance_release_not_approved",
+    "version_governance_release_target_mismatch",
+    "version_governance_capability_gate_failed",
+    "version_governance_legal_gate_failed",
+    "version_governance_owned_version_drift",
+    "version_governance_ledger_drift",
+    "version_governance_release_script_invalid",
+    "version_governance_completion_audit_incomplete",
+    "version_governance_policy_export_missing",
+  ]) {
+    if (!output.includes(`code: ${code}`)) fail(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Do not publish or mutate versions")) fail("self-test missing release approval suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) fail("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printErrors([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
 }
 
 if (args.has("--release-gate")) {
@@ -349,8 +485,7 @@ if (args.has("--release-gate")) {
 }
 
 if (errors.length > 0) {
-  console.error("Version governance check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors(errors);
   process.exit(1);
 }
 
