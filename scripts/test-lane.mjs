@@ -1,8 +1,129 @@
 #!/usr/bin/env node
+import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const lane = process.argv[2] ?? "fast";
 const extraArgs = process.argv.slice(3);
+const coordinationActive = process.env.CLAW_AGENT_COORDINATION_ACTIVE === "1";
+const coordinationBypass = process.env.CLAW_AGENT_COORDINATION_BYPASS === "1";
+const KNOWN_LANES = [
+  "fast",
+  "changed",
+  "integration",
+  "e2e",
+  "host",
+  "device",
+  "live",
+  "live-brokered",
+  "release",
+];
+
+class LaneExit extends Error {
+  constructor(exitCode) {
+    super(`lane exited with ${exitCode}`);
+    this.exitCode = exitCode;
+  }
+}
+
+function printTestLaneReport(diagnostics, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "test lane failed:",
+    diagnostics,
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function childFailedDiagnostic(command, args, status, options = {}) {
+  return createDiagnostic("test_lane_child_failed", `${command} ${args[0] ?? ""} failed with exit status ${status ?? "unknown"}`.trim(), {
+    location: options.location ?? `scripts/test-lane.mjs:${lane}`,
+    suggestion: "Inspect the child command output above; it is the direct failure source.",
+    safeNextStep: "Fix the failing command, then rerun the same test lane.",
+  });
+}
+
+function missingLiveApprovalDiagnostic(laneName) {
+  return createDiagnostic("test_lane_live_not_approved", `CLAW_TEST_LIVE=1 is required for the ${laneName} lane.`, {
+    status: "USAGE",
+    location: `scripts/test-lane.mjs:${laneName}`,
+    suggestion: "Use this lane only after explicit live-test approval.",
+    safeNextStep: `Set CLAW_TEST_LIVE=1 only in an approved live validation session, then rerun node scripts/test-lane.mjs ${laneName}.`,
+  });
+}
+
+function externalPendingDiagnostic(laneName, envName, description) {
+  return createDiagnostic("test_lane_external_pending", `EXTERNAL PENDING ${laneName} lane: set ${envName} for ${description}.`, {
+    status: "EXTERNAL_PENDING",
+    location: `scripts/test-lane.mjs:${laneName}`,
+    suggestion: "Provide an approved external validation command, or record this lane as external pending.",
+    safeNextStep: `Set ${envName} to the approved command and rerun node scripts/test-lane.mjs ${laneName}.`,
+  });
+}
+
+function unknownLaneDiagnostic(laneName) {
+  return createDiagnostic("test_lane_unknown", `Unknown test lane: ${laneName}`, {
+    status: "USAGE",
+    location: "scripts/test-lane.mjs",
+    suggestion: `Use one of: ${KNOWN_LANES.join(", ")}.`,
+    safeNextStep: "Rerun node scripts/test-lane.mjs with a known lane name.",
+  });
+}
+
+function coordinationPendingDiagnostic(laneName) {
+  return createDiagnostic("test_lane_coordination_pending", `another agent owns test lane ${laneName}; demand was recorded in the coordination ledger.`, {
+    status: "PENDING",
+    location: `scripts/test-lane.mjs:${laneName}`,
+    suggestion: "Wait for the active lease to release or choose a non-conflicting validation lane.",
+    safeNextStep: `Rerun node scripts/test-lane.mjs ${laneName} after the current lease is released.`,
+  });
+}
+
+function coordinationCommandFailedDiagnostic(action, status) {
+  return createDiagnostic("test_lane_coordination_command_failed", `could not ${action} coordination lease for test lane ${lane}.`, {
+    status: "FAIL",
+    location: `scripts/test-lane.mjs:${lane}`,
+    suggestion: "Inspect the coordination command output with --json; avoid bypassing unless the run is explicitly marked partial.",
+    safeNextStep: `Fix the coordination state or rerun with an approved CLAW_AGENT_COORDINATION_BYPASS_REASON, then retry node scripts/test-lane.mjs ${lane}.`,
+  });
+}
+
+function unexpectedFailureDiagnostic(error) {
+  return createDiagnostic("test_lane_unexpected_failure", error?.message ?? "unexpected test lane failure", {
+    location: `scripts/test-lane.mjs:${lane}`,
+    suggestion: "Inspect the stack locally if needed; do not paste private paths or secrets into public logs.",
+    safeNextStep: "Fix the unexpected failure source, then rerun the same test lane.",
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printTestLaneReport([
+    missingLiveApprovalDiagnostic("live"),
+    externalPendingDiagnostic("host", "CLAW_HOST_TEST_COMMAND", "signed-host validation"),
+    unknownLaneDiagnostic("/Users/example/private"),
+    coordinationPendingDiagnostic("fast"),
+    childFailedDiagnostic("npm", ["run", "test"], 1, { location: "/Users/example/private/repo" }),
+    unexpectedFailureDiagnostic(new Error("token: sk-test-secret-123456")),
+  ], {
+    title: "test lane failed for /Users/example/private:",
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assert.match(output, /code: test_lane_live_not_approved/);
+  assert.match(output, /code: test_lane_external_pending/);
+  assert.match(output, /code: test_lane_unknown/);
+  assert.match(output, /code: test_lane_coordination_pending/);
+  assert.match(output, /code: test_lane_child_failed/);
+  assert.match(output, /\[USAGE\]/);
+  assert.match(output, /\[EXTERNAL_PENDING\]/);
+  assert.match(output, /\[PENDING\]/);
+  assert.match(output, /location: scripts\/test-lane\.mjs:host/);
+  assert.match(output, /suggestion: Provide an approved external validation command/);
+  assert.match(output, /next: Set CLAW_HOST_TEST_COMMAND/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
+  console.log("test lane self-test passed");
+}
 
 function run(command, args, options = {}) {
   const child = spawnSync(command, args, {
@@ -12,7 +133,8 @@ function run(command, args, options = {}) {
     shell: false,
   });
   if (child.status !== 0) {
-    process.exit(child.status ?? 1);
+    printTestLaneReport([childFailedDiagnostic(command, args, child.status, { location: options.location })]);
+    throw new LaneExit(child.status ?? 1);
   }
 }
 
@@ -134,16 +256,16 @@ function integration() {
 
 function live() {
   if (process.env.CLAW_TEST_LIVE !== "1") {
-    console.error("CLAW_TEST_LIVE=1 is required for the live lane.");
-    process.exit(2);
+    printTestLaneReport([missingLiveApprovalDiagnostic("live")]);
+    throw new LaneExit(2);
   }
   npmRun("test:e2e:smoke-real", extraArgs);
 }
 
 function liveBrokered() {
   if (process.env.CLAW_TEST_LIVE !== "1") {
-    console.error("CLAW_TEST_LIVE=1 is required for the live-brokered lane.");
-    process.exit(2);
+    printTestLaneReport([missingLiveApprovalDiagnostic("live-brokered")]);
+    throw new LaneExit(2);
   }
   npmRun("test:package-live", extraArgs);
 }
@@ -153,7 +275,9 @@ function host() {
     run("bash", ["-lc", process.env.CLAW_HOST_TEST_COMMAND]);
     return;
   }
-  console.error("EXTERNAL PENDING host lane: set CLAW_HOST_TEST_COMMAND for signed-host validation.");
+  printTestLaneReport([externalPendingDiagnostic("host", "CLAW_HOST_TEST_COMMAND", "signed-host validation")], {
+    title: "test lane external pending:",
+  });
 }
 
 function device() {
@@ -161,7 +285,9 @@ function device() {
     run("bash", ["-lc", process.env.CLAW_DEVICE_TEST_COMMAND]);
     return;
   }
-  console.error("EXTERNAL PENDING device lane: set CLAW_DEVICE_TEST_COMMAND for device validation.");
+  printTestLaneReport([externalPendingDiagnostic("device", "CLAW_DEVICE_TEST_COMMAND", "device validation")], {
+    title: "test lane external pending:",
+  });
 }
 
 function release() {
@@ -193,35 +319,138 @@ function release() {
   device();
 }
 
-switch (lane) {
-  case "fast":
-    fast(extraArgs);
-    break;
-  case "changed":
-    changed();
-    break;
-  case "integration":
-    integration();
-    break;
-  case "e2e":
-    npmRun("test:e2e", extraArgs);
-    break;
-  case "host":
-    host();
-    break;
-  case "device":
-    device();
-    break;
-  case "live":
-    live();
-    break;
-  case "live-brokered":
-    liveBrokered();
-    break;
-  case "release":
-    release();
-    break;
-  default:
-    console.error(`Unknown test lane: ${lane}`);
-    process.exit(2);
+function runClawJson(args) {
+  const child = spawnSync(process.execPath, ["packages/clawjs/bin/claw.mjs", ...args, "--json"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+    shell: false,
+  });
+  let payload = null;
+  try {
+    payload = child.stdout ? JSON.parse(child.stdout) : null;
+  } catch {
+    payload = null;
+  }
+  return { status: child.status ?? 1, stdout: child.stdout ?? "", stderr: child.stderr ?? "", payload };
 }
+
+function coordinationPathFlags() {
+  return [
+    ...(process.env.CLAW_AGENT_COORDINATION_STATE_DIR ? ["--state-dir", process.env.CLAW_AGENT_COORDINATION_STATE_DIR] : []),
+    ...(process.env.CLAW_AGENT_COORDINATION_RUN_DIR ? ["--run-dir", process.env.CLAW_AGENT_COORDINATION_RUN_DIR] : []),
+  ];
+}
+
+function acquireLaneLease() {
+  if (coordinationActive) return null;
+  if (coordinationBypass) {
+    console.error("WARNING: CLAW_AGENT_COORDINATION_BYPASS=1; this validation will not count as clean coordinated evidence.");
+    if (!process.env.CLAW_AGENT_COORDINATION_BYPASS_REASON) console.error("WARNING: CLAW_AGENT_COORDINATION_BYPASS_REASON is missing.");
+    return null;
+  }
+  const result = runClawJson([
+    "test",
+    "require",
+    "--repo",
+    process.cwd(),
+    "--lane",
+    lane,
+    "--checks",
+    lane,
+    "--pid",
+    String(process.pid),
+    ...coordinationPathFlags(),
+  ]);
+  if (result.status === 0) return result.payload?.data?.checks?.[0]?.lease?.id ?? null;
+  if (result.payload?.data?.status === "PENDING") {
+    printTestLaneReport([coordinationPendingDiagnostic(lane)], {
+      title: "test lane coordination pending:",
+    });
+    throw new LaneExit(2);
+  }
+  printTestLaneReport([coordinationCommandFailedDiagnostic("acquire", result.status)]);
+  throw new LaneExit(result.status);
+}
+
+function releaseLaneLease(leaseId, exitCode) {
+  if (!leaseId) return;
+  const status = exitCode === 0 ? "passed" : "failed";
+  const result = runClawJson([
+    "agent-resource",
+    "release",
+    "--lease",
+    leaseId,
+    "--status",
+    status,
+    "--repo",
+    process.cwd(),
+    "--lane",
+    lane,
+    "--check",
+    lane,
+    ...coordinationPathFlags(),
+  ]);
+  if (result.status !== 0) {
+    printTestLaneReport([coordinationCommandFailedDiagnostic("release", result.status)], {
+      title: "test lane coordination release failed:",
+    });
+  }
+}
+
+function runLane() {
+  switch (lane) {
+    case "fast":
+      fast(extraArgs);
+      return;
+    case "changed":
+      changed();
+      return;
+    case "integration":
+      integration();
+      return;
+    case "e2e":
+      npmRun("test:e2e", extraArgs);
+      return;
+    case "host":
+      host();
+      return;
+    case "device":
+      device();
+      return;
+    case "live":
+      live();
+      return;
+    case "live-brokered":
+      liveBrokered();
+      return;
+    case "release":
+      release();
+      return;
+    default:
+      printTestLaneReport([unknownLaneDiagnostic(lane)]);
+      throw new LaneExit(2);
+  }
+}
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  process.exit(0);
+}
+
+let leaseId = null;
+let exitCode = 0;
+try {
+  leaseId = acquireLaneLease();
+  runLane();
+} catch (error) {
+    if (error instanceof LaneExit) {
+      exitCode = error.exitCode;
+    } else {
+      printTestLaneReport([unexpectedFailureDiagnostic(error)]);
+      exitCode = 1;
+    }
+} finally {
+  releaseLaneLease(leaseId, exitCode);
+}
+process.exit(exitCode);

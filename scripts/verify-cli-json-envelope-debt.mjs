@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import assert from "node:assert/strict";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(rootDir, "packages", "clawjs", "src");
@@ -27,28 +29,82 @@ function countRawJsonWriters(filePath) {
   return count;
 }
 
-const actual = {};
-for (const file of listFiles(sourceRoot)) {
-  const count = countRawJsonWriters(file);
-  if (count === 0) continue;
-  actual[path.relative(rootDir, file)] = count;
+function collectRawJsonWriterDebt(targetRoot = sourceRoot) {
+  const actual = {};
+  for (const file of listFiles(targetRoot)) {
+    const count = countRawJsonWriters(file);
+    if (count === 0) continue;
+    actual[path.relative(rootDir, file)] = count;
+  }
+  return actual;
 }
 
-const failures = [];
-const baseline = debt.files ?? {};
-for (const [file, count] of Object.entries(actual)) {
-  const allowed = baseline[file];
-  if (allowed === undefined) failures.push(`${file}: new raw writeJson debt (${count})`);
-  else if (count > allowed) failures.push(`${file}: raw writeJson debt increased from ${allowed} to ${count}`);
-}
-for (const [file, allowed] of Object.entries(baseline)) {
-  const count = actual[file] ?? 0;
-  if (count < allowed) failures.push(`${file}: raw writeJson debt decreased from ${allowed} to ${count}; update ${path.relative(rootDir, debtPath)}`);
+function validateCliJsonEnvelopeDebt(actual, baseline, debtFile = path.relative(rootDir, debtPath)) {
+  const diagnostics = [];
+  for (const [file, count] of Object.entries(actual)) {
+    const allowed = baseline[file];
+    if (allowed === undefined) {
+      diagnostics.push(createDiagnostic("cli_json_raw_writer_untracked", `${file}: new raw writeJson debt (${count})`, {
+        location: file,
+        suggestion: "Route CLI JSON output through writeCommandJsonOk/writeCommandJsonError so errors keep the stable envelope.",
+        safeNextStep: `Migrate the raw writer or add a reviewed decreasing baseline entry in ${debtFile}.`,
+      }));
+    } else if (count > allowed) {
+      diagnostics.push(createDiagnostic("cli_json_raw_writer_growth", `${file}: raw writeJson debt increased from ${allowed} to ${count}`, {
+        location: file,
+        suggestion: "Do not add new raw JSON writers; use the common CLI JSON helpers instead.",
+        safeNextStep: "Replace the new writer with writeCommandJsonOk/writeCommandJsonError, then rerun this check.",
+      }));
+    }
+  }
+  for (const [file, allowed] of Object.entries(baseline)) {
+    const count = actual[file] ?? 0;
+    if (count < allowed) {
+      diagnostics.push(createDiagnostic("cli_json_baseline_stale", `${file}: raw writeJson debt decreased from ${allowed} to ${count}`, {
+        location: debtFile,
+        suggestion: "Lower the baseline when raw writer debt is removed.",
+        safeNextStep: `Update ${debtFile}, then rerun node scripts/verify-cli-json-envelope-debt.mjs.`,
+      }));
+    }
+  }
+  return diagnostics;
 }
 
-if (failures.length > 0) {
-  console.error("CLI JSON envelope debt check failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+function runSelfTest() {
+  const diagnostics = validateCliJsonEnvelopeDebt(
+    { "packages/clawjs/src/new-command.ts": 1, "packages/clawjs/src/reduced.ts": 0 },
+    { "packages/clawjs/src/reduced.ts": 2 },
+    "qa/cli-json-envelope-debt.json",
+  );
+  assert.equal(diagnostics.length, 2);
+  const chunks = [];
+  printActionableFailureReport({
+    title: "CLI JSON envelope debt check failed for /Users/example/private",
+    diagnostics,
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assert.match(output, /code: cli_json_raw_writer_untracked/);
+  assert.match(output, /location: packages\/clawjs\/src\/new-command\.ts/);
+  assert.match(output, /suggestion: Route CLI JSON output through writeCommandJsonOk\/writeCommandJsonError/);
+  assert.match(output, /next: Migrate the raw writer/);
+  assert.match(output, /code: cli_json_baseline_stale/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  console.log("cli json envelope debt self-test passed");
+}
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  process.exit(0);
+}
+
+const actual = collectRawJsonWriterDebt();
+const diagnostics = validateCliJsonEnvelopeDebt(actual, debt.files ?? {});
+if (diagnostics.length > 0) {
+  printActionableFailureReport({
+    title: "CLI JSON envelope debt check failed:",
+    diagnostics,
+  });
   process.exit(1);
 }
 
