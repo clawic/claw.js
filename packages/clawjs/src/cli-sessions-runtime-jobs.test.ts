@@ -70,6 +70,35 @@ test("sessions runtime CLI runs Codex import jobs and emits session Search inval
     assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.chats" && event.sessionId === THREAD_ID && event.result.ok), true);
     assert.equal(runPayload.data.searchEvents.some((event) => event.source === "sessions.events" && event.sessionId === THREAD_ID && event.result.ok), true);
 
+    const runtimeEvents = await runCliCapture([
+      "sessions",
+      "runtime",
+      "events",
+      "--job-id",
+      "job-import-codex",
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(runtimeEvents.code, CLI_EXIT_OK, runtimeEvents.stderr || runtimeEvents.stdout);
+    const runtimeEventsPayload = JSON.parse(runtimeEvents.stdout) as { data: { items: Array<{ kind: string; jobId: string; redacted: boolean }> } };
+    assert.equal(runtimeEventsPayload.data.items.some((event) => event.kind === "job.done" && event.jobId === "job-import-codex"), true);
+
+    const retention = await runCliCapture([
+      "sessions",
+      "runtime",
+      "retention",
+      "--data-dir",
+      dataRoot,
+      "--dry-run",
+      "true",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(retention.code, CLI_EXIT_OK, retention.stderr || retention.stdout);
+    const retentionPayload = JSON.parse(retention.stdout) as { data: { retention: { dryRun: boolean; deleted: { events: number; logs: number; jobs: number } } } };
+    assert.equal(retentionPayload.data.retention.dryRun, true);
+    assert.equal(typeof retentionPayload.data.retention.deleted.events, "number");
+
     const eventsRun = await runCliCapture([
       "search",
       "service",

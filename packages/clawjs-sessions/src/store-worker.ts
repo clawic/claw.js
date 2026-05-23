@@ -25,6 +25,7 @@ const allowedOperations = new Set([
   "getSession",
   "getSessionWithMessages",
   "hydrateSession",
+  "listSessionDynamicTools",
   "listSessions",
   "sidebarBootstrap",
   "updateSessionTitle",

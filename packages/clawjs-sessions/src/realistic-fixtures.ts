@@ -9,7 +9,7 @@ import type {
 } from "./types.ts";
 import type { SessionsServiceStore } from "./store.ts";
 
-export type RealisticSessionsFixtureProfile = "smoke" | "large";
+export type RealisticSessionsFixtureProfile = "smoke" | "large" | "heavy";
 
 export interface RealisticSessionsFixtureOptions {
   profile?: RealisticSessionsFixtureProfile;
@@ -34,6 +34,7 @@ export interface RealisticSessionsFixtureCorpus {
     longChats: number;
     conversationsWithAttachments: number;
     markdownHeavyMessages: number;
+    toolEvents: number;
     providerErrors: number;
     recoverableCorruptions: number;
   };
@@ -110,9 +111,10 @@ const RECOVERABLE_CORRUPTION_TEXT = [
 
 export function buildRealisticSessionsFixtureCorpus(options: RealisticSessionsFixtureOptions = {}): RealisticSessionsFixtureCorpus {
   const profile = options.profile ?? "large";
-  const projectCount = clampInt(options.projectCount, 1, 200, profile === "smoke" ? 4 : 24);
-  const sessionCount = clampInt(options.sessionCount, 1, 1_000, profile === "smoke" ? 12 : 96);
-  const longSessionMessageCount = clampInt(options.longSessionMessageCount, 20, 5_000, profile === "smoke" ? 42 : 240);
+  const defaults = profileDefaults(profile);
+  const projectCount = clampInt(options.projectCount, 1, 500, defaults.projectCount);
+  const sessionCount = clampInt(options.sessionCount, 1, defaults.maxSessionCount, defaults.sessionCount);
+  const longSessionMessageCount = clampInt(options.longSessionMessageCount, 20, 5_000, defaults.longSessionMessageCount);
   const baseTimestamp = options.baseTimestamp ?? DEFAULT_BASE_TIMESTAMP;
   const workspaceRoot = options.workspaceRoot ?? "/tmp/claw-realistic-session-fixtures";
 
@@ -136,6 +138,7 @@ export function buildRealisticSessionsFixtureCorpus(options: RealisticSessionsFi
     longChats: 0,
     conversationsWithAttachments: 0,
     markdownHeavyMessages: 0,
+    toolEvents: 0,
     providerErrors: 0,
     recoverableCorruptions: 0,
   };
@@ -234,6 +237,7 @@ export function buildRealisticSessionsFixtureCorpus(options: RealisticSessionsFi
 
       if (role === "assistant" && messageIndex % 6 === 3) {
         events.push(toolEvent(sessionId, turnId, messageIndex, timestamp + 20_000, kind));
+        coverage.toolEvents += 1;
       }
       if (role === "assistant" && messageIndex % 10 === 5) {
         events.push(usageEvent(sessionId, turnId, messageIndex, timestamp + 40_000, messageCount));
@@ -453,6 +457,36 @@ function providerErrorEvent(sessionId: string, timestamp: number): AppendSession
 
 function titleCase(value: string): string {
   return value.split("-").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join(" ");
+}
+
+function profileDefaults(profile: RealisticSessionsFixtureProfile): {
+  projectCount: number;
+  sessionCount: number;
+  maxSessionCount: number;
+  longSessionMessageCount: number;
+} {
+  if (profile === "smoke") {
+    return {
+      projectCount: 4,
+      sessionCount: 12,
+      maxSessionCount: 1_000,
+      longSessionMessageCount: 42,
+    };
+  }
+  if (profile === "heavy") {
+    return {
+      projectCount: 72,
+      sessionCount: 5_000,
+      maxSessionCount: 20_000,
+      longSessionMessageCount: 360,
+    };
+  }
+  return {
+    projectCount: 48,
+    sessionCount: 2_000,
+    maxSessionCount: 10_000,
+    longSessionMessageCount: 240,
+  };
 }
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {

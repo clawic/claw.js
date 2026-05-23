@@ -8,6 +8,7 @@ import type {
   ExportTrajectoryOptions,
   HydrateSessionInput,
   HydratedSessionResult,
+  ListSessionDynamicToolsOptions,
   ListSessionEventsFilter,
   ListProjectsFilter,
   ListProjectsResult,
@@ -29,6 +30,7 @@ import type {
   SessionTurnSummaryRecord,
   SessionWithMessages,
   SidebarBootstrapResult,
+  SessionDynamicToolRecord,
   TrajectoryRecord,
   UpdateProjectInput,
   UpsertOriginInput,
@@ -118,6 +120,10 @@ export class AsyncSessionsServiceStore {
 
   hydrateSession(input: HydrateSessionInput): Promise<HydratedSessionResult | null> {
     return this.call("hydrateSession", input);
+  }
+
+  listSessionDynamicTools(sessionId: string, options: ListSessionDynamicToolsOptions = {}): Promise<SessionDynamicToolRecord[]> {
+    return this.call("listSessionDynamicTools", sessionId, options);
   }
 
   listSessions(filter: ListSessionsFilter = {}): Promise<ListSessionsResult> {

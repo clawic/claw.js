@@ -13,6 +13,7 @@ import {
   createRootSearchFederator,
 } from "../packages/clawjs-search/src/index.ts";
 import { SessionsServiceStore } from "../packages/clawjs-sessions/src/store.ts";
+import { seedRealisticSessionsFixture } from "../packages/clawjs-sessions/src/realistic-fixtures.ts";
 import { SkillsStore } from "../packages/clawjs-node/src/skills-v2/store.ts";
 import { listRuntimeAdapters } from "../packages/clawjs-node/src/runtime/adapters/registry.ts";
 import { listClawProfessionalRecordsAcceptanceFixtureRecords } from "../packages/clawjs-core/src/dense-data-fixtures.ts";
@@ -291,40 +292,15 @@ function runSessionsWorkload(root: string, counts: ScaleCounts): WorkloadReport 
   const store = new SessionsServiceStore(path.join(root, "sessions", "sessions.sqlite"));
   const metrics: Metric[] = [];
   try {
-    for (let i = 0; i < Math.min(8, counts.sessions); i += 1) {
-      store.createProject({ id: `scale-project-${i}`, path: path.join(root, "projects", `project-${i}`), displayName: `Scale Project ${i}` });
-    }
-    const sessions = [];
-    const messages = [];
-    const seed = "scalehotword";
     const ingestStarted = performance.now();
-    for (let sessionIndex = 0; sessionIndex < counts.sessions; sessionIndex += 1) {
-      const sessionId = `scale-session-${sessionIndex}`;
-      sessions.push({
-        id: sessionId,
-        agent: "scale-lab-agent",
-        runtime: `null-runtime-${sessionIndex % 5}`,
-        runtimeAdapter: "nullclaw",
-        projectId: `scale-project-${sessionIndex % Math.min(8, counts.sessions)}`,
-        title: `Scale session ${sessionIndex}`,
-        createdAt: 1_800_000_000_000 + sessionIndex,
-        status: sessionIndex % 9 === 0 ? "completed" as const : "active" as const,
-        customMetadata: { synthetic: true, profile: "scale-lab" },
-      });
-      for (let messageIndex = 0; messageIndex < counts.messagesPerSession; messageIndex += 1) {
-        const role = messageIndex % 2 === 0 ? "user" as const : "assistant" as const;
-        messages.push({
-          id: `${sessionId}-message-${messageIndex}`,
-          sessionId,
-          role,
-          contentText: `Synthetic ${role} message ${messageIndex} in ${sessionId} ${messageIndex % 7 === 0 ? seed : "ordinary"} ${"chunk ".repeat(12)}`,
-          timestamp: 1_800_000_000_000 + sessionIndex * 1_000 + messageIndex,
-          attachments: messageIndex % 11 === 0 ? [{ id: `attachment-${sessionIndex}-${messageIndex}`, kind: "metadata-only", bytes: counts.blobBytes }] : null,
-          streamingState: role === "assistant" ? "complete" as const : null,
-        });
-      }
-    }
-    store.importSessionBatch({ sessions, messages });
+    const seeded = seedRealisticSessionsFixture(store, {
+      profile: options.profile === "heavy" ? "heavy" : options.profile === "medium" ? "large" : "smoke",
+      sessionCount: counts.sessions,
+      projectCount: Math.max(4, Math.min(200, Math.ceil(counts.sessions / 25))),
+      longSessionMessageCount: counts.messagesPerSession,
+      workspaceRoot: path.join(root, "projects"),
+      rebuildProjections: counts.sessions <= 250,
+    });
     metrics.push({ name: "ingest_total", valueMs: performance.now() - ingestStarted });
 
     const sidebarStarted = performance.now();
@@ -340,10 +316,21 @@ function runSessionsWorkload(root: string, counts: ScaleCounts): WorkloadReport 
     if (listed.items.length === 0) throw new Error("sessions workload list returned no items");
 
     const searchStarted = performance.now();
-    const hits = store.searchMessages({ query: seed, limit: 25 });
+    const hits = store.searchMessages({ query: "Regression Packet", limit: 25 });
     const searchMs = performance.now() - searchStarted;
     metrics.push({ name: "fts_search", valueMs: searchMs, budgetMs: 150, pass: searchMs <= 150 });
     if (hits.length === 0) throw new Error("sessions workload search returned no hits");
+
+    const eventSearchStarted = performance.now();
+    const eventHits = store.searchSessionEvents({ query: "fixture query completed", eventKind: "tool_output", limit: 25 });
+    const eventSearchMs = performance.now() - eventSearchStarted;
+    metrics.push({ name: "event_fts_search", valueMs: eventSearchMs, budgetMs: 150, pass: eventSearchMs <= 150 });
+    if (seeded.coverage.toolEvents > 0 && eventHits.length === 0) throw new Error("sessions workload event search returned no hits");
+
+    if (seeded.staleProjectionSessionIds.length > 0) {
+      const staleMeta = store.getProjectionMeta(seeded.staleProjectionSessionIds[0]!);
+      if (staleMeta?.projectionStatus !== "stale") throw new Error("sessions workload did not preserve recoverable corruption projection state");
+    }
 
     const exportStarted = performance.now();
     const trajectories = store.exportTrajectories({ limit: 25, messageLimit: 25 });
@@ -351,7 +338,17 @@ function runSessionsWorkload(root: string, counts: ScaleCounts): WorkloadReport 
     metrics.push({ name: "bounded_export", valueMs: exportMs, budgetMs: 150, pass: exportMs <= 150 });
     if (trajectories.length === 0) throw new Error("sessions workload export returned no trajectories");
 
-    return okWorkload("sessions", { sessions: counts.sessions, messages: messages.length }, metrics);
+    return okWorkload("sessions", {
+      sessions: seeded.sessionsSeeded,
+      messages: seeded.messagesSeeded,
+      events: seeded.eventsSeeded,
+      longChats: seeded.coverage.longChats,
+      markdownHeavyMessages: seeded.coverage.markdownHeavyMessages,
+      attachments: seeded.coverage.conversationsWithAttachments,
+      toolEvents: seeded.coverage.toolEvents,
+      providerErrors: seeded.coverage.providerErrors,
+      recoverableCorruptions: seeded.coverage.recoverableCorruptions,
+    }, metrics);
   } finally {
     store.close();
   }

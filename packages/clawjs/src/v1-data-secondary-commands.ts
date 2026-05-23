@@ -700,6 +700,58 @@ async function runSessionsRuntimeCommand(input: V1DataCliInput): Promise<number>
       store.close();
     }
   }
+  if (action === "events") {
+    const store = new SessionsRuntimeJobStore(paths.runtimeDbPath);
+    try {
+      const items = store.listEvents({
+        jobId: input.flags["job-id"],
+        sessionId: input.flags["session-id"] || input.flags.session,
+        target: input.flags.target,
+        subsystem: input.flags.subsystem,
+        pinned: input.flags.pinned === undefined ? undefined : truthy(input.flags.pinned),
+        limit: numberFlag(input.flags.limit, 100),
+      });
+      writeSuccess(input, { items, paths: publicSessionsRuntimePaths(paths) });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      store.close();
+    }
+  }
+  if (action === "logs") {
+    const store = new SessionsRuntimeJobStore(paths.runtimeDbPath);
+    try {
+      const items = store.listLogs({
+        jobId: input.flags["job-id"],
+        sessionId: input.flags["session-id"] || input.flags.session,
+        target: input.flags.target,
+        subsystem: input.flags.subsystem,
+        pinned: input.flags.pinned === undefined ? undefined : truthy(input.flags.pinned),
+        limit: numberFlag(input.flags.limit, 100),
+      });
+      writeSuccess(input, { items, paths: publicSessionsRuntimePaths(paths) });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      store.close();
+    }
+  }
+  if (action === "retention") {
+    const store = new SessionsRuntimeJobStore(paths.runtimeDbPath);
+    try {
+      const result = store.applyRetention({
+        now: input.flags.now,
+        maxAgeDays: numberFlag(input.flags.days ?? input.flags["max-age-days"], 30),
+        maxEvents: numberFlag(input.flags["max-events"], 10_000),
+        maxLogs: numberFlag(input.flags["max-logs"], 10_000),
+        maxEventBytes: numberFlag(input.flags["max-event-bytes"], 50 * 1024 * 1024),
+        maxLogBytes: numberFlag(input.flags["max-log-bytes"], 50 * 1024 * 1024),
+        dryRun: truthy(input.flags["dry-run"]),
+      });
+      writeSuccess(input, { retention: result, paths: publicSessionsRuntimePaths(paths) });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      store.close();
+    }
+  }
   if (action === "job") {
     const subaction = input.positionals[3] || "get";
     const id = input.flags.id || input.positionals[4];
@@ -721,7 +773,7 @@ async function runSessionsRuntimeCommand(input: V1DataCliInput): Promise<number>
       store.close();
     }
   }
-  return usageError(input, `Usage: ${input.binName} sessions runtime enqueue|run-once|jobs|job [--json]`);
+  return usageError(input, `Usage: ${input.binName} sessions runtime enqueue|run-once|jobs|job|events|logs|retention [--json]`);
 }
 
 function scheduleSessionChangedSearchEvents(input: V1DataCliInput, paths: SessionsRuntimePaths, event: SessionsRuntimeSessionChangedEvent): unknown[] {

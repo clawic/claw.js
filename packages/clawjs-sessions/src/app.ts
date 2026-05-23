@@ -17,6 +17,7 @@ import type {
   CreateProjectInput,
   CreateSessionInput,
   HydrateSessionInput,
+  ListSessionDynamicToolsOptions,
   ListSessionEventsFilter,
   ListProjectsFilter,
   ListSessionsFilter,
@@ -357,6 +358,18 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     const hydrated = await store.hydrateSession(input);
     if (!hydrated) return await reply.code(404).send({ error: "session_not_found" });
     return hydrated;
+  });
+
+  app.get(clawApiPath("sessions/:id/dynamic-tools"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const session = await store.getSession(params.id);
+    if (!session) return await reply.code(404).send({ error: "session_not_found" });
+    const query = readQuery(request);
+    const options: ListSessionDynamicToolsOptions = {
+      includeDeferredSchemas: asBool(query.includeDeferredSchemas ?? query.includeSchemas) === true,
+    };
+    return { items: await store.listSessionDynamicTools(params.id, options) };
   });
 
   app.get(clawApiPath("sessions"), async (request, reply) => {

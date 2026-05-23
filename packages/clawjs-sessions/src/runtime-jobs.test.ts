@@ -83,6 +83,90 @@ test("SessionsRuntimeJobStore claims jobs with leases and retries expired leases
   }
 });
 
+test("SessionsRuntimeJobStore redacts runtime events/logs and applies bounded retention", () => {
+  const rootDir = tempRoot("clawjs-sessions-runtime-retention-");
+  const store = new SessionsRuntimeJobStore(path.join(rootDir, "runtime.sqlite"));
+  try {
+    store.enqueueJob({
+      id: "job-secret",
+      kind: "sessions.import_codex",
+      title: "Import",
+      payload: { token: "secret-token-value", dir: "/tmp/codex" },
+      scheduledAt: "2026-05-20T10:00:00.000Z",
+    });
+    assert.equal((store.getJob("job-secret")?.payloadJson as { token?: string }).token, "[REDACTED]");
+
+    const [job] = store.claimJobs({ now: "2026-05-20T10:00:01.000Z", owner: "worker-a" });
+    assert.ok(job);
+    const failed = store.failJob("job-secret", {
+      error: "request failed authorization=Bearer abc123secret",
+      retry: false,
+      updatedAt: "2026-05-20T10:00:02.000Z",
+    });
+    assert.equal(failed?.error?.includes("abc123secret"), false);
+
+    store.recordEvent({
+      kind: "runtime.audit",
+      sessionId: "session-retention",
+      target: "sessions",
+      subsystem: "import",
+      message: "called with token=visible-secret",
+      metadata: { apiKey: "metadata-secret", nested: { password: "pw-secret" } },
+      createdAt: "2026-05-20T10:00:03.000Z",
+    });
+    store.recordEvent({
+      kind: "runtime.pinned",
+      sessionId: "session-retention",
+      target: "sessions",
+      subsystem: "import",
+      message: "keep old pinned",
+      createdAt: "2026-05-20T10:00:04.000Z",
+      pinned: true,
+    });
+    store.recordLog({
+      sessionId: "session-retention",
+      target: "sessions",
+      subsystem: "diagnostic",
+      message: "Bearer log-secret",
+      metadata: { secret: "log-metadata-secret" },
+      createdAt: "2026-05-20T10:00:05.000Z",
+    });
+    store.recordLog({
+      sessionId: "session-retention",
+      target: "sessions",
+      subsystem: "diagnostic",
+      message: "keep new",
+      createdAt: "2026-05-23T10:00:00.000Z",
+    });
+
+    const serializedEvents = JSON.stringify(store.listEvents({ sessionId: "session-retention", limit: 10 }));
+    assert.equal(serializedEvents.includes("visible-secret"), false);
+    assert.equal(serializedEvents.includes("metadata-secret"), false);
+    assert.equal(serializedEvents.includes("pw-secret"), false);
+    assert.equal(store.listEvents({ sessionId: "session-retention", limit: 10 }).some((event) => event.redacted), true);
+
+    const serializedLogs = JSON.stringify(store.listLogs({ sessionId: "session-retention", limit: 10 }));
+    assert.equal(serializedLogs.includes("log-secret"), false);
+    assert.equal(serializedLogs.includes("log-metadata-secret"), false);
+
+    const dryRun = store.applyRetention({ now: "2026-05-23T10:00:00.000Z", maxAgeDays: 1, dryRun: true });
+    assert.equal(dryRun.deleted.logs, 1);
+    assert.equal(dryRun.deleted.jobs, 1);
+    assert.equal(store.listLogs({ sessionId: "session-retention", limit: 10 }).length, 2);
+
+    const retention = store.applyRetention({ now: "2026-05-23T10:00:00.000Z", maxAgeDays: 1 });
+    assert.equal(retention.deleted.logs, 1);
+    assert.equal(retention.deleted.jobs, 1);
+    assert.equal(store.getJob("job-secret"), null);
+    assert.deepEqual(store.listLogs({ sessionId: "session-retention", limit: 10 }).map((log) => log.message), ["keep new"]);
+    assert.equal(store.listEvents({ sessionId: "session-retention", pinned: true }).length, 1);
+    assert.equal(store.listEvents({ sessionId: "session-retention", pinned: false }).every((event) => event.createdAt >= "2026-05-22T10:00:00.000Z"), true);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("runSessionsRuntimeJobs processes import and projection jobs with budgets", async () => {
   const rootDir = tempRoot("clawjs-sessions-runtime-runner-");
   const runtimeDbPath = path.join(rootDir, "runtime.sqlite");

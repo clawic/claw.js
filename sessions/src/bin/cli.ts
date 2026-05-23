@@ -58,7 +58,7 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
     "  sessions visibility --id ID --visible true|false",
     "  sessions project --id ID [--path PATH | --clear]",
     "  sessions delete --id ID",
-    "  sessions seed-realistic [--db-path PATH] [--profile smoke|large]",
+    "  sessions seed-realistic [--db-path PATH] [--profile smoke|large|heavy]",
     "  sessions import codex [--dir CODEX_SESSIONS_DIR] [--force]",
     "",
     "Service flags shared by client commands:",
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
     const store = new SessionsServiceStore(dbPath);
     try {
       write(seedRealisticSessionsFixture(store, {
-        profile: flags.profile === "smoke" ? "smoke" : "large",
+        profile: parseFixtureProfile(flags.profile),
         ...(flags.projects ? { projectCount: Number(flags.projects) } : {}),
         ...(flags.sessions ? { sessionCount: Number(flags.sessions) } : {}),
         ...(flags.messages ? { longSessionMessageCount: Number(flags.messages) } : {}),
@@ -192,6 +192,11 @@ async function main(): Promise<void> {
 
   process.stderr.write(`Unknown command: ${group}\n`);
   process.exit(64);
+}
+
+function parseFixtureProfile(value: string | undefined): "smoke" | "large" | "heavy" {
+  if (value === "smoke" || value === "heavy") return value;
+  return "large";
 }
 
 try {
