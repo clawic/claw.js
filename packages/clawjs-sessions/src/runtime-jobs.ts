@@ -197,7 +197,7 @@ export class SessionsRuntimeJobStore {
       scheduled_at: scheduledAt,
       max_attempts: boundedInt(input.maxAttempts, 1, 50, 3),
       priority: boundedInt(input.priority, 0, 100, 0),
-      payload_json: JSON.stringify(input.payload ?? {}),
+      payload_json: JSON.stringify(redactValue(input.payload ?? {}).value),
       created_at: now,
       updated_at: now,
     });
@@ -258,12 +258,13 @@ export class SessionsRuntimeJobStore {
     const row = this.db.prepare("SELECT attempts, max_attempts FROM runtime_jobs WHERE id = ?").get(id) as { attempts: number; max_attempts: number | null } | undefined;
     const maxAttempts = row?.max_attempts ?? 3;
     const retry = input.retry === true && (row?.attempts ?? maxAttempts) < maxAttempts;
+    const error = redactString(input.error).value;
     this.db.prepare(`
       UPDATE runtime_jobs
       SET status=?, leased_until=NULL, error=?, scheduled_at=COALESCE(?, scheduled_at), run_at=COALESCE(?, run_at), updated_at=?
       WHERE id=?
-    `).run(retry ? "queued" : "failed", input.error, input.scheduledAt ?? null, input.scheduledAt ?? null, updatedAt, id);
-    this.recordEvent({ jobId: id, kind: retry ? "job.retry" : "job.failed", level: retry ? "warn" : "error", message: input.error, createdAt: updatedAt });
+    `).run(retry ? "queued" : "failed", error, input.scheduledAt ?? null, input.scheduledAt ?? null, updatedAt, id);
+    this.recordEvent({ jobId: id, kind: retry ? "job.retry" : "job.failed", level: retry ? "warn" : "error", message: error, createdAt: updatedAt });
     return this.getJob(id);
   }
 
@@ -293,20 +294,141 @@ export class SessionsRuntimeJobStore {
     return rows.map(rowToJob);
   }
 
-  recordEvent(input: { jobId?: string | null; kind: string; level?: string; message?: string; metadata?: Record<string, unknown>; createdAt?: string }): void {
+  listEvents(input: { jobId?: string; sessionId?: string; target?: string; subsystem?: string; pinned?: boolean; limit?: number } = {}): SessionsRuntimeEventRecord[] {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.jobId) { clauses.push("job_id = ?"); params.push(input.jobId); }
+    if (input.sessionId) { clauses.push("session_id = ?"); params.push(input.sessionId); }
+    if (input.target) { clauses.push("target = ?"); params.push(input.target); }
+    if (input.subsystem) { clauses.push("subsystem = ?"); params.push(input.subsystem); }
+    if (input.pinned !== undefined) { clauses.push("pinned = ?"); params.push(input.pinned ? 1 : 0); }
+    const limit = boundedInt(input.limit, 1, 1000, 100);
+    const rows = this.db.prepare(`
+      SELECT * FROM runtime_events
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(...params, limit) as RuntimeEventRow[];
+    return rows.map(rowToEvent);
+  }
+
+  listLogs(input: { jobId?: string; sessionId?: string; target?: string; subsystem?: string; pinned?: boolean; limit?: number } = {}): SessionsRuntimeLogRecord[] {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (input.jobId) { clauses.push("job_id = ?"); params.push(input.jobId); }
+    if (input.sessionId) { clauses.push("session_id = ?"); params.push(input.sessionId); }
+    if (input.target) { clauses.push("target = ?"); params.push(input.target); }
+    if (input.subsystem) { clauses.push("subsystem = ?"); params.push(input.subsystem); }
+    if (input.pinned !== undefined) { clauses.push("pinned = ?"); params.push(input.pinned ? 1 : 0); }
+    const limit = boundedInt(input.limit, 1, 1000, 100);
+    const rows = this.db.prepare(`
+      SELECT * FROM runtime_logs
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(...params, limit) as RuntimeLogRow[];
+    return rows.map(rowToLog);
+  }
+
+  recordEvent(input: { jobId?: string | null; sessionId?: string | null; kind: string; level?: string; target?: string | null; subsystem?: string | null; message?: string; metadata?: Record<string, unknown>; createdAt?: string; pinned?: boolean; diagnosticBundleId?: string | null }): void {
     const createdAt = input.createdAt ?? new Date().toISOString();
+    const message = redactString(input.message ?? "");
+    const metadata = redactValue(input.metadata ?? {});
     this.db.prepare(`
-      INSERT INTO runtime_events (id, job_id, kind, level, message, created_at, metadata_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO runtime_events (
+        id, job_id, session_id, kind, level, target, subsystem, message, created_at,
+        metadata_json, pinned, diagnostic_bundle_id, redacted
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       `event-${randomUUID()}`,
       input.jobId ?? null,
+      input.sessionId ?? null,
       input.kind,
       input.level ?? "info",
-      input.message ?? "",
+      input.target ?? null,
+      input.subsystem ?? null,
+      message.value,
       createdAt,
-      JSON.stringify(input.metadata ?? {}),
+      JSON.stringify(metadata.value),
+      input.pinned ? 1 : 0,
+      input.diagnosticBundleId ?? null,
+      message.redacted || metadata.redacted ? 1 : 0,
     );
+  }
+
+  recordLog(input: { jobId?: string | null; sessionId?: string | null; level?: string; target?: string | null; subsystem?: string | null; message?: string; metadata?: Record<string, unknown>; createdAt?: string; pinned?: boolean; diagnosticBundleId?: string | null }): SessionsRuntimeLogRecord {
+    const createdAt = input.createdAt ?? new Date().toISOString();
+    const id = `log-${randomUUID()}`;
+    const message = redactString(input.message ?? "");
+    const metadata = redactValue(input.metadata ?? {});
+    this.db.prepare(`
+      INSERT INTO runtime_logs (
+        id, job_id, session_id, level, target, subsystem, message, created_at,
+        metadata_json, pinned, diagnostic_bundle_id, redacted
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.jobId ?? null,
+      input.sessionId ?? null,
+      input.level ?? "info",
+      input.target ?? null,
+      input.subsystem ?? null,
+      message.value,
+      createdAt,
+      JSON.stringify(metadata.value),
+      input.pinned ? 1 : 0,
+      input.diagnosticBundleId ?? null,
+      message.redacted || metadata.redacted ? 1 : 0,
+    );
+    return this.listLogs({ limit: 1 })[0] as SessionsRuntimeLogRecord;
+  }
+
+  createDiagnosticBundle(input: { id?: string; title: string; sessionId?: string | null; target?: string | null; metadata?: Record<string, unknown>; createdAt?: string }): SessionsRuntimeDiagnosticBundleRecord {
+    const now = input.createdAt ?? new Date().toISOString();
+    const id = input.id ?? `diagnostic-${randomUUID()}`;
+    const metadata = redactValue(input.metadata ?? {});
+    this.db.prepare(`
+      INSERT INTO diagnostic_bundles (id, title, status, session_id, target, metadata_json, created_at, updated_at)
+      VALUES (?, ?, 'open', ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title=excluded.title,
+        session_id=excluded.session_id,
+        target=excluded.target,
+        metadata_json=excluded.metadata_json,
+        updated_at=excluded.updated_at
+    `).run(id, redactString(input.title).value, input.sessionId ?? null, input.target ?? null, JSON.stringify(metadata.value), now, now);
+    const row = this.db.prepare("SELECT * FROM diagnostic_bundles WHERE id = ?").get(id) as DiagnosticBundleRow;
+    return rowToDiagnosticBundle(row);
+  }
+
+  applyRetention(input: ApplySessionsRuntimeRetentionInput = {}): ApplySessionsRuntimeRetentionResult {
+    const now = Date.parse(input.now ?? new Date().toISOString());
+    const maxAgeDays = boundedInt(input.maxAgeDays, 1, 3650, 30);
+    const cutoff = new Date(now - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+    const maxEvents = boundedInt(input.maxEvents, 1, 1_000_000, 10_000);
+    const maxLogs = boundedInt(input.maxLogs, 1, 1_000_000, 10_000);
+    const maxEventBytes = boundedInt(input.maxEventBytes, 1024, 1024 * 1024 * 1024, 50 * 1024 * 1024);
+    const maxLogBytes = boundedInt(input.maxLogBytes, 1024, 1024 * 1024 * 1024, 50 * 1024 * 1024);
+    const eventIds = retentionIds(this.db, "runtime_events", cutoff, maxEvents, maxEventBytes);
+    const logIds = retentionIds(this.db, "runtime_logs", cutoff, maxLogs, maxLogBytes);
+    const jobIds = (this.db.prepare("SELECT id FROM runtime_jobs WHERE updated_at < ? AND status IN ('done','failed','cancelled')").all(cutoff) as Array<{ id: string }>).map((row) => row.id);
+    if (input.dryRun !== true) {
+      deleteByIds(this.db, "runtime_events", eventIds);
+      deleteByIds(this.db, "runtime_logs", logIds);
+      deleteByIds(this.db, "runtime_jobs", jobIds);
+    }
+    return {
+      cutoff,
+      dryRun: input.dryRun === true,
+      deleted: { events: eventIds.length, logs: logIds.length, jobs: jobIds.length },
+      retained: {
+        events: countRows(this.db, "runtime_events") - (input.dryRun === true ? 0 : 0),
+        logs: countRows(this.db, "runtime_logs") - (input.dryRun === true ? 0 : 0),
+        jobs: countRows(this.db, "runtime_jobs") - (input.dryRun === true ? 0 : 0),
+      },
+    };
   }
 
   private ensureSchema(): void {
@@ -317,7 +439,16 @@ export class SessionsRuntimeJobStore {
     this.ensureColumn("runtime_jobs", "leased_until", "TEXT");
     this.ensureColumn("runtime_jobs", "max_attempts", "INTEGER NOT NULL DEFAULT 3");
     this.ensureColumn("runtime_jobs", "error", "TEXT");
+    this.ensureColumn("runtime_events", "session_id", "TEXT");
+    this.ensureColumn("runtime_events", "target", "TEXT");
+    this.ensureColumn("runtime_events", "subsystem", "TEXT");
+    this.ensureColumn("runtime_events", "pinned", "INTEGER NOT NULL DEFAULT 0");
+    this.ensureColumn("runtime_events", "diagnostic_bundle_id", "TEXT");
+    this.ensureColumn("runtime_events", "redacted", "INTEGER NOT NULL DEFAULT 0");
     this.db.prepare("CREATE INDEX IF NOT EXISTS runtime_jobs_lease_idx ON runtime_jobs(status, scheduled_at, leased_until, priority DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS runtime_events_session_idx ON runtime_events(session_id, created_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS runtime_events_target_idx ON runtime_events(target, subsystem, created_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS runtime_events_retention_idx ON runtime_events(pinned, created_at)").run();
     this.db.prepare("UPDATE runtime_jobs SET scheduled_at = COALESCE(scheduled_at, run_at, created_at), max_attempts = COALESCE(max_attempts, 3), priority = COALESCE(priority, 0)").run();
   }
 
@@ -460,6 +591,54 @@ function rowToJob(row: RuntimeJobRow): SessionsRuntimeJobRecord {
   };
 }
 
+function rowToEvent(row: RuntimeEventRow): SessionsRuntimeEventRecord {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    sessionId: row.session_id,
+    kind: row.kind,
+    level: row.level,
+    target: row.target,
+    subsystem: row.subsystem,
+    message: row.message,
+    createdAt: row.created_at,
+    metadataJson: payloadRecord(row.metadata_json),
+    pinned: row.pinned === 1,
+    diagnosticBundleId: row.diagnostic_bundle_id,
+    redacted: row.redacted === 1,
+  };
+}
+
+function rowToLog(row: RuntimeLogRow): SessionsRuntimeLogRecord {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    sessionId: row.session_id,
+    level: row.level,
+    target: row.target,
+    subsystem: row.subsystem,
+    message: row.message,
+    createdAt: row.created_at,
+    metadataJson: payloadRecord(row.metadata_json),
+    pinned: row.pinned === 1,
+    diagnosticBundleId: row.diagnostic_bundle_id,
+    redacted: row.redacted === 1,
+  };
+}
+
+function rowToDiagnosticBundle(row: DiagnosticBundleRow): SessionsRuntimeDiagnosticBundleRecord {
+  return {
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    sessionId: row.session_id,
+    target: row.target,
+    metadataJson: payloadRecord(row.metadata_json),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function payloadRecord(value: unknown): Record<string, unknown> {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) return value as Record<string, unknown>;
   if (typeof value !== "string" || !value) return {};
@@ -469,6 +648,94 @@ function payloadRecord(value: unknown): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+function retentionIds(db: Database.Database, table: "runtime_events" | "runtime_logs", cutoff: string, maxRows: number, maxBytes: number): string[] {
+  const rows = db.prepare(`
+    SELECT id, created_at, length(message) + length(metadata_json) AS byte_size
+    FROM ${table}
+    WHERE pinned = 0 AND diagnostic_bundle_id IS NULL
+    ORDER BY created_at ASC, id ASC
+  `).all() as Array<{ id: string; created_at: string; byte_size: number | null }>;
+  const deleteIds = new Set<string>();
+  let retainedRows = rows.length;
+  let retainedBytes = rows.reduce((sum, row) => sum + (row.byte_size ?? 0), 0);
+  for (const row of rows) {
+    if (row.created_at >= cutoff) continue;
+    deleteIds.add(row.id);
+    retainedRows -= 1;
+    retainedBytes -= row.byte_size ?? 0;
+  }
+  for (const row of rows) {
+    if (retainedRows <= maxRows && retainedBytes <= maxBytes) break;
+    if (deleteIds.has(row.id)) continue;
+    deleteIds.add(row.id);
+    retainedRows -= 1;
+    retainedBytes -= row.byte_size ?? 0;
+  }
+  return [...deleteIds];
+}
+
+function deleteByIds(db: Database.Database, table: "runtime_events" | "runtime_logs" | "runtime_jobs", ids: string[]): void {
+  if (ids.length === 0) return;
+  const statement = db.prepare(`DELETE FROM ${table} WHERE id = ?`);
+  const tx = db.transaction((values: string[]) => {
+    for (const id of values) statement.run(id);
+  });
+  tx(ids);
+}
+
+function countRows(db: Database.Database, table: "runtime_events" | "runtime_logs" | "runtime_jobs"): number {
+  return (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n;
+}
+
+const SENSITIVE_KEY_RE = /(?:^|[_-])(api[_-]?key|authorization|bearer|credential|password|secret|token)(?:$|[_-])/i;
+const SECRET_VALUE_PATTERNS = [
+  /Bearer\s+[A-Za-z0-9._~+/=-]+/gi,
+  /(api[_-]?key|authorization|password|secret|token)=([^&\s]+)/gi,
+  /(sk-[A-Za-z0-9_-]{8,})/g,
+];
+const REDACTED = "[REDACTED]";
+
+function redactValue(value: unknown): { value: unknown; redacted: boolean } {
+  if (typeof value === "string") return redactString(value);
+  if (Array.isArray(value)) {
+    let redacted = false;
+    const next = value.map((item) => {
+      const result = redactValue(item);
+      redacted ||= result.redacted;
+      return result.value;
+    });
+    return { value: next, redacted };
+  }
+  if (typeof value === "object" && value !== null) {
+    let redacted = false;
+    const next: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (SENSITIVE_KEY_RE.test(key)) {
+        next[key] = REDACTED;
+        redacted = true;
+        continue;
+      }
+      const result = redactValue(child);
+      next[key] = result.value;
+      redacted ||= result.redacted;
+    }
+    return { value: next, redacted };
+  }
+  return { value, redacted: false };
+}
+
+function redactString(value: string): { value: string; redacted: boolean } {
+  let redacted = false;
+  let next = value;
+  for (const pattern of SECRET_VALUE_PATTERNS) {
+    next = next.replace(pattern, (match, key) => {
+      redacted = true;
+      return typeof key === "string" && key !== match ? `${key}=${REDACTED}` : REDACTED;
+    });
+  }
+  return { value: next, redacted };
 }
 
 function titleForJob(kind: string, resourceId: string | null | undefined): string {
