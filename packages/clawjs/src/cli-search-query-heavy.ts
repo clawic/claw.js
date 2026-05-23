@@ -166,7 +166,7 @@ import {
   ensureSocialPostsSourceIndexed,
 } from "./cli-search-source-indexers-secondary.ts";
 const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSourceManifests();
-import { openCliSearchStore, registerCliSearchSources, resolveSearchDbPath, searchStorageMetadata } from "./cli-search-heavy-command.ts";
+import { isRebuildableSearchStorageError, openCliSearchStore, registerCliSearchSources, resolveSearchDbPath, searchStorageMetadata } from "./cli-search-heavy-command.ts";
 
 export async function runSearchQueryCli(input: {
   positionals: string[];
@@ -185,6 +185,9 @@ export async function runSearchQueryCli(input: {
   if (domains?.some((domain) => WORKSPACE_SEARCH_DOMAINS.has(domain))) {
     return await runWorkspaceSearchQueryCli(input, query, domains);
   }
+  const strategy = SearchDocuments.parseSearchStrategyFlag(input.flags.strategy);
+  const embedding = SearchDocuments.parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model)
+    ?? SearchDocuments.localTextEmbeddingForQuery(query, strategy, input.flags);
   const scheduleRefresh = readBooleanFlag(input.argv ?? [], input.flags, "schedule-refresh");
   const persistentQuery = readBooleanFlag(input.argv ?? [], input.flags, "persistent") || scheduleRefresh;
   const searchDbPath = resolveSearchDbPath(input.flags);
@@ -198,8 +201,8 @@ export async function runSearchQueryCli(input: {
       stale: false,
       staleSources: [],
       elapsedMs: 0,
-      strategy: SearchDocuments.parseSearchStrategyFlag(input.flags.strategy) ?? "lexical",
-      embeddingModel: null,
+      strategy: strategy ?? "lexical",
+      embeddingModel: embedding?.model ?? null,
       agentBudget: SearchDocuments.parseSearchAgentBudget(input.flags) ?? null,
       commandFallback: { policy: importedParseCommandFallbackPolicy(input.flags["command-fallback"] ?? input.flags["fallback-commands"]), applied: false, reason: "missing_index", added: 0 },
       storage: searchStorageMetadata(input.flags),
@@ -212,15 +215,39 @@ export async function runSearchQueryCli(input: {
     }
     return CLI_EXIT_DEGRADED;
   }
-  const store = openCliSearchStore(input.flags);
+  let store: SearchStore;
+  try {
+    store = openCliSearchStore(input.flags);
+  } catch (error) {
+    if (!isRebuildableSearchStorageError(error)) throw error;
+    const data = {
+      query,
+      sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
+      results: [],
+      partial: true,
+      omittedSources: [],
+      stale: true,
+      staleSources: [],
+      elapsedMs: 0,
+      strategy: strategy ?? "lexical",
+      embeddingModel: embedding?.model ?? null,
+      agentBudget: SearchDocuments.parseSearchAgentBudget(input.flags) ?? null,
+      commandFallback: { policy: importedParseCommandFallbackPolicy(input.flags["command-fallback"] ?? input.flags["fallback-commands"]), applied: false, reason: "corrupt_index", added: 0 },
+      storage: searchStorageMetadata(input.flags),
+      indexState: "corrupt",
+    };
+    if (input.wantsJson) {
+      writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "query" });
+    } else {
+      input.context.stdout.write("");
+    }
+    return CLI_EXIT_DEGRADED;
+  }
   try {
     registerCliSearchSources(store, input.flags);
     const sources = SearchDocuments.parseListFlag(input.flags.sources ?? input.flags.source);
     const shards = SearchDocuments.parseListFlag(input.flags.shards ?? input.flags.shard);
     const filters = SearchDocuments.parseSearchFiltersFlag(input.flags.filters ?? input.flags.filter);
-    const strategy = SearchDocuments.parseSearchStrategyFlag(input.flags.strategy);
-    const embedding = SearchDocuments.parseSearchEmbeddingFlag(input.flags.embedding ?? input.flags["embedding-json"], input.flags["embedding-model"] ?? input.flags.model)
-      ?? SearchDocuments.localTextEmbeddingForQuery(query, strategy, input.flags);
     const agentBudget = SearchDocuments.parseSearchAgentBudget(input.flags);
     const limit = input.flags.limit ? SearchDocuments.boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
     const sourceSet = input.flags["source-set"] === "full" ? "full" : "framework";
@@ -271,7 +298,7 @@ export async function runSearchQueryCli(input: {
           limit ?? 20,
         )
       : commandFallback.output ?? results;
-    if (persistentQuery && SearchDocuments.searchQueryRequiresAudit(query, outputResults.results, filters)) {
+    if (SearchDocuments.searchQueryRequiresAudit(query, outputResults.results, filters)) {
       store.recordAuditEvent({
         type: "sensitive_query",
         actor: input.flags.actor,

@@ -1247,13 +1247,17 @@ function runCalendarCommand(input: V1DataCliInput, store: DatabaseServiceStore):
     const title = input.flags.title || (command === "create" ? input.positionals.slice(2).join(" ") : stringValue(existing?.title, id));
     const startsAt = input.flags.start || input.flags["starts-at"] || stringValue(existing?.startsAt, nowIso());
     const now = nowIso();
+    const rawMetadata = input.flags.metadata ? parseMaybeJson(input.flags.metadata) : {};
+    const metadata = typeof rawMetadata === "object" && rawMetadata !== null && !Array.isArray(rawMetadata)
+      ? { ...rawMetadata, ...(input.flags.description ? { description: input.flags.description } : {}) }
+      : { value: rawMetadata, ...(input.flags.description ? { description: input.flags.description } : {}) };
     store.sqlite.prepare(`
       INSERT INTO calendar_events (id, title, starts_at, ends_at, calendar_id, source, external_id, page_id, metadata_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET title = excluded.title, starts_at = excluded.starts_at, ends_at = excluded.ends_at,
         calendar_id = excluded.calendar_id, source = excluded.source, external_id = excluded.external_id,
         page_id = excluded.page_id, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
-    `).run(id, title, startsAt, input.flags.end || input.flags["ends-at"] || null, input.flags["calendar-id"] || null, input.flags.source || "clawjs", input.flags["external-id"] || null, input.flags["page-id"] || null, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    `).run(id, title, startsAt, input.flags.end || input.flags["ends-at"] || null, input.flags["calendar-id"] || null, input.flags.source || "clawjs-time", input.flags["external-id"] || null, input.flags["page-id"] || null, JSON.stringify(metadata), now, now);
     scheduleCalendarEventsSearchEvent({
       operation: "upsert",
       eventId: id,

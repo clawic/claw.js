@@ -46,7 +46,7 @@ export function stringifyCliJson(payload: unknown): string {
 
 function redactString(value: string): string {
   if (value.length <= 8) return "[REDACTED]";
-  return `${value.slice(0, 3)}...${value.slice(-3)}`;
+  return `${"*".repeat(Math.max(4, value.length - 4))}${value.slice(-4)}`;
 }
 
 function redactSensitiveText(value: string): string {

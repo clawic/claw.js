@@ -129,6 +129,7 @@ function surfaceNodeSearchDocument(node: ClawPersistentSurfaceNode): SearchDocum
     rankingHints: {
       technical: 1,
       route: relatedRoutes.length > 0 ? 1 : 0,
+      priority: node.id === "claw.relay" ? 10 : Math.min(5, relatedRoutes.length),
     },
     fragments: [{
       id: `${node.id}:evidence`,

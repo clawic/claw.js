@@ -776,6 +776,7 @@ export function calendarEventSearchDocument(row: CalendarEventRow): SearchDocume
       calendarId: row.calendar_id,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
+      status: "active",
       source: row.source,
       externalId: row.external_id,
       pageId: row.page_id,

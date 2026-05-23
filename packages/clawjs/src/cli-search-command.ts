@@ -59,7 +59,7 @@ export async function runCliDiscoverySearch(input: {
     input.context.stdout.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
     return CLI_EXIT_OK;
   }
-  const limit = input.flags.limit ? Number(input.flags.limit) : 10;
+  const limit = input.flags.limit ? Number(input.flags.limit) : 20;
   const repositories = detectClawPublicRepositories(input.context.cwd, { includeFallback: true });
   const results = mergeSearchResults([
     ...searchCliDiscovery(query, { limit }),

@@ -490,7 +490,7 @@ export function cosineSimilarity(left: number[], right: number[]): number {
 
 export function isRebuildableSearchSchemaMismatch(error: unknown): boolean {
   return error instanceof Error
-    && /no such column: source|no such column: shard|search_fts|schema/i.test(error.message);
+    && /no such column: source|no such column: shard|no such column: byte_count|no such column: source_count|no such column: domain_count|no such column: shard_count|search_fts|schema/i.test(error.message);
 }
 
 export function ftsQuery(query: string): string {

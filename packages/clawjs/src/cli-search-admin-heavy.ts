@@ -111,6 +111,24 @@ import { listTemplates, readTemplate, templateManifestPath } from "./templates/s
 import { resolveClawjsDataRoot, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, readMcpServers, type JsonRecord } from "./v1-data-core.ts";
 import * as SearchDocuments from "./cli-search-documents.ts";
+
+function localSearchEmbeddingModel(model: string | undefined): string {
+  if (!model || model === LOCAL_TEXT_EMBEDDING_MODEL) return LOCAL_TEXT_EMBEDDING_MODEL;
+  throw new CliHandledError("SEARCH_EMBEDDING_PROVIDER_PENDING", `Search local embedding indexing only supports ${LOCAL_TEXT_EMBEDDING_MODEL}; provider-backed embedding workers are EXTERNAL PENDING.`, CLI_EXIT_USAGE);
+}
+
+function searchActionAccessInput(flags: Record<string, string>): Pick<SearchQueryInput, "actor" | "surface" | "filters"> {
+  const parsedFilters = SearchDocuments.parseSearchFiltersFlag(flags.filters ?? flags.filter);
+  const filters = { ...(parsedFilters ?? {}) };
+  if (flags.scope) filters.scope = flags.scope;
+  if (flags["scope-id"] || flags.scopeId) filters.scopeId = flags["scope-id"] ?? flags.scopeId;
+  return {
+    actor: flags.actor,
+    surface: flags.surface,
+    ...(Object.keys(filters).length ? { filters } : {}),
+  };
+}
+
 import {
   ensureCalendarEventResourceIndexed,
   ensureCalendarEventsSourceIndexed,
