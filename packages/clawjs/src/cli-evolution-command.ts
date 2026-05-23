@@ -69,7 +69,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
       migrationLab,
       checks: [
         "ledger_schema_valid",
-        "records_have_owner_surfaces_tests",
+        "records_have_steward_surfaces_tests",
         "receipts_redacted_by_policy",
         "rescue_core_declared",
         diff && diff.uncoveredChanges.length === 0 ? "public_surface_baseline_covered" : "public_surface_baseline_needs_attention",
@@ -189,7 +189,7 @@ function writeEvolutionResult(input: EvolutionCliInput, action: string, data: un
       id: record.id,
       class: record.class,
       status: record.status,
-      owner: record.owner,
+      steward: record.steward,
       surfaces: String(record.surfaces.length),
     })))}\n`);
     return CLI_EXIT_OK;

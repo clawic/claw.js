@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const lane = process.argv[2] ?? "fast";
@@ -78,6 +78,15 @@ function coordinationPendingDiagnostic(laneName) {
   });
 }
 
+function coordinationSatisfiedDiagnostic(laneName) {
+  return createDiagnostic("test_lane_coordination_satisfied", `test lane ${laneName} already has valid matching evidence.`, {
+    status: "SATISFIED",
+    location: `scripts/test-lane.mjs:${laneName}`,
+    suggestion: "Reuse the recorded coordinated evidence instead of rerunning the lane.",
+    safeNextStep: `Inspect the coordination ledger for lane ${laneName}, or rerun node scripts/test-lane.mjs ${laneName} after evidence expires.`,
+  });
+}
+
 function coordinationCommandFailedDiagnostic(action, status) {
   return createDiagnostic("test_lane_coordination_command_failed", `could not ${action} coordination lease for test lane ${lane}.`, {
     status: "FAIL",
@@ -111,6 +120,7 @@ function runSelfTest() {
     externalPendingDiagnostic("host", "CLAW_HOST_TEST_COMMAND", "signed-host validation"),
     unknownLaneDiagnostic("/Users/example/private"),
     coordinationPendingDiagnostic("fast"),
+    coordinationSatisfiedDiagnostic("changed"),
     childFailedDiagnostic("npm", ["run", "test"], 1, { location: "/Users/example/private/repo" }),
     unexpectedFailureDiagnostic(new Error("token: sk-test-secret-123456")),
   ], {
@@ -122,10 +132,12 @@ function runSelfTest() {
   assert.match(output, /code: test_lane_external_pending/);
   assert.match(output, /code: test_lane_unknown/);
   assert.match(output, /code: test_lane_coordination_pending/);
+  assert.match(output, /code: test_lane_coordination_satisfied/);
   assert.match(output, /code: test_lane_child_failed/);
   assert.match(output, /\[USAGE\]/);
   assert.match(output, /\[EXTERNAL_PENDING\]/);
   assert.match(output, /\[PENDING\]/);
+  assert.match(output, /\[SATISFIED\]/);
   assert.match(output, /location: scripts\/test-lane\.mjs:host/);
   assert.match(output, /suggestion: Provide an approved external validation command/);
   assert.match(output, /next: Set CLAW_HOST_TEST_COMMAND/);
@@ -390,7 +402,24 @@ function acquireLaneLease() {
     String(process.pid),
     ...coordinationPathFlags(),
   ]);
-  if (result.status === 0) return result.payload?.data?.checks?.[0]?.lease?.id ?? null;
+  if (result.status === 0) {
+    if (result.payload?.data?.status === "PENDING") {
+      printTestLaneReport([coordinationPendingDiagnostic(lane)], {
+        title: "test lane coordination pending:",
+      });
+      throw new LaneExit(2);
+    }
+    if (result.payload?.data?.status === "SATISFIED") {
+      printTestLaneReport([coordinationSatisfiedDiagnostic(lane)], {
+        title: "test lane coordination satisfied:",
+      });
+      throw new LaneExit(0);
+    }
+    const check = result.payload?.data?.checks?.[0];
+    const primary = check?.lease?.id ?? null;
+    const leases = Array.isArray(check?.leases) ? check.leases.map((lease) => lease.id).filter(Boolean) : primary ? [primary] : [];
+    return primary ? { primary, leases } : null;
+  }
   if (result.payload?.data?.status === "PENDING") {
     printTestLaneReport([coordinationPendingDiagnostic(lane)], {
       title: "test lane coordination pending:",
@@ -401,28 +430,80 @@ function acquireLaneLease() {
   throw new LaneExit(result.status);
 }
 
-function releaseLaneLease(leaseId, exitCode) {
-  if (!leaseId) return;
-  const status = exitCode === 0 ? "passed" : "failed";
-  const result = runClawJson([
-    "agent-resource",
-    "release",
-    "--lease",
-    leaseId,
-    "--status",
-    status,
-    "--repo",
-    process.cwd(),
-    "--lane",
-    lane,
-    "--check",
-    lane,
-    ...coordinationPathFlags(),
-  ]);
-  if (result.status !== 0) {
-    printTestLaneReport([coordinationCommandFailedDiagnostic("release", result.status)], {
-      title: "test lane coordination release failed:",
+function releaseLaneLease(acquired, exitCode) {
+  if (!acquired?.primary) return;
+  const status = exitCode === 0 ? "passed" : exitCode === 2 ? "external_pending" : "failed";
+  const leases = acquired.leases?.length ? acquired.leases : [acquired.primary];
+  for (const leaseId of leases) {
+    const isPrimary = leaseId === acquired.primary;
+    const result = runClawJson([
+      "agent-resource",
+      "release",
+      "--lease",
+      leaseId,
+      "--status",
+      status,
+      "--repo",
+      process.cwd(),
+      "--lane",
+      lane,
+      "--check",
+      lane,
+      ...(isPrimary ? [] : ["--no-result", "true"]),
+      ...coordinationPathFlags(),
+    ]);
+    if (result.status !== 0) {
+      printTestLaneReport([coordinationCommandFailedDiagnostic("release", result.status)], {
+        title: "test lane coordination release failed:",
+      });
+    }
+  }
+}
+
+function startLaneHeartbeat(acquired) {
+  if (!acquired?.leases?.length) return null;
+  const payload = Buffer.from(JSON.stringify({
+    cwd: process.cwd(),
+    parentPid: process.pid,
+    leases: acquired.leases,
+    flags: coordinationPathFlags(),
+    intervalMs: 10_000,
+  })).toString("base64");
+  const script = `
+const { spawnSync } = require("node:child_process");
+const data = JSON.parse(Buffer.from(process.argv[1], "base64").toString("utf8"));
+function parentAlive() {
+  try { process.kill(data.parentPid, 0); return true; } catch { return false; }
+}
+function beat() {
+  if (!parentAlive()) process.exit(0);
+  for (const lease of data.leases) {
+    spawnSync(process.execPath, ["packages/clawjs/bin/claw.mjs", "agent-resource", "heartbeat", "--lease", lease, "--status", "running", ...data.flags, "--json"], {
+      cwd: data.cwd,
+      env: process.env,
+      stdio: "ignore",
     });
+  }
+}
+process.on("SIGTERM", () => process.exit(0));
+beat();
+setInterval(beat, data.intervalMs);
+`;
+  const child = spawn(process.execPath, ["-e", script, payload], {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: "ignore",
+  });
+  child.unref();
+  return child;
+}
+
+function stopLaneHeartbeat(child) {
+  if (!child) return;
+  try {
+    child.kill("SIGTERM");
+  } catch {
+    // Best-effort cleanup; the helper also exits when the parent process dies.
   }
 }
 
@@ -467,9 +548,11 @@ if (process.argv.includes("--self-test")) {
 }
 
 let leaseId = null;
+let heartbeat = null;
 let exitCode = 0;
 try {
   leaseId = acquireLaneLease();
+  heartbeat = startLaneHeartbeat(leaseId);
   runLane();
 } catch (error) {
     if (error instanceof LaneExit) {
@@ -479,6 +562,7 @@ try {
       exitCode = 1;
     }
 } finally {
+  stopLaneHeartbeat(heartbeat);
   releaseLaneLease(leaseId, exitCode);
 }
 process.exit(exitCode);

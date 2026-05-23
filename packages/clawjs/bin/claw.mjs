@@ -195,7 +195,7 @@ if (first === "setup") {
   process.exit(0);
 }
 if (first === "inspect" && (second === "commands" || second === "cli")) {
-  const commands = ["help", "setup", "modules", "inspect", "collections", "db", "tasks", "search", "chat", "code"];
+  const commands = ["help", "setup", "modules", "inspect", "collections", "db", "tasks", "search", "chat", "code", "agent-resource", "test"];
   if (wantsJson()) writeJsonOk("inspect", commands.map((command) => ({ id: `claw.cli.command.${command}`, value: command })), { subcommand: second });
   else console.log(commands.join("\n"));
   process.exit(0);

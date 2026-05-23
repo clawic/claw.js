@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -13,7 +13,12 @@ import {
   publicRepairOwnership,
   publicWorkResult,
   resolveAgentCoordinationPaths,
+  type AgentCoordinationAcquireInput,
   type AgentCoordinationStore,
+  type AgentRepairOwnershipRow,
+  type AgentResourceDemandRow,
+  type AgentResourceLeaseMode,
+  type AgentResourceLeaseRow,
   type AgentWorkResultRow,
 } from "./agent-coordination-store.ts";
 
@@ -40,10 +45,41 @@ interface CoordinationCheck {
   realServices: boolean;
   pathPatterns?: string[];
   fingerprintInputs?: string[];
+  environmentInputs?: string[];
+  resourceStateInputs?: string[];
+  consumes: string[];
+  produces: string[];
+  mutates: string[];
+  exclusiveResources: string[];
+  canRunWith: string[];
+  cannotRunWith: string[];
+  heartbeatSeconds: number;
+  ttlSeconds: number;
+  cleanup: string;
+  ownerObligations?: string[];
+  stewardObligations?: string[];
   resultReuse?: { allowed: boolean; validForSeconds: number };
   externalPendingPolicy?: string;
   failureAction?: string;
   repairPolicy?: string;
+}
+
+interface CommandRunResult {
+  status: number | null;
+  signal: NodeJS.Signals | null;
+  stdout: string;
+  stderr: string;
+  error?: Error;
+}
+
+interface TestRequirementAcquisition {
+  check: CoordinationCheck;
+  resource: string;
+  fingerprint: string;
+  reused: AgentWorkResultRow | null;
+  result: (ReturnType<AgentCoordinationStore["acquireMany"]> & { lease?: AgentResourceLeaseRow }) | { status: "pending"; lease: undefined; demand: AgentResourceDemandRow; conflicts: AgentResourceLeaseRow[] } | null;
+  repair: AgentRepairOwnershipRow | null;
+  deduplicated?: boolean;
 }
 
 export async function runTestCli(input: TestCliInput): Promise<number> {
@@ -64,7 +100,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
     return ok(input, {
       activeLeases: status.activeLeases.map(publicLease),
       pendingDemands: status.pendingDemands.map(publicDemand),
-      recentResults: status.recentResults,
+      recentResults: status.recentResults.map(publicWorkResult),
       paths: status.paths,
     }, { subcommand: command });
   }
@@ -89,12 +125,20 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
       purpose: `test require ${ids.join(",")}`,
       metadata: { command: "claw test require", lane },
     });
+    const acquisitionsByKey = new Map<string, TestRequirementAcquisition>();
     const acquisitions = selected.map((check) => {
-      const resource = `test:${repoFingerprint(repo)}:${check.id}`;
+      const resource = testResourceId(repo, check);
       const fingerprint = fingerprintForCheck(repo, check, input);
+      const acquisitionKey = `${check.id}\0${fingerprint}`;
+      const existingAcquisition = acquisitionsByKey.get(acquisitionKey);
+      if (existingAcquisition) {
+        return { ...existingAcquisition, check, resource, fingerprint, deduplicated: true };
+      }
       const reusable = reusableResult(store, repo, check, fingerprint);
       if (reusable?.status === "passed") {
-        return { check, resource, fingerprint, reused: reusable, result: null, repair: null };
+        const entry: TestRequirementAcquisition = { check, resource, fingerprint, reused: reusable, result: null, repair: null };
+        acquisitionsByKey.set(acquisitionKey, entry);
+        return entry;
       }
       const repair = store.activeRepairOwnership({ checkId: check.id, fingerprint });
       if (repair && repair.owner_intent_id !== intent.id) {
@@ -105,30 +149,25 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
           reason: `repair active for ${check.id}`,
           metadata: { command: "claw test require", lane: check.lane, fingerprint, repairId: repair.id },
         });
-        return { check, resource, fingerprint, reused: reusable, result: { status: "pending" as const, lease: undefined, demand, conflicts: [] }, repair };
+        const entry: TestRequirementAcquisition = { check, resource, fingerprint, reused: reusable, result: { status: "pending" as const, lease: undefined, demand, conflicts: [] }, repair };
+        acquisitionsByKey.set(acquisitionKey, entry);
+        return entry;
       }
       if (reusable) {
-        return { check, resource, fingerprint, reused: reusable, result: null, repair: null };
+        const entry: TestRequirementAcquisition = { check, resource, fingerprint, reused: reusable, result: null, repair: null };
+        acquisitionsByKey.set(acquisitionKey, entry);
+        return entry;
       }
-      return {
+      const entry: TestRequirementAcquisition = {
         check,
         resource,
         fingerprint,
         reused: null,
         repair: null,
-        result: store.acquire({
-          resourceId: resource,
-          mode: "exclusive",
-          intentId: intent.id,
-          agentId: input.flags.agent,
-          sessionId: input.flags.session,
-          pid: input.flags.pid ? parsePositiveInteger(input.flags.pid, process.pid) : undefined,
-          ttlSeconds: check.timeoutSeconds,
-          resourceKind: "test",
-          reason: `test result required for ${check.id}`,
-          metadata: { command: check.command, lane: check.lane, fingerprint },
-        }),
+        result: acquireCheckResources(store, repo, check, intent.id, fingerprint, input, "test result required"),
       };
+      acquisitionsByKey.set(acquisitionKey, entry);
+      return entry;
     });
     const pending = acquisitions.filter((entry) => entry.result?.status === "pending");
     const failedEvidence = acquisitions.filter((entry) => entry.reused && entry.reused.status !== "passed");
@@ -145,13 +184,16 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         id: entry.check.id,
         resource: entry.resource,
         fingerprint: entry.fingerprint,
+        deduplicated: entry.deduplicated === true,
         status: entry.result?.status === "pending" ? "PENDING"
           : entry.result?.status === "acquired" ? "ACQUIRED"
             : entry.reused?.status === "passed" ? "SATISFIED"
               : entry.reused ? "FAILED_EVIDENCE"
                 : "UNKNOWN",
         lease: entry.result?.lease ? publicLease(entry.result.lease) : null,
-        demand: entry.result?.demand ? publicDemand(entry.result.demand) : null,
+        leases: entry.result?.leases?.map(publicLease) ?? (entry.result?.lease ? [publicLease(entry.result.lease)] : []),
+        demand: entry.result?.demand ? publicDemand(entry.result.demand) : entry.result?.demands?.[0] ? publicDemand(entry.result.demands[0]) : null,
+        demands: entry.result?.demands?.map(publicDemand) ?? (entry.result?.demand ? [publicDemand(entry.result.demand)] : []),
         conflicts: entry.result?.conflicts.map(publicLease) ?? [],
         reusableResult: entry.reused ? publicWorkResult(entry.reused) : null,
         repair: entry.repair ? publicRepairOwnership(entry.repair) : null,
@@ -185,7 +227,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
     const repair = store.activeRepairOwnership({ checkId: check.id, fingerprint });
     if (repair && repair.owner_intent_id !== intent.id) {
       const demand = store.waitlist({
-        resourceId: `test:${repoFingerprint(repo)}:${check.id}`,
+        resourceId: testResourceId(repo, check),
         intentId: intent.id,
         agentId: input.flags.agent,
         reason: `repair active for ${check.id}`,
@@ -200,33 +242,23 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         repair: publicRepairOwnership(repair),
       }, { subcommand: command, lane }, CLI_EXIT_DEGRADED);
     }
-    const acquisition = store.acquire({
-      resourceId: `test:${repoFingerprint(repo)}:${check.id}`,
-      mode: "exclusive",
-      intentId: intent.id,
-      agentId: input.flags.agent,
-      sessionId: input.flags.session,
-      pid: input.flags.pid ? parsePositiveInteger(input.flags.pid, process.pid) : undefined,
-      ttlSeconds: check.timeoutSeconds,
-      resourceKind: "test",
-      reason: `test run ${check.id}`,
-      metadata: { command: check.command, lane: check.lane, fingerprint },
-    });
+    const acquisition = acquireCheckResources(store, repo, check, intent.id, fingerprint, input, "test run");
     if (acquisition.status === "pending") {
       return ok(input, {
         status: "PENDING",
         intent: { id: intent.id, repo, lane },
         check: check.id,
         fingerprint,
-        demand: acquisition.demand ? publicDemand(acquisition.demand) : null,
+        demand: acquisition.demands[0] ? publicDemand(acquisition.demands[0]) : null,
+        demands: acquisition.demands.map(publicDemand),
         conflicts: acquisition.conflicts.map(publicLease),
       }, { subcommand: command, lane }, CLI_EXIT_DEGRADED);
     }
-    if (!acquisition.lease) throw new CliHandledError("test_lease_missing", "test run could not acquire a lease.", CLI_EXIT_DEGRADED);
+    const primaryLease = acquisition.leases[0];
+    if (!primaryLease) throw new CliHandledError("test_lease_missing", "test run could not acquire a lease.", CLI_EXIT_DEGRADED);
 
     if (input.flags["dry-run"] === "1" || input.flags["dry-run"] === "true") {
-      const released = store.release({
-        leaseId: acquisition.lease.id,
+      const released = releaseCheckLeases(store, acquisition.leases, primaryLease.id, {
         status: "passed",
         checkId: check.id,
         repo,
@@ -242,29 +274,23 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         check: check.id,
         fingerprint,
         lease: publicLease(released),
+        leases: acquisition.leases.map(publicLease),
         command: check.command,
       }, { subcommand: command, lane });
     }
 
     const startedAt = new Date().toISOString();
     const started = Date.now();
-    let result: ReturnType<typeof spawnSync> = { status: 1, signal: null, error: undefined, pid: 0, output: [], stdout: "", stderr: "" };
+    let result: CommandRunResult = { status: 1, signal: null, stdout: "", stderr: "" };
     let status: "passed" | "failed" | "external_pending" = "failed";
     let released: ReturnType<AgentCoordinationStore["release"]> = null;
     try {
-      result = spawnSync("bash", ["-lc", check.command], {
-        cwd: repo,
-        env: { ...process.env, CLAW_AGENT_COORDINATION_ACTIVE: "1" },
-        encoding: "utf8",
-        maxBuffer: 20 * 1024 * 1024,
-        shell: false,
-      });
+      result = await runCheckCommandWithHeartbeat(store, acquisition.leases, check, repo);
       if (result.stdout) input.context.stderr.write(result.stdout);
       if (result.stderr) input.context.stderr.write(result.stderr);
       status = result.status === 0 ? "passed" : result.status === 2 ? "external_pending" : "failed";
     } finally {
-      released = store.release({
-        leaseId: acquisition.lease.id,
+      released = releaseCheckLeases(store, acquisition.leases, primaryLease.id, {
         status,
         checkId: check.id,
         repo,
@@ -290,6 +316,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         check: check.id,
         fingerprint,
         lease: publicLease(released),
+        leases: acquisition.leases.map(publicLease),
         repair: repairOwnership ? publicRepairOwnership(repairOwnership) : null,
         command: check.command,
         exitCode: result.status ?? 1,
@@ -339,23 +366,208 @@ function loadChecks(repo: string): CoordinationCheck[] {
 
 function validateCheck(check: CoordinationCheck, index: number, manifestPath: string): CoordinationCheck {
   const prefix = `${manifestPath} checks[${index}]`;
+  const normalized = { ...check, ownerObligations: check.ownerObligations ?? check.stewardObligations ?? [] };
+  delete normalized.stewardObligations;
   const requiredStrings = ["id", "lane", "command"] as const;
   for (const field of requiredStrings) {
-    if (typeof check[field] !== "string" || !check[field].trim()) throw new CliHandledError("malformed_test_manifest", `${prefix}.${field} must be a non-empty string.`, CLI_EXIT_USAGE);
+    if (typeof normalized[field] !== "string" || !normalized[field].trim()) throw new CliHandledError("malformed_test_manifest", `${prefix}.${field} must be a non-empty string.`, CLI_EXIT_USAGE);
   }
-  if (!Number.isFinite(check.timeoutSeconds) || check.timeoutSeconds <= 0) throw new CliHandledError("malformed_test_manifest", `${prefix}.timeoutSeconds must be a positive number.`, CLI_EXIT_USAGE);
-  if (!["light", "heavy", "saturating", "interactive"].includes(check.costClass)) throw new CliHandledError("malformed_test_manifest", `${prefix}.costClass is invalid.`, CLI_EXIT_USAGE);
-  if (typeof check.realServices !== "boolean") throw new CliHandledError("malformed_test_manifest", `${prefix}.realServices must be boolean.`, CLI_EXIT_USAGE);
-  if (!Array.isArray(check.resources) || check.resources.length === 0) throw new CliHandledError("malformed_test_manifest", `${prefix}.resources must be a non-empty array.`, CLI_EXIT_USAGE);
-  for (const [resourceIndex, resource] of check.resources.entries()) {
+  if (!Number.isFinite(normalized.timeoutSeconds) || normalized.timeoutSeconds <= 0) throw new CliHandledError("malformed_test_manifest", `${prefix}.timeoutSeconds must be a positive number.`, CLI_EXIT_USAGE);
+  if (!["light", "heavy", "saturating", "interactive"].includes(normalized.costClass)) throw new CliHandledError("malformed_test_manifest", `${prefix}.costClass is invalid.`, CLI_EXIT_USAGE);
+  if (typeof normalized.realServices !== "boolean") throw new CliHandledError("malformed_test_manifest", `${prefix}.realServices must be boolean.`, CLI_EXIT_USAGE);
+  for (const field of ["consumes", "produces", "mutates", "exclusiveResources", "canRunWith", "cannotRunWith", "ownerObligations"] as const) {
+    if (!Array.isArray(normalized[field]) || normalized[field].some((item) => typeof item !== "string")) {
+      throw new CliHandledError("malformed_test_manifest", `${prefix}.${field} must be an array of strings.`, CLI_EXIT_USAGE);
+    }
+  }
+  for (const field of ["pathPatterns", "fingerprintInputs", "environmentInputs", "resourceStateInputs"] as const) {
+    if (normalized[field] !== undefined && (!Array.isArray(normalized[field]) || normalized[field]?.some((item) => typeof item !== "string"))) {
+      throw new CliHandledError("malformed_test_manifest", `${prefix}.${field} must be an array of strings when present.`, CLI_EXIT_USAGE);
+    }
+  }
+  for (const field of ["heartbeatSeconds", "ttlSeconds"] as const) {
+    if (!Number.isFinite(normalized[field]) || normalized[field] <= 0) throw new CliHandledError("malformed_test_manifest", `${prefix}.${field} must be a positive number.`, CLI_EXIT_USAGE);
+  }
+  if (typeof normalized.cleanup !== "string" || !normalized.cleanup.trim()) throw new CliHandledError("malformed_test_manifest", `${prefix}.cleanup must be a non-empty string.`, CLI_EXIT_USAGE);
+  if (!Array.isArray(normalized.resources) || normalized.resources.length === 0) throw new CliHandledError("malformed_test_manifest", `${prefix}.resources must be a non-empty array.`, CLI_EXIT_USAGE);
+  for (const [resourceIndex, resource] of normalized.resources.entries()) {
     if (typeof resource.id !== "string" || !resource.id.trim()) throw new CliHandledError("malformed_test_manifest", `${prefix}.resources[${resourceIndex}].id must be a non-empty string.`, CLI_EXIT_USAGE);
     if (!["read", "write", "exclusive"].includes(resource.mode)) throw new CliHandledError("malformed_test_manifest", `${prefix}.resources[${resourceIndex}].mode is invalid.`, CLI_EXIT_USAGE);
   }
-  return check;
+  return normalized;
 }
 
 function findCheck(checks: CoordinationCheck[], repo: string, id: string, lane: string): CoordinationCheck {
   return checks.find((check) => check.id === id) ?? defaultCheck(repo, id, lane);
+}
+
+function testResourceId(repo: string, check: CoordinationCheck): string {
+  return `test:${repoFingerprint(repo)}:${check.id}`;
+}
+
+function acquireCheckResources(
+  store: AgentCoordinationStore,
+  repo: string,
+  check: CoordinationCheck,
+  intentId: string,
+  fingerprint: string,
+  input: TestCliInput,
+  reason: string,
+): ReturnType<AgentCoordinationStore["acquireMany"]> & { lease?: AgentResourceLeaseRow } {
+  const requests = resourceRequestsForCheck(repo, check, intentId, fingerprint, input, reason);
+  const result = store.acquireMany(requests);
+  return { ...result, lease: result.leases[0] };
+}
+
+function resourceRequestsForCheck(
+  repo: string,
+  check: CoordinationCheck,
+  intentId: string,
+  fingerprint: string,
+  input: TestCliInput,
+  reason: string,
+): AgentCoordinationAcquireInput[] {
+  const pid = input.flags.pid ? parsePositiveInteger(input.flags.pid, process.pid) : undefined;
+  const primary: AgentCoordinationAcquireInput = {
+    resourceId: testResourceId(repo, check),
+    mode: "exclusive",
+    intentId,
+    agentId: input.flags.agent,
+    sessionId: input.flags.session,
+    pid,
+    ttlSeconds: check.ttlSeconds || check.timeoutSeconds,
+    resourceKind: "test",
+    reason: `${reason} ${check.id}`,
+    cleanupCommand: { command: check.cleanup, scope: "test-result", check: check.id },
+    metadata: { command: check.command, lane: check.lane, check: check.id, fingerprint, role: "test-result" },
+  };
+  const resourceInputs = check.resources.map((resource) => ({
+    resourceId: resource.id,
+    mode: resource.mode,
+    intentId,
+    agentId: input.flags.agent,
+    sessionId: input.flags.session,
+    pid,
+    ttlSeconds: check.ttlSeconds || check.timeoutSeconds,
+    resourceKind: resourceKind(resource.id),
+    reason: `${reason} ${check.id} needs ${resource.id}`,
+    cleanupCommand: { command: check.cleanup, scope: "declared-resource", check: check.id, resource: resource.id },
+    metadata: { command: check.command, lane: check.lane, check: check.id, fingerprint, role: "declared-resource" },
+  }));
+  return normalizeAcquireInputs([primary, ...resourceInputs]);
+}
+
+function normalizeAcquireInputs(inputs: AgentCoordinationAcquireInput[]): AgentCoordinationAcquireInput[] {
+  const byResource = new Map<string, AgentCoordinationAcquireInput>();
+  for (const input of inputs) {
+    const existing = byResource.get(input.resourceId);
+    if (!existing) {
+      byResource.set(input.resourceId, input);
+      continue;
+    }
+    byResource.set(input.resourceId, {
+      ...existing,
+      mode: stricterMode(existing.mode, input.mode),
+      metadata: { ...(existing.metadata ?? {}), duplicateModes: [existing.mode, input.mode] },
+    });
+  }
+  return [...byResource.values()];
+}
+
+function stricterMode(left: AgentResourceLeaseMode, right: AgentResourceLeaseMode): AgentResourceLeaseMode {
+  const rank: Record<AgentResourceLeaseMode, number> = { read: 0, write: 1, exclusive: 2 };
+  return rank[right] > rank[left] ? right : left;
+}
+
+function resourceKind(resourceId: string): string {
+  const [kind] = resourceId.split(":");
+  return kind || "test-resource";
+}
+
+function releaseCheckLeases(
+  store: AgentCoordinationStore,
+  leases: AgentResourceLeaseRow[],
+  primaryLeaseId: string,
+  input: Parameters<AgentCoordinationStore["release"]>[0],
+): AgentResourceLeaseRow | null {
+  let primary: AgentResourceLeaseRow | null = null;
+  for (const lease of leases) {
+    const released = store.release({
+      ...input,
+      leaseId: lease.id,
+      recordResult: lease.id === primaryLeaseId,
+      metadata: {
+        ...(input.metadata ?? {}),
+        releasedResourceId: lease.resource_id,
+        primaryLease: lease.id === primaryLeaseId,
+      },
+    });
+    if (lease.id === primaryLeaseId) primary = released;
+  }
+  return primary;
+}
+
+async function runCheckCommandWithHeartbeat(
+  store: AgentCoordinationStore,
+  leases: AgentResourceLeaseRow[],
+  check: CoordinationCheck,
+  repo: string,
+): Promise<CommandRunResult> {
+  const heartbeatMs = Math.max(1, check.heartbeatSeconds || 10) * 1000;
+  let stdout = "";
+  let stderr = "";
+  let settled = false;
+  let child: ReturnType<typeof spawn> | null = null;
+  const heartbeat = () => {
+    for (const lease of leases) {
+      try {
+        store.heartbeat({
+          leaseId: lease.id,
+          status: "running",
+          ttlSeconds: check.ttlSeconds || check.timeoutSeconds,
+          metadata: { command: check.command, lane: check.lane, check: check.id, phase: "running" },
+        });
+      } catch {
+        // Keep release/failure reporting authoritative even if a heartbeat
+        // races with cleanup or a local store issue.
+      }
+    }
+  };
+  heartbeat();
+  const heartbeatTimer = setInterval(heartbeat, heartbeatMs);
+  const timeoutTimer = setTimeout(() => {
+    if (!settled && child) child.kill("SIGTERM");
+  }, Math.max(1, check.timeoutSeconds) * 1000);
+  child = spawn("bash", ["-lc", check.command], {
+    cwd: repo,
+    env: { ...process.env, CLAW_AGENT_COORDINATION_ACTIVE: "1" },
+    shell: false,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const append = (current: string, chunk: Buffer): string => {
+    const next = current + chunk.toString("utf8");
+    return next.length > 20 * 1024 * 1024 ? next.slice(-20 * 1024 * 1024) : next;
+  };
+  child.stdout?.on("data", (chunk) => {
+    stdout = append(stdout, chunk);
+  });
+  child.stderr?.on("data", (chunk) => {
+    stderr = append(stderr, chunk);
+  });
+  return await new Promise((resolve) => {
+    child?.on("error", (error) => {
+      settled = true;
+      clearInterval(heartbeatTimer);
+      clearTimeout(timeoutTimer);
+      resolve({ status: 1, signal: null, stdout, stderr, error });
+    });
+    child?.on("close", (status, signal) => {
+      settled = true;
+      clearInterval(heartbeatTimer);
+      clearTimeout(timeoutTimer);
+      resolve({ status: status ?? (signal ? 1 : 0), signal, stdout, stderr });
+    });
+  });
 }
 
 function reusableResult(store: AgentCoordinationStore, repo: string, check: CoordinationCheck, fingerprint: string): AgentWorkResultRow | null {
@@ -379,8 +591,40 @@ function fingerprintForCheck(repo: string, check: CoordinationCheck, input: Test
     inputs: check.fingerprintInputs ?? [],
     git: gitFingerprintEvidence(repo, check.fingerprintInputs ?? []),
     files: filesystemFingerprintEvidence(repo, check.fingerprintInputs ?? []),
+    environment: environmentFingerprintEvidence(check.environmentInputs ?? []),
+    resources: resourceFingerprintEvidence(check),
   }));
   return hash.digest("hex").slice(0, 16);
+}
+
+function environmentFingerprintEvidence(inputs: string[]): Record<string, string | null> {
+  const evidence: Record<string, string | null> = {
+    "node.version": process.version,
+    "process.platform": process.platform,
+    "process.arch": process.arch,
+  };
+  for (const name of [...new Set(inputs)].sort()) {
+    evidence[`env.${name}`] = process.env[name] ?? null;
+  }
+  return evidence;
+}
+
+function resourceFingerprintEvidence(check: CoordinationCheck): Record<string, unknown> {
+  const explicitResources = (check.resourceStateInputs && check.resourceStateInputs.length > 0)
+    ? check.resourceStateInputs
+    : [
+        ...check.resources.map((resource) => `${resource.id}:${resource.mode}`),
+        ...check.consumes.map((resource) => `consumes:${resource}`),
+        ...check.produces.map((resource) => `produces:${resource}`),
+        ...check.mutates.map((resource) => `mutates:${resource}`),
+        ...check.exclusiveResources.map((resource) => `exclusive:${resource}`),
+        ...check.cannotRunWith.map((resource) => `cannotRunWith:${resource}`),
+      ];
+  return {
+    realServices: check.realServices,
+    costClass: check.costClass,
+    resources: [...new Set(explicitResources)].sort(),
+  };
 }
 
 function gitFingerprintEvidence(repo: string, inputs: string[]): Record<string, unknown> | null {
@@ -443,13 +687,23 @@ function defaultCheck(repo: string, id: string, lane: string): CoordinationCheck
     realServices: false,
     pathPatterns: ["**/*"],
     fingerprintInputs: ["package.json", "package-lock.json", "scripts/**", "packages/**", "docs/**", "qa/**"],
+    consumes: [`repo:${repoName}:worktree`, lane === "integration" ? "cpu:global:heavy" : "cpu:global:light"],
+    produces: [`test-result:${repoName}:${lane}`],
+    mutates: [],
+    exclusiveResources: lane === "integration" ? [] : [],
+    canRunWith: [],
+    cannotRunWith: lane === "integration" ? ["cpu:global:saturating"] : [],
+    heartbeatSeconds: 30,
+    ttlSeconds: lane === "integration" ? 3600 : 900,
+    cleanup: "release all acquired leases and record only the primary test result",
+    ownerObligations: ["inspect failures before rerun", "record pending demand instead of waiting on busy resources"],
     resources: [
       { id: `repo:${repoName}:worktree`, mode: "read" },
       { id: lane === "integration" ? "cpu:global:heavy" : "cpu:global:light", mode: lane === "integration" ? "write" : "read" },
     ],
     resultReuse: { allowed: false, validForSeconds: 0 },
     externalPendingPolicy: "report",
-    failureAction: "Inspect the failing lane output and repair the owning change before rerunning the same fingerprint.",
+    failureAction: "Inspect the failing lane output and repair the responsible change before rerunning the same fingerprint.",
     repairPolicy: "claim failing check before broad repair",
   };
 }

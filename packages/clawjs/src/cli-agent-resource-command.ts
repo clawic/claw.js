@@ -100,6 +100,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
       fingerprint: input.flags.fingerprint || null,
       failureAction: input.flags["failure-action"] || null,
       metadata: { command: "agent-resource release" },
+      recordResult: !(input.flags["no-result"] === "1" || input.flags["no-result"] === "true"),
     });
     if (!lease) return fail(input, command, "lease_not_found", `Unknown coordination lease: ${leaseId}`, CLI_EXIT_FAILURE);
     return ok(input, { status: "RELEASED", lease: publicLease(lease) }, { subcommand: command });
@@ -158,7 +159,7 @@ function writeHelp(input: AgentResourceCliInput): number {
     "  agent-resource plan --intent <id> [--repo <path>] --json",
     "  agent-resource acquire --resource <id> --mode read|write|exclusive --intent <id> --json",
     "  agent-resource heartbeat --lease <id> [--status running|repairing|blocked] --json",
-    "  agent-resource release --lease <id> --status passed|failed|partial|external_pending|blocked|abandoned --json",
+    "  agent-resource release --lease <id> --status passed|failed|partial|external_pending|blocked|abandoned [--no-result true] --json",
     "  agent-resource status --json",
     "  agent-resource waitlist --resource <id> --intent <id> --json",
     "  agent-resource reap --json",

@@ -130,6 +130,13 @@ export interface AgentCoordinationAcquireResult {
   conflicts: AgentResourceLeaseRow[];
 }
 
+export interface AgentCoordinationAcquireManyResult {
+  status: "acquired" | "pending";
+  leases: AgentResourceLeaseRow[];
+  demands: AgentResourceDemandRow[];
+  conflicts: AgentResourceLeaseRow[];
+}
+
 const ACTIVE_LEASE_STATUSES = new Set<AgentResourceLeaseStatus>(["running", "repairing", "blocked", "releasing"]);
 const VALID_LEASE_MODES = new Set<AgentResourceLeaseMode>(["read", "write", "exclusive"]);
 const VALID_HEARTBEAT_STATUSES = new Set<AgentResourceLeaseStatus>(["running", "repairing", "blocked"]);
@@ -161,6 +168,7 @@ export async function openAgentCoordinationStore(paths: AgentCoordinationPaths):
   const Database = imported.default as new (filename: string) => SqliteDatabase;
   const sqlite = new Database(paths.databasePath);
   sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("busy_timeout = 5000");
   sqlite.pragma("foreign_keys = ON");
   const store = new AgentCoordinationStore(sqlite, paths);
   store.ensureSchema();
@@ -365,6 +373,78 @@ export class AgentCoordinationStore {
     return run();
   }
 
+  acquireMany(inputs: AgentCoordinationAcquireInput[]): AgentCoordinationAcquireManyResult {
+    if (inputs.length === 0) return { status: "acquired", leases: [], demands: [], conflicts: [] };
+    for (const input of inputs) {
+      if (!VALID_LEASE_MODES.has(input.mode)) throw new Error(`Invalid lease mode: ${input.mode}`);
+    }
+    const run = this.sqlite.transaction(() => {
+      const now = nowIso();
+      const conflicts = inputs.flatMap((input) => this.activeConflicts(input.resourceId, input.mode, now));
+      if (conflicts.length > 0) {
+        const demands: AgentResourceDemandRow[] = [];
+        for (const input of inputs) {
+          const resourceConflicts = conflicts.filter((conflict) => conflict.resource_id === input.resourceId);
+          if (resourceConflicts.length === 0) continue;
+          const agentId = input.agentId || defaultAgentId();
+          const ttlSeconds = input.ttlSeconds && input.ttlSeconds > 0 ? input.ttlSeconds : 600;
+          const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+          const demand: AgentResourceDemandRow = {
+            id: `demand-${randomUUID()}`,
+            resource_id: input.resourceId,
+            intent_id: input.intentId,
+            agent_id: agentId,
+            reason: input.reason || "resource is already leased",
+            required_by: expiresAt,
+            created_at: now,
+            status: "pending",
+            metadata_json: JSON.stringify({ requestedMode: input.mode, conflicts: resourceConflicts.map((conflict) => conflict.id), ...(input.metadata ?? {}) }),
+          };
+          this.sqlite.prepare(`
+            INSERT INTO resource_demands (id, resource_id, intent_id, agent_id, reason, required_by, created_at, status, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(demand.id, demand.resource_id, demand.intent_id, demand.agent_id, demand.reason, demand.required_by, demand.created_at, demand.status, demand.metadata_json);
+          this.audit("resource.pending", { agentId, intentId: input.intentId, resourceId: input.resourceId, payload: { demandId: demand.id, requestedMode: input.mode, conflicts: resourceConflicts.map(publicLease) } });
+          demands.push(demand);
+        }
+        return { status: "pending" as const, leases: [], demands, conflicts };
+      }
+
+      const leases: AgentResourceLeaseRow[] = [];
+      for (const input of inputs) {
+        const agentId = input.agentId || defaultAgentId();
+        const ttlSeconds = input.ttlSeconds && input.ttlSeconds > 0 ? input.ttlSeconds : 600;
+        const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+        const lease: AgentResourceLeaseRow = {
+          id: `lease-${randomUUID()}`,
+          resource_id: input.resourceId,
+          resource_kind: input.resourceKind ?? null,
+          mode: input.mode,
+          intent_id: input.intentId,
+          agent_id: agentId,
+          session_id: input.sessionId ?? process.env.CLAW_AGENT_SESSION_ID ?? null,
+          pid: input.pid && input.pid > 0 ? input.pid : process.pid,
+          hostname: os.hostname(),
+          started_at: now,
+          heartbeat_at: now,
+          expires_at: expiresAt,
+          status: "running",
+          cleanup_command_json: JSON.stringify(input.cleanupCommand ?? null),
+          metadata_json: JSON.stringify(input.metadata ?? {}),
+        };
+        this.sqlite.prepare(`
+          INSERT INTO resource_leases (id, resource_id, resource_kind, mode, intent_id, agent_id, session_id, pid, hostname, started_at, heartbeat_at, expires_at, status, cleanup_command_json, metadata_json)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(lease.id, lease.resource_id, lease.resource_kind, lease.mode, lease.intent_id, lease.agent_id, lease.session_id, lease.pid, lease.hostname, lease.started_at, lease.heartbeat_at, lease.expires_at, lease.status, lease.cleanup_command_json, lease.metadata_json);
+        this.audit("resource.acquired", { agentId, intentId: input.intentId, resourceId: input.resourceId, leaseId: lease.id, payload: publicLease(lease) });
+        writeLeaseHeartbeat(this.paths.runDir, lease);
+        leases.push(lease);
+      }
+      return { status: "acquired" as const, leases, demands: [], conflicts: [] };
+    });
+    return run();
+  }
+
   heartbeat(input: { leaseId: string; status?: "running" | "repairing" | "blocked"; ttlSeconds?: number; metadata?: Record<string, unknown> }): AgentResourceLeaseRow | null {
     if (input.status && !VALID_HEARTBEAT_STATUSES.has(input.status)) throw new Error(`Invalid heartbeat status: ${input.status}`);
     const existing = this.lease(input.leaseId);
@@ -399,35 +479,61 @@ export class AgentCoordinationStore {
     failureAction?: string | null;
     artifacts?: unknown[];
     metadata?: Record<string, unknown>;
+    recordResult?: boolean;
   }): AgentResourceLeaseRow | null {
     if (!VALID_RELEASE_STATUSES.has(input.status)) throw new Error(`Invalid release status: ${input.status}`);
-    const existing = this.lease(input.leaseId);
-    if (!existing) return null;
-    const now = nowIso();
-    this.sqlite.prepare("UPDATE resource_leases SET status = ?, heartbeat_at = ? WHERE id = ?").run("released", now, input.leaseId);
-    this.sqlite.prepare(`
-      INSERT INTO work_results (id, intent_id, check_id, repo, lane, fingerprint, status, started_at, finished_at, duration_ms, stdout_tail, stderr_tail, artifact_refs_json, failure_action, metadata_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      `result-${randomUUID()}`,
-      existing.intent_id,
-      input.checkId ?? null,
-      input.repo ?? null,
-      input.lane ?? null,
-      input.fingerprint ?? null,
-      input.status,
-      input.startedAt ?? existing.started_at,
-      now,
-      input.durationMs ?? null,
-      tail(input.stdoutTail),
-      tail(input.stderrTail),
-      JSON.stringify(input.artifacts ?? []),
-      input.failureAction ?? null,
-      JSON.stringify(input.metadata ?? {}),
-    );
-    this.audit("resource.released", { agentId: existing.agent_id, intentId: existing.intent_id, resourceId: existing.resource_id, leaseId: existing.id, payload: { status: input.status } });
-    removeHeartbeatFile(this.paths.runDir, `${existing.id}.heartbeat.json`);
-    return this.lease(input.leaseId);
+    const run = this.sqlite.transaction(() => {
+      const existing = this.lease(input.leaseId);
+      if (!existing) return null;
+      const now = nowIso();
+      this.sqlite.prepare("UPDATE resource_leases SET status = ?, heartbeat_at = ? WHERE id = ?").run("released", now, input.leaseId);
+      if (input.recordResult !== false) {
+        this.sqlite.prepare(`
+          INSERT INTO work_results (id, intent_id, check_id, repo, lane, fingerprint, status, started_at, finished_at, duration_ms, stdout_tail, stderr_tail, artifact_refs_json, failure_action, metadata_json)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          `result-${randomUUID()}`,
+          existing.intent_id,
+          input.checkId ?? null,
+          input.repo ?? null,
+          input.lane ?? null,
+          input.fingerprint ?? null,
+          input.status,
+          input.startedAt ?? existing.started_at,
+          now,
+          input.durationMs ?? null,
+          tail(input.stdoutTail),
+          tail(input.stderrTail),
+          JSON.stringify(input.artifacts ?? []),
+          input.failureAction ?? null,
+          JSON.stringify(input.metadata ?? {}),
+        );
+      }
+      const pendingDemands = this.sqlite.prepare(`
+        SELECT * FROM resource_demands
+        WHERE resource_id = ? AND status = 'pending'
+        ORDER BY created_at ASC
+      `).all(existing.resource_id) as AgentResourceDemandRow[];
+      if (pendingDemands.length > 0) {
+        this.sqlite.prepare(`
+          UPDATE resource_demands
+          SET status = 'satisfied'
+          WHERE resource_id = ? AND status = 'pending'
+        `).run(existing.resource_id);
+        this.audit("resource.demands_satisfied", {
+          agentId: existing.agent_id,
+          intentId: existing.intent_id,
+          resourceId: existing.resource_id,
+          leaseId: existing.id,
+          payload: { demandIds: pendingDemands.map((demand) => demand.id) },
+        });
+      }
+      this.audit("resource.released", { agentId: existing.agent_id, intentId: existing.intent_id, resourceId: existing.resource_id, leaseId: existing.id, payload: { status: input.status } });
+      return this.lease(input.leaseId);
+    });
+    const released = run();
+    if (released) removeHeartbeatFile(this.paths.runDir, `${released.id}.heartbeat.json`);
+    return released;
   }
 
   waitlist(input: { resourceId: string; intentId: string; agentId?: string; reason?: string; requiredBy?: string | null; metadata?: Record<string, unknown> }): AgentResourceDemandRow {
@@ -658,6 +764,8 @@ export function publicRepairOwnership(repair: AgentRepairOwnershipRow): Record<s
     fingerprint: repair.fingerprint,
     ownerIntentId: repair.owner_intent_id,
     ownerAgentId: repair.owner_agent_id,
+    stewardIntentId: repair.owner_intent_id,
+    stewardAgentId: repair.owner_agent_id,
     startedAt: repair.started_at,
     heartbeatAt: repair.heartbeat_at,
     expiresAt: repair.expires_at,

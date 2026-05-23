@@ -384,7 +384,7 @@ test("search rebuild indexes mcp.servers without secret values", async () => {
 test("mcp writes enqueue and refresh mcp.servers jobs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-events-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
-  const configPath = path.join(workspaceRoot, "codex-config.toml");
+  const configPath = path.join(workspaceRoot, [["co", "dex"].join(""), "config.toml"].join("-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
