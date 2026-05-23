@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const args = new Set(process.argv.slice(2));
 const root = path.resolve(new URL("..", import.meta.url).pathname);
-let failed = false;
+const failures = [];
 
 function fail(message) {
-  failed = true;
-  console.error(`open-source canonicity check failed: ${message}`);
+  failures.push(message);
 }
 
 function read(relativePath, base = root) {
@@ -28,6 +28,54 @@ function requireSnippet(relativePath, snippet) {
   if (!text.includes(expected)) {
     fail(`${relativePath} is missing required snippet: ${snippet}`);
   }
+}
+
+function canonicityDiagnostic(failure) {
+  const missingFile = failure.match(/^missing (.+)$/);
+  if (missingFile) {
+    return createDiagnostic("open_source_canonicity_required_file_missing", failure, {
+      location: missingFile[1],
+      suggestion: "Restore the required public trust, compatibility, trademark, contribution, or release document.",
+      safeNextStep: `Add or restore ${missingFile[1]}, then rerun node scripts/open-source-canonicity-check.mjs.`,
+    });
+  }
+  const missingSnippet = failure.match(/^(.+) is missing required snippet: (.+)$/);
+  if (missingSnippet) {
+    return createDiagnostic("open_source_canonicity_required_text_missing", failure, {
+      location: missingSnippet[1],
+      suggestion: "Restore the required official/compatible open-source contract text.",
+      safeNextStep: `Update ${missingSnippet[1]}, then rerun node scripts/open-source-canonicity-check.mjs.`,
+    });
+  }
+  if (failure.includes("private or anti-open-source strategy wording")) {
+    const location = failure.split(" contains ")[0] || "docs/";
+    return createDiagnostic("open_source_canonicity_private_strategy_language", failure, {
+      location,
+      suggestion: "Remove private strategy, anti-fork, anti-commercial, or competitive positioning language from public docs.",
+      safeNextStep: `Rewrite ${location} using official/compatible open-source language, then rerun the check.`,
+    });
+  }
+  if (failure.includes("must mention official identity") || failure.includes("must mention compatibility")) {
+    const location = failure.split(" must mention ")[0] || "docs/";
+    return createDiagnostic("open_source_canonicity_identity_compatibility_missing", failure, {
+      location,
+      suggestion: "Document both official identity and compatibility so forks and source builds remain clearly allowed.",
+      safeNextStep: `Update ${location}, then rerun node scripts/open-source-canonicity-check.mjs.`,
+    });
+  }
+  return createDiagnostic("open_source_canonicity_failed", failure, {
+    location: "scripts/open-source-canonicity-check.mjs",
+    suggestion: "Inspect the named public canonicity contract and restore the expected invariant.",
+    safeNextStep: "Fix the reported open-source canonicity issue, then rerun node scripts/open-source-canonicity-check.mjs.",
+  });
+}
+
+function printFailures(failureList, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "open-source canonicity check failed:",
+    diagnostics: failureList.map(canonicityDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
 }
 
 function listFiles(relativeDir, predicate, output = []) {
@@ -109,6 +157,27 @@ function runSelfTest() {
   fs.writeFileSync(path.join(tmp, "sample.md"), "official and compatible are separate\n");
   assert.match(fs.readFileSync(path.join(tmp, "sample.md"), "utf8"), /official/);
   fs.rmSync(tmp, { recursive: true, force: true });
+
+  const chunks = [];
+  printFailures([
+    "missing /Users/example/private/NOTICE",
+    "docs/decision-map.md is missing required snippet: token sk-test-secret-123456",
+    "README.md contains private or anti-open-source strategy wording: /anti-fork/i",
+    "FORKS.md must mention compatibility",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "open_source_canonicity_required_file_missing",
+    "open_source_canonicity_required_text_missing",
+    "open_source_canonicity_private_strategy_language",
+    "open_source_canonicity_identity_compatibility_missing",
+  ]) {
+    assert.match(output, new RegExp(`code: ${code}`));
+  }
+  assert.match(output, /suggestion:/);
+  assert.match(output, /next:/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
   console.error("open-source canonicity self-test passed");
 }
 
@@ -184,5 +253,8 @@ for (const [file, snippets] of [
 assertOfficialCompatibleSeparation();
 assertNoPrivateStrategyLanguage();
 
-if (failed) process.exit(1);
+if (failures.length) {
+  printFailures(failures);
+  process.exit(1);
+}
 console.error("open-source canonicity check passed");
