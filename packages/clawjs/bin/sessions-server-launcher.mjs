@@ -4,6 +4,7 @@ import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
+import { createLauncherDiagnostic, printLauncherFailure } from "./launcher-diagnostics.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,7 +60,15 @@ function writeStatusFile(filePath, payload) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
   } catch (err) {
-    console.error(`[sessions] could not write status file: ${err?.message ?? err}`);
+    printOpenSessionsFailure(createLauncherDiagnostic(
+      "claw_open_sessions_status_file_write_failed",
+      "Could not write the sessions status file.",
+      {
+        location: "--status-file",
+        suggestion: "Choose a writable status-file path or fix directory permissions.",
+        safeNextStep: "Rerun claw open sessions with a writable --status-file path.",
+      },
+    ));
   }
 }
 
@@ -73,7 +82,32 @@ function defaultClawjsDataRoot(flags) {
   });
 }
 
+function printOpenSessionsFailure(diagnostic) {
+  printLauncherFailure("claw open sessions failed:", [diagnostic]);
+}
+
+function runOpenSessionsSelfTest() {
+  const chunks = [];
+  printLauncherFailure("claw open sessions failed for /Users/example/private", [
+    createLauncherDiagnostic("claw_open_sessions_listen_failed", "token: sk-test-secret-123456", {
+      location: "/Users/example/private/sessions",
+      suggestion: "Choose a free --port or fix host binding.",
+      safeNextStep: "Rerun claw open sessions --port <free-port>.",
+    }),
+  ], { write: (chunk) => chunks.push(chunk) });
+  const output = chunks.join("");
+  if (!output.includes("code: claw_open_sessions_listen_failed")) throw new Error("self-test missing stable code");
+  if (!output.includes("suggestion: Choose a free --port or fix host binding.")) throw new Error("self-test missing suggestion");
+  if (!output.includes("next: Rerun claw open sessions --port <free-port>.")) throw new Error("self-test missing next step");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+  console.log("sessions launcher diagnostics self-test passed");
+}
+
 export async function runOpenSessions(args) {
+  if (args.includes("--self-test")) {
+    runOpenSessionsSelfTest();
+    return 0;
+  }
   const flags = parseFlags(args);
   const bootstrap = await readLocalAdminBootstrap();
 
@@ -87,8 +121,15 @@ export async function runOpenSessions(args) {
 
   const buildSessionsApp = await loadBuildSessionsApp();
   if (!buildSessionsApp) {
-    console.error("[claw open sessions] could not locate buildSessionsApp().");
-    console.error("Tried @clawjs/sessions and the workspace fallback paths.");
+    printOpenSessionsFailure(createLauncherDiagnostic(
+      "claw_open_sessions_build_app_missing",
+      "Could not locate buildSessionsApp().",
+      {
+        location: "@clawjs/sessions",
+        suggestion: "Build or bundle the sessions package so buildSessionsApp is importable.",
+        safeNextStep: "Run npm --workspace @clawjs/sessions run build, then rerun claw open sessions.",
+      },
+    ));
     return 1;
   }
 
@@ -107,11 +148,19 @@ export async function runOpenSessions(args) {
   try {
     await app.listen({ host: config.host, port: config.port });
   } catch (err) {
-    console.error(`[claw open sessions] failed to listen on ${config.host}:${config.port}: ${err?.message ?? err}`);
+    printOpenSessionsFailure(createLauncherDiagnostic(
+      "claw_open_sessions_listen_failed",
+      "Sessions server failed to listen on the requested host and port.",
+      {
+        location: `sessions:${config.host}:${config.port}`,
+        suggestion: "Check whether the port is already in use or the host binding is unavailable.",
+        safeNextStep: "Choose a free --port or stop the process using the current sessions port, then rerun claw open sessions.",
+      },
+    ));
     writeStatusFile(statusFile, {
       service: "sessions",
       ready: false,
-      error: String(err?.message ?? err),
+      error: "claw_open_sessions_listen_failed",
       pid: process.pid,
       at: new Date().toISOString(),
     });
@@ -137,7 +186,15 @@ export async function runOpenSessions(args) {
     try {
       await app.close();
     } catch (err) {
-      console.error(`[sessions] error during shutdown: ${err?.message ?? err}`);
+      printOpenSessionsFailure(createLauncherDiagnostic(
+        "claw_open_sessions_shutdown_failed",
+        "Sessions server shutdown failed.",
+        {
+          location: "sessions.shutdown",
+          suggestion: "Inspect local sessions server logs before restarting.",
+          safeNextStep: "Stop any remaining sessions process, then rerun claw open sessions.",
+        },
+      ));
     }
     writeStatusFile(statusFile, {
       service: "sessions",

@@ -6,6 +6,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createLauncherDiagnostic, printLauncherFailure } from "./launcher-diagnostics.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,7 +23,32 @@ function findServerEntry() {
   return null;
 }
 
+function printOpenMemoryFailure(diagnostic) {
+  printLauncherFailure("claw open memory failed:", [diagnostic]);
+}
+
+function runOpenMemorySelfTest() {
+  const chunks = [];
+  printLauncherFailure("claw open memory failed for /Users/example/private", [
+    createLauncherDiagnostic("claw_open_memory_entry_missing", "token: sk-test-secret-123456", {
+      location: "/Users/example/private/memory",
+      suggestion: "Build the memory package that provides the server entrypoint.",
+      safeNextStep: "Run npm --workspace @clawjs/memory run build, then rerun claw open memory.",
+    }),
+  ], { write: (chunk) => chunks.push(chunk) });
+  const output = chunks.join("");
+  if (!output.includes("code: claw_open_memory_entry_missing")) throw new Error("self-test missing stable code");
+  if (!output.includes("suggestion: Build the memory package that provides the server entrypoint.")) throw new Error("self-test missing suggestion");
+  if (!output.includes("next: Run npm --workspace @clawjs/memory run build, then rerun claw open memory.")) throw new Error("self-test missing next step");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+  console.log("memory launcher diagnostics self-test passed");
+}
+
 export async function runOpenMemory(args) {
+  if (args.includes("--self-test")) {
+    runOpenMemorySelfTest();
+    return 0;
+  }
   const flags = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -44,11 +70,15 @@ export async function runOpenMemory(args) {
 
   const entry = findServerEntry();
   if (!entry) {
-    console.error("[claw open memory] could not locate the memory server entrypoint.");
-    console.error("Expected one of:");
-    console.error("  - <cli>/bin/memory-server.mjs (bundled)");
-    console.error("  - clawjs/memory/dist/server.js (built)");
-    console.error("  - clawjs/memory/src/server.ts (dev, requires tsx)");
+    printOpenMemoryFailure(createLauncherDiagnostic(
+      "claw_open_memory_entry_missing",
+      "Could not locate the memory server entrypoint.",
+      {
+        location: "packages/clawjs/bin/memory-server-launcher.mjs",
+        suggestion: "Build or bundle one of the supported memory server entrypoints.",
+        safeNextStep: "Run npm --workspace @clawjs/memory run build, then rerun claw open memory.",
+      },
+    ));
     return 1;
   }
 
@@ -74,6 +104,14 @@ export async function runOpenMemory(args) {
     return new Promise(() => {}); // keep process alive while server runs
   }
 
-  console.error("[claw open memory] entry does not export startMemoryServer().");
+  printOpenMemoryFailure(createLauncherDiagnostic(
+    "claw_open_memory_export_missing",
+    "Memory server entry does not export startMemoryServer().",
+    {
+      location: "startMemoryServer",
+      suggestion: "Use a memory server build that exports startMemoryServer().",
+      safeNextStep: "Rebuild the memory package, then rerun claw open memory.",
+    },
+  ));
   return 1;
 }
