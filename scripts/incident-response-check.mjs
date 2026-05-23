@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const selfTest = process.argv.includes("--self-test");
@@ -80,6 +81,38 @@ function runCheck() {
   validateDocs();
 }
 
+function incidentDiagnostic(error) {
+  const missingFile = error.match(/^(.+) is missing$/);
+  if (missingFile) {
+    return createDiagnostic("incident_response_required_file_missing", error, {
+      location: missingFile[1],
+      suggestion: "Restore the required incident-response document or registry entry.",
+      safeNextStep: `Add or restore ${missingFile[1]}, then rerun node scripts/incident-response-check.mjs.`,
+    });
+  }
+  const missingSnippet = error.match(/^(.+) must mention (.+)$/);
+  if (missingSnippet) {
+    return createDiagnostic("incident_response_required_text_missing", error, {
+      location: missingSnippet[1],
+      suggestion: "Restore the required incident-response severity, timeline, workflow, or privacy wording.",
+      safeNextStep: `Update ${missingSnippet[1]}, then rerun node scripts/incident-response-check.mjs.`,
+    });
+  }
+  return createDiagnostic("incident_response_check_failed", error, {
+    location: "scripts/incident-response-check.mjs",
+    suggestion: "Inspect the incident-response contract and restore the expected invariant.",
+    safeNextStep: "Fix the reported incident-response issue, then rerun node scripts/incident-response-check.mjs.",
+  });
+}
+
+function printErrors(options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "incident response check failed:",
+    diagnostics: errors.map(incidentDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function runSelfTest() {
   errors.length = 0;
   validateIncidentDoc(`
@@ -112,6 +145,21 @@ private user data
   validateIncidentDoc("SEV3 low", "fixture");
   assert(errors.some((error) => error.includes("SEV0 critical")));
   errors.length = 0;
+
+  errors.push(
+    "/Users/example/private/SECURITY.md is missing",
+    "docs/incident-response.md must mention private paths",
+  );
+  const chunks = [];
+  printErrors({ stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: incident_response_required_file_missing/);
+  assert.match(output, /code: incident_response_required_text_missing/);
+  assert.match(output, /location: docs\/incident-response\.md/);
+  assert.match(output, /suggestion: Restore the required incident-response severity/);
+  assert.match(output, /next: Update docs\/incident-response\.md/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  errors.length = 0;
 }
 
 if (selfTest) {
@@ -122,8 +170,7 @@ if (selfTest) {
 
 runCheck();
 if (errors.length > 0) {
-  console.error("incident response check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors();
   process.exit(1);
 }
 
