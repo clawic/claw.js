@@ -13,9 +13,9 @@ import {
   type HostKind,
 } from "./models.ts";
 
-export const DEFAULT_TENANT_ID = "clawix-local";
+export const DEFAULT_MESH_ID = "clawix-local";
 
-export const MESH_SCHEMA_VERSION = 1;
+export const MESH_SCHEMA_VERSION = 2;
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS mesh_schema_version (
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS mesh_schema_version (
 
 CREATE TABLE IF NOT EXISTS hosts (
   id TEXT NOT NULL,
-  tenant_id TEXT NOT NULL,
+  mesh_id TEXT NOT NULL,
   kind TEXT NOT NULL,
   display_name TEXT NOT NULL,
   signing_public_key TEXT,
@@ -36,28 +36,53 @@ CREATE TABLE IF NOT EXISTS hosts (
   last_seen_at TEXT,
   revoked_at TEXT,
   created_at TEXT NOT NULL,
-  PRIMARY KEY (tenant_id, id)
+  PRIMARY KEY (mesh_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS host_endpoints (
   host_id TEXT NOT NULL,
-  tenant_id TEXT NOT NULL,
+  mesh_id TEXT NOT NULL,
   ord INTEGER NOT NULL,
   kind TEXT NOT NULL,
   host TEXT NOT NULL,
   port INTEGER NOT NULL,
   protocol TEXT,
-  PRIMARY KEY (tenant_id, host_id, ord),
-  FOREIGN KEY (tenant_id, host_id) REFERENCES hosts(tenant_id, id) ON DELETE CASCADE
+  PRIMARY KEY (mesh_id, host_id, ord),
+  FOREIGN KEY (mesh_id, host_id) REFERENCES hosts(mesh_id, id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_hosts_tenant_kind ON hosts(tenant_id, kind);
-CREATE INDEX IF NOT EXISTS idx_hosts_tenant_revoked ON hosts(tenant_id, revoked_at);
+CREATE INDEX IF NOT EXISTS idx_hosts_mesh_kind ON hosts(mesh_id, kind);
+CREATE INDEX IF NOT EXISTS idx_hosts_mesh_revoked ON hosts(mesh_id, revoked_at);
 `;
+
+interface PragmaColumnRow {
+  name: string;
+}
+
+function assertSqlIdentifier(identifier: string): void {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier)) {
+    throw new Error(`invalid SQLite identifier: ${identifier}`);
+  }
+}
+
+function tableHasColumn(db: Database.Database, tableName: string, columnName: string): boolean {
+  assertSqlIdentifier(tableName);
+  const rows = db.prepare<[], PragmaColumnRow>(`PRAGMA table_info(${tableName})`).all();
+  return rows.some((row) => row.name === columnName);
+}
+
+export function migrateMeshScopeColumn(db: Database.Database, tableName: string): void {
+  assertSqlIdentifier(tableName);
+  const hasLegacyColumn = tableHasColumn(db, tableName, "tenant_id");
+  const hasMeshColumn = tableHasColumn(db, tableName, "mesh_id");
+  if (hasLegacyColumn && !hasMeshColumn) {
+    db.exec(`ALTER TABLE ${tableName} RENAME COLUMN tenant_id TO mesh_id;`);
+  }
+}
 
 interface HostRow {
   id: string;
-  tenant_id: string;
+  mesh_id: string;
   kind: string;
   display_name: string;
   signing_public_key: string | null;
@@ -73,7 +98,7 @@ interface HostRow {
 
 interface EndpointRow {
   host_id: string;
-  tenant_id: string;
+  mesh_id: string;
   ord: number;
   kind: string;
   host: string;
@@ -88,15 +113,18 @@ export interface HostListFilter {
 
 export class HostStore {
   private readonly db: Database.Database;
-  private readonly tenantId: string;
+  private readonly meshId: string;
 
-  constructor(db: Database.Database, tenantId: string = DEFAULT_TENANT_ID) {
+  constructor(db: Database.Database, meshId: string = DEFAULT_MESH_ID) {
     this.db = db;
-    this.tenantId = tenantId;
+    this.meshId = meshId;
     this.migrate();
   }
 
   private migrate(): void {
+    this.db.exec("PRAGMA foreign_keys = OFF;");
+    migrateMeshScopeColumn(this.db, "hosts");
+    migrateMeshScopeColumn(this.db, "host_endpoints");
     this.db.exec("PRAGMA foreign_keys = ON;");
     this.db.exec(DDL);
     const row = this.db
@@ -108,6 +136,10 @@ export class HostStore {
       this.db
         .prepare("INSERT INTO mesh_schema_version (version) VALUES (?)")
         .run(MESH_SCHEMA_VERSION);
+    } else if (row.version === 1) {
+      this.db
+        .prepare("UPDATE mesh_schema_version SET version = ?")
+        .run(MESH_SCHEMA_VERSION);
     } else if (row.version !== MESH_SCHEMA_VERSION) {
       throw new Error(
         `mesh schema version mismatch: db=${row.version} expected=${MESH_SCHEMA_VERSION}`,
@@ -116,8 +148,8 @@ export class HostStore {
   }
 
   list(filter: HostListFilter = {}): Host[] {
-    const clauses: string[] = ["tenant_id = ?"];
-    const args: unknown[] = [this.tenantId];
+    const clauses: string[] = ["mesh_id = ?"];
+    const args: unknown[] = [this.meshId];
     if (filter.kind) {
       clauses.push("kind = ?");
       args.push(filter.kind);
@@ -138,9 +170,9 @@ export class HostStore {
   get(id: string): Host | null {
     const row = this.db
       .prepare<[string, string], HostRow>(
-        "SELECT * FROM hosts WHERE tenant_id = ? AND id = ?",
+        "SELECT * FROM hosts WHERE mesh_id = ? AND id = ?",
       )
-      .get(this.tenantId, id);
+      .get(this.meshId, id);
     if (!row) return null;
     const endpoints = this.endpointsFor([id]).get(id) ?? [];
     return rowToHost(row, endpoints);
@@ -176,13 +208,13 @@ export class HostStore {
       this.db
         .prepare(
           `INSERT INTO hosts (
-            id, tenant_id, kind, display_name,
+            id, mesh_id, kind, display_name,
             signing_public_key, agreement_public_key,
             permission_profile, capabilities_json,
             ssh_json, metadata_json,
             last_seen_at, revoked_at, created_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(tenant_id, id) DO UPDATE SET
+          ON CONFLICT(mesh_id, id) DO UPDATE SET
             kind = excluded.kind,
             display_name = excluded.display_name,
             signing_public_key = excluded.signing_public_key,
@@ -196,7 +228,7 @@ export class HostStore {
         )
         .run(
           host.id,
-          this.tenantId,
+          this.meshId,
           host.kind,
           host.displayName,
           host.signingPublicKey ?? null,
@@ -211,18 +243,18 @@ export class HostStore {
         );
       this.db
         .prepare(
-          "DELETE FROM host_endpoints WHERE tenant_id = ? AND host_id = ?",
+          "DELETE FROM host_endpoints WHERE mesh_id = ? AND host_id = ?",
         )
-        .run(this.tenantId, host.id);
+        .run(this.meshId, host.id);
       const insertEndpoint = this.db.prepare(
         `INSERT INTO host_endpoints (
-          host_id, tenant_id, ord, kind, host, port, protocol
+          host_id, mesh_id, ord, kind, host, port, protocol
         ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       );
       host.endpoints.forEach((ep, idx) => {
         insertEndpoint.run(
           host.id,
-          this.tenantId,
+          this.meshId,
           idx,
           ep.kind,
           ep.host,
@@ -238,34 +270,34 @@ export class HostStore {
   revoke(id: string, at: Date = new Date()): boolean {
     const result = this.db
       .prepare(
-        "UPDATE hosts SET revoked_at = ? WHERE tenant_id = ? AND id = ? AND revoked_at IS NULL",
+        "UPDATE hosts SET revoked_at = ? WHERE mesh_id = ? AND id = ? AND revoked_at IS NULL",
       )
-      .run(at.toISOString(), this.tenantId, id);
+      .run(at.toISOString(), this.meshId, id);
     return result.changes > 0;
   }
 
   unrevoke(id: string): boolean {
     const result = this.db
       .prepare(
-        "UPDATE hosts SET revoked_at = NULL WHERE tenant_id = ? AND id = ? AND revoked_at IS NOT NULL",
+        "UPDATE hosts SET revoked_at = NULL WHERE mesh_id = ? AND id = ? AND revoked_at IS NOT NULL",
       )
-      .run(this.tenantId, id);
+      .run(this.meshId, id);
     return result.changes > 0;
   }
 
   touch(id: string, at: Date = new Date()): boolean {
     const result = this.db
       .prepare(
-        "UPDATE hosts SET last_seen_at = ? WHERE tenant_id = ? AND id = ?",
+        "UPDATE hosts SET last_seen_at = ? WHERE mesh_id = ? AND id = ?",
       )
-      .run(at.toISOString(), this.tenantId, id);
+      .run(at.toISOString(), this.meshId, id);
     return result.changes > 0;
   }
 
   remove(id: string): boolean {
     const result = this.db
-      .prepare("DELETE FROM hosts WHERE tenant_id = ? AND id = ?")
-      .run(this.tenantId, id);
+      .prepare("DELETE FROM hosts WHERE mesh_id = ? AND id = ?")
+      .run(this.meshId, id);
     return result.changes > 0;
   }
 
@@ -276,10 +308,10 @@ export class HostStore {
     const rows = this.db
       .prepare<unknown[], EndpointRow>(
         `SELECT * FROM host_endpoints
-         WHERE tenant_id = ? AND host_id IN (${placeholders})
+         WHERE mesh_id = ? AND host_id IN (${placeholders})
          ORDER BY host_id ASC, ord ASC`,
       )
-      .all(this.tenantId, ...hostIds);
+      .all(this.meshId, ...hostIds);
     for (const row of rows) {
       const list = out.get(row.host_id) ?? [];
       list.push({

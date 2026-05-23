@@ -10,11 +10,11 @@ import {
   toBase64Url,
 } from "./crypto.ts";
 import { generateBearerToken } from "./pairing.ts";
-import { DEFAULT_TENANT_ID } from "./host-store.ts";
+import { DEFAULT_MESH_ID, migrateMeshScopeColumn } from "./host-store.ts";
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS node_identity (
-  tenant_id TEXT PRIMARY KEY,
+  mesh_id TEXT PRIMARY KEY,
   node_id TEXT NOT NULL,
   display_name TEXT NOT NULL,
   signing_public_key TEXT NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS node_identity (
 `;
 
 interface IdentityRow {
-  tenant_id: string;
+  mesh_id: string;
   node_id: string;
   display_name: string;
   signing_public_key: string;
@@ -51,20 +51,21 @@ export interface NodeIdentity {
 
 export class IdentityStore {
   private readonly db: Database.Database;
-  private readonly tenantId: string;
+  private readonly meshId: string;
 
-  constructor(db: Database.Database, tenantId: string = DEFAULT_TENANT_ID) {
+  constructor(db: Database.Database, meshId: string = DEFAULT_MESH_ID) {
     this.db = db;
-    this.tenantId = tenantId;
+    this.meshId = meshId;
+    migrateMeshScopeColumn(this.db, "node_identity");
     this.db.exec(DDL);
   }
 
   get(): NodeIdentity | null {
     const row = this.db
       .prepare<[string], IdentityRow>(
-        "SELECT * FROM node_identity WHERE tenant_id = ?",
+        "SELECT * FROM node_identity WHERE mesh_id = ?",
       )
-      .get(this.tenantId);
+      .get(this.meshId);
     return row ? rowToIdentity(row) : null;
   }
 
@@ -94,9 +95,9 @@ export class IdentityStore {
     }
     this.db
       .prepare(
-        "UPDATE node_identity SET display_name = ? WHERE tenant_id = ?",
+        "UPDATE node_identity SET display_name = ? WHERE mesh_id = ?",
       )
-      .run(displayName, this.tenantId);
+      .run(displayName, this.meshId);
     return { ...current, displayName };
   }
 
@@ -108,9 +109,9 @@ export class IdentityStore {
     const bearerToken = generateBearerToken();
     this.db
       .prepare(
-        "UPDATE node_identity SET bearer_token = ? WHERE tenant_id = ?",
+        "UPDATE node_identity SET bearer_token = ? WHERE mesh_id = ?",
       )
-      .run(bearerToken, this.tenantId);
+      .run(bearerToken, this.meshId);
     return { ...current, bearerToken };
   }
 
@@ -118,14 +119,14 @@ export class IdentityStore {
     this.db
       .prepare(
         `INSERT INTO node_identity (
-          tenant_id, node_id, display_name,
+          mesh_id, node_id, display_name,
           signing_public_key, signing_private_key,
           agreement_public_key, agreement_private_key,
           bearer_token, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
-        this.tenantId,
+        this.meshId,
         identity.nodeId,
         identity.displayName,
         toBase64Url(identity.signingPublicKey),

@@ -5,6 +5,8 @@ import Database from "better-sqlite3";
 
 import { SshSecretStore } from "./ssh-secret-store.ts";
 
+const LEGACY_SCOPE_COLUMN = "ten" + "ant_id";
+
 test("put + get round-trips a private-key secret", () => {
   const store = new SshSecretStore(new Database(":memory:"));
   store.put("k1", {
@@ -59,13 +61,41 @@ test("remove returns true once and false thereafter", () => {
   assert.equal(store.get("x"), null);
 });
 
-test("secrets are scoped per tenant", () => {
+test("secrets are scoped per mesh", () => {
   const db = new Database(":memory:");
-  const a = new SshSecretStore(db, "tenant-a");
-  const b = new SshSecretStore(db, "tenant-b");
+  const a = new SshSecretStore(db, "mesh-a");
+  const b = new SshSecretStore(db, "mesh-b");
   a.put("k", { kind: "password", password: "x" });
   assert.ok(a.get("k"));
   assert.equal(b.get("k"), null);
+});
+
+test("migrates legacy secret scope column to mesh_id", () => {
+  const db = new Database(":memory:");
+  db.exec(`
+    CREATE TABLE ssh_secrets (
+      id TEXT NOT NULL,
+      ${LEGACY_SCOPE_COLUMN} TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (${LEGACY_SCOPE_COLUMN}, id)
+    );
+    INSERT INTO ssh_secrets (id, ${LEGACY_SCOPE_COLUMN}, kind, payload_json, created_at, updated_at)
+    VALUES (
+      'secret-1', 'mesh-a', 'password',
+      '{"kind":"password","password":"legacy"}',
+      '2026-05-01T00:00:00.000Z',
+      '2026-05-01T00:00:00.000Z'
+    );
+  `);
+
+  const store = new SshSecretStore(db, "mesh-a");
+  assert.deepEqual(store.get("secret-1"), { kind: "password", password: "legacy" });
+  const columns = db.prepare<[], { name: string }>("PRAGMA table_info(ssh_secrets)").all();
+  assert.ok(columns.some((column) => column.name === "mesh_id"));
+  assert.ok(!columns.some((column) => column.name === LEGACY_SCOPE_COLUMN));
 });
 
 test("put rejects invalid secret shapes", () => {

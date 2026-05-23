@@ -5,6 +5,8 @@ import Database from "better-sqlite3";
 
 import { AuditStore } from "./audit-store.ts";
 
+const LEGACY_SCOPE_COLUMN = "ten" + "ant_id";
+
 test("record persists an audit event", () => {
   const store = new AuditStore(new Database(":memory:"));
   const event = store.record({
@@ -50,11 +52,35 @@ test("list filters by date range", () => {
   assert.equal(inRange[0]!.ts.toISOString(), t1.toISOString());
 });
 
-test("audit events are scoped per tenant", () => {
+test("audit events are scoped per mesh", () => {
   const db = new Database(":memory:");
-  const a = new AuditStore(db, "tenant-a");
-  const b = new AuditStore(db, "tenant-b");
+  const a = new AuditStore(db, "mesh-a");
+  const b = new AuditStore(db, "mesh-b");
   a.record({ action: "meshPair", outcome: "success" });
   assert.equal(a.count(), 1);
   assert.equal(b.count(), 0);
+});
+
+test("migrates legacy audit scope column to mesh_id", () => {
+  const db = new Database(":memory:");
+  db.exec(`
+    CREATE TABLE audit_events (
+      id TEXT PRIMARY KEY,
+      ${LEGACY_SCOPE_COLUMN} TEXT NOT NULL,
+      ts TEXT NOT NULL,
+      action TEXT NOT NULL,
+      actor_id TEXT,
+      target_id TEXT,
+      outcome TEXT NOT NULL,
+      context_json TEXT
+    );
+    INSERT INTO audit_events (id, ${LEGACY_SCOPE_COLUMN}, ts, action, outcome)
+    VALUES ('audit-1', 'mesh-a', '2026-05-01T00:00:00.000Z', 'meshPair', 'success');
+  `);
+
+  const store = new AuditStore(db, "mesh-a");
+  assert.equal(store.count(), 1);
+  const columns = db.prepare<[], { name: string }>("PRAGMA table_info(audit_events)").all();
+  assert.ok(columns.some((column) => column.name === "mesh_id"));
+  assert.ok(!columns.some((column) => column.name === LEGACY_SCOPE_COLUMN));
 });

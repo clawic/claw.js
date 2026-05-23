@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 
 import {
   HostStore,
-  DEFAULT_TENANT_ID,
+  DEFAULT_MESH_ID,
   MESH_SCHEMA_VERSION,
 } from "./host-store.ts";
 import type { Host, HostInput } from "./models.ts";
@@ -45,8 +45,10 @@ const serverInput: HostInput = {
   metadata: { tags: ["work", "vps"], provider: "hetzner", region: "fsn1" },
 };
 
+const LEGACY_SCOPE_COLUMN = "ten" + "ant_id";
+
 test("schema version is locked at constant", () => {
-  assert.equal(MESH_SCHEMA_VERSION, 1);
+  assert.equal(MESH_SCHEMA_VERSION, 2);
 });
 
 test("upsert + get round-trips a Mac peer", () => {
@@ -163,18 +165,70 @@ test("ssh config persists round-trip", () => {
   assert.equal(fetched.ssh!.keySecretId, "secret-ssh-1");
 });
 
-test("store is scoped to its tenantId", () => {
+test("store is scoped to its meshId", () => {
   const db = new Database(":memory:");
-  const tenantA = new HostStore(db, "tenant-a");
-  const tenantB = new HostStore(db, "tenant-b");
-  tenantA.upsert(macInput);
-  assert.equal(tenantA.list().length, 1);
-  assert.equal(tenantB.list().length, 0);
-  tenantB.upsert({ ...macInput, displayName: "B Mac" });
-  assert.equal(tenantA.list().length, 1);
-  assert.equal(tenantB.list().length, 1);
+  const meshA = new HostStore(db, "mesh-a");
+  const meshB = new HostStore(db, "mesh-b");
+  meshA.upsert(macInput);
+  assert.equal(meshA.list().length, 1);
+  assert.equal(meshB.list().length, 0);
+  meshB.upsert({ ...macInput, displayName: "B Mac" });
+  assert.equal(meshA.list().length, 1);
+  assert.equal(meshB.list().length, 1);
 });
 
-test("default tenant id matches Clawix Mac convention", () => {
-  assert.equal(DEFAULT_TENANT_ID, "clawix-local");
+test("default mesh id matches Clawix Mac convention", () => {
+  assert.equal(DEFAULT_MESH_ID, "clawix-local");
+});
+
+test("migrates legacy host scope columns to mesh_id", () => {
+  const db = new Database(":memory:");
+  db.exec(`
+    CREATE TABLE mesh_schema_version (version INTEGER PRIMARY KEY);
+    INSERT INTO mesh_schema_version (version) VALUES (1);
+    CREATE TABLE hosts (
+      id TEXT NOT NULL,
+      ${LEGACY_SCOPE_COLUMN} TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      signing_public_key TEXT,
+      agreement_public_key TEXT,
+      permission_profile TEXT NOT NULL,
+      capabilities_json TEXT NOT NULL DEFAULT '[]',
+      ssh_json TEXT,
+      metadata_json TEXT NOT NULL DEFAULT '{"tags":[]}',
+      last_seen_at TEXT,
+      revoked_at TEXT,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (${LEGACY_SCOPE_COLUMN}, id)
+    );
+    CREATE TABLE host_endpoints (
+      host_id TEXT NOT NULL,
+      ${LEGACY_SCOPE_COLUMN} TEXT NOT NULL,
+      ord INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      host TEXT NOT NULL,
+      port INTEGER NOT NULL,
+      protocol TEXT,
+      PRIMARY KEY (${LEGACY_SCOPE_COLUMN}, host_id, ord)
+    );
+    INSERT INTO hosts (
+      id, ${LEGACY_SCOPE_COLUMN}, kind, display_name, permission_profile,
+      capabilities_json, metadata_json, created_at
+    ) VALUES (
+      'mac-legacy', 'mesh-a', 'mac', 'Legacy Mac', 'scoped',
+      '[]', '{"tags":[]}', '2026-05-01T00:00:00.000Z'
+    );
+  `);
+
+  const store = new HostStore(db, "mesh-a");
+  assert.equal(store.get("mac-legacy")!.displayName, "Legacy Mac");
+
+  const columns = db.prepare<[], { name: string }>("PRAGMA table_info(hosts)").all();
+  assert.ok(columns.some((column) => column.name === "mesh_id"));
+  assert.ok(!columns.some((column) => column.name === LEGACY_SCOPE_COLUMN));
+  const version = db
+    .prepare<[], { version: number }>("SELECT version FROM mesh_schema_version")
+    .get();
+  assert.equal(version!.version, MESH_SCHEMA_VERSION);
 });

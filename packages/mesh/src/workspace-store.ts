@@ -4,20 +4,20 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_ID } from "./host-store.ts";
+import { DEFAULT_MESH_ID, migrateMeshScopeColumn } from "./host-store.ts";
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS local_workspaces (
   id TEXT NOT NULL,
-  tenant_id TEXT NOT NULL,
+  mesh_id TEXT NOT NULL,
   path TEXT NOT NULL,
   label TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  PRIMARY KEY (tenant_id, id)
+  PRIMARY KEY (mesh_id, id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_local_workspaces_tenant
-  ON local_workspaces(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_local_workspaces_mesh
+  ON local_workspaces(mesh_id);
 `;
 
 export const LocalWorkspaceSchema = z.object({
@@ -38,7 +38,7 @@ export type LocalWorkspaceInput = z.infer<typeof LocalWorkspaceInputSchema>;
 
 interface WorkspaceRow {
   id: string;
-  tenant_id: string;
+  mesh_id: string;
   path: string;
   label: string;
   created_at: string;
@@ -46,29 +46,30 @@ interface WorkspaceRow {
 
 export class WorkspaceStore {
   private readonly db: Database.Database;
-  private readonly tenantId: string;
+  private readonly meshId: string;
 
-  constructor(db: Database.Database, tenantId: string = DEFAULT_TENANT_ID) {
+  constructor(db: Database.Database, meshId: string = DEFAULT_MESH_ID) {
     this.db = db;
-    this.tenantId = tenantId;
+    this.meshId = meshId;
+    migrateMeshScopeColumn(this.db, "local_workspaces");
     this.db.exec(DDL);
   }
 
   list(): LocalWorkspace[] {
     const rows = this.db
       .prepare<[string], WorkspaceRow>(
-        "SELECT * FROM local_workspaces WHERE tenant_id = ? ORDER BY label COLLATE NOCASE ASC",
+        "SELECT * FROM local_workspaces WHERE mesh_id = ? ORDER BY label COLLATE NOCASE ASC",
       )
-      .all(this.tenantId);
+      .all(this.meshId);
     return rows.map(rowToWorkspace);
   }
 
   get(id: string): LocalWorkspace | null {
     const row = this.db
       .prepare<[string, string], WorkspaceRow>(
-        "SELECT * FROM local_workspaces WHERE tenant_id = ? AND id = ?",
+        "SELECT * FROM local_workspaces WHERE mesh_id = ? AND id = ?",
       )
-      .get(this.tenantId, id);
+      .get(this.meshId, id);
     return row ? rowToWorkspace(row) : null;
   }
 
@@ -82,15 +83,15 @@ export class WorkspaceStore {
     });
     this.db
       .prepare(
-        `INSERT INTO local_workspaces (id, tenant_id, path, label, created_at)
+        `INSERT INTO local_workspaces (id, mesh_id, path, label, created_at)
          VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(tenant_id, id) DO UPDATE SET
+         ON CONFLICT(mesh_id, id) DO UPDATE SET
            path = excluded.path,
            label = excluded.label`,
       )
       .run(
         merged.id,
-        this.tenantId,
+        this.meshId,
         merged.path,
         merged.label,
         merged.createdAt.toISOString(),
@@ -100,8 +101,8 @@ export class WorkspaceStore {
 
   remove(id: string): boolean {
     const result = this.db
-      .prepare("DELETE FROM local_workspaces WHERE tenant_id = ? AND id = ?")
-      .run(this.tenantId, id);
+      .prepare("DELETE FROM local_workspaces WHERE mesh_id = ? AND id = ?")
+      .run(this.meshId, id);
     return result.changes > 0;
   }
 }

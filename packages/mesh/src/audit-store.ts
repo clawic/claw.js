@@ -4,12 +4,12 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_ID } from "./host-store.ts";
+import { DEFAULT_MESH_ID, migrateMeshScopeColumn } from "./host-store.ts";
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS audit_events (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
+  mesh_id TEXT NOT NULL,
   ts TEXT NOT NULL,
   action TEXT NOT NULL,
   actor_id TEXT,
@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS audit_events (
   context_json TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_audit_tenant_ts
-  ON audit_events(tenant_id, ts DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_tenant_action
-  ON audit_events(tenant_id, action, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_mesh_ts
+  ON audit_events(mesh_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_mesh_action
+  ON audit_events(mesh_id, action, ts DESC);
 `;
 
 export const AUDIT_ACTIONS = [
@@ -71,7 +71,7 @@ export type AuditEventInput = z.infer<typeof AuditEventInputSchema>;
 
 interface AuditRow {
   id: string;
-  tenant_id: string;
+  mesh_id: string;
   ts: string;
   action: string;
   actor_id: string | null;
@@ -91,11 +91,12 @@ export interface AuditQuery {
 
 export class AuditStore {
   private readonly db: Database.Database;
-  private readonly tenantId: string;
+  private readonly meshId: string;
 
-  constructor(db: Database.Database, tenantId: string = DEFAULT_TENANT_ID) {
+  constructor(db: Database.Database, meshId: string = DEFAULT_MESH_ID) {
     this.db = db;
-    this.tenantId = tenantId;
+    this.meshId = meshId;
+    migrateMeshScopeColumn(this.db, "audit_events");
     this.db.exec(DDL);
   }
 
@@ -113,12 +114,12 @@ export class AuditStore {
     this.db
       .prepare(
         `INSERT INTO audit_events (
-          id, tenant_id, ts, action, actor_id, target_id, outcome, context_json
+          id, mesh_id, ts, action, actor_id, target_id, outcome, context_json
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         event.id,
-        this.tenantId,
+        this.meshId,
         event.ts.toISOString(),
         event.action,
         event.actorId ?? null,
@@ -130,8 +131,8 @@ export class AuditStore {
   }
 
   list(query: AuditQuery = {}): AuditEvent[] {
-    const clauses: string[] = ["tenant_id = ?"];
-    const args: unknown[] = [this.tenantId];
+    const clauses: string[] = ["mesh_id = ?"];
+    const args: unknown[] = [this.meshId];
     if (query.action) {
       clauses.push("action = ?");
       args.push(query.action);
@@ -168,16 +169,16 @@ export class AuditStore {
     if (action) {
       const row = this.db
         .prepare<[string, string], { c: number }>(
-          "SELECT COUNT(*) AS c FROM audit_events WHERE tenant_id = ? AND action = ?",
+          "SELECT COUNT(*) AS c FROM audit_events WHERE mesh_id = ? AND action = ?",
         )
-        .get(this.tenantId, action);
+        .get(this.meshId, action);
       return row?.c ?? 0;
     }
     const row = this.db
       .prepare<[string], { c: number }>(
-        "SELECT COUNT(*) AS c FROM audit_events WHERE tenant_id = ?",
+        "SELECT COUNT(*) AS c FROM audit_events WHERE mesh_id = ?",
       )
-      .get(this.tenantId);
+      .get(this.meshId);
     return row?.c ?? 0;
   }
 }

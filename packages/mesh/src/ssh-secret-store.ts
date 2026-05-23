@@ -2,17 +2,17 @@
 import type Database from "better-sqlite3";
 import { z } from "zod";
 
-import { DEFAULT_TENANT_ID } from "./host-store.ts";
+import { DEFAULT_MESH_ID, migrateMeshScopeColumn } from "./host-store.ts";
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS ssh_secrets (
   id TEXT NOT NULL,
-  tenant_id TEXT NOT NULL,
+  mesh_id TEXT NOT NULL,
   kind TEXT NOT NULL,
   payload_json TEXT NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  PRIMARY KEY (tenant_id, id)
+  PRIMARY KEY (mesh_id, id)
 );
 `;
 
@@ -49,7 +49,7 @@ export interface SshSecretRecord {
 
 interface Row {
   id: string;
-  tenant_id: string;
+  mesh_id: string;
   kind: string;
   payload_json: string;
   created_at: string;
@@ -58,11 +58,12 @@ interface Row {
 
 export class SshSecretStore {
   private readonly db: Database.Database;
-  private readonly tenantId: string;
+  private readonly meshId: string;
 
-  constructor(db: Database.Database, tenantId: string = DEFAULT_TENANT_ID) {
+  constructor(db: Database.Database, meshId: string = DEFAULT_MESH_ID) {
     this.db = db;
-    this.tenantId = tenantId;
+    this.meshId = meshId;
+    migrateMeshScopeColumn(this.db, "ssh_secrets");
     this.db.exec(DDL);
   }
 
@@ -74,16 +75,16 @@ export class SshSecretStore {
     this.db
       .prepare(
         `INSERT INTO ssh_secrets (
-          id, tenant_id, kind, payload_json, created_at, updated_at
+          id, mesh_id, kind, payload_json, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(tenant_id, id) DO UPDATE SET
+        ON CONFLICT(mesh_id, id) DO UPDATE SET
           kind = excluded.kind,
           payload_json = excluded.payload_json,
           updated_at = excluded.updated_at`,
       )
       .run(
         id,
-        this.tenantId,
+        this.meshId,
         parsed.kind,
         JSON.stringify(parsed),
         createdAt.toISOString(),
@@ -100,9 +101,9 @@ export class SshSecretStore {
   get(id: string): SshStoredSecret | null {
     const row = this.db
       .prepare<[string, string], Row>(
-        "SELECT * FROM ssh_secrets WHERE tenant_id = ? AND id = ?",
+        "SELECT * FROM ssh_secrets WHERE mesh_id = ? AND id = ?",
       )
-      .get(this.tenantId, id);
+      .get(this.meshId, id);
     if (!row) return null;
     return SshStoredSecretSchema.parse(JSON.parse(row.payload_json));
   }
@@ -121,9 +122,9 @@ export class SshSecretStore {
   list(): SshSecretRecord[] {
     const rows = this.db
       .prepare<[string], Row>(
-        "SELECT * FROM ssh_secrets WHERE tenant_id = ? ORDER BY id ASC",
+        "SELECT * FROM ssh_secrets WHERE mesh_id = ? ORDER BY id ASC",
       )
-      .all(this.tenantId);
+      .all(this.meshId);
     return rows.map((row) => ({
       id: row.id,
       kind: row.kind as SshStoredSecret["kind"],
@@ -134,16 +135,16 @@ export class SshSecretStore {
 
   remove(id: string): boolean {
     const result = this.db
-      .prepare("DELETE FROM ssh_secrets WHERE tenant_id = ? AND id = ?")
-      .run(this.tenantId, id);
+      .prepare("DELETE FROM ssh_secrets WHERE mesh_id = ? AND id = ?")
+      .run(this.meshId, id);
     return result.changes > 0;
   }
 
   private metaRow(id: string): Row | undefined {
     return this.db
       .prepare<[string, string], Row>(
-        "SELECT * FROM ssh_secrets WHERE tenant_id = ? AND id = ?",
+        "SELECT * FROM ssh_secrets WHERE mesh_id = ? AND id = ?",
       )
-      .get(this.tenantId, id);
+      .get(this.meshId, id);
   }
 }

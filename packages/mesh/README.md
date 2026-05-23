@@ -114,7 +114,7 @@ shape the Swift sheet should target once the cutover happens.
 ## Stores
 
 `SshSecretStore` keeps private keys, passwords and passphrases in a
-multitenant SQLite table. Secrets are never logged. Callers obtain them only
+mesh-scoped SQLite table. Secrets are never logged. Callers obtain them only
 through explicit `get(id)` and pass them to `@clawjs/ssh-client` via the
 `SecretResolver` interface.
 
