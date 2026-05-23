@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const files = ["AGENTS.md", "CLAUDE.md", "docs/agent-rules/index.md"];
@@ -8,6 +9,51 @@ const budgets = {
   "AGENTS.md": 120,
   "CLAUDE.md": 20,
 };
+
+function instructionDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("agent_instructions_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/agent-instructions-check.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node scripts/agent-instructions-check.mjs with supported arguments.",
+    });
+  }
+  const missing = error.match(/^missing (.+)$/);
+  if (missing) {
+    return createDiagnostic("agent_instructions_required_file_missing", error, {
+      location: missing[1],
+      suggestion: "Restore the required agent instruction file or route shim.",
+      safeNextStep: `Add or restore ${missing[1]}, then rerun node scripts/agent-instructions-check.mjs.`,
+    });
+  }
+  return createDiagnostic("agent_instructions_check_failed", error, {
+    location: "scripts/agent-instructions-check.mjs",
+    suggestion: "Inspect the agent instruction invariant and restore the expected file.",
+    safeNextStep: "Fix the reported agent instruction issue, then rerun node scripts/agent-instructions-check.mjs.",
+  });
+}
+
+function printErrors(errors, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "agent instructions check failed:",
+    diagnostics: errors.map(instructionDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printErrors([
+    "missing /Users/example/private/AGENTS.md",
+    "unknown argument --bad-token-sk-test-secret-123456",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  if (!output.includes("code: agent_instructions_required_file_missing")) throw new Error("self-test missing required-file code");
+  if (!output.includes("code: agent_instructions_usage_error")) throw new Error("self-test missing usage code");
+  if (!output.includes("suggestion: Restore the required agent instruction file")) throw new Error("self-test missing suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
 
 function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
@@ -59,6 +105,16 @@ function duplicatedInstructionLines(contents) {
     .map(([line, paths]) => `${[...paths].sort().join(", ")} duplicate: ${line}`);
 }
 
+for (const arg of process.argv.slice(2)) {
+  if (arg === "--self-test") {
+    runSelfTest();
+    console.log("agent instructions check self-test passed");
+    process.exit(0);
+  }
+  printErrors([`unknown argument ${arg}`]);
+  process.exit(64);
+}
+
 const errors = [];
 const contents = {};
 for (const relativePath of files) {
@@ -71,8 +127,7 @@ for (const relativePath of files) {
 }
 
 if (errors.length > 0) {
-  console.error("agent instructions check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors(errors);
   process.exit(1);
 }
 
