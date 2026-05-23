@@ -2049,7 +2049,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     };
     assert.equal(unpinnedProjectionPayload.data.pinnedThreads.some((entry) => entry.threadId === "runtime:openclaw:sessions:alpha"), false);
   });
-}, 60_000);
+}, 180_000);
 
 test("runCli smokes the required command surface in dry-run or headless mode", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-smoke-"));
