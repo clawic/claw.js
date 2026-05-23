@@ -48,7 +48,7 @@ test("Mac control plane registry captures the binding V1 governance defaults", (
 
 test("Mac command roots are direct, singular and conflict-aware", () => {
   const roots = new Map(MAC_CONTROL_COMMAND_ROOTS.map((entry) => [entry.root, entry]));
-  for (const root of ["mac", "permissions", "wifi", "window", "shortcut", "app", "process", "bluetooth", "vpn", "network", "display", "screen", "audio", "notification"]) {
+  for (const root of ["mac", "permissions", "wifi", "window", "shortcut", "app", "process", "bluetooth", "vpn", "network", "display", "screen", "audio", "media", "notification"]) {
     assert.ok(roots.has(root), `missing root ${root}`);
   }
 
@@ -171,6 +171,11 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.shortcut.show",
     "mac.shortcut.run",
     "mac.audio.volume",
+    "mac.audio.mute.status",
+    "mac.audio.mute.set",
+    "mac.media.playback.status",
+    "mac.media.playback.pause",
+    "mac.media.playback.resume",
     "mac.display.brightness",
   ]);
 
@@ -191,6 +196,11 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.shortcut.show",
     "mac.shortcut.run",
     "mac.audio.volume",
+    "mac.audio.mute.status",
+    "mac.audio.mute.set",
+    "mac.media.playback.status",
+    "mac.media.playback.pause",
+    "mac.media.playback.resume",
     "mac.display.brightness",
   ]) {
     assert.ok(executableIds.includes(id), `missing executable ${id}`);
@@ -208,6 +218,10 @@ test("Mac V1 executable slice is fully declared", () => {
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.backend.executablePath, "/usr/bin/shortcuts");
   assert.equal(findMacAtlasCapability("mac.shortcut.run")?.risk, "high");
   assert.equal(findMacAtlasCapability("mac.audio.volume")?.portableFamily, "system.audio.set_output_volume");
+  assert.equal(findMacAtlasCapability("mac.audio.mute.status")?.backend.strategy, "coreaudio");
+  assert.equal(findMacAtlasCapability("mac.audio.mute.set")?.risk, "medium");
+  assert.equal(findMacAtlasCapability("mac.media.playback.pause")?.backend.strategy, "apple_events");
+  assert.deepEqual(findMacAtlasCapability("mac.media.playback.pause")?.permissions, ["mac.permission.automation_apple_events"]);
   assert.equal(findMacAtlasCapability("mac.display.brightness")?.portableFamily, "system.display.set_brightness");
 });
 

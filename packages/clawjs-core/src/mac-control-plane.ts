@@ -840,7 +840,7 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
     uiPack: "audio",
     testRefs: ["packages/clawjs-core/src/mac-control-plane.test.ts", "apps/host/Tests/CommanderE2ETests/MacControlTests.swift"],
   }),
-  ...[
+  ...([
     {
       action: "status",
       label: "Read media playback state",
@@ -868,7 +868,7 @@ export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
       mutatesState: true,
       canonicalUsage: "claw media playback resume --app <app>",
     },
-  ].map(({ action, label, summary, portableFamily, risk, mutatesState, canonicalUsage }) => capability({
+  ] as const).map(({ action, label, summary, portableFamily, risk, mutatesState, canonicalUsage }) => capability({
     id: `mac.media.playback.${action}`,
     family: "media",
     action: `playback.${action}`,

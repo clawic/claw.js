@@ -49,8 +49,13 @@ non-executable.
 | `mac.process.terminate` | planned | `claw process terminate --pid &lt;pid&gt;` | `terminate` is explicit process control and avoids overloading app quit. |
 | `mac.vpn.connect` | planned | `claw vpn connect &lt;name&gt;` | `connect` mirrors network session establishment and is continuity-sensitive. |
 | `mac.bluetooth.connect` | planned | `claw bluetooth connect &lt;device&gt;` | `connect` describes pairing/session attachment without implying discovery. |
-| `mac.audio.volume` | planned | `claw audio volume set &lt;value&gt;` | Stable id keeps the governed property; CLI uses `set` for mutation. |
-| `mac.display.brightness` | planned | `claw display brightness set &lt;value&gt;` | Stable id keeps the governed property; CLI uses `set` for mutation. |
+| `mac.audio.volume` | executable | `claw audio volume set &lt;value&gt;` | Stable id keeps the governed property; CLI uses `set` for mutation. |
+| `mac.audio.mute.status` | executable | `claw audio mute status` | `status` is read-only output mute inspection through the broker. |
+| `mac.audio.mute.set` | executable | `claw audio mute set &lt;on\|off&gt;` | `set` changes the output mute property; the argument is a bounded boolean. |
+| `mac.media.playback.status` | executable | `claw media playback status --app &lt;app&gt;` | `status` reads playback state for an approved local media app target. |
+| `mac.media.playback.pause` | executable | `claw media playback pause --app &lt;app&gt;` | `pause` is a transport action scoped to an approved media app target. |
+| `mac.media.playback.resume` | executable | `claw media playback resume --app &lt;app&gt;` | `resume` maps to the app playback `play` transport action while keeping the user-facing verb natural. |
+| `mac.display.brightness` | executable | `claw display brightness set &lt;value&gt;` | Stable id keeps the governed property; CLI uses `set` for mutation. |
 | `mac.screen.capture` | planned | `claw screen capture` | `capture` is a read/observation action gated by Screen Recording. |
 | `mac.focus.set` | planned | `claw focus set &lt;mode&gt;` | `set` is the natural mode-changing verb for Focus state. |
 | `mac.notification.status` | planned | `claw notification status` | `status` reads notification permission/delivery state, distinct from `notify`. |
@@ -75,6 +80,10 @@ claw app quit <app>
 claw process terminate --pid <pid>
 claw vpn connect <name>
 claw bluetooth connect <device>
+claw audio mute set <on|off>
+claw media playback status --app <app>
+claw media playback pause --app <app>
+claw media playback resume --app <app>
 claw display brightness set <value>
 claw focus set <mode>
 ```
