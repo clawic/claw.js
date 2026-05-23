@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, normalizeDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const json = process.argv.includes("--json");
+const selfTest = process.argv.includes("--self-test");
 
 const requiredDocs = [
   "docs/adr/0013-agentic-naming-and-code-structure.md",
@@ -109,6 +111,7 @@ const ignoredDirectoryNames = new Set([
   ".next",
   ".next-e2e",
   ".tmp",
+  ".vitepress",
   "artifacts",
   "build",
   "coverage",
@@ -316,6 +319,70 @@ function hasDocsJsonRoleSuffix(name) {
   return docsDataRoleSuffixes.has(role);
 }
 
+function diagnosticForFailure(failure) {
+  const message = String(failure);
+  const location = message.match(/^([^ ]+)/u)?.[1] ?? "scripts/naming-shape-check.mjs";
+  if (message.startsWith("missing naming source ")) {
+    return createDiagnostic("naming_shape_required_source_missing", message, {
+      location: message.slice("missing naming source ".length),
+      suggestion: "Restore the required naming canon document or guard source.",
+      safeNextStep: "Restore the missing naming source, then rerun node scripts/naming-shape-check.mjs.",
+    });
+  }
+  if (message.includes("broad source symbol")) {
+    return createDiagnostic("naming_shape_broad_symbol_blocked", message, {
+      location,
+      suggestion: "Rename the symbol to use a precise domain term instead of broad placeholders such as Data or Thing.",
+      safeNextStep: "Rename the symbol in the named file, then rerun node scripts/naming-shape-check.mjs.",
+    });
+  }
+  if (message.includes("could not be read")) {
+    return createDiagnostic("naming_shape_source_read_failed", message, {
+      location,
+      suggestion: "Remove generated transient files from the scan or make the named source file readable.",
+      safeNextStep: "Clean the transient docs output or restore the missing file, then rerun node scripts/naming-shape-check.mjs.",
+    });
+  }
+  return createDiagnostic("naming_shape_check_failed", message, {
+    location,
+    suggestion: "Inspect the named naming rule failure and align the source with the naming guide.",
+    safeNextStep: "Fix the reported naming issue, then rerun node scripts/naming-shape-check.mjs.",
+  });
+}
+
+function diagnosticsForFailures(items) {
+  return items.map((failure) => normalizeDiagnostic(diagnosticForFailure(failure)));
+}
+
+function assertSelfTest(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printActionableFailureReport({
+    title: "naming shape check failed for /Users/example/private:",
+    diagnostics: diagnosticsForFailures([
+      "/Users/example/private/src/BadData.ts broad source symbol BadData uses imprecise Data token: sk-test-secret-123456",
+      "missing naming source docs/naming-style-guide.md",
+    ]),
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assertSelfTest(output.includes("code: naming_shape_broad_symbol_blocked"), "self-test missing broad-symbol code");
+  assertSelfTest(output.includes("code: naming_shape_required_source_missing"), "self-test missing missing-source code");
+  assertSelfTest(output.includes("suggestion:"), "self-test missing suggestion");
+  assertSelfTest(output.includes("next:"), "self-test missing next step");
+  assertSelfTest(!output.includes("/Users/example"), "self-test leaked private path");
+  assertSelfTest(!output.includes("sk-test-secret-123456"), "self-test leaked token-like text");
+  console.log("naming shape check self-test passed");
+}
+
+if (selfTest) {
+  runSelfTest();
+  process.exit(0);
+}
+
 const failures = [];
 const warnings = [];
 
@@ -342,7 +409,13 @@ for (const relativePath of walk(rootDir)) {
   }
 
   if (sourceExtensions.has(ext)) {
-    const text = read(relativePath);
+    let text;
+    try {
+      text = read(relativePath);
+    } catch (error) {
+      failures.push(`${relativePath} could not be read: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
     if (!isExternalProviderPath(relativePath)) {
       warnings.push(...collectContextVocabularyWarnings(relativePath, text, criticalForbidden));
     }
@@ -352,11 +425,14 @@ for (const relativePath of walk(rootDir)) {
 
 const result = { failures, warnings };
 if (json) {
-  console.log(JSON.stringify(result, null, 2));
+  const diagnostics = diagnosticsForFailures(failures);
+  console.log(JSON.stringify({ ...result, failures: diagnostics.map((diagnostic) => diagnostic.message), diagnostics }, null, 2));
 } else {
   if (failures.length) {
-    console.error("naming shape check failed:");
-    for (const failure of failures) console.error(`- ${failure}`);
+    printActionableFailureReport({
+      title: "naming shape check failed:",
+      diagnostics: diagnosticsForFailures(failures),
+    });
   }
   console.log(`naming shape check ${failures.length ? "failed" : "passed"} (${warnings.length} warnings)`);
 }
