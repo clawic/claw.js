@@ -2,8 +2,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--self-test"]);
 const errors = [];
 
 function read(relativePath) {
@@ -21,6 +24,116 @@ function requireFile(relativePath) {
 function requireSnippet(relativePath, snippet) {
   const text = read(relativePath);
   if (!text.includes(snippet)) errors.push(`${relativePath} is missing ${JSON.stringify(snippet)}`);
+}
+
+function evolutionDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("evolution_governance_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/evolution-governance-check.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node scripts/evolution-governance-check.mjs with a supported argument.",
+    });
+  }
+  const missing = error.match(/^missing (.+)$/);
+  if (missing) {
+    return createDiagnostic("evolution_governance_required_file_missing", error, {
+      location: missing[1],
+      suggestion: "Restore the required evolution doc, fixture, source file, CLI file, or skill.",
+      safeNextStep: `Add or restore ${missing[1]}, then rerun node scripts/evolution-governance-check.mjs.`,
+    });
+  }
+  const missingSnippet = error.match(/^(.+) is missing (.+)$/);
+  if (missingSnippet) {
+    return createDiagnostic("evolution_governance_required_snippet_missing", error, {
+      location: missingSnippet[1],
+      suggestion: "Restore the required policy, API, CLI, decision, or audit marker in the named file.",
+      safeNextStep: "Add the missing marker, then rerun node scripts/evolution-governance-check.mjs.",
+    });
+  }
+  if (error.includes("partial or blocked rows")) {
+    return createDiagnostic("evolution_governance_source_audit_incomplete", error, {
+      location: "docs/governance/evolution/source-audit.md",
+      suggestion: "Do not close the evolution goal while any source-audit decision is partial or blocked.",
+      safeNextStep: "Implement, document, or explicitly resolve the partial/blocked rows, then rerun this check.",
+    });
+  }
+  if (error.startsWith("evolution ledger") || error.startsWith("postV1Migration") || error.startsWith("rescueCore")) {
+    return createDiagnostic("evolution_governance_ledger_invalid", error, {
+      location: "docs/evolution/baseline.json",
+      suggestion: "Restore the evolution ledger schema, policy, and record structure.",
+      safeNextStep: "Fix docs/evolution/baseline.json, then rerun node scripts/evolution-governance-check.mjs.",
+    });
+  }
+  if (error.startsWith("public versions manifest") || error.startsWith("public version ") || error.startsWith("duplicate public version")) {
+    return createDiagnostic("evolution_governance_public_versions_invalid", error, {
+      location: "docs/evolution/public-versions.json",
+      suggestion: "Keep every public version listed once with a matching fixture and previous-version chain.",
+      safeNextStep: "Fix docs/evolution/public-versions.json or its named fixture, then rerun this check.",
+    });
+  }
+  if (error.startsWith("public fixture is not listed")) {
+    return createDiagnostic("evolution_governance_fixture_unlisted", error, {
+      location: "docs/evolution/fixtures",
+      suggestion: "List every public fixture in the public versions manifest, or remove obsolete fixtures.",
+      safeNextStep: "Update docs/evolution/public-versions.json, then rerun this check.",
+    });
+  }
+  if (error.includes("forbidden private/sensitive token")) {
+    return createDiagnostic("evolution_governance_fixture_privacy_leak", error, {
+      location: "docs/evolution/fixtures/v1-foundation.json",
+      suggestion: "Remove private paths and secret-like tokens from public evolution fixtures.",
+      safeNextStep: "Replace the sensitive fixture value with a synthetic public-safe placeholder, then rerun this check.",
+    });
+  }
+  if (error.startsWith("public surface baseline diff")) {
+    return createDiagnostic("evolution_governance_surface_diff_failed", error, {
+      location: "docs/evolution/public-surface-baseline.json",
+      suggestion: "Fix the nested diff command or rebuild the public surface baseline inputs.",
+      safeNextStep: "Run the diff path locally, fix its first failure, then rerun node scripts/evolution-governance-check.mjs.",
+    });
+  }
+  if (error.startsWith("public surface baseline")) {
+    return createDiagnostic("evolution_governance_public_surface_baseline_invalid", error, {
+      location: "docs/evolution/public-surface-baseline.json",
+      suggestion: "Refresh or cover public surface baseline changes with an active evolution record.",
+      safeNextStep: "Update the baseline or add the covering evolution record, then rerun this check.",
+    });
+  }
+  if (error.startsWith("v1 foundation fixture")) {
+    return createDiagnostic("evolution_governance_v1_fixture_invalid", error, {
+      location: "docs/evolution/fixtures/v1-foundation.json",
+      suggestion: "Restore the v1 foundation fixture schema, identity, rescue core, and required surface inventory.",
+      safeNextStep: "Fix docs/evolution/fixtures/v1-foundation.json, then rerun node scripts/evolution-governance-check.mjs.",
+    });
+  }
+  if (error.includes("self-test")) {
+    return createDiagnostic("evolution_governance_self_test_failed", error, {
+      location: "scripts/evolution-governance-check.mjs",
+      suggestion: "Fix the evolution guard self-test before trusting the check.",
+      safeNextStep: "Update the detector logic, then rerun node scripts/evolution-governance-check.mjs --self-test.",
+    });
+  }
+  return createDiagnostic("evolution_governance_check_failed", error, {
+    location: "scripts/evolution-governance-check.mjs",
+    suggestion: "Inspect the named evolution governance invariant and restore the expected contract.",
+    safeNextStep: "Fix the reported evolution issue, then rerun node scripts/evolution-governance-check.mjs.",
+  });
+}
+
+function printErrors(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "evolution governance check failed:",
+    diagnostics: items.map(evolutionDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printErrors([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
 }
 
 for (const file of [
@@ -201,7 +314,7 @@ if (ledger.policy?.postV1Migration !== "step_by_step_all_public_versions") error
 if (ledger.policy?.rescueCore !== "launch_chat_repair") errors.push("rescueCore policy drifted");
 if (!Array.isArray(ledger.records) || ledger.records.length < 1) errors.push("evolution ledger must have at least one record");
 for (const record of ledger.records ?? []) {
-  for (const key of ["id", "title", "class", "status", "owner", "surfaces", "tests", "createdAt"]) {
+  for (const key of ["id", "title", "class", "status", "steward", "surfaces", "tests", "createdAt"]) {
     if (record[key] === undefined) errors.push(`evolution record ${record.id ?? "<unknown>"} is missing ${key}`);
   }
   if (!Array.isArray(record.surfaces) || record.surfaces.length < 1) errors.push(`evolution record ${record.id} needs surfaces`);
@@ -304,18 +417,47 @@ if (!diff) {
   }
 }
 
-if (process.argv.includes("--self-test")) {
+if (args.has("--self-test")) {
   const invalid = { schemaVersion: 1, policy: { sourceOfTruth: "other" }, records: [] };
   if (invalid.policy.sourceOfTruth === "clawjs") errors.push("self-test fixture unexpectedly passed");
   const simulated = currentPublicSurfaceDiff({ simulateMissingCliCommand: true });
   if (!simulated || simulated.uncoveredChanges.length < 1) {
     errors.push("self-test must detect uncovered CLI baseline drift");
   }
+  const chunks = [];
+  printErrors([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "missing /Users/example/private/docs/evolution/README.md",
+    "docs/evolution/README.md is missing \"launch_chat_repair\"",
+    "evolution source audit still has partial or blocked rows",
+    "evolution ledger sourceOfTruth must be clawjs",
+    "public version v2 fixture is missing: docs/evolution/fixtures/v2.json",
+    "public fixture is not listed in public-versions manifest: docs/evolution/fixtures/old.json",
+    "public surface baseline must be refreshed after stable surface changes",
+    "v1 foundation fixture includes forbidden private/sensitive token sk-",
+    "public surface baseline diff failed: token: sk-test-secret-123456",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "evolution_governance_usage_error",
+    "evolution_governance_required_file_missing",
+    "evolution_governance_required_snippet_missing",
+    "evolution_governance_source_audit_incomplete",
+    "evolution_governance_ledger_invalid",
+    "evolution_governance_public_versions_invalid",
+    "evolution_governance_fixture_unlisted",
+    "evolution_governance_public_surface_baseline_invalid",
+    "evolution_governance_fixture_privacy_leak",
+    "evolution_governance_surface_diff_failed",
+  ]) {
+    if (!output.includes(`code: ${code}`)) errors.push(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Restore the required evolution doc")) errors.push("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) errors.push("self-test leaked private data");
 }
 
 if (errors.length > 0) {
-  console.error("evolution governance check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors(errors);
   process.exit(1);
 }
 

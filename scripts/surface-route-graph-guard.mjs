@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const requiredNodeIds = [
   "claw.cli.public",
@@ -71,6 +72,8 @@ const requiredTransportTokens = ["24080"];
 const allowedEdgeTypes = new Set(["owns", "consumes", "exposes", "brokers"]);
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const baselinePath = path.join(rootDir, "docs/surface-evidence-baseline.json");
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--self-test"]);
 
 function readBaseline() {
   if (!fs.existsSync(baselinePath)) return { entries: [] };
@@ -153,6 +156,93 @@ function cloneRegistry() {
   return JSON.parse(JSON.stringify(clawPersistentSurfaceRegistry));
 }
 
+function surfaceRouteDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("surface_route_graph_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/surface-route-graph-guard.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node --import tsx scripts/surface-route-graph-guard.mjs with a supported argument.",
+    });
+  }
+  if (error.startsWith("missing required surface graph node")) {
+    return createDiagnostic("surface_route_graph_required_node_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Restore the required surface graph node or update the guard only with a public routing decision.",
+      safeNextStep: "Add the missing node to the persistent surface registry, then rerun this guard.",
+    });
+  }
+  if (error.startsWith("missing required surface graph route")) {
+    return createDiagnostic("surface_route_graph_required_route_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Restore the required route that proves the surface path can be followed end to end.",
+      safeNextStep: "Add the missing route with tests and explicit steps, then rerun this guard.",
+    });
+  }
+  if (error.includes("missing id") || error.includes("duplicate surface graph edge id") || error.includes("invalid edge type")) {
+    return createDiagnostic("surface_route_graph_edge_shape_invalid", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Give every edge a unique id and one of the allowed edge types: owns, consumes, exposes, brokers.",
+      safeNextStep: "Fix the edge shape in the registry, then rerun node --import tsx scripts/surface-route-graph-guard.mjs.",
+    });
+  }
+  if (error.includes("references missing fromId") || error.includes("references missing toId")) {
+    return createDiagnostic("surface_route_graph_node_reference_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Point the edge or route step at an existing registry node.",
+      safeNextStep: "Add the missing node or correct the fromId/toId reference, then rerun this guard.",
+    });
+  }
+  if (error.includes("references missing contractId") || error.startsWith("required critical contract is not referenced")) {
+    return createDiagnostic("surface_route_graph_contract_reference_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Reference an existing contract node or a baselined evidence contract for the route.",
+      safeNextStep: "Add or correct the contractId, then rerun node --import tsx scripts/surface-route-graph-guard.mjs.",
+    });
+  }
+  if (error.includes("is missing validation")) {
+    return createDiagnostic("surface_route_graph_validation_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Attach validation evidence to every route, edge, and explicit route step.",
+      safeNextStep: "Add the missing validation field, then rerun this guard.",
+    });
+  }
+  if (error.includes("must list route tests")) {
+    return createDiagnostic("surface_route_graph_route_tests_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "List the tests that prove the route works before treating it as closed.",
+      safeNextStep: "Add route tests to the route entry, then rerun this guard.",
+    });
+  }
+  if (error.includes("must define explicit steps")) {
+    return createDiagnostic("surface_route_graph_route_steps_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Define explicit route steps so agents can see each handoff and contract in the path.",
+      safeNextStep: "Add route steps to the route entry, then rerun this guard.",
+    });
+  }
+  if (error.startsWith("required critical transport token")) {
+    return createDiagnostic("surface_route_graph_transport_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Document the critical transport token in the edge, route, or step transport metadata.",
+      safeNextStep: "Add the missing transport evidence, then rerun node --import tsx scripts/surface-route-graph-guard.mjs.",
+    });
+  }
+  return createDiagnostic("surface_route_graph_guard_failed", error, {
+    location: "packages/clawjs-core/src/catalogs.ts",
+    suggestion: "Inspect the surface route graph invariant and restore the missing graph evidence.",
+    safeNextStep: "Fix the reported graph issue, then rerun node --import tsx scripts/surface-route-graph-guard.mjs.",
+  });
+}
+
+function printErrors(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "surface route graph guard failed:",
+    diagnostics: items.map(surfaceRouteDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function runSelfTest() {
   const missingNode = cloneRegistry();
   missingNode.routes[0].steps[0].toId = "missing.node";
@@ -177,9 +267,45 @@ function runSelfTest() {
     for (const step of route.steps ?? []) step.transport = step.transport?.replace("24080", "PORT");
   }
   assert.match(validateRegistry(missingTransport).join("\n"), /required critical transport token is not covered/);
+
+  const chunks = [];
+  printErrors([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "missing required surface graph node /Users/example/private",
+    "missing required surface graph route chat.companionBridge",
+    "edge.1 references missing fromId missing.node",
+    "edge.1 references missing contractId missing.contract",
+    "chat.localDesktop is missing validation",
+    "chat.localDesktop must list route tests",
+    "chat.localDesktop must define explicit steps",
+    "required critical transport token is not covered by the surface graph: 24080",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "surface_route_graph_usage_error",
+    "surface_route_graph_required_node_missing",
+    "surface_route_graph_required_route_missing",
+    "surface_route_graph_node_reference_missing",
+    "surface_route_graph_contract_reference_missing",
+    "surface_route_graph_validation_missing",
+    "surface_route_graph_route_tests_missing",
+    "surface_route_graph_route_steps_missing",
+    "surface_route_graph_transport_missing",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Restore the required route")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
 }
 
-if (process.argv.includes("--self-test")) {
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printErrors([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
+if (args.has("--self-test")) {
   runSelfTest();
   console.log("surface route graph guard self-test passed");
   process.exit(0);
@@ -187,8 +313,7 @@ if (process.argv.includes("--self-test")) {
 
 const errors = validateRegistry(clawPersistentSurfaceRegistry);
 if (errors.length > 0) {
-  console.error("surface route graph guard failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors(errors);
   process.exit(1);
 }
 

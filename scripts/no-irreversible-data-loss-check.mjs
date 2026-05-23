@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const expectedClasses = [
@@ -40,11 +41,30 @@ function parseArgs(argv) {
   const args = { root: scriptRoot, profile: null, selfTest: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--root") args.root = path.resolve(argv[++index]);
-    else if (arg === "--profile") args.profile = argv[++index];
+    if (arg === "--root") {
+      if (!argv[index + 1]) {
+        printErrors(["--root requires a value"]);
+        process.exit(64);
+      }
+      args.root = path.resolve(argv[++index]);
+    } else if (arg === "--profile") {
+      if (!argv[index + 1]) {
+        printErrors(["--profile requires a value"]);
+        process.exit(64);
+      }
+      args.profile = argv[++index];
+    }
     else if (arg === "--self-test") args.selfTest = true;
+    else {
+      printErrors([`unknown argument ${arg}`]);
+      process.exit(64);
+    }
   }
   args.profile ??= fs.existsSync(path.join(args.root, "macos")) ? "clawix" : "claw";
+  if (!["claw", "clawix"].includes(args.profile)) {
+    printErrors([`unknown profile ${args.profile}`]);
+    process.exit(64);
+  }
   return args;
 }
 
@@ -63,8 +83,16 @@ function read(relativePath) {
   return fs.readFileSync(absolute(relativePath), "utf8");
 }
 
-function readJson(relativePath) {
-  return JSON.parse(read(relativePath));
+function readJson(relativePath, errors = null) {
+  try {
+    return JSON.parse(read(relativePath));
+  } catch (error) {
+    if (errors) {
+      errors.push(`${relativePath} is not valid JSON: ${error.message}`);
+      return null;
+    }
+    throw error;
+  }
 }
 
 function countKeywordHits(relativePath, keywords) {
@@ -91,6 +119,82 @@ function validateFixture(entry) {
   return null;
 }
 
+function diagnosticFor(error) {
+  if (error.startsWith("unknown argument") || error.startsWith("unknown profile") || error.startsWith("--")) {
+    return createDiagnostic("data_loss_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/no-irreversible-data-loss-check.mjs",
+      suggestion: "Use --self-test, --root <repo>, or --profile claw|clawix.",
+      safeNextStep: "Rerun node scripts/no-irreversible-data-loss-check.mjs with supported arguments.",
+    });
+  }
+  const missing = error.match(/^missing (.+)$/);
+  if (missing) {
+    return createDiagnostic("data_loss_required_file_missing", error, {
+      location: missing[1],
+      suggestion: "Restore the required governance file before validating destructive operations.",
+      safeNextStep: `Add or restore ${missing[1]}, then rerun node scripts/no-irreversible-data-loss-check.mjs.`,
+    });
+  }
+  const invalidJson = error.match(/^(.+) is not valid JSON:/);
+  if (invalidJson) {
+    return createDiagnostic("data_loss_invalid_json", error, {
+      location: invalidJson[1],
+      suggestion: "Fix the JSON syntax before trusting no-irreversible-data-loss policy results.",
+      safeNextStep: `Repair ${invalidJson[1]}, then rerun node scripts/no-irreversible-data-loss-check.mjs.`,
+    });
+  }
+  const keywordDrift = error.match(/^(.+) has \d+ destructive\/data-moving keyword hits, above baseline/);
+  if (keywordDrift) {
+    return createDiagnostic("data_loss_keyword_baseline_exceeded", error, {
+      location: keywordDrift[1],
+      suggestion: "Classify the new destructive or data-moving behavior with recovery class, approval policy, audit receipt, and evidence.",
+      safeNextStep: `Update ${keywordDrift[1]} or the reviewed baseline after classification, then rerun node scripts/no-irreversible-data-loss-check.mjs.`,
+    });
+  }
+  if (error.startsWith("valid fixture") || error.startsWith("invalid fixture")) {
+    return createDiagnostic("data_loss_fixture_contract_failed", error, {
+      location: "docs/governance/no-irreversible-data-loss/fixtures.json",
+      suggestion: "Fix the recovery-class fixture so valid examples pass and invalid examples fail for the expected reason.",
+      safeNextStep: "Update docs/governance/no-irreversible-data-loss/fixtures.json, then rerun node scripts/no-irreversible-data-loss-check.mjs --self-test.",
+    });
+  }
+  if (error.includes("constitution assertions") || error.includes("must route to") || error.includes("must be protected by") || error.includes("must be enforced")) {
+    return createDiagnostic("data_loss_constitution_route_invalid", error, {
+      location: "docs/constitution.assertions.json",
+      suggestion: "Restore constitutional routing to the no-irreversible-data-loss manifest and protector script.",
+      safeNextStep: "Update docs/constitution.assertions.json, then rerun node scripts/no-irreversible-data-loss-check.mjs.",
+    });
+  }
+  if (error.includes("decision-map.md") || error.includes("constitution-map.md") || error.includes("package.json") || error.includes("scripts/test.sh")) {
+    return createDiagnostic("data_loss_guard_route_missing", error, {
+      location: error.split(" ")[0],
+      suggestion: "Restore the public route or test hook that makes the guard discoverable and enforced.",
+      safeNextStep: "Update the named route or test file, then rerun node scripts/no-irreversible-data-loss-check.mjs.",
+    });
+  }
+  if (error.includes("manifest") || error.includes("policy") || error.includes("baseline entry") || error.includes("monitored file")) {
+    return createDiagnostic("data_loss_policy_manifest_invalid", error, {
+      location: "docs/governance/no-irreversible-data-loss/manifest.json",
+      suggestion: "Fix policy metadata, recovery class, target coverage, baseline stewardship, expiry, evidence, or monitored file coverage.",
+      safeNextStep: "Repair the no-irreversible-data-loss manifest or baseline, then rerun node scripts/no-irreversible-data-loss-check.mjs.",
+    });
+  }
+  return createDiagnostic("data_loss_guard_failed", error, {
+    location: "scripts/no-irreversible-data-loss-check.mjs",
+    suggestion: "Inspect the no-irreversible-data-loss invariant and restore the expected recovery guarantee.",
+    safeNextStep: "Fix the reported data-loss guard issue, then rerun node scripts/no-irreversible-data-loss-check.mjs.",
+  });
+}
+
+function printErrors(errors, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "no irreversible data loss check failed:",
+    diagnostics: errors.map(diagnosticFor),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function validateRoot(root, profile = "claw") {
   rootDir = root;
   const errors = [];
@@ -102,10 +206,15 @@ function validateRoot(root, profile = "claw") {
   if (!exists(assertionPath)) errors.push(`missing ${assertionPath}`);
   if (errors.length > 0) return errors;
 
-  const manifest = readJson(manifestPath);
-  const baseline = readJson(manifest.rollout?.baselinePath ?? "docs/governance/no-irreversible-data-loss/baseline.json");
-  const fixtures = readJson(fixturePath);
-  const assertions = readJson(assertionPath);
+  const manifest = readJson(manifestPath, errors);
+  const fixtures = readJson(fixturePath, errors);
+  const assertions = readJson(assertionPath, errors);
+  if (!manifest || !fixtures || !assertions) return errors;
+  const baselinePath = manifest.rollout?.baselinePath ?? "docs/governance/no-irreversible-data-loss/baseline.json";
+  if (!exists(baselinePath)) errors.push(`missing ${baselinePath}`);
+  if (errors.length > 0) return errors;
+  const baseline = readJson(baselinePath, errors);
+  if (!baseline) return errors;
   const today = new Date().toISOString().slice(0, 10);
 
   if (manifest.schemaVersion !== 1) errors.push("manifest schemaVersion must be 1");
@@ -250,6 +359,20 @@ function runSelfTest() {
   baseline.monitoredKeywordBaselines[0].maxKeywordHits = 0;
   fs.writeFileSync(path.join(temp, "docs/governance/no-irreversible-data-loss/baseline.json"), JSON.stringify(baseline, null, 2));
   assert(validateRoot(temp, "claw").some((error) => error.includes("above baseline")));
+  const chunks = [];
+  printErrors([
+    "/Users/example/private/manifest.json is not valid JSON: token sk-test-secret-123456",
+    "docs/evolution/README.md has 3 destructive/data-moving keyword hits, above baseline 1",
+    "invalid fixture purge unexpectedly passed",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: data_loss_invalid_json/);
+  assert.match(output, /code: data_loss_keyword_baseline_exceeded/);
+  assert.match(output, /code: data_loss_fixture_contract_failed/);
+  assert.match(output, /suggestion: Classify the new destructive or data-moving behavior/);
+  assert.match(output, /next: Update docs\/evolution\/README\.md or the reviewed baseline/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
 }
 
 if (options.selfTest) {
@@ -257,15 +380,13 @@ if (options.selfTest) {
     runSelfTest();
     console.log("no irreversible data loss self-test passed");
   } catch (error) {
-    console.error("no irreversible data loss self-test failed:");
-    console.error(error);
+    printErrors([`self-test failed: ${error?.message ?? String(error)}`]);
     process.exit(1);
   }
 } else {
   const errors = validateRoot(rootDir, options.profile);
   if (errors.length > 0) {
-    console.error("no irreversible data loss check failed:");
-    for (const error of errors) console.error(`- ${error}`);
+    printErrors(errors);
     process.exit(1);
   }
   console.log("no irreversible data loss check passed");

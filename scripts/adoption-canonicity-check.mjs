@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const manifestPath = "docs/governance/adoption-canonicity.manifest.json";
@@ -12,6 +13,74 @@ const errors = [];
 
 function fail(message) {
   errors.push(message);
+}
+
+function adoptionDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("adoption_canonicity_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/adoption-canonicity-check.mjs",
+      suggestion: "Use --self-test or one of the supported --simulate-* self-test flags.",
+      safeNextStep: "Rerun node scripts/adoption-canonicity-check.mjs with a supported argument.",
+    });
+  }
+  const invalidJson = error.match(/^(.+) is not valid JSON:/);
+  if (invalidJson) {
+    return createDiagnostic("adoption_canonicity_invalid_json", error, {
+      location: invalidJson[1],
+      suggestion: "Fix JSON syntax before trusting adoption/canonicity promotion results.",
+      safeNextStep: `Repair ${invalidJson[1]}, then rerun node scripts/adoption-canonicity-check.mjs.`,
+    });
+  }
+  const localPath = error.match(/^(.+) must not contain local paths$/);
+  if (localPath) {
+    return createDiagnostic("adoption_canonicity_private_path_leak", error, {
+      location: localPath[1],
+      suggestion: "Replace local filesystem evidence with a public-safe path or approved external evidence alias.",
+      safeNextStep: "Update docs/governance/adoption-canonicity.manifest.json, then rerun node scripts/adoption-canonicity-check.mjs.",
+    });
+  }
+  if (error.includes("telemetryDefault")) {
+    return createDiagnostic("adoption_canonicity_telemetry_enabled", error, {
+      location: manifestPath,
+      suggestion: "Keep adoption telemetry disabled unless it is explicitly opt-in and governed.",
+      safeNextStep: `Set telemetryDefault to disabled in ${manifestPath}, then rerun node scripts/adoption-canonicity-check.mjs.`,
+    });
+  }
+  if (error.includes("feedbackLoop")) {
+    return createDiagnostic("adoption_canonicity_feedback_loop_missing", error, {
+      location: manifestPath,
+      suggestion: "Add the required feedback loop mechanism, cadence, and evidence references before promotion.",
+      safeNextStep: `Complete feedbackLoop in ${manifestPath}, then rerun node scripts/adoption-canonicity-check.mjs.`,
+    });
+  }
+  if (error.includes("evidenceRefs") || error.includes("public-safe") || error.includes("external evidence alias")) {
+    return createDiagnostic("adoption_canonicity_evidence_invalid", error, {
+      location: manifestPath,
+      suggestion: "Use public-safe evidence refs or approved external aliases; do not include private paths.",
+      safeNextStep: `Fix evidenceRefs in ${manifestPath}, then rerun node scripts/adoption-canonicity-check.mjs.`,
+    });
+  }
+  if (error.includes("capability maturity") || error.includes("seed packet") || error.includes("packet")) {
+    return createDiagnostic("adoption_canonicity_packet_invalid", error, {
+      location: manifestPath,
+      suggestion: "Restore the referenced promotion packet and keep capability maturity references in sync.",
+      safeNextStep: `Update ${manifestPath} or packages/clawjs-core/src/capability-maturity.ts, then rerun node scripts/adoption-canonicity-check.mjs.`,
+    });
+  }
+  return createDiagnostic("adoption_canonicity_manifest_invalid", error, {
+    location: manifestPath,
+    suggestion: "Fix required fields, stage, claim type, privacy mode, review dates, promotion decision, or references.",
+    safeNextStep: `Repair ${manifestPath}, then rerun node scripts/adoption-canonicity-check.mjs.`,
+  });
+}
+
+function printErrors(options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "adoption/canonicity check failed:",
+    diagnostics: errors.map(adoptionDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
 }
 
 function readJson(relativePath) {
@@ -165,13 +234,38 @@ function runSelfTests() {
     const output = `${result.stdout || ""}${result.stderr || ""}`;
     if (result.status === 0) fail(`self-test ${id} must fail`);
     if (!output.includes(expected.get(id))) fail(`self-test ${id} output must include ${expected.get(id)}`);
+    if (!output.includes("code: ")) fail(`self-test ${id} output must include a diagnostic code`);
   }
+
+  const before = errors.length;
+  errors.push(
+    "docs/governance/adoption-canonicity.manifest.json.packets[0].evidenceRefs[0].ref must be public-safe or use an approved external evidence alias",
+    "/Users/example/private/research.json must not contain local paths",
+    "docs/governance/adoption-canonicity.manifest.json is not valid JSON: token sk-test-secret-123456",
+  );
+  const chunks = [];
+  printErrors({ stream: { write: (chunk) => chunks.push(chunk) } });
+  errors.splice(before);
+  const output = chunks.join("");
+  if (!output.includes("code: adoption_canonicity_evidence_invalid")) fail("self-test output missing evidence code");
+  if (!output.includes("code: adoption_canonicity_private_path_leak")) fail("self-test output missing local path code");
+  if (!output.includes("code: adoption_canonicity_invalid_json")) fail("self-test output missing invalid JSON code");
+  if (!output.includes("suggestion: Use public-safe evidence refs")) fail("self-test output missing suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) fail("self-test output leaked private data");
 }
 
 if (args.has("--self-test") && !isSelfTestChild) runSelfTests();
 
 let mutation = null;
 for (const arg of args) {
+  if (![
+    "--self-test",
+    "--simulate-missing-feedback-loop",
+    "--simulate-silent-telemetry",
+    "--simulate-local-private-path",
+  ].includes(arg)) {
+    fail(`unknown argument ${arg}`);
+  }
   if (arg === "--simulate-missing-feedback-loop") mutation = "missing-feedback-loop";
   if (arg === "--simulate-silent-telemetry") mutation = "silent-telemetry";
   if (arg === "--simulate-local-private-path") mutation = "local-private-path";
@@ -180,8 +274,7 @@ for (const arg of args) {
 validateManifest(readJson(manifestPath), { mutation });
 
 if (errors.length > 0) {
-  console.error("Adoption/canonicity check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors();
   process.exit(1);
 }
 

@@ -16,6 +16,7 @@ const requiredFiles = [
   "docs/testing.md",
   "docs/testing-matrix.md",
   "qa/coverage-budgets.json",
+  "qa/agent-coordination.manifest.json",
   "qa/quarantine.json",
   "qa/scenarios/external-pending.md",
   "qa/scenarios/telegram-integration-qa-lab.md",
@@ -35,6 +36,21 @@ const requiredLaneRoots = [
   "tests/fixtures",
   "tests/live",
 ];
+
+const coordinationCostClasses = new Set(["light", "heavy", "saturating", "interactive"]);
+const coordinationResourceModes = new Set(["read", "write", "exclusive"]);
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isStringArray(value) {
+  return Array.isArray(value) && value.every(isNonEmptyString);
+}
+
+function isPositiveNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
 
 function verifyTestingPolicy(targetRoot = root, today = new Date().toISOString().slice(0, 10)) {
   const diagnostics = [];
@@ -177,6 +193,146 @@ function verifyTestingPolicy(targetRoot = root, today = new Date().toISOString()
     }
   }
 
+  const coordinationManifestPath = path.join(targetRoot, "qa/agent-coordination.manifest.json");
+  let coordinationManifest;
+  try {
+    coordinationManifest = JSON.parse(fs.readFileSync(coordinationManifestPath, "utf8"));
+  } catch (error) {
+    fail("testing_policy_coordination_manifest_invalid_json", `qa/agent-coordination.manifest.json is invalid JSON: ${error.message}`, {
+      location: "qa/agent-coordination.manifest.json",
+      suggestion: "Repair the coordination manifest JSON before editing test lanes.",
+    });
+    coordinationManifest = { checks: [] };
+  }
+
+  if (!Array.isArray(coordinationManifest.checks)) {
+    fail("testing_policy_coordination_manifest_invalid_shape", "qa/agent-coordination.manifest.json must contain a checks array", {
+      location: "qa/agent-coordination.manifest.json",
+      suggestion: "Use the coordination manifest schema with a top-level checks array.",
+    });
+  } else {
+    const seenCheckIds = new Set();
+    for (const check of coordinationManifest.checks) {
+      const checkId = check.id ?? "<unknown>";
+      for (const field of ["id", "lane", "command", "failureAction", "repairPolicy", "externalPendingPolicy", "cleanup"]) {
+        if (!isNonEmptyString(check[field])) {
+          fail("testing_policy_coordination_manifest_check_incomplete", `coordination check ${checkId} is missing ${field}`, {
+            location: "qa/agent-coordination.manifest.json",
+            suggestion: "Complete every coordination check with stewardship, command, cleanup, and failure guidance.",
+          });
+        }
+      }
+      if (seenCheckIds.has(check.id)) {
+        fail("testing_policy_coordination_manifest_duplicate_check", `coordination check ${checkId} is duplicated`, {
+          location: "qa/agent-coordination.manifest.json",
+          suggestion: "Give every coordination check a stable unique id.",
+        });
+      }
+      seenCheckIds.add(check.id);
+
+      for (const field of ["timeoutSeconds", "heartbeatSeconds", "ttlSeconds"]) {
+        if (!isPositiveNumber(check[field])) {
+          fail("testing_policy_coordination_manifest_invalid_number", `coordination check ${checkId} has invalid ${field}`, {
+            location: "qa/agent-coordination.manifest.json",
+            suggestion: "Use positive numeric timeout, heartbeat, and ttl values.",
+          });
+        }
+      }
+      if (isPositiveNumber(check.ttlSeconds) && isPositiveNumber(check.heartbeatSeconds) && check.ttlSeconds < check.heartbeatSeconds) {
+        fail("testing_policy_coordination_manifest_invalid_ttl", `coordination check ${checkId} has ttlSeconds shorter than heartbeatSeconds`, {
+          location: "qa/agent-coordination.manifest.json",
+          suggestion: "Set ttlSeconds to cover at least one heartbeat interval.",
+        });
+      }
+      if (!coordinationCostClasses.has(check.costClass)) {
+        fail("testing_policy_coordination_manifest_invalid_cost_class", `coordination check ${checkId} has invalid costClass`, {
+          location: "qa/agent-coordination.manifest.json",
+          suggestion: "Use costClass light, heavy, saturating, or interactive.",
+        });
+      }
+      if (typeof check.realServices !== "boolean") {
+        fail("testing_policy_coordination_manifest_invalid_real_services", `coordination check ${checkId} must declare realServices as a boolean`, {
+          location: "qa/agent-coordination.manifest.json",
+          suggestion: "Set realServices to true only for lanes that contact real services.",
+        });
+      }
+
+      for (const field of ["pathPatterns", "fingerprintInputs", "consumes", "produces", "mutates", "exclusiveResources", "canRunWith", "cannotRunWith"]) {
+        if (!isStringArray(check[field])) {
+          fail("testing_policy_coordination_manifest_invalid_array", `coordination check ${checkId} has invalid ${field}`, {
+            location: "qa/agent-coordination.manifest.json",
+            suggestion: "Declare every coordination relationship field as an array of non-empty strings.",
+          });
+        }
+      }
+      for (const field of ["environmentInputs", "resourceStateInputs"]) {
+        if (check[field] !== undefined && !isStringArray(check[field])) {
+          fail("testing_policy_coordination_manifest_invalid_array", `coordination check ${checkId} has invalid ${field}`, {
+            location: "qa/agent-coordination.manifest.json",
+            suggestion: "Optional fingerprint dependency fields must be arrays of non-empty strings.",
+          });
+        }
+      }
+      const obligations = Array.isArray(check.ownerObligations) ? check.ownerObligations : check.stewardObligations;
+      if (!isStringArray(obligations)) {
+        fail("testing_policy_coordination_manifest_invalid_array", `coordination check ${checkId} has invalid ownerObligations`, {
+          location: "qa/agent-coordination.manifest.json",
+          suggestion: "Declare every coordination relationship field as an array of non-empty strings.",
+        });
+      }
+
+      const resourceIds = new Set();
+      const exclusiveResourceIds = new Set();
+      if (!Array.isArray(check.resources) || check.resources.length === 0) {
+        fail("testing_policy_coordination_manifest_missing_resources", `coordination check ${checkId} must declare resources`, {
+          location: "qa/agent-coordination.manifest.json",
+          suggestion: "Declare every resource the check reads, writes, or requires exclusively.",
+        });
+      } else {
+        for (const resource of check.resources) {
+          if (!isNonEmptyString(resource?.id) || !coordinationResourceModes.has(resource?.mode)) {
+            fail("testing_policy_coordination_manifest_invalid_resource", `coordination check ${checkId} has an invalid resource declaration`, {
+              location: "qa/agent-coordination.manifest.json",
+              suggestion: "Use resource declarations with id and mode read, write, or exclusive.",
+            });
+            continue;
+          }
+          if (resourceIds.has(resource.id)) {
+            fail("testing_policy_coordination_manifest_duplicate_resource", `coordination check ${checkId} declares duplicate resource ${resource.id}`, {
+              location: "qa/agent-coordination.manifest.json",
+              suggestion: "Declare each resource once per check.",
+            });
+          }
+          resourceIds.add(resource.id);
+          if (resource.mode === "exclusive") {
+            exclusiveResourceIds.add(resource.id);
+          }
+        }
+      }
+
+      if (isStringArray(check.consumes)) {
+        for (const consumed of check.consumes) {
+          if (!resourceIds.has(consumed)) {
+            fail("testing_policy_coordination_manifest_unmapped_consumption", `coordination check ${checkId} consumes undeclared resource ${consumed}`, {
+              location: "qa/agent-coordination.manifest.json",
+              suggestion: "Every consumed resource must also appear in resources with the required mode.",
+            });
+          }
+        }
+      }
+      if (isStringArray(check.exclusiveResources)) {
+        for (const exclusiveResource of check.exclusiveResources) {
+          if (!exclusiveResourceIds.has(exclusiveResource)) {
+            fail("testing_policy_coordination_manifest_unmapped_exclusive", `coordination check ${checkId} lists ${exclusiveResource} as exclusive without an exclusive resource declaration`, {
+              location: "qa/agent-coordination.manifest.json",
+              suggestion: "Exclusive resources must appear in resources with mode exclusive.",
+            });
+          }
+        }
+      }
+    }
+  }
+
   return diagnostics;
 }
 
@@ -190,6 +346,32 @@ function runSelfTest() {
   fs.writeFileSync(path.join(targetRoot, "qa/coverage-budgets.json"), JSON.stringify({
     budgets: [{ boundary: "cli-and-public-api", lane: "fast", metric: "tests", minimum: -1 }],
   }));
+  fs.writeFileSync(path.join(targetRoot, "qa/agent-coordination.manifest.json"), JSON.stringify({
+    checks: [{
+      id: "changed",
+      lane: "changed",
+      command: "npm test",
+      timeoutSeconds: 5,
+      heartbeatSeconds: 10,
+      ttlSeconds: 1,
+      costClass: "expensive",
+      realServices: "no",
+      pathPatterns: ["**/*"],
+      fingerprintInputs: ["package.json"],
+      resources: [{ id: "repo:fixture:worktree", mode: "read" }],
+      failureAction: "repair",
+      repairPolicy: "claim repair",
+      externalPendingPolicy: "report",
+      consumes: ["repo:fixture:worktree", "missing:resource"],
+      produces: ["test-result:fixture:changed"],
+      mutates: [],
+      exclusiveResources: ["repo:fixture:worktree"],
+      canRunWith: [],
+      cannotRunWith: [],
+      cleanup: "release leases",
+      ownerObligations: ["release leases"],
+    }],
+  }));
   const diagnostics = verifyTestingPolicy(targetRoot, "2026-05-23");
   const chunks = [];
   printActionableFailureReport({
@@ -202,6 +384,10 @@ function runSelfTest() {
   assert.match(output, /code: testing_policy_missing_ignore_rule/);
   assert.match(output, /code: testing_policy_quarantine_entry_expired/);
   assert.match(output, /code: testing_policy_coverage_budget_invalid_minimum/);
+  assert.match(output, /code: testing_policy_coordination_manifest_invalid_ttl/);
+  assert.match(output, /code: testing_policy_coordination_manifest_invalid_cost_class/);
+  assert.match(output, /code: testing_policy_coordination_manifest_unmapped_consumption/);
+  assert.match(output, /code: testing_policy_coordination_manifest_unmapped_exclusive/);
   assert.match(output, /location: qa\/coverage-budgets\.json/);
   assert.match(output, /next: Fix the reported file/);
   assert.doesNotMatch(output, /\/Users\/example/);

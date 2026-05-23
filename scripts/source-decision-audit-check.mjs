@@ -7,6 +7,7 @@ const args = new Set(process.argv.slice(2));
 const errors = [];
 
 const allowedStates = ["implemented", "documented", "blocked", "superseded"];
+const privateCodenamePattern = new RegExp(`\\b(?:${["Source Code Aging", "Program"].join(" ")}|${["Provocation Not", "Publish"].join(" ")})\\b`);
 const unsafePublicPatterns = [
   /\/Users\//,
   /file:\/\//,
@@ -15,6 +16,12 @@ const unsafePublicPatterns = [
   /\bsk-[A-Za-z0-9_-]+/,
   /\bAKIA[A-Z0-9]+/,
   /rollout-\d{4}-\d{2}-\d{2}T/,
+  /\b019e[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-plan)?\b/i,
+  /\bprivate-runtime-(?:conversation|plan):/i,
+  /\bprivate-session-not-published\b|\bprivate session,\s*not published\b/i,
+  /\bcurrent-thread-20\d{2}-\d{2}-\d{2}\b/i,
+  /\bsourceSession(?:Ref|Alias)\b/,
+  privateCodenamePattern,
 ];
 
 function fail(message) {
@@ -129,6 +136,7 @@ function validateSelectiveBackfill(seed) {
 }
 
 function validateJsonSeed(seed) {
+  assertPublicSafe(`${seed.id}.artifact`, read(seed.artifactPath));
   const artifact = readJson(seed.artifactPath);
   const rows = sourceReviewRows(artifact);
   if (artifact.sourceConversationId && artifact.sourceConversationId !== seed.sourceConversationId) {
@@ -157,6 +165,7 @@ function validateJsonSeed(seed) {
 
 function validateMarkdownSeed(seed) {
   const text = read(seed.artifactPath);
+  assertPublicSafe(`${seed.id}.artifact`, text);
   const rowRequirements = [];
   if (typeof seed.markdownRowPrefix === "string") {
     rowRequirements.push({
@@ -276,6 +285,23 @@ function runSelfTest() {
   if (patternRows.length !== 1) fail("self-test: markdown pattern row extraction failed");
   assertPublicSafe("self-test-public-alias", "private-session:not-a-path");
   assertPublicSafe("self-test-safe-ref", "docs/governance/source-decision-audits.md");
+  const privateRuntimeConversation = ["private", "runtime", "conversation"].join("-") + ":system-telemetry";
+  const privateSessionPlaceholder = ["private", "session", "not", "published"].join("-");
+  const currentThreadAlias = ["current", "thread", "2026", "05", "21"].join("-");
+  const privateProvenanceField = ["source", "Session", "Alias"].join("");
+  const privateCodename = ["Provocation Not", "Publish"].join(" ");
+  for (const unsafe of [
+    privateRuntimeConversation,
+    privateSessionPlaceholder,
+    currentThreadAlias,
+    privateProvenanceField,
+    privateCodename,
+  ]) {
+    const before = errors.length;
+    assertPublicSafe(`self-test-unsafe-${unsafe}`, unsafe);
+    if (errors.length === before) fail(`self-test: ${unsafe} must be rejected`);
+    else errors.splice(before);
+  }
 }
 
 if (args.has("--self-test")) runSelfTest();

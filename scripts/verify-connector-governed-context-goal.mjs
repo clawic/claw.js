@@ -424,6 +424,8 @@ for (const snippet of [
   "secretRefs?: string[]",
   "defaultContextRefs?: string[]",
   "appliedRuleIds?: string[]",
+  "scopedGrantId?: string",
+  "approvalEvidenceId?: string",
   "approvalGrantId?: string",
   "evaluateGovernedContext",
 ]) {

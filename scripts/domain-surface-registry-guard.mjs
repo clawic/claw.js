@@ -71,7 +71,7 @@ function domainSurfaceDiagnostic(failure) {
       safeNextStep: "Restore the evidence file or correct the path, then rerun this guard.",
     });
   }
-  if (failure.includes("collections must be") || failure.includes("missing core database ownership") || failure.includes("missing claw db") || failure.includes("missing claw collections")) {
+  if (failure.includes("collections must be") || failure.includes("missing core database stewardship") || failure.includes("missing claw db") || failure.includes("missing claw collections")) {
     return createDiagnostic("domain_surface_collection_contract_invalid", failure, {
       location: "packages/clawjs-core/src/catalogs.ts",
       suggestion: "Keep collection surfaces hidden until approved and prove database plus CLI CRUD/schema routes.",
@@ -122,7 +122,7 @@ function domainSurfaceDiagnostic(failure) {
   }
   return createDiagnostic("domain_surface_registry_failed", failure, {
     location: "packages/clawjs-core/src/catalogs.ts",
-    suggestion: "Inspect the domain surface registry invariant and restore the missing ownership evidence.",
+    suggestion: "Inspect the domain surface registry invariant and restore the missing stewardship evidence.",
     safeNextStep: "Fix the reported registry issue, then rerun node --import tsx scripts/domain-surface-registry-guard.mjs.",
   });
 }
@@ -201,7 +201,7 @@ for (const entry of clawDomainSurfaceRegistry.entries) {
 
   if (entry.kind === "collection") {
     if (entry.status !== "registered_hidden") failures.push(`${entry.id}: collections must be registered_hidden until exposed through an approved command`);
-    if (!entry.storageIds?.includes("claw.database.core")) failures.push(`${entry.id}: missing core database ownership`);
+    if (!entry.storageIds?.includes("claw.database.core")) failures.push(`${entry.id}: missing core database stewardship`);
     if (!entry.cliCommands?.some((command) => command.startsWith(`claw db ${entry.name} `))) failures.push(`${entry.id}: missing claw db CRUD route`);
     if (!entry.cliCommands?.some((command) => command.startsWith(`claw collections ${entry.name} `))) failures.push(`${entry.id}: missing claw collections schema route`);
   }

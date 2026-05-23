@@ -211,7 +211,7 @@ function validateSourceReview(review) {
 }
 
 function validateRowShape(kind, row, fail) {
-  if (!isNonEmptyString(row.owner)) fail(`${kind} ${row.id} is missing owner`);
+  if (!isNonEmptyString(row.steward)) fail(`${kind} ${row.id} is missing steward`);
   if (!isNonEmptyStringArray(row.inputContracts)) fail(`${kind} ${row.id} is missing inputContracts`);
   if (!isNonEmptyStringArray(row.outputContracts)) fail(`${kind} ${row.id} is missing outputContracts`);
   if (!row.edges || typeof row.edges !== "object") fail(`${kind} ${row.id} is missing edges`);
