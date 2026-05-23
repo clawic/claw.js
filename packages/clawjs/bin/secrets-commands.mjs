@@ -1,4 +1,5 @@
 import { clawApiPath } from "@clawjs/core";
+import { createLauncherDiagnostic, printLauncherFailure } from "./launcher-diagnostics.mjs";
 // Secrets subcommands for the Clawix CLI. Implemented as a small HTTP
 // client against the local Secrets server (default 127.0.0.1:24103).
 
@@ -47,14 +48,99 @@ function fmt(value) {
   return JSON.stringify(value, null, 2);
 }
 
-function signedHostOnly(command) {
-  console.error(`secrets ${command} requires the signed host UI; the public CLI must not handle master passwords or recovery phrases.`);
+function printSecretsFailure(diagnostic, stream = process.stderr) {
+  printLauncherFailure("claw secrets failed:", [diagnostic], stream);
+}
+
+function usageFailure(code, message, options = {}) {
+  printSecretsFailure(createLauncherDiagnostic(code, message, {
+    status: "USAGE",
+    location: options.location ?? "claw secrets",
+    suggestion: options.suggestion ?? "Pass the required argument or flag shown in the command help.",
+    safeNextStep: options.safeNextStep ?? "Rerun the same claw secrets command with the missing input supplied.",
+  }));
   return 1;
 }
 
-function sensitiveHostOnly(command) {
-  console.error(`secrets ${command} requires signed host UI reauthentication; the public CLI must not perform this sensitive operation.`);
+function commandFailure(code, message, options = {}) {
+  printSecretsFailure(createLauncherDiagnostic(code, message, {
+    location: options.location ?? "claw secrets",
+    suggestion: options.suggestion ?? "Inspect the command input before retrying.",
+    safeNextStep: options.safeNextStep ?? "Fix the reported input, then rerun the same claw secrets command.",
+  }));
   return 1;
+}
+
+function diagnosticFromSecretsError(error) {
+  if (error?.code === "CLAW_SECRETS_PLACEHOLDER_FIELD_MISSING") {
+    return createLauncherDiagnostic("claw_secrets_placeholder_field_missing", "Secret placeholder must include an explicit field.", {
+      location: "secrets broker-http placeholder",
+      suggestion: "Use placeholders shaped like {{secretName.fieldName}}.",
+      safeNextStep: "Fix the placeholder, then rerun claw secrets broker-http.",
+    });
+  }
+  if (error instanceof SyntaxError) {
+    return createLauncherDiagnostic("claw_secrets_json_invalid", "JSON input could not be parsed.", {
+      location: "claw secrets JSON input",
+      suggestion: "Validate the JSON file or --scope value before retrying.",
+      safeNextStep: "Fix the JSON input, then rerun the same claw secrets command.",
+    });
+  }
+  return createLauncherDiagnostic("claw_secrets_command_failed", "Secrets command failed before completing.", {
+    location: "claw secrets",
+    suggestion: "Inspect the command inputs and local Secrets server state.",
+    safeNextStep: "Fix the reported command input or server state, then rerun the same claw secrets command.",
+  });
+}
+
+function runSecretsCommandSelfTest() {
+  const chunks = [];
+  printSecretsFailure(createLauncherDiagnostic("claw_secrets_name_missing", "token: sk-test-secret-123456", {
+    status: "USAGE",
+    location: "/Users/example/private/secrets",
+    suggestion: "Pass the required argument.",
+    safeNextStep: "Rerun claw secrets describe <name>.",
+  }), { write: (chunk) => chunks.push(chunk) });
+  printSecretsFailure(diagnosticFromSecretsError(Object.assign(
+    new Error("Secret placeholder {{secret}} must include an explicit field"),
+    { code: "CLAW_SECRETS_PLACEHOLDER_FIELD_MISSING" },
+  )), { write: (chunk) => chunks.push(chunk) });
+  printSecretsFailure(diagnosticFromSecretsError(new SyntaxError("Unexpected token in /Users/example/private/sk-test-secret-123456/draft.json")), { write: (chunk) => chunks.push(chunk) });
+  const output = chunks.join("");
+  for (const code of [
+    "claw_secrets_name_missing",
+    "claw_secrets_placeholder_field_missing",
+    "claw_secrets_json_invalid",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion:") || !output.includes("next:")) throw new Error("self-test missing guidance");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+  console.log("secrets command diagnostics self-test passed");
+}
+
+function signedHostOnly(command) {
+  return commandFailure(
+    "claw_secrets_signed_host_required",
+    `secrets ${command} requires the signed host UI.`,
+    {
+      location: `secrets ${command}`,
+      suggestion: "Use the signed host UI for master-password and recovery-phrase operations.",
+      safeNextStep: "Open the Secrets UI in the signed host app and retry the operation there.",
+    },
+  );
+}
+
+function sensitiveHostOnly(command) {
+  return commandFailure(
+    "claw_secrets_reauthentication_required",
+    `secrets ${command} requires signed host UI reauthentication.`,
+    {
+      location: `secrets ${command}`,
+      suggestion: "Use the signed host UI for operations that require local reauthentication.",
+      safeNextStep: "Reauthenticate in the signed host app and retry the operation there.",
+    },
+  );
 }
 
 function inferBrokerDeclaredFields(input) {
@@ -66,7 +152,9 @@ function inferBrokerDeclaredFields(input) {
       const ref = match[1];
       const fieldSeparator = ref.lastIndexOf(".");
       if (fieldSeparator <= 0 || fieldSeparator === ref.length - 1) {
-        throw new Error(`Secret placeholder ${match[0]} must include an explicit field`);
+        throw Object.assign(new Error("Secret placeholder must include an explicit field."), {
+          code: "CLAW_SECRETS_PLACEHOLDER_FIELD_MISSING",
+        });
       }
       const secretName = ref.slice(0, fieldSeparator);
       const fieldName = ref.slice(fieldSeparator + 1);
@@ -176,7 +264,10 @@ async function foldersList() {
 
 async function foldersCreate(args) {
   const name = args.flags.name;
-  if (!name) { console.error("--name required"); return 1; }
+  if (!name) return usageFailure("claw_secrets_folder_name_missing", "Missing --name for folder creation.", {
+    location: "secrets folders create --name",
+    safeNextStep: "Rerun claw secrets folders create --name <name>.",
+  });
   const body = {
     name: String(name),
     ...(args.flags.icon ? { icon: String(args.flags.icon) } : {}),
@@ -190,7 +281,10 @@ async function foldersCreate(args) {
 async function foldersRename(args) {
   const id = args._[2];
   const name = args.flags.name;
-  if (!id || !name) { console.error("id and --name required"); return 1; }
+  if (!id || !name) return usageFailure("claw_secrets_folder_rename_input_missing", "Missing folder id or --name for folder rename.", {
+    location: "secrets folders rename <id> --name",
+    safeNextStep: "Rerun claw secrets folders rename <id> --name <name>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`), {
     method: "PATCH",
     body: JSON.stringify({ name: String(name) }),
@@ -201,7 +295,10 @@ async function foldersRename(args) {
 
 async function foldersTrash(args) {
   const id = args._[2];
-  if (!id) { console.error("id required"); return 1; }
+  if (!id) return usageFailure("claw_secrets_folder_id_missing", "Missing folder id.", {
+    location: "secrets folders trash <id>",
+    safeNextStep: "Rerun claw secrets folders trash <id>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/folders/${encodeURIComponent(id)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -209,7 +306,10 @@ async function foldersTrash(args) {
 
 async function secretsDescribe(args) {
   const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
+  if (!name) return usageFailure("claw_secrets_name_missing", "Missing secret name.", {
+    location: "secrets describe <name>",
+    safeNextStep: "Rerun claw secrets describe <name>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}`));
   if (!res.ok) { console.error(fmt(res.body)); return 1; }
   console.log(fmt(res.body.secret));
@@ -218,7 +318,11 @@ async function secretsDescribe(args) {
 
 async function secretsCreate(args) {
   const file = args.flags.file;
-  if (!file) { console.error("--file <draft.json> required"); return 1; }
+  if (!file) return usageFailure("claw_secrets_create_file_missing", "Missing --file <draft.json>.", {
+    location: "secrets create --file",
+    suggestion: "Pass a JSON draft file; do not paste secret values into the command line.",
+    safeNextStep: "Rerun claw secrets create --file <draft.json>.",
+  });
   const fs = await import("node:fs");
   const draft = JSON.parse(fs.readFileSync(String(file), "utf8"));
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets`), {
@@ -230,7 +334,10 @@ async function secretsCreate(args) {
 
 async function secretsArchive(args) {
   const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
+  if (!name) return usageFailure("claw_secrets_name_missing", "Missing secret name.", {
+    location: "secrets archive <name>",
+    safeNextStep: "Rerun claw secrets archive <name>.",
+  });
   const archived = args.flags.off ? false : true;
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/archive`), {
     method: "POST", body: JSON.stringify({ archived }),
@@ -241,7 +348,10 @@ async function secretsArchive(args) {
 
 async function secretsCompromise(args) {
   const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
+  if (!name) return usageFailure("claw_secrets_name_missing", "Missing secret name.", {
+    location: "secrets compromise <name>",
+    safeNextStep: "Rerun claw secrets compromise <name>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/compromise`), {
     method: "POST", body: JSON.stringify({ compromised: true, reason: args.flags.reason ?? null }),
   });
@@ -251,7 +361,10 @@ async function secretsCompromise(args) {
 
 async function secretsTrash(args) {
   const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
+  if (!name) return usageFailure("claw_secrets_name_missing", "Missing secret name.", {
+    location: "secrets trash <name>",
+    safeNextStep: "Rerun claw secrets trash <name>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -259,7 +372,10 @@ async function secretsTrash(args) {
 
 async function secretsRestore(args) {
   const name = args._[1];
-  if (!name) { console.error("name required"); return 1; }
+  if (!name) return usageFailure("claw_secrets_name_missing", "Missing secret name.", {
+    location: "secrets restore <name>",
+    safeNextStep: "Rerun claw secrets restore <name>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/secrets/${encodeURIComponent(name)}/restore`), { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -268,9 +384,16 @@ async function secretsRestore(args) {
 async function secretsBrokerHttp(args) {
   const method = args.flags.method;
   const url = args.flags.url;
-  if (!method || !url) { console.error("--method and --url required"); return 1; }
+  if (!method || !url) return usageFailure("claw_secrets_broker_http_target_missing", "Missing --method or --url.", {
+    location: "secrets broker-http --method --url",
+    suggestion: "Pass the HTTP method and target URL without embedding secret values in the URL.",
+    safeNextStep: "Rerun claw secrets broker-http --method <method> --url <url> --risk-tier <tier>.",
+  });
   const riskTier = args.flags["risk-tier"] ?? args.flags.risk;
-  if (!riskTier) { console.error("--risk-tier required"); return 1; }
+  if (!riskTier) return usageFailure("claw_secrets_broker_http_risk_missing", "Missing --risk-tier.", {
+    location: "secrets broker-http --risk-tier",
+    safeNextStep: "Rerun claw secrets broker-http with --risk-tier <tier>.",
+  });
   const fs = await import("node:fs");
   const headers = {};
   const headerFlags = args.flags.header === undefined
@@ -278,7 +401,11 @@ async function secretsBrokerHttp(args) {
     : Array.isArray(args.flags.header) ? args.flags.header : [args.flags.header];
   for (const entry of headerFlags) {
     const idx = String(entry).indexOf(":");
-    if (idx <= 0) { console.error("--header must be key:value"); return 1; }
+    if (idx <= 0) return usageFailure("claw_secrets_broker_http_header_invalid", "--header must be key:value.", {
+      location: "secrets broker-http --header",
+      suggestion: "Use --header Name:Value and keep secret values in broker placeholders, not raw command arguments.",
+      safeNextStep: "Rerun claw secrets broker-http with a valid --header key:value pair.",
+    });
     headers[String(entry).slice(0, idx).trim()] = String(entry).slice(idx + 1).trim();
   }
   const body = args.flags.body ? fs.readFileSync(String(args.flags.body), "utf8") : undefined;
@@ -318,6 +445,12 @@ async function secretsPlugins() {
 }
 
 async function grantsIssue(args) {
+  if (!args.flags.secret || !args.flags.agent || !args.flags.capability) {
+    return usageFailure("claw_secrets_grant_issue_input_missing", "Missing --secret, --agent, or --capability.", {
+      location: "secrets grants issue",
+      safeNextStep: "Rerun claw secrets grants issue --secret <name> --agent <id> --capability <kind>.",
+    });
+  }
   const body = {
     secretName: args.flags.secret,
     agent: args.flags.agent,
@@ -339,13 +472,22 @@ async function grantsList() {
 
 async function grantsRevoke(args) {
   const id = args._[2];
-  if (!id) { console.error("id required"); return 1; }
+  if (!id) return usageFailure("claw_secrets_grant_id_missing", "Missing grant id.", {
+    location: "secrets grants revoke <id>",
+    safeNextStep: "Rerun claw secrets grants revoke <id>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/grants/${encodeURIComponent(id)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
 }
 
 async function leasesIssue(args) {
+  if (!args.flags.secret || !args.flags.mode) {
+    return usageFailure("claw_secrets_lease_issue_input_missing", "Missing --secret or --mode.", {
+      location: "secrets leases issue",
+      safeNextStep: "Rerun claw secrets leases issue --secret <name> --mode process|browser.",
+    });
+  }
   const body = {
     secretName: args.flags.secret,
     mode: args.flags.mode,
@@ -364,7 +506,10 @@ async function leasesList() {
 
 async function leasesRevoke(args) {
   const id = args._[2];
-  if (!id) { console.error("id required"); return 1; }
+  if (!id) return usageFailure("claw_secrets_lease_id_missing", "Missing lease id.", {
+    location: "secrets leases revoke <id>",
+    safeNextStep: "Rerun claw secrets leases revoke <id>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/leases/${encodeURIComponent(id)}/revoke`), { method: "POST" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -377,6 +522,12 @@ async function policiesList() {
 }
 
 async function policiesCreate(args) {
+  if (!args.flags["subject-type"] || !args.flags["subject-id"] || !args.flags.secret || !args.flags.capability || !args.flags.effect) {
+    return usageFailure("claw_secrets_policy_create_input_missing", "Missing policy subject, secret, capability, or effect.", {
+      location: "secrets policies create",
+      safeNextStep: "Rerun claw secrets policies create --subject-type <t> --subject-id <id> --secret <name> --capability <c> --effect allow|deny.",
+    });
+  }
   const body = {
     subjectType: args.flags["subject-type"],
     subjectId: args.flags["subject-id"],
@@ -391,7 +542,10 @@ async function policiesCreate(args) {
 
 async function policiesDelete(args) {
   const id = args._[2];
-  if (!id) { console.error("id required"); return 1; }
+  if (!id) return usageFailure("claw_secrets_policy_id_missing", "Missing policy id.", {
+    location: "secrets policies delete <id>",
+    safeNextStep: "Rerun claw secrets policies delete <id>.",
+  });
   const res = await fetchJson(clawApiPath(`tenants/${DEFAULT_TENANT}/policies/${encodeURIComponent(id)}`), { method: "DELETE" });
   console.log(fmt(res.body));
   return res.ok ? 0 : 1;
@@ -494,9 +648,13 @@ export async function runSecretsCli(rawArgs) {
         return 1;
     }
   } catch (err) {
-    console.error("[claw secrets]", err?.message ?? err);
+    printSecretsFailure(diagnosticFromSecretsError(err));
     return 1;
   }
 }
 
 export const CLAW_SECRETS_GROUPS = new Set(["secrets"]);
+
+if (import.meta.url === `file://${process.argv[1]}` && process.argv.includes("--self-test")) {
+  runSecretsCommandSelfTest();
+}
