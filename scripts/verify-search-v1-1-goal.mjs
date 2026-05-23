@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const CLI_SEARCH_SMOKE_TIMEOUT_MS = 60_000;
+const CLI_SEARCH_SMOKE_MAX_BUFFER = 32 * 1024 * 1024;
 const {
   SearchStore,
   createFrameworkSearchSourceManifest,
@@ -17,6 +18,7 @@ const requiredSources = [
   "commands",
   "sessions.chats",
   "sessions.events",
+  "sessions.turns",
   "database.records",
   "work.items",
   "documents.blocks",
@@ -90,6 +92,7 @@ const requiredEntrypoints = {
 const requiredResourceHandlers = {
   "sessions.chats": "ensureSessionChatResourceIndexed",
   "sessions.events": "ensureSessionEventsResourceIndexed",
+  "sessions.turns": "ensureSessionTurnsResourceIndexed",
   "database.records": "ensureDatabaseRecordResourceIndexed",
   "work.items": "ensureWorkItemResourceIndexed",
   "documents.blocks": "ensureDocumentBlocksResourceIndexed",
@@ -129,6 +132,7 @@ const requiredResourceHandlers = {
 const requiredEventSchedulers = {
   "sessions.chats": "scheduleSessionChatSearchEvent",
   "sessions.events": "scheduleSessionEventsSearchEvent",
+  "sessions.turns": "scheduleSessionTurnsSearchEvent",
   "database.records": "scheduleDatabaseRecordSearchEvent",
   "work.items": "scheduleWorkItemsSearchEvent",
   "documents.blocks": "scheduleDocumentBlocksSearchEvent",
@@ -325,6 +329,7 @@ function readCliSearchSources(sourceSet) {
         CLAW_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")),
       },
       timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
+      maxBuffer: CLI_SEARCH_SMOKE_MAX_BUFFER,
     });
     const parsed = JSON.parse(output);
     if (parsed?.ok !== true || !Array.isArray(parsed?.data?.sources)) {
@@ -353,6 +358,7 @@ function readCliSearchEntrypoints() {
         CLAW_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")),
       },
       timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
+      maxBuffer: CLI_SEARCH_SMOKE_MAX_BUFFER,
     });
     const parsed = JSON.parse(output);
     if (parsed?.ok !== true || !Array.isArray(parsed?.data?.entrypoints)) {
@@ -389,6 +395,7 @@ function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.t
         CLAW_DATA_DIR: dataRoot,
       },
       timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
+      maxBuffer: CLI_SEARCH_SMOKE_MAX_BUFFER,
     });
   } catch (error) {
     const stdout = error && typeof error === "object" && "stdout" in error ? error.stdout : "";
@@ -430,6 +437,7 @@ function readCliSearchErrorJson(args, label, dataRoot) {
         CLAW_DATA_DIR: dataRoot,
       },
       timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
+      maxBuffer: CLI_SEARCH_SMOKE_MAX_BUFFER,
     });
     failures.push(`${label}: expected a non-zero external-pending error`);
     return {};
@@ -1190,6 +1198,7 @@ for (const snippet of [
   "sessions index enqueues sessions.chats search refresh jobs",
   "sessions-index-emitter-needle should be deleted from Search",
   "sessions.chats event jobs refresh and tombstone individual chats",
+  "sessions.turns service jobs index turn summaries from sessions.sqlite",
   "search changes schedule enqueues typed code.symbols refresh jobs",
   "search changes scan schedules upserts and deletes from a root snapshot",
   "local.files event jobs refresh and tombstone individual files",
@@ -1261,13 +1270,19 @@ requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleDocsPagesSea
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"docs.pages\"");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSessionChatSearchEvent");
 requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"sessions.chats\"");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "scheduleSessionTurnsSearchEvent");
+requireSnippet("packages/clawjs/src/cli-search-events.ts", "source: \"sessions.turns\"");
 requireV1DataSnippet("scheduleSessionChatSearchEvent");
+requireV1DataSnippet("scheduleSessionTurnsSearchEvent");
 requireV1DataSnippet("indexSessionRoots(store.sqlite, roots");
 requireV1DataSnippet("operation: archived ? \"delete\" : \"upsert\"");
 requireSnippet("packages/clawjs/src/v1-data-core.ts", "onIndexed?: (sessionId: string, archived: boolean)");
 requireCliSearchSnippet("ensureSessionChatResourceIndexed");
+requireCliSearchSnippet("ensureSessionTurnsResourceIndexed");
 requireCliSearchSnippet("scheduleSessionChatSearchEvent({");
+requireCliSearchSnippet("scheduleSessionTurnsSearchEvent({");
 requireCliSearchSnippet("--source sessions.chats --session-id <session-id>");
+requireCliSearchSnippet("--source sessions.turns --session-id <session-id>");
 requireCliSearchSnippet("scheduleDocsPagesSearchEvent({");
 requireCliSearchSnippet("--source docs.pages --workspace <workspace-root> --path <file>");
 requireCliSearchSnippet("scheduleSheetsWorkbookSearchEvent({");
@@ -1294,6 +1309,7 @@ requireSnippet("packages/clawjs/src/cli-search-docs-pages-test-utils.ts", "\"sea
 requireSnippet("packages/clawjs/src/cli-search-manifest-sources.test.ts", "\"search\", \"changes\", \"schedule\", \"upsert\", \"--source\", \"sheets.workbooks\"");
 requireSnippet("docs/search.md", "`claw search changes schedule` is the typed producer-facing wrapper");
 requireSnippet("docs/search.md", "schedule upsert|delete --source sessions.chats --session-id <id>");
+requireSnippet("docs/search.md", "schedule upsert|delete --source sessions.turns --session-id <id>");
 requireSnippet("docs/search.md", "schedule upsert|delete\n--source docs.pages --workspace <workspace-root> --path <docs-file>");
 requireSnippet("docs/search.md", "schedule upsert|delete\n--source sheets.workbooks --workbook-id <id> --workspace <workspace-root>");
 requireSnippet("docs/search.md", "`claw search changes scan` is a bounded local fallback producer");

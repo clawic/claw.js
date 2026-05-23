@@ -199,6 +199,7 @@ claw search jobs complete <job-id> --json
 claw search jobs fail <job-id> --error "temporary extractor throttle" --retry --json
 claw search jobs schedule upsert --source documents.blocks --resource-id doc_123 --json
 claw search changes schedule upsert --source sessions.chats --session-id <session-id> --json
+claw search changes schedule upsert --source sessions.turns --session-id <session-id> --json
 claw search changes schedule upsert --source docs.pages --workspace . --path docs/guide.md --json
 claw search changes schedule upsert --source sheets.workbooks --workbook-id forecast-q2 --workspace . --json
 claw search changes schedule upsert --source code.symbols --root ./repo --path ./repo/src/app.ts --json
@@ -771,12 +772,13 @@ signed host shortcut broker validates it.
   `slides.decks`, `sheets.workbooks`, `generations.artifacts`, `skills.registry`, `providers.routing`,
   `snippets.library`, `agents.catalog`, `marketplace.choices`, `content.items`,
   `business.records`, `social.posts`, `iot.config`, and the first bounded
-  `code.symbols` adapter with per-file event refresh. `sessions.chats` supports
-  resource-scoped refresh jobs keyed by session id, `claw search changes
-  schedule upsert|delete --source sessions.chats --session-id <id>` exposes
-  that producer contract, and `claw sessions index` enqueues hot Search
-  refresh/delete jobs for indexed local session artifacts and archived session
-  artifacts. `docs.pages` indexes
+  `code.symbols` adapter with per-file event refresh. `sessions.chats`,
+  `sessions.events`, and `sessions.turns` support resource-scoped refresh jobs
+  keyed by session id. `claw search changes schedule upsert|delete --source sessions.chats --session-id <id>`
+  and `claw search changes schedule upsert|delete --source sessions.turns --session-id <id>` expose that producer
+  contract, and `claw sessions index` enqueues hot Search refresh/delete jobs
+  for indexed local session artifacts and archived session artifacts.
+  `docs.pages` indexes
   public root docs, docs, and ADR sections with resource-scoped refresh jobs and
   best-effort event scheduling for changed docs files. `surfaces.routes` indexes
   route graph contracts with resource-scoped refresh jobs keyed by route id, and
