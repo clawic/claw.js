@@ -3,68 +3,117 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
-import {
-  buildConnectorOperationRuntimePlan,
-  buildConnectorRuntimeAudit,
-  buildConnectorRuntimeFetchRequest,
-  buildOpenApiConnectorCatalog,
-  ConnectorRuntimeCoverageError,
-  createOpenApiConnectorRuntimeImplementations,
-  findConnectorRuntimeImplementation,
-  verifyConnectorRuntimeCoverage,
-  verifyConnectorRuntimeOfflineExecutions,
-} from "../packages/clawjs-integrations/dist/index.js";
+let buildConnectorOperationRuntimePlan;
+let buildConnectorRuntimeAudit;
+let buildConnectorRuntimeFetchRequest;
+let buildOpenApiConnectorCatalog;
+let ConnectorRuntimeCoverageError;
+let createOpenApiConnectorRuntimeImplementations;
+let findConnectorRuntimeImplementation;
+let verifyConnectorRuntimeCoverage;
+let verifyConnectorRuntimeOfflineExecutions;
 
+const SCRIPT_PATH = "scripts/verify-openapi-runtime-coverage.mjs";
+const VALID_OPTIONS = new Set([
+  "spec",
+  "app-id",
+  "app-name",
+  "description",
+  "auth-field-name",
+  "auth-placement",
+  "auth-header-name",
+  "auth-prefix",
+  "base-url",
+  "executor-id",
+  "evidence",
+  "fixtures",
+  "generate-fixtures",
+  "catalog-out",
+  "report",
+  "execute-offline",
+  "self-test",
+]);
 const args = parseArgs(process.argv.slice(2));
 const rootDir = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
-const specPath = path.resolve(args.spec ?? "");
-const appId = stringArg(args["app-id"]);
-const evidence = stringListArg(args.evidence);
-const fixtureInput = readFixtures(args.fixtures);
-const generateFixturesDir = stringArg(args["generate-fixtures"]);
-const executeOffline = args["execute-offline"] === true || args["execute-offline"] === "true";
 
-if (!specPath || !fs.existsSync(specPath) || !appId || evidence.length === 0) {
-  console.error("Usage: node scripts/verify-openapi-runtime-coverage.mjs --spec <openapi.json|yaml> --app-id <id> --evidence <path[,path]> [--fixtures <fixtures.json|yaml>] [--generate-fixtures <dir>] [--catalog-out <catalog.json>] [--report <report.json>] [--execute-offline]");
+if (args["self-test"] === true) {
+  runSelfTest();
+  process.exit(0);
+}
+
+const usageDiagnostics = validateArgs(args);
+if (usageDiagnostics.length > 0) {
+  printActionableFailureReport({
+    title: "openapi runtime coverage usage failed:",
+    diagnostics: usageDiagnostics,
+  });
+  process.exit(64);
+}
+
+let activeCatalog;
+try {
+  await loadRuntimeOrThrow();
+  activeCatalog = await runOpenApiCoverage();
+} catch (error) {
+  if (isRuntimeCoverageError(error)) {
+    writeAuditIfRequested({ catalog: activeCatalog, report: error.report });
+    printActionableFailureReport({
+      title: "openapi runtime coverage failed:",
+      diagnostics: error.report.errors.map(runtimeCoverageDiagnostic),
+    });
+    console.error(summaryLine(error.report.summary));
+    console.error(`openapi runtime coverage failed with ${error.report.errors.length} error(s)`);
+    process.exit(1);
+  }
+  printActionableFailureReport({
+    title: "openapi runtime coverage failed:",
+    diagnostics: [runtimeVerifierDiagnostic(error)],
+  });
   process.exit(1);
 }
 
-const spec = readStructuredFile(specPath);
-let options = {
-  appId,
-  ...optionalString("appName", stringArg(args["app-name"])),
-  ...optionalString("description", stringArg(args.description)),
-  ...optionalString("authFieldName", stringArg(args["auth-field-name"])),
-  ...optionalString("authPlacement", stringArg(args["auth-placement"])),
-  ...optionalString("authHeaderName", stringArg(args["auth-header-name"])),
-  ...optionalString("authPrefix", stringArg(args["auth-prefix"])),
-  ...optionalString("baseUrl", stringArg(args["base-url"])),
-  ...optionalString("executorId", stringArg(args["executor-id"])),
-  evidence,
-  fixtures: fixtureInput,
-};
-let catalog = buildOpenApiConnectorCatalog(spec, options);
-let registry = createOpenApiConnectorRuntimeImplementations(spec, options);
-
-if (generateFixturesDir) {
-  const generatedFixtures = generateOpenApiRuntimeFixtures({
-    catalog,
-    registry,
-    outputDir: generateFixturesDir,
-  });
-  options = {
-    ...options,
-    fixtures: mergeFixtures(fixtureInput, generatedFixtures),
+async function runOpenApiCoverage() {
+  const specPath = path.resolve(args.spec);
+  const appId = stringArg(args["app-id"]);
+  const evidence = stringListArg(args.evidence);
+  const fixtureInput = readFixtures(args.fixtures);
+  const generateFixturesDir = stringArg(args["generate-fixtures"]);
+  const executeOffline = args["execute-offline"] === true || args["execute-offline"] === "true";
+  const spec = readStructuredFile(specPath);
+  let options = {
+    appId,
+    ...optionalString("appName", stringArg(args["app-name"])),
+    ...optionalString("description", stringArg(args.description)),
+    ...optionalString("authFieldName", stringArg(args["auth-field-name"])),
+    ...optionalString("authPlacement", stringArg(args["auth-placement"])),
+    ...optionalString("authHeaderName", stringArg(args["auth-header-name"])),
+    ...optionalString("authPrefix", stringArg(args["auth-prefix"])),
+    ...optionalString("baseUrl", stringArg(args["base-url"])),
+    ...optionalString("executorId", stringArg(args["executor-id"])),
+    evidence,
+    fixtures: fixtureInput,
   };
-  catalog = buildOpenApiConnectorCatalog(spec, options);
-  registry = createOpenApiConnectorRuntimeImplementations(spec, options);
-  console.error(`generatedFixtures=${generatedFixtures.length}`);
-}
+  let catalog = buildOpenApiConnectorCatalog(spec, options);
+  let registry = createOpenApiConnectorRuntimeImplementations(spec, options);
 
-writeJsonIfRequested(args["catalog-out"], catalog);
+  if (generateFixturesDir) {
+    const generatedFixtures = generateOpenApiRuntimeFixtures({
+      catalog,
+      registry,
+      outputDir: generateFixturesDir,
+    });
+    options = {
+      ...options,
+      fixtures: mergeFixtures(fixtureInput, generatedFixtures),
+    };
+    catalog = buildOpenApiConnectorCatalog(spec, options);
+    registry = createOpenApiConnectorRuntimeImplementations(spec, options);
+    console.error(`generatedFixtures=${generatedFixtures.length}`);
+  }
 
-try {
+  writeJsonIfRequested(args["catalog-out"], catalog);
   const report = verifyConnectorRuntimeCoverage(catalog, { registry, evidenceRoot: rootDir });
   if (executeOffline) {
     const offlineReport = await verifyConnectorRuntimeOfflineExecutions(catalog, {
@@ -77,23 +126,132 @@ try {
   writeAuditIfRequested({ catalog, report });
   console.error(summaryLine(report.summary));
   console.error("openapi runtime coverage passed");
-} catch (error) {
-  if (error instanceof ConnectorRuntimeCoverageError) {
-    writeAuditIfRequested({ catalog, report: error.report });
-    for (const entry of error.report.errors) console.error(`FAIL ${entry}`);
-    console.error(summaryLine(error.report.summary));
-    console.error(`openapi runtime coverage failed with ${error.report.errors.length} error(s)`);
-    process.exit(1);
-  }
-  throw error;
+  return catalog;
 }
 
 function summaryLine(summary) {
   return `operations=${summary.total} implemented=${summary.implemented} unsupported=${summary.unsupported} missing=${summary.missing} offlineValidated=${summary.offlineValidated}`;
 }
 
+async function loadRuntimeOrThrow() {
+  try {
+    ({
+      buildConnectorOperationRuntimePlan,
+      buildConnectorRuntimeAudit,
+      buildConnectorRuntimeFetchRequest,
+      buildOpenApiConnectorCatalog,
+      ConnectorRuntimeCoverageError,
+      createOpenApiConnectorRuntimeImplementations,
+      findConnectorRuntimeImplementation,
+      verifyConnectorRuntimeCoverage,
+      verifyConnectorRuntimeOfflineExecutions,
+    } = await import("../packages/clawjs-integrations/dist/index.js"));
+  } catch (error) {
+    throw Object.assign(new Error("Could not load @clawjs/integrations dist runtime."), {
+      code: "OPENAPI_RUNTIME_DIST_LOAD_FAILED",
+      cause: error,
+    });
+  }
+}
+
+function isRuntimeCoverageError(error) {
+  return typeof ConnectorRuntimeCoverageError === "function" && error instanceof ConnectorRuntimeCoverageError;
+}
+
+function validateArgs(parsed) {
+  const diagnostics = [];
+  for (const message of parsed.__errors ?? []) {
+    diagnostics.push(createDiagnostic("openapi_runtime_coverage_usage_error", message, {
+      status: "USAGE",
+      location: SCRIPT_PATH,
+      suggestion: "Use only supported OpenAPI runtime coverage flags.",
+      safeNextStep: `Run node ${SCRIPT_PATH} --spec <openapi.json|yaml> --app-id <id> --evidence <path[,path]>.`,
+    }));
+  }
+  const specValue = parsed.spec;
+  const specPath = specValue ? path.resolve(specValue) : "";
+  if (!specValue || !fs.existsSync(specPath)) {
+    diagnostics.push(createDiagnostic("openapi_runtime_coverage_spec_missing", "OpenAPI spec does not exist or is not readable.", {
+      status: "USAGE",
+      location: "--spec",
+      suggestion: "Pass a readable OpenAPI JSON or YAML file.",
+      safeNextStep: `Rerun node ${SCRIPT_PATH} --spec <openapi.json|yaml> --app-id <id> --evidence <path[,path]>.`,
+    }));
+  }
+  if (!stringArg(parsed["app-id"])) {
+    diagnostics.push(createDiagnostic("openapi_runtime_coverage_app_id_missing", "Missing --app-id <id>.", {
+      status: "USAGE",
+      location: "--app-id",
+      suggestion: "Pass the stable app id to use when generating connector operation ids.",
+      safeNextStep: `Rerun node ${SCRIPT_PATH} with --app-id <id>.`,
+    }));
+  }
+  if (stringListArg(parsed.evidence).length === 0) {
+    diagnostics.push(createDiagnostic("openapi_runtime_coverage_evidence_missing", "Missing --evidence <path[,path]>.", {
+      status: "USAGE",
+      location: "--evidence",
+      suggestion: "Attach local runtime implementation evidence paths for generated operations.",
+      safeNextStep: `Rerun node ${SCRIPT_PATH} with --evidence <path[,path]>.`,
+    }));
+  }
+  if (typeof parsed.fixtures === "string" && !fs.existsSync(path.resolve(parsed.fixtures))) {
+    diagnostics.push(createDiagnostic("openapi_runtime_coverage_fixtures_missing", "Fixtures file does not exist or is not readable.", {
+      status: "USAGE",
+      location: "--fixtures",
+      suggestion: "Pass an existing JSON/YAML fixtures file or omit --fixtures.",
+      safeNextStep: `Fix --fixtures, then rerun node ${SCRIPT_PATH}.`,
+    }));
+  }
+  return diagnostics;
+}
+
+function runtimeCoverageDiagnostic(error) {
+  if (error.includes("missing runtime implementation")) {
+    return createDiagnostic("openapi_runtime_coverage_missing_implementation", error, {
+      location: "openapi runtime registry",
+      suggestion: "Add generated runtime implementation evidence or adjust the OpenAPI operation mapping.",
+      safeNextStep: `Update runtime evidence, then rerun node ${SCRIPT_PATH}.`,
+    });
+  }
+  if (error.includes("fixture") || error.includes("offline")) {
+    return createDiagnostic("openapi_runtime_coverage_offline_fixture_invalid", error, {
+      location: "openapi runtime fixtures",
+      suggestion: "Regenerate or repair the generated OpenAPI runtime fixtures.",
+      safeNextStep: `Fix fixtures, then rerun node ${SCRIPT_PATH} --execute-offline.`,
+    });
+  }
+  return createDiagnostic("openapi_runtime_coverage_invalid", error, {
+    location: "openapi runtime coverage",
+    suggestion: "Fix the named OpenAPI operation, runtime metadata, or evidence path before trusting coverage.",
+    safeNextStep: `Fix the reported operation, then rerun node ${SCRIPT_PATH}.`,
+  });
+}
+
+function runtimeVerifierDiagnostic(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error?.code === "OPENAPI_RUNTIME_DIST_LOAD_FAILED") {
+    return createDiagnostic("openapi_runtime_coverage_dist_load_failed", "Could not load @clawjs/integrations dist runtime.", {
+      location: "packages/clawjs-integrations/dist/index.js",
+      suggestion: "Rebuild the integrations package before running OpenAPI runtime coverage.",
+      safeNextStep: "Run npm --workspace @clawjs/integrations run build, then rerun node scripts/verify-openapi-runtime-coverage.mjs.",
+    });
+  }
+  if (message.includes("--fixtures must point to a JSON array")) {
+    return createDiagnostic("openapi_runtime_coverage_fixtures_invalid", "--fixtures must point to a JSON array.", {
+      location: "--fixtures",
+      suggestion: "Use an array of fixture descriptors or regenerate fixtures with --generate-fixtures.",
+      safeNextStep: `Fix the fixtures file, then rerun node ${SCRIPT_PATH}.`,
+    });
+  }
+  return createDiagnostic("openapi_runtime_coverage_verifier_failed", `OpenAPI runtime verifier crashed: ${message}`, {
+    location: SCRIPT_PATH,
+    suggestion: "Fix the verifier crash before trusting runtime coverage.",
+    safeNextStep: `Rerun node ${SCRIPT_PATH} after the script-level crash is fixed.`,
+  });
+}
+
 function writeAuditIfRequested({ catalog, report }) {
-  if (typeof args.report !== "string" || !args.report.trim()) return;
+  if (typeof args.report !== "string" || !args.report.trim() || !buildConnectorRuntimeAudit || !catalog) return;
   writeJson(args.report, buildConnectorRuntimeAudit(catalog, report));
 }
 
@@ -341,18 +499,71 @@ function optionalString(key, value) {
   return value ? { [key]: value } : {};
 }
 
+function runSelfTest() {
+  const parsed = parseArgs([
+    "--bad-token",
+    "sk-test-secret-123456",
+    "--spec",
+    "/Users/example/private/openapi.yaml",
+    "--app-id",
+    "",
+  ]);
+  const chunks = [];
+  printActionableFailureReport({
+    title: "openapi runtime coverage failed for /Users/example/private",
+    diagnostics: [
+      ...validateArgs(parsed),
+      runtimeCoverageDiagnostic("missing runtime implementation for demo.action.getUser token sk-test-secret-123456"),
+      runtimeCoverageDiagnostic("offline fixture /Users/example/private/fixture.json is invalid"),
+      runtimeVerifierDiagnostic(Object.assign(new Error("boom"), { code: "OPENAPI_RUNTIME_DIST_LOAD_FAILED" })),
+      runtimeVerifierDiagnostic(new Error("--fixtures must point to a JSON array.")),
+    ],
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  for (const code of [
+    "openapi_runtime_coverage_usage_error",
+    "openapi_runtime_coverage_spec_missing",
+    "openapi_runtime_coverage_app_id_missing",
+    "openapi_runtime_coverage_evidence_missing",
+    "openapi_runtime_coverage_missing_implementation",
+    "openapi_runtime_coverage_offline_fixture_invalid",
+    "openapi_runtime_coverage_dist_load_failed",
+    "openapi_runtime_coverage_fixtures_invalid",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion:") || !output.includes("next:")) throw new Error("self-test missing guidance");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+  console.log("openapi runtime coverage self-test passed");
+}
+
 function parseArgs(argv) {
-  const parsed = {};
+  const parsed = { __errors: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
-    if (!token?.startsWith("--")) continue;
-    const value = argv[index + 1];
-    if (value && !value.startsWith("--")) {
-      parsed[token.slice(2)] = value;
-      index += 1;
-    } else {
-      parsed[token.slice(2)] = true;
+    if (!token?.startsWith("--")) {
+      parsed.__errors.push(`Unexpected positional argument: ${token ?? "<empty>"}`);
+      continue;
     }
+    const key = token.slice(2);
+    if (!VALID_OPTIONS.has(key)) {
+      parsed.__errors.push(`Unknown option: --${key}`);
+      const maybeValue = argv[index + 1];
+      if (maybeValue && !maybeValue.startsWith("--")) index += 1;
+      continue;
+    }
+    if (key === "execute-offline" || key === "self-test") {
+      parsed[key] = true;
+      continue;
+    }
+    const value = argv[index + 1];
+    if (!value || value.startsWith("--")) {
+      parsed.__errors.push(`Missing value for --${key}`);
+      continue;
+    }
+    parsed[key] = value;
+    index += 1;
   }
   return parsed;
 }
