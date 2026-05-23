@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const allowlistPath = "docs/mac-native-usage-allowlist.json";
@@ -67,6 +68,14 @@ function readJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
 
+function addDiagnostic(diagnostics, code, message, options = {}) {
+  diagnostics.push(createDiagnostic(code, message, {
+    location: options.location ?? "scripts/verify-host-permission-contract.mjs",
+    suggestion: options.suggestion ?? "Keep native permission access behind the bridge/host boundary.",
+    safeNextStep: options.safeNextStep ?? "Fix the reported contract or allowlist entry, then rerun node scripts/verify-host-permission-contract.mjs.",
+  }));
+}
+
 function listFiles(relativeDir, output = []) {
   const absoluteDir = path.join(rootDir, relativeDir);
   if (!fs.existsSync(absoluteDir)) return output;
@@ -90,26 +99,79 @@ function shouldScan(relativePath) {
 
 function loadAllowlist(errors = []) {
   const allowlist = readJson(allowlistPath);
-  if (allowlist.version !== 1) errors.push(`${allowlistPath} version must be 1`);
+  if (allowlist.version !== 1) {
+    addDiagnostic(errors, "host_permission_allowlist_invalid", `${allowlistPath} version must be 1`, {
+      location: allowlistPath,
+      suggestion: "Use the current host permission allowlist schema version.",
+    });
+  }
   const allowedByPath = new Map();
   const seen = new Set();
   for (const entry of allowlist.entries ?? []) {
     const label = entry.path ?? "<missing path>";
-    if (!entry.path || typeof entry.path !== "string") errors.push(`${allowlistPath}: entry is missing path`);
-    if (seen.has(entry.path)) errors.push(`${allowlistPath}: duplicate path ${entry.path}`);
+    if (!entry.path || typeof entry.path !== "string") {
+      addDiagnostic(errors, "host_permission_allowlist_entry_invalid", `${allowlistPath}: entry is missing path`, {
+        location: allowlistPath,
+        suggestion: "Give every allowlist entry the exact repo-relative source path it covers.",
+      });
+    }
+    if (seen.has(entry.path)) {
+      addDiagnostic(errors, "host_permission_allowlist_entry_duplicate", `${allowlistPath}: duplicate path ${entry.path}`, {
+        location: allowlistPath,
+        suggestion: "Keep one reviewed allowlist entry per source path.",
+      });
+    }
     seen.add(entry.path);
-    if (entry.path && !fs.existsSync(path.join(rootDir, entry.path))) errors.push(`${allowlistPath}: ${entry.path} does not exist`);
-    if (!entry.owner) errors.push(`${allowlistPath}: ${label} is missing owner`);
-    if (!entry.reason) errors.push(`${allowlistPath}: ${label} is missing reason`);
+    if (entry.path && !fs.existsSync(path.join(rootDir, entry.path))) {
+      addDiagnostic(errors, "host_permission_allowlist_path_missing", `${allowlistPath}: ${entry.path} does not exist`, {
+        location: allowlistPath,
+        suggestion: "Remove stale entries or update them to the moved source path.",
+      });
+    }
+    if (!entry.owner) {
+      addDiagnostic(errors, "host_permission_allowlist_entry_incomplete", `${allowlistPath}: ${label} is missing owner`, {
+        location: allowlistPath,
+        suggestion: "Record the owner responsible for this native permission exception.",
+      });
+    }
+    if (!entry.reason) {
+      addDiagnostic(errors, "host_permission_allowlist_entry_incomplete", `${allowlistPath}: ${label} is missing reason`, {
+        location: allowlistPath,
+        suggestion: "Record why this native permission exception is required.",
+      });
+    }
     if (!Array.isArray(entry.allowedViolations) || entry.allowedViolations.length === 0) {
-      errors.push(`${allowlistPath}: ${label} must declare allowedViolations`);
+      addDiagnostic(errors, "host_permission_allowlist_entry_incomplete", `${allowlistPath}: ${label} must declare allowedViolations`, {
+        location: allowlistPath,
+        suggestion: "Declare the exact native permission patterns this path may contain.",
+      });
     }
     for (const violation of entry.allowedViolations ?? []) {
-      if (!sensitiveNativePermissionNames.has(violation)) errors.push(`${allowlistPath}: ${label} allows unknown violation ${violation}`);
+      if (!sensitiveNativePermissionNames.has(violation)) {
+        addDiagnostic(errors, "host_permission_allowlist_unknown_violation", `${allowlistPath}: ${label} allows unknown violation ${violation}`, {
+          location: allowlistPath,
+          suggestion: "Use one of the known native permission violation names.",
+        });
+      }
     }
-    if (entry.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)) errors.push(`${allowlistPath}: ${label} expiresOn must be YYYY-MM-DD`);
-    if (entry.expiresOn && entry.expiresOn < today) errors.push(`${allowlistPath}: ${label} expired on ${entry.expiresOn}`);
-    if (!Array.isArray(entry.tests) || entry.tests.length === 0) errors.push(`${allowlistPath}: ${label} must declare tests`);
+    if (entry.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)) {
+      addDiagnostic(errors, "host_permission_allowlist_expiry_invalid", `${allowlistPath}: ${label} expiresOn must be YYYY-MM-DD`, {
+        location: allowlistPath,
+        suggestion: "Use an ISO date so expiry comparisons are stable.",
+      });
+    }
+    if (entry.expiresOn && entry.expiresOn < today) {
+      addDiagnostic(errors, "host_permission_allowlist_expired", `${allowlistPath}: ${label} expired on ${entry.expiresOn}`, {
+        location: allowlistPath,
+        suggestion: "Remove the exception or renew it with current review and tests.",
+      });
+    }
+    if (!Array.isArray(entry.tests) || entry.tests.length === 0) {
+      addDiagnostic(errors, "host_permission_allowlist_entry_incomplete", `${allowlistPath}: ${label} must declare tests`, {
+        location: allowlistPath,
+        suggestion: "Record the test command that proves this exception remains bounded.",
+      });
+    }
     allowedByPath.set(entry.path, new Set(entry.allowedViolations ?? []));
   }
   return allowedByPath;
@@ -126,7 +188,11 @@ function nativePermissionViolations(relativePath, text, allowedByPath = new Map(
 
 function requireSnippet(errors, relativePath, snippet) {
   if (!read(relativePath).includes(snippet)) {
-    errors.push(`${relativePath} is missing required snippet: ${snippet}`);
+    addDiagnostic(errors, "host_permission_contract_snippet_missing", `${relativePath} is missing required snippet: ${snippet}`, {
+      location: relativePath,
+      suggestion: "Restore the host-boundary contract hook before changing native permission routing.",
+      safeNextStep: `Restore or intentionally update ${relativePath}, then rerun node scripts/verify-host-permission-contract.mjs.`,
+    });
   }
 }
 
@@ -138,7 +204,11 @@ function validate() {
       if (!shouldScan(relativePath)) continue;
       const violations = nativePermissionViolations(relativePath, read(relativePath), allowedByPath);
       if (violations.length > 0) {
-        errors.push(`${relativePath} directly references host-owned native permission surface: ${violations.join(", ")}`);
+        addDiagnostic(errors, "host_permission_direct_native_reference", `${relativePath} directly references host-owned native permission surface: ${violations.join(", ")}`, {
+          location: relativePath,
+          suggestion: "Route native permission work through the bridge/host permission contract instead of direct app/framework code.",
+          safeNextStep: "Move the direct native call behind the host-owned bridge surface or add a reviewed allowlist entry with tests.",
+        });
       }
     }
   }
@@ -184,6 +254,25 @@ function runSelfTest() {
     nativePermissionViolations("bridge/src/computer-use.ts", 'const method = "tcc.computer.screenshot";', allowlist),
     ["TCC computer method"],
   );
+  const chunks = [];
+  printActionableFailureReport({
+    title: "Host permission contract guard failed for /Users/example/private:",
+    diagnostics: [
+      createDiagnostic("host_permission_direct_native_reference", "packages/clawjs/src/direct.ts directly references host-owned native permission surface: token: sk-test-secret-123456", {
+        location: "/Users/example/private/packages/clawjs/src/direct.ts",
+        suggestion: "Route native permission work through the bridge/host permission contract instead.",
+        safeNextStep: "Move the call behind the bridge or add a reviewed allowlist entry with tests.",
+      }),
+    ],
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assert.match(output, /code: host_permission_direct_native_reference/);
+  assert.match(output, /location: ~\/private\/packages\/clawjs\/src\/direct\.ts/);
+  assert.match(output, /suggestion: Route native permission work through the bridge\/host permission contract/);
+  assert.match(output, /next: Move the call behind the bridge/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
 }
 
 if (process.argv.includes("--self-test")) {
@@ -194,8 +283,10 @@ if (process.argv.includes("--self-test")) {
 
 const errors = validate();
 if (errors.length > 0) {
-  console.error("Host permission contract guard failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printActionableFailureReport({
+    title: "Host permission contract guard failed:",
+    diagnostics: errors,
+  });
   process.exit(1);
 }
 
