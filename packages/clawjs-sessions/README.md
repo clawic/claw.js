@@ -32,6 +32,10 @@ Session SSE publishes `SESSION_EVENTS_STREAMING_POLICY_ID` and includes the
 effective policy id plus queue/frame limits in its metrics and overflow
 diagnostics.
 
+Assistant stream traces keep the final answer in message `contentText` and use
+a capped timeline preview with truncation metadata, avoiding a second full
+copy of large streamed text in event payloads.
+
 ## Realistic fixtures
 
 `seedRealisticSessionsFixture(store, { profile: "large" })` in

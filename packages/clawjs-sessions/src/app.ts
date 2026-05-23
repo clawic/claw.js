@@ -12,6 +12,7 @@ import { AsyncSessionsServiceStore } from "./async-store.ts";
 import { loadSessionsConfig, type SessionsServiceConfig } from "./config.ts";
 import { createLazyResource, createLazyResourceProxy } from "./lazy-resource.ts";
 import { SESSION_JSON_CONTRACT_VERSION } from "./json-contracts.ts";
+import { capSessionRenderText } from "./render-caps.ts";
 import { SessionEventBroadcaster } from "./sse-broadcaster.ts";
 import type {
   AppendMessageInput,
@@ -39,6 +40,8 @@ import type {
 export interface BuildSessionsAppOptions {
   config?: Partial<SessionsServiceConfig>;
 }
+
+export const SESSION_ASSISTANT_STREAM_TRACE_MAX_DELTA_TEXT_CHARS = 4096;
 
 function parseBearer(request: FastifyRequest): string | null {
   const header = request.headers.authorization;
@@ -100,14 +103,18 @@ function messageUpdatedPayload(
   };
 }
 
-function buildCompactAssistantStreamTrace(text: string, coalesceMs = 16): unknown {
+export function buildCompactAssistantStreamTrace(text: string, coalesceMs = 16): unknown {
+  const capped = capSessionRenderText(text, SESSION_ASSISTANT_STREAM_TRACE_MAX_DELTA_TEXT_CHARS);
   return {
     kind: "assistant_stream_trace",
     schemaVersion: 1,
     coalesceMs,
     finalLength: text.length,
+    previewLength: capped.text.length,
+    truncated: capped.truncated,
+    omittedChars: capped.omittedChars,
     deltas: text
-      ? [{ offset: 0, length: text.length, text, at: Date.now() }]
+      ? [{ offset: 0, length: capped.text.length, text: capped.text, at: Date.now() }]
       : [],
   };
 }

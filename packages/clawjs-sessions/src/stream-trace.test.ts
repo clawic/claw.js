@@ -4,6 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
+import {
+  buildCompactAssistantStreamTrace,
+  SESSION_ASSISTANT_STREAM_TRACE_MAX_DELTA_TEXT_CHARS,
+} from "./app.ts";
+import { SESSION_RENDER_TRUNCATION_MARKER } from "./render-caps.ts";
 import { SessionsServiceStore } from "./store.ts";
 
 test("sessions store keeps final text searchable while preserving compact stream trace metadata", () => {
@@ -50,4 +55,24 @@ test("sessions store keeps final text searchable while preserving compact stream
     store.close();
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
+});
+
+test("compact assistant stream traces cap duplicated delta text", () => {
+  const text = `${"stream chunk ".repeat(1000)}final-tail`;
+
+  const trace = buildCompactAssistantStreamTrace(text) as {
+    finalLength: number;
+    previewLength: number;
+    truncated: boolean;
+    omittedChars: number;
+    deltas: Array<{ length: number; text: string }>;
+  };
+
+  assert.equal(trace.finalLength, text.length);
+  assert.equal(trace.truncated, true);
+  assert.ok(trace.omittedChars > 0);
+  assert.ok(trace.previewLength <= SESSION_ASSISTANT_STREAM_TRACE_MAX_DELTA_TEXT_CHARS);
+  assert.ok(trace.deltas[0]?.text.includes(SESSION_RENDER_TRUNCATION_MARKER));
+  assert.equal(trace.deltas[0]?.text.includes("final-tail"), false);
+  assert.equal(trace.deltas[0]?.length, trace.deltas[0]?.text.length);
 });

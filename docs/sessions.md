@@ -79,6 +79,11 @@ to the default ClawJS streaming policy. `/v1/storage/metrics` includes the
 effective policy id and queue/frame limits so slow-client closures and overflow
 diagnostics can be tied back to the governing contract.
 
+Assistant stream traces keep final searchable text in `contentText` and store
+only a capped duplicate preview in timeline metadata. `finalLength`,
+`previewLength`, `truncated`, and `omittedChars` make large fixture or fallback
+turns auditable without replaying a full transcript through the timeline.
+
 ## Which Surface To Use
 
 | Need | Use | Why |
