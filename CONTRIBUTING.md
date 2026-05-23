@@ -41,7 +41,10 @@ npm run ci
 - Add a `Signed-off-by: Name <email>` line to commits under the lightweight
   [DCO](DCO). This certifies contribution provenance without adding a broad
   Contributor License Agreement.
-- Keep commit messages in `type(scope): description` form.
+- Keep commit messages in `type(scope): description` form, written in English.
+- Include a commit body for every non-trivial commit. Explain why the change
+  exists, what behavior or contract changed, and which validation was run or is
+  still pending.
 - Target `main` for releasable work, `next` for queued integration work, and `release/*` only for stabilization or hotfixes.
 - Keep branch names short and scoped, such as `feat/runtime-status` or `docs/release-policy`.
 - Run the relevant local validation before merge. GitHub does not run automatic CI or release checks for this repo.

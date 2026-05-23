@@ -121,6 +121,8 @@ credentials, release artifact directories, local launchers, private automation,
 private Q&A indexes, personal references, logs, caches, or screenshots. Run `npm run privacy:check`
 and `npm run test:docs` before publication or broad review.
 
-Use Conventional Commits, keep commits scoped by intention, do not sweep
+Use Conventional Commits in English only, keep commits scoped by intention, and
+include a body for every non-trivial commit explaining why the change exists,
+what changed, and what validation was run or remains pending. Do not sweep
 unrelated edits, commit changesets with the behavior they document, and never
 push, publish, upload, or tag without explicit approval.

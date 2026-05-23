@@ -161,7 +161,11 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   private automation, private Q&A indexes, logs, caches, or screenshots.
 - Run `npm run privacy:check` and `npm run test:docs` before publication or
   broad review.
-- Use Conventional Commits and keep commits scoped by intention.
+- Use Conventional Commits in English only and keep commits scoped by
+  intention.
+- Include a commit body for every non-trivial commit explaining why the change
+  exists, what behavior or contract changed, and which validation was run or
+  remains pending.
 - Commit `.changeset/*.md` with the behavior it documents when published
   package surface changes.
 - Push, publish, upload, tagging, and release actions require explicit
