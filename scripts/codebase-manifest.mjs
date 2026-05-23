@@ -2,9 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const manifestPath = path.join(rootDir, "docs", "codebase-manifest.json");
+const manifestRelativePath = "docs/codebase-manifest.json";
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--self-test", "--write", "--check"]);
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".swift"]);
 const TEST_PATTERNS = [".test.", ".spec.", "/__tests__/"];
@@ -269,6 +273,51 @@ function validateManifest(manifest) {
   return failures;
 }
 
+function manifestDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("codebase_manifest_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/codebase-manifest.mjs",
+      suggestion: "Use --self-test, --write, --check, or no arguments.",
+      safeNextStep: "Rerun node scripts/codebase-manifest.mjs with a supported argument.",
+    });
+  }
+  if (failure.startsWith("summary.")) {
+    return createDiagnostic("codebase_manifest_summary_mismatch", failure, {
+      location: manifestRelativePath,
+      suggestion: "Regenerate the manifest after source files change so summary counts match the file inventory.",
+      safeNextStep: "Run node scripts/codebase-manifest.mjs --write, review docs/codebase-manifest.json, then rerun --check.",
+    });
+  }
+  if (failure.startsWith("files are not sorted") || failure.startsWith("duplicate file path")) {
+    return createDiagnostic("codebase_manifest_order_invalid", failure, {
+      location: manifestRelativePath,
+      suggestion: "Keep file records sorted by path and remove duplicate entries.",
+      safeNextStep: "Regenerate with node scripts/codebase-manifest.mjs --write, then rerun --check.",
+    });
+  }
+  if (failure.includes("file record") || failure.includes("source extension") || failure.includes("language") || failure.includes("line count") || failure.includes("must be an array")) {
+    return createDiagnostic("codebase_manifest_file_record_invalid", failure, {
+      location: manifestRelativePath,
+      suggestion: "Fix the named file record shape or regenerate the manifest from source.",
+      safeNextStep: "Run node scripts/codebase-manifest.mjs --write, review the named record, then rerun --check.",
+    });
+  }
+  return createDiagnostic("codebase_manifest_schema_invalid", failure, {
+    location: manifestRelativePath,
+    suggestion: "Restore the manifest schema fields expected by the codebase inventory check.",
+    safeNextStep: "Fix docs/codebase-manifest.json or regenerate it, then rerun node scripts/codebase-manifest.mjs --check.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "codebase manifest check failed:",
+    diagnostics: failures.map(manifestDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function runSelfTest() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-codebase-manifest-"));
   try {
@@ -285,12 +334,35 @@ function runSelfTest() {
     if (!manifest.files.some((file) => file.path === "src/View.swift" && file.exports.includes("ViewModel"))) {
       throw new Error("expected Swift declaration inventory");
     }
+    const chunks = [];
+    printFailures([
+      "unknown argument --bad-token-sk-test-secret-123456",
+      "summary.files does not match files length",
+      "files are not sorted near /Users/example/private/src/index.ts",
+      "src/index.ts imports must be an array",
+      "schemaVersion must be 1",
+    ], { stream: { write: (chunk) => chunks.push(chunk) } });
+    const output = chunks.join("");
+    if (!output.includes("code: codebase_manifest_usage_error")) throw new Error("self-test missing usage code");
+    if (!output.includes("code: codebase_manifest_summary_mismatch")) throw new Error("self-test missing summary code");
+    if (!output.includes("code: codebase_manifest_order_invalid")) throw new Error("self-test missing order code");
+    if (!output.includes("code: codebase_manifest_file_record_invalid")) throw new Error("self-test missing record code");
+    if (!output.includes("code: codebase_manifest_schema_invalid")) throw new Error("self-test missing schema code");
+    if (!output.includes("suggestion: Regenerate the manifest")) throw new Error("self-test missing actionable suggestion");
+    if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 }
 
-if (process.argv.includes("--self-test")) {
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printFailures([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
+if (args.has("--self-test")) {
   runSelfTest();
   console.log("codebase manifest self-test passed");
   process.exit(0);
@@ -299,17 +371,16 @@ if (process.argv.includes("--self-test")) {
 const manifest = buildCodebaseManifest(rootDir);
 const generated = stableJson(manifest);
 
-if (process.argv.includes("--write")) {
+if (args.has("--write")) {
   fs.writeFileSync(manifestPath, generated);
   console.log(`wrote ${path.relative(rootDir, manifestPath)}`);
   process.exit(0);
 }
 
-if (process.argv.includes("--check")) {
+if (args.has("--check")) {
   const failures = validateManifest(manifest);
   if (failures.length) {
-    console.error("codebase manifest check failed:");
-    for (const failure of failures) console.error(`- ${failure}`);
+    printFailures(failures);
     process.exit(1);
   }
   console.log(`codebase manifest check passed (${manifest.summary.files} files)`);
