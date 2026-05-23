@@ -150,7 +150,7 @@ test("codex import: idempotent on unchanged file", async () => {
 
     const second = await ctx.client.importCodex({});
     assert.equal(second.imported[0].skipped, true);
-    assert.equal(second.imported[0].reason, "unchanged");
+    assert.equal(second.imported[0].reason, "unchanged_fingerprint");
 
     const session = await ctx.client.getSession(sessionUuid);
     assert.equal(session.messageCount, 2);

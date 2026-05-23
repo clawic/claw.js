@@ -286,5 +286,5 @@ function resolveWorkerUrl(): URL {
 }
 
 function workerExecArgv(): string[] {
-  return import.meta.url.endsWith(".ts") ? ["--import", "tsx"] : process.execArgv;
+  return import.meta.url.endsWith(".ts") ? ["--import", "tsx"] : [];
 }
