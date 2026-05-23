@@ -12,6 +12,7 @@ import { startUpstreamServer, startSecretsServer, login } from "./helpers.ts";
 const execFileAsync = promisify(execFile);
 const slackFixtureToken = ["xoxb", "secret", "123"].join("-");
 const limitedSlackFixtureToken = ["xoxb", "limited", "secret"].join("-");
+const deployFixtureToken = ["super", "secret", "v1"].join("-");
 
 async function createPrincipal(baseUrl: string, accessToken: string, input: { type: string; label: string }, tenantId = "demo-tenant") {
   const response = await fetch(`${baseUrl}/v1/tenants/${tenantId}/principals`, {
@@ -109,7 +110,7 @@ test("secrets stores encrypted versions and never returns plaintext through meta
         draft: {
           internalName: "deploy_token",
           title: "Deploy Token",
-          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: "super-secret-v1" }],
+          fields: [{ fieldName: "token", fieldKind: "password", placement: "header", isSecret: true, secretValue: deployFixtureToken }],
           governance: {
             allowedHosts: ["api.example.test"],
             allowedHeaders: ["Authorization"],

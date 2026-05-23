@@ -5097,14 +5097,14 @@
         "docs/security-threat-model.md"
       ],
       "discoveryTerms": [
-        "approval grant authority matrix",
-        "approvals grants authority",
+        "approval and grant authority matrix",
+        "approval and grant authority",
         "grant domain steward",
         "fail-closed authority matrix"
       ],
       "searchQueries": [
         {
-          "query": "approval grant authority matrix",
+          "query": "approval and grant authority matrix",
           "expectPath": "docs/governance/approval-grant-authority-matrix.md"
         }
       ],

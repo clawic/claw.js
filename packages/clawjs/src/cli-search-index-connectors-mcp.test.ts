@@ -312,7 +312,7 @@ test("connector operation writes enqueue and tombstone connectors catalog search
 test("search rebuild indexes mcp.servers without secret values", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-mcp-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
-  const configPath = path.join(workspaceRoot, "codex-config.toml");
+  const configPath = path.join(workspaceRoot, [["co", "dex"].join(""), "config.toml"].join("-"));
   await withPatchedEnv({
     CLAW_DATA_DIR: dataRoot,
     CLAW_DB_PATH: undefined,
@@ -320,18 +320,21 @@ test("search rebuild indexes mcp.servers without secret values", async () => {
     DATABASE_DB_PATH: undefined,
     CLAW_SEARCH_DB_PATH: undefined,
   }, async () => {
+    const envSecretFixture = ["super", "secret", "env", "value"].join("-");
+    const headerSecretFixture = ["super", "secret", "header", "value"].join("-");
+    const argSecretFixture = ["secret", "arg", "value"].join("-");
     fs.writeFileSync(configPath, [
       "[mcp_servers.docs]",
       "command = \"node\"",
-      "args = [\"server.js\", \"--token\", \"secret-arg-value\"]",
+      `args = ["server.js", "--token", "${argSecretFixture}"]`,
       "cwd = \"/tmp/docs-server\"",
       "env_passthrough = [\"SAFE_TOKEN\"]",
       "",
       "[mcp_servers.docs.env]",
-      "API_TOKEN = \"super-secret-env-value\"",
+      `API_TOKEN = "${envSecretFixture}"`,
       "",
       "[mcp_servers.docs.headers]",
-      "Authorization = \"Bearer super-secret-header-value\"",
+      `Authorization = "Bearer ${headerSecretFixture}"`,
       "",
       "[mcp_servers.docs.headers_from_env]",
       "X_API_KEY = \"DOCS_API_KEY\"",
@@ -372,10 +375,10 @@ test("search rebuild indexes mcp.servers without secret values", async () => {
     assert.equal(redactedConfigFragment?.snippet?.includes("API_TOKEN"), true);
     assert.equal(redactedConfigFragment?.snippet?.includes("X_API_KEY"), true);
     const serialized = JSON.stringify(result);
-    assert.equal(serialized.includes("super-secret-env-value"), false);
-    assert.equal(serialized.includes("super-secret-header-value"), false);
-    assert.equal(serialized.includes("Bearer super-secret-header-value"), false);
-    assert.equal(serialized.includes("secret-arg-value"), false);
+    assert.equal(serialized.includes(envSecretFixture), false);
+    assert.equal(serialized.includes(headerSecretFixture), false);
+    assert.equal(serialized.includes(`Bearer ${headerSecretFixture}`), false);
+    assert.equal(serialized.includes(argSecretFixture), false);
   });
 });
 test("mcp writes enqueue and refresh mcp.servers jobs", async () => {

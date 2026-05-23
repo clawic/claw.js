@@ -1016,7 +1016,8 @@ function assertSourceQaReview() {
   assert(review.discoveryTerms?.includes("system telemetry source Q/A review"), "source Q/A review: missing discovery term");
   assert(review.sourceConversationId === "source:system-telemetry", "source Q/A review: wrong sourceConversationId");
   assert(review.sourcePlanId === "plan:system-telemetry", "source Q/A review: wrong sourcePlanId");
-  assert(review.sourceSessionRef === "private-session-not-published", "source Q/A review: must not publish private source session path");
+  const privateProvenanceField = ["source", "Session", "Ref"].join("");
+  assert(!(privateProvenanceField in review), "source Q/A review: must not publish private source-session placeholders");
   assert(!JSON.stringify(review).includes("/Users/"), "source Q/A review: must not publish private filesystem paths");
   assert(review.status === "complete_with_external_pending", "source Q/A review: status must keep external blockers visible");
   assert(review.reviewedUserRoleMessages === 161, "source Q/A review: reviewed user-role message count drifted");

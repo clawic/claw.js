@@ -52,7 +52,7 @@ cited, the work closes only as partial validation, blocked, or
   explicit module requires it.
 - Stay bounded. Caches, logs, queues, snapshots, indexes, attachments, and
   model artifacts need bytes, count, age, or active-window limits plus cleanup
-  ownership.
+  stewardship.
 - Sleep at idle. Idle CPU, GPU, timers, workers, WebViews, streams, and
   watchers must quiesce when no useful work remains.
 - Apply backpressure. Streams, bridge frames, sync, indexing, search,
@@ -106,15 +106,15 @@ exceptions.
 Any cache, queue, log, snapshot, checkpoint, timeline, upload buffer,
 transcript, session state, EventBus, WebSocket or SSE fanout, markdown cache,
 ranking cache, or similar retained collection must declare a bytes, count, age,
-or active-window limit plus cleanup ownership. The cleanup policy names how the
+or active-window limit plus cleanup stewardship. The cleanup policy names how the
 state is trimmed, expired, compacted, evicted, backpressured, paginated,
 leased, or otherwise released.
 
 Unbounded growth is a P0 closure blocker. New work fails validation when a
 risk surface has no nearby boundedness declaration. Historical debt is allowed
-only through `docs/boundedness-baseline.json`, with owner area, reason, limit
-kind, current limit value, cleanup policy, reference, expiration date, and
-release-blocking classification.
+only through `docs/boundedness-baseline.json`, with steward area, reason,
+limit kind, current limit value, cleanup policy, reference, expiration date,
+and release-blocking classification.
 
 Examples that block closure include async queues without a maximum, caches
 limited only by entry count when entry byte cost is unbounded, whole-payload
@@ -127,8 +127,8 @@ Registered runtime, UI, storage, stream, cache, queue, IPC, daemon, worker, and
 long-running-agent surfaces are not complete until `resourceContract` records
 startup, idle, memory, streaming, storage, hot-path, scale, and validation
 behavior. Existing missing contracts are allowed only through
-`docs/surface-resource-contract-baseline.json` with owner, reason, expiry, and
-reentry condition.
+`docs/surface-resource-contract-baseline.json` with steward, reason, expiry,
+and reentry condition.
 
 ## Idle Quiescence Contract P1
 
@@ -148,7 +148,7 @@ default unless the loop is an active protocol heartbeat with a declared lease.
 
 New unregistered periodic work is a P1 release-check failure. Existing
 non-adaptive or dedicated loops may be carried only as expiring manifest debt
-with owner area, evidence, target sleep behavior, and release-blocking status.
+with steward area, evidence, target sleep behavior, and release-blocking status.
 
 ## Resource Dimensions
 
@@ -173,8 +173,8 @@ with owner area, evidence, target sleep behavior, and release-blocking status.
 
 Performance debt is tracked when a surface knowingly ships with unbounded,
 unmeasured, or heavy behavior. Each debt record needs the affected surface, the
-resource dimension, current evidence, target behavior, owner, review date, and
-whether it blocks release.
+resource dimension, current evidence, target behavior, steward, review date,
+and whether it blocks release.
 
 Debt is not permission to let the system drift heavier. Repeated regressions,
 expired debt, or missing cleanup for critical surfaces should become release

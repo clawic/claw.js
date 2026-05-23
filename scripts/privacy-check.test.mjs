@@ -27,6 +27,7 @@ test("flags private public-boundary categories", () => {
   const currentThreadAlias = ["current", "thread", "2026", "05", "21"].join("-");
   const sourceSessionRef = ["source", "Session", "Ref"].join("");
   const privateCodename = ["Source Code Aging", "Program"].join(" ");
+  const fixtureSecret = ["super", "secret", "value"].join("-");
   const rolloutPath = [
     "rollout",
     "2026-05-15T12-27-04",
@@ -49,6 +50,7 @@ test("flags private public-boundary categories", () => {
     currentThreadAlias,
     sourceSessionRef,
     privateCodename,
+    fixtureSecret,
   ].join("\n"));
   for (const rule of [
     "private-user-path",
@@ -67,6 +69,7 @@ test("flags private public-boundary categories", () => {
     "current-thread-source-alias",
     "private-provenance-source-field",
     "private-codename",
+    "fixture-secret-literal",
   ]) {
     assert.equal(findings.some((finding) => finding.rule === rule), true, `expected ${rule}`);
   }

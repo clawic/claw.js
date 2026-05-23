@@ -2,7 +2,6 @@
   "schemaVersion": 1,
   "program": "code-hygiene",
   "sourceConversationId": "source:code-hygiene-program",
-  "sourceSessionRef": "private-session-not-published",
   "decisionCount": 33,
   "decisions": [
     {

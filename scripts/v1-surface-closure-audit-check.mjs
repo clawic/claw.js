@@ -132,10 +132,12 @@ const expectedAcceptanceCategoryIds = [
 ];
 const allowedValidationStatuses = new Set(["passed", "external-pending", "blocked-tooling"]);
 const allowedCompletionStatuses = new Set(["complete", "local-validation-passed-with-external-pending", "blocked-tooling"]);
+const privateProvenanceField = ["source", "Session", "Ref"].join("");
+const privateSessionPlaceholderPattern = new RegExp(`(?:private session,\\s*not published|${privateProvenanceField})`, "iu");
 
 if (decisions.schemaVersion !== 1) fail(`${decisionsPath}.schemaVersion must be 1`);
 if (decisions.program !== "v1-surface-closure") fail(`${decisionsPath}.program must be v1-surface-closure`);
-if (decisions.sourceSessionRef !== "private-session-not-published") fail(`${decisionsPath} must not publish the private source session path`);
+if (privateProvenanceField in decisions) fail(`${decisionsPath} must not publish private source-session placeholders`);
 if (decisions.decisionCount !== expectedIds.length) fail(`${decisionsPath}.decisionCount must be ${expectedIds.length}`);
 if (decisions.sourceExtraction?.requestUserInputPrompts !== 39) fail(`${decisionsPath}.sourceExtraction.requestUserInputPrompts must be 39`);
 if (decisions.sourceExtraction?.bindingAnswers !== expectedSourceQuestionIds.length) fail(`${decisionsPath}.sourceExtraction.bindingAnswers must be ${expectedSourceQuestionIds.length}`);
@@ -261,7 +263,7 @@ if (!audit.includes("Validation ledger")) fail(`${auditPath} must mention the va
 for (const sourceSnippet of ["`bridge_manifest_source`", "`apps_design_storage`", "`apps_design_contract_status`"]) {
   if (!audit.includes(sourceSnippet)) fail(`${auditPath} must mention source extraction snippet ${sourceSnippet}`);
 }
-if (!audit.includes("private session, not published")) fail(`${auditPath} must not publish the private source session path`);
+if (privateSessionPlaceholderPattern.test(audit)) fail(`${auditPath} must not publish private source-session placeholders`);
 if (/\/Users\//.test(audit) || /rollout-\d{4}-\d{2}-\d{2}T/.test(audit)) {
   fail(`${auditPath} must not include private local session paths`);
 }

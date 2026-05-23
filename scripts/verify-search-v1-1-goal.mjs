@@ -1484,7 +1484,7 @@ requireCliSearchSnippet("source: \"mcp.servers\", operation: \"delete\", status:
 requireCliSearchSnippet("id: `mcp.servers:${server.id}:redacted-config`");
 requireCliSearchSnippet("metadata: { redactedValues: true }");
 requireCliSearchSnippet("redactedConfigFragment");
-requireCliSearchSnippet("Bearer super-secret-header-value");
+requireCliSearchSnippet('`Authorization = "Bearer ${headerSecretFixture}"`');
 requireSnippet("docs/search.md", "redacted config fragments");
 requireCliSearchSnippet("afterRuntimeDelete");
 requireCliSearchSnippet("source: \"runtime.events\", operation: \"delete\", status: \"done\", indexed: 1");

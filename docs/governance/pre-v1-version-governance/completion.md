@@ -2,8 +2,8 @@
 
 Source conversation: `source:pre-v1-version-governance`.
 
-Source session: private session, not published. The active Codex goal contains
-the local session path and requires the source Q/A review before closure.
+Private maintainer provenance is tracked outside this public repository and
+must be verified before maintainer closure.
 
 ## Decision Review
 

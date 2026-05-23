@@ -2,10 +2,9 @@
   "schemaVersion": 1,
   "program": "v1-surface-closure",
   "sourceConversationId": "source:v1-surface-closure",
-  "sourceSessionRef": "private-session-not-published",
   "decisionCount": 37,
   "notes": [
-    "Public-safe mirror of the private source review. The private session path is intentionally not published.",
+    "Public-safe mirror of the private source review. Private maintainer provenance is tracked outside this public repository.",
     "A rolled-back bridge_manifest_source prompt and a failed Default-mode request are excluded from the binding count.",
     "The early bridge_contract_v1 answer is retained as an additional binding decision and is implemented by the clean v1 bridge contract."
   ],

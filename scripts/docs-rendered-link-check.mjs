@@ -1,15 +1,21 @@
 #!/usr/bin/env node
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const docsDir = path.join(rootDir, "docs");
 const distDir = path.join(rootDir, "website", "dist");
 const skipBuild = process.argv.includes("--skip-build");
 
-function fail(message) {
-  failures.push(message);
+function fail(code, message, options = {}) {
+  failures.push(createDiagnostic(code, message, {
+    location: options.location ?? "docs",
+    suggestion: options.suggestion ?? "Fix the referenced docs source or rendered route before retrying.",
+    safeNextStep: options.safeNextStep ?? "Rerun node scripts/docs-rendered-link-check.mjs after fixing the reported docs link.",
+  }));
 }
 
 function listMarkdownFiles(relativeDir) {
@@ -101,6 +107,40 @@ function relativeHtmlPathForDocsFile(relativePath) {
 
 const failures = [];
 
+function runSelfTest() {
+  const chunks = [];
+  printActionableFailureReport({
+    title: "Rendered docs link check failed for /Users/example/private:",
+    diagnostics: [
+      createDiagnostic("docs_rendered_source_link_missing", "docs/decision-map.md links to missing source target token: sk-test-secret-123456", {
+        location: "/Users/example/private/docs/decision-map.md",
+        suggestion: "Update or remove the broken markdown link.",
+        safeNextStep: "Fix docs/decision-map.md, then rerun node scripts/docs-rendered-link-check.mjs.",
+      }),
+      createDiagnostic("docs_rendered_html_link_missing", "website/dist/docs.html has missing rendered link /missing", {
+        location: "website/dist/docs.html",
+        suggestion: "Ensure the linked page renders or update the route.",
+        safeNextStep: "Run npm --prefix website run docs:build, then rerun node scripts/docs-rendered-link-check.mjs.",
+      }),
+    ],
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assert.match(output, /code: docs_rendered_source_link_missing/);
+  assert.match(output, /code: docs_rendered_html_link_missing/);
+  assert.match(output, /location: ~\/private\/docs\/decision-map\.md/);
+  assert.match(output, /suggestion: Update or remove the broken markdown link/);
+  assert.match(output, /next: Run npm --prefix website run docs:build/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
+  console.log("rendered docs link check self-test passed");
+}
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  process.exit(0);
+}
+
 if (!skipBuild) {
   const build = spawnSync("npm", ["--prefix", "website", "run", "docs:build"], {
     cwd: rootDir,
@@ -108,6 +148,16 @@ if (!skipBuild) {
     shell: false,
   });
   if (build.status !== 0) {
+    printActionableFailureReport({
+      title: "Rendered docs link check failed:",
+      diagnostics: [
+        createDiagnostic("docs_rendered_build_failed", `npm --prefix website run docs:build failed with exit status ${build.status ?? "unknown"}`, {
+          location: "website",
+          suggestion: "Fix the docs build output before checking rendered links.",
+          safeNextStep: "Run npm --prefix website run docs:build, fix the reported error, then rerun node scripts/docs-rendered-link-check.mjs.",
+        }),
+      ],
+    });
     process.exit(build.status ?? 1);
   }
 }
@@ -120,13 +170,21 @@ const docsToCheck = [
 for (const sourceRelativePath of docsToCheck) {
   const sourceAbsolutePath = path.join(rootDir, sourceRelativePath);
   if (!fs.existsSync(sourceAbsolutePath)) {
-    fail(`${sourceRelativePath} is missing`);
+    fail("docs_rendered_source_missing", `${sourceRelativePath} is missing`, {
+      location: sourceRelativePath,
+      suggestion: "Restore the canonical docs source or remove it from the rendered docs check.",
+      safeNextStep: `Restore ${sourceRelativePath}, then rerun node scripts/docs-rendered-link-check.mjs.`,
+    });
     continue;
   }
 
   const renderedPath = renderedPathForDocsFile(sourceRelativePath);
   if (!fs.existsSync(renderedPath)) {
-    fail(`${sourceRelativePath} did not render to ${path.relative(rootDir, renderedPath)}`);
+    fail("docs_rendered_page_missing", `${sourceRelativePath} did not render to ${path.relative(rootDir, renderedPath)}`, {
+      location: sourceRelativePath,
+      suggestion: "Ensure the docs builder emits a rendered page for this canonical source.",
+      safeNextStep: "Run npm --prefix website run docs:build, inspect the missing output, then rerun node scripts/docs-rendered-link-check.mjs.",
+    });
   }
 
   const text = fs.readFileSync(sourceAbsolutePath, "utf8");
@@ -135,13 +193,21 @@ for (const sourceRelativePath of docsToCheck) {
     if (!resolved) continue;
     const absoluteResolved = path.join(rootDir, resolved);
     if (!fs.existsSync(absoluteResolved)) {
-      fail(`${sourceRelativePath} links to missing source target ${target}`);
+      fail("docs_rendered_source_link_missing", `${sourceRelativePath} links to missing source target ${target}`, {
+        location: sourceRelativePath,
+        suggestion: "Update or remove the broken markdown link.",
+        safeNextStep: `Fix the link target ${target} in ${sourceRelativePath}, then rerun node scripts/docs-rendered-link-check.mjs.`,
+      });
       continue;
     }
     if (resolved.startsWith("docs/") && resolved.endsWith(".md")) {
       const renderedTarget = renderedPathForDocsFile(resolved);
       if (!fs.existsSync(renderedTarget)) {
-        fail(`${sourceRelativePath} links to ${target}, but ${resolved} has no rendered page`);
+        fail("docs_rendered_target_page_missing", `${sourceRelativePath} links to ${target}, but ${resolved} has no rendered page`, {
+          location: sourceRelativePath,
+          suggestion: "Ensure linked markdown pages are part of the rendered docs output.",
+          safeNextStep: "Add the linked page to the docs renderer or update the link, then rerun node scripts/docs-rendered-link-check.mjs.",
+        });
       }
     }
   }
@@ -154,14 +220,20 @@ for (const sourceRelativePath of docsToCheck) {
     if (!href || href.startsWith("#") || isExternal(href)) continue;
     const renderedTarget = renderedPathForCleanRoute(href, currentHtmlPath);
     if (renderedTarget && !fs.existsSync(renderedTarget)) {
-      fail(`${path.relative(rootDir, renderedPath)} has missing rendered link ${href}`);
+      fail("docs_rendered_html_link_missing", `${path.relative(rootDir, renderedPath)} has missing rendered link ${href}`, {
+        location: path.relative(rootDir, renderedPath),
+        suggestion: "Ensure the linked page renders or update the route.",
+        safeNextStep: "Run npm --prefix website run docs:build, then rerun node scripts/docs-rendered-link-check.mjs.",
+      });
     }
   }
 }
 
 if (failures.length > 0) {
-  console.error("Rendered docs link check failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printActionableFailureReport({
+    title: "Rendered docs link check failed:",
+    diagnostics: failures,
+  });
   process.exit(1);
 }
 

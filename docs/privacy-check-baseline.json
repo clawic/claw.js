@@ -1,25 +1,4 @@
 {
   "schemaVersion": 1,
-  "entries": [
-    {
-      "filePath": "packages/clawjs/src/cli-search-index-connectors-mcp.test.ts",
-      "rule": "fixture-secret-literal",
-      "count": 4
-    },
-    {
-      "filePath": "scripts/code-hygiene-check.mjs",
-      "rule": "private-provenance-source-field",
-      "count": 8
-    },
-    {
-      "filePath": "scripts/v1-surface-closure-audit-check.mjs",
-      "rule": "private-provenance-source-field",
-      "count": 4
-    },
-    {
-      "filePath": "scripts/verify-system-telemetry-goal.mjs",
-      "rule": "private-provenance-source-field",
-      "count": 2
-    }
-  ]
+  "entries": []
 }

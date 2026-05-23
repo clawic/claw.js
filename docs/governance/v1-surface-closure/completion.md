@@ -1,7 +1,7 @@
 # V1 Surface Closure Completion Audit
 
 Source conversation: `source:v1-surface-closure`
-Source session: private session, not published
+Private maintainer provenance is tracked outside this public repository.
 
 This audit records the required one-by-one review of the private source
 conversation before the v1 surface closure goal can be closed. It mirrors the

@@ -235,7 +235,7 @@ function checkCompletionAudit() {
   const audit = read("docs/governance/pre-v1-version-governance/completion.md");
   for (const snippet of [
     "Source conversation: `source:pre-v1-version-governance`",
-    "private session, not published",
+    "Private maintainer provenance is tracked outside this public repository",
     "3 `request_user_input` prompts",
     "8 binding answers",
     "0 excluded prompts",

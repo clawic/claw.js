@@ -3,7 +3,7 @@
   "decisions": [
     {
       "decisionId": "SBC-001",
-      "sourceConversationId": "current-thread-2026-05-21",
+      "sourceConversationId": "source:streaming-backpressure",
       "sourceAnchor": "Streaming and Backpressure ADR P0 implementation request",
       "architectureImpact": "Streaming, IPC, SSE, WebSocket, Relay, session events, and UI delta routes must declare bounded frame, queue, slow-consumer, cancellation, overflow, and incremental persistence behavior.",
       "state": "implemented",

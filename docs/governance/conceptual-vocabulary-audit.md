@@ -63,7 +63,7 @@ the surface-route graph. The protected words keep these meanings:
 | Signed-host negative wording | Classified negative Node examples that explicitly forbid native authority outside the signed host. |
 | Relay technical tenancy | Classified the stable Relay technical-isolation environment-variable label as a technical isolation context, not as a Relay-derived authority source. |
 | Relay/Gateway technical tenancy | Classified selected Relay/Gateway/remote-sync paths as technical isolation contexts in the vocabulary policy. |
-| Audit-doc terminology cleanup | Reworded this audit and its classification ledger so they describe old mistake classes without reintroducing blocked phrases for workspace, project, route, Relay, sync, host, or agent authority. |
+| Audit-doc terminology cleanup | Reworded this audit and its classification ledger so they describe old mistake classes without reintroducing blocked access-source phrases for workspace, project, route, Relay, sync, host, or agents. |
 
 ## Pending Semantic Decisions
 

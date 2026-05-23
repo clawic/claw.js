@@ -87,9 +87,9 @@
       "path": "packages/clawjs/src/cli-search-heavy-command.ts",
       "pattern": "owner_id",
       "classification": "legacySchemaReadOnly",
-      "rationale": "Search heavy command still reads legacy owner_id columns from existing tables for indexing; it does not grant authority.",
+      "rationale": "Search heavy command no longer owns this legacy owner_id read after document indexing extraction; kept as an exact zero-count regression check.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 4,
+      "maxOccurrences": 0,
       "steward": "clawjs-search"
     },
     {
@@ -197,9 +197,9 @@
       "path": "docs/governance/performance-governance.md",
       "pattern": "ownership_relation",
       "classification": "governancePolicyReference",
-      "rationale": "Performance governance uses cleanup ownership to mean operational responsibility, not access authority.",
+      "rationale": "Performance governance no longer uses cleanup ownership wording; kept as an exact zero-count regression check for stewardship terminology.",
       "canonicalDoc": "docs/governance/performance-governance.md",
-      "maxOccurrences": 1,
+      "maxOccurrences": 0,
       "steward": "clawjs-performance"
     },
     {
@@ -229,7 +229,7 @@
       "classification": "technicalIsolationIdentifier",
       "rationale": "Legacy Relay browser command passes provider/relay tenant context as technical isolation, not public authority.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 3,
+      "maxOccurrences": 1,
       "steward": "clawjs-relay"
     },
     {
@@ -239,7 +239,7 @@
       "classification": "technicalIsolationIdentifier",
       "rationale": "Legacy Relay browser command passes provider/relay tenantId context as technical isolation, not public authority.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 6,
+      "maxOccurrences": 2,
       "steward": "clawjs-relay"
     },
     {
@@ -333,9 +333,9 @@
       "path": "packages/clawjs-core/src/surface-registry.ts",
       "pattern": "profile",
       "classification": "humanUserProfile",
-      "rationale": "Surface registry includes profile package, portal, projection table, and config route as explicit user/domain profile surfaces.",
+      "rationale": "Surface registry no longer carries these user/domain profile surface names; kept as an exact zero-count regression check.",
       "canonicalDoc": "docs/vocabulary.md",
-      "maxOccurrences":  6,
+      "maxOccurrences": 0,
       "steward": "clawjs-surfaces"
     },
     {

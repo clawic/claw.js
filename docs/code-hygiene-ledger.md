@@ -3,7 +3,7 @@
 This ledger records code hygiene campaigns, exceptions, and validation evidence.
 
 Source conversation: `source:code-hygiene-program`
-Source session: private session, not published
+Private maintainer provenance is tracked outside this public repository.
 
 ## 2026-05-17 - Program bootstrap
 

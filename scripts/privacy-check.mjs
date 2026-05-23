@@ -100,6 +100,11 @@ const patterns = [
     regex: /\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16})\b/g,
   },
   {
+    id: "fixture-secret-literal",
+    description: "unredacted fixture secret literal",
+    regex: /\b(?:super-secret(?:-[A-Za-z0-9]+)*|p@ss|ghp-extra-value|secret-arg-value)\b/g,
+  },
+  {
     id: "private-bundle-id",
     description: "private bundle identifier in app/release context",
     regex: /\b(?:bundle_id|bundleId|bundle identifier|withBundleIdentifier)\b[^\n]{0,80}\bcom\.(?!example\b)[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+\b/gi,
