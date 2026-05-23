@@ -11,6 +11,8 @@ import {
   uniqueRecordsById,
 } from "./cli-dense-data-semantic-common.ts";
 
+const DENSE_SEMANTIC_VIEW_LIMIT = 250;
+
 export function materializedWorkOrderTimeline(
   input: ProfessionalRecordsCliInput,
   intent: ProfessionalRecordsIntent,
@@ -24,9 +26,9 @@ export function materializedWorkOrderTimeline(
   const workOrder = store.getRecord(namespaceId, "work_orders", workOrderId);
   if (!workOrder) return undefined;
 
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "work_orders", recordId: workOrderId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "work_orders", targetId: workOrderId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "work_orders", targetId: workOrderId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "work_orders", recordId: workOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "work_orders", targetId: workOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "work_orders", targetId: workOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(workOrder, "work_order", workOrder.id, workOrder.title ?? workOrder.id, workOrder.startedAt ?? workOrder.plannedStartAt ?? workOrder.createdAt, workOrder),
     ...evidence.map((record) => timelineItem(record, "evidence", record.id, record.label ?? record.id, record.capturedAt ?? record.createdAt, record)),
@@ -69,13 +71,13 @@ export function materializedAssetTimeline(
   const company = typeof asset.companyId === "string" ? store.getRecord(namespaceId, "companies", asset.companyId) : undefined;
   const account = typeof asset.accountId === "string" ? store.getRecord(namespaceId, "accounts", asset.accountId) : undefined;
   const product = typeof asset.productCatalogId === "string" ? store.getRecord(namespaceId, "products_catalog", asset.productCatalogId) : undefined;
-  const workOrders = store.listRecords(namespaceId, "work_orders", { filter: { assetId } }).items;
-  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "assets", fromEntityId: assetId } }).items;
-  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "assets", toEntityId: assetId } }).items;
+  const workOrders = store.listRecords(namespaceId, "work_orders", { filter: { assetId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "assets", fromEntityId: assetId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "assets", toEntityId: assetId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const relations = uniqueRecordsById([...outgoingRelations, ...incomingRelations]);
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "assets", recordId: assetId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "assets", targetId: assetId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "assets", targetId: assetId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "assets", recordId: assetId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "assets", targetId: assetId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "assets", targetId: assetId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(asset, "asset", asset.id, asset.serialNumber ?? asset.id, asset.purchaseDate ?? asset.createdAt, asset),
     ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
@@ -139,12 +141,12 @@ export function materializedPropertyTimeline(
   const property = store.getRecord(namespaceId, "property_listings", propertyId);
   if (!property) return undefined;
 
-  const visits = store.listRecords(namespaceId, "property_visits", { filter: { propertyListingId: propertyId } }).items;
-  const offers = store.listRecords(namespaceId, "property_offers", { filter: { propertyListingId: propertyId } }).items;
-  const inspections = store.listRecords(namespaceId, "property_inspections", { filter: { propertyListingId: propertyId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "property_listings", recordId: propertyId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "property_listings", targetId: propertyId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "property_listings", targetId: propertyId } }).items;
+  const visits = store.listRecords(namespaceId, "property_visits", { filter: { propertyListingId: propertyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const offers = store.listRecords(namespaceId, "property_offers", { filter: { propertyListingId: propertyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const inspections = store.listRecords(namespaceId, "property_inspections", { filter: { propertyListingId: propertyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "property_listings", recordId: propertyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "property_listings", targetId: propertyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "property_listings", targetId: propertyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(property, "property", property.id, property.title ?? property.address ?? property.id, property.createdAt, property),
     ...visits.map((record) => timelineItem(record, "property_visit", record.id, record.visitorName ?? record.id, record.visitedAt ?? record.createdAt, record)),
@@ -202,13 +204,13 @@ export function materializedInsurancePolicyTimeline(
   const policy = store.getRecord(namespaceId, "insurance_policies", policyId);
   if (!policy) return undefined;
 
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "insurance_policies", recordId: policyId } }).items;
-  const receipts = store.listRecords(namespaceId, "important_receipts").items.filter((record) => {
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "insurance_policies", recordId: policyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const receipts = store.listRecords(namespaceId, "important_receipts", { limit: DENSE_SEMANTIC_VIEW_LIMIT }).items.filter((record) => {
     const tags = Array.isArray(record.tags) ? record.tags : [];
     return tags.includes("insurance") && tags.includes(policyId);
   });
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "insurance_policies", targetId: policyId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "insurance_policies", targetId: policyId } }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "insurance_policies", targetId: policyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "insurance_policies", targetId: policyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(policy, "insurance_policy", policy.id, policy.title ?? policy.policyNumber ?? policy.id, policy.startedAt ?? policy.createdAt, policy),
     ...receipts.map((record) => timelineItem(record, "receipt", record.id, record.title ?? record.vendor ?? record.id, record.issuedAt ?? record.createdAt, record)),
@@ -260,11 +262,11 @@ export function materializedVehicleTimeline(
   const vehicle = store.getRecord(namespaceId, "vehicles", vehicleId);
   if (!vehicle) return undefined;
 
-  const maintenanceRecords = store.listRecords(namespaceId, "vehicle_maintenance", { filter: { vehicleId } }).items;
-  const insurancePolicies = store.listRecords(namespaceId, "vehicle_insurance_policies", { filter: { vehicleId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "vehicles", recordId: vehicleId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "vehicles", targetId: vehicleId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "vehicles", targetId: vehicleId } }).items;
+  const maintenanceRecords = store.listRecords(namespaceId, "vehicle_maintenance", { filter: { vehicleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const insurancePolicies = store.listRecords(namespaceId, "vehicle_insurance_policies", { filter: { vehicleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "vehicles", recordId: vehicleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "vehicles", targetId: vehicleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "vehicles", targetId: vehicleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(vehicle, "vehicle", vehicle.id, vehicle.name ?? vehicle.plate ?? vehicle.id, vehicle.createdAt, vehicle),
     ...maintenanceRecords.map((record) => timelineItem(record, "vehicle_maintenance", record.id, record.title ?? record.id, record.performedAt ?? record.createdAt, record)),
@@ -321,10 +323,10 @@ export function materializedPurchaseOrderTimeline(
 
   const supplier = typeof purchaseOrder.supplierId === "string" ? store.getRecord(namespaceId, "suppliers", purchaseOrder.supplierId) : undefined;
   const company = typeof purchaseOrder.companyId === "string" ? store.getRecord(namespaceId, "companies", purchaseOrder.companyId) : undefined;
-  const lineItems = store.listRecords(namespaceId, "purchase_order_line_items", { filter: { purchaseOrderId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "purchase_orders", recordId: purchaseOrderId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "purchase_orders", targetId: purchaseOrderId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "purchase_orders", targetId: purchaseOrderId } }).items;
+  const lineItems = store.listRecords(namespaceId, "purchase_order_line_items", { filter: { purchaseOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "purchase_orders", recordId: purchaseOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "purchase_orders", targetId: purchaseOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "purchase_orders", targetId: purchaseOrderId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(purchaseOrder, "purchase_order", purchaseOrder.id, purchaseOrder.number ?? purchaseOrder.id, purchaseOrder.orderedAt ?? purchaseOrder.createdAt, purchaseOrder),
     ...(supplier ? [timelineItem(supplier, "supplier", supplier.id, supplier.name ?? supplier.id, supplier.createdAt, supplier)] : []),
@@ -384,16 +386,16 @@ export function materializedWarehouseTimeline(
   if (!warehouse) return undefined;
 
   const company = typeof warehouse.companyId === "string" ? store.getRecord(namespaceId, "companies", warehouse.companyId) : undefined;
-  const inventoryItems = store.listRecords(namespaceId, "inventory_items", { filter: { warehouseId } }).items;
-  const stockMovements = store.listRecords(namespaceId, "stock_movements", { filter: { warehouseId } }).items;
+  const inventoryItems = store.listRecords(namespaceId, "inventory_items", { filter: { warehouseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const stockMovements = store.listRecords(namespaceId, "stock_movements", { filter: { warehouseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const productIds = new Set(inventoryItems.map((record) => record.productCatalogId).filter((value): value is string => typeof value === "string"));
   const products = [...productIds].flatMap((productId) => {
     const product = store.getRecord(namespaceId, "products_catalog", productId);
     return product ? [product] : [];
   });
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "warehouses", recordId: warehouseId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "warehouses", targetId: warehouseId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "warehouses", targetId: warehouseId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "warehouses", recordId: warehouseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "warehouses", targetId: warehouseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "warehouses", targetId: warehouseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(warehouse, "warehouse", warehouse.id, warehouse.name ?? warehouse.code ?? warehouse.id, warehouse.createdAt, warehouse),
     ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
@@ -456,8 +458,8 @@ export function materializedSupplyPlanTimeline(
   if (!supplyPlan) return undefined;
 
   const company = typeof supplyPlan.companyId === "string" ? store.getRecord(namespaceId, "companies", supplyPlan.companyId) : undefined;
-  const items = store.listRecords(namespaceId, "supply_plan_items", { filter: { supplyPlanId } }).items;
-  const risks = store.listRecords(namespaceId, "supply_risks", { filter: { supplyPlanId } }).items;
+  const items = store.listRecords(namespaceId, "supply_plan_items", { filter: { supplyPlanId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const risks = store.listRecords(namespaceId, "supply_risks", { filter: { supplyPlanId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const supplierIds = new Set<string>([
     ...items.map((record) => record.supplierId),
     ...risks.map((record) => record.supplierId),
@@ -495,9 +497,9 @@ export function materializedSupplyPlanTimeline(
     const record = store.getRecord(namespaceId, "products_catalog", productId);
     return record ? [record] : [];
   });
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "supply_plans", recordId: supplyPlanId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "supply_plans", targetId: supplyPlanId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "supply_plans", targetId: supplyPlanId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "supply_plans", recordId: supplyPlanId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "supply_plans", targetId: supplyPlanId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "supply_plans", targetId: supplyPlanId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const timelineItems = [
     timelineItem(supplyPlan, "supply_plan", supplyPlan.id, supplyPlan.title ?? supplyPlan.id, supplyPlan.horizonStartAt ?? supplyPlan.createdAt, supplyPlan),
     ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
@@ -574,13 +576,13 @@ export function materializedShipmentTimeline(
   const shipment = store.getRecord(namespaceId, "shipments", shipmentId);
   if (!shipment) return undefined;
 
-  const legs = store.listRecords(namespaceId, "shipment_legs", { filter: { shipmentId } }).items;
+  const legs = store.listRecords(namespaceId, "shipment_legs", { filter: { shipmentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const carrier = typeof shipment.carrierId === "string" ? store.getRecord(namespaceId, "carriers", shipment.carrierId) : undefined;
   const purchaseOrder = typeof shipment.purchaseOrderId === "string" ? store.getRecord(namespaceId, "purchase_orders", shipment.purchaseOrderId) : undefined;
   const warehouse = typeof shipment.warehouseId === "string" ? store.getRecord(namespaceId, "warehouses", shipment.warehouseId) : undefined;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "shipments", recordId: shipmentId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "shipments", targetId: shipmentId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "shipments", targetId: shipmentId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "shipments", recordId: shipmentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "shipments", targetId: shipmentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "shipments", targetId: shipmentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(shipment, "shipment", shipment.id, shipment.title ?? shipment.trackingNumber ?? shipment.id, shipment.shippedAt ?? shipment.plannedShipAt ?? shipment.createdAt, shipment),
     ...(carrier ? [timelineItem(carrier, "carrier", carrier.id, carrier.name ?? carrier.id, carrier.createdAt, carrier)] : []),
@@ -643,11 +645,11 @@ export function materializedControlTimeline(
 
   const company = typeof control.companyId === "string" ? store.getRecord(namespaceId, "companies", control.companyId) : undefined;
   const obligation = typeof control.obligationId === "string" ? store.getRecord(namespaceId, "compliance_obligations", control.obligationId) : undefined;
-  const assessments = store.listRecords(namespaceId, "control_assessments", { filter: { controlId } }).items;
-  const findings = store.listRecords(namespaceId, "compliance_findings", { filter: { controlId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "compliance_controls", recordId: controlId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "compliance_controls", targetId: controlId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "compliance_controls", targetId: controlId } }).items;
+  const assessments = store.listRecords(namespaceId, "control_assessments", { filter: { controlId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const findings = store.listRecords(namespaceId, "compliance_findings", { filter: { controlId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "compliance_controls", recordId: controlId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "compliance_controls", targetId: controlId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "compliance_controls", targetId: controlId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(control, "control", control.id, control.title ?? control.controlKey ?? control.id, control.createdAt, control),
     ...(company ? [timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company)] : []),
@@ -714,11 +716,11 @@ export function materializedPublicCaseTimeline(
   const agency = typeof publicCase.agencyId === "string" ? store.getRecord(namespaceId, "agencies", publicCase.agencyId) : undefined;
   const company = typeof publicCase.companyId === "string" ? store.getRecord(namespaceId, "companies", publicCase.companyId) : undefined;
   const person = typeof publicCase.personId === "string" ? store.getRecord(namespaceId, "people", publicCase.personId) : undefined;
-  const permits = store.listRecords(namespaceId, "permits", { filter: { publicCaseId } }).items;
-  const filings = store.listRecords(namespaceId, "public_filings", { filter: { publicCaseId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "public_cases", recordId: publicCaseId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "public_cases", targetId: publicCaseId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "public_cases", targetId: publicCaseId } }).items;
+  const permits = store.listRecords(namespaceId, "permits", { filter: { publicCaseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const filings = store.listRecords(namespaceId, "public_filings", { filter: { publicCaseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "public_cases", recordId: publicCaseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "public_cases", targetId: publicCaseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "public_cases", targetId: publicCaseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(publicCase, "public_case", publicCase.id, publicCase.title ?? publicCase.caseNumber ?? publicCase.id, publicCase.openedAt ?? publicCase.submittedAt ?? publicCase.createdAt, publicCase),
     ...(agency ? [timelineItem(agency, "agency", agency.id, agency.name ?? agency.id, agency.createdAt, agency)] : []),

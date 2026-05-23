@@ -11,6 +11,8 @@ import {
   uniqueRecordsById,
 } from "./cli-dense-data-semantic-common.ts";
 
+const DENSE_SEMANTIC_VIEW_LIMIT = 250;
+
 export function materializedPatientTimeline(
   input: ProfessionalRecordsCliInput,
   intent: ProfessionalRecordsIntent,
@@ -24,13 +26,13 @@ export function materializedPatientTimeline(
   const patient = store.getRecord(namespaceId, "patients", patientId);
   if (!patient) return undefined;
 
-  const encounters = store.listRecords(namespaceId, "encounters", { filter: { patientId } }).items;
-  const medications = store.listRecords(namespaceId, "medications", { filter: { patientId } }).items;
-  const symptoms = store.listRecords(namespaceId, "symptom_logs", { filter: { patientId } }).items;
-  const labResults = store.listRecords(namespaceId, "lab_results", { filter: { patientId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId } }).items;
+  const encounters = store.listRecords(namespaceId, "encounters", { filter: { patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const medications = store.listRecords(namespaceId, "medications", { filter: { patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const symptoms = store.listRecords(namespaceId, "symptom_logs", { filter: { patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const labResults = store.listRecords(namespaceId, "lab_results", { filter: { patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(patient, "patient", patient.id, patient.displayName ?? patient.id, patient.createdAt, patient),
     ...encounters.map((record) => timelineItem(record, "encounter", record.id, record.title ?? record.encounterType ?? record.id, record.startedAt ?? record.createdAt, record)),
@@ -74,16 +76,16 @@ export function materializedPatientMedications(
   const patient = store.getRecord(namespaceId, "patients", patientId);
   if (!patient) return undefined;
 
-  const medications = store.listRecords(namespaceId, "medications", { filter: { patientId } }).items;
-  const medicationEvidence = medications.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "medications", recordId: record.id } }).items);
-  const patientEvidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId } }).items;
+  const medications = store.listRecords(namespaceId, "medications", { filter: { patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const medicationEvidence = medications.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "medications", recordId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
+  const patientEvidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "patients", recordId: patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const evidence = uniqueRecordsById([...patientEvidence, ...medicationEvidence]);
-  const medicationGaps = medications.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "medications", targetId: record.id } }).items);
-  const patientGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId } }).items;
+  const medicationGaps = medications.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "medications", targetId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
+  const patientGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "patients", targetId: patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const qualityGaps = uniqueRecordsById([...patientGaps, ...medicationGaps]);
   const provenance = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId } }).items,
-    ...medications.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "medications", targetId: record.id } }).items),
+    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "patients", targetId: patientId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...medications.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "medications", targetId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const activeMedications = medications.filter((record) => !["stopped", "inactive", "completed"].includes(String(record.status ?? "").toLowerCase())).length;
   const historicalMedications = medications.length - activeMedications;
@@ -139,11 +141,11 @@ export function materializedCaseTimeline(
   const legalCase = store.getRecord(namespaceId, "legal_cases", caseId);
   if (!legalCase) return undefined;
 
-  const clients = store.listRecords(namespaceId, "legal_clients", { filter: { caseId } }).items;
-  const evidenceItems = store.listRecords(namespaceId, "case_evidence", { filter: { caseId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "legal_cases", recordId: caseId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items;
+  const clients = store.listRecords(namespaceId, "legal_clients", { filter: { caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidenceItems = store.listRecords(namespaceId, "case_evidence", { filter: { caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "legal_cases", recordId: caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "legal_cases", targetId: caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "legal_cases", targetId: caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(legalCase, "case", legalCase.id, legalCase.title ?? legalCase.id, legalCase.openedAt ?? legalCase.createdAt, legalCase),
     ...clients.map((record) => timelineItem(record, "legal_client", record.id, record.displayName ?? record.id, record.openedAt ?? record.createdAt, record)),
@@ -185,18 +187,18 @@ export function materializedCaseEvidence(
   const legalCase = store.getRecord(namespaceId, "legal_cases", caseId);
   if (!legalCase) return undefined;
 
-  const evidenceItems = store.listRecords(namespaceId, "case_evidence", { filter: { caseId } }).items;
+  const evidenceItems = store.listRecords(namespaceId, "case_evidence", { filter: { caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const evidenceSources = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "legal_cases", recordId: caseId } }).items,
-    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "case_evidence", recordId: record.id } }).items),
+    ...store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "legal_cases", recordId: caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "case_evidence", recordId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const qualityGaps = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items,
-    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "case_evidence", targetId: record.id } }).items),
+    ...store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "legal_cases", targetId: caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "case_evidence", targetId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const provenance = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "legal_cases", targetId: caseId } }).items,
-    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "case_evidence", targetId: record.id } }).items),
+    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "legal_cases", targetId: caseId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...evidenceItems.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "case_evidence", targetId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const items = [
     ...evidenceItems.map((record) => timelineItem(record, "case_evidence", record.id, record.title ?? record.id, record.observedAt ?? record.createdAt, record)),
@@ -249,10 +251,10 @@ export function materializedServiceTimeline(
   const service = store.getRecord(namespaceId, "services", serviceId);
   if (!service) return undefined;
 
-  const incidents = store.listRecords(namespaceId, "incidents", { filter: { serviceId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "services", recordId: serviceId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "services", targetId: serviceId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "services", targetId: serviceId } }).items;
+  const incidents = store.listRecords(namespaceId, "incidents", { filter: { serviceId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "services", recordId: serviceId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "services", targetId: serviceId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "services", targetId: serviceId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(service, "service", service.id, service.name ?? service.id, service.createdAt, service),
     ...incidents.map((record) => timelineItem(record, "incident", record.id, record.title ?? record.id, record.detectedAt ?? record.createdAt, record)),
@@ -293,10 +295,10 @@ export function materializedSampleTimeline(
   const sample = store.getRecord(namespaceId, "samples", sampleId);
   if (!sample) return undefined;
 
-  const assays = store.listRecords(namespaceId, "assays", { filter: { sampleId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "samples", recordId: sampleId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "samples", targetId: sampleId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "samples", targetId: sampleId } }).items;
+  const assays = store.listRecords(namespaceId, "assays", { filter: { sampleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "samples", recordId: sampleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "samples", targetId: sampleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "samples", targetId: sampleId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(sample, "sample", sample.id, sample.label ?? sample.id, sample.collectedAt ?? sample.createdAt, sample),
     ...assays.map((record) => timelineItem(record, "assay", record.id, record.name ?? record.id, record.performedAt ?? record.createdAt, record)),
@@ -337,11 +339,11 @@ export function materializedStudyTimeline(
   const study = store.getRecord(namespaceId, "studies", studyId);
   if (!study) return undefined;
 
-  const participants = store.listRecords(namespaceId, "participants", { filter: { studyId } }).items;
-  const samples = store.listRecords(namespaceId, "samples", { filter: { studyId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "studies", recordId: studyId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "studies", targetId: studyId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "studies", targetId: studyId } }).items;
+  const participants = store.listRecords(namespaceId, "participants", { filter: { studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const samples = store.listRecords(namespaceId, "samples", { filter: { studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "studies", recordId: studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "studies", targetId: studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "studies", targetId: studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(study, "study", study.id, study.title ?? study.id, study.startedAt ?? study.createdAt, study),
     ...participants.map((record) => timelineItem(record, "participant", record.id, record.displayName ?? record.subjectCode ?? record.id, record.enrolledAt ?? record.createdAt, record)),
@@ -384,23 +386,23 @@ export function materializedStudyCohort(
   const study = store.getRecord(namespaceId, "studies", studyId);
   if (!study) return undefined;
 
-  const participants = store.listRecords(namespaceId, "participants", { filter: { studyId } }).items;
+  const participants = store.listRecords(namespaceId, "participants", { filter: { studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const participantProfiles = participants.flatMap((record): Array<Record<string, unknown>> => {
     const profile = store.getRecord(namespaceId, "domain_profiles", `profile_participants_${record.id}`);
     return profile ? [profile as Record<string, unknown>] : [];
   });
-  const relations = participants.flatMap((record) => store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "participants", toEntityId: record.id } }).items);
+  const relations = participants.flatMap((record) => store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "participants", toEntityId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
   const evidence = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "studies", recordId: studyId } }).items,
-    ...participants.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "participants", recordId: record.id } }).items),
+    ...store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "studies", recordId: studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...participants.flatMap((record) => store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "participants", recordId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const qualityGaps = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "studies", targetId: studyId } }).items,
-    ...participants.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "participants", targetId: record.id } }).items),
+    ...store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "studies", targetId: studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...participants.flatMap((record) => store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "participants", targetId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const provenance = uniqueRecordsById([
-    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "studies", targetId: studyId } }).items,
-    ...participants.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "participants", targetId: record.id } }).items),
+    ...store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "studies", targetId: studyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items,
+    ...participants.flatMap((record) => store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "participants", targetId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items),
   ]);
   const consentUnknown = participants.filter((record) => String(record.consentStatus ?? "").toLowerCase() === "unknown").length;
   const enrolled = participants.filter((record) => String(record.status ?? "").toLowerCase() === "enrolled").length;
@@ -464,12 +466,12 @@ export function materializedExperimentTimeline(
   const experiment = store.getRecord(namespaceId, "biology_experiments", experimentId);
   if (!experiment) return undefined;
 
-  const samples = store.listRecords(namespaceId, "samples", { filter: { biologyExperimentId: experimentId } }).items;
+  const samples = store.listRecords(namespaceId, "samples", { filter: { biologyExperimentId: experimentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const sampleIds = new Set(samples.map((record) => record.id));
-  const assays = samples.flatMap((sample) => store.listRecords(namespaceId, "assays", { filter: { sampleId: sample.id } }).items);
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "biology_experiments", recordId: experimentId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "biology_experiments", targetId: experimentId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "biology_experiments", targetId: experimentId } }).items;
+  const assays = samples.flatMap((sample) => store.listRecords(namespaceId, "assays", { filter: { sampleId: sample.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "biology_experiments", recordId: experimentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "biology_experiments", targetId: experimentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "biology_experiments", targetId: experimentId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(experiment, "experiment", experiment.id, experiment.title ?? experiment.id, experiment.startedAt ?? experiment.createdAt, experiment),
     ...samples.map((record) => timelineItem(record, "sample", record.id, record.label ?? record.id, record.collectedAt ?? record.createdAt, record)),
@@ -512,9 +514,9 @@ export function materializedLabNotebookTimeline(
   const notebook = store.getRecord(namespaceId, "lab_notebooks", notebookId);
   if (!notebook) return undefined;
 
-  const entries = store.listRecords(namespaceId, "notebook_entries", { filter: { notebookId } }).items;
-  const protocolRuns = store.listRecords(namespaceId, "protocol_runs", { filter: { notebookId } }).items;
-  const observations = store.listRecords(namespaceId, "experiment_observations", { filter: { notebookId } }).items;
+  const entries = store.listRecords(namespaceId, "notebook_entries", { filter: { notebookId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const protocolRuns = store.listRecords(namespaceId, "protocol_runs", { filter: { notebookId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const observations = store.listRecords(namespaceId, "experiment_observations", { filter: { notebookId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const study = typeof notebook.studyId === "string" ? store.getRecord(namespaceId, "studies", notebook.studyId) : undefined;
   const experiment = typeof notebook.biologyExperimentId === "string" ? store.getRecord(namespaceId, "biology_experiments", notebook.biologyExperimentId) : undefined;
   const samples = uniqueRecordsById([
@@ -527,9 +529,9 @@ export function materializedLabNotebookTimeline(
     ...protocolRuns.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId) as Record<string, unknown> | null] : []),
     ...observations.flatMap((record) => typeof record.assayId === "string" ? [store.getRecord(namespaceId, "assays", record.assayId) as Record<string, unknown> | null] : []),
   ].filter((record): record is Record<string, unknown> => record !== null));
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "lab_notebooks", recordId: notebookId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "lab_notebooks", targetId: notebookId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "lab_notebooks", targetId: notebookId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "lab_notebooks", recordId: notebookId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "lab_notebooks", targetId: notebookId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "lab_notebooks", targetId: notebookId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(notebook, "lab_notebook", notebook.id, notebook.title ?? notebook.id, notebook.openedAt ?? notebook.createdAt, notebook),
     ...(study ? [timelineItem(study, "study", study.id, study.title ?? study.id, study.startedAt ?? study.createdAt, study)] : []),

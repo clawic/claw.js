@@ -11,6 +11,8 @@ import {
   uniqueRecordsById,
 } from "./cli-dense-data-semantic-common.ts";
 
+const DENSE_SEMANTIC_VIEW_LIMIT = 250;
+
 export function materializedCompanyTimeline(
   input: ProfessionalRecordsCliInput,
   intent: ProfessionalRecordsIntent,
@@ -24,25 +26,25 @@ export function materializedCompanyTimeline(
   const company = store.getRecord(namespaceId, "companies", companyId);
   if (!company) return undefined;
 
-  const accounts = store.listRecords(namespaceId, "accounts", { filter: { companyId } }).items;
-  const deals = store.listRecords(namespaceId, "deals", { filter: { companyId } }).items;
-  const contacts = store.listRecords(namespaceId, "contacts", { filter: { companyId } }).items;
-  const activities = store.listRecords(namespaceId, "activities", { filter: { companyId } }).items;
-  const billingCustomers = store.listRecords(namespaceId, "billing_customers", { filter: { companyId } }).items;
-  const invoices = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "invoices", { filter: { billingCustomerId: record.id } }).items);
-  const paymentsByCustomer = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { billingCustomerId: record.id } }).items);
-  const paymentsByInvoice = invoices.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { invoiceId: record.id } }).items);
+  const accounts = store.listRecords(namespaceId, "accounts", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const deals = store.listRecords(namespaceId, "deals", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const contacts = store.listRecords(namespaceId, "contacts", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const activities = store.listRecords(namespaceId, "activities", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const billingCustomers = store.listRecords(namespaceId, "billing_customers", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const invoices = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "invoices", { filter: { billingCustomerId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
+  const paymentsByCustomer = billingCustomers.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { billingCustomerId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
+  const paymentsByInvoice = invoices.flatMap((record) => store.listRecords(namespaceId, "payment_intents", { filter: { invoiceId: record.id }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items);
   const payments = uniqueRecordsById([...paymentsByCustomer, ...paymentsByInvoice]);
-  const services = store.listRecords(namespaceId, "services", { filter: { companyId } }).items;
-  const workOrders = store.listRecords(namespaceId, "work_orders", { filter: { companyId } }).items;
-  const assets = store.listRecords(namespaceId, "assets", { filter: { companyId } }).items;
-  const products = store.listRecords(namespaceId, "products_catalog", { filter: { companyId } }).items;
-  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "companies", fromEntityId: companyId } }).items;
-  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "companies", toEntityId: companyId } }).items;
+  const services = store.listRecords(namespaceId, "services", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const workOrders = store.listRecords(namespaceId, "work_orders", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const assets = store.listRecords(namespaceId, "assets", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const products = store.listRecords(namespaceId, "products_catalog", { filter: { companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const outgoingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { fromEntityKind: "companies", fromEntityId: companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const incomingRelations = store.listRecords(namespaceId, "entity_relations", { filter: { toEntityKind: "companies", toEntityId: companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const relations = uniqueRecordsById([...outgoingRelations, ...incomingRelations]);
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "companies", recordId: companyId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "companies", targetId: companyId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "companies", targetId: companyId } }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "companies", recordId: companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "companies", targetId: companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "companies", targetId: companyId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const items = [
     timelineItem(company, "company", company.id, company.name ?? company.legalName ?? company.id, company.createdAt, company),
     ...accounts.map((record) => timelineItem(record, "account", record.id, record.name ?? record.id, record.createdAt, record)),
@@ -129,12 +131,12 @@ export function materializedCrmAccountOverview(
 
   const companyId = typeof account.companyId === "string" ? account.companyId : undefined;
   const company = companyId ? store.getRecord(namespaceId, "companies", companyId) : undefined;
-  const deals = store.listRecords(namespaceId, "deals", { filter: { accountId } }).items;
-  const contacts = store.listRecords(namespaceId, "contacts", { filter: { accountId } }).items;
-  const activities = store.listRecords(namespaceId, "activities", { filter: { accountId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "accounts", recordId: accountId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "accounts", targetId: accountId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "accounts", targetId: accountId } }).items;
+  const deals = store.listRecords(namespaceId, "deals", { filter: { accountId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const contacts = store.listRecords(namespaceId, "contacts", { filter: { accountId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const activities = store.listRecords(namespaceId, "activities", { filter: { accountId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "accounts", recordId: accountId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "accounts", targetId: accountId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "accounts", targetId: accountId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const openDealValueCents = sumNumericField(deals.filter((record) => record.status !== "lost"), "valueCents");
 
   return {
@@ -186,10 +188,10 @@ export function materializedFinanceEntityOverview(
   const financialAccount = store.getRecord(namespaceId, "financial_accounts", entityId);
   if (!financialAccount) return undefined;
 
-  const transactions = store.listRecords(namespaceId, "transactions", { filter: { accountId: entityId } }).items;
-  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "financial_accounts", recordId: entityId } }).items;
-  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "financial_accounts", targetId: entityId } }).items;
-  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "financial_accounts", targetId: entityId } }).items;
+  const transactions = store.listRecords(namespaceId, "transactions", { filter: { accountId: entityId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const evidence = store.listRecords(namespaceId, "evidence_sources", { filter: { collectionName: "financial_accounts", recordId: entityId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const qualityGaps = store.listRecords(namespaceId, "quality_gaps", { filter: { targetCollection: "financial_accounts", targetId: entityId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
+  const provenance = store.listRecords(namespaceId, "provenance_events", { filter: { targetCollection: "financial_accounts", targetId: entityId }, limit: DENSE_SEMANTIC_VIEW_LIMIT }).items;
   const debitCents = sumNumericField(transactions.filter((record) => record.kind !== "credit" && typeof record.amountCents === "number" && record.amountCents > 0), "amountCents");
   const creditCents = sumNumericField(transactions.filter((record) => record.kind === "credit" || (typeof record.amountCents === "number" && record.amountCents < 0)), "amountCents");
   const netAmountCents = sumNumericField(transactions, "amountCents");

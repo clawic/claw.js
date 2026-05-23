@@ -262,7 +262,13 @@ test("createClaw emits domain events and supports auth key storage", async () =>
     "auth.progress",
   ]);
 
-  const auditLog = fs.readFileSync(resolveClawWorkspaceSurfacePath("claw.workspace.audit", workspaceDir, "audit.jsonl"), "utf8");
+  const auditLogReadLimitBytes = 64 * 1024;
+  const auditLogPath = resolveClawWorkspaceSurfacePath("claw.workspace.audit", workspaceDir, "audit.jsonl");
+  const auditLogBuffer = Buffer.alloc(auditLogReadLimitBytes);
+  const auditLogFd = fs.openSync(auditLogPath, "r");
+  const auditLogBytes = fs.readSync(auditLogFd, auditLogBuffer, 0, auditLogReadLimitBytes, 0);
+  fs.closeSync(auditLogFd);
+  const auditLog = auditLogBuffer.subarray(0, auditLogBytes).toString("utf8");
   assert.equal(auditLog.includes("sk-ant-secret-12345678"), false);
 });
 
