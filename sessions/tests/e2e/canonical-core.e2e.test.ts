@@ -1,13 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import childProcess from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { SessionsApiClient, buildSessionsApp, stableProjectIdFromPath } from "@clawjs/sessions";
 import type { FastifyInstance } from "fastify";
 
 const SECRET = "sessions-canonical-secret";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 interface TestContext {
   client: SessionsApiClient;
@@ -158,6 +161,67 @@ test("fixture Codex turn appends working timeline and final assistant answer", a
     assert.ok((result.assistantMessage?.timeline?.length ?? 0) >= 2);
   } finally {
     await ctx.close();
+  }
+});
+
+test("CLI seed-realistic creates a reusable hermetic sessions dataset", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sessions-seed-realistic-"));
+  try {
+    const dbPath = path.join(tmpDir, "seeded.sqlite");
+    const result = childProcess.spawnSync(process.execPath, [
+      "--import",
+      "tsx",
+      path.resolve(HERE, "../../src/bin/cli.ts"),
+      "seed-realistic",
+      "--db-path",
+      dbPath,
+      "--profile",
+      "smoke",
+      "--sessions",
+      "12",
+      "--projects",
+      "4",
+      "--workspace-root",
+      path.join(tmpDir, "workspace"),
+    ], {
+      cwd: path.resolve(HERE, "../.."),
+      encoding: "utf8",
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const seedReport = JSON.parse(result.stdout);
+    assert.equal(seedReport.fixtureSetId, "realistic-sessions-v1");
+    assert.equal(seedReport.sessionsSeeded, 12);
+    assert.ok(seedReport.coverage.markdownHeavyMessages > 0);
+    assert.ok(seedReport.coverage.toolEvents > 0);
+    assert.ok(seedReport.coverage.recoverableCorruptions > 0);
+
+    const { app } = buildSessionsApp({
+      config: {
+        host: "127.0.0.1",
+        port: 0,
+        dataDir: tmpDir,
+        dbPath,
+        sharedSecret: SECRET,
+        codexSessionsDir: path.join(tmpDir, "codex"),
+      },
+    });
+    const client = new SessionsApiClient({
+      baseUrl: "http://sessions.test",
+      token: SECRET,
+      fetchImpl: injectFetch(app),
+    });
+    try {
+      const listed = await client.list({ limit: 20 });
+      assert.equal(listed.total, 12);
+      const markdownHits = await client.search({ query: "Regression Packet", limit: 10 });
+      assert.ok(markdownHits.items.length > 0);
+      assert.ok(markdownHits.items.some((hit) => hit.message.contentBlocks && hit.message.contentBlocks.length > 0));
+    } finally {
+      await app.close();
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 

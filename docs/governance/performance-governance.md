@@ -205,6 +205,15 @@ session, skill, attachment, runtime, search, and dense-data roots. It must not
 read user data, send prompts, contact providers, use paid APIs, reveal secrets,
 or mutate real services.
 
+The sessions workload consumes the reusable `realistic-sessions-v1` generator
+from `@clawjs/sessions`. That generator is deterministic and covers thousands
+of conversations in its `large` profile, long chats, heavy Markdown, attachment
+metadata, tool events, provider errors, recoverable corruption markers, dense
+project distribution, and search-visible transcript/event text. The same corpus
+is available through the sessions package API and `sessions seed-realistic` CLI
+so tests, performance runs, and E2E setup use one hermetic source instead of
+private transcripts.
+
 The harness has three profiles:
 
 - `smoke`: safe for fast and changed lanes.

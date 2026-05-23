@@ -5,6 +5,7 @@ import type {
   CreateSessionInput,
   HydrateSessionInput,
   HydratedSessionResult,
+  ListSessionDynamicToolsOptions,
   ListProjectsFilter,
   ListProjectsResult,
   ListSessionsFilter,
@@ -15,6 +16,7 @@ import type {
   SearchSessionsInput,
   SearchSessionEventsInput,
   SidebarBootstrapResult,
+  SessionDynamicToolRecord,
   SessionEvent,
   SessionEventSearchHit,
   SessionMessageRecord,
@@ -135,6 +137,12 @@ export class SessionsApiClient {
       eventLimit: input.eventLimit,
       eventOffset: input.eventOffset,
       eventTurnId: input.eventTurnId,
+    })}`));
+  }
+
+  listDynamicTools(sessionId: string, options: ListSessionDynamicToolsOptions = {}): Promise<{ items: SessionDynamicToolRecord[] }> {
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/dynamic-tools${buildQuery({
+      includeDeferredSchemas: options.includeDeferredSchemas,
     })}`));
   }
 

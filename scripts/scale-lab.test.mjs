@@ -35,6 +35,12 @@ test("scale lab smoke runs all synthetic workloads and cleans up by default", ()
   assert.equal(report.ok, true);
   assert.equal(report.profile, "smoke");
   assert.deepEqual(report.workloads.map((workload) => workload.name), ["search", "sessions", "skills", "runtimes", "dense", "attachments"]);
+  const sessionsWorkload = report.workloads.find((workload) => workload.name === "sessions");
+  assert.equal(sessionsWorkload?.counts.sessions, 6);
+  assert.ok(sessionsWorkload?.counts.markdownHeavyMessages > 0);
+  assert.ok(sessionsWorkload?.counts.attachments > 0);
+  assert.ok(sessionsWorkload?.counts.toolEvents > 0);
+  assert.ok(sessionsWorkload?.counts.recoverableCorruptions > 0);
   assert.equal(report.cleanup.status, "removed");
   assert.equal(fs.existsSync(report.tempRoot), false);
   assert.equal(fs.existsSync(lockPath), false);

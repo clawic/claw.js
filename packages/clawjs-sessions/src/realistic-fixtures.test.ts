@@ -30,6 +30,7 @@ test("realistic sessions fixture covers long chats, attachments, markdown, provi
     assert.ok(result.coverage.longChats > 0);
     assert.ok(result.coverage.conversationsWithAttachments > 0);
     assert.ok(result.coverage.markdownHeavyMessages > 0);
+    assert.ok(result.coverage.toolEvents > 0);
     assert.ok(result.coverage.providerErrors > 0);
     assert.ok(result.coverage.recoverableCorruptions > 0);
 
@@ -72,4 +73,19 @@ test("realistic sessions fixture generation is deterministic enough for screensh
   assert.deepEqual(first.sessions, second.sessions);
   assert.deepEqual(first.messages.slice(0, 12), second.messages.slice(0, 12));
   assert.deepEqual(first.events.slice(0, 12), second.events.slice(0, 12));
+});
+
+test("large realistic sessions fixture represents thousands of synthetic conversations", () => {
+  const corpus = buildRealisticSessionsFixtureCorpus({ profile: "large" });
+
+  assert.equal(corpus.fixtureSetId, "realistic-sessions-v1");
+  assert.equal(corpus.sessions.length, 2_000);
+  assert.ok(corpus.messages.length > 20_000);
+  assert.ok(corpus.events.length > corpus.messages.length);
+  assert.ok(corpus.coverage.longChats > 100);
+  assert.ok(corpus.coverage.conversationsWithAttachments > 100);
+  assert.ok(corpus.coverage.markdownHeavyMessages > 1_000);
+  assert.ok(corpus.coverage.toolEvents > 1_000);
+  assert.ok(corpus.coverage.providerErrors > 100);
+  assert.ok(corpus.coverage.recoverableCorruptions > 100);
 });

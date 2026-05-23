@@ -156,3 +156,55 @@ test("sessions hydrate endpoint opens chat from sessions.sqlite with a bounded m
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("sessions dynamic tools endpoint expands deferred schemas on demand", async () => {
+  const rootDir = tempRoot("clawjs-session-dynamic-tools-api-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const seed = new SessionsServiceStore(dbPath);
+  try {
+    seed.createSession({ id: "session-tools-api", agent: "codex", title: "Tools" });
+    seed.replaceSessionDynamicTools("session-tools-api", [
+      {
+        position: 0,
+        name: "automation_update",
+        namespace: "codex-cli",
+        description: "Update automation",
+        inputSchemaJson: { type: "object", properties: { prompt: { type: "string" } } },
+        deferLoading: true,
+        source: "fixture",
+      },
+    ]);
+  } finally {
+    seed.close();
+  }
+  const { app } = buildSessionsApp({
+    config: {
+      sharedSecret: "test-secret",
+      dataDir: path.join(rootDir, "data"),
+      dbPath,
+    },
+  });
+  try {
+    const deferredResponse = await app.inject({
+      method: "GET",
+      url: "/v1/sessions/session-tools-api/dynamic-tools",
+      headers: { authorization: "Bearer test-secret" },
+    });
+    assert.equal(deferredResponse.statusCode, 200);
+    const deferredBody = JSON.parse(deferredResponse.body) as { items: Array<{ inputSchemaJson: unknown; schemaHash: string }> };
+    assert.equal(deferredBody.items[0]?.inputSchemaJson, null);
+    assert.equal(deferredBody.items[0]?.schemaHash.length, 64);
+
+    const expandedResponse = await app.inject({
+      method: "GET",
+      url: "/v1/sessions/session-tools-api/dynamic-tools?includeDeferredSchemas=true",
+      headers: { authorization: "Bearer test-secret" },
+    });
+    assert.equal(expandedResponse.statusCode, 200);
+    const expandedBody = JSON.parse(expandedResponse.body) as { items: Array<{ inputSchemaJson: unknown }> };
+    assert.deepEqual(expandedBody.items[0]?.inputSchemaJson, { type: "object", properties: { prompt: { type: "string" } } });
+  } finally {
+    await app.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
