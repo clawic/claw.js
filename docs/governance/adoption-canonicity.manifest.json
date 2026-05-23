@@ -5,7 +5,7 @@
   "stages": ["unproven", "exploratory", "understandable", "adopted", "canonical"],
   "claimTypes": ["stable_capability", "standard_canonicity", "ui_canon_promotion", "any_human_comprehension", "pmf_adoption"],
   "privacyModes": ["hybrid_private", "manual_public", "explicit_opt_in_metrics"],
-  "privateEvidenceAliases": ["private-codex-research", "private-codex-ui-review", "private-codex-feedback"],
+  "externalEvidenceAliases": ["external-research-evidence", "external-ui-review", "external-feedback"],
   "requiredPromotionPacketFields": [
     "id",
     "targetType",

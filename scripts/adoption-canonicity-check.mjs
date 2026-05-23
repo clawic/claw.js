@@ -90,7 +90,7 @@ function validateManifest(manifest, { mutation } = {}) {
   const stages = new Set(requireArray(manifest, manifestPath, "stages"));
   const claimTypes = new Set(requireArray(manifest, manifestPath, "claimTypes"));
   const privacyModes = new Set(requireArray(manifest, manifestPath, "privacyModes"));
-  const aliases = requireArray(manifest, manifestPath, "privateEvidenceAliases", { nonEmpty: false });
+  const aliases = requireArray(manifest, manifestPath, "externalEvidenceAliases", { nonEmpty: false });
   for (const required of ["unproven", "exploratory", "understandable", "adopted", "canonical"]) {
     if (!stages.has(required)) fail(`${manifestPath}.stages must include ${required}`);
   }
@@ -123,7 +123,7 @@ function validateManifest(manifest, { mutation } = {}) {
     const evidenceRefs = requireArray(packet, label, "evidenceRefs");
     for (const [evidenceIndex, evidence] of evidenceRefs.entries()) {
       requireFields(evidence, `${label}.evidenceRefs[${evidenceIndex}]`, ["kind", "ref", "summary"]);
-      if (!evidenceRefIsSafe(evidence.ref, aliases)) fail(`${label}.evidenceRefs[${evidenceIndex}].ref must be public-safe or use an approved private alias`);
+      if (!evidenceRefIsSafe(evidence.ref, aliases)) fail(`${label}.evidenceRefs[${evidenceIndex}].ref must be public-safe or use an approved external evidence alias`);
     }
     requireFields(packet.feedbackLoop, `${label}.feedbackLoop`, ["mechanism", "cadence", "evidenceRefs"]);
     requireArray(packet.feedbackLoop, `${label}.feedbackLoop`, "evidenceRefs");

@@ -947,5 +947,5 @@ function containsPrivatePath(value: string): boolean {
 function redactPrivatePaths(value: string): string {
   return value
     .replace(/\/Users\/[^/\s]+\/[^\s)]+/g, "<private-path>")
-    .replace(/~\/\.codex[^\s)]*/g, "<private-codex-path>");
+    .replace(/~\/\.codex[^\s)]*/g, "<redacted-local-path>");
 }

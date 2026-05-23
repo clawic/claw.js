@@ -53,7 +53,7 @@ target is downgraded.
 No packet may depend on silent telemetry. Metric evidence is valid only when it
 is explicitly opt-in, aggregated or redacted, and tied to a consent mechanism.
 Manual research and private review artifacts use aliases such as
-`private-codex-research:<relative-ref>` instead of local paths.
+`external-research-evidence:<relative-ref>` instead of local paths.
 
 ## Guardrail
 
