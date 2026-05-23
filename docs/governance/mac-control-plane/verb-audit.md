@@ -63,6 +63,37 @@ non-executable.
 | `mac.media.playback.status` | executable | `claw media playback status --app &lt;app&gt;` | `status` reads playback state for an approved local media app target. |
 | `mac.media.playback.pause` | executable | `claw media playback pause --app &lt;app&gt;` | `pause` is a transport action scoped to an approved media app target. |
 | `mac.media.playback.resume` | executable | `claw media playback resume --app &lt;app&gt;` | `resume` maps to the app playback `play` transport action while keeping the user-facing verb natural. |
+| `mac.text.inject` | executable | `claw input text inject --text &lt;text&gt;` | `inject` is the explicit focused-target text insertion verb; plans redact payload content. |
+| `mac.utility.hide_all_windows` | executable | `claw mac utility hide-all-windows` | `hide` is scoped to the Mac Utilities window-management action and remains broker-audited. |
+| `mac.utility.minimize_all_windows` | executable | `claw mac utility minimize-all-windows` | `minimize` is the visible window-state verb; id keeps the all-windows scope explicit. |
+| `mac.utility.minimize_all_windows_except_frontmost` | executable | `claw mac utility minimize-all-windows-except-frontmost` | The long verb keeps the exception explicit instead of overloading generic minimize. |
+| `mac.utility.minimize_app_windows_except_frontmost` | executable | `claw mac utility minimize-app-windows-except-frontmost` | The app-scoped minimize action is separate from global window minimization. |
+| `mac.utility.isolate_window` | executable | `claw mac utility isolate-window` | `isolate` captures the combined hide-other-apps and minimize-other-windows intent. |
+| `mac.utility.unminimize_all_windows` | executable | `claw mac utility unminimize-all-windows` | `unminimize` is the direct inverse of the minimized window state. |
+| `mac.utility.show_desktop` | executable | `claw mac utility show-desktop` | `show` matches the system action label for revealing the desktop. |
+| `mac.utility.clear_clipboard` | executable | `claw mac utility clear-clipboard` | `clear` is destructive pasteboard mutation and carries high risk. |
+| `mac.utility.sleep_displays` | executable | `claw mac utility sleep-displays` | `sleep` matches the display power action without implying full system sleep. |
+| `mac.utility.center_mouse_pointer` | executable | `claw mac utility center-mouse-pointer` | `center` describes the bounded pointer repositioning action. |
+| `mac.utility.show_color_picker` | executable | `claw mac utility show-color-picker` | `show` opens the host-owned color picker UI without external state mutation. |
+| `mac.utility.toggle_dark_mode` | executable | `claw mac utility toggle-dark-mode` | `toggle` is retained because the current UI intentionally flips the existing state. |
+| `mac.utility.toggle_mute_sound` | executable | `claw mac utility toggle-mute-sound` | `toggle` matches the legacy Mac Utilities control; lower-level audio mute set remains separate. |
+| `mac.utility.keep_awake_on` | executable | `claw mac utility keep-awake-on` | `on` creates the broker-owned idle-sleep assertion. |
+| `mac.utility.keep_awake_off` | executable | `claw mac utility keep-awake-off` | `off` releases the broker-owned idle-sleep assertion. |
+| `mac.utility.toggle_desktop_icons` | executable | `claw mac utility toggle-desktop-icons` | `toggle` matches the Finder desktop icon visibility control. |
+| `mac.utility.open_finder` | executable | `claw mac utility open-finder` | `open` starts or focuses the allowlisted Finder app. |
+| `mac.utility.open_terminal` | executable | `claw mac utility open-terminal` | `open` starts or focuses the allowlisted Terminal app and remains approval-gated. |
+| `mac.utility.open_shortcuts` | executable | `claw mac utility open-shortcuts` | `open` starts or focuses the allowlisted Shortcuts app. |
+| `mac.utility.open_passwords` | executable | `claw mac utility open-passwords` | `open` is high risk because it foregrounds the password manager surface. |
+| `mac.utility.open_airdrop` | executable | `claw mac utility open-airdrop` | `open` targets the Finder AirDrop surface through an allowlisted broker action. |
+| `mac.utility.open_vpn_settings` | executable | `claw mac utility open-vpn-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_private_relay_settings` | executable | `claw mac utility open-private-relay-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_hide_my_email_settings` | executable | `claw mac utility open-hide-my-email-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_keyboard_settings` | executable | `claw mac utility open-keyboard-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_display_settings` | executable | `claw mac utility open-display-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_desktop_dock_settings` | executable | `claw mac utility open-desktop-dock-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_notifications_settings` | executable | `claw mac utility open-notifications-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_sound_settings` | executable | `claw mac utility open-sound-settings` | `open` is limited to an allowlisted System Settings pane. |
+| `mac.utility.open_privacy_settings` | executable | `claw mac utility open-privacy-settings` | `open` is limited to an allowlisted System Settings pane. |
 | `mac.display.brightness` | executable | `claw display brightness set &lt;value&gt;` | Stable id keeps the governed property; CLI uses `set` for mutation. |
 | `mac.screen.capture` | planned | `claw screen capture` | `capture` is a read/observation action gated by Screen Recording. |
 | `mac.focus.set` | planned | `claw focus set &lt;mode&gt;` | `set` is the natural mode-changing verb for Focus state. |
@@ -92,6 +123,37 @@ claw audio mute set <on|off>
 claw media playback status --app <app>
 claw media playback pause --app <app>
 claw media playback resume --app <app>
+claw input text inject --text <text>
+claw mac utility hide-all-windows
+claw mac utility minimize-all-windows
+claw mac utility minimize-all-windows-except-frontmost
+claw mac utility minimize-app-windows-except-frontmost
+claw mac utility isolate-window
+claw mac utility unminimize-all-windows
+claw mac utility show-desktop
+claw mac utility clear-clipboard
+claw mac utility sleep-displays
+claw mac utility center-mouse-pointer
+claw mac utility show-color-picker
+claw mac utility toggle-dark-mode
+claw mac utility toggle-mute-sound
+claw mac utility keep-awake-on
+claw mac utility keep-awake-off
+claw mac utility toggle-desktop-icons
+claw mac utility open-finder
+claw mac utility open-terminal
+claw mac utility open-shortcuts
+claw mac utility open-passwords
+claw mac utility open-airdrop
+claw mac utility open-vpn-settings
+claw mac utility open-private-relay-settings
+claw mac utility open-hide-my-email-settings
+claw mac utility open-keyboard-settings
+claw mac utility open-display-settings
+claw mac utility open-desktop-dock-settings
+claw mac utility open-notifications-settings
+claw mac utility open-sound-settings
+claw mac utility open-privacy-settings
 claw display brightness set <value>
 claw focus set <mode>
 ```

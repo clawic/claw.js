@@ -9,6 +9,7 @@ import Foundation
 import IOKit
 import IOKit.graphics
 import IOKit.hid
+import IOKit.pwr_mgt
 import Speech
 
 public enum MacControlOrigin: String, Codable, Sendable {
@@ -744,7 +745,37 @@ public protocol MacControlCommandRunning {
     func runNative(_ action: String, arguments: [String]) throws -> String
 }
 
+private final class MacControlUtilityKeepAwakeState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var assertion: IOPMAssertionID = 0
+
+    func setEnabled(_ enabled: Bool) throws {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if enabled {
+            guard assertion == 0 else { return }
+            var assertionID: IOPMAssertionID = 0
+            let result = IOPMAssertionCreateWithName(
+                kIOPMAssertionTypeNoIdleSleep as CFString,
+                IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                "Clawix Keep Awake" as CFString,
+                &assertionID
+            )
+            guard result == kIOReturnSuccess else {
+                throw MacControlError.commandFailed("Could not keep the Mac awake.")
+            }
+            assertion = assertionID
+        } else if assertion != 0 {
+            IOPMAssertionRelease(assertion)
+            assertion = 0
+        }
+    }
+}
+
 public struct MacControlProcessRunner: MacControlCommandRunning {
+    private static let utilityKeepAwakeState = MacControlUtilityKeepAwakeState()
+
     public init() {}
 
     public func runProcess(_ executable: String, arguments: [String]) throws -> String {
@@ -798,6 +829,10 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
             let muted = try booleanValue(from: arguments, label: "muted")
             try setDefaultOutputMuted(muted)
             return muted ? "output muted" : "output unmuted"
+        case "text.inject":
+            return try injectText(arguments)
+        case let nativeAction where nativeAction.hasPrefix("utility."):
+            return try runUtilityAction(nativeAction)
         case "display.brightness":
             let value = try percentValue(from: arguments, label: "brightness")
             try setMainDisplayBrightness(Float(value) / 100)
@@ -883,6 +918,321 @@ public struct MacControlProcessRunner: MacControlCommandRunning {
         }
         return value
     }
+
+    private func runUtilityAction(_ action: String) throws -> String {
+        switch action {
+        case "utility.hide_all_windows":
+            _ = try runAppleScript(Self.utilityHideAllWindowsScript)
+        case "utility.minimize_all_windows":
+            _ = try runAppleScript(Self.utilityMinimizeWindowsScript(mode: "all"))
+        case "utility.minimize_all_windows_except_frontmost":
+            _ = try runAppleScript(Self.utilityMinimizeWindowsScript(mode: "allExceptFrontmost"))
+        case "utility.minimize_app_windows_except_frontmost":
+            _ = try runAppleScript(Self.utilityMinimizeWindowsScript(mode: "frontmostExceptFirst"))
+        case "utility.isolate_window":
+            _ = try runAppleScript(Self.utilityIsolateWindowScript)
+        case "utility.unminimize_all_windows":
+            _ = try runAppleScript(Self.utilityUnminimizeAllWindowsScript)
+        case "utility.show_desktop":
+            _ = try runAppleScript(Self.utilityShowDesktopScript)
+        case "utility.clear_clipboard":
+            NSPasteboard.general.clearContents()
+        case "utility.sleep_displays":
+            _ = try runProcess("/usr/bin/pmset", arguments: ["displaysleepnow"])
+        case "utility.center_mouse_pointer":
+            try centerMousePointer()
+        case "utility.show_color_picker":
+            DispatchQueue.main.async {
+                NSColorPanel.shared.orderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        case "utility.toggle_dark_mode":
+            _ = try runAppleScript(Self.utilityToggleDarkModeScript)
+        case "utility.toggle_mute_sound":
+            let muted = try isDefaultOutputMuted()
+            try setDefaultOutputMuted(!muted)
+        case "utility.keep_awake_on":
+            try setUtilityKeepAwake(true)
+        case "utility.keep_awake_off":
+            try setUtilityKeepAwake(false)
+        case "utility.toggle_desktop_icons":
+            try toggleDesktopIcons()
+        case "utility.open_finder":
+            openApplication("/System/Library/CoreServices/Finder.app")
+        case "utility.open_terminal":
+            openApplication("/System/Applications/Utilities/Terminal.app")
+        case "utility.open_shortcuts":
+            openApplication("/System/Applications/Shortcuts.app")
+        case "utility.open_passwords":
+            openApplication("/System/Applications/Passwords.app")
+        case "utility.open_airdrop":
+            _ = try runAppleScript(Self.utilityOpenAirDropScript)
+        case "utility.open_vpn_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.Network-Settings.extension")
+        case "utility.open_private_relay_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane?PRIVATERELAY")
+        case "utility.open_hide_my_email_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane?HIDE_MY_EMAIL")
+        case "utility.open_keyboard_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.Keyboard-Settings.extension")
+        case "utility.open_display_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.Displays-Settings.extension")
+        case "utility.open_desktop_dock_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.Desktop-Settings.extension")
+        case "utility.open_notifications_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+        case "utility.open_sound_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.Sound-Settings.extension")
+        case "utility.open_privacy_settings":
+            try openSystemSettings("x-apple.systempreferences:com.apple.preference.security")
+        default:
+            throw MacControlError.commandFailed("Unsupported Mac Utility action \(action).")
+        }
+        return "\(action) executed"
+    }
+
+    private func centerMousePointer() throws {
+        let bounds = CGDisplayBounds(CGMainDisplayID())
+        let result = CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
+        guard result == .success else {
+            throw MacControlError.commandFailed("Could not move the pointer.")
+        }
+        CGAssociateMouseAndMouseCursorPosition(1)
+    }
+
+    private func setUtilityKeepAwake(_ enabled: Bool) throws {
+        try Self.utilityKeepAwakeState.setEnabled(enabled)
+    }
+
+    private func toggleDesktopIcons() throws {
+        let current = try runProcess("/usr/bin/defaults", arguments: ["read", "com.apple.finder", "CreateDesktop"])
+        let showsDesktop = current.trimmingCharacters(in: .whitespacesAndNewlines) != "false"
+        _ = try runProcess("/usr/bin/defaults", arguments: ["write", "com.apple.finder", "CreateDesktop", showsDesktop ? "false" : "true"])
+        _ = try? runProcess("/usr/bin/killall", arguments: ["Finder"])
+    }
+
+    private func openApplication(_ path: String) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    private func openSystemSettings(_ urlString: String) throws {
+        guard let url = URL(string: urlString), url.scheme == "x-apple.systempreferences" else {
+            throw MacControlError.commandFailed("Unsupported System Settings URL.")
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    private func injectText(_ arguments: [String]) throws -> String {
+        let payload = try axArgument(arguments, 0, label: "text")
+        guard payload.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            throw MacControlError.commandFailed("Text injection requires a non-empty payload.")
+        }
+        let restorePrevious = try booleanValue(from: [arguments.count > 1 ? arguments[1] : "true"], label: "restore_previous")
+        let autoSend = arguments.count > 2 ? arguments[2] : "none"
+        let restoreAfter = arguments.count > 3 ? (Double(arguments[3]) ?? 1.5) : 1.5
+        let addSpaceBefore = try booleanValue(from: [arguments.count > 4 ? arguments[4] : "false"], label: "add_space_before")
+
+        guard AXIsProcessTrusted() else {
+            throw MacControlError.commandFailed("Accessibility permission is required for text injection.")
+        }
+
+        let text = addSpaceBefore && shouldPrependSpaceBeforeFocusedText() ? " " + payload : payload
+        let pasteboard = NSPasteboard.general
+        let snapshot = pasteboard.snapshot()
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        postCommandV()
+        if autoSend != "none" {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                Self.postReturn(autoSend: autoSend)
+            }
+        }
+        if restorePrevious {
+            DispatchQueue.main.asyncAfter(deadline: .now() + max(0, restoreAfter)) {
+                pasteboard.restore(snapshot)
+            }
+        }
+        return "injected \(payload.count) characters"
+    }
+
+    private func postCommandV() {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true)
+        cmdDown?.flags = .maskCommand
+        let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
+        vDown?.flags = .maskCommand
+        let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        vUp?.flags = .maskCommand
+        let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: false)
+
+        cmdDown?.post(tap: .cghidEventTap)
+        vDown?.post(tap: .cghidEventTap)
+        vUp?.post(tap: .cghidEventTap)
+        cmdUp?.post(tap: .cghidEventTap)
+    }
+
+    private static func postReturn(autoSend: String) {
+        let flags: CGEventFlags
+        switch autoSend {
+        case "enter":
+            flags = []
+        case "shift_enter":
+            flags = .maskShift
+        case "cmd_enter":
+            flags = .maskCommand
+        default:
+            return
+        }
+        let source = CGEventSource(stateID: .hidSystemState)
+        let down = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true)
+        let up = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false)
+        if !flags.isEmpty {
+            down?.flags = flags
+            up?.flags = flags
+        }
+        down?.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
+    }
+
+    private func shouldPrependSpaceBeforeFocusedText() -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focused: CFTypeRef?
+        let focusStatus = AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &focused
+        )
+        guard focusStatus == .success, let element = focused else { return false }
+        let focusedElement = element as! AXUIElement
+
+        var rangeValue: CFTypeRef?
+        let rangeStatus = AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXSelectedTextRangeAttribute as CFString,
+            &rangeValue
+        )
+        guard rangeStatus == .success, let rawRange = rangeValue else { return false }
+        var range = CFRange(location: 0, length: 0)
+        let axValue = rawRange as! AXValue
+        guard AXValueGetValue(axValue, .cfRange, &range), range.location > 0 else { return false }
+
+        var valueRef: CFTypeRef?
+        let valueStatus = AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXValueAttribute as CFString,
+            &valueRef
+        )
+        guard valueStatus == .success, let value = valueRef as? String else { return false }
+        let beforeIndex = range.location - 1
+        guard beforeIndex >= 0, beforeIndex < value.utf16.count else { return false }
+        let utf16Index = value.utf16.index(value.utf16.startIndex, offsetBy: beforeIndex)
+        guard let scalar = Unicode.Scalar(value.utf16[utf16Index]) else { return false }
+        let char = Character(scalar)
+        return char.isLetter || char.isNumber
+    }
+
+    private static let utilityHideAllWindowsScript = """
+    tell application "System Events"
+        repeat with appProcess in application processes
+            try
+                if background only of appProcess is false then
+                    set visible of appProcess to false
+                end if
+            end try
+        end repeat
+    end tell
+    """
+
+    private static func utilityMinimizeWindowsScript(mode: String) -> String {
+        """
+        tell application "System Events"
+            set frontName to name of first application process whose frontmost is true
+            repeat with appProcess in application processes
+                try
+                    set windowIndex to 0
+                    repeat with appWindow in windows of appProcess
+                        set windowIndex to windowIndex + 1
+                        set shouldMinimize to true
+                        if "\(mode)" is "allExceptFrontmost" and name of appProcess is frontName and windowIndex is 1 then
+                            set shouldMinimize to false
+                        end if
+                        if "\(mode)" is "frontmostExceptFirst" and name of appProcess is not frontName then
+                            set shouldMinimize to false
+                        end if
+                        if "\(mode)" is "frontmostExceptFirst" and name of appProcess is frontName and windowIndex is 1 then
+                            set shouldMinimize to false
+                        end if
+                        if shouldMinimize then
+                            try
+                                set value of attribute "AXMinimized" of appWindow to true
+                            end try
+                        end if
+                    end repeat
+                end try
+            end repeat
+        end tell
+        """
+    }
+
+    private static let utilityIsolateWindowScript = """
+    tell application "System Events"
+        set frontName to name of first application process whose frontmost is true
+        repeat with appProcess in application processes
+            try
+                if background only of appProcess is false and name of appProcess is not frontName then
+                    set visible of appProcess to false
+                end if
+                if name of appProcess is frontName then
+                    set windowIndex to 0
+                    repeat with appWindow in windows of appProcess
+                        set windowIndex to windowIndex + 1
+                        if windowIndex is greater than 1 then
+                            try
+                                set value of attribute "AXMinimized" of appWindow to true
+                            end try
+                        end if
+                    end repeat
+                end if
+            end try
+        end repeat
+    end tell
+    """
+
+    private static let utilityUnminimizeAllWindowsScript = """
+    tell application "System Events"
+        repeat with appProcess in application processes
+            try
+                repeat with appWindow in windows of appProcess
+                    try
+                        set value of attribute "AXMinimized" of appWindow to false
+                    end try
+                end repeat
+            end try
+        end repeat
+    end tell
+    """
+
+    private static let utilityShowDesktopScript = """
+    tell application "System Events"
+        key code 103
+    end tell
+    """
+
+    private static let utilityToggleDarkModeScript = """
+    tell application "System Events"
+        tell appearance preferences
+            set dark mode to not dark mode
+        end tell
+    end tell
+    """
+
+    private static let utilityOpenAirDropScript = """
+    tell application "Finder"
+        activate
+        open AirDrop
+    end tell
+    """
 
     private func booleanValue(from arguments: [String], label: String) throws -> Bool {
         guard let raw = arguments.first?.lowercased() else {
@@ -1110,7 +1460,7 @@ public enum MacControlPolicy {
                 ?? defaultAuthorization(policy: policy, origin: origin, approvedOverride: approvedOverride)
         }
 
-        appendAudit(
+        let auditWritten = appendAudit(
             AuditEvent(
                 timestamp: timestamp(now),
                 action: action,
@@ -1124,6 +1474,14 @@ public enum MacControlPolicy {
             ),
             to: auditURL ?? defaultAuditURL()
         )
+        if !auditWritten, authorization.allowed, sensitiveMutation(plan: plan) {
+            return Authorization(
+                allowed: false,
+                outcome: "blocked",
+                reason: "Mac Control audit write failed; action was not executed.",
+                grantId: nil
+            )
+        }
         return authorization
     }
 
@@ -1179,7 +1537,7 @@ public enum MacControlPolicy {
             .appendingPathComponent(auditFilename)
     }
 
-    private static func appendAudit(_ event: AuditEvent, to url: URL) {
+    private static func appendAudit(_ event: AuditEvent, to url: URL) -> Bool {
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder()
@@ -1194,9 +1552,17 @@ public enum MacControlPolicy {
             } else {
                 try data.write(to: url, options: .atomic)
             }
+            return true
         } catch {
             NSLog("Mac Control audit write failed: \(error.localizedDescription)")
+            return false
         }
+    }
+
+    private static func sensitiveMutation(plan: MacControlActionPlan?) -> Bool {
+        guard let plan else { return false }
+        guard plan.risk != .read else { return false }
+        return plan.requiresApproval || plan.risk == .high || plan.risk == .critical
     }
 
     private static func timestamp(_ date: Date) -> String {
@@ -1369,6 +1735,24 @@ public enum MacControlActionBroker {
                 redacted: true,
                 blockedReason: blockedReason
             )
+        case "mac.text.inject":
+            guard let text = request.arguments["text"], !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return blockedPlan(request, reason: "Text injection requires a non-empty text payload.")
+            }
+            guard textInjectionAutoSend(from: request) != nil else {
+                return blockedPlan(request, reason: "Text injection auto-send must be one of none, enter, shift_enter, or cmd_enter.")
+            }
+            return processPlan(
+                request,
+                risk: .high,
+                permissions: [.accessibility],
+                steps: [.native("text.inject", textInjectionPlanArguments(from: request, textLength: text.count), "Inject <text:\(text.count) chars> into focused app", redacted: true)],
+                requiresApproval: true,
+                revertLevel: .bestEffort,
+                blockedReason: blockedReason
+            )
+        case let capabilityId where capabilityId.hasPrefix("mac.utility."):
+            return utilityPlan(for: request, blockedReason: blockedReason)
         case "mac.display.brightness":
             guard let value = percentArgument("value", from: request) else {
                 return blockedPlan(request, reason: "Display brightness requires a numeric value from 0 to 100.")
@@ -1595,7 +1979,10 @@ public enum MacControlActionBroker {
                     outputs.append(try runner.runAppleScript(script))
                 case .native:
                     guard let action = step.executable else { continue }
-                    outputs.append(try runner.runNative(action, arguments: step.arguments))
+                    let arguments = request.capabilityId == "mac.text.inject"
+                        ? textInjectionExecutionArguments(from: request)
+                        : step.arguments
+                    outputs.append(try runner.runNative(action, arguments: arguments))
                 }
             }
             let receipt = receipt(
@@ -1676,6 +2063,94 @@ public enum MacControlActionBroker {
 
     private static func blockedPlan(_ request: MacControlActionRequest, reason: String) -> MacControlActionPlan {
         processPlan(request, risk: .high, permissions: [], steps: [], blockedReason: reason)
+    }
+
+    private static func utilityPlan(
+        for request: MacControlActionRequest,
+        blockedReason: String?
+    ) -> MacControlActionPlan {
+        guard let metadata = utilityActionMetadata(for: request.capabilityId) else {
+            return blockedPlan(request, reason: "Unsupported Mac Utility capability.")
+        }
+        return processPlan(
+            request,
+            risk: metadata.risk,
+            permissions: metadata.permissions,
+            steps: [.native(metadata.nativeAction, [], metadata.preview, redacted: metadata.redacted)],
+            requiresApproval: metadata.requiresApproval,
+            revertLevel: metadata.revertLevel,
+            blockedReason: blockedReason
+        )
+    }
+
+    private static func utilityActionMetadata(
+        for capabilityId: String
+    ) -> (
+        nativeAction: String,
+        preview: String,
+        risk: MacControlActionPlan.Risk,
+        permissions: [MacControlPermissionID],
+        requiresApproval: Bool,
+        revertLevel: MacControlActionPlan.RevertLevel,
+        redacted: Bool
+    )? {
+        let suffix = capabilityId.replacingOccurrences(of: "mac.", with: "", options: .anchored)
+        switch suffix {
+        case "utility.hide_all_windows":
+            return (suffix, "Hide all visible application windows", .medium, [.accessibility], true, .bestEffort, false)
+        case "utility.minimize_all_windows":
+            return (suffix, "Minimize all visible application windows", .medium, [.accessibility], true, .bestEffort, false)
+        case "utility.minimize_all_windows_except_frontmost":
+            return (suffix, "Minimize all windows except the frontmost window", .medium, [.accessibility], true, .bestEffort, false)
+        case "utility.minimize_app_windows_except_frontmost":
+            return (suffix, "Minimize other windows in the frontmost app", .medium, [.accessibility], true, .bestEffort, false)
+        case "utility.isolate_window":
+            return (suffix, "Hide other apps and minimize non-frontmost windows", .medium, [.accessibility], true, .bestEffort, false)
+        case "utility.unminimize_all_windows":
+            return (suffix, "Restore minimized visible application windows", .medium, [.accessibility], true, .bestEffort, false)
+        case "utility.show_desktop":
+            return (suffix, "Show the desktop", .low, [.accessibility], true, .none, false)
+        case "utility.clear_clipboard":
+            return (suffix, "Clear the system pasteboard", .high, [], true, .none, false)
+        case "utility.sleep_displays":
+            return (suffix, "Put connected displays to sleep", .medium, [], true, .none, false)
+        case "utility.center_mouse_pointer":
+            return (suffix, "Move the pointer to the center of the main display", .low, [.accessibility], true, .bestEffort, false)
+        case "utility.show_color_picker":
+            return (suffix, "Open the system color picker", .low, [], false, .none, false)
+        case "utility.toggle_dark_mode":
+            return (suffix, "Toggle system dark mode", .low, [.automationAppleEvents], true, .bestEffort, false)
+        case "utility.toggle_mute_sound":
+            return (suffix, "Toggle default output mute", .medium, [], true, .none, false)
+        case "utility.keep_awake_on":
+            return (suffix, "Prevent idle sleep", .medium, [], true, .bestEffort, false)
+        case "utility.keep_awake_off":
+            return (suffix, "Allow idle sleep again", .low, [], false, .none, false)
+        case "utility.toggle_desktop_icons":
+            return (suffix, "Toggle Finder desktop icons", .medium, [], true, .bestEffort, false)
+        case "utility.open_finder":
+            return (suffix, "Open Finder", .low, [], false, .none, false)
+        case "utility.open_terminal":
+            return (suffix, "Open Terminal", .medium, [], true, .none, false)
+        case "utility.open_shortcuts":
+            return (suffix, "Open Shortcuts", .low, [], false, .none, false)
+        case "utility.open_passwords":
+            return (suffix, "Open Passwords", .high, [], true, .none, false)
+        case "utility.open_airdrop":
+            return (suffix, "Open AirDrop in Finder", .low, [.automationAppleEvents], false, .none, false)
+        case "utility.open_vpn_settings",
+             "utility.open_private_relay_settings",
+             "utility.open_hide_my_email_settings",
+             "utility.open_keyboard_settings",
+             "utility.open_display_settings",
+             "utility.open_desktop_dock_settings",
+             "utility.open_notifications_settings",
+             "utility.open_sound_settings",
+             "utility.open_privacy_settings":
+            return (suffix, "Open an allowlisted System Settings pane", .low, [], false, .none, false)
+        default:
+            return nil
+        }
     }
 
     private static func wifiPowerPlan(_ request: MacControlActionRequest, power: String, risk: MacControlActionPlan.Risk, blockedReason: String?) -> MacControlActionPlan {
@@ -1814,6 +2289,40 @@ public enum MacControlActionBroker {
             return true
         case "false", "0", "no", "off":
             return false
+        default:
+            return nil
+        }
+    }
+
+    private static func textInjectionPlanArguments(from request: MacControlActionRequest, textLength: Int) -> [String] {
+        [
+            "<text:\(textLength) chars>",
+            String(booleanArgument("restorePrevious", from: request) ?? true),
+            textInjectionAutoSend(from: request) ?? "none",
+            request.arguments["restoreAfter"] ?? "1.5",
+            String(booleanArgument("addSpaceBefore", from: request) ?? false),
+        ]
+    }
+
+    private static func textInjectionExecutionArguments(from request: MacControlActionRequest) -> [String] {
+        [
+            request.arguments["text"] ?? "",
+            String(booleanArgument("restorePrevious", from: request) ?? true),
+            textInjectionAutoSend(from: request) ?? "none",
+            request.arguments["restoreAfter"] ?? "1.5",
+            String(booleanArgument("addSpaceBefore", from: request) ?? false),
+        ]
+    }
+
+    private static func textInjectionAutoSend(from request: MacControlActionRequest) -> String? {
+        let raw = request.arguments["autoSend"] ?? "none"
+        switch raw {
+        case "none", "enter", "shift_enter", "cmd_enter":
+            return raw
+        case "shiftEnter":
+            return "shift_enter"
+        case "cmdEnter":
+            return "cmd_enter"
         default:
             return nil
         }
@@ -1989,6 +2498,39 @@ private extension MacControlActionPlan.Step {
 
     static func native(_ action: String, _ arguments: [String], _ preview: String, redacted: Bool = false) -> MacControlActionPlan.Step {
         MacControlActionPlan.Step(kind: .native, executable: action, arguments: arguments, script: nil, preview: preview, redacted: redacted)
+    }
+}
+
+private extension NSPasteboard {
+    struct Snapshot {
+        let items: [[NSPasteboard.PasteboardType: Data]]
+    }
+
+    func snapshot() -> Snapshot {
+        let entries: [[NSPasteboard.PasteboardType: Data]] = (pasteboardItems ?? []).map { item in
+            var dict: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                if let data = item.data(forType: type) {
+                    dict[type] = data
+                }
+            }
+            return dict
+        }
+        return Snapshot(items: entries)
+    }
+
+    func restore(_ snapshot: Snapshot) {
+        clearContents()
+        let items: [NSPasteboardItem] = snapshot.items.map { dict in
+            let item = NSPasteboardItem()
+            for (type, data) in dict {
+                item.setData(data, forType: type)
+            }
+            return item
+        }
+        if !items.isEmpty {
+            writeObjects(items)
+        }
     }
 }
 

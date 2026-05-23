@@ -33,11 +33,11 @@ public Apple documentation.
 
 | Backend strategy | Capability count | macOS 14 | macOS 15 | macOS 26 | Disposition |
 | --- | ---: | --- | --- | --- | --- |
-| `mixed` | 5 | Supported for Wi-Fi read/list, central permission planning, output volume, and display brightness. | No V1 drift recorded. | No V1 drift recorded. | Keep broker-owned composition; do not expose native calls outside signed host. |
+| `mixed` | 35 | Supported for Wi-Fi read/list, central permission planning, output volume, display brightness, and broker-owned Mac Utilities actions. | No V1 drift recorded. | No V1 drift recorded. | Keep broker-owned composition; do not expose native calls outside signed host. |
 | `networksetup` | 3 | Stable wrapper for Wi-Fi join and power state. | No V1 drift recorded. | No V1 drift recorded. | Continue using wrapper only through Mac Action Broker. |
 | `corewlan` | 1 | Official CoreWLAN surface for Wi-Fi interface control. | No V1 drift recorded. | No V1 drift recorded. | Keep signed-host native action and continuity breaker. |
 | `cgwindow_observation` | 1 | Observation-only screen/window inventory; Screen Recording permission applies. | No V1 drift recorded. | No V1 drift recorded. | Read-only observation; no control mutation. |
-| `accessibility_ax` | 11 | AX-backed control requires Accessibility trust. | No V1 drift recorded. | No V1 drift recorded. | Keep selector validation, permission broker check, and signed-host execution. |
+| `accessibility_ax` | 12 | AX-backed control requires Accessibility trust. | No V1 drift recorded. | No V1 drift recorded. | Keep selector validation, permission broker check, and signed-host execution. |
 | `appkit` | 1 | AppKit `NSWorkspace` running-app inventory for Computer Use targeting. | No V1 drift recorded. | No V1 drift recorded. | Read-only inventory; no native mutation. |
 | `shortcuts_cli` | 3 | `/usr/bin/shortcuts` list/view/run is documented. | No V1 drift recorded. | No V1 drift recorded. | Keep typed input/output plan and broker risk profile. |
 | `coreaudio` | 2 | Default output mute properties are broker-owned through the signed host. | No V1 drift recorded. | No V1 drift recorded. | Keep bounded boolean arguments and isolated host tests before real-device closure. |
@@ -83,6 +83,37 @@ public Apple documentation.
 | `mac.media.playback.status` | `apple_events` | executable | Signed-host Apple Events read remains scoped to an approved media app and Automation permission. |
 | `mac.media.playback.pause` | `apple_events` | executable | Signed-host Apple Events pause remains approval-gated and scoped to an approved media app. |
 | `mac.media.playback.resume` | `apple_events` | executable | Signed-host Apple Events resume remains approval-gated and scoped to an approved media app. |
+| `mac.text.inject` | `accessibility_ax` | executable | Signed-host text injection owns pasteboard snapshot/restore and CGEvent paste/autosend; payload content stays redacted from plans and audit. |
+| `mac.utility.hide_all_windows` | `mixed` | executable | Broker-owned Mac Utilities window action; Accessibility and Apple Events drift stays signed-host validated. |
+| `mac.utility.minimize_all_windows` | `mixed` | executable | Broker-owned Mac Utilities window action; Accessibility and Apple Events drift stays signed-host validated. |
+| `mac.utility.minimize_all_windows_except_frontmost` | `mixed` | executable | Broker-owned Mac Utilities window action; Accessibility and Apple Events drift stays signed-host validated. |
+| `mac.utility.minimize_app_windows_except_frontmost` | `mixed` | executable | Broker-owned Mac Utilities window action; Accessibility and Apple Events drift stays signed-host validated. |
+| `mac.utility.isolate_window` | `mixed` | executable | Broker-owned Mac Utilities window action; Accessibility and Apple Events drift stays signed-host validated. |
+| `mac.utility.unminimize_all_windows` | `mixed` | executable | Broker-owned Mac Utilities window action; Accessibility and Apple Events drift stays signed-host validated. |
+| `mac.utility.show_desktop` | `mixed` | executable | Broker-owned System Events shortcut action; Accessibility drift stays signed-host validated. |
+| `mac.utility.clear_clipboard` | `mixed` | executable | Broker-owned pasteboard clear action; no macOS 14/15/26 API drift recorded. |
+| `mac.utility.sleep_displays` | `mixed` | executable | Broker-owned `pmset displaysleepnow` action; command availability remains host-validated. |
+| `mac.utility.center_mouse_pointer` | `mixed` | executable | Broker-owned cursor repositioning action; display coordinate behavior remains host-validated. |
+| `mac.utility.show_color_picker` | `mixed` | executable | Broker-owned AppKit color panel action; no macOS 14/15/26 API drift recorded. |
+| `mac.utility.toggle_dark_mode` | `mixed` | executable | Broker-owned System Events appearance action; Automation drift stays signed-host validated. |
+| `mac.utility.toggle_mute_sound` | `mixed` | executable | Broker-owned CoreAudio mute toggle; lower-level `mac.audio.mute.set` remains available. |
+| `mac.utility.keep_awake_on` | `mixed` | executable | Broker-owned IOPM no-idle-sleep assertion; lifecycle release remains signed-host validated. |
+| `mac.utility.keep_awake_off` | `mixed` | executable | Broker-owned IOPM no-idle-sleep release; lifecycle release remains signed-host validated. |
+| `mac.utility.toggle_desktop_icons` | `mixed` | executable | Broker-owned Finder defaults mutation plus Finder restart; command behavior remains host-validated. |
+| `mac.utility.open_finder` | `mixed` | executable | Broker-owned allowlisted app open action through AppKit/Launch Services. |
+| `mac.utility.open_terminal` | `mixed` | executable | Broker-owned allowlisted app open action through AppKit/Launch Services. |
+| `mac.utility.open_shortcuts` | `mixed` | executable | Broker-owned allowlisted app open action through AppKit/Launch Services. |
+| `mac.utility.open_passwords` | `mixed` | executable | Broker-owned allowlisted app open action through AppKit/Launch Services. |
+| `mac.utility.open_airdrop` | `mixed` | executable | Broker-owned Finder AirDrop open action; Automation drift stays signed-host validated. |
+| `mac.utility.open_vpn_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_private_relay_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_hide_my_email_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_keyboard_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_display_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_desktop_dock_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_notifications_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_sound_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
+| `mac.utility.open_privacy_settings` | `mixed` | executable | Broker-owned allowlisted System Settings deep link; URL allowlist must stay host-owned. |
 | `mac.display.brightness` | `mixed` | executable | Signed-host IOKit brightness remains bounded to 0-100 and writable local displays. |
 | `mac.screen.capture` | `manual` | planned | Atlas-only; Screen Recording permission is known but capture backend is not executable. |
 | `mac.focus.set` | `manual` | planned | Atlas-only; no executable claim until Focus strategy is audited. |

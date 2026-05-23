@@ -90,7 +90,7 @@ final class MacControlTests: XCTestCase {
 
         let cases: [(MacControlPolicySubjectKind, String, MacControlActionRequest)] = [
             (.role, "operator", MacControlActionRequest(capabilityId: "mac.window.close", actorId: "agent.codex", origin: .agent, actorKind: "agent", actorRole: "operator")),
-            (.user, "owner.local", MacControlActionRequest(capabilityId: "mac.window.close", actorId: "owner.local", origin: .ownerCLI, actorKind: "owner_cli")),
+            (.user, "local.steward", MacControlActionRequest(capabilityId: "mac.window.close", actorId: "local.steward", origin: .ownerCLI, actorKind: "owner_cli")),
             (.agent, "agent.codex", MacControlActionRequest(capabilityId: "mac.window.close", actorId: "agent.codex", origin: .agent, actorKind: "agent")),
             (.assignment, "assignment.mac", MacControlActionRequest(capabilityId: "mac.window.close", actorId: "agent.codex", origin: .agent, actorKind: "agent", assignmentId: "assignment.mac")),
             (.run, "run.1", MacControlActionRequest(capabilityId: "mac.window.close", actorId: "agent.codex", origin: .agent, actorKind: "agent", runId: "run.1")),
@@ -179,11 +179,39 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(events.last?.grantId, "grant_role_operator_block")
     }
 
+    func testSensitiveMutationFailsClosedWhenAuditCannotBeWritten() throws {
+        let runner = RecordingMacControlRunner()
+        let defaults = try makeDefaults()
+        let auditDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mac-control-unwritable-audit-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: auditDirectory, withIntermediateDirectories: true)
+
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_audit_fail_closed",
+                capabilityId: "mac.text.inject",
+                actorId: "local-steward",
+                origin: .ownerCLI,
+                arguments: ["text": "private dictated content"],
+                approved: true
+            ),
+            defaults: defaults,
+            auditURL: auditDirectory,
+            runner: runner
+        )
+
+        XCTAssertEqual(receipt.outcome, .blocked)
+        XCTAssertEqual(receipt.error, "Mac Control audit write failed; action was not executed.")
+        XCTAssertTrue(runner.nativeCalls.isEmpty)
+        XCTAssertTrue(runner.processCalls.isEmpty)
+        XCTAssertTrue(runner.appleScriptCalls.isEmpty)
+    }
+
     func testWifiDisconnectUsesNativeCoreWlanStepWithContinuityBreaker() throws {
         let request = MacControlActionRequest(
             requestId: "macreq_test_wifi_disconnect",
             capabilityId: "mac.wifi.disconnect",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["device": "en1"],
             approved: true
@@ -235,7 +263,7 @@ final class MacControlTests: XCTestCase {
         let focus = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_window_focus",
             capabilityId: "mac.window.focus",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["app": "TextEdit"]
         ))
@@ -249,7 +277,7 @@ final class MacControlTests: XCTestCase {
         let move = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_window_move",
             capabilityId: "mac.window.move",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["x": "120", "y": "80", "title": "Notes"]
         ))
@@ -259,7 +287,7 @@ final class MacControlTests: XCTestCase {
         let resize = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_window_resize",
             capabilityId: "mac.window.resize",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["width": "900", "height": "700"]
         ))
@@ -269,7 +297,7 @@ final class MacControlTests: XCTestCase {
         let blockedMove = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_window_move_blocked",
             capabilityId: "mac.window.move",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["x": "120"]
         ))
@@ -283,7 +311,7 @@ final class MacControlTests: XCTestCase {
         let request = MacControlActionRequest(
             requestId: "macreq_test_shortcut",
             capabilityId: "mac.shortcut.run",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["name": "Daily Plan"],
             approved: true
@@ -304,7 +332,7 @@ final class MacControlTests: XCTestCase {
         let statusPlan = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_audio_mute_status",
             capabilityId: "mac.audio.mute.status",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI
         ))
         XCTAssertEqual(statusPlan.risk, .read)
@@ -316,7 +344,7 @@ final class MacControlTests: XCTestCase {
         let setRequest = MacControlActionRequest(
             requestId: "macreq_test_audio_mute_set",
             capabilityId: "mac.audio.mute.set",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["muted": "true"],
             approved: true
@@ -336,7 +364,7 @@ final class MacControlTests: XCTestCase {
         let blocked = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_audio_mute_blocked",
             capabilityId: "mac.audio.mute.set",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["muted": "maybe"]
         ))
@@ -347,7 +375,7 @@ final class MacControlTests: XCTestCase {
         let missingApp = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_media_missing",
             capabilityId: "mac.media.playback.pause",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI
         ))
         XCTAssertEqual(missingApp.blockedReason, "Media playback control requires an explicit approved app target: Music, Podcasts, or TV.")
@@ -355,7 +383,7 @@ final class MacControlTests: XCTestCase {
         let unsupportedApp = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_media_unsupported",
             capabilityId: "mac.media.playback.pause",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["app": "UnreviewedPlayer"]
         ))
@@ -364,7 +392,7 @@ final class MacControlTests: XCTestCase {
         let statusPlan = try MacControlActionBroker.plan(for: MacControlActionRequest(
             requestId: "macreq_test_media_status",
             capabilityId: "mac.media.playback.status",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["app": "Music"]
         ))
@@ -378,7 +406,7 @@ final class MacControlTests: XCTestCase {
         let request = MacControlActionRequest(
             requestId: "macreq_test_media_pause",
             capabilityId: "mac.media.playback.pause",
-            actorId: "owner",
+            actorId: "local-steward",
             origin: .ownerCLI,
             arguments: ["app": "Music"],
             approved: true
@@ -394,6 +422,107 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(receipt.outcome, .executed)
         XCTAssertEqual(runner.appleScriptCalls.count, 1)
         XCTAssertTrue(runner.appleScriptCalls.first?.contains("pause") == true)
+    }
+
+    func testTextInjectionPlanRedactsPayloadAndExecutionUsesBrokerNativeAction() throws {
+        let request = MacControlActionRequest(
+            requestId: "macreq_test_text_inject",
+            capabilityId: "mac.text.inject",
+            actorId: "local-steward",
+            origin: .ownerCLI,
+            arguments: [
+                "text": "secret dictated payload",
+                "restorePrevious": "true",
+                "autoSend": "cmdEnter",
+                "restoreAfter": "1.25",
+                "addSpaceBefore": "true",
+            ]
+        )
+        let plan = try MacControlActionBroker.plan(for: request)
+
+        XCTAssertEqual(plan.risk, .high)
+        XCTAssertTrue(plan.requiresApproval)
+        XCTAssertEqual(plan.revertLevel, .bestEffort)
+        XCTAssertEqual(plan.requiredPermissionIds, [.accessibility])
+        XCTAssertEqual(plan.steps.first?.kind, .native)
+        XCTAssertEqual(plan.steps.first?.executable, "text.inject")
+        XCTAssertEqual(plan.steps.first?.preview, "Inject <text:23 chars> into focused app")
+        XCTAssertEqual(plan.steps.first?.redacted, true)
+        XCTAssertFalse(plan.steps.first?.arguments.contains("secret dictated payload") == true)
+        XCTAssertEqual(plan.steps.first?.arguments, ["<text:23 chars>", "true", "cmd_enter", "1.25", "true"])
+
+        let runner = RecordingMacControlRunner()
+        let receipt = MacControlActionBroker.evaluate(request, defaults: try makeDefaults(), runner: runner)
+
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.nativeCalls, [
+            RecordingMacControlRunner.NativeCall(action: "text.inject", arguments: ["secret dictated payload", "true", "cmd_enter", "1.25", "true"]),
+        ])
+    }
+
+    func testTextInjectionBlocksEmptyPayloadAndDryRunDoesNotExecute() throws {
+        let blocked = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_text_inject_empty",
+            capabilityId: "mac.text.inject",
+            actorId: "local-steward",
+            origin: .ownerCLI,
+            arguments: ["text": "  "]
+        ))
+        XCTAssertEqual(blocked.blockedReason, "Text injection requires a non-empty text payload.")
+
+        let runner = RecordingMacControlRunner()
+        let dryRun = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_test_text_inject_dry_run",
+                capabilityId: "mac.text.inject",
+                actorId: "local-steward",
+                origin: .ownerCLI,
+                arguments: ["text": "secret dictated payload"],
+                dryRun: true
+            ),
+            defaults: try makeDefaults(),
+            runner: runner
+        )
+        XCTAssertEqual(dryRun.outcome, .planned)
+        XCTAssertTrue(runner.nativeCalls.isEmpty)
+    }
+
+    func testMacUtilitiesCapabilitiesPlanAndExecuteThroughBrokerNativeActions() throws {
+        let plan = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_utility_clipboard",
+            capabilityId: "mac.utility.clear_clipboard",
+            actorId: "local-steward",
+            origin: .ownerCLI
+        ))
+        XCTAssertEqual(plan.risk, .high)
+        XCTAssertEqual(plan.steps.first?.kind, .native)
+        XCTAssertEqual(plan.steps.first?.executable, "utility.clear_clipboard")
+        XCTAssertEqual(plan.requiresApproval, true)
+
+        let runner = RecordingMacControlRunner()
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_test_utility_keep_awake",
+                capabilityId: "mac.utility.keep_awake_on",
+                actorId: "local-steward",
+                origin: .ownerCLI
+            ),
+            defaults: try makeDefaults(),
+            runner: runner
+        )
+
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.nativeCalls, [
+            RecordingMacControlRunner.NativeCall(action: "utility.keep_awake_on", arguments: []),
+        ])
+
+        let blocked = try MacControlActionBroker.plan(for: MacControlActionRequest(
+            requestId: "macreq_test_utility_unknown",
+            capabilityId: "mac.utility.unknown",
+            actorId: "local-steward",
+            origin: .ownerCLI
+        ))
+        XCTAssertEqual(blocked.blockedReason, "Unsupported Mac Utility capability.")
     }
 
     func testDryRunDoesNotExecuteNativeSteps() throws {
@@ -697,7 +826,7 @@ final class MacControlTests: XCTestCase {
             arguments: [
                 "capability-id": "mac.wifi.power.off",
                 "actor-kind": "owner_cli",
-                "actor-id": "owner.local",
+                "actor-id": "local.steward",
                 "approved": "true",
             ],
             environment: environment,
@@ -781,7 +910,7 @@ final class MacControlTests: XCTestCase {
             permissionIds: permissionIds,
             riskCeiling: riskCeiling,
             duration: MacControlPolicyGrantDuration(kind: .task, ttlSeconds: 1800),
-            createdBy: MacControlWireActor(kind: "owner_cli", id: "owner.local", role: "owner"),
+            createdBy: MacControlWireActor(kind: "owner_cli", id: "local.steward", role: "admin"),
             createdAt: "2026-05-18T00:00:00.000Z",
             expiresAt: nil,
             status: .active
@@ -814,7 +943,7 @@ final class MacControlTests: XCTestCase {
         let request = MacControlWireRequest(
             requestId: requestId,
             capabilityId: capabilityId,
-            actor: MacControlWireActor(kind: actorKind, id: "actor_test", role: "owner", assignmentId: nil, runId: nil),
+            actor: MacControlWireActor(kind: actorKind, id: "actor_test", role: "admin", assignmentId: nil, runId: nil),
             host: MacControlWireHost(
                 hostId: "host_test",
                 bundleId: "com.example.claw-host",
