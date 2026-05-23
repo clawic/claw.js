@@ -3631,6 +3631,34 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-scale-lab",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/scale-lab.ts",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md"
+      ],
+      "discoveryTerms": [
+        "scale-lab",
+        "Scale Lab",
+        "ClawJS Scale Lab",
+        "performance scale harness"
+      ],
+      "searchQueries": [
+        {
+          "query": "ClawJS Scale Lab",
+          "expectPath": "scripts/scale-lab.ts"
+        }
+      ],
+      "guard": "scripts/scale-lab.ts",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-security-threat-model-check",
       "kind": "guardrail",
       "steward": "claw",
@@ -4651,59 +4679,6 @@
       "reviewDate": "2026-08-18"
     },
     {
-      "id": "guard-scripts-search-scale-lab-test",
-      "kind": "test-harness",
-      "steward": "claw",
-      "canonicalSource": "scripts/search-scale-lab.test.mjs",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/discoverability.md",
-        "docs/decision-map.md"
-      ],
-      "discoveryTerms": [
-        "search-scale-lab.test",
-        "Search Scale Lab.Test"
-      ],
-      "searchQueries": [
-        {
-          "query": "search-scale-lab.test",
-          "expectPath": "scripts/search-scale-lab.test.mjs"
-        }
-      ],
-      "guard": "scripts/search-scale-lab.test.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-18"
-    },
-    {
-      "id": "guard-scripts-scale-lab",
-      "kind": "guardrail",
-      "steward": "claw",
-      "canonicalSource": "scripts/scale-lab.ts",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/governance/performance-governance.md"
-      ],
-      "discoveryTerms": [
-        "scale-lab",
-        "Scale Lab",
-        "ClawJS Scale Lab",
-        "performance scale harness"
-      ],
-      "searchQueries": [
-        {
-          "query": "ClawJS Scale Lab",
-          "expectPath": "scripts/scale-lab.ts"
-        }
-      ],
-      "guard": "scripts/scale-lab.ts",
-      "status": "enforced",
-      "reviewDate": "2026-08-18"
-    },
-    {
       "id": "guard-scripts-scale-lab-test",
       "kind": "test-harness",
       "steward": "claw",
@@ -4727,6 +4702,31 @@
         }
       ],
       "guard": "scripts/scale-lab.test.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-search-scale-lab-test",
+      "kind": "test-harness",
+      "steward": "claw",
+      "canonicalSource": "scripts/search-scale-lab.test.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "search-scale-lab.test",
+        "Search Scale Lab.Test"
+      ],
+      "searchQueries": [
+        {
+          "query": "search-scale-lab.test",
+          "expectPath": "scripts/search-scale-lab.test.mjs"
+        }
+      ],
+      "guard": "scripts/search-scale-lab.test.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },
@@ -4977,6 +4977,35 @@
       "guard": "scripts/discoverability-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-20",
+      "steward": "claw"
+    },
+    {
+      "id": "approval-grant-authority-matrix",
+      "kind": "docs-page",
+      "canonicalSource": "docs/governance/approval-grant-authority-matrix.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/security-threat-model.md"
+      ],
+      "discoveryTerms": [
+        "approval grant authority matrix",
+        "approvals grants authority",
+        "grant domain owner",
+        "fail-closed authority matrix"
+      ],
+      "searchQueries": [
+        {
+          "query": "approval grant authority matrix",
+          "expectPath": "docs/governance/approval-grant-authority-matrix.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "approval-grant-authority-matrix",
       "steward": "claw"
     },
     {
@@ -5864,34 +5893,6 @@
       "status": "enforced",
       "reviewDate": "2026-05-20",
       "steward": "claw"
-    },
-    {
-      "id": "approval-grant-authority-matrix",
-      "kind": "docs-page",
-      "canonicalSource": "docs/governance/approval-grant-authority-matrix.md",
-      "requiredEntrypoints": [
-        "AGENTS.md",
-        "CLAUDE.md",
-        "docs/discoverability.md",
-        "docs/decision-map.md",
-        "docs/security-threat-model.md"
-      ],
-      "discoveryTerms": [
-        "approval grant authority matrix",
-        "approvals grants authority",
-        "grant domain owner",
-        "fail-closed authority matrix"
-      ],
-      "searchQueries": [
-        {
-          "query": "approval grant authority matrix",
-          "expectPath": "docs/governance/approval-grant-authority-matrix.md"
-        }
-      ],
-      "guard": "scripts/discoverability-check.mjs",
-      "status": "enforced",
-      "reviewDate": "2026-08-18",
-      "canonicalName": "approval-grant-authority-matrix"
     }
   ]
 }

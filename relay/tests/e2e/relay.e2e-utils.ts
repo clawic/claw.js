@@ -15,6 +15,7 @@ interface SessionRecord {
   updatedAt: number;
   messageCount: number;
   preview: string;
+  hasActiveGeneration?: boolean;
   messages: Array<{
     role: string;
     content: string;
@@ -144,6 +145,7 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
   const socket = new WebSocket(url.replace(/^http/, "ws") + clawApiPath("connector/connect"), {
     headers: { Authorization: `Bearer ${connectorToken}` },
   });
+  const activeStreams = new Map<string, { timer: NodeJS.Timeout; workspaceId: string; sessionId: string }>();
 
   socket.on("open", () => {
     socket.send(JSON.stringify({
@@ -167,6 +169,21 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
       workspaceId?: string;
       payload?: Record<string, unknown>;
     };
+    if (message.type === "cancel") {
+      const active = message.requestId ? activeStreams.get(message.requestId) : undefined;
+      if (active) {
+        clearTimeout(active.timer);
+        const workspaceSessions = sessionsForWorkspace(active.workspaceId);
+        const session = workspaceSessions.get(active.sessionId);
+        if (session) {
+          session.hasActiveGeneration = false;
+          session.updatedAt = Date.now();
+          workspaceSessions.set(active.sessionId, summarizeSession(session));
+        }
+        activeStreams.delete(message.requestId!);
+      }
+      return;
+    }
     if (message.type !== "invoke") return;
     const respond = (payload: Record<string, unknown>) => {
       socket.send(JSON.stringify({ type: "result", requestId: message.requestId, payload }));
@@ -373,14 +390,28 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
         const session = workspaceSessions.get(sessionId);
         const documents = resolveDocumentIds(message.payload?.documentIds);
         if (session && (typeof message.payload?.message === "string" || documents.length > 0)) {
+          session.hasActiveGeneration = true;
           session.messages.push({
             role: "user",
             content: String(message.payload?.message ?? ""),
             ...(documents.length > 0 ? { documents } : {}),
           });
-          session.messages.push({ role: "assistant", content: "hello world" });
           session.updatedAt = Date.now();
           workspaceSessions.set(sessionId, summarizeSession(session));
+        }
+        if (message.payload?.message === "fixture-error") {
+          if (session) {
+            session.hasActiveGeneration = false;
+            session.updatedAt = Date.now();
+            workspaceSessions.set(sessionId, summarizeSession(session));
+          }
+          socket.send(JSON.stringify({
+            type: "error",
+            requestId: message.requestId,
+            code: "fixture_stream_error",
+            message: "fixture stream failure",
+          }));
+          return;
         }
         socket.send(JSON.stringify({
           type: "stream",
@@ -394,6 +425,15 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
           event: "chunk",
           payload: { type: "chunk", delta: "hello " },
         }));
+        if (message.payload?.message === "fixture-cancel") {
+          if (session) {
+            session.hasActiveGeneration = false;
+            session.updatedAt = Date.now();
+            workspaceSessions.set(sessionId, summarizeSession(session));
+          }
+          respond({ cancelled: true });
+          return;
+        }
         socket.send(JSON.stringify({
           type: "stream",
           requestId: message.requestId,
@@ -412,6 +452,12 @@ export function startFakeConnector(url: string, connectorToken: string, agentId 
           event: "title",
           payload: { type: "title", title: "hello world" },
         }));
+        if (session) {
+          session.messages.push({ role: "assistant", content: "hello world" });
+          session.hasActiveGeneration = false;
+          session.updatedAt = Date.now();
+          workspaceSessions.set(sessionId, summarizeSession(session));
+        }
         respond({ ok: true });
         return;
       }

@@ -805,6 +805,28 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     tests: ["packages/clawjs/src/inspect-cli.test.ts", "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"],
     docs: ["docs/adr/0049-surface-route-graph.md", "docs/relay.md"],
     adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0049-surface-route-graph.md"],
+    surfaceNarrative: {
+      concept: "Companion chat route from paired companion clients through the Clawix bridge into the framework runtime and sessions service.",
+      authorizingDecision: {
+        ref: "ADR 0049: Surface route graph",
+        path: "docs/adr/0049-surface-route-graph.md",
+      },
+      completingSurface: {
+        human: "Clawix companion chat clients and bridge status UI",
+        programmatic: "claw inspect route chat.companionBridge plus bridge protocol frame contracts",
+      },
+      nonInference: "This route does not authorize public Relay exposure, unpaired companion access, or bypassing the registered daemon/runtime/session steps.",
+    },
+    resourceContract: {
+      startup: "Companion chat does not start the bridge listener by default; pairing, companion, or remote-tools surfaces acquire an explicit bridge lease before traffic is accepted.",
+      idle: "Idle companion state retains pairing/bridge readiness only; no active WebSocket stream, model turn, or response buffer remains after the route is inactive.",
+      memory: "Bridge frames and session events are bounded to active companion connections and released on disconnect, cancellation, completion, or lease expiry.",
+      streaming: "WebSocket frames use the default streaming policy with cancellation, bounded queues, and session-event backpressure before exposing updates to the companion client.",
+      storage: "Durable conversation records are written through the framework sessions store; Clawix bridge state remains host-operational lease/status state only.",
+      hotPath: "Bridge WebSocket frame parsing, daemon handoff, runtime callbacks, and companion response fanout are hot paths and must avoid synchronous heavy work.",
+      scale: "The route supports active companion sessions through bounded bridge connections, relies on session/search pagination for 1,000 sessions, and must not load 100,000 sessions into bridge or client memory.",
+      validation: "packages/clawjs/src/inspect-cli.test.ts and packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift",
+    },
     source: surfaceRouteGraphSource,
   },
   {
@@ -829,6 +851,28 @@ export const clawSurfaceGraphRoutes: ClawSurfaceRoute[] = [
     tests: ["packages/clawjs/src/inspect-cli.test.ts", "relay/tests/e2e/relay.e2e.test.ts", "relay/tests/e2e/codex-connector.e2e.test.ts"],
     docs: ["docs/adr/0049-surface-route-graph.md", "docs/relay.md"],
     adrs: ["docs/adr/0009-dual-human-programmatic-surfaces.md", "docs/adr/0049-surface-route-graph.md"],
+    surfaceNarrative: {
+      concept: "Remote chat route from a remote client through Relay and the workspace connector into the same framework runtime and sessions service.",
+      authorizingDecision: {
+        ref: "ADR 0049: Surface route graph",
+        path: "docs/adr/0049-surface-route-graph.md",
+      },
+      completingSurface: {
+        human: "Remote chat clients and Relay/Gateway status surfaces",
+        programmatic: "claw inspect route chat.remoteRelay plus Relay remote and connector contracts",
+      },
+      nonInference: "This route does not make Relay the canonical local API, does not authorize plaintext secret transport, and does not clear physical/provider external validation without approved evidence.",
+    },
+    resourceContract: {
+      startup: "Remote Relay chat starts only when Relay and connector endpoints are configured or requested; local desktop startup must not implicitly open remote access.",
+      idle: "Idle remote state keeps only configured Relay/connector readiness, heartbeats, and classification metadata; no queued interactive command or model stream is retained.",
+      memory: "Remote request, connector, and session-event buffers are bounded per active stream and released on completion, disconnect, cancellation, or fail-fast connector absence.",
+      streaming: "Relay and connector WebSocket streams use the default streaming policy with cancellation, bounded frames, fail-fast offline behavior, and remote-safe session-event projection.",
+      storage: "Canonical conversation persistence remains in the framework sessions store; Relay compatibility state is routing/control-plane metadata and cannot become source-of-truth chat storage.",
+      hotPath: "Relay auth/routing, connector frame dispatch, runtime callbacks, and remote session-event fanout are hot paths and must avoid broad storage reads or synchronous connector work.",
+      scale: "The route handles active remote turns through bounded connector sessions, relies on Gateway/Sync/search pagination at 1,000 sessions, and must not materialize 100,000 sessions in Relay memory.",
+      validation: "packages/clawjs/src/inspect-cli.test.ts, relay/tests/e2e/relay.e2e.test.ts, and relay/tests/e2e/codex-connector.e2e.test.ts",
+    },
     source: surfaceRouteGraphSource,
   },
   {

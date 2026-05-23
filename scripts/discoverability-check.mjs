@@ -354,12 +354,14 @@ function expectedRegistry(existingRegistry = {}, profile = options.profile) {
 }
 
 function expectedBaseline(existingBaseline = {}) {
-  return {
+  const baseline = {
     version: 1,
     createdAt: existingBaseline.createdAt ?? "2026-05-18",
     description: existingBaseline.description ?? "Expiring baseline for exceptional pre-existing meta-code that cannot yet be fully routed. The normal target is an empty baseline.",
     entries: [],
   };
+  if (existingBaseline.debtControl) baseline.debtControl = existingBaseline.debtControl;
+  return baseline;
 }
 
 function renderRouter(registry, profile) {

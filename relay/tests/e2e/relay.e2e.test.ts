@@ -594,6 +594,56 @@ describe("relay e2e", () => {
     assert.match(streamPostText, /event: chunk/);
     assert.match(streamPostText, /hello world/);
 
+    const afterStreamSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/sessions/${sessionId}`, {
+      headers: { Authorization: `Bearer ${userTokens.accessToken}` },
+    });
+    assert.equal(afterStreamSession.status, 200);
+    const afterStreamPayload = await afterStreamSession.json() as { session: SessionRecord & { hasActiveGeneration?: boolean } };
+    assert.equal(afterStreamPayload.session.hasActiveGeneration, false);
+
+    const streamErrorResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/sessions/${sessionId}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ message: "fixture-error" }),
+    });
+    const streamErrorText = await streamErrorResponse.text();
+    assert.match(streamErrorText, /event: error/);
+    assert.match(streamErrorText, /fixture stream failure/);
+
+    const afterErrorSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/sessions/${sessionId}`, {
+      headers: { Authorization: `Bearer ${userTokens.accessToken}` },
+    });
+    assert.equal(afterErrorSession.status, 200);
+    const afterErrorPayload = await afterErrorSession.json() as { session: SessionRecord & { hasActiveGeneration?: boolean } };
+    assert.equal(afterErrorPayload.session.hasActiveGeneration, false);
+
+    const cancelStreamResponse = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/sessions/${sessionId}/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${userTokens.accessToken}`,
+      },
+      body: JSON.stringify({ message: "fixture-cancel" }),
+    });
+    assert.equal(cancelStreamResponse.status, 200);
+    const cancelText = await cancelStreamResponse.text();
+    assert.match(cancelText, /event: transport|event: chunk/);
+    assert.match(cancelText, /event: cancelled/);
+    let afterCancelPayload: { session: SessionRecord & { hasActiveGeneration?: boolean } } | null = null;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const afterCancelSession = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/sessions/${sessionId}`, {
+        headers: { Authorization: `Bearer ${userTokens.accessToken}` },
+      });
+      assert.equal(afterCancelSession.status, 200);
+      afterCancelPayload = await afterCancelSession.json() as { session: SessionRecord & { hasActiveGeneration?: boolean } };
+      if (afterCancelPayload.session.hasActiveGeneration === false) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(afterCancelPayload?.session.hasActiveGeneration, false);
+
     const searchDocuments = await fetch(`${baseUrl}/v1/tenants/demo-tenant/agents/demo-agent/workspaces/main/documents:search?q=${encodeURIComponent("budget")}&sessionId=${encodeURIComponent(sessionId)}`, {
       headers: { Authorization: `Bearer ${userTokens.accessToken}` },
     });

@@ -149,7 +149,7 @@ function validate() {
   requireSnippet(errors, "bridge/src/tcc-job-handler.ts", 'input.method.startsWith("tcc.computer.")');
   requireSnippet(errors, "bridge/src/server.ts", "audit: auditSink");
   requireSnippet(errors, "bridge/src/server.ts", "actorId: senderId");
-  requireSnippet(errors, "packages/clawjs-core/src/surface-registry.ts", "never Node-only code");
+  requireSnippet(errors, "packages/clawjs-core/src/surface-registry-graph.ts", "never Node-only code");
   requireSnippet(errors, "docs/decision-map.md", "scripts/verify-host-permission-contract.mjs");
   requireSnippet(errors, "docs/mac-control-plane.md", allowlistPath);
 

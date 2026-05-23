@@ -133,6 +133,22 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.match(narrativeRoutePayload.resourceContract.streaming, /cancellation/);
   assert.match(narrativeRoutePayload.resourceContract.hotPath, /UI body/);
 
+  for (const routeId of ["chat.companionBridge", "chat.remoteRelay"]) {
+    const criticalChatRoute = await runCliCapture(["inspect", "route", routeId, "--json"], process.cwd());
+    assert.equal(criticalChatRoute.code, CLI_EXIT_OK);
+    const criticalChatPayload = parseCliJson<{
+      id: string;
+      surfaceNarrative?: { authorizingDecision: { path: string }; nonInference: string };
+      resourceContract?: { startup: string; streaming: string; validation: string };
+    }>(criticalChatRoute.stdout).data;
+    assert.equal(criticalChatPayload.id, routeId);
+    assert.equal(criticalChatPayload.surfaceNarrative?.authorizingDecision.path, "docs/adr/0049-surface-route-graph.md");
+    assert.match(criticalChatPayload.surfaceNarrative?.nonInference ?? "", /does not/);
+    assert.match(criticalChatPayload.resourceContract?.startup ?? "", /start/i);
+    assert.match(criticalChatPayload.resourceContract?.streaming ?? "", /cancellation/);
+    assert.match(criticalChatPayload.resourceContract?.validation ?? "", /inspect-cli\.test\.ts/);
+  }
+
   const markdown = await runCliCapture(["inspect", "render", "--format", "markdown"], process.cwd());
   assert.equal(markdown.code, CLI_EXIT_OK);
   assert.match(markdown.stdout, /Generated from `claw inspect render --format markdown`/);
