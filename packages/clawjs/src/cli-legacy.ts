@@ -482,14 +482,14 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (connectorContextExit !== null) return connectorContextExit;
   const projectManifestExit = await runProjectManifestCli({ argv, positionals, flags, context, wantsJson, binName });
   if (projectManifestExit !== null) return projectManifestExit;
+  const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
+  if (portalShortcutExit !== null) return portalShortcutExit;
+
   if (group === "remote") return await runRemoteCli({ positionals, flags, context, wantsJson, binName });
   if (group === "sync") return await runSyncCli({ positionals, flags, context, wantsJson, binName });
   if (group === "nodes") return await runNodesCli({ positionals, flags, context, wantsJson, binName });
   if (group === "gateway") return await runGatewayCli({ positionals, flags, context, wantsJson, binName });
   if (isMacControlCliRoot(group)) return await runMacControlCli({ argv, positionals, flags, context, wantsJson, binName });
-
-  const portalShortcutExit = await runPublicPortalShortcut({ group, command, subcommand, argv, flags, context, runCli: runCliUnsafe });
-  if (portalShortcutExit !== null) return portalShortcutExit;
 
   const runtimePortalExit = await runRuntimePortalCli({
     group,
