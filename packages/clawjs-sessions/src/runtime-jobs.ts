@@ -21,6 +21,7 @@ import type {
   SessionsRuntimeJobStatus,
 } from "./types.ts";
 
+// @clawjs-persistent-surface-ddl-source
 const RUNTIME_SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS runtime_jobs (
     id TEXT PRIMARY KEY,

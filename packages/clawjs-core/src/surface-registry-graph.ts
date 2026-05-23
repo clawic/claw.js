@@ -1440,6 +1440,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       envOverrides: ["CLAW_AGENT_COORDINATION_STATE_DIR", "CLAW_HOME"],
       notes: "Framework-owned coordination ledger for agent intents, resource leases, pending demands, reusable test results, repair ownership, and bypass audit events.",
+      surfaceNarrative: {
+        concept: "Durable coordination ledger database for local agents sharing test lanes, app launches, fixture data, CPU budgets, and interactive resources.",
+        authorizingDecision: {
+          ref: "ADR 0002: Testing architecture",
+          path: "docs/adr/0002-testing-architecture.md",
+        },
+        completingSurface: {
+          human: "docs/testing.md and docs/cli.md coordination workflow",
+          programmatic: "claw agent-resource and claw test JSON commands backed by agent-coordination.sqlite",
+        },
+        nonInference: "This database does not make a test result valid by existing; each lease/result must carry status, scope, and audit evidence.",
+      },
       resourceContract: {
         startup: "Created lazily by `claw agent-resource` and `claw test`; importing ClawJS or starting an app must not open the ledger.",
         idle: "No background worker is required. Idle state is one SQLite sidecar plus heartbeat JSON files written only by active coordinated work.",
@@ -1463,6 +1475,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       source: registrySource,
       envOverrides: ["CLAW_AGENT_COORDINATION_RUN_DIR", "CLAW_HOME"],
       notes: "Ephemeral heartbeat and intent JSON files for live process inspection. Files must be redacted and contain no prompts, secrets, screenshots, signing IDs, or private bundle IDs.",
+      surfaceNarrative: {
+        concept: "Ephemeral run-state directory for coordination heartbeat and intent files that make active local agent work inspectable.",
+        authorizingDecision: {
+          ref: "ADR 0002: Testing architecture",
+          path: "docs/adr/0002-testing-architecture.md",
+        },
+        completingSurface: {
+          human: "claw agent-resource status output and docs/testing.md coordination guidance",
+          programmatic: "heartbeat files maintained by claw agent-resource heartbeat/release/reap",
+        },
+        nonInference: "Heartbeat files are diagnostic liveness evidence only; they do not authorize work, validate checks, or preserve private prompts.",
+      },
       resourceContract: {
         startup: "Directory is created only by coordination CLI commands when a lease or intent is recorded.",
         idle: "Idle directory may be empty. No watcher scans it unless an explicit status or reap command runs.",
@@ -1741,6 +1765,18 @@ export const clawPersistentSurfaceRegistry: ClawPersistentSurfaceRegistry = {
       lifecycle: "rebuildable",
       source: registrySource,
       notes: "Optional workspace-local override and manifest cache for agent coordination. Public reusable defaults stay in qa/agent-coordination.manifest.json.",
+      surfaceNarrative: {
+        concept: "Workspace-local coordination override and cache folder for repo-specific test lane and resource manifests.",
+        authorizingDecision: {
+          ref: "ADR 0002: Testing architecture",
+          path: "docs/adr/0002-testing-architecture.md",
+        },
+        completingSurface: {
+          human: "docs/testing-matrix.md and qa/agent-coordination.manifest.json",
+          programmatic: "claw test plan/require manifest resolution",
+        },
+        nonInference: "Workspace overrides do not weaken global coordination policy and must not contain credentials, prompts, screenshots, or host signing material.",
+      },
       resourceContract: {
         startup: "Workspace-local coordination cache is read only when a runner requests a workspace override.",
         idle: "No idle process owns this folder.",

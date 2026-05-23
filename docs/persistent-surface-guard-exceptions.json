@@ -274,6 +274,71 @@
       "tests": [
         "node scripts/persistent-surface-guard.mjs --self-test"
       ]
+    },
+    {
+      "id": "ddl-fixture-session-schema-projects",
+      "path": "packages/clawjs-sessions/src/session-schema.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "projects",
+      "steward": "clawjs-sessions",
+      "reason": "Hermetic legacy sessions migration fixture used to verify schema upgrade behavior without opening a second production schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
+    },
+    {
+      "id": "ddl-fixture-session-schema-sessions",
+      "path": "packages/clawjs-sessions/src/session-schema.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "sessions",
+      "steward": "clawjs-sessions",
+      "reason": "Hermetic legacy sessions migration fixture used to verify schema upgrade behavior without opening a second production schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
+    },
+    {
+      "id": "ddl-fixture-session-schema-session-messages",
+      "path": "packages/clawjs-sessions/src/session-schema.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "session_messages",
+      "steward": "clawjs-sessions",
+      "reason": "Hermetic legacy sessions migration fixture used to verify schema upgrade behavior without opening a second production schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
+    },
+    {
+      "id": "ddl-fixture-session-schema-session-origins",
+      "path": "packages/clawjs-sessions/src/session-schema.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "session_origins",
+      "steward": "clawjs-sessions",
+      "reason": "Hermetic legacy sessions migration fixture used to verify schema upgrade behavior without opening a second production schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
+    },
+    {
+      "id": "ddl-fixture-session-schema-meta",
+      "path": "packages/clawjs-sessions/src/session-schema.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "sessions_service_schema_meta",
+      "steward": "clawjs-sessions",
+      "reason": "Hermetic legacy sessions migration fixture used to verify schema upgrade behavior without opening a second production schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test"
+      ]
     }
   ]
 }

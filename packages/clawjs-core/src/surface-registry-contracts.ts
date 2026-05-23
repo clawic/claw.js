@@ -1,5 +1,4 @@
 import { clawCliCommandRegistry } from "./cli-command-registry.ts";
-import { MAC_CARE_SIDECAR_FILENAME } from "./mac-care.ts";
 import { clawStreamingBackpressurePolicyId } from "./streaming-backpressure.ts";
 
 export const clawSurfaceRegistryVersion = 1;
@@ -698,7 +697,7 @@ export const clawStorageFiles = {
   driveDatabase: "drive.sqlite",
   secretsDatabase: "secrets.sqlite",
   searchDatabase: "search.sqlite",
-  macCareDatabase: MAC_CARE_SIDECAR_FILENAME,
+  macCareDatabase: "mac_care.sqlite",
   agentCoordinationDatabase: "agent-coordination.sqlite",
 } as const;
 
@@ -990,6 +989,10 @@ export const corePublicRoutes = [
   ["claw.api.mcp.serversRefresh", "POST", "/v1/mcp/servers/{serverId}/refresh", "MCP server refresh contract"],
   ["claw.api.sessions", "GET", "/v1/sessions", "Sessions service list contract"],
   ["claw.api.sessions.importCodex", "POST", "/v1/sessions/import/codex", "Codex session import contract"],
+  ["claw.api.sessions.messages", "GET", "/v1/sessions/{sessionId}/messages", "Sessions service message list contract"],
+  ["claw.api.sessions.dynamicTools", "GET", "/v1/sessions/{sessionId}/dynamic-tools", "Sessions service dynamic tool contract"],
+  ["claw.api.sessions.projectionRebuild", "POST", "/v1/sessions/projection/rebuild", "Sessions projection rebuild contract"],
+  ["claw.api.sessions.memoryExtractRebuild", "POST", "/v1/sessions/memory-extract/rebuild", "Sessions memory extract rebuild contract"],
   ["claw.api.signals.vertical", "GET", "/v1/{verticalId}", "Signals vertical route template"],
   ["claw.api.relay.remote", "WS", "/v1/relay/remote", "Remote Relay client channel"],
   ["claw.api.relay.connector", "WS", "/v1/relay/connectors", "Relay workspace connector channel"],
@@ -1114,7 +1117,7 @@ export function stableEnvVarId(value: string): string { return `claw.env.${value
 export function stableEnvVarName(value: string): string { return `${value.replace(/^CLAW_/, "").toLowerCase().replace(/_/g, " ")} environment variable`; }
 
 export const stableEnvVarValues = "CLAW_ALLOWED_ORIGINS CLAW_AUDIO_BLOBS_DIR CLAW_AUDIO_DATA_DIR CLAW_AUDIO_HOST CLAW_AUDIO_PORT CLAW_AUDIO_SHARED_SECRET CLAW_BIN CLAW_CALENDAR_MOCK CLAW_CODEX_PATH CLAW_CODE_HOME CLAW_COMPANY_FAKE_AGENT_RUNS CLAW_COMPANY_OPENCLAW_AGENT_ID CLAW_COMPONENTS_SOURCE_DIR CLAW_CONNECTOR_CATALOG_PATH CLAW_CONNECTOR_SUBSCRIPTIONS_PATH CLAW_CONTENT_TOKEN CLAW_CONTENT_URL CLAW_DATABASE_ADMIN_EMAIL CLAW_DATABASE_ADMIN_PASSWORD CLAW_DATABASE_CORS_ORIGINS CLAW_DATABASE_DATA_DIR CLAW_DATABASE_DIR CLAW_DATABASE_FILES_DIR CLAW_DATABASE_HOST CLAW_DATABASE_JWT_SECRET CLAW_DATABASE_NAMESPACE CLAW_DATABASE_PORT CLAW_DATABASE_URL CLAW_DATA_DIR CLAW_DAY_ROOT CLAW_DB_PATH CLAW_DEBUG_CHAT_PERF CLAW_DEMO_DATA_DIR CLAW_DEVICE_TEST_COMMAND CLAW_DOMAINS_ACTIVE CLAW_DOMAIN_SHARE_URL CLAW_DRIVE_BACKEND CLAW_DRIVE_BASE CLAW_DRIVE_CLOUDFLARED CLAW_DRIVE_CONVERTER_MODE CLAW_DRIVE_CORS_ORIGINS CLAW_DRIVE_DATA_DIR CLAW_DRIVE_DB_PATH CLAW_DRIVE_EMAIL CLAW_DRIVE_EMBED_SIDECAR CLAW_DRIVE_HOST CLAW_DRIVE_JWT_SECRET CLAW_DRIVE_OCR_SIDECAR CLAW_DRIVE_PASSWORD CLAW_DRIVE_PORT CLAW_DRIVE_PUBLIC_BASE_URL CLAW_DRIVE_STATUS_FILE CLAW_DRIVE_TOKEN CLAW_DRIVE_UI_DIST_DIR CLAW_E2E CLAW_E2E_DISABLE_EXTERNAL_CALLS CLAW_E2E_FIXTURE_MODE CLAW_E2E_REUSE_SERVER CLAW_EMAIL_MOCK CLAW_ERP_DIR CLAW_FILES_DIR CLAW_FIND_COMMAND_STRICT_PATH CLAW_GUIDANCE_DIR CLAW_HOME CLAW_HOST_APP_BUNDLE CLAW_HOST_APP_SUPPORT_NAME CLAW_HOST_BIN_DIR CLAW_HOST_BUNDLE_ID CLAW_HOST_CLI_NAME CLAW_HOST_DAEMON_NAME CLAW_HOST_DISABLE_SOCKET_FALLBACK CLAW_HOST_DISPLAY_NAME CLAW_HOST_HOME CLAW_HOST_ID CLAW_HOST_LAUNCH_AGENTS_DIR CLAW_HOST_LAUNCH_AGENT_LABEL CLAW_HOST_LOG_SUBSYSTEM CLAW_HOST_MACH_SERVICE CLAW_HOST_OBSIDIAN_VAULT CLAW_HOST_PERMISSION_NAME CLAW_HOST_PERMISSION_REQUEST_DRY_RUN CLAW_HOST_PERMISSION_REQUEST_LOG CLAW_HOST_RUNTIME_TRANSPORT CLAW_HOST_SAFE CLAW_HOST_TEST_CALENDAR CLAW_HOST_TEST_COMMAND CLAW_HOST_TEST_MAILBOX CLAW_HOST_TEST_MODE CLAW_HOST_TEST_NOTES_FOLDER CLAW_HOST_TEST_REMINDERS_LIST CLAW_HOST_TEST_SAFARI_WINDOW CLAW_HOST_TEST_THINGS_PROJECT CLAW_HOST_VALIDATION_MODE CLAW_IMAGE_LIBRARY_DIR CLAW_IOT_BASE_URL CLAW_IOT_DIR CLAW_LIBRARY_DIR CLAW_LIVE_BROKER_COMMAND CLAW_LOCAL_ADMIN_BOOTSTRAP_STDIN CLAW_MEMORY_BASE CLAW_MEMORY_EDITOR CLAW_MEMORY_HOST CLAW_MEMORY_PORT CLAW_MEMORY_WORKSPACE CLAW_MONITOR_COLLECT_INTERVAL_MS CLAW_MONITOR_CORS_ORIGINS CLAW_MONITOR_HOST CLAW_MONITOR_LOCAL_DISCOVERY_INTERVAL_MS CLAW_MONITOR_LOCAL_SCAN_PORTS CLAW_MONITOR_MODE CLAW_MONITOR_PORT CLAW_MONITOR_RELAY_TOKEN CLAW_MONITOR_RELAY_URL CLAW_MONITOR_RETENTION_DAYS CLAW_NODE CLAW_OPENCLAW_PATH CLAW_OPEN_WORKSPACE CLAW_PREVIEW_CLOUDFLARE_URL CLAW_PUBLISHING_CORS_ORIGINS CLAW_PUBLISHING_DATA_DIR CLAW_PUBLISHING_DB_PATH CLAW_PUBLISHING_DIR CLAW_PUBLISHING_DRIVE_URL CLAW_PUBLISHING_HEALTH_PROBE_MS CLAW_PUBLISHING_HOST CLAW_PUBLISHING_LOG_LEVEL CLAW_PUBLISHING_PIPELINE_ENABLED CLAW_PUBLISHING_PORT CLAW_PUBLISHING_PRINT_TOKEN CLAW_PUBLISHING_PUBLIC_BASE_URL CLAW_PUBLISHING_RECURRENCE_TICK_MS CLAW_PUBLISHING_SCHEDULER_TICK_MS CLAW_PUBLISHING_STATUS_FILE CLAW_PUBLISHING_TOKEN CLAW_PUBLISHING_TOKEN_STORE CLAW_PUBLISHING_URL CLAW_PUBLISHING_VAULT_URL CLAW_PUBLISHING_WORKER_TICK_MS CLAW_PUBLISHING_WORKSPACE CLAW_RELAY_ACCESS_TOKEN CLAW_RELAY_AGENT_ID CLAW_RELAY_TENANT_ID CLAW_RELAY_URL CLAW_RELAY_WORKSPACE_ID CLAW_REPORT_GITHUB_TOKEN CLAW_RESOURCES_DIR CLAW_RULES_DIR CLAW_RUNTIME_HOME CLAW_RUNTIME_PORT CLAW_RUNTIME_SESSIONS_URL CLAW_SEARCH_ADMIN_TOKEN CLAW_SEARCH_BASE CLAW_SEARCH_CODEX_BINARY CLAW_SEARCH_CORS_ORIGINS CLAW_SEARCH_DATA_DIR CLAW_SEARCH_HOST CLAW_SEARCH_JWT_SECRET CLAW_SEARCH_PORT CLAW_SEARCH_RUN_TIMEOUT_MS CLAW_SEARCH_SCHEDULER_TICK_MS CLAW_SEARCH_TOKEN CLAW_SEARCH_WORKER_CONCURRENCY CLAW_SECRETS_ADMIN_TOKEN CLAW_SECRETS_BACKEND CLAW_SECRETS_BASE CLAW_SECRETS_BASE_URL CLAW_SECRETS_BOOTSTRAP_STDIN CLAW_SECRETS_CORS_ORIGINS CLAW_SECRETS_DATA_DIR CLAW_SECRETS_DB_PATH CLAW_SECRETS_ENABLE_UNSAFE_EXTERNAL_PLUGINS CLAW_SECRETS_HOST CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64 CLAW_SECRETS_JWT_SECRET CLAW_SECRETS_KEK_BASE64 CLAW_SECRETS_PLUGINS_DIR CLAW_SECRETS_PORT CLAW_SECRETS_PROXY_PATH CLAW_SECRETS_PUBLIC_BASE_URL CLAW_SECRETS_SIDECAR_PATH CLAW_SECRETS_SIGNED_HOST_TOKEN CLAW_SECRETS_TENANT CLAW_SECRETS_TENANT_ID CLAW_SECRETS_TOKEN CLAW_SECRETS_UI_DIST_DIR CLAW_SESSIONS_CODEX_DIR CLAW_SESSIONS_DATA_DIR CLAW_SESSIONS_DISABLE_CODEX CLAW_SESSIONS_DISABLE_HERMES CLAW_SESSIONS_HERMES_DB CLAW_SESSIONS_HOST CLAW_SESSIONS_PORT CLAW_SESSIONS_SHARED_SECRET CLAW_SKILLS_AUTO_IMPORT CLAW_SLIDES_DISABLE_BROWSER CLAW_TELEGRAM_BACKEND CLAW_TELEGRAM_DOMAIN_SHARE_URL CLAW_TELEGRAM_HOST CLAW_TELEGRAM_LOG_LEVEL CLAW_TELEGRAM_PORT CLAW_TELEGRAM_WORKSPACE CLAW_TEMPLATE_DISABLE_BROWSER CLAW_TEST_LIVE CLAW_TEST_LIVE_PACKAGE CLAW_TEST_WORKSPACE CLAW_TIME_DATA_DIR CLAW_TIME_DB_FILE CLAW_TIME_DEFAULT_TIMEZONE CLAW_TIME_HOST CLAW_TIME_NOTIFY_SOURCE_TOKEN CLAW_TIME_NOTIFY_URL CLAW_TIME_PORT CLAW_TIME_SCHEDULER_INTERVAL_MS CLAW_TIME_TOKEN CLAW_TIME_URL CLAW_WACLI_PATH CLAW_WORKSPACE".split(" ");
-export const additionalStableEnvVarValues = "CLAW_ALLOW_PRE_V1_RELEASE CLAW_CODEBASE_MANIFEST CLAW_DATABASE_DB_PATH CLAW_DATABASE_MAX_UPLOAD_BYTES CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES CLAW_DATABASE_REALTIME_MAX_CLIENTS CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS CLAW_DATABASE_REALTIME_QUEUE_LIMIT CLAW_HOST_APP_VARIANT CLAW_HOST_APP_VERSION CLAW_HOST_SIGNING_IDENTITY CLAW_HOST_TEAM_ID CLAW_INSPECT_MANIFEST CLAW_MAC_CONTROL_SOURCE_SESSION CLAW_MCP_CONFIG_PATH CLAW_RELEASE_APPROVED_FOR CLAW_REMOTE_BIND CLAW_REMOTE_COORDINATOR_DEVICE_ID CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS CLAW_REMOTE_COORDINATOR_TENANT_ID CLAW_REMOTE_COORDINATOR_TOKEN CLAW_REMOTE_COORDINATOR_URL CLAW_REMOTE_DB CLAW_REMOTE_DISABLE_BONJOUR CLAW_REMOTE_ENABLE_BONJOUR CLAW_REMOTE_ENABLE_COORDINATOR CLAW_REMOTE_ENABLE_IROH CLAW_REMOTE_EXPOSURE CLAW_REMOTE_HTTP_PORT CLAW_REMOTE_IROH_DISABLE CLAW_REMOTE_IROH_RELAY_URL CLAW_REMOTE_MAX_BUFFERED_BYTES CLAW_REMOTE_MAX_QUEUE_FRAMES CLAW_REMOTE_MAX_SESSIONS CLAW_REMOTE_NAME CLAW_REMOTE_PORT CLAW_REMOTE_STATUS CLAW_REMOTE_VERSION CLAW_SCALE_LAB_HEAVY CLAW_SESSIONS_DB_PATH CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS CLAW_SESSIONS_EVENTS_QUEUE_LIMIT CLAWIX_MACOS_PATH CLAWIX_SDK_FIRST_REQUIRE_CLAWIX CLAWIX_SDK_FIRST_ROOT".split(" ");
+export const additionalStableEnvVarValues = "CLAW_AGENT_COORDINATION_ACTIVE CLAW_AGENT_COORDINATION_BYPASS CLAW_AGENT_COORDINATION_BYPASS_REASON CLAW_AGENT_COORDINATION_RUN_DIR CLAW_AGENT_COORDINATION_STATE_DIR CLAW_AGENT_SESSION_ID CLAW_ALLOW_PRE_V1_RELEASE CLAW_CODEBASE_MANIFEST CLAW_DATABASE_DB_PATH CLAW_DATABASE_MAX_UPLOAD_BYTES CLAW_DATABASE_REALTIME_MAX_BUFFERED_BYTES CLAW_DATABASE_REALTIME_MAX_CLIENTS CLAW_DATABASE_REALTIME_MAX_SUBSCRIPTIONS CLAW_DATABASE_REALTIME_QUEUE_LIMIT CLAW_HOST_APP_VARIANT CLAW_HOST_APP_VERSION CLAW_HOST_SIGNING_IDENTITY CLAW_HOST_TEAM_ID CLAW_INSPECT_MANIFEST CLAW_MAC_CONTROL_SOURCE_SESSION CLAW_MCP_CONFIG_PATH CLAW_RELEASE_APPROVED_FOR CLAW_REMOTE_BIND CLAW_REMOTE_COORDINATOR_DEVICE_ID CLAW_REMOTE_COORDINATOR_HEARTBEAT_MS CLAW_REMOTE_COORDINATOR_TENANT_ID CLAW_REMOTE_COORDINATOR_TOKEN CLAW_REMOTE_COORDINATOR_URL CLAW_REMOTE_DB CLAW_REMOTE_DISABLE_BONJOUR CLAW_REMOTE_ENABLE_BONJOUR CLAW_REMOTE_ENABLE_COORDINATOR CLAW_REMOTE_ENABLE_IROH CLAW_REMOTE_EXPOSURE CLAW_REMOTE_HTTP_PORT CLAW_REMOTE_IROH_DISABLE CLAW_REMOTE_IROH_RELAY_URL CLAW_REMOTE_MAX_BUFFERED_BYTES CLAW_REMOTE_MAX_QUEUE_FRAMES CLAW_REMOTE_MAX_SESSIONS CLAW_REMOTE_NAME CLAW_REMOTE_PORT CLAW_REMOTE_STATUS CLAW_REMOTE_VERSION CLAW_SCALE_LAB_HEAVY CLAW_SESSIONS_DB_PATH CLAW_SESSIONS_EVENTS_MAX_FRAME_BYTES CLAW_SESSIONS_EVENTS_MAX_QUEUED_BYTES CLAW_SESSIONS_EVENTS_MAX_SUBSCRIBERS CLAW_SESSIONS_EVENTS_QUEUE_LIMIT CLAWIX_MACOS_PATH CLAWIX_SDK_FIRST_REQUIRE_CLAWIX CLAWIX_SDK_FIRST_ROOT".split(" ");
 export const guardCoveredStableEnvVarValues = "CLAW_ACTOR_ASSERTION CLAW_ACTOR_HOST_ID CLAW_ACTOR_ID CLAW_ACTOR_KIND CLAW_ACTOR_RUN_ID CLAW_ACTOR_SESSION_ID CLAW_ACTOR_TRUSTED_KEYS CLAW_ADOPTION_CANONICITY_SELF_TEST CLAW_CHANNEL_PROCESSOR_ID CLAW_CONTEXT_AGENT_RUNS_ACTIVE CLAW_CONTEXT_BUILD_STATUS CLAW_CONTEXT_CUSTOM_METRIC CLAW_CONTEXT_SERVICE_HEALTH CLAW_CONTEXT_WEATHER_FILE CLAW_DEMO_SCENARIO CLAW_IMAGE_ALLOW_ENV_CREDENTIALS CLAW_OPENAI_IMAGE_BASE_URL CLAW_OPENAI_IMAGE_SECRET_REF CLAW_PUBLISHING_WORKER_BUDGET CLAW_PUBLISHING_WORKER_IDLE_MAX_MS CLAW_PUBLISHING_WORKER_IDLE_MIN_MS CLAW_ZERO_WORK_REPORT CLAWIX_ROOT".split(" ");
 
 export const stableEnvVars = [...new Set([...stableEnvVarValues, ...additionalStableEnvVarValues, ...guardCoveredStableEnvVarValues])]
@@ -1140,6 +1143,7 @@ export const stableNativeIdentities = [
 ] as const;
 
 export const clawRegisteredDdlSources = [
+  "packages/clawjs/src/agent-coordination-store.ts",
   "packages/clawjs/src/cli-network-command.ts",
   "packages/clawjs/src/cli-search-command.ts",
   "packages/clawjs/src/cli-search-heavy-command.ts",
@@ -1154,6 +1158,7 @@ export const clawRegisteredDdlSources = [
   "packages/clawjs-runtime/src/store.ts",
   "packages/clawjs-sandbox/src/store.ts",
   "packages/clawjs-sessions/src/store.ts",
+  "packages/clawjs-sessions/src/runtime-jobs.ts",
   "packages/clawjs-user-model/src/store.ts",
   "packages/clawjs-voice/src/store.ts",
   "packages/mesh/src/audit-store.ts",
@@ -1268,11 +1273,90 @@ export const stableEventTopics: ReadonlyArray<{
     direction: "generated" as const,
     notes: "Surface route, sync, remote, mesh, gateway, or signals event used by registered contract projections.",
   })),
+  {
+    id: "claw.event.sessions.fixtureRecoverableCorruption",
+    value: "fixture.recoverable_corruption",
+    name: "fixture.recoverable_corruption",
+    direction: "generated" as const,
+    notes: "Hermetic sessions fixture event topic used to exercise recoverable corruption handling without external input.",
+  },
 ] as const;
 
 export function cliFlagCatalogKey(flag: string): string {
   return flag.slice(2).replace(/-([a-z0-9])/g, (_, char: string) => char.toUpperCase());
 }
+
+const sessionsPublicRouteNarrative: ClawSurfaceNarrative = {
+  concept: "Public Sessions service route for listing, reading, rebuilding, or projecting session-owned state.",
+  authorizingDecision: {
+    ref: "ADR 0004: Stable surface registry and inspection",
+    path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+  },
+  completingSurface: {
+    human: "Sessions service behavior is covered by package docs and sessions route tests.",
+    programmatic: "Registered /v1/sessions routes consumed by @clawjs/sessions hydration and projection tests.",
+  },
+  nonInference: "This route registration does not authorize arbitrary session mutation, secret exposure, or unregistered session subroutes.",
+};
+
+const sessionsPublicRouteResourceContract: ClawResourceContract = {
+  startup: "Routes are registered statically at module load and do not open the sessions database.",
+  idle: "No background work is started by the route contract itself.",
+  memory: "Contract metadata is fixed-size and independent of session count.",
+  streaming: "These HTTP contracts are request/response surfaces; event streaming remains on the sessions event stream.",
+  storage: "Storage access is delegated to the sessions service store and projection rebuild handlers.",
+  hotPath: "Route lookup is registry-only; handler implementations own any request hot paths.",
+  scale: "Dynamic session-id routes use a bounded template rather than one node per session.",
+  validation: "Covered by persistent surface, narrative, resource, and sessions hydration route tests.",
+};
+
+const coordinationEnvNarrative: ClawSurfaceNarrative = {
+  concept: "Agent coordination environment override used by local test lanes and resource leases.",
+  authorizingDecision: {
+    ref: "ADR 0004: Stable surface registry and inspection",
+    path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+  },
+  completingSurface: {
+    human: "Agent coordination CLI and test lane behavior document these overrides through registered CLI surfaces.",
+    programmatic: "packages/clawjs/src/agent-coordination-store.ts and scripts/test-lane.mjs read these variables.",
+  },
+  nonInference: "These variables do not authorize bypassing unrelated guards, changing production services, or accessing secrets.",
+};
+
+const coordinationEnvResourceContract: ClawResourceContract = {
+  startup: "Environment values are read lazily by coordination helpers and do not start services.",
+  idle: "No timers or watchers are created by the variable registration.",
+  memory: "Each value is a bounded string configuration surface.",
+  streaming: "No stream is owned by these configuration variables.",
+  storage: "State and run directory variables only select local coordination storage roots.",
+  hotPath: "Reads are direct process environment lookups on CLI/test-lane startup paths.",
+  scale: "One value is registered per stable override; runtime agents do not create registry nodes.",
+  validation: "Covered by persistent surface guard and agent coordination/test lane checks.",
+};
+
+const fixtureRecoverableCorruptionNarrative: ClawSurfaceNarrative = {
+  concept: "Hermetic Sessions fixture topic that exercises recoverable corruption import behavior.",
+  authorizingDecision: {
+    ref: "ADR 0004: Stable surface registry and inspection",
+    path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+  },
+  completingSurface: {
+    human: "Sessions realistic fixtures include this topic to validate corrupt source quarantine behavior.",
+    programmatic: "packages/clawjs-sessions/src/realistic-fixtures.ts emits fixture.recoverable_corruption.",
+  },
+  nonInference: "The fixture topic does not define a production event ingress or permit arbitrary event topics.",
+};
+
+const fixtureRecoverableCorruptionResourceContract: ClawResourceContract = {
+  startup: "The topic is fixture metadata and does not open stores on startup.",
+  idle: "No idle background work is associated with the topic registration.",
+  memory: "The registered topic is a fixed string in the stable event catalog.",
+  streaming: "It is emitted only through hermetic fixture construction, not as a live external stream.",
+  storage: "Fixture events are persisted only when tests seed a local sessions database.",
+  hotPath: "Not on a production hot path; fixture generation owns event creation cost.",
+  scale: "One stable topic covers all recoverable corruption fixture rows.",
+  validation: "Covered by persistent surface guard and sessions realistic fixture tests.",
+};
 
 export const publicApiRouteNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
   "claw.api.database.storageMetrics": {
@@ -1305,10 +1389,51 @@ export const publicApiRouteNarratives: Partial<Record<string, ClawSurfaceNarrati
     },
     nonInference: "This route registration does not permit plaintext secret export or restore mutation without signed-host approval.",
   }])),
+  ...Object.fromEntries([
+    "claw.api.sessions.messages",
+    "claw.api.sessions.dynamicTools",
+    "claw.api.sessions.projectionRebuild",
+    "claw.api.sessions.memoryExtractRebuild",
+  ].map((id) => [id, sessionsPublicRouteNarrative])),
+};
+
+export const publicApiRouteResourceContracts: Partial<Record<string, ClawResourceContract>> = {
+  ...Object.fromEntries([
+    "claw.api.sessions.messages",
+    "claw.api.sessions.dynamicTools",
+    "claw.api.sessions.projectionRebuild",
+    "claw.api.sessions.memoryExtractRebuild",
+  ].map((id) => [id, sessionsPublicRouteResourceContract])),
+};
+
+const coordinationEnvVarIds = new Set([
+  "claw.env.agentCoordinationActive",
+  "claw.env.agentCoordinationBypass",
+  "claw.env.agentCoordinationBypassReason",
+  "claw.env.agentCoordinationRunDir",
+  "claw.env.agentCoordinationStateDir",
+  "claw.env.agentSessionId",
+]);
+
+export const envVarSurfaceNarratives: Partial<Record<string, ClawSurfaceNarrative>> = Object.fromEntries(
+  [...coordinationEnvVarIds].map((id) => [id, coordinationEnvNarrative]),
+);
+
+export const envVarResourceContracts: Partial<Record<string, ClawResourceContract>> = Object.fromEntries(
+  [...coordinationEnvVarIds].map((id) => [id, coordinationEnvResourceContract]),
+);
+
+export const eventTopicSurfaceNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
+  "claw.event.sessions.fixtureRecoverableCorruption": fixtureRecoverableCorruptionNarrative,
+};
+
+export const eventTopicResourceContracts: Partial<Record<string, ClawResourceContract>> = {
+  "claw.event.sessions.fixtureRecoverableCorruption": fixtureRecoverableCorruptionResourceContract,
 };
 
 export const clawPublicApiRouteContractCatalog = defineStableCatalogFromEntries(corePublicRoutes.map(([id, method, route, name]) => {
   const surfaceNarrative = publicApiRouteNarratives[id];
+  const resourceContract = publicApiRouteResourceContracts[id];
   return [id, clawStableContractCatalogEntry({
     ...contractDefaults,
     id,
@@ -1320,6 +1445,7 @@ export const clawPublicApiRouteContractCatalog = defineStableCatalogFromEntries(
     parentId: "claw.contracts.api",
     direction: "inbound",
     ...(surfaceNarrative ? { surfaceNarrative } : {}),
+    ...(resourceContract ? { resourceContract } : {}),
   })];
 }));
 
@@ -1346,6 +1472,8 @@ export const clawEventTopicContractCatalog = defineStableCatalogFromEntries(stab
   surfaceClass: "event",
   direction: event.direction,
   ...("notes" in event && event.notes ? { notes: event.notes } : {}),
+  ...(eventTopicSurfaceNarratives[event.id] ? { surfaceNarrative: eventTopicSurfaceNarratives[event.id] } : {}),
+  ...(eventTopicResourceContracts[event.id] ? { resourceContract: eventTopicResourceContracts[event.id] } : {}),
 })]));
 
 export const clawJsonFieldContractCatalog = defineStableCatalogFromEntries(stableJsonFields.map(([id, field, name]) => [field, clawStableContractCatalogEntry({
@@ -1393,6 +1521,8 @@ export const clawEnvVarContractCatalog = defineStableCatalogFromEntries(stableEn
   key: value,
   parentId: "claw.contracts.config",
   direction: "inbound",
+  ...(envVarSurfaceNarratives[id] ? { surfaceNarrative: envVarSurfaceNarratives[id] } : {}),
+  ...(envVarResourceContracts[id] ? { resourceContract: envVarResourceContracts[id] } : {}),
 })]));
 
 export const clawPackageNameContractCatalog = defineStableCatalogFromEntries(stablePackageNames.map(([id, value, name]) => [id, clawStableContractCatalogEntry({
@@ -1474,6 +1604,30 @@ export const clawPortContractCatalog = defineStableCatalogFromEntries(Object.ent
 })]));
 
 export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
+  "agent-resource": {
+    concept: "Shared local coordination ledger CLI for agent leases, pending demands, reusable test results, repair stewardship, and bypass audit receipts.",
+    authorizingDecision: {
+      ref: "ADR 0002: Testing architecture",
+      path: "docs/adr/0002-testing-architecture.md",
+    },
+    completingSurface: {
+      human: "docs/cli.md and docs/testing.md coordination workflow",
+      programmatic: "claw agent-resource plan|acquire|heartbeat|release|status|waitlist|reap|bypass --json",
+    },
+    nonInference: "This command does not prove validation by itself; bypass and pending demand remain degraded or blocked evidence until released with an explicit result.",
+  },
+  test: {
+    concept: "Coordination-aware test facade that plans lanes, requires shared resources, reuses valid results, and records pending demand instead of colliding with active runs.",
+    authorizingDecision: {
+      ref: "ADR 0002: Testing architecture",
+      path: "docs/adr/0002-testing-architecture.md",
+    },
+    completingSurface: {
+      human: "docs/testing.md and docs/testing-matrix.md test lane guidance",
+      programmatic: "claw test plan|require|status|reap --json",
+    },
+    nonInference: "This command does not replace the underlying test command output and does not authorize skipping required validation without an explicit bypass record.",
+  },
   maturity: {
     concept: "Capability maturity governance inspection CLI for activation tier ceilings, activation policies, and leakage audit.",
     authorizingDecision: {
@@ -1508,7 +1662,7 @@ export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliC
         idle: "No daemon or background wait loop is started by the command.",
         memory: "Each invocation loads bounded ledger rows for the requested acquire/status/reap operation.",
         streaming: "No stream is exposed; heartbeat is an explicit command and JSON heartbeat file update.",
-        storage: "Writes agent intents, leases, demands, work results, repair ownership, and bypass audit rows to the registered coordination SQLite database.",
+        storage: "Writes agent intents, leases, demands, work results, repair stewardship, and bypass audit rows to the registered coordination SQLite database.",
         hotPath: "Agent automation/control-plane path only; user-facing app hot paths must not depend on it.",
         scale: "Indexed lease and demand lookups are designed for concurrent local agents and bounded recent status output.",
         validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",

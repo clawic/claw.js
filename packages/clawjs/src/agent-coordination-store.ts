@@ -173,6 +173,7 @@ export class AgentCoordinationStore {
     readonly paths: AgentCoordinationPaths,
   ) {}
 
+  // @clawjs-persistent-surface-ddl-source
   ensureSchema(): void {
     this.sqlite.exec(`
       CREATE TABLE IF NOT EXISTS agent_intents (
