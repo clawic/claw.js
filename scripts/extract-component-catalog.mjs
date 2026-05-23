@@ -2,42 +2,162 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
-const args = parseArgs(process.argv.slice(2));
-const sourceRoot = path.resolve(args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR ?? "");
-const outPath = args.out ? path.resolve(args.out) : "";
+const SCRIPT_PATH = "scripts/extract-component-catalog.mjs";
+const VALID_OPTIONS = new Set(["source", "out", "self-test"]);
 
-if (!sourceRoot || !fs.existsSync(sourceRoot)) {
-  console.error("Usage: node scripts/extract-component-catalog.mjs --source <checkout> --out <catalog.json>");
-  process.exit(1);
+main();
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args["self-test"] === true) {
+    runSelfTest();
+    return;
+  }
+  const usageDiagnostics = validateArgs(args);
+  if (usageDiagnostics.length > 0) {
+    printActionableFailureReport({
+      title: "component catalog extraction usage failed:",
+      diagnostics: usageDiagnostics,
+    });
+    process.exit(64);
+  }
+  try {
+    extractCatalog(args);
+  } catch (error) {
+    printActionableFailureReport({
+      title: "component catalog extraction failed:",
+      diagnostics: [diagnosticFromError(error)],
+    });
+    process.exit(1);
+  }
 }
-if (!outPath) {
-  console.error("Missing --out <catalog.json>");
-  process.exit(1);
+
+function extractCatalog(args) {
+  const sourceRoot = path.resolve(args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR);
+  const outPath = args.out ? path.resolve(args.out) : "";
+  const componentsDir = path.join(sourceRoot, "components");
+  if (!fs.existsSync(componentsDir)) {
+    throw Object.assign(new Error("Missing components directory under --source."), {
+      code: "COMPONENT_CATALOG_COMPONENTS_MISSING",
+    });
+  }
+
+  const sourceRevision = readRevision(sourceRoot);
+  const apps = fs.readdirSync(componentsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => readApp(path.join(componentsDir, entry.name), entry.name))
+    .filter(Boolean)
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  const catalog = {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    ...(sourceRevision ? { sourceRevision } : {}),
+    apps,
+  };
+
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, `${JSON.stringify(catalog, null, 2)}\n`);
+  console.error(`wrote ${apps.length} apps, ${apps.reduce((sum, app) => sum + app.operations.length, 0)} operations`);
 }
 
-const componentsDir = path.join(sourceRoot, "components");
-if (!fs.existsSync(componentsDir)) {
-  throw new Error(`Missing components directory: ${componentsDir}`);
+function validateArgs(args) {
+  const diagnostics = [];
+  for (const message of args.__errors ?? []) {
+    diagnostics.push(createDiagnostic("component_catalog_extract_usage_error", message, {
+      status: "USAGE",
+      location: SCRIPT_PATH,
+      suggestion: "Use only --source, --out, or --self-test.",
+      safeNextStep: `Run node ${SCRIPT_PATH} --source <checkout> --out <catalog.json>.`,
+    }));
+  }
+  const sourceValue = args.source ?? process.env.CLAW_COMPONENTS_SOURCE_DIR;
+  const sourceRoot = sourceValue ? path.resolve(sourceValue) : "";
+  if (!sourceValue || !fs.existsSync(sourceRoot)) {
+    diagnostics.push(createDiagnostic(
+      "component_catalog_extract_source_missing",
+      "Source checkout does not exist or is not readable.",
+      {
+        status: "USAGE",
+        location: "--source",
+        suggestion: "Pass the root of the component checkout or set CLAW_COMPONENTS_SOURCE_DIR.",
+        safeNextStep: `Run node ${SCRIPT_PATH} --source <checkout> --out <catalog.json>.`,
+      },
+    ));
+  }
+  if (!args.out) {
+    diagnostics.push(createDiagnostic("component_catalog_extract_out_missing", "Missing --out <catalog.json>.", {
+      status: "USAGE",
+      location: "--out",
+      suggestion: "Choose a writable generated catalog path.",
+      safeNextStep: `Run node ${SCRIPT_PATH} --source <checkout> --out <catalog.json>.`,
+    }));
+  }
+  return diagnostics;
 }
 
-const sourceRevision = readRevision(sourceRoot);
-const apps = fs.readdirSync(componentsDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => readApp(path.join(componentsDir, entry.name), entry.name))
-  .filter(Boolean)
-  .sort((left, right) => left.name.localeCompare(right.name));
+function diagnosticFromError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error?.code === "COMPONENT_CATALOG_COMPONENTS_MISSING" || message.includes("Missing components directory")) {
+    return createDiagnostic("component_catalog_extract_components_missing", "Missing components directory under --source.", {
+      location: "components/",
+      suggestion: "Use a checkout whose root contains a components directory.",
+      safeNextStep: `Rerun node ${SCRIPT_PATH} with --source pointing at the checkout root, not a nested app folder.`,
+    });
+  }
+  return createDiagnostic("component_catalog_extract_failed", `Catalog extraction failed: ${redactLocalPaths(message)}`, {
+    location: SCRIPT_PATH,
+    suggestion: "Inspect the source checkout and output path permissions.",
+    safeNextStep: `Fix the reported input, then rerun node ${SCRIPT_PATH} with the same arguments.`,
+  });
+}
 
-const catalog = {
-  version: 1,
-  generatedAt: new Date().toISOString(),
-  ...(sourceRevision ? { sourceRevision } : {}),
-  apps,
-};
+function redactLocalPaths(value) {
+  return String(value).replace(/(?:^|[\s'"])(\/(?:[^/\s'"]+\/)+[^/\s'"]*)/g, (match) => {
+    const prefix = /^[\s'"]/.test(match) ? match[0] : "";
+    return `${prefix}<path>`;
+  });
+}
 
-fs.mkdirSync(path.dirname(outPath), { recursive: true });
-fs.writeFileSync(outPath, `${JSON.stringify(catalog, null, 2)}\n`);
-console.error(`wrote ${apps.length} apps, ${apps.reduce((sum, app) => sum + app.operations.length, 0)} operations`);
+function runSelfTest() {
+  const args = parseArgs([
+    "--source",
+    "/Users/example/private/sk-test-secret-123456",
+    "--bad-token",
+    "sk-test-secret-123456",
+  ]);
+  const chunks = [];
+  printActionableFailureReport({
+    title: "component catalog extraction failed for /Users/example/private",
+    diagnostics: [
+      ...validateArgs(args),
+      diagnosticFromError(Object.assign(
+        new Error("Missing components directory under --source: /Users/example/private/sk-test-secret-123456/components"),
+        { code: "COMPONENT_CATALOG_COMPONENTS_MISSING" },
+      )),
+    ],
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  if (!output.includes("code: component_catalog_extract_usage_error")) {
+    throw new Error("self-test missing usage diagnostic code");
+  }
+  if (!output.includes("code: component_catalog_extract_source_missing")) {
+    throw new Error("self-test missing source diagnostic code");
+  }
+  if (!output.includes("code: component_catalog_extract_components_missing")) {
+    throw new Error("self-test missing components diagnostic code");
+  }
+  if (!output.includes("suggestion:") || !output.includes("next:")) {
+    throw new Error("self-test missing operator guidance");
+  }
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) {
+    throw new Error("self-test leaked private data");
+  }
+  console.log("component catalog extraction self-test passed");
+}
 
 function readApp(appDir, fallbackId) {
   const appFile = findAppFile(appDir);
@@ -1210,23 +1330,41 @@ function readJson(filePath) {
 
 function readRevision(root) {
   try {
-    return execFileSync("git", ["-C", root, "rev-parse", "--short=12", "HEAD"], { encoding: "utf8" }).trim();
+    return execFileSync("git", ["-C", root, "rev-parse", "--short=12", "HEAD"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return undefined;
   }
 }
 
 function parseArgs(argv) {
-  const parsed = {};
+  const parsed = { __errors: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
-    if (!token?.startsWith("--")) continue;
-    const key = token.slice(2);
-    const value = argv[index + 1];
-    if (value && !value.startsWith("--")) {
-      parsed[key] = value;
-      index += 1;
+    if (!token?.startsWith("--")) {
+      parsed.__errors.push(`Unexpected positional argument: ${token ?? "<empty>"}`);
+      continue;
     }
+    const key = token.slice(2);
+    if (!VALID_OPTIONS.has(key)) {
+      parsed.__errors.push(`Unknown option: --${key}`);
+      const maybeValue = argv[index + 1];
+      if (maybeValue && !maybeValue.startsWith("--")) index += 1;
+      continue;
+    }
+    if (key === "self-test") {
+      parsed[key] = true;
+      continue;
+    }
+    const value = argv[index + 1];
+    if (!value || value.startsWith("--")) {
+      parsed.__errors.push(`Missing value for --${key}`);
+      continue;
+    }
+    parsed[key] = value;
+    index += 1;
   }
   return parsed;
 }
