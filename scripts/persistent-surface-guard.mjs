@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const exceptionPath = path.join(rootDir, "docs", "persistent-surface-guard-exceptions.json");
 const today = new Date().toISOString().slice(0, 10);
+const allowedFlags = new Set(["--self-test", "--report", "--json"]);
 
 const rules = [
   {
@@ -659,16 +661,142 @@ function summarizeFindings(findings) {
   };
 }
 
+function persistentSurfaceDiagnostic(item) {
+  if (typeof item === "string" && item.startsWith("unknown argument")) {
+    return createDiagnostic("persistent_surface_usage_error", item, {
+      status: "USAGE",
+      location: "scripts/persistent-surface-guard.mjs",
+      suggestion: "Use --self-test, --report, --json, and at least one file or directory target.",
+      safeNextStep: "Rerun node scripts/persistent-surface-guard.mjs with supported flags and a target path.",
+    });
+  }
+  if (typeof item === "string" && item.startsWith("missing target")) {
+    return createDiagnostic("persistent_surface_target_missing", item, {
+      status: "USAGE",
+      location: "scripts/persistent-surface-guard.mjs",
+      suggestion: "Pass the file or directory whose persistent surfaces should be checked.",
+      safeNextStep: "Rerun node scripts/persistent-surface-guard.mjs --report <file-or-dir>.",
+    });
+  }
+  const finding = typeof item === "string"
+    ? { file: "scripts/persistent-surface-guard.mjs", line: 1, rule: "persistent-surface", message: item }
+    : item;
+  const location = `${finding.file}:${finding.line}`;
+  if (finding.rule?.startsWith("guard.exception")) {
+    return createDiagnostic("persistent_surface_exception_invalid", finding.message, {
+      location,
+      suggestion: "Fix the persistent surface exception entry so it is valid, current, stewarded, and tested.",
+      safeNextStep: "Update docs/persistent-surface-guard-exceptions.json, then rerun this guard.",
+    });
+  }
+  if (finding.rule === "ts.registry-contract-catalog") {
+    return createDiagnostic("persistent_surface_catalog_missing", finding.message, {
+      location,
+      suggestion: "Declare and consume the required stable contract catalog in the registry source files.",
+      safeNextStep: "Update the named registry file, then rerun node scripts/persistent-surface-guard.mjs.",
+    });
+  }
+  if (finding.rule?.includes("api-route")) {
+    return createDiagnostic("persistent_surface_route_literal", finding.message, {
+      location,
+      suggestion: "Register the route through the stable surface builders or use an already registered route helper.",
+      safeNextStep: "Add the route to the persistent surface registry, then rerun this guard.",
+    });
+  }
+  if (finding.rule?.includes("env-var")) {
+    return createDiagnostic("persistent_surface_env_var_literal", finding.message, {
+      location,
+      suggestion: "Register the owned environment variable as an envVar surface before direct use.",
+      safeNextStep: "Add the env var to the stable surface registry, then rerun this guard.",
+    });
+  }
+  if (finding.rule?.includes("ddl") || finding.rule?.includes("database")) {
+    return createDiagnostic("persistent_surface_database_literal", finding.message, {
+      location,
+      suggestion: "Register database files, tables, indexes, or DDL sources through persistent surface builders.",
+      safeNextStep: "Register the database surface or add a reviewed temporary exception, then rerun this guard.",
+    });
+  }
+  if (finding.rule?.includes("storage") || finding.rule?.includes("defaults") || finding.rule?.includes("app-storage") || finding.rule?.includes("persistent-key")) {
+    return createDiagnostic("persistent_surface_storage_key_literal", finding.message, {
+      location,
+      suggestion: "Register durable preference, app storage, or browser storage keys in the persistent surface registry.",
+      safeNextStep: "Add the key to the registry, then rerun node scripts/persistent-surface-guard.mjs.",
+    });
+  }
+  if (finding.rule?.includes("schema") || finding.rule?.includes("serial") || finding.rule?.includes("json-property") || finding.rule?.includes("coding-key")) {
+    return createDiagnostic("persistent_surface_wire_field_literal", finding.message, {
+      location,
+      suggestion: "Register stable wire fields through stable surface builders or typed schemas.",
+      safeNextStep: "Register the wire field or route it through the typed schema, then rerun this guard.",
+    });
+  }
+  return createDiagnostic("persistent_surface_guard_failed", finding.message, {
+    location,
+    suggestion: "Register the persistent surface or use the canonical builder for the reported literal.",
+    safeNextStep: "Fix the reported surface invariant, then rerun node scripts/persistent-surface-guard.mjs.",
+  });
+}
+
+function printFindings(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "persistent surface guard failed:",
+    diagnostics: items.map(persistentSurfaceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 if (process.argv.includes("--self-test")) {
   runSelfTest();
+  const chunks = [];
+  printFindings([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "missing target",
+    {
+      file: "/Users/example/private/bad.ts",
+      line: 3,
+      rule: "ts.direct-api-route",
+      message: "stable API routes must be registered through stable surface builders",
+    },
+    {
+      file: "docs/persistent-surface-guard-exceptions.json",
+      line: 1,
+      rule: "guard.exception-schema",
+      message: "exception token: sk-test-secret-123456 is missing tests",
+    },
+    {
+      file: "packages/clawjs-core/src/surface-registry-contracts.ts",
+      line: 1,
+      rule: "ts.registry-contract-catalog",
+      message: "clawPublicApiRouteContractCatalog must be declared",
+    },
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "persistent_surface_usage_error",
+    "persistent_surface_target_missing",
+    "persistent_surface_route_literal",
+    "persistent_surface_exception_invalid",
+    "persistent_surface_catalog_missing",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Register the route")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   process.exit(0);
+}
+
+const unknownFlags = process.argv.slice(2).filter((arg) => arg.startsWith("--") && !allowedFlags.has(arg));
+if (unknownFlags.length > 0) {
+  printFindings(unknownFlags.map((arg) => `unknown argument ${arg}`));
+  process.exit(64);
 }
 
 const wantsReport = process.argv.includes("--report");
 const wantsJson = process.argv.includes("--json");
 const targets = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 if (targets.length === 0) {
-  console.error("Usage: node scripts/persistent-surface-guard.mjs --self-test | [--report] [--json] <file-or-dir>...");
+  printFindings(["missing target"]);
   process.exit(64);
 }
 
@@ -706,10 +834,7 @@ if (wantsReport) {
   process.exit(0);
 }
 if (findings.length > 0) {
-  console.error("persistent surface guard failed:");
-  for (const finding of findings) {
-    console.error(`- ${finding.file}:${finding.line} ${finding.rule}: ${finding.message}`);
-  }
+  printFindings(findings);
   process.exit(1);
 }
 
