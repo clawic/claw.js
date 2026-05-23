@@ -36,7 +36,7 @@ function boundednessDiagnostic(failure) {
   if (failure.includes("boundedness-baseline.json")) {
     return createDiagnostic("boundedness_baseline_invalid", failure, {
       location: "docs/boundedness-baseline.json",
-      suggestion: "Fix baseline schema, ownership, expiry, duplicate keys, or stale paths.",
+      suggestion: "Fix baseline schema, stewardship, expiry, duplicate keys, or stale paths.",
       safeNextStep: "Repair docs/boundedness-baseline.json, then rerun node scripts/boundedness-guard.mjs.",
     });
   }

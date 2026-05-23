@@ -160,7 +160,7 @@ function resourceContractDiagnostic(failure) {
     return createDiagnostic("surface_resource_contract_baseline_drift", failure, {
       location: "docs/surface-resource-contract-baseline.json",
       suggestion: "Backfill resourceContract on new surfaces, or intentionally update the baseline after classifying the debt.",
-      safeNextStep: "Run node --import tsx scripts/surface-resource-contract-guard.mjs --update-baseline only after documenting owner, risk, expiry, and reentry condition.",
+      safeNextStep: "Run node --import tsx scripts/surface-resource-contract-guard.mjs --update-baseline only after documenting steward, risk, expiry, and reentry condition.",
     });
   }
   if (failure.includes("resourceContract.")) {

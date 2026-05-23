@@ -85,7 +85,7 @@ function validateBaselineEnvelope(baseline) {
   if (baseline.version !== 1) failures.push("surface narrative baseline version must be 1");
   for (const [index, entry] of (baseline.entries ?? []).entries()) {
     const label = entry.id ?? `<entry ${index + 1}>`;
-    for (const field of ["id", "classification", "owner", "reason", "risk", "expires", "nextPhase", "reentryCondition"]) {
+    for (const field of ["id", "classification", "steward", "reason", "risk", "expires", "nextPhase", "reentryCondition"]) {
       if (!entry[field]) failures.push(`${label} is missing ${field}`);
     }
     if (!["lateral_debt", "pre_existing_dirty"].includes(entry.classification)) {
@@ -180,7 +180,7 @@ function narrativeDiagnostic(failure) {
     return createDiagnostic("surface_narrative_baseline_drift", failure, {
       location: "docs/surface-narrative-baseline.json",
       suggestion: "Backfill surfaceNarrative on new surfaces, or intentionally update the baseline after classifying the debt.",
-      safeNextStep: "Run node --import tsx scripts/surface-narrative-guard.mjs --print-baseline only after documenting owner, risk, expiry, and reentry condition.",
+      safeNextStep: "Run node --import tsx scripts/surface-narrative-guard.mjs --print-baseline only after documenting steward, risk, expiry, and reentry condition.",
     });
   }
   if (failure.includes("surfaceNarrative.")) {
@@ -222,7 +222,7 @@ function buildBaseline(registry = clawPersistentSurfaceRegistry) {
       {
         id: "clawjs.existing-surfaces-without-narrative",
         classification: "lateral_debt",
-        owner: "claw",
+        steward: "claw",
         reason: "Initial bounded baseline for stable surfaces that predate the surfaceNarrative contract.",
         risk: "Existing surfaces remain inspectable, but their conceptual authorization is not yet machine-checkable.",
         expires: "2026-08-18",
