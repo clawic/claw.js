@@ -3,9 +3,70 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const defaultRootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const manifestPath = "docs/idle-quiescence.manifest.json";
+
+function idleDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("idle_quiescence_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/idle-quiescence-check.mjs",
+      suggestion: "Use --self-test or --root <repo>.",
+      safeNextStep: "Rerun node scripts/idle-quiescence-check.mjs with a supported flag.",
+    });
+  }
+  const uncovered = failure.match(/^(.+):(\d+) declares ([^ ]+) without a matching /);
+  if (uncovered) {
+    return createDiagnostic("idle_quiescence_unregistered_work", failure, {
+      location: `${uncovered[1]}:${uncovered[2]}`,
+      suggestion: "Register the timer, watcher, poller, heartbeat, refresh, or diagnostic probe in the idle-quiescence manifest.",
+      safeNextStep: `Add a matching ${manifestPath} entry for ${uncovered[1]}, then rerun node scripts/idle-quiescence-check.mjs.`,
+    });
+  }
+  if (failure.startsWith("missing docs/governance/performance-governance.md") || failure.includes("performance-governance.md must include")) {
+    return createDiagnostic("idle_quiescence_policy_missing", failure, {
+      location: "docs/governance/performance-governance.md",
+      suggestion: "Restore the idle quiescence governance text before trusting the manifest scan.",
+      safeNextStep: "Update docs/governance/performance-governance.md, then rerun node scripts/idle-quiescence-check.mjs.",
+    });
+  }
+  if (failure.startsWith("missing scripts/performance-governance-check.mjs") || failure.includes("performance-governance-check.mjs must include")) {
+    return createDiagnostic("idle_quiescence_policy_hook_missing", failure, {
+      location: "scripts/performance-governance-check.mjs",
+      suggestion: "Restore the performance-governance hook that requires idle-quiescence-check.",
+      safeNextStep: "Update scripts/performance-governance-check.mjs, then rerun node scripts/idle-quiescence-check.mjs.",
+    });
+  }
+  if (failure.startsWith(`missing ${manifestPath}`) || failure.includes(`${manifestPath} is not valid JSON`)) {
+    return createDiagnostic("idle_quiescence_manifest_unreadable", failure, {
+      location: manifestPath,
+      suggestion: "Restore a readable JSON idle-quiescence manifest.",
+      safeNextStep: `Fix ${manifestPath}, then rerun node scripts/idle-quiescence-check.mjs.`,
+    });
+  }
+  if (failure.includes(manifestPath)) {
+    return createDiagnostic("idle_quiescence_manifest_invalid", failure, {
+      location: manifestPath,
+      suggestion: "Fix manifest schemaVersion, program, severity, entries, or duplicate ids.",
+      safeNextStep: `Repair ${manifestPath}, then rerun node scripts/idle-quiescence-check.mjs.`,
+    });
+  }
+  return createDiagnostic("idle_quiescence_entry_invalid", failure, {
+    location: manifestPath,
+    suggestion: "Fix the named idle-quiescence entry field, expiry, visibility, backoff, shared timer rationale, or release behavior.",
+    safeNextStep: `Update the matching entry in ${manifestPath}, then rerun node scripts/idle-quiescence-check.mjs.`,
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "idle quiescence check failed:",
+    diagnostics: failures.map(idleDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
 
 function parseArgs(argv) {
   const args = { rootDir: defaultRootDir, selfTest: false };
@@ -13,7 +74,10 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === "--root") args.rootDir = path.resolve(argv[++index]);
     else if (arg === "--self-test") args.selfTest = true;
-    else throw new Error(`unknown argument ${arg}`);
+    else {
+      printFailures([`unknown argument ${arg}`]);
+      process.exit(64);
+    }
   }
   return args;
 }
@@ -304,6 +368,9 @@ function expectFail(rootDir, expected) {
   if (result.status === 0 || !result.stderr.includes(expected)) {
     throw new Error(`self-test expected failure containing ${expected}, got status ${result.status}: ${result.stderr}`);
   }
+  if (!result.stderr.includes("code: ")) {
+    throw new Error(`self-test failure did not include diagnostic code: ${result.stderr}`);
+  }
 }
 
 function runSelfTest() {
@@ -332,6 +399,17 @@ function runSelfTest() {
   writeFixture(tempRoot, manifestPath, baseManifest([validEntry()]));
   const pass = spawnSync(process.execPath, [new URL(import.meta.url).pathname, "--root", tempRoot], { encoding: "utf8" });
   if (pass.status !== 0) throw new Error(`self-test valid fixture failed: ${pass.stderr}`);
+  const chunks = [];
+  printFailures([
+    "/Users/example/private/apps/demo/src/app.ts:1 declares timer without a matching docs/idle-quiescence.manifest.json entry: token sk-test-secret-123456",
+    "demo-loop.releaseBehavior mixes diagnostics into release without diagnosticsOptIn",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  if (!output.includes("code: idle_quiescence_unregistered_work")) throw new Error("self-test missing unregistered work code");
+  if (!output.includes("code: idle_quiescence_entry_invalid")) throw new Error("self-test missing entry invalid code");
+  if (!output.includes("suggestion: Register the timer")) throw new Error("self-test missing suggestion");
+  if (!output.includes("next: Add a matching docs/idle-quiescence.manifest.json entry for ~/private/apps/demo/src/app.ts")) throw new Error("self-test missing redacted next step");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }
 
@@ -343,8 +421,7 @@ if (args.selfTest) {
 
 const result = checkRoot(args.rootDir);
 if (result.failures.length > 0) {
-  console.error("idle quiescence check failed:");
-  for (const failure of result.failures) console.error(`- ${failure}`);
+  printFailures(result.failures);
   process.exit(1);
 }
 
