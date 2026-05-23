@@ -10,6 +10,7 @@ import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { readLocalAdminBootstrap } from "./local-admin-bootstrap.mjs";
+import { createLauncherDiagnostic, printLauncherFailure } from "./launcher-diagnostics.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,6 +35,10 @@ function defaultClawjsDataRoot(flags) {
     homeDir: os.homedir(),
     ...(clawHome ? { clawHome } : {}),
   });
+}
+
+function printOpenDriveFailure(diagnostic) {
+  printLauncherFailure("claw open drive failed:", [diagnostic]);
 }
 
 export async function runOpenDrive(args) {
@@ -65,11 +70,15 @@ export async function runOpenDrive(args) {
 
   const entry = findServerEntry();
   if (!entry) {
-    console.error("[claw open drive] could not locate the drive server entrypoint.");
-    console.error("Expected one of:");
-    console.error("  - <cli>/bin/drive-server.mjs (bundled)");
-    console.error("  - clawjs/drive/dist/server.js (built)");
-    console.error("  - clawjs/drive/src/bin/server.ts (dev, requires tsx)");
+    printOpenDriveFailure(createLauncherDiagnostic(
+      "claw_open_drive_entry_missing",
+      "Could not locate the drive server entrypoint.",
+      {
+        location: "packages/clawjs/bin/drive-server-launcher.mjs",
+        suggestion: "Build or bundle one of the supported drive server entrypoints.",
+        safeNextStep: "Run npm --workspace @clawjs/drive run build, then rerun claw open drive.",
+      },
+    ));
     return 1;
   }
 
@@ -103,6 +112,14 @@ export async function runOpenDrive(args) {
     return new Promise(() => {});
   }
 
-  console.error("[claw open drive] entry does not export startDriveServer().");
+  printOpenDriveFailure(createLauncherDiagnostic(
+    "claw_open_drive_export_missing",
+    "Drive server entry does not export startDriveServer().",
+    {
+      location: "startDriveServer",
+      suggestion: "Use a drive server build that exports startDriveServer().",
+      safeNextStep: "Rebuild the drive package, then rerun claw open drive.",
+    },
+  ));
   return 1;
 }

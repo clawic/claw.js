@@ -9,6 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
+import { createLauncherDiagnostic, printLauncherFailure } from "./launcher-diagnostics.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,6 +51,10 @@ async function readBootstrapConfigFromStdin() {
   return { ...(adminToken ? { adminToken } : {}), ...(signedHostToken ? { signedHostToken } : {}), ...(kekBase64 ? { kekBase64 } : {}) };
 }
 
+function printOpenSecretsFailure(diagnostic) {
+  printLauncherFailure("claw open secrets failed:", [diagnostic]);
+}
+
 function envForChildBootstrap() {
   const env = { ...process.env };
   delete env.CLAW_SECRETS_ADMIN_TOKEN;
@@ -65,7 +70,21 @@ function writeBootstrapToChild(child, bootstrapConfig) {
 }
 
 export async function runOpenSecrets(args) {
-  const bootstrapConfig = await readBootstrapConfigFromStdin();
+  let bootstrapConfig;
+  try {
+    bootstrapConfig = await readBootstrapConfigFromStdin();
+  } catch {
+    printOpenSecretsFailure(createLauncherDiagnostic(
+      "claw_open_secrets_bootstrap_invalid",
+      "Bootstrap payload was missing or invalid.",
+      {
+        location: "CLAW_SECRETS_BOOTSTRAP_STDIN",
+        suggestion: "Send a non-empty JSON bootstrap payload on stdin, or unset CLAW_SECRETS_BOOTSTRAP_STDIN.",
+        safeNextStep: "Rerun claw open secrets through the signed host launcher so secrets are passed over stdin.",
+      },
+    ));
+    return 1;
+  }
   if (bootstrapConfig) {
     delete process.env.CLAW_SECRETS_ADMIN_TOKEN;
     delete process.env.CLAW_SECRETS_TOKEN;
@@ -96,11 +115,15 @@ export async function runOpenSecrets(args) {
 
   const entry = findServerEntry();
   if (!entry) {
-    console.error("[claw open secrets] could not locate the secrets server entrypoint.");
-    console.error("Expected one of:");
-    console.error("  - <cli>/bin/secrets-server.mjs (bundled)");
-    console.error("  - clawjs/secrets/dist/server.js (built)");
-    console.error("  - clawjs/secrets/src/bin/server.ts (dev, requires tsx)");
+    printOpenSecretsFailure(createLauncherDiagnostic(
+      "claw_open_secrets_entry_missing",
+      "Could not locate the secrets server entrypoint.",
+      {
+        location: "packages/clawjs/bin/secrets-server-launcher.mjs",
+        suggestion: "Build or bundle one of the supported secrets server entrypoints.",
+        safeNextStep: "Run npm --workspace @clawjs/secrets run build, then rerun claw open secrets.",
+      },
+    ));
     return 1;
   }
 
@@ -143,6 +166,14 @@ export async function runOpenSecrets(args) {
     return 0;
   }
 
-  console.error("[claw open secrets] entry does not export startSecretsServer().");
+  printOpenSecretsFailure(createLauncherDiagnostic(
+    "claw_open_secrets_export_missing",
+    "Secrets server entry does not export startSecretsServer().",
+    {
+      location: "startSecretsServer",
+      suggestion: "Use a secrets server build that exports startSecretsServer().",
+      safeNextStep: "Rebuild the secrets package, then rerun claw open secrets.",
+    },
+  ));
   return 1;
 }
