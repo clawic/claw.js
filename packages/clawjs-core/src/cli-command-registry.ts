@@ -80,7 +80,7 @@ const MAC_CONTROL_TESTS = ["packages/clawjs-core/src/mac-control-plane.test.ts",
 const NETWORK_CONTROL_DOCS = ["docs/cli.md", "docs/network-control-plane.md"];
 const NETWORK_CONTROL_ADRS = [...CLI_ADRS, "docs/adr/0034-network-control-plane.md"];
 const NETWORK_CONTROL_TESTS = ["packages/clawjs-core/src/network-control-plane.test.ts", "packages/clawjs/src/cli-network-command.test.ts"];
-const EXISTING_MAC_COLLISION_ROOTS = new Set(["audio", "network"]);
+const EXISTING_MAC_COLLISION_ROOTS = new Set(["audio", "media", "network"]);
 
 function defaultSupportForPolicy(name: string, securityPolicy: ClawCliSecurityPolicy): ClawCliSupportDeclaration {
   if (securityPolicy === "signed_host_broker") {

@@ -7,12 +7,12 @@
   },
   "counts": {
     "surfaces": 1132,
-    "cliCommands": 170
+    "cliCommands": 169
   },
   "fingerprints": {
     "surfaces": "fnv1a32:17156cd7",
-    "cliCommands": "fnv1a32:a281df73",
-    "combined": "fnv1a32:9dcd79bb"
+    "cliCommands": "fnv1a32:82daf03a",
+    "combined": "fnv1a32:f6db8620"
   },
   "surfaces": [
     {
@@ -10105,14 +10105,6 @@
       "family": "runtime",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.mcp.v1"
-    },
-    {
-      "name": "media",
-      "kind": "canonical",
-      "usage": "media status|list|plan|coverage [--dry-run]",
-      "family": "mac-control",
-      "schemaVersion": 1,
-      "jsonSchemaId": "claw.cli.media.v1"
     },
     {
       "name": "media",
