@@ -36,6 +36,7 @@ export { clawCliCommandRegistry } from "./cli-command-registry.ts";
 export { clawPersistentSurfaceRegistry } from "./surface-registry.ts";
 export * from "./connector-control-plane.ts";
 export * from "./connector-governed-context.ts";
+export * from "./cross-process-json-boundary.ts";
 export * from "./terminology.ts";
 export * from "./tts.ts";
 export * from "./types.ts";

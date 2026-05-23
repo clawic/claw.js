@@ -36,6 +36,7 @@
     "sourceOfTruth": [
       "docs/adr/0049-surface-route-graph.md",
       "docs/decision-map.md",
+      "packages/clawjs-core/src/cross-process-json-boundary.ts",
       "packages/clawjs-core/src/surface-registry-contracts.ts",
       "packages/clawjs-core/src/host-contracts.ts"
     ]
@@ -89,9 +90,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/host-contracts.ts", "packages/clawjs/src/cli-host-command.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/host-contracts.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/host-contracts.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "Zod object schemas currently do not enforce strict unknown-key rejection on host command requests.", "producer": "CLI and Relay connector", "consumer": "signed host", "risk": "A caller may believe an extra field has authority when the host ignores it." },
-        "oversized": { "status": "blocked", "absenceReason": "No shared host-command byte limit is registered for stdio/http/xpc transports.", "producer": "daemon, CLI, Relay connector", "consumer": "signed host", "risk": "Large payloads can create inconsistent transport behavior." },
-        "truncated": { "status": "blocked", "absenceReason": "No shared truncated-host-command fixture exists.", "producer": "CLI or daemon process", "consumer": "signed host", "risk": "Partial JSON could surface as generic process failure instead of a stable parseable error." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/host-contracts.ts", "packages/clawjs-core/src/mac-control-plane.test.ts"] }
       }
     },
@@ -197,8 +198,8 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/project-manifest.ts", "packages/clawjs/src/cli-project-command.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/project-manifest.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/project-manifest.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "Project manifest schema does not document strict unknown-key behavior in a fixture.", "producer": "workspace/project bootstrap", "consumer": "runtime and Relay connector", "risk": "Unknown manifest authority fields could be ignored." },
-        "oversized": { "status": "blocked", "absenceReason": "No manifest byte limit is declared.", "producer": "workspace/project bootstrap", "consumer": "CLI/runtime readers", "risk": "Large manifests could slow startup or inspection." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "truncated": { "status": "covered", "evidence": ["packages/clawjs/src/cli-project-command.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs/src/cli-project-command.test.ts"] }
       }
@@ -233,9 +234,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts", "packages/clawjs/src/cli-mac-control-command.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No strict unknown-key fixture is declared for Mac action requests.", "producer": "CLI/MCP/service API", "consumer": "signed host broker", "risk": "Ignored fields could be mistaken for approved native action scope." },
-        "oversized": { "status": "blocked", "absenceReason": "No Mac action request byte limit is declared.", "producer": "CLI/MCP/service API", "consumer": "signed host broker", "risk": "Large native-action payloads can block prompt/review surfaces." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated Mac action request fixture exists.", "producer": "CLI/MCP/service API", "consumer": "signed host broker", "risk": "Partial native request JSON could map to generic failure instead of stable denial." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs-mcp/src/control-plane.test.ts"] }
       }
     },
@@ -251,9 +252,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No strict unknown-key fixture is declared for Mac action plans.", "producer": "Mac action broker", "consumer": "CLI/MCP/Clawix UI", "risk": "Consumers may ignore future risk or approval fields." },
-        "oversized": { "status": "blocked", "absenceReason": "No plan byte limit is declared.", "producer": "Mac action broker", "consumer": "CLI/MCP/Clawix UI", "risk": "Oversized plans can block UI review." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated plan fixture exists.", "producer": "Mac action broker", "consumer": "CLI/MCP/Clawix UI", "risk": "Partial plans can hide required approvals." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] }
       }
     },
@@ -269,9 +270,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No strict unknown-key fixture is declared for receipts.", "producer": "signed host", "consumer": "audit readers", "risk": "Future receipt fields can be dropped from audit interpretation." },
-        "oversized": { "status": "blocked", "absenceReason": "No receipt byte limit is declared.", "producer": "signed host", "consumer": "audit readers", "risk": "Large receipts can make audit ingestion expensive." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated receipt fixture exists.", "producer": "signed host", "consumer": "audit readers", "risk": "Partial receipts can make action outcome ambiguous." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] }
       }
     },
@@ -287,9 +288,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No strict unknown-key fixture is declared for permission state.", "producer": "signed host permission broker", "consumer": "CLI/MCP/Clawix UI", "risk": "Future OS permission fields can be ignored while UI claims complete state." },
-        "oversized": { "status": "blocked", "absenceReason": "No permission snapshot byte limit is declared.", "producer": "signed host permission broker", "consumer": "UI and CLI", "risk": "Large permission catalogs can slow settings hydration." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated permission-state fixture exists.", "producer": "signed host permission broker", "consumer": "UI and CLI", "risk": "Partial permission JSON can make blocked state look unavailable." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/mac-control-plane.test.ts"] }
       }
     },
