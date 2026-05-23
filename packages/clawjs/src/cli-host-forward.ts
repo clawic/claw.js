@@ -145,7 +145,12 @@ export async function runHostForwardCli(input: {
     return response.ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
   } catch (error) {
     if (error instanceof HostClientError) {
-      throw new CliHandledError(error.code, error.message, error.code === "host_transport_unsupported" ? CLI_EXIT_USAGE : CLI_EXIT_DEGRADED);
+      throw new CliHandledError(error.code, error.message, error.code === "host_transport_unsupported" ? CLI_EXIT_USAGE : CLI_EXIT_DEGRADED, {
+        status: error.code === "host_transport_unsupported" ? "USAGE" : "DEGRADED",
+        location: `host:${host.id}`,
+        suggestion: "Check the active host registration and verify the endpoint is reachable before forwarding domain commands.",
+        safeNextStep: "Run claw host status --json, then register or start a reachable host endpoint.",
+      });
     }
     throw error;
   }
@@ -163,7 +168,12 @@ function writeHostResponse(context: CliContext, response: ClawCommandResponse, w
       writeCommandJsonError(
         context.stdout,
         "host",
-        new CliHandledError(response.error?.code ?? "host_command_failed", response.error?.message ?? "Host command failed.", CLI_EXIT_FAILURE),
+        new CliHandledError(response.error?.code ?? "host_command_failed", response.error?.message ?? "Host command failed.", CLI_EXIT_FAILURE, {
+          status: "FAIL",
+          location: `host:${meta.hostId ?? "active"}`,
+          suggestion: "Inspect the host response error and rerun only after the host-side prerequisite is fixed.",
+          safeNextStep: "Run claw host status --json, then retry the same command with --json for a fresh envelope.",
+        }),
         {
           ...meta,
           hostRequestId: response.requestId,

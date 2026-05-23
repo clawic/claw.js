@@ -381,10 +381,16 @@ async function runSignedHostCommand(executable: string, args: string[]): Promise
     });
     return parseSignedHostJSON(stdout);
   } catch (error) {
+    if (error instanceof CliHandledError) throw error;
     const stdout = typeof (error as { stdout?: unknown }).stdout === "string" ? (error as { stdout: string }).stdout : "";
     if (stdout.trim()) return parseSignedHostJSON(stdout);
     const message = error instanceof Error ? error.message : String(error);
-    throw new CliHandledError("signed_host_bridge_failed", `Mac signed host bridge failed: ${message}`);
+    throw new CliHandledError("signed_host_bridge_failed", `Mac signed host bridge failed: ${message}`, {
+      status: "BLOCKED",
+      location: "CLAW_LIVE_BROKER_COMMAND",
+      suggestion: "Verify the signed host broker command exists, is executable, and can return a Claw JSON envelope.",
+      safeNextStep: "Run claw host status --json or unset CLAW_LIVE_BROKER_COMMAND to use dry-run planning.",
+    });
   }
 }
 
@@ -393,7 +399,12 @@ function parseSignedHostJSON(stdout: string): unknown {
     return JSON.parse(stdout);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new CliHandledError("signed_host_bridge_invalid_json", `Mac signed host bridge returned invalid JSON: ${message}`);
+    throw new CliHandledError("signed_host_bridge_invalid_json", `Mac signed host bridge returned invalid JSON: ${message}`, {
+      status: "BLOCKED",
+      location: "signed host stdout",
+      suggestion: "Return a valid Claw JSON envelope with ok/data or ok/error from the signed host broker.",
+      safeNextStep: "Run the configured broker command directly with a fixture request, then retry the CLI command.",
+    });
   }
 }
 

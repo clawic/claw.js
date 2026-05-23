@@ -8,7 +8,7 @@ import path from "path";
 
 import { clawHostApiRoutes } from "@clawjs/core";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 test("host registry CLI registers, selects, and reports the active host", async () => {
@@ -70,6 +70,37 @@ test("host registry CLI fails clearly when no active host exists", async () => {
   assert.equal(payload.meta.subcommand, "status");
 });
 
+test("direct domain CLI returns actionable host transport errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-xpc-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+  await runCliCapture([
+    "host",
+    "register",
+    "native-host",
+    "--name",
+    "Native Host",
+    "--kind",
+    "standalone",
+    "--transport",
+    "xpc",
+    "--address",
+    "com.example.claw.runtime",
+    "--claw-home",
+    clawHome,
+    "--use",
+  ], workspaceRoot);
+
+  const result = await runCliCapture(["contacts", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "host_transport_unsupported");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "host:native-host");
+  assert.match(payload.error.suggestion, /active host registration/);
+  assert.match(payload.error.safeNextStep, /claw host status --json/);
+});
+
 test("direct domain CLI forwards v1 requests to the active host", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-forward-"));
   const clawHome = path.join(workspaceRoot, "claw-home");
@@ -126,6 +157,58 @@ test("direct domain CLI forwards v1 requests to the active host", async () => {
     assert.equal(response.meta.host.hostId, "test-host");
     assert.equal(response.data.received, "contacts.contacts.list");
     assert.equal((requests[0] as { domain: string }).domain, "contacts");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("direct domain CLI preserves actionable host command error envelopes", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-error-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+  const server = http.createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on("end", () => {
+      const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({
+        schemaVersion: 1,
+        requestId: payload.requestId,
+        ok: false,
+        error: { code: "host_permission_missing", message: "Permission grant is missing." },
+        meta: { hostId: "test-host", riskLevel: "read", validationMode: "host_real", durationMs: 1 },
+      }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    await runCliCapture([
+      "host",
+      "register",
+      "test-host",
+      "--name",
+      "Test Host",
+      "--kind",
+      "embedded",
+      "--transport",
+      "http",
+      "--address",
+      `http://127.0.0.1:${address.port}`,
+      "--claw-home",
+      clawHome,
+      "--use",
+    ], workspaceRoot);
+
+    const result = await runCliCapture(["contacts", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
+    assert.equal(result.code, CLI_EXIT_FAILURE);
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "host_permission_missing");
+    assert.equal(payload.error.status, "FAIL");
+    assert.equal(payload.error.location, "host:test-host");
+    assert.match(payload.error.suggestion, /host response error/);
+    assert.match(payload.error.safeNextStep, /retry the same command/);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

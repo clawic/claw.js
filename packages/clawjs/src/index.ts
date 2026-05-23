@@ -1,5 +1,5 @@
 import os from "node:os";
-import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError, formatCliErrorText } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { extractPositionals, parseFlags } from "./cli-flag-parsers.ts";
 import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeCommandJsonOk, writeJsonError } from "./cli-json.ts";
@@ -191,7 +191,7 @@ export async function runCli(argv: string[], context: CliContext): Promise<numbe
         ...(subcommand ? { operation: subcommand } : {}),
       });
     } else {
-      context.stderr.write(`${handled.message}\n`);
+      context.stderr.write(`${formatCliErrorText(handled)}\n`);
     }
     return handled.exitCode;
   } finally {

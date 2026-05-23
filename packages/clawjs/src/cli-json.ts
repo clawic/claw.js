@@ -1,4 +1,4 @@
-import { CliHandledError } from "./cli-errors.ts";
+import { CliHandledError, cliErrorPayload } from "./cli-errors.ts";
 import { resolveGeneratedCliCommand } from "./cli-surface.ts";
 
 export type CliJsonMeta = Record<string, unknown> & {
@@ -227,10 +227,7 @@ export function writeJsonError(stream: NodeJS.WritableStream, error: unknown, me
     : new CliHandledError("internal_error", error instanceof Error ? error.message : String(error));
   writeJson(stream, {
     ok: false,
-    error: {
-      code: handled.code,
-      message: handled.message,
-    },
+    error: cliErrorPayload(handled),
     meta: resolveCliJsonMeta(meta),
   });
 }

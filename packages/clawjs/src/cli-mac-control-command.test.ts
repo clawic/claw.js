@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("Mac control roots expose atlas and dry-run contracts without direct native execution", async () => {
@@ -128,6 +128,43 @@ test("Mac direct roots and permission requests hand off to configured signed hos
   });
 });
 
+test("Mac signed host bridge failures return actionable JSON errors", async () => {
+  const failingHostCommand = createFailingMacSignedHostCommand();
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: failingHostCommand }, async () => {
+    const execute = await runCliCapture(["wifi", "connect", "--ssid", "Office", "--json"], process.cwd());
+    assert.equal(execute.code, CLI_EXIT_FAILURE);
+    const payload = JSON.parse(execute.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; location: string; suggestion: string; safeNextStep: string; message: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "signed_host_bridge_failed");
+    assert.equal(payload.error.status, "BLOCKED");
+    assert.equal(payload.error.location, "CLAW_LIVE_BROKER_COMMAND");
+    assert.match(payload.error.suggestion, /Verify the signed host broker command/);
+    assert.match(payload.error.safeNextStep, /claw host status --json/);
+    assert.doesNotMatch(execute.stdout, /sk-test-secret-123456/);
+  });
+});
+
+test("Mac signed host bridge invalid JSON returns parse location and safe next step", async () => {
+  const invalidHostCommand = createInvalidJsonMacSignedHostCommand();
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: invalidHostCommand }, async () => {
+    const execute = await runCliCapture(["permissions", "request", "microphone", "--json"], process.cwd());
+    assert.equal(execute.code, CLI_EXIT_FAILURE);
+    const payload = JSON.parse(execute.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; location: string; suggestion: string; safeNextStep: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "signed_host_bridge_invalid_json");
+    assert.equal(payload.error.status, "BLOCKED");
+    assert.equal(payload.error.location, "signed host stdout");
+    assert.match(payload.error.suggestion, /valid Claw JSON envelope/);
+    assert.match(payload.error.safeNextStep, /fixture request/);
+  });
+});
+
 test("Mac control help shows related surfaces in normal help", async () => {
   const cases: Array<[string, string[]]> = [
     ["app", ["claw apps"]],
@@ -208,6 +245,27 @@ if (action === "execute") {
   console.log(JSON.stringify({ ok: false, error: { code: "unknown_action", message: action } }));
   process.exit(1);
 }
+`);
+  fs.chmodSync(script, 0o755);
+  return script;
+}
+
+function createFailingMacSignedHostCommand(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-mac-host-failing-"));
+  const script = path.join(dir, "failing-mac-host.mjs");
+  fs.writeFileSync(script, `#!/usr/bin/env node
+console.error("token: sk-test-secret-123456");
+process.exit(1);
+`);
+  fs.chmodSync(script, 0o755);
+  return script;
+}
+
+function createInvalidJsonMacSignedHostCommand(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-mac-host-invalid-json-"));
+  const script = path.join(dir, "invalid-json-mac-host.mjs");
+  fs.writeFileSync(script, `#!/usr/bin/env node
+console.log("{");
 `);
   fs.chmodSync(script, 0o755);
   return script;

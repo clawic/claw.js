@@ -5,7 +5,9 @@ import {
   CLI_JSON_ENVELOPE_MAX_BYTES,
   parseCliJsonEnvelope,
   stringifyCliJson,
+  writeJsonError,
 } from "./cli-json.ts";
+import { CliHandledError, formatCliErrorText } from "./cli-errors.ts";
 
 test("CLI JSON envelope parser accepts success and error envelopes", () => {
   const success = parseCliJsonEnvelope<{ value: number }>(stringifyCliJson({
@@ -54,4 +56,47 @@ test("CLI JSON envelope parser enforces a declared stdout byte ceiling", () => {
     assert.equal(result.error.code, "cli_json_envelope_oversized");
     assert.equal(result.error.maxBytes, CLI_JSON_ENVELOPE_MAX_BYTES);
   }
+});
+
+test("CLI handled errors include actionable fields and redact sensitive details in JSON", () => {
+  let output = "";
+  const stream = { write: (chunk: string) => { output += chunk; return true; } } as NodeJS.WritableStream;
+  writeJsonError(stream, new CliHandledError("host_bridge_unavailable", "Host bridge is not reachable.", {
+    status: "BLOCKED",
+    location: "host.bridge",
+    suggestion: "Start the signed host before retrying.",
+    safeNextStep: "Run claw host status --json.",
+    details: {
+      token: "sk-test-secret-123456",
+      checkedPath: ".claw/bridge.sock",
+    },
+  }), { canonicalCommand: "host" });
+
+  const parsed = parseCliJsonEnvelope(output);
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.envelope.error?.code, "host_bridge_unavailable");
+    assert.equal(parsed.envelope.error?.message, "Host bridge is not reachable.");
+    assert.equal((parsed.envelope.error as { status?: string }).status, "BLOCKED");
+    assert.equal((parsed.envelope.error as { location?: string }).location, "host.bridge");
+    assert.equal((parsed.envelope.error as { suggestion?: string }).suggestion, "Start the signed host before retrying.");
+    assert.equal((parsed.envelope.error as { safeNextStep?: string }).safeNextStep, "Run claw host status --json.");
+  }
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
+});
+
+test("CLI text errors include stable code, status, location, suggestion, and next step", () => {
+  const text = formatCliErrorText(new CliHandledError("invalid_flag", "Unknown flag --wat. token: sk-test-secret-123456", {
+    status: "USAGE",
+    location: "/Users/example/private/argv.--wat",
+    suggestion: "Use --json or --help to inspect supported flags.",
+    safeNextStep: "Run claw inspect commands --json.",
+  }));
+
+  assert.match(text, /USAGE: Unknown flag --wat\. token: \[REDACTED\]/);
+  assert.match(text, /code: invalid_flag/);
+  assert.match(text, /location: ~\/private\/argv\.--wat/);
+  assert.match(text, /suggestion: Use --json or --help to inspect supported flags\./);
+  assert.match(text, /next: Run claw inspect commands --json\./);
+  assert.doesNotMatch(text, /sk-test-secret-123456|\/Users\/example/);
 });

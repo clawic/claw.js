@@ -3,13 +3,85 @@ export const CLI_EXIT_FAILURE = 1;
 export const CLI_EXIT_DEGRADED = 2;
 export const CLI_EXIT_USAGE = 64;
 
+export type CliErrorStatus = "FAIL" | "USAGE" | "DEGRADED" | "BLOCKED" | "EXTERNAL_PENDING";
+
+export interface CliHandledErrorOptions {
+  readonly exitCode?: number;
+  readonly status?: CliErrorStatus;
+  readonly location?: string;
+  readonly suggestion?: string;
+  readonly safeNextStep?: string;
+  readonly details?: Record<string, unknown>;
+}
+
+export interface CliErrorPayload {
+  readonly code: string;
+  readonly message: string;
+  readonly status: CliErrorStatus;
+  readonly location?: string;
+  readonly suggestion?: string;
+  readonly safeNextStep?: string;
+  readonly details?: Record<string, unknown>;
+}
+
 export class CliHandledError extends Error {
   readonly code: string;
   readonly exitCode: number;
+  readonly status: CliErrorStatus;
+  readonly location?: string;
+  readonly suggestion?: string;
+  readonly safeNextStep?: string;
+  readonly details?: Record<string, unknown>;
 
-  constructor(code: string, message: string, exitCode = CLI_EXIT_FAILURE) {
+  constructor(code: string, message: string, exitCodeOrOptions: number | CliHandledErrorOptions = CLI_EXIT_FAILURE, options: CliHandledErrorOptions = {}) {
     super(message);
+    const resolved = typeof exitCodeOrOptions === "number"
+      ? { ...options, exitCode: exitCodeOrOptions }
+      : exitCodeOrOptions;
     this.code = code;
-    this.exitCode = exitCode;
+    this.exitCode = resolved.exitCode ?? CLI_EXIT_FAILURE;
+    this.status = resolved.status ?? statusForExitCode(this.exitCode);
+    this.location = resolved.location;
+    this.suggestion = resolved.suggestion;
+    this.safeNextStep = resolved.safeNextStep;
+    this.details = resolved.details;
   }
+}
+
+export function statusForExitCode(exitCode: number): CliErrorStatus {
+  if (exitCode === CLI_EXIT_USAGE) return "USAGE";
+  if (exitCode === CLI_EXIT_DEGRADED) return "DEGRADED";
+  return "FAIL";
+}
+
+export function cliErrorPayload(error: CliHandledError | { code: string; message: string; status?: CliErrorStatus; location?: string; suggestion?: string; safeNextStep?: string; details?: Record<string, unknown> }): CliErrorPayload {
+  return {
+    code: error.code,
+    message: error.message,
+    status: error.status ?? "FAIL",
+    ...(error.location ? { location: error.location } : {}),
+    ...(error.suggestion ? { suggestion: error.suggestion } : {}),
+    ...(error.safeNextStep ? { safeNextStep: error.safeNextStep } : {}),
+    ...(error.details ? { details: error.details } : {}),
+  };
+}
+
+export function formatCliErrorText(error: CliHandledError): string {
+  const lines = [
+    `${error.status}: ${redactCliErrorText(error.message)}`,
+    `code: ${redactCliErrorText(error.code)}`,
+  ];
+  if (error.location) lines.push(`location: ${redactCliErrorText(error.location)}`);
+  if (error.suggestion) lines.push(`suggestion: ${redactCliErrorText(error.suggestion)}`);
+  if (error.safeNextStep) lines.push(`next: ${redactCliErrorText(error.safeNextStep)}`);
+  return lines.join("\n");
+}
+
+function redactCliErrorText(value: string): string {
+  let redacted = value;
+  redacted = redacted.replaceAll(/\bBearer\s+([A-Za-z0-9._-]{6,})/gi, "Bearer [REDACTED]");
+  redacted = redacted.replaceAll(/\bsk-[A-Za-z0-9._-]{6,}\b/g, "[REDACTED]");
+  redacted = redacted.replaceAll(/\b(api[_ -]?key|token|secret)\b\s*[:=]\s*([^\s,;]+)/gi, (_match, label: string) => `${label}: [REDACTED]`);
+  redacted = redacted.replaceAll(/\/Users\/[^/\s]+/g, "~");
+  return redacted;
 }
