@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 import {
   assertRegulatedDomainSafetyComplete,
@@ -10,6 +11,84 @@ import {
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
+
+function regulatedSafetyDiagnostic(error) {
+  if (error.includes("missing package legal disclaimer") || error.includes("public package")) {
+    return createDiagnostic("regulated_safety_package_disclaimer_missing", error, {
+      location: error.split(":")[0] || "packages/",
+      suggestion: "Restore package README legal disclaimers and release gates for public packages.",
+      safeNextStep: "Update the named package README or package.json, then rerun node scripts/verify-regulated-domain-safety-goal.mjs.",
+    });
+  }
+  if (error.includes("contains banned or unqualified public claim")) {
+    return createDiagnostic("regulated_safety_public_claim_forbidden", error, {
+      location: error.split(":").slice(0, 2).join(":") || "docs/",
+      suggestion: "Remove or qualify regulated-domain claims so public docs do not imply autonomous professional decisions or compliance status.",
+      safeNextStep: "Rewrite the named public copy, then rerun node scripts/verify-regulated-domain-safety-goal.mjs.",
+    });
+  }
+  if (error.includes("EXTERNAL PENDING") || error.includes("LEGAL-EXT")) {
+    return createDiagnostic("regulated_safety_external_pending_invalid", error, {
+      location: "docs/governance/legal/external-pending.md",
+      suggestion: "Keep unresolved external validation rows explicit and pending until approved evidence exists.",
+      safeNextStep: "Restore the legal external-pending ledger row, then rerun the regulated-domain safety guard.",
+    });
+  }
+  if (error.includes("missing ") || error.includes("contains forbidden")) {
+    return createDiagnostic("regulated_safety_required_text_invalid", error, {
+      location: error.split(":")[0] || "regulated-domain safety docs",
+      suggestion: "Restore the required regulated-domain safety contract text or remove forbidden wording.",
+      safeNextStep: "Fix the named file, then rerun node scripts/verify-regulated-domain-safety-goal.mjs.",
+    });
+  }
+  if (error.includes("credential") || error.includes("secret") || error.includes("token")) {
+    return createDiagnostic("regulated_safety_public_secret_exposure", error, {
+      location: error.split(":")[0] || "public docs/examples",
+      suggestion: "Replace credential-like public values with synthetic placeholders.",
+      safeNextStep: "Remove the sensitive-looking value, then rerun node scripts/verify-regulated-domain-safety-goal.mjs.",
+    });
+  }
+  return createDiagnostic("regulated_safety_goal_failed", error, {
+    location: "scripts/verify-regulated-domain-safety-goal.mjs",
+    suggestion: "Inspect the named legal, safety, release, or public-copy invariant.",
+    safeNextStep: "Fix the reported regulated-domain safety issue, then rerun node scripts/verify-regulated-domain-safety-goal.mjs.",
+  });
+}
+
+function printRegulatedSafetyFailures(failureList, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "regulated domain safety guard failed:",
+    diagnostics: failureList.map(regulatedSafetyDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printRegulatedSafetyFailures([
+    "packages/example/package.json: public package must ship README.md with legal disclaimer",
+    "docs/site.md:42: contains banned or unqualified public claim \"provides medical advice\" token sk-test-secret-123456",
+    "docs/governance/legal/external-pending.md: LEGAL-EXT-001 must have EXTERNAL PENDING status, found passed",
+    "/Users/example/private/docs.md: contains forbidden \"secret\"",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "regulated_safety_package_disclaimer_missing",
+    "regulated_safety_public_claim_forbidden",
+    "regulated_safety_external_pending_invalid",
+    "regulated_safety_required_text_invalid",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion:") || !output.includes("next:")) throw new Error("self-test missing guidance");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+  console.log("regulated domain safety guard self-test passed");
+}
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  process.exit(0);
+}
 
 function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), "utf8");
@@ -911,8 +990,8 @@ assertDemoFixturesAreSynthetic();
 assertNoCredentialLikePublicSecrets();
 
 if (errors.length > 0) {
-  console.error(`Regulated domain safety guard failed with ${errors.length} issue(s):`);
-  for (const error of errors) console.error(`- ${error}`);
+  printRegulatedSafetyFailures(errors);
+  console.error(`regulated domain safety guard failed with ${errors.length} issue(s)`);
   process.exit(1);
 }
 
