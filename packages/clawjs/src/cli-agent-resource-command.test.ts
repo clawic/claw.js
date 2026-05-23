@@ -299,7 +299,7 @@ test("failed test runs create repair ownership that blocks duplicate reruns", as
     checks: [{
       id: "changed",
       lane: "changed",
-      command: "node -e \"process.exit(1)\"",
+      command: "node -e \"console.log('fixture stdout before failure'); console.error('fixture stderr before failure'); process.exit(1)\"",
       timeoutSeconds: 30,
       costClass: "light",
       realServices: false,
@@ -328,6 +328,14 @@ test("failed test runs create repair ownership that blocks duplicate reruns", as
   const failedPayload = payload(failed.stdout);
   assert.equal(failedPayload.data.status, "FAIL");
   assert.equal(failedPayload.data.repair.status, "repairing");
+  assert.match(failed.stderr, /fixture stdout before failure/);
+
+  const failedStatus = await runCliCapture(["agent-resource", "status", "--state-dir", stateDir, "--json"], process.cwd());
+  assert.equal(failedStatus.code, CLI_EXIT_OK, failedStatus.stderr || failedStatus.stdout);
+  const failedResult = payload(failedStatus.stdout).data.recentResults[0];
+  assert.equal(failedResult.status, "failed");
+  assert.match(failedResult.stdoutTail, /fixture stdout before failure/);
+  assert.match(failedResult.stderrTail, /fixture stderr before failure/);
 
   const duplicate = await runCliCapture([
     "test",

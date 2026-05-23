@@ -246,23 +246,38 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
       }, { subcommand: command, lane });
     }
 
-    const result = spawnSync("bash", ["-lc", check.command], {
-      cwd: repo,
-      env: { ...process.env, CLAW_AGENT_COORDINATION_ACTIVE: "1" },
-      stdio: "inherit",
-      shell: false,
-    });
-    const status = result.status === 0 ? "passed" : "failed";
-    const released = store.release({
-      leaseId: acquisition.lease.id,
-      status,
-      checkId: check.id,
-      repo,
-      lane,
-      fingerprint,
-      failureAction: check.failureAction ?? null,
-      metadata: { command: check.command, exitCode: result.status ?? null, signal: result.signal ?? null },
-    });
+    const startedAt = new Date().toISOString();
+    const started = Date.now();
+    let result: ReturnType<typeof spawnSync> = { status: 1, signal: null, error: undefined, pid: 0, output: [], stdout: "", stderr: "" };
+    let status: "passed" | "failed" | "external_pending" = "failed";
+    let released: ReturnType<AgentCoordinationStore["release"]> = null;
+    try {
+      result = spawnSync("bash", ["-lc", check.command], {
+        cwd: repo,
+        env: { ...process.env, CLAW_AGENT_COORDINATION_ACTIVE: "1" },
+        encoding: "utf8",
+        maxBuffer: 20 * 1024 * 1024,
+        shell: false,
+      });
+      if (result.stdout) input.context.stderr.write(result.stdout);
+      if (result.stderr) input.context.stderr.write(result.stderr);
+      status = result.status === 0 ? "passed" : result.status === 2 ? "external_pending" : "failed";
+    } finally {
+      released = store.release({
+        leaseId: acquisition.lease.id,
+        status,
+        checkId: check.id,
+        repo,
+        lane,
+        fingerprint,
+        startedAt,
+        durationMs: Date.now() - started,
+        stdoutTail: typeof result.stdout === "string" ? result.stdout : null,
+        stderrTail: typeof result.stderr === "string" ? result.stderr : null,
+        failureAction: check.failureAction ?? null,
+        metadata: { command: check.command, exitCode: result.status ?? null, signal: result.signal ?? null, error: result.error?.message ?? null },
+      });
+    }
     const repairOwnership = status === "failed"
       ? store.claimRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: intent.id, ownerAgentId: input.flags.agent || process.env.CLAW_AGENT_ID || process.env.USER || "agent", ttlSeconds: check.timeoutSeconds })
       : null;
@@ -270,7 +285,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
     if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${acquisition.lease.id}.`, CLI_EXIT_DEGRADED);
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "test", {
-        status: status === "passed" ? "PASS" : "FAIL",
+        status: status === "passed" ? "PASS" : status === "external_pending" ? "EXTERNAL_PENDING" : "FAIL",
         intent: { id: intent.id, repo, lane },
         check: check.id,
         fingerprint,

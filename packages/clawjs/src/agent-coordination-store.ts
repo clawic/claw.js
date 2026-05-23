@@ -643,6 +643,8 @@ export function publicWorkResult(result: AgentWorkResultRow): Record<string, unk
     startedAt: result.started_at,
     finishedAt: result.finished_at,
     durationMs: result.duration_ms,
+    stdoutTail: result.stdout_tail,
+    stderrTail: result.stderr_tail,
     failureAction: result.failure_action,
     metadata: parseJsonObject(result.metadata_json),
   };

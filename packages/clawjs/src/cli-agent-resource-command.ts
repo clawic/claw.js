@@ -7,6 +7,7 @@ import {
   publicAuditEvent,
   publicDemand,
   publicLease,
+  publicWorkResult,
   resolveAgentCoordinationPaths,
   type AgentResourceLeaseMode,
   type AgentWorkResultStatus,
@@ -109,16 +110,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
     return ok(input, {
       activeLeases: status.activeLeases.map(publicLease),
       pendingDemands: status.pendingDemands.map(publicDemand),
-      recentResults: status.recentResults.map((result) => ({
-        id: result.id,
-        intentId: result.intent_id,
-        checkId: result.check_id,
-        repo: result.repo,
-        lane: result.lane,
-        fingerprint: result.fingerprint,
-        status: result.status,
-        finishedAt: result.finished_at,
-      })),
+      recentResults: status.recentResults.map(publicWorkResult),
       paths: status.paths,
     }, { subcommand: command });
   }
