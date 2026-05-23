@@ -579,73 +579,18 @@ async function runOneSessionsJob(job: SessionsRuntimeJobRecord, store: SessionsS
       if (!sessionId) throw new Error("sessions.rebuild_projection requires resourceId or payload.sessionId");
       return store.rebuildSessionProjection(sessionId);
     }
-    case "sessions.rebuild_projections": {
-      return rebuildSessionProjections(store, payload);
-    }
+    case "sessions.rebuild_projections":
+      return store.rebuildSessionProjections({
+        projectId: typeof payload.projectId === "string" ? payload.projectId : undefined,
+        projectPath: typeof payload.projectPath === "string" ? payload.projectPath : undefined,
+        offset: typeof payload.offset === "number" ? payload.offset : undefined,
+        maxSessions: typeof payload.maxSessions === "number" ? payload.maxSessions : undefined,
+        budgetMs: typeof payload.budgetMs === "number" ? payload.budgetMs : undefined,
+        batchSize: typeof payload.batchSize === "number" ? payload.batchSize : undefined,
+      });
     default:
       throw new Error(`unsupported sessions runtime job kind: ${job.kind}`);
   }
-}
-
-function rebuildSessionProjections(store: SessionsServiceStore, payload: Record<string, unknown>): {
-  sessionsProcessed: number;
-  sessionIds: string[];
-  totalMatched: number;
-  budgetExhausted: boolean;
-  stopReason: "drained" | "max_sessions" | "budget_ms";
-  nextOffset: number | null;
-} {
-  const start = performance.now();
-  const maxSessions = boundedOptionalInt(payload.maxSessions, 1, 1_000_000);
-  const budgetMs = boundedOptionalInt(payload.budgetMs, 1, 10 * 60 * 1000);
-  const batchSize = boundedInt(payload.batchSize, 1, 500, 50);
-  let offset = boundedInt(payload.offset, 0, Number.MAX_SAFE_INTEGER, 0);
-  const filter = {
-    projectId: typeof payload.projectId === "string" ? payload.projectId : undefined,
-    projectPath: typeof payload.projectPath === "string" ? payload.projectPath : undefined,
-  };
-  const sessionIds: string[] = [];
-  let totalMatched = 0;
-  let budgetExhausted = false;
-  let stopReason: "drained" | "max_sessions" | "budget_ms" = "drained";
-  while (true) {
-    if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
-      budgetExhausted = true;
-      stopReason = "budget_ms";
-      break;
-    }
-    if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
-      stopReason = "max_sessions";
-      break;
-    }
-    const page = store.listSessions({ ...filter, limit: batchSize, offset });
-    totalMatched = page.total;
-    if (page.items.length === 0) break;
-    for (const session of page.items) {
-      if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
-        budgetExhausted = true;
-        stopReason = "budget_ms";
-        break;
-      }
-      if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
-        stopReason = "max_sessions";
-        break;
-      }
-      store.rebuildSessionProjection(session.id);
-      sessionIds.push(session.id);
-    }
-    offset += page.items.length;
-    if (stopReason !== "drained") break;
-    if (offset >= page.total) break;
-  }
-  return {
-    sessionsProcessed: sessionIds.length,
-    sessionIds,
-    totalMatched,
-    budgetExhausted,
-    stopReason,
-    nextOffset: stopReason === "drained" ? null : offset,
-  };
 }
 
 function rowToJob(row: RuntimeJobRow): SessionsRuntimeJobRecord {
@@ -824,12 +769,5 @@ function titleForJob(kind: string, resourceId: string | null | undefined): strin
 function boundedInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, Math.floor(n)));
-}
-
-function boundedOptionalInt(value: unknown, min: number, max: number): number | undefined {
-  if (value === undefined || value === null || value === "") return undefined;
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return undefined;
   return Math.min(max, Math.max(min, Math.floor(n)));
 }

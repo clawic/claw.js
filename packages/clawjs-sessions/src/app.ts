@@ -22,6 +22,7 @@ import type {
   ListProjectsFilter,
   ListSessionsFilter,
   MessageRole,
+  RebuildSessionProjectionsInput,
   SearchSessionsInput,
   SearchSessionEventsInput,
   SessionEvent,
@@ -515,6 +516,24 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
     return { meta: await store.getProjectionMeta(params.id) };
+  });
+
+  app.post(clawApiPath("sessions/projection/rebuild"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const body = readBody(request);
+      const input: RebuildSessionProjectionsInput = {
+        projectId: asString(body.projectId),
+        projectPath: asString(body.projectPath),
+        offset: asNumber(body.offset),
+        maxSessions: asNumber(body.maxSessions),
+        budgetMs: asNumber(body.budgetMs),
+        batchSize: asNumber(body.batchSize),
+      };
+      return await store.rebuildSessionProjections(input);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   app.post(clawApiPath("sessions/:id/projection/rebuild"), async (request, reply) => {

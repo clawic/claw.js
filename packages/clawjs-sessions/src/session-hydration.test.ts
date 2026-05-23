@@ -208,3 +208,75 @@ test("sessions dynamic tools endpoint expands deferred schemas on demand", async
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("sessions projection rebuild endpoint rebuilds project-scoped windows with budgets", async () => {
+  const rootDir = tempRoot("clawjs-session-projection-rebuild-api-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const projectPath = path.join(rootDir, "project-a");
+  const seed = new SessionsServiceStore(dbPath);
+  try {
+    seed.createProject({ id: "project-api", path: projectPath, displayName: "Project API" });
+    for (const id of ["session-api-a", "session-api-b", "session-api-other"]) {
+      seed.createSession({
+        id,
+        agent: "codex",
+        title: id,
+        projectId: id === "session-api-other" ? undefined : "project-api",
+        projectPath: id === "session-api-other" ? undefined : projectPath,
+      });
+      seed.appendSessionEvent({
+        sessionId: id,
+        turnId: `turn-${id}`,
+        eventKind: "message",
+        eventType: "event_msg.user_message",
+        role: "user",
+        timestamp: 10,
+        sourceNativeId: `${id}:line:1`,
+        payloadJson: { message: id },
+        renderedSummary: id,
+        searchableText: id,
+      });
+    }
+  } finally {
+    seed.close();
+  }
+
+  const { app } = buildSessionsApp({
+    config: {
+      sharedSecret: "test-secret",
+      dataDir: path.join(rootDir, "data"),
+      dbPath,
+    },
+  });
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/sessions/projection/rebuild",
+      headers: { authorization: "Bearer test-secret" },
+      payload: { projectId: "project-api", maxSessions: 1, batchSize: 1 },
+    });
+    assert.equal(response.statusCode, 200);
+    const body = JSON.parse(response.body) as {
+      sessionsProcessed: number;
+      totalMatched: number;
+      stopReason: string;
+      nextOffset: number | null;
+      sessionIds: string[];
+    };
+    assert.equal(body.sessionsProcessed, 1);
+    assert.equal(body.totalMatched, 2);
+    assert.equal(body.stopReason, "max_sessions");
+    assert.equal(body.nextOffset, 1);
+
+    const reopened = new SessionsServiceStore(dbPath);
+    try {
+      assert.equal(body.sessionIds.every((id) => reopened.getProjectionMeta(id)?.projectionStatus === "current"), true);
+      assert.equal(reopened.getProjectionMeta("session-api-other"), null);
+    } finally {
+      reopened.close();
+    }
+  } finally {
+    await app.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});

@@ -12,6 +12,8 @@ import type {
   ListSessionsResult,
   ListSessionEventsFilter,
   ProjectRecord,
+  RebuildSessionProjectionsInput,
+  RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
   SearchSessionsInput,
   SearchSessionEventsInput,
@@ -242,6 +244,10 @@ export class SessionsApiClient {
 
   rebuildProjection(sessionId: string): Promise<RebuildSessionProjectionResult> {
     return this.call("POST", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/projection/rebuild`), {});
+  }
+
+  rebuildProjections(input: RebuildSessionProjectionsInput = {}): Promise<RebuildSessionProjectionsResult> {
+    return this.call("POST", clawApiPath("sessions/projection/rebuild"), input);
   }
 
   importCodex(input: {

@@ -212,6 +212,24 @@ export interface RebuildSessionProjectionResult {
   summaries: SessionTurnSummaryRecord[];
 }
 
+export interface RebuildSessionProjectionsInput {
+  projectId?: string;
+  projectPath?: string;
+  offset?: number;
+  maxSessions?: number;
+  budgetMs?: number;
+  batchSize?: number;
+}
+
+export interface RebuildSessionProjectionsResult {
+  sessionsProcessed: number;
+  sessionIds: string[];
+  totalMatched: number;
+  budgetExhausted: boolean;
+  stopReason: "drained" | "max_sessions" | "budget_ms";
+  nextOffset: number | null;
+}
+
 export interface SessionDynamicToolRecord {
   sessionId: string;
   position: number;

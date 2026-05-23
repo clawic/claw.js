@@ -47,6 +47,7 @@ const allowedOperations = new Set([
   "getProjectionMeta",
   "markSessionProjectionStale",
   "rebuildSessionProjection",
+  "rebuildSessionProjections",
   "upsertOrigin",
   "listOrigins",
   "findOriginByPath",

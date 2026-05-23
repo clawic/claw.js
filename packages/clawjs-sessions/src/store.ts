@@ -21,6 +21,8 @@ import type {
   ListSessionsResult,
   MessageRole,
   ProjectRecord,
+  RebuildSessionProjectionsInput,
+  RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
   SearchSessionsInput,
   SearchSessionEventsInput,
@@ -1756,6 +1758,63 @@ export class SessionsServiceStore {
     return { meta, summaries: this.listTurnSummaries(sessionId) };
   }
 
+  rebuildSessionProjections(input: RebuildSessionProjectionsInput = {}): RebuildSessionProjectionsResult {
+    const start = performance.now();
+    const maxSessions = optionalBoundedInt(input.maxSessions, 1, 1_000_000);
+    const budgetMs = optionalBoundedInt(input.budgetMs, 1, 10 * 60 * 1000);
+    const batchSize = clampInt(input.batchSize, 1, 500, 50);
+    let offset = clampInt(input.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+    const sessionIds: string[] = [];
+    let totalMatched = 0;
+    let budgetExhausted = false;
+    let stopReason: RebuildSessionProjectionsResult["stopReason"] = "drained";
+
+    while (true) {
+      if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
+        budgetExhausted = true;
+        stopReason = "budget_ms";
+        break;
+      }
+      if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
+        stopReason = "max_sessions";
+        break;
+      }
+      const page = this.listSessions({
+        projectId: input.projectId,
+        projectPath: input.projectPath,
+        limit: batchSize,
+        offset,
+      });
+      totalMatched = page.total;
+      if (page.items.length === 0) break;
+      for (const session of page.items) {
+        if (budgetMs !== undefined && performance.now() - start >= budgetMs) {
+          budgetExhausted = true;
+          stopReason = "budget_ms";
+          break;
+        }
+        if (maxSessions !== undefined && sessionIds.length >= maxSessions) {
+          stopReason = "max_sessions";
+          break;
+        }
+        this.rebuildSessionProjection(session.id);
+        sessionIds.push(session.id);
+      }
+      offset += page.items.length;
+      if (stopReason !== "drained") break;
+      if (offset >= page.total) break;
+    }
+
+    return {
+      sessionsProcessed: sessionIds.length,
+      sessionIds,
+      totalMatched,
+      budgetExhausted,
+      stopReason,
+      nextOffset: stopReason === "drained" ? null : offset,
+    };
+  }
+
   upsertOrigin(input: UpsertOriginInput): SessionOriginRecord {
     const now = Date.now();
     this.db.prepare(`
@@ -1858,5 +1917,12 @@ export class SessionsServiceStore {
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+function optionalBoundedInt(value: unknown, min: number, max: number): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return undefined;
   return Math.min(max, Math.max(min, Math.floor(n)));
 }

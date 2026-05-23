@@ -15,6 +15,8 @@ import type {
   ListSessionsFilter,
   ListSessionsResult,
   ProjectRecord,
+  RebuildSessionProjectionsInput,
+  RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
   SearchSessionsInput,
   SearchSessionEventsInput,
@@ -208,6 +210,10 @@ export class AsyncSessionsServiceStore {
 
   rebuildSessionProjection(sessionId: string): Promise<RebuildSessionProjectionResult> {
     return this.call("rebuildSessionProjection", sessionId);
+  }
+
+  rebuildSessionProjections(input: RebuildSessionProjectionsInput = {}): Promise<RebuildSessionProjectionsResult> {
+    return this.call("rebuildSessionProjections", input);
   }
 
   upsertOrigin(input: UpsertOriginInput): Promise<SessionOriginRecord> {
