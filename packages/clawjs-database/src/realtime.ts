@@ -124,6 +124,7 @@ export class RealtimeHub {
       alive = false;
       try { socket.ping(); } catch { /* ignore */ }
     }, 30_000);
+    heartbeat.unref?.();
 
     socket.on("pong", () => { alive = true; });
 
