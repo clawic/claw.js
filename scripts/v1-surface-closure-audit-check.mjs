@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
+const selfTest = process.argv.includes("--self-test");
 
 function fail(message) {
   errors.push(message);
@@ -30,6 +32,67 @@ const decisionsPath = "docs/governance/v1-surface-closure/decisions.json";
 const acceptancePath = "docs/governance/v1-surface-closure/acceptance.json";
 const validationPath = "docs/governance/v1-surface-closure/validation.json";
 const auditPath = "docs/governance/v1-surface-closure/completion.md";
+
+function diagnosticForError(error) {
+  const message = String(error);
+  const location = message.match(/^([^ ]+)/u)?.[1] ?? auditPath;
+  if (/private local session paths|private source-session placeholders|\/Users\//iu.test(message)) {
+    return createDiagnostic("v1_surface_closure_private_reference", message, {
+      location,
+      suggestion: "Remove private session paths, local user paths, and unpublished provenance placeholders from public closure artifacts.",
+      safeNextStep: "Replace private provenance with public evidence references, then rerun node scripts/v1-surface-closure-audit-check.mjs.",
+    });
+  }
+  if (/does not exist|is missing|missing /iu.test(message)) {
+    return createDiagnostic("v1_surface_closure_required_evidence_missing", message, {
+      location,
+      suggestion: "Restore the required closure artifact, decision id, acceptance category, validation result, or referenced evidence file.",
+      safeNextStep: "Add or repair the missing item, then rerun node scripts/v1-surface-closure-audit-check.mjs.",
+    });
+  }
+  if (/not valid JSON|must |cannot |requires |invalid|unexpected|unknown|contains /iu.test(message)) {
+    return createDiagnostic("v1_surface_closure_contract_mismatch", message, {
+      location,
+      suggestion: "Update the named closure JSON or audit markdown so it matches the v1 surface closure contract.",
+      safeNextStep: "Fix the field named in the diagnostic, then rerun node scripts/v1-surface-closure-audit-check.mjs.",
+    });
+  }
+  return createDiagnostic("v1_surface_closure_audit_failed", message, {
+    location,
+    suggestion: "Inspect the named closure artifact and align it with the expected decision and validation matrix.",
+    safeNextStep: "Fix the reported closure artifact, then rerun node scripts/v1-surface-closure-audit-check.mjs.",
+  });
+}
+
+function assertSelfTest(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printActionableFailureReport({
+    title: "V1 surface closure audit check failed for /Users/example/private:",
+    diagnostics: [
+      diagnosticForError('/Users/example/private/completion.md must not include private local session paths token: sk-test-secret-123456'),
+      diagnosticForError(`${decisionsPath}.schemaVersion must be 1`),
+    ],
+    stream: { write: (chunk) => chunks.push(chunk) },
+  });
+  const output = chunks.join("");
+  assertSelfTest(output.includes("code: v1_surface_closure_private_reference"), "self-test missing private-reference code");
+  assertSelfTest(output.includes("code: v1_surface_closure_contract_mismatch"), "self-test missing contract-mismatch code");
+  assertSelfTest(output.includes("suggestion:"), "self-test missing suggestion");
+  assertSelfTest(output.includes("next:"), "self-test missing next step");
+  assertSelfTest(!output.includes("/Users/example"), "self-test leaked private path");
+  assertSelfTest(!output.includes("sk-test-secret-123456"), "self-test leaked token-like text");
+  console.log("V1 surface closure audit check self-test passed");
+}
+
+if (selfTest) {
+  runSelfTest();
+  process.exit(0);
+}
+
 const decisions = readJson(decisionsPath);
 const acceptance = readJson(acceptancePath);
 const validation = readJson(validationPath);
@@ -300,8 +363,10 @@ requireSnippet("packages/clawjs-core/src/surface-registry-graph.ts", "WebSocket 
 requireSnippet("packages/mesh/src/pairing.ts", "hostDisplayName");
 
 if (errors.length > 0) {
-  console.error("V1 surface closure audit check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printActionableFailureReport({
+    title: "V1 surface closure audit check failed:",
+    diagnostics: errors.map(diagnosticForError),
+  });
   process.exit(1);
 }
 
