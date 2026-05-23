@@ -85,6 +85,31 @@ test("CLI handled errors include actionable fields and redact sensitive details 
   assert.doesNotMatch(output, /sk-test-secret-123456/);
 });
 
+test("CLI handled errors synthesize actionable defaults for legacy code/message errors", () => {
+  let output = "";
+  const stream = { write: (chunk: string) => { output += chunk; return true; } } as NodeJS.WritableStream;
+  writeJsonError(stream, new CliHandledError("usage_error", "Missing required argument.", 64), { canonicalCommand: "db" });
+
+  const parsed = parseCliJsonEnvelope(output);
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    const error = parsed.envelope.error as {
+      code: string;
+      message: string;
+      status: string;
+      location: string;
+      suggestion: string;
+      safeNextStep: string;
+    };
+    assert.equal(error.code, "usage_error");
+    assert.equal(error.message, "Missing required argument.");
+    assert.equal(error.status, "USAGE");
+    assert.equal(error.location, "cli.argv");
+    assert.match(error.suggestion, /required arguments/);
+    assert.match(error.safeNextStep, /claw inspect commands --json/);
+  }
+});
+
 test("CLI text errors include stable code, status, location, suggestion, and next step", () => {
   const text = formatCliErrorText(new CliHandledError("invalid_flag", "Unknown flag --wat. token: sk-test-secret-123456", {
     status: "USAGE",
@@ -99,4 +124,13 @@ test("CLI text errors include stable code, status, location, suggestion, and nex
   assert.match(text, /suggestion: Use --json or --help to inspect supported flags\./);
   assert.match(text, /next: Run claw inspect commands --json\./);
   assert.doesNotMatch(text, /sk-test-secret-123456|\/Users\/example/);
+});
+
+test("CLI text errors include actionable defaults for legacy errors", () => {
+  const text = formatCliErrorText(new CliHandledError("internal_error", "Unexpected runtime failure."));
+  assert.match(text, /FAIL: Unexpected runtime failure\./);
+  assert.match(text, /code: internal_error/);
+  assert.match(text, /location: cli\.runtime/);
+  assert.match(text, /suggestion: Inspect the command JSON error/);
+  assert.match(text, /next: Rerun the same command with --json/);
 });
