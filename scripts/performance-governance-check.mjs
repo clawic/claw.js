@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
@@ -16,6 +17,38 @@ function fail(message) {
 function requireSnippet(relativePath, snippet) {
   const content = overrides.get(relativePath) ?? read(relativePath);
   if (!content.includes(snippet)) fail(`${relativePath} must include ${JSON.stringify(snippet)}`);
+}
+
+function performanceDiagnostic(failure) {
+  const missingSnippet = failure.match(/^(.+) must include (.+)$/);
+  if (missingSnippet) {
+    const location = missingSnippet[1];
+    return createDiagnostic("performance_governance_required_text_missing", failure, {
+      location,
+      suggestion: "Restore the required performance-governance contract text before closing performance-sensitive work.",
+      safeNextStep: `Update ${location}, then rerun node scripts/performance-governance-check.mjs.`,
+    });
+  }
+  if (failure.startsWith("self-test")) {
+    return createDiagnostic("performance_governance_self_test_failed", failure, {
+      location: "scripts/performance-governance-check.mjs",
+      suggestion: "Fix the negative fixture so the guard proves it catches missing performance governance.",
+      safeNextStep: "Rerun node scripts/performance-governance-check.mjs --self-test after repairing the fixture.",
+    });
+  }
+  return createDiagnostic("performance_governance_check_failed", failure, {
+    location: "scripts/performance-governance-check.mjs",
+    suggestion: "Inspect the performance governance rule and restore the expected invariant.",
+    safeNextStep: "Fix the reported performance governance issue, then rerun node scripts/performance-governance-check.mjs.",
+  });
+}
+
+function printFailures(options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "performance governance check failed:",
+    diagnostics: failures.map(performanceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
 }
 
 const failures = [];
@@ -162,14 +195,26 @@ if (args.has("--self-test")) {
     cwd: rootDir,
     encoding: "utf8",
   }));
-  if (result.status === 0 || !String(result.stderr).includes("CONSTITUTION.md")) {
+  if (result.status === 0 || !String(result.stderr).includes("code: performance_governance_required_text_missing")) {
     fail("self-test failed to catch missing constitutional performance governance");
   }
+  const chunks = [];
+  failures.push(
+    "/Users/example/private/CONSTITUTION.md must include \"CPU, RAM, GPU/Neural Engine\"",
+    "self-test fixture token: sk-test-secret-123456",
+  );
+  printFailures({ stream: { write: (chunk) => chunks.push(chunk) } });
+  failures.splice(-2);
+  const output = chunks.join("");
+  if (!output.includes("code: performance_governance_required_text_missing")) throw new Error("self-test missing stable code");
+  if (!output.includes("code: performance_governance_self_test_failed")) throw new Error("self-test missing self-test code");
+  if (!output.includes("suggestion: Restore the required performance-governance contract text")) throw new Error("self-test missing suggestion");
+  if (!output.includes("next: Update ~/private/CONSTITUTION.md")) throw new Error("self-test missing next step");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
 }
 
 if (failures.length > 0) {
-  console.error("performance governance check failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures();
   process.exit(1);
 }
 
