@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1125,
-    "cliCommands": 165
+    "surfaces": 1127,
+    "cliCommands": 167
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:49ab860c",
-    "cliCommands": "fnv1a32:0fbc5be0",
-    "combined": "fnv1a32:ba49a051"
+    "surfaces": "fnv1a32:89a853f8",
+    "cliCommands": "fnv1a32:d1abe484",
+    "combined": "fnv1a32:60897eb2"
   },
   "surfaces": [
     {
@@ -2153,6 +2153,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.my-work",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "my-work",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.needs",
       "owner": "claw",
       "kind": "cliCommand",
@@ -2635,6 +2644,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "tasks",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.team-work",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "team-work",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -10095,6 +10113,13 @@
       "jsonSchemaId": "claw.cli.mouse.v1"
     },
     {
+      "name": "my-work",
+      "kind": "canonical",
+      "family": "work",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.my-work.v1"
+    },
+    {
       "name": "needs",
       "kind": "canonical",
       "usage": "needs dimensions|pilots|generate|evaluate|opportunities",
@@ -10509,6 +10534,13 @@
       "family": "work",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.tasks.v1"
+    },
+    {
+      "name": "team-work",
+      "kind": "canonical",
+      "family": "work",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.team-work.v1"
     },
     {
       "name": "telegram",

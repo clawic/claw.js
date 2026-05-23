@@ -97,6 +97,7 @@ export const LOCAL_FIRST_PRODUCTIVITY_GROUPS = new Set([
   "inbox",
   "events",
   "my-work",
+  "team-work",
   "timeline",
 ]);
 

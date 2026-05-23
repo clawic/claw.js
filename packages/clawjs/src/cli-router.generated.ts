@@ -2299,8 +2299,8 @@ export const GENERATED_CLI_COMMANDS = [
   {
     name: "archive",
     kind: "canonical",
-    summary: "Portable archive planning, export handoff, verification, import preview, restore report, and encrypted secrets backup gates.",
-    usage: "archive plan|export|verify|inspect|import|restore|doctor [--include-secrets] [--signed-host] [--target PATH]",
+    summary: "Portable archive planning, local export, verification, import preview, restore report, and encrypted secrets backup gates.",
+    usage: "archive plan|export|verify|inspect|import|restore|doctor [--include-secrets] [--signed-host] [--output PATH.clawbackup] [--archive PATH.clawbackup] [--target PATH] [--approve --confirm-restore PATH]",
     family: "diagnostics",
     schemaVersion: 1,
     jsonSchemaId: "claw.cli.archive.v1",
@@ -3409,7 +3409,7 @@ export const GENERATED_CLI_COMMANDS = [
       file: "packages/clawjs/src/cli-productivity-primary-command.ts",
       symbol: "runPrimaryProductivityCli"
     },
-    routeGroup: "legacy"
+    routeGroup: "database-productivity"
   },
   {
     name: "timeline",
@@ -3440,7 +3440,7 @@ export const GENERATED_CLI_COMMANDS = [
       file: "packages/clawjs/src/cli-productivity-primary-command.ts",
       symbol: "runPrimaryProductivityCli"
     },
-    routeGroup: "legacy"
+    routeGroup: "database-productivity"
   },
   {
     name: "review",
@@ -3471,7 +3471,69 @@ export const GENERATED_CLI_COMMANDS = [
       file: "packages/clawjs/src/cli-productivity-primary-command.ts",
       symbol: "runPrimaryProductivityCli"
     },
-    routeGroup: "legacy"
+    routeGroup: "database-productivity"
+  },
+  {
+    name: "my-work",
+    kind: "canonical",
+    summary: "Personal work summary.",
+    family: "work",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.my-work.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw my-work --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md"
+    ],
+    tests: [
+      "packages/clawjs/src/index.test.ts",
+      "packages/clawjs/src/inspect-cli.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-productivity-primary-command.ts",
+      symbol: "runPrimaryProductivityCli"
+    },
+    routeGroup: "database-productivity"
+  },
+  {
+    name: "team-work",
+    kind: "canonical",
+    summary: "Team work summary.",
+    family: "work",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.team-work.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw team-work --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md"
+    ],
+    tests: [
+      "packages/clawjs/src/index.test.ts",
+      "packages/clawjs/src/inspect-cli.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-productivity-primary-command.ts",
+      symbol: "runPrimaryProductivityCli"
+    },
+    routeGroup: "database-productivity"
   },
   {
     name: "channels",
@@ -5655,9 +5717,11 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   routines: "legacy",
   schedule: "legacy",
   watch: "legacy",
-  agenda: "legacy",
-  timeline: "legacy",
-  review: "legacy",
+  agenda: "database-productivity",
+  timeline: "database-productivity",
+  review: "database-productivity",
+  "my-work": "database-productivity",
+  "team-work": "database-productivity",
   channels: "legacy",
   telegram: "legacy",
   notify: "domain-data",
@@ -5820,6 +5884,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "modules",
   "monitor",
   "mouse",
+  "my-work",
   "needs",
   "network",
   "nodes",
@@ -5873,6 +5938,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "sync",
   "system",
   "tasks",
+  "team-work",
   "telegram",
   "templates",
   "time",
