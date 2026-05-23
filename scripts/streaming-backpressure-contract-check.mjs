@@ -7,6 +7,7 @@ import {
   clawPersistentSurfaceRegistry,
   clawStreamingBackpressurePolicyId,
 } from "../packages/clawjs-core/src/catalogs.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const streamingTransportPattern = /\b(stream|streaming|sse|websocket|ipc|stdout events?|session events?)\b/i;
@@ -73,6 +74,45 @@ export function validateStreamingBackpressureContract(registry = clawPersistentS
   return errors;
 }
 
+function streamingDiagnostic(error) {
+  if (error.includes("transport requires") || error.includes("route requires") || error.includes(".steps[")) {
+    return createDiagnostic("streaming_backpressure_policy_missing", error, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Attach the default streaming backpressure policy to every stream, SSE, WebSocket, IPC, stdout-event, or session-event surface.",
+      safeNextStep: `Set streamingPolicyId to ${clawStreamingBackpressurePolicyId}, then rerun node --import tsx scripts/streaming-backpressure-contract-check.mjs.`,
+    });
+  }
+  if (error.startsWith("missing ")) {
+    const location = error.replace(/^missing /, "");
+    return createDiagnostic("streaming_backpressure_required_file_missing", error, {
+      location,
+      suggestion: "Restore the ADR, decision map, discoverability entry, or operational coverage manifest that documents the streaming contract.",
+      safeNextStep: `Add or restore ${location}, then rerun node --import tsx scripts/streaming-backpressure-contract-check.mjs.`,
+    });
+  }
+  if (error.includes(" missing ")) {
+    const location = error.split(" missing ")[0];
+    return createDiagnostic("streaming_backpressure_required_text_missing", error, {
+      location,
+      suggestion: "Restore the required streaming backpressure contract text or discoverability hook.",
+      safeNextStep: `Update ${location}, then rerun node --import tsx scripts/streaming-backpressure-contract-check.mjs.`,
+    });
+  }
+  return createDiagnostic("streaming_backpressure_contract_invalid", error, {
+    location: "packages/clawjs-core/src/catalogs.ts",
+    suggestion: "Restore default frame, queue, cancellation, buffer, and persistence policy constants.",
+    safeNextStep: "Fix the streaming backpressure policy constant, then rerun node --import tsx scripts/streaming-backpressure-contract-check.mjs.",
+  });
+}
+
+function printErrors(errors, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "streaming backpressure contract check failed:",
+    diagnostics: errors.map(streamingDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function runSelfTest() {
   const fixture = {
     edges: [{ id: "edge.stream", transport: "SSE stream" }],
@@ -83,6 +123,19 @@ function runSelfTest() {
   fixture.routes[0].streamingPolicyId = clawStreamingBackpressurePolicyId;
   fixture.routes[0].steps[0].streamingPolicyId = clawStreamingBackpressurePolicyId;
   assert.equal(validateStreamingBackpressureContract(fixture).filter((error) => error.includes("edge.stream") || error.includes("route.websocket")).length, 0);
+
+  const chunks = [];
+  printErrors([
+    "/Users/example/private edge.stream transport requires claw.streaming.backpressure.default.v1 token sk-test-secret-123456",
+    "docs/adr/0042-streaming-backpressure-contract.md missing AbortSignal",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: streaming_backpressure_policy_missing/);
+  assert.match(output, /code: streaming_backpressure_required_text_missing/);
+  assert.match(output, /suggestion: Attach the default streaming backpressure policy/);
+  assert.match(output, /next: Set streamingPolicyId/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
 }
 
 if (process.argv.includes("--self-test")) {
@@ -93,8 +146,7 @@ if (process.argv.includes("--self-test")) {
 
 const errors = validateStreamingBackpressureContract();
 if (errors.length > 0) {
-  console.error("streaming backpressure contract check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors(errors);
   process.exit(1);
 }
 
