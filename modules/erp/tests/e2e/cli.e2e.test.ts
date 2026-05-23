@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, before, test } from "node:test";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -34,86 +36,93 @@ async function boot() {
 
 test("dedicated CLI and claw bridge hit the same erp service", async () => {
   const server = await boot();
+  const clawWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-erp-claw-"));
 
-  const login = await execFileAsync("node", [
-    erpDistCli,
-    "login",
-    "--url",
-    server.baseUrl,
-    "--email",
-    "admin@erp.local",
-    "--password",
-    "erp-admin",
-    "--json",
-  ], { cwd: process.cwd() });
-  const token = (JSON.parse(login.stdout) as { accessToken: string }).accessToken;
-  assert.ok(token);
+  try {
+    const login = await execFileAsync("node", [
+      erpDistCli,
+      "login",
+      "--url",
+      server.baseUrl,
+      "--email",
+      "admin@erp.local",
+      "--password",
+      "erp-admin",
+      "--json",
+    ], { cwd: process.cwd() });
+    const token = (JSON.parse(login.stdout) as { accessToken: string }).accessToken;
+    assert.ok(token);
 
-  const bootstrap = await execFileAsync("node", [
-    erpDistCli,
-    "tenant",
-    "bootstrap",
-    "--url",
-    server.baseUrl,
-    "--token",
-    token,
-    "--name",
-    "CLI ERP",
-    "--pack",
-    "es_eu",
-    "--json",
-  ], { cwd: process.cwd() });
-  const bootstrapPayload = JSON.parse(bootstrap.stdout) as {
-    tenant: { id: string };
-    legalEntity: { id: string };
-    branch: { id: string };
-  };
-  const tenantId = bootstrapPayload.tenant.id;
-  const legalEntityId = bootstrapPayload.legalEntity.id;
-  const branchId = bootstrapPayload.branch.id;
+    const bootstrap = await execFileAsync("node", [
+      erpDistCli,
+      "tenant",
+      "bootstrap",
+      "--url",
+      server.baseUrl,
+      "--token",
+      token,
+      "--name",
+      "CLI ERP",
+      "--pack",
+      "es_eu",
+      "--json",
+    ], { cwd: process.cwd() });
+    const bootstrapPayload = JSON.parse(bootstrap.stdout) as {
+      tenant: { id: string };
+      legalEntity: { id: string };
+      branch: { id: string };
+    };
+    const tenantId = bootstrapPayload.tenant.id;
+    const legalEntityId = bootstrapPayload.legalEntity.id;
+    const branchId = bootstrapPayload.branch.id;
 
-  await execFileAsync("node", [
-    erpDistCli,
-    "ar",
-    "invoice-create",
-    "--url",
-    server.baseUrl,
-    "--token",
-    token,
-    "--tenant",
-    tenantId,
-    "--entity",
-    legalEntityId,
-    "--branch",
-    branchId,
-    "--customer",
-    "CLI Customer",
-    "--amount",
-    "120000",
-    "--json",
-  ], { cwd: process.cwd() });
+    await execFileAsync("node", [
+      erpDistCli,
+      "ar",
+      "invoice-create",
+      "--url",
+      server.baseUrl,
+      "--token",
+      token,
+      "--tenant",
+      tenantId,
+      "--entity",
+      legalEntityId,
+      "--branch",
+      branchId,
+      "--customer",
+      "CLI Customer",
+      "--amount",
+      "120000",
+      "--json",
+    ], { cwd: process.cwd() });
 
-  const dashboard = await execFileAsync("node", [
-    clawBin,
-    "erp",
-    "reports",
-    "dashboard",
-    "--url",
-    server.baseUrl,
-    "--token",
-    token,
-    "--tenant",
-    tenantId,
-    "--entity",
-    legalEntityId,
-    "--json",
-  ], {
-    cwd: path.resolve(process.cwd(), ".."),
-    env: {
-      ...process.env,
-      CLAW_ERP_DIR: process.cwd(),
-    },
-  });
-  const dashboardPayload = JSON.parse(dashboard.stdout) as { metrics: { revenueCents: number } };
-  assert.equal(dashboardPayload.metrics.revenueCents, 120000);
+    await execFileAsync("node", [clawBin, "modules", "enable", "erp", "--json"], { cwd: clawWorkspace });
+
+    const dashboard = await execFileAsync("node", [
+      clawBin,
+      "erp",
+      "reports",
+      "dashboard",
+      "--url",
+      server.baseUrl,
+      "--token",
+      token,
+      "--tenant",
+      tenantId,
+      "--entity",
+      legalEntityId,
+      "--json",
+    ], {
+      cwd: clawWorkspace,
+      env: {
+        ...process.env,
+        CLAW_ERP_DIR: process.cwd(),
+      },
+    });
+    const dashboardPayload = JSON.parse(dashboard.stdout) as { metrics: { revenueCents: number } };
+    assert.equal(dashboardPayload.metrics.revenueCents, 120000);
+  } finally {
+    fs.rmSync(clawWorkspace, { recursive: true, force: true });
+  }
 });

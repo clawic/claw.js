@@ -1,5 +1,7 @@
 import { afterEach, before, test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -34,39 +36,46 @@ async function boot() {
 
 test("dedicated CLI and claw bridge hit the same iot service", async () => {
   const server = await boot();
+  const clawWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-iot-claw-"));
 
-  const scene = await execFileAsync("node", [
-    iotDistCli,
-    "scenes",
-    "activate",
-    "scene_focus",
-    "--url",
-    server.baseUrl,
-    "--json",
-  ], { cwd: process.cwd() });
-  const scenePayload = JSON.parse(scene.stdout) as { result: { scene: { id: string } } };
-  assert.equal(scenePayload.result.scene.id, "scene_focus");
+  try {
+    const scene = await execFileAsync("node", [
+      iotDistCli,
+      "scenes",
+      "activate",
+      "scene_focus",
+      "--url",
+      server.baseUrl,
+      "--json",
+    ], { cwd: process.cwd() });
+    const scenePayload = JSON.parse(scene.stdout) as { result: { scene: { id: string } } };
+    assert.equal(scenePayload.result.scene.id, "scene_focus");
 
-  const listed = await execFileAsync("node", [
-    clawBin,
-    "iot",
-    "state",
-    "get",
-    "--url",
-    server.baseUrl,
-    "--json",
-  ], {
-    cwd: path.resolve(process.cwd(), ".."),
-    env: {
-      ...process.env,
-      CLAW_IOT_DIR: process.cwd(),
-    },
-  });
-  const listedPayload = JSON.parse(listed.stdout) as {
-    snapshot: {
-      things: Array<{ id: string; capabilities: Array<{ key: string; observedValue: unknown }> }>;
+    await execFileAsync("node", [clawBin, "modules", "enable", "iot", "--json"], { cwd: clawWorkspace });
+
+    const listed = await execFileAsync("node", [
+      clawBin,
+      "iot",
+      "state",
+      "get",
+      "--url",
+      server.baseUrl,
+      "--json",
+    ], {
+      cwd: clawWorkspace,
+      env: {
+        ...process.env,
+        CLAW_IOT_DIR: process.cwd(),
+      },
+    });
+    const listedPayload = JSON.parse(listed.stdout) as {
+      snapshot: {
+        things: Array<{ id: string; capabilities: Array<{ key: string; observedValue: unknown }> }>;
+      };
     };
-  };
-  const officeLight = listedPayload.snapshot.things.find((thing) => thing.id === "office-light");
-  assert.equal(officeLight?.capabilities.find((capability) => capability.key === "power")?.observedValue, true);
+    const officeLight = listedPayload.snapshot.things.find((thing) => thing.id === "office-light");
+    assert.equal(officeLight?.capabilities.find((capability) => capability.key === "power")?.observedValue, true);
+  } finally {
+    fs.rmSync(clawWorkspace, { recursive: true, force: true });
+  }
 });
