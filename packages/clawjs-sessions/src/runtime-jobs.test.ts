@@ -83,6 +83,67 @@ test("SessionsRuntimeJobStore claims jobs with leases and retries expired leases
   }
 });
 
+test("SessionsRuntimeJobStore exposes bounded background work projection", () => {
+  const rootDir = tempRoot("clawjs-sessions-background-work-");
+  const store = new SessionsRuntimeJobStore(path.join(rootDir, "runtime.sqlite"));
+  try {
+    store.enqueueJob({
+      id: "job-awaiting",
+      kind: "sessions.rebuild_projection",
+      title: "Awaiting",
+      resourceId: "session-a",
+      priority: 5,
+      scheduledAt: "2026-05-23T10:00:00.000Z",
+    });
+    store.enqueueJob({
+      id: "job-active",
+      kind: "sessions.extract_memory_base",
+      title: "Active",
+      priority: 10,
+      payload: { sessionId: "session-a" },
+      scheduledAt: "2026-05-23T10:00:00.000Z",
+    });
+    store.enqueueJob({
+      id: "job-failed",
+      kind: "sessions.import_codex",
+      title: "Failed",
+      priority: 1,
+      scheduledAt: "2026-05-23T10:00:00.000Z",
+    });
+    store.enqueueJob({
+      id: "job-done",
+      kind: "sessions.rebuild_projection",
+      title: "Done",
+      resourceId: "session-a",
+      scheduledAt: "2026-05-23T10:00:00.000Z",
+    });
+
+    const [active] = store.claimJobs({
+      now: "2026-05-23T10:00:01.000Z",
+      leaseMs: 30_000,
+      owner: "worker-a",
+      kinds: ["sessions.extract_memory_base"],
+    });
+    assert.equal(active?.id, "job-active");
+    store.failJob("job-failed", { error: "permanent", retry: false, updatedAt: "2026-05-23T10:00:02.000Z" });
+    store.completeJob("job-done", {}, "2026-05-23T10:00:03.000Z");
+
+    const projection = store.listBackgroundWork({ sessionId: "session-a", limit: 10 });
+    assert.equal(projection.source, "sessions.background_work");
+    assert.deepEqual(projection.items.map((item) => [item.id, item.status, item.sessionId]), [
+      ["job-active", "active", "session-a"],
+      ["job-awaiting", "awaiting", "session-a"],
+    ]);
+    assert.equal(projection.items.some((item) => item.id === "job-done"), false);
+
+    const withResolved = store.listBackgroundWork({ sessionId: "session-a", includeResolved: true, limit: 10 });
+    assert.equal(withResolved.items.some((item) => item.id === "job-done" && item.status === "done"), true);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("SessionsRuntimeJobStore redacts runtime events/logs and applies bounded retention", () => {
   const rootDir = tempRoot("clawjs-sessions-runtime-retention-");
   const store = new SessionsRuntimeJobStore(path.join(rootDir, "runtime.sqlite"));

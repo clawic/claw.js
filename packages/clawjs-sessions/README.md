@@ -15,10 +15,19 @@ Search uses separate redacted text (`session_messages.searchable_text`,
 `fts_session_messages`, and redacted event summaries) so previews and FTS do
 not need to index common credential patterns.
 
-Sidebar, project-scoped session lists, transcript hydration, and turn-event
-expansion are guarded as hot-path query contracts. Keep those reads
-index-backed and bounded; `src/session-query-contract.test.ts` verifies the
-expected SQLite plans and fails on temporary b-tree sorts in those paths.
+Sidebar, quick switch, project-scoped session lists, transcript hydration, and
+turn-event expansion are guarded as hot-path query contracts. Keep those reads
+index-backed and bounded; `src/session-query-contract.test.ts` and
+`src/quick-switcher.test.ts` verify the expected SQLite plans and fail on
+temporary b-tree sorts in those paths.
+
+`quickSwitchSessions()` and `/v1/sidebar/quick-switch` are intentionally
+header-only. They search active visible session titles, cwd, branch,
+project path, and runtime session ids, and return pinned/recent ordering without
+touching message or event FTS tables. Deep transcript and structured-event
+search must use `/v1/sessions/search` or `/v1/sessions/events/search`; those
+FTS routes accept `limit` and `offset` so callers page through result sets
+instead of treating search as an unbounded in-memory filter.
 
 `sessionRenderMatrix` is the public render contract for structured session
 events. It maps every event kind to collapsed, active, expanded, everyday, and
@@ -35,6 +44,17 @@ diagnostics.
 Assistant stream traces keep the final answer in message `contentText` and use
 a capped timeline preview with truncation metadata, avoiding a second full
 copy of large streamed text in event payloads.
+
+Session dynamic tools are persisted with namespace, source, deferred schema
+flag, and a SHA-256 hash of the canonical schema JSON. The store rejects an
+explicit schema hash that does not match the schema payload, so reopened
+sessions can reconstruct tool context without trusting stale capability
+metadata.
+
+`SessionsRuntimeJobStore.listBackgroundWork()` exposes a bounded sidebar/side
+panel projection of queued, leased, and failed work, with an opt-in for resolved
+jobs. It maps durable runtime jobs to active/awaiting/failed/done/cancelled UI
+states without scanning runtime event or log tables.
 
 ## Realistic fixtures
 

@@ -17,6 +17,8 @@ import type {
   ListSessionsResult,
   ProjectRecord,
   PendingSessionMemoryExtractionRecord,
+  QuickSwitchSessionsInput,
+  QuickSwitchSessionsResult,
   RebuildSessionMemoryExtractsInput,
   RebuildSessionMemoryExtractsResult,
   RebuildSessionProjectionsInput,
@@ -139,6 +141,10 @@ export class AsyncSessionsServiceStore {
 
   sidebarBootstrap(input: { recentLimit?: number } = {}): Promise<SidebarBootstrapResult> {
     return this.call("sidebarBootstrap", input);
+  }
+
+  quickSwitchSessions(input: QuickSwitchSessionsInput = {}): Promise<QuickSwitchSessionsResult> {
+    return this.call("quickSwitchSessions", input);
   }
 
   updateSessionTitle(id: string, title: string): Promise<SessionRecord | null> {

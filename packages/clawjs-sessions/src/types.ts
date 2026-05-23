@@ -149,6 +149,7 @@ export interface SearchSessionEventsInput {
   fromTimestamp?: number;
   toTimestamp?: number;
   limit?: number;
+  offset?: number;
 }
 
 export interface SessionEventSearchHit {
@@ -345,6 +346,25 @@ export interface SidebarBootstrapResult {
   totalActiveVisible: number;
 }
 
+export interface QuickSwitchSessionsInput {
+  query?: string;
+  projectId?: string;
+  projectPath?: string;
+  includeArchived?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface QuickSwitchSessionsResult {
+  items: SessionRecord[];
+  total: number;
+  query: string;
+  limit: number;
+  offset: number;
+  source: "sessions.quick_switch";
+  searchedMessageHistory: false;
+}
+
 export interface SearchSessionsInput {
   query: string;
   agent?: SessionAgent;
@@ -353,6 +373,7 @@ export interface SearchSessionsInput {
   fromTimestamp?: number;
   toTimestamp?: number;
   limit?: number;
+  offset?: number;
 }
 
 export interface SessionSearchHit {
@@ -548,6 +569,38 @@ export interface SessionsRuntimeJobRecord {
   error: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type SessionsBackgroundWorkStatus = "active" | "awaiting" | "failed" | "done" | "cancelled";
+
+export interface SessionsBackgroundWorkItem {
+  id: string;
+  kind: string;
+  title: string;
+  status: SessionsBackgroundWorkStatus;
+  jobStatus: SessionsRuntimeJobStatus;
+  sessionId: string | null;
+  resourceId: string | null;
+  priority: number;
+  scheduledAt: string;
+  leasedUntil: string | null;
+  attempts: number;
+  maxAttempts: number;
+  error: string | null;
+  updatedAt: string;
+}
+
+export interface ListSessionsBackgroundWorkInput {
+  sessionId?: string;
+  includeResolved?: boolean;
+  limit?: number;
+}
+
+export interface ListSessionsBackgroundWorkResult {
+  items: SessionsBackgroundWorkItem[];
+  limit: number;
+  includeResolved: boolean;
+  source: "sessions.background_work";
 }
 
 export interface EnqueueSessionsRuntimeJobInput {

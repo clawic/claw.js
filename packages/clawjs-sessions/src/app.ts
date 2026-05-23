@@ -24,6 +24,7 @@ import type {
   ListProjectsFilter,
   ListSessionsFilter,
   MessageRole,
+  QuickSwitchSessionsInput,
   RebuildSessionMemoryExtractsInput,
   RebuildSessionProjectionsInput,
   SearchSessionsInput,
@@ -279,6 +280,20 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return await store.sidebarBootstrap({ recentLimit: asNumber(query.recentLimit) });
   });
 
+  app.get(clawApiPath("sidebar/quick-switch"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    const input: QuickSwitchSessionsInput = {
+      query: asString(query.q ?? query.query),
+      projectId: asString(query.projectId),
+      projectPath: asString(query.projectPath),
+      includeArchived: asBool(query.includeArchived),
+      limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
+    };
+    return await store.quickSwitchSessions(input);
+  });
+
   app.patch(clawApiPath("projects/:id"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const params = request.params as { id: string };
@@ -417,6 +432,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       fromTimestamp: asNumber(query.fromTimestamp),
       toTimestamp: asNumber(query.toTimestamp),
       limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
     };
     return { items: await store.searchMessages(input) };
   });
@@ -441,6 +457,7 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       fromTimestamp: asNumber(query.fromTimestamp),
       toTimestamp: asNumber(query.toTimestamp),
       limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
     };
     return { items: await store.searchSessionEvents(input) };
   });

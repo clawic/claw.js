@@ -11,6 +11,8 @@ import type {
   EnqueueSessionsRuntimeJobInput,
   ApplySessionsRuntimeRetentionInput,
   ApplySessionsRuntimeRetentionResult,
+  ListSessionsBackgroundWorkInput,
+  ListSessionsBackgroundWorkResult,
   RunSessionsRuntimeJobsInput,
   RunSessionsRuntimeJobsResult,
   SessionsRuntimeDiagnosticBundleRecord,
@@ -293,6 +295,41 @@ export class SessionsRuntimeJobStore {
       LIMIT ?
     `).all(...params, limit) as RuntimeJobRow[];
     return rows.map(rowToJob);
+  }
+
+  listBackgroundWork(input: ListSessionsBackgroundWorkInput = {}): ListSessionsBackgroundWorkResult {
+    const limit = boundedInt(input.limit, 1, 100, 50);
+    const includeResolved = input.includeResolved === true;
+    const clauses: string[] = [];
+    const params: Record<string, unknown> = { limit };
+    if (!includeResolved) clauses.push("status IN ('queued', 'leased', 'failed')");
+    if (input.sessionId) {
+      clauses.push("(resource_id = @session_id OR json_extract(payload_json, '$.sessionId') = @session_id)");
+      params.session_id = input.sessionId;
+    }
+    const rows = this.db.prepare(`
+      SELECT * FROM runtime_jobs
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY
+        CASE status
+          WHEN 'leased' THEN 0
+          WHEN 'queued' THEN 1
+          WHEN 'failed' THEN 2
+          WHEN 'done' THEN 3
+          WHEN 'cancelled' THEN 4
+          ELSE 5
+        END ASC,
+        priority DESC,
+        updated_at DESC,
+        id ASC
+      LIMIT @limit
+    `).all(params) as RuntimeJobRow[];
+    return {
+      items: rows.map(rowToBackgroundWorkItem),
+      limit,
+      includeResolved,
+      source: "sessions.background_work",
+    };
   }
 
   listEvents(input: { jobId?: string; sessionId?: string; target?: string; subsystem?: string; pinned?: boolean; limit?: number } = {}): SessionsRuntimeEventRecord[] {
@@ -629,6 +666,36 @@ function rowToJob(row: RuntimeJobRow): SessionsRuntimeJobRecord {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function rowToBackgroundWorkItem(row: RuntimeJobRow): ListSessionsBackgroundWorkResult["items"][number] {
+  const payload = payloadRecord(row.payload_json);
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    status: backgroundWorkStatusFor(row.status),
+    jobStatus: row.status,
+    sessionId: row.resource_id ?? (typeof payload.sessionId === "string" ? payload.sessionId : null),
+    resourceId: row.resource_id,
+    priority: row.priority ?? 0,
+    scheduledAt: row.scheduled_at ?? row.run_at ?? row.created_at,
+    leasedUntil: row.leased_until,
+    attempts: row.attempts,
+    maxAttempts: row.max_attempts ?? 3,
+    error: row.error,
+    updatedAt: row.updated_at,
+  };
+}
+
+function backgroundWorkStatusFor(status: SessionsRuntimeJobStatus): ListSessionsBackgroundWorkResult["items"][number]["status"] {
+  switch (status) {
+    case "leased": return "active";
+    case "queued": return "awaiting";
+    case "failed": return "failed";
+    case "done": return "done";
+    case "cancelled": return "cancelled";
+  }
 }
 
 function rowToEvent(row: RuntimeEventRow): SessionsRuntimeEventRecord {

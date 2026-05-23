@@ -28,6 +28,7 @@ const allowedOperations = new Set([
   "listSessionDynamicTools",
   "listSessions",
   "sidebarBootstrap",
+  "quickSwitchSessions",
   "updateSessionTitle",
   "setPinned",
   "setArchived",

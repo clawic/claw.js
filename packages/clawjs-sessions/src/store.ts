@@ -21,6 +21,8 @@ import type {
   ListSessionsResult,
   MessageRole,
   ProjectRecord,
+  QuickSwitchSessionsInput,
+  QuickSwitchSessionsResult,
   RebuildSessionProjectionsInput,
   RebuildSessionProjectionsResult,
   RebuildSessionProjectionResult,
@@ -62,6 +64,8 @@ const DEFAULT_EXPORT_SESSION_LIMIT = 100;
 const MAX_EXPORT_SESSION_LIMIT = 500;
 const DEFAULT_EXPORT_MESSAGE_LIMIT = 1000;
 const MAX_EXPORT_MESSAGE_LIMIT = 2000;
+const DEFAULT_QUICK_SWITCH_LIMIT = 20;
+const MAX_QUICK_SWITCH_LIMIT = 50;
 
 const SCHEMA_DDL = `
   CREATE TABLE IF NOT EXISTS projects (
@@ -1037,7 +1041,11 @@ export class SessionsServiceStore {
     if (!session) throw new Error(`session not found: ${input.sessionId}`);
     const position = clampInt(input.position, 0, Number.MAX_SAFE_INTEGER, 0);
     const inputSchemaJson = JSON.stringify(input.inputSchemaJson ?? {});
-    const schemaHash = input.schemaHash ?? createHash("sha256").update(inputSchemaJson).digest("hex");
+    const computedSchemaHash = createHash("sha256").update(inputSchemaJson).digest("hex");
+    if (input.schemaHash !== undefined && input.schemaHash !== computedSchemaHash) {
+      throw new Error(`dynamic tool schema hash mismatch for ${input.sessionId}:${position}`);
+    }
+    const schemaHash = input.schemaHash ?? computedSchemaHash;
     const now = Date.now();
     const createdAt = input.createdAt ?? now;
     const updatedAt = input.updatedAt ?? now;
@@ -1186,6 +1194,44 @@ export class SessionsServiceStore {
       pinned: pinnedRows.map(rowToSession),
       recent: recentRows.map(rowToSession),
       totalActiveVisible,
+    };
+  }
+
+  quickSwitchSessions(input: QuickSwitchSessionsInput = {}): QuickSwitchSessionsResult {
+    const query = (input.query ?? "").trim();
+    const limit = clampInt(input.limit, 1, MAX_QUICK_SWITCH_LIMIT, DEFAULT_QUICK_SWITCH_LIMIT);
+    const offset = clampInt(input.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+    const conditions: string[] = ["sidebar_visible = 1"];
+    const params: Record<string, unknown> = { limit, offset };
+    if (input.includeArchived !== true) conditions.push("archived = 0");
+    if (input.projectId) { conditions.push("project_id = @project_id"); params.project_id = input.projectId; }
+    if (input.projectPath) { conditions.push("project_path = @project_path"); params.project_path = input.projectPath; }
+    if (query) {
+      params.quick_query = `%${escapeSqlLike(query.toLowerCase())}%`;
+      conditions.push(`(
+        lower(title) LIKE @quick_query ESCAPE '~'
+        OR lower(COALESCE(cwd, '')) LIKE @quick_query ESCAPE '~'
+        OR lower(COALESCE(branch, '')) LIKE @quick_query ESCAPE '~'
+        OR lower(COALESCE(project_path, '')) LIKE @quick_query ESCAPE '~'
+        OR lower(COALESCE(runtime_session_id, '')) LIKE @quick_query ESCAPE '~'
+      )`);
+    }
+    const where = `WHERE ${conditions.join(" AND ")}`;
+    const total = (this.db.prepare(`SELECT COUNT(*) AS n FROM sessions ${where}`).get(params) as { n: number }).n;
+    const rows = this.db.prepare(
+      `SELECT * FROM sessions
+       ${where}
+       ORDER BY pinned DESC, COALESCE(last_message_at, created_at) DESC
+       LIMIT @limit OFFSET @offset`,
+    ).all(params) as SessionRow[];
+    return {
+      items: rows.map(rowToSession),
+      total,
+      query,
+      limit,
+      offset,
+      source: "sessions.quick_switch",
+      searchedMessageHistory: false,
     };
   }
 
@@ -1469,10 +1515,11 @@ export class SessionsServiceStore {
   searchMessages(input: SearchSessionsInput): SessionSearchHit[] {
     const query = input.query.trim();
     if (!query) return [];
-    const limit = Math.min(input.limit ?? 50, 200);
+    const limit = clampInt(input.limit, 1, 200, 50);
+    const offset = clampInt(input.offset, 0, Number.MAX_SAFE_INTEGER, 0);
 
     const conditions: string[] = [];
-    const params: Record<string, unknown> = { query, limit };
+    const params: Record<string, unknown> = { query, limit, offset };
     if (input.agent) { conditions.push("s.agent = @agent"); params.agent = input.agent; }
     if (input.projectId) { conditions.push("s.project_id = @project_id"); params.project_id = input.projectId; }
     if (input.projectPath) { conditions.push("s.project_path = @project_path"); params.project_path = input.projectPath; }
@@ -1505,7 +1552,7 @@ export class SessionsServiceStore {
        WHERE fts_session_messages MATCH @query
        ${extra}
        ORDER BY rank ASC
-       LIMIT @limit`,
+       LIMIT @limit OFFSET @offset`,
     ).all(params) as Array<SessionRow & {
       message_id: string;
       message_session_id: string;
@@ -1552,7 +1599,11 @@ export class SessionsServiceStore {
     const query = input.query.trim();
     if (!query) return [];
     const conditions: string[] = [];
-    const params: Record<string, unknown> = { query, limit: Math.min(input.limit ?? 50, 200) };
+    const params: Record<string, unknown> = {
+      query,
+      limit: clampInt(input.limit, 1, 200, 50),
+      offset: clampInt(input.offset, 0, Number.MAX_SAFE_INTEGER, 0),
+    };
     if (input.sessionId) { conditions.push("e.session_id = @session_id"); params.session_id = input.sessionId; }
     if (input.eventKind) { conditions.push("e.event_kind = @event_kind"); params.event_kind = input.eventKind; }
     if (input.eventType) { conditions.push("e.event_type = @event_type"); params.event_type = input.eventType; }
@@ -1589,7 +1640,7 @@ export class SessionsServiceStore {
       WHERE fts_session_events MATCH @query
       ${extra}
       ORDER BY rank ASC
-      LIMIT @limit
+      LIMIT @limit OFFSET @offset
     `).all(params) as Array<SessionEventRow & { snippet: string; rank: number }>;
     return rows.map((row) => ({
       event: rowToStructuredEvent(row),
@@ -2274,4 +2325,8 @@ function optionalBoundedInt(value: unknown, min: number, max: number): number | 
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return undefined;
   return Math.min(max, Math.max(min, Math.floor(n)));
+}
+
+function escapeSqlLike(value: string): string {
+  return value.replaceAll("~", "~~").replaceAll("%", "~%").replaceAll("_", "~_");
 }

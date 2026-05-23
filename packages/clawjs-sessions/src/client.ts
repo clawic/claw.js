@@ -15,6 +15,8 @@ import type {
   ListSessionEventsFilter,
   ProjectRecord,
   PendingSessionMemoryExtractionRecord,
+  QuickSwitchSessionsInput,
+  QuickSwitchSessionsResult,
   RebuildSessionMemoryExtractsInput,
   RebuildSessionMemoryExtractsResult,
   RebuildSessionProjectionsInput,
@@ -179,6 +181,17 @@ export class SessionsApiClient {
     })}`));
   }
 
+  quickSwitchSessions(input: QuickSwitchSessionsInput = {}): Promise<QuickSwitchSessionsResult> {
+    return this.call("GET", clawApiPath(`sidebar/quick-switch${buildQuery({
+      q: input.query,
+      projectId: input.projectId,
+      projectPath: input.projectPath,
+      includeArchived: input.includeArchived,
+      limit: input.limit,
+      offset: input.offset,
+    })}`));
+  }
+
   search(input: SearchSessionsInput): Promise<{ items: SessionSearchHit[] }> {
     return this.call("GET", clawApiPath(`sessions/search${buildQuery({
       q: input.query,
@@ -188,6 +201,7 @@ export class SessionsApiClient {
       fromTimestamp: input.fromTimestamp,
       toTimestamp: input.toTimestamp,
       limit: input.limit,
+      offset: input.offset,
     })}`));
   }
 
@@ -207,6 +221,7 @@ export class SessionsApiClient {
       fromTimestamp: input.fromTimestamp,
       toTimestamp: input.toTimestamp,
       limit: input.limit,
+      offset: input.offset,
     })}`));
   }
 
