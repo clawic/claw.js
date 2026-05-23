@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-22T00:00:00.000Z",
+  "generatedAt": "2026-05-23T00:00:00.000Z",
   "sources": {
     "surfaces": "packages/clawjs-core/src/surface-registry.ts",
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1132,
+    "surfaces": 1143,
     "cliCommands": 169
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:17156cd7",
+    "surfaces": "fnv1a32:063e4a23",
     "cliCommands": "fnv1a32:82daf03a",
-    "combined": "fnv1a32:f6db8620"
+    "combined": "fnv1a32:07510052"
   },
   "surfaces": [
     {
@@ -892,11 +892,47 @@
       "stability": "v1"
     },
     {
+      "id": "claw.api.sessions.dynamicTools",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/sessions/{sessionId}/dynamic-tools",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
       "id": "claw.api.sessions.importCodex",
       "owner": "claw",
       "kind": "apiRoute",
       "parentId": "claw.contracts.api",
       "value": "POST /v1/sessions/import/codex",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.sessions.memoryExtractRebuild",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/sessions/memory-extract/rebuild",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.sessions.messages",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "GET /v1/sessions/{sessionId}/messages",
+      "surfaceClass": "api",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.api.sessions.projectionRebuild",
+      "owner": "claw",
+      "kind": "apiRoute",
+      "parentId": "claw.contracts.api",
+      "value": "POST /v1/sessions/projection/rebuild",
       "surfaceClass": "api",
       "stability": "v1"
     },
@@ -3736,6 +3772,54 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.agentCoordinationActive",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_AGENT_COORDINATION_ACTIVE",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.agentCoordinationBypass",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_AGENT_COORDINATION_BYPASS",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.agentCoordinationBypassReason",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_AGENT_COORDINATION_BYPASS_REASON",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.agentCoordinationRunDir",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_AGENT_COORDINATION_RUN_DIR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.agentCoordinationStateDir",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_AGENT_COORDINATION_STATE_DIR",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.agentSessionId",
+      "owner": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_AGENT_SESSION_ID",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.allowedOrigins",
       "owner": "claw",
       "kind": "envVar",
@@ -6423,6 +6507,15 @@
       "kind": "eventTopic",
       "parentId": "claw.contracts.events",
       "value": "transport.handshake.recorded",
+      "surfaceClass": "event",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.event.sessions.fixtureRecoverableCorruption",
+      "owner": "claw",
+      "kind": "eventTopic",
+      "parentId": "claw.contracts.events",
+      "value": "fixture.recoverable_corruption",
       "surfaceClass": "event",
       "stability": "v1"
     },

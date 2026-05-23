@@ -375,6 +375,37 @@
       "adr": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "notes": "Registers additive agent coordination database, global state/run, and workspace override/cache surfaces so shared validation leases and reusable work records remain explicit in the public surface baseline.",
       "createdAt": "2026-05-23T00:00:00.000Z"
+    },
+    {
+      "id": "evo_agent_coordination_session_contract_surfaces",
+      "title": "Agent coordination and sessions contract surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.api.sessions.dynamicTools",
+        "claw.api.sessions.memoryExtractRebuild",
+        "claw.api.sessions.messages",
+        "claw.api.sessions.projectionRebuild",
+        "claw.env.agentCoordinationActive",
+        "claw.env.agentCoordinationBypass",
+        "claw.env.agentCoordinationBypassReason",
+        "claw.env.agentCoordinationRunDir",
+        "claw.env.agentCoordinationStateDir",
+        "claw.env.agentSessionId",
+        "claw.event.sessions.fixtureRecoverableCorruption"
+      ],
+      "tests": [
+        "packages/clawjs-sessions/src/session-hydration.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "scripts/persistent-surface-guard.mjs",
+        "scripts/surface-narrative-guard.mjs",
+        "scripts/surface-resource-contract-guard.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "notes": "Registers additive sessions HTTP subroutes, agent coordination environment overrides, and the hermetic recoverable-corruption fixture topic so persistent surface guard coverage remains explicit and the refreshed public surface baseline is covered by the evolution ledger.",
+      "createdAt": "2026-05-23T00:00:00.000Z"
     }
   ]
 }
