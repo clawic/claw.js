@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--self-test"]);
 const errors = [];
 
 function readText(relativePath) {
@@ -15,6 +18,131 @@ function readJson(relativePath) {
 
 function fail(message) {
   errors.push(message);
+}
+
+function hygieneDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("code_hygiene_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/code-hygiene-check.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node scripts/code-hygiene-check.mjs with a supported argument.",
+    });
+  }
+  if (error.includes("generatedProvenance")) {
+    return createDiagnostic("code_hygiene_generated_provenance_invalid", error, {
+      location: "docs/code-hygiene-baseline.json",
+      suggestion: "Document generator, command, source, hash, regeneration mode, delta, and debt impact for generated or refreshed baselines.",
+      safeNextStep: "Fix the generatedProvenance entry, then rerun node scripts/code-hygiene-check.mjs.",
+    });
+  }
+  if (error.includes("must run successfully") || error.includes("output must be valid JSON")) {
+    return createDiagnostic("code_hygiene_audit_unavailable", error, {
+      location: "scripts/code-hygiene-audit.mjs",
+      suggestion: "Fix the nested audit command or its JSON output before trusting the hygiene report.",
+      safeNextStep: "Run node scripts/code-hygiene-audit.mjs --json and address its first failure.",
+    });
+  }
+  if (error.includes("decisions")) {
+    return createDiagnostic("code_hygiene_decisions_invalid", error, {
+      location: "docs/code-hygiene-decisions.json",
+      suggestion: "Restore the reviewed code hygiene decision record without private session fields.",
+      safeNextStep: "Fix docs/code-hygiene-decisions.json, then rerun node scripts/code-hygiene-check.mjs.",
+    });
+  }
+  if (error.includes("baseline")) {
+    return createDiagnostic("code_hygiene_baseline_invalid", error, {
+      location: "docs/code-hygiene-baseline.json",
+      suggestion: "Keep baseline entries categorized, owned, referenced, unexpired, and justified.",
+      safeNextStep: "Fix the named baseline entry, then rerun node scripts/code-hygiene-check.mjs.",
+    });
+  }
+  if (error.includes("Knip")) {
+    return createDiagnostic("code_hygiene_knip_report_invalid", error, {
+      location: "docs/code-hygiene-knip-report.json",
+      suggestion: "Refresh or correct the Knip report while keeping it report-only and non-destructive.",
+      safeNextStep: "Run node scripts/code-hygiene-knip.mjs, review the report pair, then rerun this check.",
+    });
+  }
+  if (error.includes("Periphery")) {
+    return createDiagnostic("code_hygiene_periphery_report_invalid", error, {
+      location: "docs/code-hygiene-periphery-report.json",
+      suggestion: "Refresh or correct the Periphery report while keeping external-pending evidence separate when the binary is unavailable.",
+      safeNextStep: "Run node scripts/code-hygiene-periphery.mjs or record external pending, then rerun this check.",
+    });
+  }
+  if (error.includes("report")) {
+    return createDiagnostic("code_hygiene_report_invalid", error, {
+      location: "docs/code-hygiene-report.json",
+      suggestion: "Keep the JSON/Markdown report pair aligned with the current audit summaries and safety notes.",
+      safeNextStep: "Regenerate or edit the code hygiene report pair, then rerun node scripts/code-hygiene-check.mjs.",
+    });
+  }
+  if (error.includes("completion audit")) {
+    return createDiagnostic("code_hygiene_completion_audit_invalid", error, {
+      location: "docs/governance/code-hygiene/completion.md",
+      suggestion: "Document every reviewed decision row without private source-session placeholders.",
+      safeNextStep: "Fix the completion audit, then rerun node scripts/code-hygiene-check.mjs.",
+    });
+  }
+  if (error.includes("private maintainer path") || error.includes("private source-session")) {
+    return createDiagnostic("code_hygiene_private_reference", error, {
+      location: "docs/code-hygiene",
+      suggestion: "Remove private maintainer paths and source-session placeholders from public hygiene artifacts.",
+      safeNextStep: "Replace private references with public-safe provenance, then rerun this check.",
+    });
+  }
+  return createDiagnostic("code_hygiene_check_failed", error, {
+    location: "scripts/code-hygiene-check.mjs",
+    suggestion: "Inspect the named code hygiene artifact and restore the expected governance invariant.",
+    safeNextStep: "Fix the reported hygiene issue, then rerun node scripts/code-hygiene-check.mjs.",
+  });
+}
+
+function printErrors(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "code hygiene check failed:",
+    diagnostics: items.map(hygieneDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runDiagnosticSelfTest() {
+  const chunks = [];
+  printErrors([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "code hygiene baseline entry generated generatedProvenance is missing upstreamHash",
+    "code hygiene audit must run successfully from the checker",
+    "code hygiene decisions must not publish private sourceSessionPath",
+    "code hygiene report Knip summary must match the Knip report",
+    "code hygiene report Periphery status must match the Periphery report",
+    "code hygiene report must include generatedAt",
+    "code hygiene completion audit must record the decision count review",
+    "docs/code-hygiene-ledger.md contains a private maintainer path /Users/example/private",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "code_hygiene_usage_error",
+    "code_hygiene_generated_provenance_invalid",
+    "code_hygiene_audit_unavailable",
+    "code_hygiene_decisions_invalid",
+    "code_hygiene_knip_report_invalid",
+    "code_hygiene_periphery_report_invalid",
+    "code_hygiene_report_invalid",
+    "code_hygiene_completion_audit_invalid",
+    "code_hygiene_private_reference",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Document generator")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printErrors([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
 }
 
 function validateGeneratedProvenance(value, label) {
@@ -222,6 +350,10 @@ for (const decision of decisions.decisions ?? []) {
 const completionRows = completionAudit.split("\n").filter((line) => /^\| \d+ \|/.test(line));
 if (completionRows.length !== decisions.decisionCount) fail("code hygiene completion audit must have one row per decision");
 
+if (args.has("--self-test")) {
+  runDiagnosticSelfTest();
+}
+
 for (const relativePath of [
   "docs/adr/0016-code-hygiene-program.md",
   "docs/code-hygiene-decisions.json",
@@ -249,9 +381,8 @@ for (const relativePath of [
 }
 
 if (errors.length > 0) {
-  console.error("code hygiene check failed:");
-  for (const error of errors) console.error(`- ${error}`);
+  printErrors(errors);
   process.exit(1);
 }
 
-console.log(process.argv.includes("--self-test") ? "code hygiene check self-test passed" : "code hygiene check passed");
+console.log(args.has("--self-test") ? "code hygiene check self-test passed" : "code hygiene check passed");
