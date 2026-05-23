@@ -21,13 +21,17 @@ import type {
   KanbanStatus,
   KanbanTaskRecord,
   ListKanbanFilter,
+  ListRuntimeLogsFilter,
   NudgeRecord,
+  RecordRuntimeLogInput,
   RuntimeJobEventKind,
   RuntimeJobEventLevel,
   RuntimeJobEventRecord,
   RuntimeJobKind,
   RuntimeJobRecord,
   RuntimeJobStatus,
+  RuntimeLogRecord,
+  RuntimeLogRetentionResult,
   UpdateKanbanTaskInput,
   UserModelRefreshRecord,
 } from "./types.ts";
@@ -97,6 +101,24 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_job_events_job_id ON runtime_job_events(job_id, id ASC);
   CREATE INDEX IF NOT EXISTS idx_job_events_id     ON runtime_job_events(id ASC);
 
+  CREATE TABLE IF NOT EXISTS runtime_logs (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id     TEXT,
+    job_id         TEXT REFERENCES runtime_jobs(id) ON DELETE SET NULL,
+    process_id     TEXT,
+    subsystem      TEXT NOT NULL,
+    level          TEXT NOT NULL CHECK (level IN ('debug','info','warning','error')),
+    message        TEXT NOT NULL,
+    recorded_at    INTEGER NOT NULL,
+    redacted       INTEGER NOT NULL DEFAULT 0,
+    metadata_json  TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_runtime_logs_session_time   ON runtime_logs(session_id, recorded_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_runtime_logs_job_time       ON runtime_logs(job_id, recorded_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_runtime_logs_process_time   ON runtime_logs(process_id, recorded_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_runtime_logs_subsystem_time ON runtime_logs(subsystem, level, recorded_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_runtime_logs_time           ON runtime_logs(recorded_at DESC, id DESC);
+
   CREATE TABLE IF NOT EXISTS kanban_tasks (
     id                  TEXT PRIMARY KEY,
     title               TEXT NOT NULL,
@@ -149,7 +171,7 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_ke_kind      ON kanban_events(kind, recorded_at DESC);
 `;
 const RUNTIME_SCHEMA_META_TABLE = "runtime_service_schema_meta";
-const RUNTIME_SCHEMA_VERSION = 1;
+const RUNTIME_SCHEMA_VERSION = 2;
 
 interface KanbanTaskRow {
   id: string;
@@ -312,6 +334,19 @@ interface JobEventRow {
   payload_json: string | null;
 }
 
+interface RuntimeLogRow {
+  id: number;
+  session_id: string | null;
+  job_id: string | null;
+  process_id: string | null;
+  subsystem: string;
+  level: RuntimeLogRecord["level"];
+  message: string;
+  recorded_at: number;
+  redacted: number;
+  metadata_json: string | null;
+}
+
 function rowToDist(row: DistRow): DistillationRecord {
   return {
     id: row.id,
@@ -376,6 +411,65 @@ function rowToJobEvent(row: JobEventRow): RuntimeJobEventRecord {
     recordedAt: row.recorded_at,
     payload: parseJsonField<Record<string, unknown>>(row.payload_json),
   };
+}
+
+function rowToRuntimeLog(row: RuntimeLogRow): RuntimeLogRecord {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    jobId: row.job_id,
+    processId: row.process_id,
+    subsystem: row.subsystem,
+    level: row.level,
+    message: row.message,
+    recordedAt: row.recorded_at,
+    redacted: row.redacted === 1,
+    metadata: parseJsonField<Record<string, unknown>>(row.metadata_json),
+  };
+}
+
+const RUNTIME_LOG_REDACTIONS: Array<[RegExp, string]> = [
+  [/\b(authorization)\s*[:=]\s*Bearer\s+[A-Za-z0-9._~+/-]+/gi, "$1=[REDACTED]"],
+  [/\b(api[_-]?key|token|secret|password|passwd|pwd)\s*[:=]\s*["']?[^"'\s,;)}\]]+/gi, "$1=[REDACTED]"],
+  [/\bBearer\s+[A-Za-z0-9._~+/-]+/gi, "Bearer [REDACTED]"],
+  [/\bsk-[A-Za-z0-9_-]{8,}\b/g, "sk-[REDACTED]"],
+];
+
+function redactRuntimeLogText(text: string): { value: string; redacted: boolean } {
+  let value = text;
+  for (const [pattern, replacement] of RUNTIME_LOG_REDACTIONS) {
+    value = value.replace(pattern, replacement);
+  }
+  return { value, redacted: value !== text };
+}
+
+function redactRuntimeLogValue(value: unknown): { value: unknown; redacted: boolean } {
+  if (typeof value === "string") return redactRuntimeLogText(value);
+  if (Array.isArray(value)) {
+    let redacted = false;
+    const items = value.map((item) => {
+      const next = redactRuntimeLogValue(item);
+      redacted ||= next.redacted;
+      return next.value;
+    });
+    return { value: items, redacted };
+  }
+  if (value && typeof value === "object") {
+    let redacted = false;
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (/(secret|password|token|credential|privateKey|apiKey|authorization)/i.test(key)) {
+        out[key] = "[REDACTED]";
+        redacted = true;
+        continue;
+      }
+      const next = redactRuntimeLogValue(item);
+      redacted ||= next.redacted;
+      out[key] = next.value;
+    }
+    return { value: out, redacted };
+  }
+  return { value, redacted: false };
 }
 
 export class RuntimeServiceStore {
@@ -504,7 +598,19 @@ export class RuntimeServiceStore {
       recorded_at: Date.now(),
       payload_json: payload ? JSON.stringify(payload) : null,
     });
-    return rowToJobEvent(this.db.prepare("SELECT * FROM runtime_job_events WHERE id = ?").get(result.lastInsertRowid) as JobEventRow);
+    const event = rowToJobEvent(this.db.prepare("SELECT * FROM runtime_job_events WHERE id = ?").get(result.lastInsertRowid) as JobEventRow);
+    const job = this.getJob(jobId);
+    const sessionId = typeof job?.payload?.sessionId === "string" ? job.payload.sessionId : null;
+    this.recordRuntimeLog({
+      sessionId,
+      jobId,
+      subsystem: "runtime.jobs",
+      level,
+      message,
+      recordedAt: event.recordedAt,
+      metadata: payload ? { eventKind: kind, ...payload } : { eventKind: kind },
+    });
+    return event;
   }
 
   listJobEvents(input: { jobId?: string; afterId?: number; limit?: number } = {}): RuntimeJobEventRecord[] {
@@ -527,6 +633,68 @@ export class RuntimeServiceStore {
       LIMIT ?
     `).all(...params, limit) as JobEventRow[];
     return rows.map(rowToJobEvent);
+  }
+
+  recordRuntimeLog(input: RecordRuntimeLogInput): RuntimeLogRecord {
+    const message = redactRuntimeLogText(input.message);
+    const metadata = input.metadata ? redactRuntimeLogValue(input.metadata) : { value: null, redacted: false };
+    const redacted = message.redacted || metadata.redacted;
+    const result = this.db.prepare(`
+      INSERT INTO runtime_logs (
+        session_id, job_id, process_id, subsystem, level, message, recorded_at, redacted, metadata_json
+      ) VALUES (
+        @session_id, @job_id, @process_id, @subsystem, @level, @message, @recorded_at, @redacted, @metadata_json
+      )
+    `).run({
+      session_id: input.sessionId ?? null,
+      job_id: input.jobId ?? null,
+      process_id: input.processId == null ? null : String(input.processId),
+      subsystem: input.subsystem?.trim() || "runtime",
+      level: input.level ?? "info",
+      message: message.value,
+      recorded_at: input.recordedAt ?? Date.now(),
+      redacted: redacted ? 1 : 0,
+      metadata_json: metadata.value ? JSON.stringify(metadata.value) : null,
+    });
+    return rowToRuntimeLog(this.db.prepare("SELECT * FROM runtime_logs WHERE id = ?").get(result.lastInsertRowid) as RuntimeLogRow);
+  }
+
+  listRuntimeLogs(filter: ListRuntimeLogsFilter = {}): RuntimeLogRecord[] {
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+    if (filter.sessionId) { conditions.push("session_id = @session_id"); params.session_id = filter.sessionId; }
+    if (filter.jobId) { conditions.push("job_id = @job_id"); params.job_id = filter.jobId; }
+    if (filter.processId !== undefined) { conditions.push("process_id = @process_id"); params.process_id = String(filter.processId); }
+    if (filter.subsystem) { conditions.push("subsystem = @subsystem"); params.subsystem = filter.subsystem; }
+    if (filter.level) { conditions.push("level = @level"); params.level = filter.level; }
+    if (filter.fromRecordedAt !== undefined) { conditions.push("recorded_at >= @from_recorded_at"); params.from_recorded_at = filter.fromRecordedAt; }
+    if (filter.toRecordedAt !== undefined) { conditions.push("recorded_at <= @to_recorded_at"); params.to_recorded_at = filter.toRecordedAt; }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const limit = Math.min(Math.max(filter.limit ?? 100, 1), 1000);
+    const offset = Math.max(filter.offset ?? 0, 0);
+    const rows = this.db.prepare(`
+      SELECT * FROM runtime_logs
+      ${where}
+      ORDER BY recorded_at DESC, id DESC
+      LIMIT @limit OFFSET @offset
+    `).all({ ...params, limit, offset }) as RuntimeLogRow[];
+    return rows.map(rowToRuntimeLog);
+  }
+
+  pruneRuntimeLogs(input: { olderThan: number; subsystem?: string | null }): RuntimeLogRetentionResult {
+    const info = input.subsystem
+      ? this.db.prepare("DELETE FROM runtime_logs WHERE recorded_at < @older_than AND subsystem = @subsystem").run({
+          older_than: input.olderThan,
+          subsystem: input.subsystem,
+        })
+      : this.db.prepare("DELETE FROM runtime_logs WHERE recorded_at < @older_than").run({
+          older_than: input.olderThan,
+        });
+    return {
+      deleted: info.changes,
+      olderThan: input.olderThan,
+      subsystem: input.subsystem ?? null,
+    };
   }
 
   recordDistillation(input: Omit<DistillationRecord, "id" | "distilledAt" | "provenance"> & {

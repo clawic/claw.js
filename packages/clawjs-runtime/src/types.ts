@@ -6,6 +6,7 @@ export type RuntimeJobStatus = "pending" | "running" | "completed" | "failed" | 
 
 export type RuntimeJobEventKind = "job.started" | "job.completed" | "job.failed" | "job.cancelled";
 export type RuntimeJobEventLevel = "info" | "warning" | "error";
+export type RuntimeLogLevel = "debug" | "info" | "warning" | "error";
 
 export interface RuntimeJobRecord {
   id: string;
@@ -25,6 +26,48 @@ export interface RuntimeJobEventRecord {
   message: string;
   recordedAt: number;
   payload: Record<string, unknown> | null;
+}
+
+export interface RuntimeLogRecord {
+  id: number;
+  sessionId: string | null;
+  jobId: string | null;
+  processId: string | null;
+  subsystem: string;
+  level: RuntimeLogLevel;
+  message: string;
+  recordedAt: number;
+  redacted: boolean;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface RecordRuntimeLogInput {
+  sessionId?: string | null;
+  jobId?: string | null;
+  processId?: string | number | null;
+  subsystem?: string | null;
+  level?: RuntimeLogLevel;
+  message: string;
+  recordedAt?: number;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface ListRuntimeLogsFilter {
+  sessionId?: string;
+  jobId?: string;
+  processId?: string | number;
+  subsystem?: string;
+  level?: RuntimeLogLevel;
+  fromRecordedAt?: number;
+  toRecordedAt?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface RuntimeLogRetentionResult {
+  deleted: number;
+  olderThan: number;
+  subsystem: string | null;
 }
 
 export interface RuntimeJobStartInput {

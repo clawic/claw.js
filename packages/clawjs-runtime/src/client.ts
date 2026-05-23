@@ -10,14 +10,18 @@ import type {
   KanbanEventRecord,
   KanbanTaskRecord,
   ListKanbanFilter,
+  ListRuntimeLogsFilter,
   NudgeInput,
   NudgeRecord,
+  RecordRuntimeLogInput,
   RuntimeJobCancelResult,
   RuntimeJobEventRecord,
   RuntimeJobKind,
   RuntimeJobRecord,
   RuntimeJobStartInput,
   RuntimeJobStartResult,
+  RuntimeLogRecord,
+  RuntimeLogRetentionResult,
   UpdateKanbanTaskInput,
   UserModelRefreshInput,
   UserModelRefreshRecord,
@@ -138,6 +142,28 @@ export class RuntimeApiClient {
 
   cancelJob(id: string, reason?: string): Promise<RuntimeJobCancelResult> {
     return this.call("POST", clawApiPath(`runtime/jobs/${encodeURIComponent(id)}/cancel`), { reason });
+  }
+
+  recordRuntimeLog(input: RecordRuntimeLogInput): Promise<RuntimeLogRecord> {
+    return this.call("POST", clawApiPath("runtime/logs"), input);
+  }
+
+  listRuntimeLogs(filter: ListRuntimeLogsFilter = {}): Promise<{ items: RuntimeLogRecord[]; source: "runtime.logs.query" }> {
+    return this.call("GET", clawApiPath(`runtime/logs${buildQuery({
+      sessionId: filter.sessionId,
+      jobId: filter.jobId,
+      processId: filter.processId,
+      subsystem: filter.subsystem,
+      level: filter.level,
+      from: filter.fromRecordedAt,
+      to: filter.toRecordedAt,
+      limit: filter.limit,
+      offset: filter.offset,
+    })}`));
+  }
+
+  pruneRuntimeLogs(input: { olderThan: number; subsystem?: string | null }): Promise<RuntimeLogRetentionResult> {
+    return this.call("POST", clawApiPath("runtime/logs/prune"), input);
   }
 
   createKanbanTask(input: CreateKanbanTaskInput): Promise<KanbanTaskRecord> {

@@ -24,8 +24,11 @@ import type {
   KanbanPriority,
   KanbanStatus,
   ListKanbanFilter,
+  ListRuntimeLogsFilter,
   NudgeInput,
+  RecordRuntimeLogInput,
   RuntimeJobKind,
+  RuntimeLogLevel,
   RuntimeJobStartInput,
   RuntimeServicesContext,
   UpdateKanbanTaskInput,
@@ -73,6 +76,10 @@ function asNumber(value: unknown): number | undefined {
 
 function asRuntimeJobKind(value: unknown): RuntimeJobKind | null {
   return value === "distill" || value === "nudge" || value === "user_model_refresh" ? value : null;
+}
+
+function asRuntimeLogLevel(value: unknown): RuntimeLogLevel | undefined {
+  return value === "debug" || value === "info" || value === "warning" || value === "error" ? value : undefined;
 }
 
 async function startRuntimeJob(
@@ -302,6 +309,55 @@ export function buildRuntimeApp(options: BuildRuntimeAppOptions = {}) {
       }),
       source: "runtime.jobs.stream",
     };
+  });
+
+  app.post(clawApiPath("runtime/logs"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const body = readBody(request);
+      const input: RecordRuntimeLogInput = {
+        sessionId: (body.sessionId as string | null | undefined) ?? null,
+        jobId: (body.jobId as string | null | undefined) ?? null,
+        processId: (body.processId as string | number | null | undefined) ?? null,
+        subsystem: (body.subsystem as string | null | undefined) ?? null,
+        level: asRuntimeLogLevel(body.level) ?? "info",
+        message: String(body.message ?? ""),
+        recordedAt: asNumber(body.recordedAt),
+        metadata: (body.metadata as Record<string, unknown> | null | undefined) ?? null,
+      };
+      if (!input.message.trim()) return await reply.code(400).send({ error: "message is required" });
+      return store.recordRuntimeLog(input);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.get(clawApiPath("runtime/logs"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    const filter: ListRuntimeLogsFilter = {
+      sessionId: asString(query.sessionId),
+      jobId: asString(query.jobId),
+      processId: asString(query.processId),
+      subsystem: asString(query.subsystem),
+      level: asRuntimeLogLevel(query.level),
+      fromRecordedAt: asNumber(query.from),
+      toRecordedAt: asNumber(query.to),
+      limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
+    };
+    return { items: store.listRuntimeLogs(filter), source: "runtime.logs.query" };
+  });
+
+  app.post(clawApiPath("runtime/logs/prune"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const body = readBody(request);
+    const olderThan = asNumber(body.olderThan);
+    if (olderThan === undefined) return await reply.code(400).send({ error: "olderThan is required" });
+    return store.pruneRuntimeLogs({
+      olderThan,
+      subsystem: (body.subsystem as string | null | undefined) ?? null,
+    });
   });
 
   app.post(clawApiPath("runtime/jobs/:id/cancel"), async (request, reply) => {
