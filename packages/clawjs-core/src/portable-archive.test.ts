@@ -89,3 +89,17 @@ test("portable archive restore is two phase and approval gated", () => {
   assert.equal(approvedReport.restoredCounts.policies, 2);
   assert.equal(approvedReport.restoredCounts.secretsEnvelopes, 1);
 });
+
+test("portable archive restore report keeps corrupt previews blocked by verification", () => {
+  const manifest = createPortableArchiveManifestFixture({ includeSecrets: false });
+  const tampered: PortableArchiveManifestV1 = {
+    ...manifest,
+    inventory: manifest.inventory.map((entry) => entry.id === "core.sqlite" ? { ...entry, hash: undefined } : entry),
+  };
+  const preview = createPortableArchiveImportPreview({ manifest: tampered, targetRoot: "/tmp/restore", signedHostAvailable: true });
+  const report = createPortableArchiveRestoreReport({ preview, approved: false });
+
+  assert.equal(preview.status, "verification_failed");
+  assert.equal(report.status, "verification_failed");
+  assert.ok(report.blockedReasons.includes("verification_failed"));
+});

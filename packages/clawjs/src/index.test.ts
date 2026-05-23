@@ -82,6 +82,7 @@ test("runCli rejects removed public pre-v1 namespaces before V1 routing", async 
 
 test("runCli exposes portable archive governance and signed-host gates", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-archive-cli-"));
+  const archivePath = path.join(cwd, "local.clawbackup");
 
   const planStdout = captureStream();
   assert.equal(await runCli(["archive", "plan", "--include-secrets", "--json"], {
@@ -106,6 +107,50 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   assert.equal(verification.counts.plaintextSecretFindings, 0);
   assert.ok(verification.counts.entries > 0);
 
+  const exportStdout = captureStream();
+  assert.equal(await runCli(["archive", "export", "--output", archivePath, "--json"], {
+    stdout: exportStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const exported = parseCliJsonPayload<{ status: string; dryRun: boolean; archivePath: string; manifestPath: string; verification: { status: string } }>(exportStdout.getOutput());
+  assert.equal(exported.status, "ready");
+  assert.equal(exported.dryRun, false);
+  assert.equal(exported.archivePath, archivePath);
+  assert.equal(exported.verification.status, "ok");
+  assert.equal(fs.existsSync(path.join(archivePath, "manifest.json")), true);
+
+  const localVerifyStdout = captureStream();
+  assert.equal(await runCli(["archive", "verify", "--archive", archivePath, "--json"], {
+    stdout: localVerifyStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const localVerification = parseCliJsonPayload<{ status: string; issues: Array<{ code: string }> }>(localVerifyStdout.getOutput());
+  assert.equal(localVerification.status, "ok");
+
+  const previewStdout = captureStream();
+  assert.equal(await runCli(["archive", "import", "--archive", archivePath, "--target", path.join(cwd, "restore-target"), "--json"], {
+    stdout: previewStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const preview = parseCliJsonPayload<{ status: string; canRestore: boolean; mappedCounts: { records: number } }>(previewStdout.getOutput());
+  assert.equal(preview.status, "ready");
+  assert.equal(preview.canRestore, true);
+  assert.ok(preview.mappedCounts.records > 0);
+
+  fs.writeFileSync(path.join(archivePath, "data", "core.sqlite"), "tampered\n", "utf8");
+  const corruptVerifyStdout = captureStream();
+  assert.equal(await runCli(["archive", "verify", "--archive", archivePath, "--json"], {
+    stdout: corruptVerifyStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const corruptVerification = parseCliJsonPayload<{ status: string; issues: Array<{ code: string }> }>(corruptVerifyStdout.getOutput());
+  assert.equal(corruptVerification.status, "failed");
+  assert.equal(corruptVerification.issues.some((issue) => issue.code === "hash_mismatch"), true);
+
   const restoreStdout = captureStream();
   assert.equal(await runCli(["archive", "restore", "--include-secrets", "--json"], {
     stdout: restoreStdout.stream,
@@ -116,6 +161,17 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   assert.equal(restore.dryRun, true);
   assert.equal(restore.report.status, "requires_signed_host");
   assert.ok(restore.report.blockedReasons.includes("requires_signed_host"));
+
+  const missingConfirmationStdout = captureStream();
+  assert.equal(await runCli(["archive", "restore", "--target", path.join(cwd, "restore-target"), "--approve", "--json"], {
+    stdout: missingConfirmationStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const missingConfirmation = parseCliJsonPayload<{ dryRun: boolean; report: { status: string; blockedReasons: string[] } }>(missingConfirmationStdout.getOutput());
+  assert.equal(missingConfirmation.dryRun, true);
+  assert.equal(missingConfirmation.report.status, "requires_approval");
+  assert.ok(missingConfirmation.report.blockedReasons.includes("restore_confirmation_required"));
 });
 
 test("runCli exposes Search source registry, profiles, status and explain admin commands", async () => {

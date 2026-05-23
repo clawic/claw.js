@@ -990,6 +990,29 @@ plans for risky or unavailable actions. See
 [ADR 0018: CLI action intent registry](./adr/0018-cli-action-intent-registry.md)
 for the durable contract.
 
+## Portable Archive
+
+`claw archive` is the reversible data-flow surface for local backup planning,
+local export, verification, simulated import preview, restore reports, and
+signed-host secrets gates.
+
+```bash
+claw archive plan --json
+claw archive export --output ./backup.clawbackup --json
+claw archive verify --archive ./backup.clawbackup --json
+claw archive inspect --archive ./backup.clawbackup --json
+claw archive import --archive ./backup.clawbackup --target /tmp/claw-restore --json
+claw archive restore --archive ./backup.clawbackup --target /tmp/claw-restore --approve --confirm-restore /tmp/claw-restore --json
+claw archive doctor --json
+```
+
+The archive format remains the existing `.clawbackup` contract with root
+`manifest.json`. Local export refuses to overwrite an existing archive path.
+Archive-backed verification fails closed for corrupt manifests, missing files,
+hash mismatches, plaintext secret findings, and copied external read-only
+sources. Restore is dry-run by default and requires both approval and exact
+target confirmation before a report can become `restore_complete`.
+
 ## Regulated Domain Safety
 
 `claw safety` exposes the regulated-domain boundary for agents and scripts. It

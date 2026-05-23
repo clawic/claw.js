@@ -35,8 +35,9 @@ the only readable representation. Rebuildable caches and search indexes are
 excluded and recorded as `rebuildable_no_canonical_backup`.
 
 Restore is two-phase. Import preview validates the archive and maps it into a
-new or selected target. Restore applies only after verification and explicit
-approval; restore involving encrypted secrets requires signed-host proof.
+new or selected target. Restore applies only after verification, explicit
+approval, and exact target confirmation; restore involving encrypted secrets
+requires signed-host proof.
 
 ## Operational Surface
 
@@ -45,7 +46,10 @@ The public framework surface is:
 - `@clawjs/core` schemas: `PortableArchiveManifestV1`,
   `PortableArchivePlan`, `PortableArchiveVerificationReport`,
   `PortableArchiveImportPreview`, and `PortableArchiveRestoreReport`.
-- CLI: `claw archive plan|export|verify|inspect|import|restore|doctor --json`.
+- CLI: `claw archive plan|export|verify|inspect|import|restore|doctor --json`,
+  including local `export --output PATH.clawbackup`, archive-backed
+  `verify|inspect|import|restore --archive PATH.clawbackup`, and
+  `restore --approve --confirm-restore TARGET`.
 - API contracts: `/v1/archives/plans`, `/v1/archives/exports`,
   `/v1/archives/verifications`, `/v1/archives/import-previews`, and
   `/v1/archives/restores`.

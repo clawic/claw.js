@@ -426,15 +426,24 @@ export function createPortableArchiveRestoreReport(input: { preview: PortableArc
   return portableArchiveRestoreReportSchema.parse({
     schemaVersion: portableArchiveSchemaVersion,
     schemaId: portableArchiveRestoreReportSchemaId,
-    status: blockedReasons.length > 0
-      ? input.preview.requiresSignedHost ? "requires_signed_host" : approved ? "restore_blocked" : "requires_approval"
-      : "restore_complete",
+    status: restoreReportStatus(input.preview, blockedReasons, approved),
     targetRoot: input.preview.targetRoot,
     approved,
     ...(blockedReasons.length === 0 ? { appliedAt: input.appliedAt ?? new Date(0).toISOString() } : {}),
     restoredCounts: blockedReasons.length === 0 ? input.preview.mappedCounts : { records: 0, files: 0, grants: 0, policies: 0, secretsEnvelopes: 0 },
     blockedReasons,
   });
+}
+
+function restoreReportStatus(
+  preview: PortableArchiveImportPreview,
+  blockedReasons: string[],
+  approved: boolean,
+): PortableArchiveRestoreReport["status"] {
+  if (preview.status === "verification_failed" || blockedReasons.includes("verification_failed")) return "verification_failed";
+  if (blockedReasons.length === 0) return "restore_complete";
+  if (preview.requiresSignedHost) return "requires_signed_host";
+  return approved ? "restore_blocked" : "requires_approval";
 }
 
 function canonicalEntry(

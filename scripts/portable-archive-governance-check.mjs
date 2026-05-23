@@ -50,6 +50,7 @@ requireIncludes("docs/portable-archive-contract.md", [
   "PortableArchiveManifestV1",
   "restoreReport.v1",
   "requires_signed_host",
+  "--confirm-restore",
   "rebuildable_no_canonical_backup",
   "raw Secret Keys",
   "POST /v1/archives/restores",
@@ -67,16 +68,22 @@ requireIncludes("packages/clawjs-core/src/portable-archive.ts", [
 
 requireIncludes("packages/clawjs/src/cli-archive-command.ts", [
   "runArchiveCli",
+  "local_export_writes_manifest",
+  "local_verify_reads_manifest",
+  "restore_confirmation_required",
   "requires_signed_host",
   "plan|export|verify|inspect|import|restore|doctor",
 ]);
 
-requireIncludes("packages/clawjs-core/src/surface-registry.ts", [
+requireIncludes("packages/clawjs-core/src/surface-registry-contracts.ts", [
   "claw.api.archives.plans",
   "claw.api.archives.exports",
   "claw.api.archives.verifications",
   "claw.api.archives.importPreviews",
   "claw.api.archives.restores",
+]);
+
+requireIncludes("packages/clawjs-core/src/surface-registry-graph.ts", [
   "claw.schema.portableArchive.manifest.v1",
   "claw.schema.portableArchive.restoreReport.v1",
 ]);
@@ -91,6 +98,12 @@ requireIncludes("packages/clawjs-core/src/portable-archive.test.ts", [
   "plaintext secret material",
   "two phase",
   "requires_signed_host",
+]);
+
+requireIncludes("packages/clawjs/src/index.test.ts", [
+  "local.clawbackup",
+  "hash_mismatch",
+  "restore_confirmation_required",
 ]);
 
 const assertion = readJson("docs/constitution.assertions.json")?.assertions?.find((entry) => entry.id === "II.6.backups-and-export-are-a-user-right");
@@ -143,7 +156,7 @@ for (const forbidden of ["sk-live-", "sk-proj-", "Bearer live", "plaintextSecret
   if (sourceAndFixtures.includes(forbidden)) errors.push(`plaintext secret fixture marker found: ${forbidden}`);
 }
 
-const clawixMirror = path.resolve(root, "../Clawix/clawix/docs/adr/0024-portable-archive-contract-mirror.md");
+const clawixMirror = path.resolve(root, "../Clawix/clawix/docs/adr/0034-portable-archive-contract-mirror.md");
 if (!fs.existsSync(clawixMirror)) errors.push("missing Clawix portable archive mirror ADR");
 else {
   const mirror = fs.readFileSync(clawixMirror, "utf8");

@@ -68,7 +68,8 @@ Restore is two-phase:
 
 1. Import preview validates the manifest, hashes, compatibility, external
    references, cache exclusions, and secrets envelope requirements.
-2. Restore applies only after successful verification and explicit approval.
+2. Restore applies only after successful verification, explicit approval, and
+   exact target confirmation.
 
 The restore report uses `claw.portableArchive.restoreReport.v1` and records
 status, target root, approval state, restored counts, blocked reasons, and
@@ -87,6 +88,14 @@ The CLI surface is:
 ```bash
 claw archive plan|export|verify|inspect|import|restore|doctor --json
 ```
+
+`export --output PATH.clawbackup` writes a local readable archive directory with
+root `manifest.json` and contract paths. It refuses to overwrite an existing
+archive path. `verify`, `inspect`, `import`, and `restore` accept
+`--archive PATH.clawbackup` and fail closed for missing manifests, invalid JSON,
+missing files, hash mismatches, plaintext secret findings, and copied external
+read-only sources. `restore --approve` remains a dry run unless
+`--confirm-restore` exactly matches the target root.
 
 The API contracts are:
 
