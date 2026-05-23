@@ -8,6 +8,7 @@ import {
   listClawCapabilityFiches,
   listClawCapabilityMaturityEntries,
 } from "../packages/clawjs-core/src/catalogs.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const baselinePath = "docs/governance/capability-maturity/baseline.json";
@@ -16,6 +17,72 @@ const failures = [];
 
 function fail(message) {
   failures.push(message);
+}
+
+function maturityDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("capability_maturity_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/capability-maturity-guard.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node scripts/capability-maturity-guard.mjs with supported arguments.",
+    });
+  }
+  if (failure.startsWith(`${baselinePath}:`)) {
+    return createDiagnostic("capability_maturity_baseline_invalid", failure, {
+      location: baselinePath,
+      suggestion: "Update the public baseline so it is versioned, sorted, unique, and only lists currently missing capability fiches.",
+      safeNextStep: "Fix docs/governance/capability-maturity/baseline.json, then rerun node scripts/capability-maturity-guard.mjs.",
+    });
+  }
+  if (failure.startsWith("missing required seed maturity entry:")) {
+    return createDiagnostic("capability_maturity_seed_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Restore the required seed maturity entry before changing promotion behavior.",
+      safeNextStep: "Add the named maturity entry, then rerun node scripts/capability-maturity-guard.mjs.",
+    });
+  }
+  if (failure.includes("promotion decision path must be public-safe")) {
+    return createDiagnostic("capability_maturity_private_path", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Replace private machine, goal, or session paths with a public ADR, doc, or redacted decision reference.",
+      safeNextStep: "Remove the private path from the capability maturity registry, then rerun this guard.",
+    });
+  }
+  if (failure.includes("invalid activation policy")) {
+    return createDiagnostic("capability_maturity_activation_invalid", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Use an activation policy allowed for promoted capabilities: enabled or opt_in.",
+      safeNextStep: "Correct the activation policy, then rerun node scripts/capability-maturity-guard.mjs.",
+    });
+  }
+  if (failure.includes("capability fiche is missing maturity classification")) {
+    return createDiagnostic("capability_maturity_classification_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Classify the capability in the maturity registry, or add a sorted temporary exception to the baseline when intentionally deferred.",
+      safeNextStep: "Update the registry or baseline, then rerun node scripts/capability-maturity-guard.mjs.",
+    });
+  }
+  if (failure.includes("must remain")) {
+    return createDiagnostic("capability_maturity_contract_changed", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Keep the protected maturity contract unchanged unless a new explicit public decision updates it.",
+      safeNextStep: "Restore the protected maturity value or add the required decision first, then rerun this guard.",
+    });
+  }
+  return createDiagnostic("capability_maturity_registry_invalid", failure, {
+    location: "packages/clawjs-core/src/catalogs.ts",
+    suggestion: "Inspect the capability maturity registry audit failure and fix the named registry entry.",
+    safeNextStep: "Fix the reported registry issue, then rerun node scripts/capability-maturity-guard.mjs.",
+  });
+}
+
+function printFailures(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "Capability maturity guard failed:",
+    diagnostics: items.map(maturityDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
 }
 
 function readJson(relativePath) {
@@ -89,12 +156,33 @@ function validate({ baseline }) {
   }
 }
 
+for (const arg of args) {
+  if (arg !== "--self-test") {
+    printFailures([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
 if (args.has("--self-test")) {
   validate({ baseline: { version: 1, allowedMissingCapabilityFiches: [] } });
   if (!failures.some((failure) => failure.includes("capability fiche is missing maturity classification"))) {
     console.error("capability maturity guard self-test did not catch missing classifications");
     process.exit(1);
   }
+  const chunks = [];
+  printFailures([
+    `${baselinePath}: allowedMissingCapabilityFiches has duplicates`,
+    "missing required seed maturity entry: claw.shell.core",
+    "secret.capability: promotion decision path must be public-safe: /Users/example/private token: sk-test-secret-123456",
+    "demo.capability: capability fiche is missing maturity classification",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  if (!output.includes("code: capability_maturity_baseline_invalid")) throw new Error("self-test missing baseline code");
+  if (!output.includes("code: capability_maturity_seed_missing")) throw new Error("self-test missing seed code");
+  if (!output.includes("code: capability_maturity_private_path")) throw new Error("self-test missing private-path code");
+  if (!output.includes("code: capability_maturity_classification_missing")) throw new Error("self-test missing classification code");
+  if (!output.includes("suggestion: Classify the capability")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   console.log("capability maturity guard self-test passed");
   process.exit(0);
 }
@@ -102,8 +190,7 @@ if (args.has("--self-test")) {
 validate({ baseline: readJson(baselinePath) });
 
 if (failures.length > 0) {
-  console.error("Capability maturity guard failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures(failures);
   process.exit(1);
 }
 
