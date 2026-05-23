@@ -387,7 +387,7 @@ export class ContextStore {
 
   private readMemoryCandidates(): MemoryCandidate[] {
     const dbPath = resolveMainDbPath();
-    if (!fs.existsSync(dbPath)) return this.readLegacyMemoryCandidates();
+    if (!fs.existsSync(dbPath)) return [];
     let db: Database.Database | null = null;
     try {
       db = new Database(dbPath, { readonly: true, fileMustExist: true });
@@ -395,20 +395,6 @@ export class ContextStore {
         ...readKnowledgeFactCandidates(db),
         ...readGenericMemoryCandidates(db),
       ];
-    } catch {
-      return [];
-    } finally {
-      db?.close();
-    }
-  }
-
-  private readLegacyMemoryCandidates(): MemoryCandidate[] {
-    const dbPath = path.join(this.workspaceDir, CLAW_DIR, "data", "database.sqlite");
-    if (!fs.existsSync(dbPath)) return [];
-    let db: Database.Database | null = null;
-    try {
-      db = new Database(dbPath, { readonly: true, fileMustExist: true });
-      return readGenericMemoryCandidates(db);
     } catch {
       return [];
     } finally {

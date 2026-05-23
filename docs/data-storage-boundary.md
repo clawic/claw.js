@@ -135,3 +135,46 @@ indexed only.
 Every future domain migration must state which of these buckets it uses:
 main database, sidecar database, workspace files, host state, external
 read-only source, or encrypted secret reference.
+
+## Reviewed store bucket map
+
+This map records the current storage ambiguity review baseline. New stores must
+extend this table or a more specific ADR before they add durable reads, writes,
+migrations, fixtures, or tests.
+
+| Store or surface | Canonical bucket | Notes |
+| --- | --- | --- |
+| `@clawjs/database`, `@clawjs/workspace`, productivity, app state, agents, connector context, knowledge, signals, time, content, ERP, publishing, IoT, MCP, channel metadata, resources, skills, and snippets | Main database: `~/.claw/data/core.sqlite` | These are user-facing structured records or framework metadata that benefit from the shared relational graph. |
+| Sessions service and long-running session events | Sidecar: `~/.claw/data/sessions.sqlite` | Searchable projections may still be mirrored into `core.sqlite`; event-heavy session state stays in the sessions sidecar. |
+| Runtime, sandbox, code index, bridge/daemon operational state, delegation/jobs state, and code work queues | Sidecar: `~/.claw/data/runtime.sqlite` | Code ledger tables in `packages/clawjs-node/src/code/surface.ts` are classified as runtime operational state until an ADR promotes any user-facing subset to `core.sqlite`. |
+| Audio and voice catalog/output metadata | Sidecar plus files: `~/.claw/data/audio.sqlite` and `~/.claw/data/audio/` or `~/.claw/data/blobs/` | Regular audio blobs do not belong in host app support. |
+| Drive/object storage metadata and blobs | Sidecar plus files: `~/.claw/data/drive.sqlite` and `~/.claw/data/files/` or `~/.claw/data/blobs/` | `storage_objects`, `storage_tokens`, and `storage_shares` are drive-sidecar tables, not `core.sqlite` tables. |
+| Search indexes and search FTS | Sidecar: `~/.claw/data/search.sqlite` | Rebuildable from canonical sources. |
+| Notify, monitor, feed, infra, and ops services | Sidecars: `notify.sqlite`, `monitor.sqlite`, `feed.sqlite`, `infra.sqlite`, and `ops.sqlite` under `~/.claw/data/` | These are service-specific operational stores. Durable product records should not move here only because a service package exists. |
+| Vault and secret material | Encrypted sidecar or host secret storage: `vault.sqlite` or signed-host secret storage | `core.sqlite` may store only opaque `secret_ref` references. |
+| Workspace manifests, desired/observed state, projections, sessions files, audit, locks, backups, browser state, reports, and source-like generated assets | Workspace files under `.claw/` | Do not add workspace-local SQLite databases for canonical framework records. |
+| Clawix bridge status, helper install metadata, native approvals, host audit, UI-only caches, and signed-host operational state | Host state under `~/.clawix` or platform-native app data | Host state may reference framework ids but must not become the canonical framework store. |
+| Codex data | External read-only source: `~/.codex` | Read, mirror, or index only. Writes require an explicit reversible opt-in. |
+
+## Retired and blocked locations
+
+The following paths are retired pre-public locations, not compatibility
+contracts: `.clawjs/data/database.sqlite`,
+`.clawjs/data/productivity.sqlite`, `.clawjs/data/storage.sqlite`,
+and `.clawjs/code/code.sqlite`.
+
+There are no approved new readers, writers, or migrations for those locations.
+If a future user-data rescue discovers a valuable external copy there, it must
+be handled as a blocked migration proposal with:
+
+- affected source path and detected schema,
+- data-loss risk,
+- dry-run inventory command,
+- non-destructive copy/import plan,
+- canonical target bucket from the table above,
+- rollback or quarantine plan,
+- owner and next validation step.
+
+`scripts/storage-boundary-guard.mjs` protects this contract by scanning code,
+tests, fixtures, docs routing, and reviewed store declarations for retired paths
+and bucket drift.

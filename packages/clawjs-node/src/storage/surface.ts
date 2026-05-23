@@ -3,10 +3,10 @@ import { clawPersistentSurface } from "@clawjs/core";
 const source = { file: "packages/clawjs-node/src/storage/surface.ts", language: "typescript" } as const;
 
 const schemaSurfaceNodes = [
-  clawPersistentSurface.table({ id: `claw.database.core.table.storage_objects`, name: "storage_objects", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.storage_tokens`, name: "storage_tokens", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.storage_shares`, name: "storage_shares", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.storage_objects_bucket_key_idx`, name: "storage_objects_bucket_key_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source })
+  clawPersistentSurface.table({ id: `claw.database.drive.table.storage_objects`, name: "storage_objects", parentId: "claw.database.drive", databaseId: "claw.database.drive", source }),
+  clawPersistentSurface.table({ id: `claw.database.drive.table.storage_tokens`, name: "storage_tokens", parentId: "claw.database.drive", databaseId: "claw.database.drive", source }),
+  clawPersistentSurface.table({ id: `claw.database.drive.table.storage_shares`, name: "storage_shares", parentId: "claw.database.drive", databaseId: "claw.database.drive", source }),
+  clawPersistentSurface.index({ id: `claw.database.drive.index.storage_objects_bucket_key_idx`, name: "storage_objects_bucket_key_idx", parentId: "claw.database.drive", databaseId: "claw.database.drive", source })
 ];
 
 export const STORAGE_STORE_SCHEMA_SQL = String.raw`

@@ -3,25 +3,25 @@ import { clawPersistentSurface } from "@clawjs/core";
 const source = { file: "packages/clawjs-node/src/code/surface.ts", language: "typescript" } as const;
 
 const schemaSurfaceNodes = [
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_repositories`, name: "code_repositories", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_intents`, name: "code_intents", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_reservations`, name: "code_reservations", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_evidence`, name: "code_evidence", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_checks`, name: "code_checks", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_reviews`, name: "code_reviews", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_queue`, name: "code_queue", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_host_syncs`, name: "code_host_syncs", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_policies`, name: "code_policies", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_gate_runs`, name: "code_gate_runs", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_projects`, name: "code_projects", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.table({ id: `claw.database.core.table.code_agents`, name: "code_agents", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_intents_repo_status_idx`, name: "code_intents_repo_status_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_reservations_active_idx`, name: "code_reservations_active_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_checks_intent_name_idx`, name: "code_checks_intent_name_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_reviews_intent_idx`, name: "code_reviews_intent_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_gate_runs_intent_idx`, name: "code_gate_runs_intent_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_projects_status_idx`, name: "code_projects_status_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.code_agents_project_idx`, name: "code_agents_project_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source })
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_repositories`, name: "code_repositories", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_intents`, name: "code_intents", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_reservations`, name: "code_reservations", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_evidence`, name: "code_evidence", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_checks`, name: "code_checks", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_reviews`, name: "code_reviews", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_queue`, name: "code_queue", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_host_syncs`, name: "code_host_syncs", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_policies`, name: "code_policies", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_gate_runs`, name: "code_gate_runs", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_projects`, name: "code_projects", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.table({ id: `claw.database.runtime.table.code_agents`, name: "code_agents", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_intents_repo_status_idx`, name: "code_intents_repo_status_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_reservations_active_idx`, name: "code_reservations_active_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_checks_intent_name_idx`, name: "code_checks_intent_name_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_reviews_intent_idx`, name: "code_reviews_intent_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_gate_runs_intent_idx`, name: "code_gate_runs_intent_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_projects_status_idx`, name: "code_projects_status_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_agents_project_idx`, name: "code_agents_project_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source })
 ];
 
 export const CODE_LEDGER_SCHEMA_SQL = String.raw`
