@@ -105,9 +105,9 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
           reason: `repair active for ${check.id}`,
           metadata: { command: "claw test require", lane: check.lane, fingerprint, repairId: repair.id },
         });
-        return { check, resource, fingerprint, reused: reusable, result: { status: "pending" as const, demand, conflicts: [] }, repair };
+        return { check, resource, fingerprint, reused: reusable, result: { status: "pending" as const, lease: undefined, demand, conflicts: [] }, repair };
       }
-      if (reusable && reusable.status !== "passed") {
+      if (reusable) {
         return { check, resource, fingerprint, reused: reusable, result: null, repair: null };
       }
       return {
