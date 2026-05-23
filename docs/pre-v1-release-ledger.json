@@ -6,16 +6,16 @@
   "policySurfaceId": "claw.versionGovernance.preV1",
   "changesets": {
     "mode": "frozen_until_v1_freeze",
-    "count": 358,
-    "filenameSha256": "60b175a0dac7ed49596931b24f838aa686a7b7b2fbb71a15a6dc0a5ee385ee09",
-    "contentSha256": "258cfb66b04a1fa3c2e353996de2cef4bbc78a52f41816b0fb43ca81aaf42f1c",
+    "count": 362,
+    "filenameSha256": "6c06199822012a4ca0bbc5ee0997162c6f98e5c03253fe554d5443975aa9eac2",
+    "contentSha256": "7cf80f50f87bb8e4566e082b56e0e0f8b172d866cee037e0b4b0a17bd7fd554a",
     "excludedFiles": ["README.md"],
     "notes": "Existing changesets are frozen pre-release ledger input, not approval to bump packages. Update this ledger only with explicit user approval to freeze/release."
   },
   "packageVersions": {
     "mode": "frozen_until_v1_freeze",
-    "packageFileCount": 38,
-    "nameVersionSha256": "d60b3a26d0566a3eb775e9554bcb8f7668eda42bb2066887e3e2086fdc432265",
+    "packageFileCount": 39,
+    "nameVersionSha256": "821ac6025e70e840cef3f39125bcce9ce2aa09198a9b33ae431fbe5797cc8729",
     "notes": "Package manifest versions are pinned while phase is pre_v1_mutable. Dependency lockfile versions are external/dependency metadata and are not covered by this digest."
   },
   "externalAllowlist": [
