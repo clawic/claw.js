@@ -60,7 +60,7 @@ export function SettingsPage() {
     <>
       <PageHeader title="Settings">
         <span className="text-xs text-text-muted">
-          Tenant <span className="font-mono">{tenantId}</span>
+          Relay isolation <span className="font-mono">{tenantId}</span>
         </span>
       </PageHeader>
       <PageBody>

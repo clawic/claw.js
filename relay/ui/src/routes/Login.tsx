@@ -45,7 +45,7 @@ export function LoginPage() {
 
         <form onSubmit={onSubmit} className="cb-login-form" data-testid="login-form">
           <label className="cb-field required">
-            <span>Tenant ID</span>
+            <span>Relay isolation ID</span>
             <input
               value={tenantId}
               onChange={(e) => setTenantId(e.target.value)}

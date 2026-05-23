@@ -57,7 +57,7 @@ export function DevicesPage() {
     <>
       <PageHeader title="Devices" />
       <PageBody>
-        <Card title="Registered devices" subtitle="iPhones, Macs, and remote agents in your tenant.">
+        <Card title="Registered devices" subtitle="iPhones, Macs, and remote agents in this Relay isolation.">
           {error ? <ErrorMsg message={error} /> : null}
           {devices == null ? <Loading /> : null}
           {devices?.length === 0 ? (

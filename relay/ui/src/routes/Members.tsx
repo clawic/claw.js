@@ -65,7 +65,7 @@ export function MembersPage() {
     <>
       <PageHeader title="Members" />
       <PageBody>
-        <Card title="Invite a teammate" subtitle={tenantId ? `Tenant ${tenantId}` : undefined}>
+        <Card title="Invite a teammate" subtitle={tenantId ? `Relay isolation ${tenantId}` : undefined}>
           <div className="flex items-end gap-2 flex-wrap">
             <label className="flex flex-col text-xs flex-1 min-w-[240px]">
               <span className="text-text-muted">Email</span>
