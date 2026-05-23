@@ -501,6 +501,32 @@
         }
       }
     },
+    "packages/clawjs-core/src/index-remote-contracts.test.ts": {
+      "lines": 2051,
+      "reason": "Remote contract matrix test crossed the 2000-line boundary while preserving route coverage; split by remote domain and assertion family before expanding more route contracts.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2051,
+          "maxAllowed": 2051,
+          "nextMaxAllowed": 2050,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/index-remote-contracts.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
+    },
     "packages/clawjs-core/src/index.test.ts": {
       "lines": 2038,
       "reason": "Remote Gateway/Sync contract integration coverage awaiting extraction into focused remote contract test files; future growth should move scenarios out of the core barrel test.",
@@ -576,6 +602,32 @@
           ],
           "gate": "node scripts/source-size-check.mjs",
           "reason": "packages/clawjs-core/src/schemas.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
+    },
+    "packages/clawjs-core/src/surface-registry-graph.ts": {
+      "lines": 2105,
+      "reason": "Canonical surface registry graph crossed the 2000-line boundary while adding coordination and session surfaces; extract domain surface groups before expanding more registry nodes.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2105,
+          "maxAllowed": 2105,
+          "nextMaxAllowed": 2104,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-core/src/surface-registry-graph.ts is baselined only while it shrinks or avoids additional growth."
         }
       }
     },
@@ -865,6 +917,32 @@
         }
       }
     },
+    "packages/clawjs-sessions/src/store.ts": {
+      "lines": 2278,
+      "reason": "Sessions store remains a large persistence and migration boundary; split schema migration, projections, events, and memory extracts before expanding storage behavior.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2278,
+          "maxAllowed": 2278,
+          "nextMaxAllowed": 2277,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs-sessions/src/store.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
+    },
     "packages/clawjs-workspace/src/index.ts": {
       "lines": 1977,
       "reason": "Workspace runtime shell after indexing, human activity, context, work session, productivity, and instance assembly extraction; split new domains before expanding.",
@@ -1021,6 +1099,32 @@
         }
       }
     },
+    "packages/clawjs/src/cli-runtime-portal-command.ts": {
+      "lines": 2039,
+      "reason": "Runtime portal CLI crossed the 2000-line boundary with broad command handling; split planning, rendering, and handler modules before expanding more portal commands.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2039,
+          "maxAllowed": 2039,
+          "nextMaxAllowed": 2038,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-runtime-portal-command.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
+    },
     "packages/clawjs/src/cli-search-heavy-command.ts": {
       "lines": 4984,
       "blockGrowth": true,
@@ -1098,6 +1202,32 @@
           ],
           "gate": "node scripts/source-size-check.mjs",
           "reason": "packages/clawjs/src/index-data.test.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
+    },
+    "packages/clawjs/src/index-workspace-runtime.test.ts": {
+      "lines": 2096,
+      "reason": "Workspace runtime integration test crossed the 2000-line boundary while preserving scenario coverage; split by workspace/runtime surface before adding more cases.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2096,
+          "maxAllowed": 2096,
+          "nextMaxAllowed": 2095,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/index-workspace-runtime.test.ts is baselined only while it shrinks or avoids additional growth."
         }
       }
     },
