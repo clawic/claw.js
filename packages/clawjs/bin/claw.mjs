@@ -63,7 +63,8 @@ async function hasPackage(packageName) {
 function isMissingImport(error, specifier) {
   const code = error?.code;
   if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND") return false;
-  return String(error?.message ?? "").includes(specifier);
+  const message = String(error?.message ?? "");
+  return message.includes(specifier) || message.includes(specifier.replace(/^@clawjs\/core\/compact-catalogs$/, "@clawjs/core/dist/compact-catalogs.js"));
 }
 
 async function importCoreCompactCatalogs() {
