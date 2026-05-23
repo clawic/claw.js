@@ -440,6 +440,32 @@ test("Mac action planner builds the shared dry-run contract for CLI, MCP, API an
   });
   assert.deepEqual(resizeArgs.blockedReasons, []);
 
+  const missingMediaApp = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.media.pause.missing.1",
+      capabilityId: "mac.media.playback.pause",
+      actor,
+      host,
+      dryRun: true,
+    }),
+  });
+  assert.equal(missingMediaApp.executable, true);
+  assert.deepEqual(missingMediaApp.blockedReasons, ["target_blocked:approved_media_app_required"]);
+
+  const approvedMediaApp = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.media.pause.approved.1",
+      capabilityId: "mac.media.playback.pause",
+      actor,
+      host,
+      arguments: { app: "Music" },
+      dryRun: true,
+    }),
+  });
+  assert.deepEqual(approvedMediaApp.blockedReasons, []);
+
   const blocked = buildMacActionPlan({
     request: macActionRequestSchema.parse({
       schemaVersion: clawContractVersionV1,
