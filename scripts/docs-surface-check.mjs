@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
-const writeSurface = process.argv.includes("--write");
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--write", "--self-test"]);
+const writeSurface = args.has("--write");
 const surfaceContract = JSON.parse(
   fs.readFileSync(path.join(rootDir, "docs", "surface-contract.registry.json"), "utf8"),
 );
@@ -251,6 +254,144 @@ function relayRouteSnippets(route) {
   return snippets;
 }
 
+function surfaceDiagnostic(violation) {
+  if (violation.startsWith("unknown argument")) {
+    return createDiagnostic("docs_surface_usage_error", violation, {
+      status: "USAGE",
+      location: "scripts/docs-surface-check.mjs",
+      suggestion: "Use --write, --self-test, or no arguments.",
+      safeNextStep: "Rerun node scripts/docs-surface-check.mjs with a supported argument.",
+    });
+  }
+  const missingPage = violation.match(/^docs site is missing required page (.+)$/);
+  if (missingPage) {
+    return createDiagnostic("docs_surface_page_missing", violation, {
+      location: `docs/${missingPage[1]}`,
+      suggestion: "Restore the required public docs page or update the required page list when the surface intentionally moved.",
+      safeNextStep: "Add the missing docs page, then rerun node scripts/docs-surface-check.mjs.",
+    });
+  }
+  const declarationFailure = violation.match(/^surface declaration inventory failed for ([^:]+):/);
+  if (declarationFailure) {
+    return createDiagnostic("docs_surface_declaration_inventory_unavailable", violation, {
+      location: declarationFailure[1],
+      suggestion: "Build package declaration files before checking the public export inventory.",
+      safeNextStep: "Run npm run build:packages, then rerun node scripts/docs-surface-check.mjs.",
+    });
+  }
+  if (violation.startsWith("docs/surface.md")) {
+    return createDiagnostic("docs_surface_export_inventory_mismatch", violation, {
+      location: "docs/surface.md",
+      suggestion: "Regenerate or edit the public export inventory so it matches built declaration files.",
+      safeNextStep: "Run node scripts/docs-surface-check.mjs --write, review docs/surface.md, then rerun the check.",
+    });
+  }
+  const fileContains = violation.match(/^(.+) contains (.+)$/);
+  if (fileContains) {
+    return createDiagnostic("docs_surface_forbidden_reference", violation, {
+      location: fileContains[1],
+      suggestion: "Remove the stale, private, or repo-local reference from public documentation.",
+      safeNextStep: "Edit the named docs file to use public-safe wording, then rerun this check.",
+    });
+  }
+  const missingSnippet = violation.match(/^(.+) is missing required snippet (.+)$/);
+  if (missingSnippet) {
+    return createDiagnostic("docs_surface_required_snippet_missing", violation, {
+      location: missingSnippet[1],
+      suggestion: "Update the public docs so the required command, API, or behavior remains discoverable.",
+      safeNextStep: "Add the missing snippet to the named docs file, then rerun node scripts/docs-surface-check.mjs.",
+    });
+  }
+  if (violation.includes("SDK namespace") || violation.includes("workspace namespace")) {
+    return createDiagnostic("docs_surface_sdk_namespace_missing", violation, {
+      location: "docs/api.md",
+      suggestion: "Document the namespace listed in docs/surface-contract.registry.json.",
+      safeNextStep: "Add the missing namespace to docs/api.md, then rerun this check.",
+    });
+  }
+  if (violation.startsWith("docs/interface-matrix.md is missing")) {
+    return createDiagnostic("docs_surface_interface_matrix_missing", violation, {
+      location: "docs/interface-matrix.md",
+      suggestion: "Update the interface matrix taxonomy, visibility marker, parity column, or status from the surface contract.",
+      safeNextStep: "Edit docs/interface-matrix.md, then rerun node scripts/docs-surface-check.mjs.",
+    });
+  }
+  if (violation.includes("CLI group") || violation.includes("CLI surface is missing command")) {
+    return createDiagnostic("docs_surface_cli_missing", violation, {
+      location: violation.startsWith("packages/") ? "packages/clawjs/src/index.ts" : "docs/cli.md",
+      suggestion: "Keep CLI source and CLI docs aligned with the surface contract command inventory.",
+      safeNextStep: "Add the missing CLI route or docs entry, then rerun node scripts/docs-surface-check.mjs.",
+    });
+  }
+  if (violation.startsWith("relay/src/server/app.ts is missing")) {
+    return createDiagnostic("docs_surface_relay_missing", violation, {
+      location: "relay/src/server/app.ts",
+      suggestion: "Implement or document the route/resource expected by the Relay surface contract.",
+      safeNextStep: "Restore the Relay route/resource or update the contract with a public decision, then rerun this check.",
+    });
+  }
+  return createDiagnostic("docs_surface_check_failed", violation, {
+    location: "scripts/docs-surface-check.mjs",
+    suggestion: "Inspect the named docs, source, or contract entry and restore surface parity.",
+    safeNextStep: "Fix the reported surface mismatch, then rerun node scripts/docs-surface-check.mjs.",
+  });
+}
+
+function printViolations(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "Documentation surface check failed:",
+    diagnostics: items.map(surfaceDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printViolations([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "docs site is missing required page api.md",
+    "surface declaration inventory failed for packages/clawjs-core/dist/index.d.ts: ENOENT /Users/example/private/packages/clawjs-core/dist/index.d.ts",
+    "docs/api.md contains absolute local workspace path /Users/example/private",
+    "docs/cli.md is missing required snippet claw tasks list",
+    "docs/api.md is missing SDK namespace claw.secret",
+    "docs/interface-matrix.md is missing taxonomy tier stable",
+    "packages/clawjs/src/index.ts is missing CLI group tasks",
+    "CLI surface is missing command claw tasks list",
+    "relay/src/server/app.ts is missing route GET /v1/example",
+    "docs/surface.md contains stale export OldThing",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "docs_surface_usage_error",
+    "docs_surface_page_missing",
+    "docs_surface_declaration_inventory_unavailable",
+    "docs_surface_forbidden_reference",
+    "docs_surface_required_snippet_missing",
+    "docs_surface_sdk_namespace_missing",
+    "docs_surface_interface_matrix_missing",
+    "docs_surface_cli_missing",
+    "docs_surface_relay_missing",
+    "docs_surface_export_inventory_mismatch",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Keep CLI source and CLI docs aligned")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printViolations([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
+if (args.has("--self-test")) {
+  runSelfTest();
+  console.log("Documentation surface check self-test passed.");
+  process.exit(0);
+}
+
 const docFiles = docRoots.flatMap((targetPath) => listFiles(targetPath))
   .filter((filePath) => /\.(md|html)$/.test(filePath));
 
@@ -369,14 +510,24 @@ for (const resource of surfaceContract.relay.resources) {
 }
 
 const surfacePath = path.join(rootDir, "docs", "surface.md");
-const sdkExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-node", "dist", "index.d.ts")));
-const coreExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-core", "dist", "index.d.ts")));
-const databaseExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-database", "dist", "index.d.ts")));
-const audioExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-audio", "dist", "index.d.ts")));
-const sessionsExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-sessions", "dist", "index.d.ts")));
-const userModelExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-user-model", "dist", "index.d.ts")));
-const runtimeExports = new Set(extractExports(path.join(rootDir, "packages", "clawjs-runtime", "dist", "index.d.ts")));
-const expectedSurfaceEntries = new Set([...sdkExports, ...coreExports, ...databaseExports, ...audioExports, ...sessionsExports, ...userModelExports, ...runtimeExports]);
+const expectedSurfaceEntries = new Set();
+for (const relativePath of [
+  "packages/clawjs-node/dist/index.d.ts",
+  "packages/clawjs-core/dist/index.d.ts",
+  "packages/clawjs-database/dist/index.d.ts",
+  "packages/clawjs-audio/dist/index.d.ts",
+  "packages/clawjs-sessions/dist/index.d.ts",
+  "packages/clawjs-user-model/dist/index.d.ts",
+  "packages/clawjs-runtime/dist/index.d.ts",
+]) {
+  try {
+    for (const exportName of extractExports(path.join(rootDir, relativePath))) {
+      expectedSurfaceEntries.add(exportName);
+    }
+  } catch (error) {
+    violations.push(`surface declaration inventory failed for ${relativePath}: ${error.message}`);
+  }
+}
 if (writeSurface) {
   fs.writeFileSync(surfacePath, renderSurface([...expectedSurfaceEntries].sort()));
 }
@@ -395,10 +546,7 @@ for (const exportName of surfaceEntries) {
 }
 
 if (violations.length > 0) {
-  console.error("Documentation surface check failed:");
-  for (const violation of violations) {
-    console.error(`- ${violation}`);
-  }
+  printViolations(violations);
   process.exit(1);
 }
 
