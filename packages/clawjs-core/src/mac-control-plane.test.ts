@@ -175,6 +175,37 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.app.scroll",
     "mac.app.set_value",
     "mac.app.action",
+    "mac.text.inject",
+    "mac.utility.hide_all_windows",
+    "mac.utility.minimize_all_windows",
+    "mac.utility.minimize_all_windows_except_frontmost",
+    "mac.utility.minimize_app_windows_except_frontmost",
+    "mac.utility.isolate_window",
+    "mac.utility.unminimize_all_windows",
+    "mac.utility.show_desktop",
+    "mac.utility.clear_clipboard",
+    "mac.utility.sleep_displays",
+    "mac.utility.center_mouse_pointer",
+    "mac.utility.show_color_picker",
+    "mac.utility.toggle_dark_mode",
+    "mac.utility.toggle_mute_sound",
+    "mac.utility.keep_awake_on",
+    "mac.utility.keep_awake_off",
+    "mac.utility.toggle_desktop_icons",
+    "mac.utility.open_finder",
+    "mac.utility.open_terminal",
+    "mac.utility.open_shortcuts",
+    "mac.utility.open_passwords",
+    "mac.utility.open_airdrop",
+    "mac.utility.open_vpn_settings",
+    "mac.utility.open_private_relay_settings",
+    "mac.utility.open_hide_my_email_settings",
+    "mac.utility.open_keyboard_settings",
+    "mac.utility.open_display_settings",
+    "mac.utility.open_desktop_dock_settings",
+    "mac.utility.open_notifications_settings",
+    "mac.utility.open_sound_settings",
+    "mac.utility.open_privacy_settings",
     "mac.shortcut.list",
     "mac.shortcut.show",
     "mac.shortcut.run",
@@ -208,6 +239,7 @@ test("Mac V1 executable slice is fully declared", () => {
     "mac.app.scroll",
     "mac.app.set_value",
     "mac.app.action",
+    "mac.text.inject",
     "mac.shortcut.list",
     "mac.shortcut.show",
     "mac.shortcut.run",
@@ -244,6 +276,11 @@ test("Mac V1 executable slice is fully declared", () => {
   assert.equal(findMacAtlasCapability("mac.audio.mute.set")?.risk, "medium");
   assert.equal(findMacAtlasCapability("mac.media.playback.pause")?.backend.strategy, "apple_events");
   assert.deepEqual(findMacAtlasCapability("mac.media.playback.pause")?.permissions, ["mac.permission.automation_apple_events"]);
+  assert.equal(findMacAtlasCapability("mac.text.inject")?.risk, "high");
+  assert.deepEqual(findMacAtlasCapability("mac.text.inject")?.permissions, ["mac.permission.accessibility"]);
+  assert.equal(findMacAtlasCapability("mac.utility.clear_clipboard")?.risk, "high");
+  assert.deepEqual(findMacAtlasCapability("mac.utility.hide_all_windows")?.permissions, ["mac.permission.accessibility"]);
+  assert.equal(findMacAtlasCapability("mac.utility.open_passwords")?.risk, "high");
   assert.equal(findMacAtlasCapability("mac.display.brightness")?.portableFamily, "system.display.set_brightness");
 });
 
@@ -487,6 +524,33 @@ test("Mac action planner builds the shared dry-run contract for CLI, MCP, API an
     }),
   });
   assert.deepEqual(approvedMediaApp.blockedReasons, []);
+
+  const missingTextInjectionPayload = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.text.inject.missing.1",
+      capabilityId: "mac.text.inject",
+      actor,
+      host,
+      arguments: { text: "   " },
+      dryRun: true,
+    }),
+  });
+  assert.equal(missingTextInjectionPayload.executable, true);
+  assert.deepEqual(missingTextInjectionPayload.blockedReasons, ["arguments_required:text"]);
+
+  const validTextInjectionPayload = buildMacActionPlan({
+    request: macActionRequestSchema.parse({
+      schemaVersion: clawContractVersionV1,
+      requestId: "req.mac.text.inject.valid.1",
+      capabilityId: "mac.text.inject",
+      actor,
+      host,
+      arguments: { text: "secret payload" },
+      dryRun: true,
+    }),
+  });
+  assert.deepEqual(validTextInjectionPayload.blockedReasons, []);
 
   const blocked = buildMacActionPlan({
     request: macActionRequestSchema.parse({

@@ -267,12 +267,25 @@ test("evolution policy and ledger schemas preserve the rescue backbone", () => {
     title: "Test record",
     class: "migration_required",
     status: "active",
-    owner: "claw",
+    steward: "claw",
     surfaces: ["claw.schema.example"],
     tests: ["packages/clawjs-core/src/index.test.ts"],
     createdAt: "2026-05-18T00:00:00.000Z",
   });
   assert.equal(record.class, "migration_required");
+  assert.equal(record.steward, "claw");
+
+  const legacyRecord = clawEvolutionRecordSchema.parse({
+    id: "evo_test_legacy_record",
+    title: "Legacy test record",
+    class: "compatible",
+    status: "active",
+    owner: "claw",
+    surfaces: ["claw.schema.example"],
+    tests: ["packages/clawjs-core/src/index.test.ts"],
+    createdAt: "2026-05-18T00:00:00.000Z",
+  });
+  assert.equal(legacyRecord.steward, "claw");
 
   const ledger = clawEvolutionLedgerSchema.parse({
     schemaVersion: 1,
@@ -347,7 +360,7 @@ test("evolution operator plan gates mutations and classifies backups", () => {
       title: "Test migration",
       class: "migration_required",
       status: "active",
-      owner: "claw",
+      steward: "claw",
       surfaces: ["claw.database.records", "claw.search.index", "claw.external.provider"],
       tests: ["packages/clawjs-core/src/index.test.ts"],
       createdAt: "2026-05-18T00:00:00.000Z",
@@ -388,7 +401,7 @@ test("evolution rollback report records restore point and forward repair contrac
       title: "Test rollback",
       class: "migration_required",
       status: "active",
-      owner: "claw",
+      steward: "claw",
       surfaces: ["claw.database.records", "claw.search.index", "claw.external.provider"],
       tests: ["packages/clawjs-core/src/index.test.ts"],
       createdAt: "2026-05-18T00:00:00.000Z",
@@ -414,6 +427,7 @@ test("evolution rollback report records restore point and forward repair contrac
   assert.equal(rollbackReport.restorePoint.retentionDays, clawEvolutionPolicy.backup.retentionDays);
   assert.equal(rollbackReport.restorePoint.maxBytesBeforeOverride, clawEvolutionPolicy.backup.threshold.maxBytes);
   assert.equal(rollbackReport.restorePoint.maxFilesBeforeOverride, clawEvolutionPolicy.backup.threshold.maxFiles);
+  assert.equal(rollbackReport.restorePoint.rootSteward, "surface_steward");
   assert.equal(rollbackReport.restorePoint.surfaces.find((surface) => surface.surface === "claw.database.records")?.canonical, true);
   assert.equal(rollbackReport.restorePoint.surfaces.find((surface) => surface.surface === "claw.search.index")?.canonical, false);
   assert.equal(rollbackReport.forwardRepair.required, true);
@@ -439,7 +453,7 @@ test("evolution receipts redact paths, prompts, and secrets", () => {
       title: "Test receipt",
       class: "compatible",
       status: "active",
-      owner: "claw",
+      steward: "claw",
       surfaces: ["claw.workspace.state"],
       tests: ["packages/clawjs-core/src/index.test.ts"],
       createdAt: "2026-05-18T00:00:00.000Z",
@@ -477,7 +491,7 @@ test("evolution migrator lab validates foundation fixtures", () => {
       title: "Test lab",
       class: "migration_required",
       status: "active",
-      owner: "claw",
+      steward: "claw",
       surfaces: ["docs/evolution/fixtures", "@clawjs/core migration lab API"],
       tests: ["packages/clawjs-core/src/index.test.ts"],
       createdAt: "2026-05-18T00:00:00.000Z",
@@ -510,7 +524,7 @@ test("evolution migrator lab validates foundation fixtures", () => {
     surfaces: kinds.map((kind) => ({
       id: `claw.fixture.${kind}.v1`,
       kind,
-      owner: kind === "rescue" ? "clawix" : "clawjs",
+      steward: kind === "rescue" ? "clawix" : "clawjs",
       backupStrategy: kind === "database" || kind === "schema" || kind === "permission"
         ? "snapshot_before_mutation"
         : kind === "search_index"
@@ -668,7 +682,7 @@ test("evolution migrator lab validates foundation fixtures", () => {
         title: "Retired runtime adapter test",
         class: "adapter_required",
         status: "retired_runtime_adapter",
-        owner: "claw",
+        steward: "claw",
         surfaces: ["claw.runtime.adapter.test"],
         tests: ["packages/clawjs-core/src/index.test.ts"],
         adapter: "runtime protocol adapter retired after compatibility window",
@@ -688,7 +702,7 @@ test("evolution migrator lab validates foundation fixtures", () => {
         title: "Retired data migrator test",
         class: "migration_required",
         status: "retired_runtime_adapter",
-        owner: "claw",
+        steward: "claw",
         surfaces: ["claw.database.core.records.v1"],
         tests: ["packages/clawjs-core/src/index.test.ts"],
         migration: "public data migrator must remain forward-compatible",
@@ -705,7 +719,7 @@ test("evolution migrator lab validates foundation fixtures", () => {
     stableSurfaces: [{
       id: "test.unknown.stable.surface",
       kind: "unsupportedStableKind",
-      owner: "claw",
+      steward: "claw",
       name: "Unsupported Stable Surface",
       storageClass: "frameworkGlobal",
       canonicality: "canonical",

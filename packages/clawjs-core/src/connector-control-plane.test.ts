@@ -254,7 +254,7 @@ test("deny rules win and raw trace mode remains explicit", () => {
   assert.equal(decision.audit.rawTraceRequiresOptIn, true);
 });
 
-test("unknown cost blocks unless an approval-bound scoped grant allows it", () => {
+test("unknown cost blocks unless a scoped connector grant allows it", () => {
   const costRequest: ConnectorExecutionRequest = {
     ...baseRequest,
     expectedCost: undefined,
@@ -283,9 +283,10 @@ test("unknown cost blocks unless an approval-bound scoped grant allows it", () =
     request: costRequest,
     policy: basePolicy,
     budgets: [budget],
-    approvalGrant: {
+    scopedGrant: {
       id: "grant",
       expiresAt: "2026-05-15T12:10:00.000Z",
+      approvalEvidenceId: "approval-cost-review",
       providerIds: ["github"],
       capabilityIds: ["issues.create.record"],
       riskTiers: ["cost"],
@@ -293,6 +294,9 @@ test("unknown cost blocks unless an approval-bound scoped grant allows it", () =
     },
   });
   assert.equal(allowed.allowed, true);
+  assert.equal(allowed.audit.scopedGrantId, "grant");
+  assert.equal(allowed.audit.approvalEvidenceId, "approval-cost-review");
+  assert.equal(allowed.audit.approvalGrantId, "grant");
 });
 
 test("connector control plane fails closed when governed context is required but not approved", () => {
@@ -403,9 +407,10 @@ test("connector control plane audit declares governed context refs, secret refs,
   const decision = evaluateConnectorControlPlaneRequest({
     request,
     policy: basePolicy,
-    approvalGrant: {
-      id: "approval-release-read",
+    scopedGrant: {
+      id: "grant-release-read",
       expiresAt: "2026-05-18T10:10:00.000Z",
+      approvalEvidenceId: "approval-release-read",
       providerIds: ["revenuecat"],
       operationIds: ["revenuecat.project_configuration.read"],
       capabilityIds: ["project.read.configuration"],
@@ -419,7 +424,9 @@ test("connector control plane audit declares governed context refs, secret refs,
   assert.deepEqual(decision.audit.secretRefs, ["secret://revenuecat/v1"]);
   assert.deepEqual(decision.audit.defaultContextRefs, ["revenuecat_api_v2"]);
   assert.deepEqual(decision.audit.appliedRuleIds, ["revenuecat_v2_to_v1"]);
-  assert.equal(decision.audit.approvalGrantId, "approval-release-read");
+  assert.equal(decision.audit.scopedGrantId, "grant-release-read");
+  assert.equal(decision.audit.approvalEvidenceId, "approval-release-read");
+  assert.equal(decision.audit.approvalGrantId, "grant-release-read");
   assert.deepEqual(decision.audit.reasonCodes, []);
 });
 

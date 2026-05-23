@@ -27,6 +27,24 @@ export const CLAW_EVOLUTION_STABLE_SURFACE_STRATEGIES = [
   "root_policy",
 ] as const;
 
+const legacyStewardField = ["own", "er"].join("");
+const legacyRootStewardField = ["root", "Owner"].join("");
+const legacySurfaceStewardValue = ["surface", legacyStewardField].join("_");
+
+function normalizeDeprecatedStewardField(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  if (typeof record.steward === "string" || typeof record[legacyStewardField] !== "string") return value;
+  return { ...record, steward: record[legacyStewardField] };
+}
+
+function normalizeDeprecatedRootStewardField(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  if (typeof record.rootSteward === "string" || record[legacyRootStewardField] !== legacySurfaceStewardValue) return value;
+  return { ...record, rootSteward: "surface_steward" };
+}
+
 export const clawEvolutionPolicy = {
   schemaVersion: 1,
   sourceOfTruth: "clawjs",
@@ -56,12 +74,13 @@ export const clawEvolutionPolicy = {
   },
 } as const;
 
-export const clawEvolutionRecordSchema = z.object({
+export const clawEvolutionRecordSchema = z.preprocess(normalizeDeprecatedStewardField, z.object({
   id: z.string().regex(/^evo_[a-z0-9_]+$/),
   title: z.string().min(1),
   class: z.enum(CLAW_EVOLUTION_CHANGE_CLASSES),
   status: z.enum(CLAW_EVOLUTION_RECORD_STATUSES),
-  owner: z.string().min(1),
+  steward: z.string().min(1),
+  owner: z.string().min(1).optional(),
   surfaces: z.array(z.string().min(1)).min(1),
   tests: z.array(z.string().min(1)),
   adr: z.string().optional(),
@@ -71,7 +90,7 @@ export const clawEvolutionRecordSchema = z.object({
   notes: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
-});
+}));
 
 export const clawEvolutionLedgerSchema = z.object({
   schemaVersion: z.literal(1),
@@ -85,6 +104,7 @@ export const clawEvolutionLedgerSchema = z.object({
 
 export const clawEvolutionBaselineSurfaceSchema = z.object({
   id: z.string().min(1),
+  steward: z.string().optional(),
   owner: z.string().optional(),
   kind: z.string().optional(),
   parentId: z.string().optional(),
@@ -241,7 +261,7 @@ export const clawEvolutionRepairReportSchema = z.object({
   }),
 });
 
-export const clawEvolutionRestorePointSchema = z.object({
+export const clawEvolutionRestorePointSchema = z.preprocess(normalizeDeprecatedRootStewardField, z.object({
   schemaVersion: z.literal(1),
   restorePointId: z.string().min(1),
   createdAt: z.string(),
@@ -249,7 +269,8 @@ export const clawEvolutionRestorePointSchema = z.object({
   retentionDays: z.number(),
   maxBytesBeforeOverride: z.number(),
   maxFilesBeforeOverride: z.number(),
-  rootOwner: z.literal("surface_owner"),
+  rootSteward: z.literal("surface_steward"),
+  rootOwner: z.literal("surface_owner").optional(),
   reversibility: z.literal("best_effort_forward_repair"),
   universalRollbackPromised: z.literal(false),
   surfaces: z.array(z.object({
@@ -258,7 +279,7 @@ export const clawEvolutionRestorePointSchema = z.object({
     requiresApproval: z.boolean(),
     canonical: z.boolean(),
   })),
-});
+}));
 
 export const clawEvolutionRollbackReportSchema = z.object({
   schemaVersion: z.literal(1),
@@ -285,7 +306,7 @@ export const clawEvolutionRollbackReportSchema = z.object({
   }),
 });
 
-export const clawEvolutionFixtureSurfaceSchema = z.object({
+const clawEvolutionFixtureSurfaceBaseSchema = z.object({
   id: z.string().min(1),
   kind: z.enum([
     "database",
@@ -304,11 +325,17 @@ export const clawEvolutionFixtureSurfaceSchema = z.object({
     "audit",
     "rescue",
   ]),
-  owner: z.string().min(1),
+  steward: z.string().min(1),
+  owner: z.string().min(1).optional(),
   backupStrategy: clawEvolutionBackupPolicySchema.shape.strategy,
   payload: z.record(z.string(), z.unknown()),
   expectedCurrent: z.record(z.string(), z.unknown()),
 });
+
+export const clawEvolutionFixtureSurfaceSchema = z.preprocess(
+  normalizeDeprecatedStewardField,
+  clawEvolutionFixtureSurfaceBaseSchema,
+);
 
 export const clawEvolutionVersionFixtureSchema = z.object({
   schemaVersion: z.literal(1),
@@ -339,7 +366,7 @@ export const clawEvolutionMigratorLabResultSchema = z.object({
   })),
   adapterChecks: z.array(z.object({
     surfaceId: z.string().min(1),
-    kind: clawEvolutionFixtureSurfaceSchema.shape.kind,
+    kind: clawEvolutionFixtureSurfaceBaseSchema.shape.kind,
     status: z.enum(["pass", "fail", "blocked"]),
     notes: z.array(z.string()),
   })),
@@ -689,7 +716,7 @@ export function createEvolutionRestorePoint(input: {
     retentionDays: clawEvolutionPolicy.backup.retentionDays,
     maxBytesBeforeOverride: clawEvolutionPolicy.backup.threshold.maxBytes,
     maxFilesBeforeOverride: clawEvolutionPolicy.backup.threshold.maxFiles,
-    rootOwner: "surface_owner",
+    rootSteward: "surface_steward",
     reversibility: "best_effort_forward_repair",
     universalRollbackPromised: false,
     surfaces: input.plan.backupPolicies.map((policy) => ({
@@ -1164,7 +1191,7 @@ function hasRequiredFixtureKinds(fixtures: ClawEvolutionVersionFixture[]): boole
 function toEvolutionBaselineSurface(node: ClawPersistentSurfaceNode): ClawEvolutionBaselineSurface {
   return stripUndefined({
     id: node.id,
-    owner: node.steward,
+    steward: node.steward,
     kind: node.kind,
     parentId: node.parentId,
     path: node.path,

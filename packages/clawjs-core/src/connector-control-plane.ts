@@ -204,9 +204,10 @@ export interface ConnectorNetworkProof {
   host?: string;
 }
 
-export interface ConnectorApprovalGrant {
+export interface ConnectorScopedGrant {
   id: string;
   expiresAt: string;
+  approvalEvidenceId?: string;
   providerIds?: string[];
   operationIds?: string[];
   capabilityIds?: string[];
@@ -214,6 +215,13 @@ export interface ConnectorApprovalGrant {
   allowsUnknownCost?: boolean;
   allowsNetworkPolicyBypass?: boolean;
 }
+
+/**
+ * @deprecated Use ConnectorScopedGrant. This compatibility alias names the
+ * legacy approval-bound connector grant projection; approval evidence remains
+ * review metadata, while the grant is the scoped capability edge.
+ */
+export type ConnectorApprovalGrant = ConnectorScopedGrant;
 
 export interface ConnectorExecutionRequest {
   provider: ConnectorProvider;
@@ -246,6 +254,11 @@ export interface ConnectorAuditDeclaration {
   secretRefs?: string[];
   defaultContextRefs?: string[];
   appliedRuleIds?: string[];
+  scopedGrantId?: string;
+  approvalEvidenceId?: string;
+  /**
+   * @deprecated Use scopedGrantId. Kept for existing audit consumers.
+   */
   approvalGrantId?: string;
   reasonCodes?: ConnectorControlPlaneDecisionReason["code"][];
 }
@@ -301,7 +314,7 @@ export function createConnectorCapability(
 }
 
 export function connectorApprovalGrantMatches(
-  grant: ConnectorApprovalGrant | undefined,
+  grant: ConnectorScopedGrant | undefined,
   request: ConnectorExecutionRequest,
 ): boolean {
   if (!grant) {
@@ -324,11 +337,17 @@ export function evaluateConnectorControlPlaneRequest(input: {
   budgets?: ConnectorBudget[];
   networkPolicies?: ConnectorNetworkPolicy[];
   networkProof?: ConnectorNetworkProof;
+  scopedGrant?: ConnectorScopedGrant;
+  /**
+   * @deprecated Use scopedGrant. Retained so existing callers keep failing
+   * closed under the same scoped grant checks until they migrate.
+   */
   approvalGrant?: ConnectorApprovalGrant;
 }): ConnectorControlPlaneDecision {
-  const { request, policy, budgets = [], networkPolicies = [], networkProof, approvalGrant } = input;
+  const { request, policy, budgets = [], networkPolicies = [], networkProof } = input;
+  const scopedGrant = input.scopedGrant ?? input.approvalGrant;
   const reasons: ConnectorControlPlaneDecisionReason[] = [];
-  const matchingGrant = connectorApprovalGrantMatches(approvalGrant, request) ? approvalGrant : undefined;
+  const matchingGrant = connectorApprovalGrantMatches(scopedGrant, request) ? scopedGrant : undefined;
 
   if (policy.requireContext && (!request.context?.actorId || !request.context?.purpose || !request.context?.requestId)) {
     reasons.push({
@@ -365,14 +384,14 @@ export function evaluateConnectorControlPlaneRequest(input: {
   if (request.operation.requiresApproval && !matchingGrant) {
     reasons.push({
       code: "approval_required",
-      message: `Operation ${request.operation.id} requires a scoped grant tied to approval evidence.`,
+      message: `Operation ${request.operation.id} requires a scoped connector grant tied to approval evidence.`,
     });
   }
 
-  if (approvalGrant && !matchingGrant) {
+  if (scopedGrant && !matchingGrant) {
     reasons.push({
       code: "approval_expired",
-      message: `Approval-bound grant ${approvalGrant.id} is expired or outside the requested scope.`,
+      message: `Scoped connector grant ${scopedGrant.id} is expired or outside the requested scope.`,
     });
   }
 
@@ -390,7 +409,11 @@ export function evaluateConnectorControlPlaneRequest(input: {
       ...(request.context?.actorId ? { actorId: request.context.actorId } : {}),
       ...(request.context?.requestId ? { requestId: request.context.requestId } : {}),
       ...auditGovernedContext(request),
-      ...(matchingGrant ? { approvalGrantId: matchingGrant.id } : {}),
+      ...(matchingGrant ? {
+        scopedGrantId: matchingGrant.id,
+        approvalGrantId: matchingGrant.id,
+        ...(matchingGrant.approvalEvidenceId ? { approvalEvidenceId: matchingGrant.approvalEvidenceId } : {}),
+      } : {}),
       reasonCodes: reasons.map((reason) => reason.code),
     },
   };
@@ -538,7 +561,7 @@ function evaluatePolicyRules(
 function evaluateBudgets(
   request: ConnectorExecutionRequest,
   budgets: ConnectorBudget[],
-  grant: ConnectorApprovalGrant | undefined,
+  grant: ConnectorScopedGrant | undefined,
   reasons: ConnectorControlPlaneDecisionReason[],
 ): void {
   if (!request.operation.costRisk) {
@@ -586,7 +609,7 @@ function evaluateNetworkPolicy(
   request: ConnectorExecutionRequest,
   networkPolicies: ConnectorNetworkPolicy[],
   networkProof: ConnectorNetworkProof | undefined,
-  grant: ConnectorApprovalGrant | undefined,
+  grant: ConnectorScopedGrant | undefined,
   reasons: ConnectorControlPlaneDecisionReason[],
 ): void {
   const policy = networkPolicies.find((candidate) => candidate.id === request.operation.networkPolicyId);
