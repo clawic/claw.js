@@ -11,7 +11,7 @@ import {
   uniqueRecordsById,
 } from "./cli-dense-data-semantic-common.ts";
 
-const DENSE_SEMANTIC_VIEW_LIMIT = 250;
+const DENSE_SEMANTIC_VIEW_LIMIT = 50;
 
 export function materializedProductSpecTimeline(
   input: ProfessionalRecordsCliInput,
