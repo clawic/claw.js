@@ -213,6 +213,14 @@ flowchart TD
   claw_contracts_api --> claw_api_sessions
   claw_api_sessions_importCodex["Codex session import contract\napiRoute"]
   claw_contracts_api --> claw_api_sessions_importCodex
+  claw_api_sessions_messages["Sessions service message list contract\napiRoute"]
+  claw_contracts_api --> claw_api_sessions_messages
+  claw_api_sessions_dynamicTools["Sessions service dynamic tool contract\napiRoute"]
+  claw_contracts_api --> claw_api_sessions_dynamicTools
+  claw_api_sessions_projectionRebuild["Sessions projection rebuild contract\napiRoute"]
+  claw_contracts_api --> claw_api_sessions_projectionRebuild
+  claw_api_sessions_memoryExtractRebuild["Sessions memory extract rebuild contract\napiRoute"]
+  claw_contracts_api --> claw_api_sessions_memoryExtractRebuild
   claw_api_signals_vertical["Signals vertical route template\napiRoute"]
   claw_contracts_api --> claw_api_signals_vertical
   claw_api_relay_remote["Remote Relay client channel\napiRoute"]
@@ -699,6 +707,8 @@ flowchart TD
   claw_contracts_events --> claw_event_routeGraph_remote_access_evaluated
   claw_event_routeGraph_clawjs_tracking_registry["clawjs.tracking-registry\neventTopic"]
   claw_contracts_events --> claw_event_routeGraph_clawjs_tracking_registry
+  claw_event_sessions_fixtureRecoverableCorruption["fixture.recoverable_corruption\neventTopic"]
+  claw_contracts_events --> claw_event_sessions_fixtureRecoverableCorruption
   claw_external_mapping_event_blueskyFeedPost["app.bsky.feed.post\nexternalMapping"]
   claw_contracts_external --> claw_external_mapping_event_blueskyFeedPost
   claw_external_mapping_event_notionPageContentUpdated["page.content_updated\nexternalMapping"]
@@ -777,6 +787,18 @@ flowchart TD
   claw_contracts_config --> claw_env_actorTrustedKeys
   claw_env_adoptionCanonicitySelfTest["adoption canonicity self test environment variable\nenvVar"]
   claw_contracts_config --> claw_env_adoptionCanonicitySelfTest
+  claw_env_agentCoordinationActive["agent coordination active environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_agentCoordinationActive
+  claw_env_agentCoordinationBypass["agent coordination bypass environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_agentCoordinationBypass
+  claw_env_agentCoordinationBypassReason["agent coordination bypass reason environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_agentCoordinationBypassReason
+  claw_env_agentCoordinationRunDir["agent coordination run dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_agentCoordinationRunDir
+  claw_env_agentCoordinationStateDir["agent coordination state dir environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_agentCoordinationStateDir
+  claw_env_agentSessionId["agent session id environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_agentSessionId
   claw_env_allowedOrigins["allowed origins environment variable\nenvVar"]
   claw_contracts_config --> claw_env_allowedOrigins
   claw_env_allowPreV1Release["allow pre v1 release environment variable\nenvVar"]
@@ -1874,6 +1896,10 @@ flowchart TD
   clawix_home["Clawix host home\nroot"]
   claw_database_core["Framework main database\ndatabase"]
   claw_global --> claw_database_core
+  claw_database_agentCoordination["Agent coordination ledger database\ndatabase"]
+  claw_global --> claw_database_agentCoordination
+  claw_run_agentCoordination["Agent coordination heartbeat run directory\nfolder"]
+  claw_global --> claw_run_agentCoordination
   claw_database_support["Support inbox projection database\nsidecar"]
   claw_global --> claw_database_support
   claw_database_core_table_workspace_records["workspace_records\ntable"]
@@ -2068,6 +2094,8 @@ flowchart TD
   claw_database_monitor --> claw_database_monitor_index_idx_network_events_decision
   claw_workspace_manifest["Workspace manifest\nfile"]
   claw_workspace --> claw_workspace_manifest
+  claw_workspace_agentCoordination["agent-coordination\nfolder"]
+  claw_workspace --> claw_workspace_agentCoordination
   claw_workspace_desiredState["desiredState\nfolder"]
   claw_workspace --> claw_workspace_desiredState
   claw_workspace_projections["projections\nfolder"]
@@ -2841,6 +2869,10 @@ flowchart TD
 | `claw.api.mcp.serversRefresh` | apiRoute | api | claw |  |  |  |  |  | `/v1/mcp/servers/{serverId}/refresh` |
 | `claw.api.sessions` | apiRoute | api | claw |  |  |  |  |  | `/v1/sessions` |
 | `claw.api.sessions.importCodex` | apiRoute | api | claw |  |  |  |  |  | `/v1/sessions/import/codex` |
+| `claw.api.sessions.messages` | apiRoute | api | claw |  |  |  | Public Sessions service route for listing, reading, rebuilding, or projecting session-owned state. | Covered by persistent surface, narrative, resource, and sessions hydration route tests. | `/v1/sessions/{sessionId}/messages` |
+| `claw.api.sessions.dynamicTools` | apiRoute | api | claw |  |  |  | Public Sessions service route for listing, reading, rebuilding, or projecting session-owned state. | Covered by persistent surface, narrative, resource, and sessions hydration route tests. | `/v1/sessions/{sessionId}/dynamic-tools` |
+| `claw.api.sessions.projectionRebuild` | apiRoute | api | claw |  |  |  | Public Sessions service route for listing, reading, rebuilding, or projecting session-owned state. | Covered by persistent surface, narrative, resource, and sessions hydration route tests. | `/v1/sessions/projection/rebuild` |
+| `claw.api.sessions.memoryExtractRebuild` | apiRoute | api | claw |  |  |  | Public Sessions service route for listing, reading, rebuilding, or projecting session-owned state. | Covered by persistent surface, narrative, resource, and sessions hydration route tests. | `/v1/sessions/memory-extract/rebuild` |
 | `claw.api.signals.vertical` | apiRoute | api | claw |  |  |  |  |  | `/v1/{verticalId}` |
 | `claw.api.relay.remote` | apiRoute | api | claw |  |  |  |  |  | `/v1/relay/remote` |
 | `claw.api.relay.connector` | apiRoute | api | claw |  |  |  |  |  | `/v1/relay/connectors` |
@@ -3084,6 +3116,7 @@ flowchart TD
 | `claw.event.routeGraph.remote.agent.service.evaluated` | eventTopic | event | claw |  |  |  |  |  | `remote.agent_service.evaluated` |
 | `claw.event.routeGraph.remote.access.evaluated` | eventTopic | event | claw |  |  |  |  |  | `remote.access.evaluated` |
 | `claw.event.routeGraph.clawjs.tracking.registry` | eventTopic | event | claw |  |  |  |  |  | `clawjs.tracking-registry` |
+| `claw.event.sessions.fixtureRecoverableCorruption` | eventTopic | event | claw |  |  |  | Hermetic Sessions fixture topic that exercises recoverable corruption import behavior. | Covered by persistent surface guard and sessions realistic fixture tests. | `fixture.recoverable_corruption` |
 | `claw.external.mapping.event.blueskyFeedPost` | externalMapping | external | external |  |  |  |  |  | `app.bsky.feed.post` |
 | `claw.external.mapping.event.notionPageContentUpdated` | externalMapping | external | external |  |  |  |  |  | `page.content_updated` |
 | `claw.external.mapping.event.stripeCheckoutSessionCompleted` | externalMapping | external | external |  |  |  |  |  | `checkout.session.completed` |
@@ -3123,6 +3156,12 @@ flowchart TD
 | `claw.env.actorSessionId` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_SESSION_ID` |
 | `claw.env.actorTrustedKeys` | envVar | config | claw |  |  |  |  |  | `CLAW_ACTOR_TRUSTED_KEYS` |
 | `claw.env.adoptionCanonicitySelfTest` | envVar | config | claw |  |  |  |  |  | `CLAW_ADOPTION_CANONICITY_SELF_TEST` |
+| `claw.env.agentCoordinationActive` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_AGENT_COORDINATION_ACTIVE` |
+| `claw.env.agentCoordinationBypass` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_AGENT_COORDINATION_BYPASS` |
+| `claw.env.agentCoordinationBypassReason` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_AGENT_COORDINATION_BYPASS_REASON` |
+| `claw.env.agentCoordinationRunDir` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_AGENT_COORDINATION_RUN_DIR` |
+| `claw.env.agentCoordinationStateDir` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_AGENT_COORDINATION_STATE_DIR` |
+| `claw.env.agentSessionId` | envVar | config | claw |  |  |  | Agent coordination environment override used by local test lanes and resource leases. | Covered by persistent surface guard and agent coordination/test lane checks. | `CLAW_AGENT_SESSION_ID` |
 | `claw.env.allowedOrigins` | envVar | config | claw |  |  |  |  |  | `CLAW_ALLOWED_ORIGINS` |
 | `claw.env.allowPreV1Release` | envVar | config | claw |  |  |  |  |  | `CLAW_ALLOW_PRE_V1_RELEASE` |
 | `claw.env.audioBlobsDir` | envVar | config | claw |  |  |  |  |  | `CLAW_AUDIO_BLOBS_DIR` |
@@ -3474,8 +3513,8 @@ flowchart TD
 | `claw.cli.command.system` | cliCommand | cli | claw |  |  |  |  |  | `system` |
 | `claw.cli.command.network` | cliCommand | cli | claw |  |  |  |  |  | `network` |
 | `claw.cli.command.mac-care` | cliCommand | cli | claw |  |  |  |  |  | `mac-care` |
-| `claw.cli.command.agent-resource` | cliCommand | cli | claw |  |  |  |  |  | `agent-resource` |
-| `claw.cli.command.test` | cliCommand | cli | claw |  |  |  |  |  | `test` |
+| `claw.cli.command.agent-resource` | cliCommand | cli | claw |  |  |  | Shared local coordination ledger CLI for agent leases, pending demands, reusable test results, repair stewardship, and bypass audit receipts. | packages/clawjs/src/cli-agent-resource-command.test.ts | `agent-resource` |
+| `claw.cli.command.test` | cliCommand | cli | claw |  |  |  | Coordination-aware test facade that plans lanes, requires shared resources, reuses valid results, and records pending demand instead of colliding with active runs. | packages/clawjs/src/cli-agent-resource-command.test.ts | `test` |
 | `claw.cli.command.mac` | cliCommand | cli | claw |  |  |  |  |  | `mac` |
 | `claw.cli.command.permissions` | cliCommand | cli | claw |  |  |  |  |  | `permissions` |
 | `claw.cli.command.wifi` | cliCommand | cli | claw |  |  |  |  |  | `wifi` |
@@ -3673,6 +3712,8 @@ flowchart TD
 | `claw.workspace` | root | persistent | claw |  |  |  |  |  | `.claw` |
 | `clawix.home` | root | persistent | clawix |  |  |  |  |  | `~/.clawix` |
 | `claw.database.core` | database | persistent | claw |  |  |  |  |  | `~/.claw/data/core.sqlite` |
+| `claw.database.agentCoordination` | database | persistent | claw |  |  |  | Durable coordination ledger database for local agents sharing test lanes, app launches, fixture data, CPU budgets, and interactive resources. | packages/clawjs/src/cli-agent-resource-command.test.ts plus inspect registry tests | `~/.claw/state/agent-coordination.sqlite` |
+| `claw.run.agentCoordination` | folder | persistent | claw |  |  |  | Ephemeral run-state directory for coordination heartbeat and intent files that make active local agent work inspectable. | packages/clawjs/src/cli-agent-resource-command.test.ts validates heartbeat and reap behavior. | `~/.claw/run/agent-coordination` |
 | `claw.database.support` | sidecar | persistent | claw |  |  |  |  |  | `~/.claw/data/support.sqlite` |
 | `claw.database.core.table.workspace_records` | table | persistent | claw |  |  |  |  |  | `` |
 | `claw.database.core.table.agent_assignments` | table | persistent | claw |  |  |  |  |  | `` |
@@ -3770,6 +3811,7 @@ flowchart TD
 | `claw.database.monitor.index.idx_network_events_observed` | index | persistent | claw |  |  |  |  |  | `` |
 | `claw.database.monitor.index.idx_network_events_decision` | index | persistent | claw |  |  |  |  |  | `` |
 | `claw.workspace.manifest` | file | persistent | claw |  |  |  |  |  | `.claw/manifest.json` |
+| `claw.workspace.agentCoordination` | folder | persistent | claw |  |  |  | Workspace-local coordination override and cache folder for repo-specific test lane and resource manifests. | claw test plan/require manifest parser tests and persistent surface registry tests | `.claw/agent-coordination` |
 | `claw.workspace.desiredState` | folder | persistent | claw |  |  |  |  |  | `.claw/state/desired` |
 | `claw.workspace.projections` | folder | persistent | claw |  |  |  |  |  | `.claw/projections` |
 | `claw.workspace.sessions` | folder | persistent | claw |  |  |  |  |  | `.claw/sessions` |
