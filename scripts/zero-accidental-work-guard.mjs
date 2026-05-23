@@ -3,12 +3,95 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = new Set(process.argv.slice(2));
 const failures = [];
 
+function zeroWorkDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("zero_accidental_work_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/zero-accidental-work-guard.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node scripts/zero-accidental-work-guard.mjs with supported arguments.",
+    });
+  }
+  const probeFailed = failure.match(/^(.+) failed:/);
+  if (probeFailed) {
+    return createDiagnostic("zero_accidental_work_probe_failed", failure, {
+      location: `scripts/zero-accidental-work-guard.mjs:${probeFailed[1]}`,
+      suggestion: "Inspect the probe command output; the guard could not determine whether startup stayed inert.",
+      safeNextStep: `Fix the ${probeFailed[1]} probe command, then rerun node scripts/zero-accidental-work-guard.mjs.`,
+    });
+  }
+  const forbidden = failure.match(/^(.+) performed forbidden ([^:]+):/);
+  if (forbidden) {
+    return createDiagnostic("zero_accidental_work_forbidden_effect", failure, {
+      location: `scripts/zero-accidental-work-guard.mjs:${forbidden[1]}`,
+      suggestion: "Remove process, timer, network, database, or heavy module work from help/import/createClaw startup.",
+      safeNextStep: `Make ${forbidden[1]} lazy or explicitly user-triggered, then rerun node scripts/zero-accidental-work-guard.mjs.`,
+    });
+  }
+  if (failure.startsWith("missing ")) {
+    const location = failure.replace(/^missing /, "");
+    return createDiagnostic("zero_accidental_work_required_file_missing", failure, {
+      location,
+      suggestion: "Restore the ADR, docs route, discoverability entry, operational coverage, or package hook.",
+      safeNextStep: `Add or restore ${location}, then rerun node scripts/zero-accidental-work-guard.mjs.`,
+    });
+  }
+  if (failure.includes(" must include ")) {
+    const location = failure.split(" must include ")[0];
+    return createDiagnostic("zero_accidental_work_required_text_missing", failure, {
+      location,
+      suggestion: "Restore the zero-accidental-work governance text or test hook.",
+      safeNextStep: `Update ${location}, then rerun node scripts/zero-accidental-work-guard.mjs.`,
+    });
+  }
+  return createDiagnostic("zero_accidental_work_guard_failed", failure, {
+    location: "scripts/zero-accidental-work-guard.mjs",
+    suggestion: "Inspect the inert-startup invariant and restore lazy or user-triggered behavior.",
+    safeNextStep: "Fix the reported zero-accidental-work issue, then rerun node scripts/zero-accidental-work-guard.mjs.",
+  });
+}
+
+function printFailures(options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "zero accidental work guard failed:",
+    diagnostics: failures.map(zeroWorkDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  failures.push(
+    "/Users/example/private/probe failed: token sk-test-secret-123456",
+    "claw-help performed forbidden network: https://example.invalid",
+    "docs/decision-map.md must include \"Zero Accidental Work\"",
+  );
+  const chunks = [];
+  printFailures({ stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  failures.length = 0;
+  if (!output.includes("code: zero_accidental_work_probe_failed")) throw new Error("self-test missing probe code");
+  if (!output.includes("code: zero_accidental_work_forbidden_effect")) throw new Error("self-test missing forbidden-effect code");
+  if (!output.includes("code: zero_accidental_work_required_text_missing")) throw new Error("self-test missing required-text code");
+  if (!output.includes("suggestion: Remove process, timer, network")) throw new Error("self-test missing suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!["--self-test"].includes(arg)) {
+    failures.push(`unknown argument ${arg}`);
+    printFailures();
+    process.exit(64);
+  }
+}
+
 if (args.has("--self-test")) {
+  runSelfTest();
   console.log("zero accidental work guard self-test passed");
   process.exit(0);
 }
@@ -172,8 +255,7 @@ for (const [relativePath, snippets] of requiredSnippets) {
 }
 
 if (failures.length > 0) {
-  console.error("zero accidental work guard failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures();
   process.exit(1);
 }
 
