@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const scriptRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const allowedStatuses = new Set(["enforced", "partial", "external_pending"]);
@@ -20,11 +21,30 @@ function parseArgs(argv) {
   const args = { root: scriptRoot, selfTest: false, profile: null };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--root") args.root = path.resolve(argv[++index]);
-    else if (arg === "--profile") args.profile = argv[++index];
+    if (arg === "--root") {
+      if (!argv[index + 1]) {
+        printErrors(["--root requires a value"]);
+        process.exit(64);
+      }
+      args.root = path.resolve(argv[++index]);
+    } else if (arg === "--profile") {
+      if (!argv[index + 1]) {
+        printErrors(["--profile requires a value"]);
+        process.exit(64);
+      }
+      args.profile = argv[++index];
+    }
     else if (arg === "--self-test") args.selfTest = true;
+    else {
+      printErrors([`unknown argument ${arg}`]);
+      process.exit(64);
+    }
   }
   args.profile ??= fs.existsSync(path.join(args.root, "macos")) ? "clawix" : "claw";
+  if (!["claw", "clawix"].includes(args.profile)) {
+    printErrors([`unknown profile ${args.profile}`]);
+    process.exit(64);
+  }
   return args;
 }
 
@@ -42,8 +62,16 @@ function read(root, relativePath) {
   return fs.readFileSync(absolute(root, relativePath), "utf8");
 }
 
-function readJson(root, relativePath) {
-  return JSON.parse(read(root, relativePath));
+function readJson(root, relativePath, errors = null) {
+  try {
+    return JSON.parse(read(root, relativePath));
+  } catch (error) {
+    if (errors) {
+      errors.push(`${relativePath} is not valid JSON: ${error.message}`);
+      return null;
+    }
+    throw error;
+  }
 }
 
 function listFiles(root, relativeDir, predicate, output = []) {
@@ -94,6 +122,77 @@ function coveredSet(rows, key) {
   return result;
 }
 
+function threatModelDiagnostic(error) {
+  if (error.startsWith("unknown argument") || error.startsWith("unknown profile") || error.startsWith("--")) {
+    return createDiagnostic("threat_model_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/security-threat-model-check.mjs",
+      suggestion: "Use --self-test, --root <repo>, or --profile claw|clawix.",
+      safeNextStep: "Rerun node scripts/security-threat-model-check.mjs with supported arguments.",
+    });
+  }
+  const invalidJson = error.match(/^(.+) is not valid JSON:/);
+  if (invalidJson) {
+    return createDiagnostic("threat_model_invalid_json", error, {
+      location: invalidJson[1],
+      suggestion: "Fix JSON syntax before trusting threat model coverage results.",
+      safeNextStep: `Repair ${invalidJson[1]}, then rerun node scripts/security-threat-model-check.mjs.`,
+    });
+  }
+  if (error.includes("references missing path") || error.startsWith("missing ")) {
+    const location = error.includes("references missing path")
+      ? error.split("references missing path ")[1]
+      : error.replace(/^missing /, "");
+    return createDiagnostic("threat_model_required_path_missing", error, {
+      location,
+      suggestion: "Restore the threat model document, ADR, coverage file, route, or evidence path.",
+      safeNextStep: `Add or restore ${location}, then rerun node scripts/security-threat-model-check.mjs.`,
+    });
+  }
+  if (error.includes("required threat layer")) {
+    return createDiagnostic("threat_model_layer_uncovered", error, {
+      location: "docs/security-threat-model.coverage.json",
+      suggestion: "Add a coverage row for the required threat-model layer.",
+      safeNextStep: "Update docs/security-threat-model.coverage.json, then rerun node scripts/security-threat-model-check.mjs.",
+    });
+  }
+  if (error.includes("security-sensitive") || error.includes("threat model row")) {
+    return createDiagnostic("threat_model_sensitive_surface_uncovered", error, {
+      location: "docs/security-threat-model.coverage.json",
+      suggestion: "Cover every security-sensitive ADR, critical surface, and critical route with a threat model row.",
+      safeNextStep: "Add the missing row in docs/security-threat-model.coverage.json, then rerun node scripts/security-threat-model-check.mjs.",
+    });
+  }
+  if (error.includes("must mention") || error.includes("test:docs") || error.includes("fast lane")) {
+    const location = error.split(" ")[0];
+    return createDiagnostic("threat_model_route_missing", error, {
+      location,
+      suggestion: "Restore the route, discoverability entry, or test hook for security-threat-model-check.",
+      safeNextStep: `Update ${location}, then rerun node scripts/security-threat-model-check.mjs.`,
+    });
+  }
+  if (error.includes(".") || error.includes("coverage")) {
+    return createDiagnostic("threat_model_coverage_invalid", error, {
+      location: "docs/security-threat-model.coverage.json",
+      suggestion: "Fix row fields, status, reviewDate, threat categories, controls, evidence, steward, or ADR references.",
+      safeNextStep: "Repair docs/security-threat-model.coverage.json, then rerun node scripts/security-threat-model-check.mjs.",
+    });
+  }
+  return createDiagnostic("threat_model_check_failed", error, {
+    location: "scripts/security-threat-model-check.mjs",
+    suggestion: "Inspect the threat model invariant and restore the expected coverage.",
+    safeNextStep: "Fix the reported threat model issue, then rerun node scripts/security-threat-model-check.mjs.",
+  });
+}
+
+function printErrors(errors, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "security threat model check failed:",
+    diagnostics: errors.map(threatModelDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function validateCoverage(root, errors) {
   const coveragePath = "docs/security-threat-model.coverage.json";
   validatePath(root, "docs/security-threat-model.md", "canonical threat model doc", errors);
@@ -101,7 +200,8 @@ function validateCoverage(root, errors) {
   validatePath(root, coveragePath, "threat model coverage", errors);
   if (errors.length > 0) return;
 
-  const coverage = readJson(root, coveragePath);
+  const coverage = readJson(root, coveragePath, errors);
+  if (!coverage) return;
   if (coverage.version !== 1) errors.push("docs/security-threat-model.coverage.json version must be 1");
   validatePath(root, coverage.canonicalDoc, "coverage.canonicalDoc", errors);
   validatePath(root, coverage.canonicalAdr, "coverage.canonicalAdr", errors);
@@ -184,7 +284,8 @@ function validateRouting(root, profile, errors) {
     }
   }
   if (!isClawix) {
-    const packageJson = readJson(root, "package.json");
+    const packageJson = readJson(root, "package.json", errors);
+    if (!packageJson) return;
     if (!String(packageJson.scripts?.["test:docs"] ?? "").includes("security-threat-model-check.mjs")) {
       errors.push("package.json test:docs must run scripts/security-threat-model-check.mjs");
     }
@@ -268,6 +369,7 @@ function runSelfTest() {
   const missingLayer = runFixture(fixtureBase({ coverage: { requiredLayers: ["missing-layer"] } }));
   assert.notEqual(missingLayer.status, 0);
   assert.match(`${missingLayer.stderr}${missingLayer.stdout}`, /missing-layer/);
+  assert.match(`${missingLayer.stderr}${missingLayer.stdout}`, /code: threat_model_layer_uncovered/);
 
   const expired = runFixture(fixtureBase({
     coverage: {
@@ -303,6 +405,21 @@ function runSelfTest() {
   assert.notEqual(missingRoute.status, 0);
   assert.match(`${missingRoute.stderr}${missingRoute.stdout}`, /route\.missing/);
 
+  const chunks = [];
+  printErrors([
+    "/Users/example/private/docs/security-threat-model.coverage.json is not valid JSON: token sk-test-secret-123456",
+    "docs/adr/0002-sensitive.md is security-sensitive but is not covered by a threat model row",
+    "docs/decision-map.md must mention security-threat-model-check",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: threat_model_invalid_json/);
+  assert.match(output, /code: threat_model_sensitive_surface_uncovered/);
+  assert.match(output, /code: threat_model_route_missing/);
+  assert.match(output, /suggestion: Cover every security-sensitive ADR/);
+  assert.match(output, /next: Add the missing row in docs\/security-threat-model\.coverage\.json/);
+  assert.doesNotMatch(output, /\/Users\/example/);
+  assert.doesNotMatch(output, /sk-test-secret-123456/);
+
   console.log("security threat model check self-test passed");
 }
 
@@ -311,8 +428,7 @@ if (options.selfTest) {
 } else {
   const errors = runCheck();
   if (errors.length > 0) {
-    console.error("security threat model check failed:");
-    for (const error of errors) console.error(`- ${error}`);
+    printErrors(errors);
     process.exit(1);
   }
   console.log("security threat model check passed");
