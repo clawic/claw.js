@@ -346,6 +346,19 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(timelinePayload.data.materializedView.items.some((item) => item.kind === "quality_gap" && item.recordId === "fixture_gap_missing_dob"), true);
   assert.equal(timelinePayload.data.materializedView.gaps.some((gap) => gap.id === "fixture_gap_missing_dob"), true);
 
+  const patientMedication = await runCliCapture(["medication", "add", "--patient", "fixture_patient_ada", "--name", "Fixture medication", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientMedication.code, CLI_EXIT_OK, patientMedication.stderr || patientMedication.stdout);
+
+  const patientMedications = await runCliCapture(["patient", "fixture_patient_ada", "medications", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(patientMedications.code, CLI_EXIT_OK, patientMedications.stderr || patientMedications.stdout);
+  const patientMedicationsPayload = JSON.parse(patientMedications.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { summary: { medications: number; activeMedications: number }; records: { medications: Array<{ name: string; patientId: string }> } } } };
+  assert.equal(patientMedicationsPayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(patientMedicationsPayload.data.coverage.recordsMaterialized, true);
+  assert.equal(patientMedicationsPayload.data.semanticView.id, "patient.medications");
+  assert.equal(patientMedicationsPayload.data.materializedView.summary.medications >= 1, true);
+  assert.equal(patientMedicationsPayload.data.materializedView.summary.activeMedications >= 1, true);
+  assert.equal(patientMedicationsPayload.data.materializedView.records.medications.some((record) => record.name === "Fixture medication" && record.patientId === "fixture_patient_ada"), true);
+
   const caseTimeline = await runCliCapture(["case", "fixture_legal_case_smith", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(caseTimeline.code, CLI_EXIT_OK);
   const caseTimelinePayload = JSON.parse(caseTimeline.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { itemCount: number; items: Array<{ kind: string; recordId: string }> } } };
@@ -356,6 +369,16 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(caseTimelinePayload.data.materializedView.items.some((item) => item.kind === "case" && item.recordId === "fixture_legal_case_smith"), true);
   assert.equal(caseTimelinePayload.data.materializedView.items.some((item) => item.kind === "case_evidence" && item.recordId === "fixture_case_evidence_contract"), true);
   assert.equal(caseTimelinePayload.data.materializedView.items.some((item) => item.kind === "evidence" && item.recordId === "fixture_evidence_contract"), true);
+
+  const caseEvidence = await runCliCapture(["case", "fixture_legal_case_smith", "evidence", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(caseEvidence.code, CLI_EXIT_OK, caseEvidence.stderr || caseEvidence.stdout);
+  const caseEvidencePayload = JSON.parse(caseEvidence.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { summary: { evidenceItems: number; evidenceSources: number }; items: Array<{ kind: string; recordId: string }> } } };
+  assert.equal(caseEvidencePayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(caseEvidencePayload.data.coverage.recordsMaterialized, true);
+  assert.equal(caseEvidencePayload.data.semanticView.id, "case.evidence");
+  assert.equal(caseEvidencePayload.data.materializedView.summary.evidenceItems >= 1, true);
+  assert.equal(caseEvidencePayload.data.materializedView.summary.evidenceSources >= 1, true);
+  assert.equal(caseEvidencePayload.data.materializedView.items.some((item) => item.kind === "case_evidence" && item.recordId === "fixture_case_evidence_contract"), true);
 
   const serviceTimeline = await runCliCapture(["service", "fixture_service_api", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(serviceTimeline.code, CLI_EXIT_OK);
@@ -377,6 +400,16 @@ test("runCli seeds the dense-data acceptance fixture into the shared database", 
   assert.equal(studyTimelinePayload.data.materializedView.items.some((item) => item.kind === "study" && item.recordId === "fixture_study_trial_a"), true);
   assert.equal(studyTimelinePayload.data.materializedView.items.some((item) => item.kind === "participant" && item.recordId === "fixture_participant_subject_001"), true);
   assert.equal(studyTimelinePayload.data.materializedView.items.some((item) => item.kind === "sample" && item.recordId === "fixture_sample_tube_a"), true);
+
+  const studyCohort = await runCliCapture(["study", "fixture_study_trial_a", "cohort", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(studyCohort.code, CLI_EXIT_OK, studyCohort.stderr || studyCohort.stdout);
+  const studyCohortPayload = JSON.parse(studyCohort.stdout) as { data: { coverage: { implementationStatus: string; recordsMaterialized: boolean }; semanticView: { id: string }; materializedView: { summary: { participants: number; identityRelations: number }; items: Array<{ kind: string; recordId: string }> } } };
+  assert.equal(studyCohortPayload.data.coverage.implementationStatus, "materialized_semantic_view");
+  assert.equal(studyCohortPayload.data.coverage.recordsMaterialized, true);
+  assert.equal(studyCohortPayload.data.semanticView.id, "study.cohort");
+  assert.equal(studyCohortPayload.data.materializedView.summary.participants >= 1, true);
+  assert.equal(studyCohortPayload.data.materializedView.summary.identityRelations >= 1, true);
+  assert.equal(studyCohortPayload.data.materializedView.items.some((item) => item.kind === "participant" && item.recordId === "fixture_participant_subject_001"), true);
 
   const sampleTimeline = await runCliCapture(["sample", "fixture_sample_tube_a", "timeline", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(sampleTimeline.code, CLI_EXIT_OK);
