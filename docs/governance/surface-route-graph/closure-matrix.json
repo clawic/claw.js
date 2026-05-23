@@ -47,7 +47,7 @@
         "exposes": ["claw.edge.sessions.exposes.bridge", "claw.edge.bridge.exposes.ui"],
         "brokers": ["claw.edge.bridge.brokers.daemon", "claw.edge.daemon.brokers.runtime"]
       },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"],
+      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"],
       "hermeticValidation": "Fixture and inspect coverage prove the local UI to bridge to daemon to runtime to sessions route shape without live prompts or paid providers.",
       "debt": { "status": "complete", "evidence": "Route has surfaceNarrative and resourceContract in the registry." }
     },
@@ -63,7 +63,7 @@
         "exposes": ["claw.edge.sessions.exposes.bridge", "claw.edge.bridge.exposes.companion"],
         "brokers": ["claw.edge.bridge.brokers.daemon", "claw.edge.daemon.brokers.runtime"]
       },
-      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"],
+      "fixtures": ["packages/clawjs/src/inspect-cli.test.ts", "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"],
       "hermeticValidation": "Inspect coverage and bridge frame tests prove the companion WebSocket route shape without requiring a physical companion device.",
       "debt": { "status": "complete", "evidence": "Route has surfaceNarrative and resourceContract in the registry." }
     },
@@ -141,7 +141,7 @@
       },
       "fixtures": ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "scripts/verify-host-permission-contract.mjs"],
       "hermeticValidation": "Mac control and host-permission contract tests cover the plan and receipt shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["signed-host.native-action-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["route.mac.directCliAction.narrative-resource", "signed-host.native-action-validation"] }
     },
     {
       "id": "mac.permissionLifecycle",
@@ -157,7 +157,7 @@
       },
       "fixtures": ["packages/clawjs-core/src/mac-control-plane.test.ts", "packages/clawjs/src/cli-mac-control-command.test.ts", "packages/clawjs/src/inspect-cli.test.ts", "scripts/verify-host-permission-contract.mjs"],
       "hermeticValidation": "Mac permission and host-permission contract tests cover the lifecycle contract shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["signed-host.permission-prompt-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["route.mac.permissionLifecycle.narrative-resource", "signed-host.permission-prompt-validation"] }
     },
     {
       "id": "gateway.headlessAgentHost",
@@ -172,7 +172,7 @@
       },
       "fixtures": ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Gateway conformance and inspect fixtures cover the headless-host route contract.",
-      "debt": { "status": "blocked", "blockedGapIds": ["remote.physical-provider-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["route.gateway.headlessAgentHost.narrative-resource", "remote.physical-provider-validation"] }
     },
     {
       "id": "sync.sessions",
@@ -187,7 +187,7 @@
       },
       "fixtures": ["packages/clawjs-core/src/index.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Sync route and inspect fixtures cover the sessions sync contract shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["remote.physical-sync-driver-application"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["route.sync.sessions.narrative-resource", "remote.physical-sync-driver-application"] }
     }
   ],
   "surfaces": [
@@ -197,7 +197,7 @@
       "inputContracts": ["clawix.protocol.bridge.v1"],
       "outputContracts": ["clawix.protocol.bridge.v1", "claw.agent_assignment.internal_mac.v1"],
       "edges": { "consumes": ["claw.edge.chat.ui.consumes.bridge", "claw.edge.chat.ui.consumes.assignment"], "owns": [], "exposes": [], "brokers": [] },
-      "fixtures": ["macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": ["clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Route fixtures cover UI ingress through local bridge and assignment selection.",
       "debt": { "status": "blocked", "blockedGapIds": ["surface.clawix.ui.chat.narrative-resource"] }
     },
@@ -207,7 +207,7 @@
       "inputContracts": ["clawix.protocol.bridge.v1"],
       "outputContracts": ["clawix.protocol.bridge.v1"],
       "edges": { "consumes": ["claw.edge.companion.consumes.bridge"], "owns": [], "exposes": [], "brokers": [] },
-      "fixtures": ["packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": ["clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Bridge frame fixtures cover companion frame contracts.",
       "debt": { "status": "blocked", "blockedGapIds": ["surface.clawix.companion.client.narrative-resource"] }
     },
@@ -217,7 +217,7 @@
       "inputContracts": ["clawix.protocol.bridge.v1", "claw.event.sessions.message.appended"],
       "outputContracts": ["claw.protocol.hostCommand.v1", "clawix.protocol.bridge.v1"],
       "edges": { "consumes": ["claw.edge.chat.ui.consumes.bridge", "claw.edge.companion.consumes.bridge"], "owns": [], "exposes": ["claw.edge.bridge.exposes.ui", "claw.edge.bridge.exposes.companion"], "brokers": ["claw.edge.bridge.brokers.daemon"] },
-      "fixtures": ["macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py", "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
+      "fixtures": ["clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py", "clawix:packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Bridge E2E and frame fixtures cover local bridge contracts.",
       "debt": { "status": "blocked", "blockedGapIds": ["surface.clawix.bridge.local.narrative-resource", "signed-host.clawix-real-app-validation"] }
     },
@@ -259,7 +259,7 @@
       "edges": { "consumes": ["claw.edge.remote.consumes.relay", "claw.edge.remote.consumes.coordinator"], "owns": [], "exposes": [], "brokers": [] },
       "fixtures": ["relay/tests/e2e/relay.e2e.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Relay and inspect fixtures cover remote-client route ingress.",
-      "debt": { "status": "blocked", "blockedGapIds": ["remote.physical-provider-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.remote.client.narrative-resource", "remote.physical-provider-validation"] }
     },
     {
       "id": "claw.relay",
@@ -269,7 +269,7 @@
       "edges": { "consumes": ["claw.edge.remote.consumes.relay"], "owns": [], "exposes": ["claw.edge.relay.exposes.remote"], "brokers": ["claw.edge.relay.brokers.connector", "claw.edge.relay.brokers.assignments"] },
       "fixtures": ["relay/tests/e2e/relay.e2e.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Relay E2E and inspect fixtures cover the critical Relay control-plane route shape.",
-      "debt": { "status": "blocked", "blockedGapIds": ["remote.physical-provider-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.relay.narrative-resource", "remote.physical-provider-validation"] }
     },
     {
       "id": "claw.relay.connector",
@@ -279,7 +279,7 @@
       "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.connector.brokers.workspace", "claw.edge.connector.brokers.runtime"] },
       "fixtures": ["relay/tests/e2e/codex-connector.e2e.test.ts", "packages/clawjs/src/inspect-cli.test.ts"],
       "hermeticValidation": "Connector E2E and inspect fixtures cover connector to workspace/runtime brokerage.",
-      "debt": { "status": "blocked", "blockedGapIds": ["remote.physical-provider-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.relay.connector.narrative-resource", "remote.physical-provider-validation"] }
     },
     {
       "id": "claw.mcp.surface",
@@ -309,7 +309,7 @@
       "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.mac.action.brokers.host", "claw.edge.system.telemetry.brokers.host"] },
       "fixtures": ["scripts/verify-host-permission-contract.mjs", "packages/clawjs-core/src/mac-control-plane.test.ts"],
       "hermeticValidation": "Hermetic checks prove host command/receipt shape only.",
-      "debt": { "status": "blocked", "blockedGapIds": ["signed-host.native-action-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.host.signed.narrative-resource", "signed-host.native-action-validation"] }
     },
     {
       "id": "claw.host.permissions",
@@ -319,7 +319,7 @@
       "edges": { "consumes": [], "owns": [], "exposes": [], "brokers": ["claw.edge.mac.permission.brokers.hostPermissions"] },
       "fixtures": ["scripts/verify-host-permission-contract.mjs", "packages/clawjs-core/src/mac-control-plane.test.ts"],
       "hermeticValidation": "Hermetic checks prove permission broker contract shape only.",
-      "debt": { "status": "blocked", "blockedGapIds": ["signed-host.permission-prompt-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.host.permissions.narrative-resource", "signed-host.permission-prompt-validation"] }
     },
     {
       "id": "claw.host.audit",
@@ -329,7 +329,7 @@
       "edges": { "consumes": [], "owns": ["claw.edge.mac.permission.owns.audit", "claw.edge.mac.action.owns.audit", "claw.edge.system.telemetry.owns.audit"], "exposes": [], "brokers": [] },
       "fixtures": ["scripts/verify-host-permission-contract.mjs", "packages/clawjs-core/src/mac-control-plane.test.ts"],
       "hermeticValidation": "Hermetic checks prove audit receipt shape only.",
-      "debt": { "status": "blocked", "blockedGapIds": ["signed-host.audit-persistence-validation"] }
+      "debt": { "status": "blocked", "blockedGapIds": ["surface.claw.host.audit.narrative-resource", "signed-host.audit-persistence-validation"] }
     }
   ],
   "blockedGaps": [
@@ -359,6 +359,42 @@
       "pairedFile": "docs/surface-resource-contract-baseline.json",
       "pendingDecision": "Backfill route-level surfaceNarrative and resourceContract for command-intent resolution.",
       "evidence": "The baseline files list cli.commandIntentResolution; CLI fixtures prove route behavior but not the route-level narrative/resource contract."
+    },
+    {
+      "id": "route.mac.directCliAction.narrative-resource",
+      "surfaceOrRouteId": "mac.directCliAction",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill route-level surfaceNarrative and resourceContract for direct Mac CLI actions.",
+      "evidence": "The baseline files list mac.directCliAction; Mac control fixtures prove plan/receipt routing but not the route-level narrative/resource contract."
+    },
+    {
+      "id": "route.mac.permissionLifecycle.narrative-resource",
+      "surfaceOrRouteId": "mac.permissionLifecycle",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill route-level surfaceNarrative and resourceContract for Mac permission lifecycle routing.",
+      "evidence": "The baseline files list mac.permissionLifecycle; permission fixtures prove state routing but not the route-level narrative/resource contract."
+    },
+    {
+      "id": "route.gateway.headlessAgentHost.narrative-resource",
+      "surfaceOrRouteId": "gateway.headlessAgentHost",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill route-level surfaceNarrative and resourceContract for Gateway to headless-host routing.",
+      "evidence": "The baseline files list gateway.headlessAgentHost; Gateway conformance fixtures prove route shape but not the route-level narrative/resource contract."
+    },
+    {
+      "id": "route.sync.sessions.narrative-resource",
+      "surfaceOrRouteId": "sync.sessions",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill route-level surfaceNarrative and resourceContract for session sync routing.",
+      "evidence": "The baseline files list sync.sessions; sync fixtures prove route shape but not the route-level narrative/resource contract."
     },
     {
       "id": "surface.clawix.ui.chat.narrative-resource",
@@ -415,6 +451,33 @@
       "evidence": "Session edges and routes are fixture-backed, but the sessions node remains in the baseline files."
     },
     {
+      "id": "surface.claw.remote.client.narrative-resource",
+      "surfaceOrRouteId": "claw.remote.client",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill node-level narrative/resource contracts for the remote client surface.",
+      "evidence": "Remote client route ingress is fixture-backed, but the remote client node remains in the baseline files."
+    },
+    {
+      "id": "surface.claw.relay.narrative-resource",
+      "surfaceOrRouteId": "claw.relay",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill node-level narrative/resource contracts for Relay as a critical remote-safe surface.",
+      "evidence": "Relay route edges and E2E fixtures are present, but the Relay node remains in the baseline files."
+    },
+    {
+      "id": "surface.claw.relay.connector.narrative-resource",
+      "surfaceOrRouteId": "claw.relay.connector",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill node-level narrative/resource contracts for the Relay connector surface.",
+      "evidence": "Connector route fixtures are present, but the Relay connector node remains in the baseline files."
+    },
+    {
       "id": "surface.claw.mcp.surface.narrative-resource",
       "surfaceOrRouteId": "claw.mcp.surface",
       "status": "blocked",
@@ -431,6 +494,33 @@
       "pairedFile": "docs/surface-resource-contract-baseline.json",
       "pendingDecision": "Backfill node-level narrative/resource contracts for the public command registry surface.",
       "evidence": "CLI command route edges are fixture-backed, but the command node remains in the baseline files."
+    },
+    {
+      "id": "surface.claw.host.signed.narrative-resource",
+      "surfaceOrRouteId": "claw.host.signed",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill node-level narrative/resource contracts for the signed host surface without moving host ownership into ClawJS.",
+      "evidence": "Host action route fixtures are present, but the signed host node remains in the baseline files."
+    },
+    {
+      "id": "surface.claw.host.permissions.narrative-resource",
+      "surfaceOrRouteId": "claw.host.permissions",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill node-level narrative/resource contracts for host permissions without claiming Node-owned native prompts.",
+      "evidence": "Permission lifecycle fixtures are present, but the host permissions node remains in the baseline files."
+    },
+    {
+      "id": "surface.claw.host.audit.narrative-resource",
+      "surfaceOrRouteId": "claw.host.audit",
+      "status": "blocked",
+      "file": "docs/surface-narrative-baseline.json",
+      "pairedFile": "docs/surface-resource-contract-baseline.json",
+      "pendingDecision": "Backfill node-level narrative/resource contracts for host audit without claiming physical signed-host persistence.",
+      "evidence": "Audit receipt fixtures are present, but the host audit node remains in the baseline files."
     },
     {
       "id": "remote.physical-provider-validation",
@@ -481,8 +571,8 @@
       "id": "signed-host.clawix-real-app-validation",
       "surfaceOrRouteId": "clawix.bridge.local",
       "status": "external_pending",
-      "file": "../Clawix/clawix/docs/adr/0011-surface-route-graph.md",
-      "pairedFile": "../Clawix/clawix/macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py",
+      "file": "clawix:docs/adr/0011-surface-route-graph.md",
+      "pairedFile": "clawix:macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py",
       "pendingDecision": "Run the private Clawix real-app validation flow before claiming visible signed-host bridge closure.",
       "evidence": "Clawix projection and hermetic bridge E2E pass; real app launch/Computer Use evidence was not produced in this audit."
     }

@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "surface-route-graph-source-review-v1",
+  "reviewedAt": "2026-05-23T00:00:00.000Z",
+  "status": "complete_with_blocked_gaps",
+  "items": [
+    {
+      "qaId": "QA-001",
+      "promptId": "primary_outcome",
+      "decisionAnchor": "line 130",
+      "userDecision": "Agentes mejores (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["docs/adr/0049-surface-route-graph.md", "skills/surface-route-work/SKILL.md", "claw inspect show|neighbors|routes|route"]
+    },
+    {
+      "qaId": "QA-002",
+      "promptId": "graph_scope",
+      "decisionAnchor": "line 130",
+      "userDecision": "Contratos + runtime (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["packages/clawjs-core/src/surface-registry-graph.ts", "scripts/surface-route-graph-guard.mjs", "docs/governance/surface-route-graph/closure-matrix.json"]
+    },
+    {
+      "qaId": "QA-003",
+      "promptId": "work_modes",
+      "decisionAnchor": "line 130",
+      "userDecision": "Superficie y ruta (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["skills/surface-route-work/SKILL.md", "docs/adr/0049-surface-route-graph.md", "claw inspect show|neighbors|routes|route"]
+    },
+    {
+      "qaId": "QA-004",
+      "promptId": "edge_source",
+      "decisionAnchor": "line 148",
+      "userDecision": "Registry extendido (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["packages/clawjs-core/src/surface-registry-graph.ts", "scripts/surface-route-graph-guard.mjs", "docs/adr/0049-surface-route-graph.md"]
+    },
+    {
+      "qaId": "QA-005",
+      "promptId": "strictness",
+      "decisionAnchor": "line 148",
+      "userDecision": "Fail desde dia uno",
+      "disposition": "implemented_with_blocked_gaps",
+      "evidenceRefs": ["scripts/surface-route-graph-guard.mjs", "scripts/surface-narrative-guard.mjs", "scripts/surface-resource-contract-guard.mjs", "docs/surface-narrative-baseline.json", "docs/surface-resource-contract-baseline.json"]
+    },
+    {
+      "qaId": "QA-006",
+      "promptId": "agent_packaging",
+      "decisionAnchor": "line 148",
+      "userDecision": "Skill + AGENTS + CLI (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["skills/surface-route-work/SKILL.md", "AGENTS.md", "CLAUDE.md", "packages/clawjs/src/inspect-cli.test.ts", "docs/discoverability.registry.json"]
+    },
+    {
+      "qaId": "QA-007",
+      "promptId": "initial_slice",
+      "decisionAnchor": "line 154",
+      "userDecision": "Chat agente (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["chat.localDesktop", "chat.companionBridge", "chat.remoteRelay", "packages/clawjs/src/inspect-cli.test.ts"]
+    },
+    {
+      "qaId": "QA-008",
+      "promptId": "edge_taxonomy",
+      "decisionAnchor": "line 154",
+      "userDecision": "Consume/owns/exposes/brokers (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["packages/clawjs-core/src/surface-registry-graph.ts", "scripts/surface-route-graph-guard.mjs", "docs/governance/surface-route-graph/closure-matrix.json"]
+    },
+    {
+      "qaId": "QA-009",
+      "promptId": "route_validation",
+      "decisionAnchor": "line 154",
+      "userDecision": "Fixture + E2E hermetica (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["packages/clawjs/src/inspect-cli.test.ts", "relay/tests/e2e/relay.e2e.test.ts", "docs/governance/surface-route-graph/closure-matrix.json"]
+    },
+    {
+      "qaId": "QA-010",
+      "promptId": "initial_routes",
+      "decisionAnchor": "line 172",
+      "userDecision": "Las tres",
+      "disposition": "implemented",
+      "evidenceRefs": ["chat.localDesktop", "chat.companionBridge", "chat.remoteRelay", "scripts/verify-surface-route-graph-goal.mjs"]
+    },
+    {
+      "qaId": "QA-011",
+      "promptId": "fail_scope",
+      "decisionAnchor": "line 172",
+      "userDecision": "Toda deuda existente",
+      "disposition": "implemented_with_blocked_gaps",
+      "evidenceRefs": ["docs/governance/surface-route-graph/closure-matrix.json", "docs/surface-narrative-baseline.json", "docs/surface-resource-contract-baseline.json", "scripts/verify-surface-route-graph-goal.mjs"]
+    },
+    {
+      "qaId": "QA-012",
+      "promptId": "agent_output",
+      "decisionAnchor": "line 172",
+      "userDecision": "Ficha + rutas (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["claw inspect show", "claw inspect neighbors", "claw inspect routes", "claw inspect route", "packages/clawjs/src/inspect-cli.test.ts"]
+    },
+    {
+      "qaId": "QA-013",
+      "promptId": "all_definition",
+      "decisionAnchor": "line 178",
+      "userDecision": "Estable + runtime critico (Recommended)",
+      "disposition": "implemented_with_blocked_gaps",
+      "evidenceRefs": ["docs/governance/surface-route-graph/closure-matrix.json", "scripts/surface-route-graph-guard.mjs", "scripts/verify-surface-route-graph-goal.mjs"]
+    },
+    {
+      "qaId": "QA-014",
+      "promptId": "gate_activation",
+      "decisionAnchor": "line 178",
+      "userDecision": "Cierre primero (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["docs/governance/surface-route-graph/closure-matrix.json", "scripts/verify-surface-route-graph-goal.mjs", "package.json:test:surface-route-goal"]
+    },
+    {
+      "qaId": "QA-015",
+      "promptId": "relay_status",
+      "decisionAnchor": "line 178",
+      "userDecision": "Superficie critica (Recommended)",
+      "disposition": "implemented_with_blocked_gaps",
+      "evidenceRefs": ["claw.relay", "chat.remoteRelay", "remote.physical-provider-validation", "docs/governance/surface-route-graph/closure-matrix.json"]
+    },
+    {
+      "qaId": "QA-016",
+      "promptId": "adr_shape",
+      "decisionAnchor": "line 206",
+      "userDecision": "ADR nueva (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["docs/adr/0049-surface-route-graph.md", "docs/discoverability.registry.json"]
+    },
+    {
+      "qaId": "QA-017",
+      "promptId": "skill_shape",
+      "decisionAnchor": "line 206",
+      "userDecision": "surface-route-work (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["skills/surface-route-work/SKILL.md", "docs/discoverability.registry.json"]
+    },
+    {
+      "qaId": "QA-018",
+      "promptId": "route_shape",
+      "decisionAnchor": "line 206",
+      "userDecision": "Pasos explicitos (Recommended)",
+      "disposition": "implemented",
+      "evidenceRefs": ["packages/clawjs-core/src/surface-registry-graph.ts", "claw inspect route chat.localDesktop", "claw inspect route chat.companionBridge", "claw inspect route chat.remoteRelay"]
+    }
+  ]
+}

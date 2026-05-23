@@ -3054,6 +3054,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-cross-process-json-contracts-check",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/cross-process-json-contracts-check.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "cross-process-json-contracts-check",
+        "Cross Process Json Contracts Check"
+      ],
+      "searchQueries": [
+        {
+          "query": "cross-process-json-contracts-check",
+          "expectPath": "scripts/cross-process-json-contracts-check.mjs"
+        }
+      ],
+      "guard": "scripts/cross-process-json-contracts-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-discoverability-check",
       "kind": "guardrail",
       "steward": "claw",
@@ -4498,6 +4523,33 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-surface-route-graph-goal",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-surface-route-graph-goal.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/adr/0049-surface-route-graph.md"
+      ],
+      "discoveryTerms": [
+        "verify-surface-route-graph-goal",
+        "Verify Surface Route Graph Goal",
+        "Surface Route Graph Goal Verifier"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-surface-route-graph-goal",
+          "expectPath": "scripts/verify-surface-route-graph-goal.mjs"
+        }
+      ],
+      "guard": "scripts/verify-surface-route-graph-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-system-telemetry-goal",
       "kind": "guardrail",
       "steward": "claw",
@@ -4652,6 +4704,35 @@
       "guard": "scripts/docs-alignment-check.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-17"
+    },
+    {
+      "id": "sessions-realistic-fixtures",
+      "kind": "test-harness",
+      "steward": "claw",
+      "canonicalSource": "packages/clawjs-sessions/src/realistic-fixtures.ts",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md",
+        "docs/governance/performance-governance.md",
+        "packages/clawjs-sessions/README.md"
+      ],
+      "discoveryTerms": [
+        "realistic-sessions-v1",
+        "realistic sessions fixtures",
+        "heavy hermetic sessions dataset",
+        "sessions seed-realistic"
+      ],
+      "searchQueries": [
+        {
+          "query": "realistic-sessions-v1",
+          "expectPath": "packages/clawjs-sessions/src/realistic-fixtures.ts"
+        }
+      ],
+      "guard": "packages/clawjs-sessions/src/realistic-fixtures.test.ts",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
     },
     {
       "id": "guard-scripts-privacy-check-test",
@@ -5531,6 +5612,60 @@
       "status": "enforced",
       "reviewDate": "2026-08-20",
       "steward": "claw"
+    },
+    {
+      "id": "surface-route-graph-closure-matrix",
+      "kind": "validation-manifest",
+      "steward": "claw",
+      "canonicalSource": "docs/governance/surface-route-graph/closure-matrix.json",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/adr/0049-surface-route-graph.md"
+      ],
+      "discoveryTerms": [
+        "surface route graph closure matrix",
+        "route graph closure ledger",
+        "docs/governance/surface-route-graph/closure-matrix.json"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface route graph closure matrix",
+          "expectPath": "docs/governance/surface-route-graph/closure-matrix.json"
+        }
+      ],
+      "guard": "scripts/verify-surface-route-graph-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "surface-route-graph-closure-matrix"
+    },
+    {
+      "id": "surface-route-graph-source-review",
+      "kind": "validation-manifest",
+      "steward": "claw",
+      "canonicalSource": "docs/governance/surface-route-graph/source-review.json",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/adr/0049-surface-route-graph.md"
+      ],
+      "discoveryTerms": [
+        "surface route graph source review",
+        "route graph source Q/A review",
+        "docs/governance/surface-route-graph/source-review.json"
+      ],
+      "searchQueries": [
+        {
+          "query": "surface route graph source review",
+          "expectPath": "docs/governance/surface-route-graph/source-review.json"
+        }
+      ],
+      "guard": "scripts/verify-surface-route-graph-goal.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18",
+      "canonicalName": "surface-route-graph-source-review"
     },
     {
       "id": "system-telemetry-external-approval-fixtures",

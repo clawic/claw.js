@@ -122,6 +122,16 @@ chat, Relay, CLI, MCP, bridge, daemon, sessions, runtime, and host surfaces.
 The registry remains the source of truth; this table is an auditable view over
 `claw inspect show|neighbors|routes|route`.
 
+The machine-readable closure ledger lives at
+`docs/governance/surface-route-graph/closure-matrix.json` and is verified by
+`node --import tsx scripts/verify-surface-route-graph-goal.mjs`. That guard
+checks the required central routes, critical surfaces, owners, contracts,
+edge-type buckets, fixtures, hermetic validation text, and every blocked gap's
+file plus pending decision and evidence. The one-by-one source Q/A review for
+the source conversation lives at
+`docs/governance/surface-route-graph/source-review.json` and is checked by the
+same verifier.
+
 ### Critical Routes
 
 | Route | Owner | Input -> output contracts | consumes / owns / exposes / brokers | Fixtures and hermetic validation | Debt state |
