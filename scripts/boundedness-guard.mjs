@@ -5,13 +5,71 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDefault = path.resolve(new URL("..", import.meta.url).pathname);
+
+function boundednessDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("boundedness_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/boundedness-guard.mjs",
+      suggestion: "Use --self-test or --root <repo>.",
+      safeNextStep: "Rerun node scripts/boundedness-guard.mjs with a supported flag.",
+    });
+  }
+  if (failure.startsWith("missing docs/boundedness-baseline.json")) {
+    return createDiagnostic("boundedness_baseline_missing", failure, {
+      location: "docs/boundedness-baseline.json",
+      suggestion: "Restore the boundedness baseline before accepting historical unbounded reads.",
+      safeNextStep: "Add docs/boundedness-baseline.json, then rerun node scripts/boundedness-guard.mjs.",
+    });
+  }
+  const finding = failure.match(/^(.+):(\d+) has ([^ ]+)/);
+  if (finding) {
+    return createDiagnostic("boundedness_unbounded_access", failure, {
+      location: `${finding[1]}:${finding[2]}`,
+      suggestion: "Add an explicit cursor, window, batch, limit, visible slice, or reviewed baseline entry.",
+      safeNextStep: `Fix ${finding[1]} or add a bounded baseline entry, then rerun node scripts/boundedness-guard.mjs.`,
+    });
+  }
+  if (failure.includes("boundedness-baseline.json")) {
+    return createDiagnostic("boundedness_baseline_invalid", failure, {
+      location: "docs/boundedness-baseline.json",
+      suggestion: "Fix baseline schema, ownership, expiry, duplicate keys, or stale paths.",
+      safeNextStep: "Repair docs/boundedness-baseline.json, then rerun node scripts/boundedness-guard.mjs.",
+    });
+  }
+  if (failure.startsWith("performance governance must include") || failure.startsWith("missing docs/governance/performance-governance.md")) {
+    return createDiagnostic("boundedness_policy_missing", failure, {
+      location: "docs/governance/performance-governance.md",
+      suggestion: "Restore the windowing/pagination governance text before trusting boundedness results.",
+      safeNextStep: "Update docs/governance/performance-governance.md, then rerun node scripts/boundedness-guard.mjs.",
+    });
+  }
+  return createDiagnostic("boundedness_guard_failed", failure, {
+    location: "scripts/boundedness-guard.mjs",
+    suggestion: "Inspect the boundedness invariant and restore the expected limit or baseline.",
+    safeNextStep: "Fix the reported boundedness issue, then rerun node scripts/boundedness-guard.mjs.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "boundedness guard failed:",
+    diagnostics: failures.map(boundednessDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 const args = { rootDir: rootDefault, selfTest: false };
 for (let i = 2; i < process.argv.length; i += 1) {
   if (process.argv[i] === "--root") args.rootDir = path.resolve(process.argv[++i]);
   else if (process.argv[i] === "--self-test") args.selfTest = true;
-  else throw new Error(`unknown argument ${process.argv[i]}`);
+  else {
+    printFailures([`unknown argument ${process.argv[i]}`]);
+    process.exit(64);
+  }
 }
 
 const scanRoots = ["apps", "bridge", "cli", "ios", "macos", "packages", "publishing", "scripts", "tests", "web"];
@@ -158,9 +216,11 @@ function selfTest() {
   writeFixture(root, "packages/demo/src/db.ts", "await db.listRecords('sessions');\n");
   let result = run(root);
   if (result.status === 0 || !result.stderr.includes("Windowing/Pagination by Default")) throw new Error("self-test missed missing policy");
+  if (!result.stderr.includes("code: boundedness_policy_missing")) throw new Error("self-test missed policy diagnostic code");
   writeFixture(root, "docs/governance/performance-governance.md", "## Windowing/Pagination by Default\nDo not load all -> filter/sort/render; use cursor/window/batch/limit.\n");
   result = run(root);
   if (result.status === 0 || !result.stderr.includes("database-list-without-explicit-window")) throw new Error("self-test missed unbounded listRecords");
+  if (!result.stderr.includes("code: boundedness_unbounded_access")) throw new Error("self-test missed unbounded access diagnostic code");
   writeFixture(root, "packages/demo/src/db.ts", "await db.listRecords('sessions', { limit: 20, offset: 0 });\n");
   writeFixture(root, "scripts/reader.mjs", "const body = fs.readFileSync('rollout.jsonl', 'utf8');\n");
   result = run(root);
@@ -187,6 +247,18 @@ function selfTest() {
   }, null, 2));
   result = run(root);
   if (result.status !== 0) throw new Error(`self-test baseline should pass: ${result.stderr}`);
+
+  const chunks = [];
+  printFailures([
+    "/Users/example/private/packages/demo/src/db.ts:1 has database-list-without-explicit-window without token sk-test-secret-123456",
+    "docs/boundedness-baseline.json entries must be an array",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  if (!output.includes("code: boundedness_unbounded_access")) throw new Error("self-test missing unbounded access code");
+  if (!output.includes("code: boundedness_baseline_invalid")) throw new Error("self-test missing baseline code");
+  if (!output.includes("suggestion: Add an explicit cursor")) throw new Error("self-test missing suggestion");
+  if (!output.includes("next: Fix ~/private/packages/demo/src/db.ts")) throw new Error("self-test missing redacted next step");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   fs.rmSync(root, { recursive: true, force: true });
 }
 
@@ -196,8 +268,7 @@ if (args.selfTest) {
 } else {
   const { failures, findings, filesScanned } = check();
   if (failures.length > 0) {
-    console.error("Boundedness guard failed:");
-    for (const failure of failures) console.error(`- ${failure}`);
+    printFailures(failures);
     process.exit(1);
   }
   console.log(`Boundedness guard passed (${filesScanned} files scanned, ${findings.length} baseline-covered findings).`);
