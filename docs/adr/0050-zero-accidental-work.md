@@ -6,8 +6,9 @@ Accepted.
 
 ## Context
 
-ADR 0031 made the base install and safe CLI paths zero-surprise. That is not
-enough by itself: good capabilities can still become product bugs when imports,
+ADR 0031 made the base install and safe CLI paths zero-surprise. ADR 0041 made
+adoption and canonicity claims evidence-gated. Those are not enough by
+themselves: good capabilities can still become product bugs when imports,
 constructors, app launch, daemon boot, or bridge transport start work before a
 person or caller has asked for it.
 
