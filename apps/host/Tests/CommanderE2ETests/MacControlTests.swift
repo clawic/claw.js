@@ -1029,6 +1029,86 @@ final class MacControlTests: XCTestCase {
         XCTAssertEqual(JSONValue.string("x").coercedStringValue, "x")
         XCTAssertNil(JSONValue.null.coercedStringValue)
     }
+
+    // MARK: - Computer Use per-app policy
+
+    func testComputerUsePolicyDecision() {
+        let policy = ComputerUsePolicy(
+            anyApp: true,
+            allowedApps: [ComputerUseAllowedApp(bundleId: "com.example.editor", name: "Editor")]
+        )
+        XCTAssertEqual(ComputerUsePolicyStore.decision(for: "Editor", policy: policy), .allowed)
+        XCTAssertEqual(ComputerUsePolicyStore.decision(for: "com.example.editor", policy: policy), .allowed)
+        XCTAssertEqual(ComputerUsePolicyStore.decision(for: "Other", policy: policy), .requiresApproval)
+
+        let disabled = ComputerUsePolicy(anyApp: false)
+        XCTAssertEqual(ComputerUsePolicyStore.decision(for: "TextEdit", policy: disabled), .blocked)
+    }
+
+    private func writeComputerUsePolicy(_ policy: ComputerUsePolicy) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cu-policy-\(UUID().uuidString)")
+            .appendingPathComponent(ComputerUsePolicyStore.filename)
+        try ComputerUsePolicyStore.save(policy, to: url)
+        return url
+    }
+
+    func testComputerUseDisabledPolicyBlocksAgentActions() throws {
+        let policyURL = try writeComputerUsePolicy(ComputerUsePolicy(anyApp: false))
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_cu_disabled",
+                capabilityId: "mac.app.click",
+                actorId: "agent_test",
+                origin: .agent,
+                arguments: ["app": "TextEdit", "element_index": "1"]
+            ),
+            auditURL: FileManager.default.temporaryDirectory.appendingPathComponent("cu-audit-\(UUID().uuidString).jsonl"),
+            computerUsePolicyURL: policyURL,
+            runner: RecordingMacControlRunner()
+        )
+        XCTAssertEqual(receipt.outcome, .blocked)
+    }
+
+    func testComputerUseAlwaysAllowedAppAutoApproves() throws {
+        let runner = RecordingMacControlRunner()
+        let policyURL = try writeComputerUsePolicy(
+            ComputerUsePolicy(anyApp: true, allowedApps: [ComputerUseAllowedApp(name: "TextEdit")])
+        )
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_cu_allowed",
+                capabilityId: "mac.app.click",
+                actorId: "agent_test",
+                origin: .agent,
+                arguments: ["app": "TextEdit", "element_index": "3"]
+            ),
+            auditURL: FileManager.default.temporaryDirectory.appendingPathComponent("cu-audit-\(UUID().uuidString).jsonl"),
+            computerUsePolicyURL: policyURL,
+            runner: runner
+        )
+        XCTAssertEqual(receipt.outcome, .executed)
+        XCTAssertEqual(runner.nativeCalls.first?.action, "ax.click")
+    }
+
+    func testComputerUseUnlistedAppStillRequiresApproval() throws {
+        let policyURL = try writeComputerUsePolicy(
+            ComputerUsePolicy(anyApp: true, allowedApps: [ComputerUseAllowedApp(name: "TextEdit")])
+        )
+        let receipt = MacControlActionBroker.evaluate(
+            MacControlActionRequest(
+                requestId: "macreq_cu_unlisted",
+                capabilityId: "mac.app.click",
+                actorId: "agent_test",
+                origin: .agent,
+                arguments: ["app": "Finder", "element_index": "1"]
+            ),
+            auditURL: FileManager.default.temporaryDirectory.appendingPathComponent("cu-audit-\(UUID().uuidString).jsonl"),
+            computerUsePolicyURL: policyURL,
+            runner: RecordingMacControlRunner()
+        )
+        XCTAssertEqual(receipt.outcome, .approvalRequired)
+    }
 }
 
 final class RecordingMacControlRunner: MacControlCommandRunning {

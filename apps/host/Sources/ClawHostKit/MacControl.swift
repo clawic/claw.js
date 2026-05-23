@@ -1518,6 +1518,7 @@ public enum MacControlActionBroker {
         auditURL: URL? = nil,
         policyURL: URL? = nil,
         continuityURL: URL? = nil,
+        computerUsePolicyURL: URL? = nil,
         runner: MacControlCommandRunning = MacControlProcessRunner()
     ) -> MacControlActionReceipt {
         let plan: MacControlActionPlan
@@ -1532,13 +1533,39 @@ public enum MacControlActionBroker {
         if request.dryRun {
             return receipt(for: request, plan: plan, outcome: .planned)
         }
+
+        // Computer Use per-app policy (host-owned, set in Settings → Computer Use):
+        // block when Computer Use is off, auto-approve always-allowed apps, and
+        // otherwise leave the per-app approval requirement in place.
+        var computerUseApproved = false
+        if request.capabilityId.hasPrefix("mac.app."), !request.origin.isLocalHuman {
+            let resolvedCUURL = computerUsePolicyURL
+                ?? policyURL?.deletingLastPathComponent().appendingPathComponent(ComputerUsePolicyStore.filename)
+            if let resolvedCUURL {
+                let policy = ComputerUsePolicyStore.load(from: resolvedCUURL)
+                switch ComputerUsePolicyStore.decision(for: request.arguments["app"] ?? "", policy: policy) {
+                case .blocked:
+                    return receipt(
+                        for: request,
+                        plan: plan,
+                        outcome: .blocked,
+                        error: "Computer Use is turned off. Enable it in Settings → Computer Use."
+                    )
+                case .allowed:
+                    computerUseApproved = true
+                case .requiresApproval:
+                    break
+                }
+            }
+        }
+
         if plan.requiresApproval {
             let authorization = MacControlPolicy.authorize(
                 action: request.capabilityId,
                 origin: request.origin,
                 defaults: defaults,
                 auditURL: auditURL,
-                approvedOverride: request.approved,
+                approvedOverride: request.approved || computerUseApproved,
                 request: request,
                 plan: plan,
                 policyURL: policyURL
