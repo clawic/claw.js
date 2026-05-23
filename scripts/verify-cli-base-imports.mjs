@@ -70,47 +70,6 @@ function addFailure(code, message, options = {}) {
   }));
 }
 
-for (const check of checks) {
-  const text = fs.readFileSync(path.join(rootDir, check.file), "utf8");
-  for (const forbidden of check.forbidden) {
-    const staticImportPattern = new RegExp(`(?:import|export)\\s+(?:[^"']+\\s+from\\s+)?["']${escapeRegExp(forbidden)}["']`);
-    if (staticImportPattern.test(text)) {
-      addFailure("cli_base_forbidden_static_import", `${check.file}: forbidden base static import ${forbidden}`, {
-        location: check.file,
-        suggestion: "Move this dependency behind a command-specific dynamic import so base CLI startup stays bounded.",
-        safeNextStep: `Remove the static import of ${forbidden}, then rerun node scripts/verify-cli-base-imports.mjs.`,
-      });
-    }
-  }
-}
-
-if (baseline.schemaVersion !== 1) {
-  addFailure("cli_base_baseline_invalid", "scripts/cli-base-import-budget.baseline.json: schemaVersion must be 1", {
-    suggestion: "Use the current import budget baseline schema.",
-  });
-}
-for (const field of ["forbiddenSpecifiers", "forbiddenUrlFragments", "scenarios"]) {
-  if (!Array.isArray(baseline[field])) {
-    addFailure("cli_base_baseline_invalid", `scripts/cli-base-import-budget.baseline.json: ${field} must be an array`, {
-      suggestion: "Restore the baseline field to an array so import-budget validation is deterministic.",
-    });
-  }
-}
-
-if (failures.length === 0) {
-  runScenarioBudgets();
-}
-
-if (failures.length > 0) {
-  printActionableFailureReport({
-    title: "CLI base import check failed:",
-    diagnostics: failures,
-  });
-  process.exit(1);
-}
-
-console.log("cli base imports passed");
-
 function runSelfTest() {
   const chunks = [];
   printActionableFailureReport({
@@ -143,6 +102,49 @@ function runSelfTest() {
 if (process.argv.includes("--self-test")) {
   runSelfTest();
   process.exit(0);
+}
+
+function runCliBaseImportCheck() {
+  for (const check of checks) {
+    const text = fs.readFileSync(path.join(rootDir, check.file), "utf8");
+    for (const forbidden of check.forbidden) {
+      const staticImportPattern = new RegExp(`(?:import|export)\\s+(?:[^"']+\\s+from\\s+)?["']${escapeRegExp(forbidden)}["']`);
+      if (staticImportPattern.test(text)) {
+        addFailure("cli_base_forbidden_static_import", `${check.file}: forbidden base static import ${forbidden}`, {
+          location: check.file,
+          suggestion: "Move this dependency behind a command-specific dynamic import so base CLI startup stays bounded.",
+          safeNextStep: `Remove the static import of ${forbidden}, then rerun node scripts/verify-cli-base-imports.mjs.`,
+        });
+      }
+    }
+  }
+
+  if (baseline.schemaVersion !== 1) {
+    addFailure("cli_base_baseline_invalid", "scripts/cli-base-import-budget.baseline.json: schemaVersion must be 1", {
+      suggestion: "Use the current import budget baseline schema.",
+    });
+  }
+  for (const field of ["forbiddenSpecifiers", "forbiddenUrlFragments", "scenarios"]) {
+    if (!Array.isArray(baseline[field])) {
+      addFailure("cli_base_baseline_invalid", `scripts/cli-base-import-budget.baseline.json: ${field} must be an array`, {
+        suggestion: "Restore the baseline field to an array so import-budget validation is deterministic.",
+      });
+    }
+  }
+
+  if (failures.length === 0) {
+    runScenarioBudgets();
+  }
+
+  if (failures.length > 0) {
+    printActionableFailureReport({
+      title: "CLI base import check failed:",
+      diagnostics: failures,
+    });
+    process.exit(1);
+  }
+
+  console.log("cli base imports passed");
 }
 
 function runScenarioBudgets() {
@@ -300,3 +302,5 @@ function trimForReport(value) {
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+runCliBaseImportCheck();

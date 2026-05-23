@@ -10,9 +10,6 @@ explicitly accepted as blocked with a reentry condition.
 `docs/governance/conceptual-vocabulary-classification-ledger.md` is the
 domain-by-domain companion ledger for the migration decisions named here.
 
-The domain classifier for the pending rows is
-`docs/governance/conceptual-vocabulary-classification-ledger.md`.
-
 ## Canon
 
 Canonical meanings come from `docs/vocabulary.md`,
