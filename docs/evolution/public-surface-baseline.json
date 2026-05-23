@@ -11,8 +11,8 @@
   },
   "fingerprints": {
     "surfaces": "fnv1a32:89a853f8",
-    "cliCommands": "fnv1a32:d1abe484",
-    "combined": "fnv1a32:60897eb2"
+    "cliCommands": "fnv1a32:f1f3d3ce",
+    "combined": "fnv1a32:a37e7ff8"
   },
   "surfaces": [
     {
@@ -9445,7 +9445,7 @@
     {
       "name": "archive",
       "kind": "canonical",
-      "usage": "archive plan|export|verify|inspect|import|restore|doctor [--include-secrets] [--signed-host] [--target PATH]",
+      "usage": "archive plan|export|verify|inspect|import|restore|doctor [--include-secrets] [--signed-host] [--output PATH.clawbackup] [--archive PATH.clawbackup] [--target PATH] [--approve --confirm-restore PATH]",
       "family": "diagnostics",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.archive.v1"
