@@ -1,34 +1,5 @@
 {
   "counts": {
-    "agent": {
-      "agent-implies-authority": {
-        "docs/adr/0020-agents-v1-refactor.md": 1,
-        "docs/cli.md": 1,
-        "docs/constitution-map.md": 1,
-        "docs/governance/governance-workspace-project/source-audit.md": 1
-      }
-    },
-    "authority": {
-      "implicit-authority": {
-        "docs/adr/0022-remote-gateway-sync-redesign.md": 1,
-        "docs/adr/0028-workspace-project-folder-manifest.md": 1,
-        "docs/cli.md": 1,
-        "docs/connector-governed-context.md": 1,
-        "docs/constitution-map.md": 1,
-        "docs/governance/remote-gateway-sync/completion.md": 1,
-        "docs/governance/remote-gateway-sync/decision-matrix.md": 2,
-        "docs/persistent-surface.md": 2,
-        "docs/relay.md": 2,
-        "packages/clawjs-core/src/surface-registry.ts": 1,
-        "packages/clawjs/src/cli-remote-sync-command.ts": 1,
-        "scripts/verify-remote-sync-goal.mjs": 8
-      }
-    },
-    "host": {
-      "node-native-owner": {
-        "docs/vocabulary.md": 1
-      }
-    },
     "owner": {
       "generic-owner-authority": {
         "apps/board/src/app/work/page.tsx": 3,
@@ -39,40 +10,46 @@
         "apps/host/Sources/ClawHostKit/SystemTelemetryControlHostBridge.swift": 1,
         "apps/host/Sources/CommanderCore/SystemTelemetry.swift": 11,
         "apps/host/Tests/CommanderE2ETests/CommanderE2ETests.swift": 3,
-        "apps/host/Tests/CommanderE2ETests/MacControlTests.swift": 13,
+        "apps/host/Tests/CommanderE2ETests/MacControlTests.swift": 20,
         "content/ui/src/api/types.ts": 1,
         "content/ui/src/screens/Pipeline.tsx": 1,
-        "docs/adr/0002-testing-architecture.md": 3,
+        "docs/adr/0001-claw-framework-host-boundary.md": 1,
+        "docs/adr/0002-testing-architecture.md": 4,
+        "docs/adr/0003-source-file-boundaries.md": 1,
         "docs/adr/0004-persistent-surface-registry-and-inspection.md": 2,
         "docs/adr/0005-canonical-data-catalog.md": 2,
-        "docs/adr/0012-domain-surface-registry-db-to-cli.md": 7,
-        "docs/adr/0049-surface-route-graph.md": 2,
-        "docs/adr/0016-code-hygiene-program.md": 1,
+        "docs/adr/0012-domain-surface-registry-db-to-cli.md": 8,
+        "docs/adr/0016-code-hygiene-program.md": 2,
         "docs/adr/0017-discoverability-and-meta-code-routing.md": 2,
+        "docs/adr/0019-search-v1-1-architecture.md": 1,
         "docs/adr/0020-agents-v1-refactor.md": 4,
         "docs/adr/0021-dense-data-operating-system.md": 3,
         "docs/adr/0022-remote-gateway-sync-redesign.md": 3,
-        "docs/adr/0027-governance-identity-scope-model.md": 10,
+        "docs/adr/0027-governance-identity-scope-model.md": 13,
         "docs/adr/0035-decision-tension-rubric.md": 1,
-        "docs/adr/0036-performance-governance.md": 1,
+        "docs/adr/0036-performance-governance.md": 3,
+        "docs/adr/0038-portable-archive-contract.md": 1,
+        "docs/adr/0040-no-irreversible-data-loss.md": 1,
+        "docs/adr/0046-problem-to-guardrail-loop.md": 1,
+        "docs/adr/0049-surface-route-graph.md": 5,
+        "docs/adr/TEMPLATE.md": 1,
         "docs/agent-rules/channels.md": 1,
         "docs/agent-rules/index.md": 2,
         "docs/api.md": 3,
         "docs/canonical-data-catalog.md": 3,
-        "docs/cli.md": 5,
+        "docs/cli.md": 7,
         "docs/code-hygiene-baseline.json": 1,
         "docs/code-hygiene-decision-checklist.md": 1,
         "docs/code-hygiene-ledger.md": 2,
         "docs/company-cockpit-frontend-spec.md": 6,
         "docs/constitution.assertions.json": 28,
-        "docs/data-storage-boundary.md": 3,
+        "docs/data-storage-boundary.md": 4,
         "docs/debt-ledger.md": 1,
         "docs/decision-map.md": 3,
         "docs/discoverability-golden-queries.json": 1,
-        "docs/discoverability.registry.json": 159,
-        "docs/evolution/baseline.json": 7,
+        "docs/evolution/baseline.json": 12,
         "docs/evolution/fixtures/v1-foundation.json": 15,
-        "docs/evolution/public-surface-baseline.json": 961,
+        "docs/evolution/public-surface-baseline.json": 1132,
         "docs/evolution/schema.json": 2,
         "docs/getting-started.md": 1,
         "docs/governance-vocabulary-baseline.json": 12,
@@ -83,13 +60,16 @@
         "docs/governance/dense-data/existing-catalog-audit.md": 6,
         "docs/governance/domain-surface/decision-matrix.md": 7,
         "docs/governance/evolution/source-audit.md": 2,
-        "docs/governance/governance-workspace-project/completion.md": 3,
-        "docs/governance/governance-workspace-project/source-audit.md": 4,
+        "docs/governance/governance-workspace-project/completion.md": 1,
+        "docs/governance/governance-workspace-project/source-audit.md": 3,
         "docs/governance/mac-control-plane/source-audit.md": 2,
-        "docs/governance/performance-governance.md": 2,
+        "docs/governance/mac-control-plane/version-drift-audit.md": 1,
+        "docs/governance/no-irreversible-data-loss/baseline.json": 3,
+        "docs/governance/no-irreversible-data-loss/manifest.json": 9,
         "docs/governance/pre-v1-version-governance/completion.md": 1,
         "docs/governance/remote-gateway-sync/decision-matrix.md": 1,
         "docs/governance/remote-gateway-sync/source-audit.md": 1,
+        "docs/governance/surface-route-graph/closure-matrix.json": 27,
         "docs/governance/v1-surface-closure/acceptance.json": 1,
         "docs/governance/v1-surface-closure/completion.md": 2,
         "docs/host-ownership.md": 4,
@@ -100,28 +80,28 @@
         "docs/mac-native-usage-allowlist.json": 3,
         "docs/naming-style-guide.md": 3,
         "docs/network-control-plane.md": 1,
-        "docs/persistent-surface-guard-exceptions.json": 19,
-        "docs/persistent-surface.md": 3,
         "docs/relay.md": 3,
         "docs/repository-map.md": 2,
         "docs/search.md": 1,
         "docs/secrets-security.md": 1,
+        "docs/security-threat-model.md": 1,
         "docs/setup.md": 1,
-        "docs/surface-evidence-baseline.json": 1,
+        "docs/source-size-baseline.json": 1,
         "docs/surface-narrative-baseline.json": 1,
         "docs/testing-matrix.md": 1,
-        "docs/testing.md": 1,
+        "docs/testing.md": 3,
         "docs/time.md": 2,
         "docs/tracking/index.md": 1,
         "docs/vocabulary.md": 3,
         "examples/showcase/src/app/tasks/page.tsx": 4,
         "packages/clawjs-core/src/builtins/construction/construction_projects.ts": 1,
         "packages/clawjs-core/src/domain-surface-registry.test.ts": 4,
-        "packages/clawjs-core/src/domain-surface-registry.ts": 34,
+        "packages/clawjs-core/src/domain-surface-registry.ts": 30,
         "packages/clawjs-core/src/need-route-lab.ts": 1,
         "packages/clawjs-core/src/schemas-workspace.ts": 2,
         "packages/clawjs-core/src/schemas.ts": 1,
-        "packages/clawjs-core/src/surface-registry.ts": 173,
+        "packages/clawjs-core/src/surface-registry-contracts.ts": 1,
+        "packages/clawjs-core/src/surface-registry-graph.ts": 4,
         "packages/clawjs-core/src/types-workspace.ts": 1,
         "packages/clawjs-index/src/routes/chats.ts": 1,
         "packages/clawjs-index/src/routes/feed.ts": 5,
@@ -130,8 +110,10 @@
         "packages/clawjs-workspace/src/index.test.ts": 1,
         "packages/clawjs-workspace/src/workspace-descriptors.ts": 3,
         "packages/clawjs-workspace/src/workspace-productivity-facades.ts": 4,
-        "packages/clawjs/src/cli-dense-data-command.ts": 42,
-        "packages/clawjs/src/cli-discovery.test.ts": 4,
+        "packages/clawjs/src/cli-agent-resource-command.test.ts": 4,
+        "packages/clawjs/src/cli-dense-data-command.ts": 16,
+        "packages/clawjs/src/cli-dense-data-semantic-products.ts": 26,
+        "packages/clawjs/src/cli-discovery-dense-data-primary.test-support.ts": 4,
         "packages/clawjs/src/cli-evolution-command.ts": 2,
         "packages/clawjs/src/cli-governance-command.test.ts": 1,
         "packages/clawjs/src/cli-governance-command.ts": 1,
@@ -144,58 +126,32 @@
         "packages/clawjs/src/cli-report-command.ts": 2,
         "packages/clawjs/src/cli-report-extra-commands.ts": 4,
         "packages/clawjs/src/cli-report.test.ts": 2,
-        "packages/clawjs/src/cli-search-command.ts": 9,
+        "packages/clawjs/src/cli-search-document-catalogs.ts": 1,
+        "packages/clawjs/src/cli-search-document-core.ts": 2,
+        "packages/clawjs/src/cli-search-document-rows.ts": 2,
         "packages/clawjs/src/cli-search-index-database-work-skills.test.ts": 1,
-        "packages/clawjs/src/cli-search-surface-routes-source.ts": 6,
+        "packages/clawjs/src/cli-search-source-indexers-primary.ts": 2,
+        "packages/clawjs/src/cli-search-source-indexers-secondary.ts": 2,
+        "packages/clawjs/src/cli-search-surface-routes-source.ts": 1,
         "packages/clawjs/src/cli-telegram-codex.ts": 1,
         "packages/clawjs/src/cli-temporal-command.ts": 3,
+        "packages/clawjs/src/index-projects-media.test.ts": 1,
         "packages/clawjs/src/index-workspace-runtime.test.ts": 4,
+        "packages/clawjs/src/v1-data-secondary-commands.ts": 2,
         "packages/clawjs/src/v1-data-surface.ts": 3,
         "publishing/src/shared/schemas.ts": 1,
         "relay/src/bin/cli.ts": 1,
         "relay/src/server/remote-sync-routes.ts": 3,
+        "scripts/cross-process-json-contracts-check.mjs": 1,
         "scripts/domain-surface-registry-guard.mjs": 1,
         "scripts/evolution-governance-check.mjs": 1,
-        "scripts/governance-scope-guard.mjs": 9,
         "scripts/naming-surface-guard.mjs": 1,
-        "scripts/package-surface-guard.mjs": 8,
-        "scripts/persistent-surface-guard.mjs": 2,
-        "scripts/surface-evidence-guard.mjs": 2,
+        "scripts/package-surface-guard.mjs": 11,
         "scripts/surface-narrative-guard.mjs": 2,
-        "scripts/verify-host-permission-contract.mjs": 2,
+        "scripts/verify-host-permission-contract.mjs": 3,
         "scripts/verify-remote-sync-goal.mjs": 1,
-        "storage/ui/src/App.tsx": 8,
-        "storage/ui/src/lib/api.ts": 1
-      },
-      "owner-implies-access": {
-        "docs/governance/governance-workspace-project/completion.md": 1,
-        "docs/governance/governance-workspace-project/source-audit.md": 1
-      }
-    },
-    "project": {
-      "project-implies-authority": {
-        "docs/adr/0027-governance-identity-scope-model.md": 1,
-        "docs/adr/0028-workspace-project-folder-manifest.md": 1,
-        "docs/connector-governed-context.md": 1,
-        "docs/governance/governance-workspace-project/source-audit.md": 2
-      }
-    },
-    "relay": {
-      "relay-implies-authority": {
-        "docs/governance/remote-gateway-sync/completion.md": 1,
-        "docs/persistent-surface.md": 1
-      }
-    },
-    "sync": {
-      "sync-implies-authority": {
-        "docs/adr/0022-remote-gateway-sync-redesign.md": 1,
-        "docs/cli.md": 1,
-        "docs/governance/remote-gateway-sync/decision-matrix.md": 2,
-        "docs/persistent-surface.md": 1,
-        "docs/relay.md": 2,
-        "packages/clawjs-core/src/surface-registry.ts": 1,
-        "packages/clawjs/src/cli-remote-sync-command.ts": 1,
-        "scripts/verify-remote-sync-goal.mjs": 8
+        "scripts/verify-surface-route-graph-goal.mjs": 2,
+        "storage/ui/src/App.tsx": 8
       }
     },
     "tenant": {
@@ -208,7 +164,7 @@
         "apps/chat/macos/ClawJSMac/Views/SettingsView.swift": 2,
         "apps/notify/src/app/api/notify/bootstrap/route.ts": 2,
         "apps/notify/src/components/NotifyDashboard.tsx": 3,
-        "docs/adr/0027-governance-identity-scope-model.md": 4,
+        "docs/adr/0027-governance-identity-scope-model.md": 5,
         "docs/agent-rules/index.md": 1,
         "docs/agent-rules/service-surfaces.md": 2,
         "docs/api.md": 4,
@@ -220,11 +176,11 @@
         "docs/governance/governance-workspace-project/completion.md": 1,
         "docs/governance/governance-workspace-project/source-audit.md": 2,
         "docs/governance/remote-gateway-sync/decision-matrix.md": 1,
+        "docs/hot-path-baseline.json": 1,
         "docs/interface-matrix.md": 28,
         "docs/iot.md": 1,
         "docs/naming-style-guide.md": 3,
         "docs/notify.md": 1,
-        "docs/persistent-surface.md": 3,
         "docs/relay.md": 68,
         "docs/secrets.md": 5,
         "docs/surface-contract.registry.json": 22,
@@ -243,10 +199,11 @@
         "modules/erp/ui/src/hooks/useAuth.ts": 4,
         "notify/src/server/surface.ts": 10,
         "packages/clawjs-core/src/connector-control-plane.ts": 1,
-        "packages/clawjs-core/src/remote-sync.ts": 20,
-        "packages/clawjs-core/src/surface-registry.ts": 1,
+        "packages/clawjs-core/src/remote-sync.ts": 14,
+        "packages/clawjs-core/src/surface-registry-graph.ts": 1,
         "packages/clawjs/src/cli-claw-factory.ts": 4,
         "packages/clawjs/src/cli-remote-sync-command.ts": 7,
+        "packages/clawjs/src/index-projects-media.test.ts": 14,
         "packages/mesh/src/host-store.test.ts": 4,
         "packages/mesh/src/host-store.ts": 35,
         "packages/mesh/src/workspace-store.test.ts": 3,
@@ -272,10 +229,8 @@
         "relay/src/server/remote-sync-routes.ts": 7,
         "relay/src/server/workspace-routes.ts": 81,
         "relay/src/service-proxy/local.ts": 5,
-        "relay/src/shared/protocol.ts": 7,
         "relay/tests/e2e/codex-connector.e2e.test.ts": 15,
         "relay/tests/e2e/relay.e2e-utils.ts": 2,
-        "relay/tests/e2e/relay.e2e.test.ts": 113,
         "relay/tests/e2e/service-gateway.e2e.test.ts": 14,
         "relay/tests/e2e/ui.spec.ts": 19,
         "relay/ui/src/App.tsx": 3,
@@ -292,24 +247,14 @@
         "relay/ui/src/routes/Workspaces.tsx": 6,
         "relay/ui/src/routes/monitor/useMonitorStream.ts": 17,
         "scripts/docs-surface-check.mjs": 1,
-        "scripts/governance-scope-guard.mjs": 5,
         "scripts/verify-governance-workspace-project-goal.mjs": 1,
         "secrets/src/bin/sidecar.ts": 6,
         "secrets/ui/src/App.tsx": 21,
         "website/src/demos/relay.js": 1
       }
-    },
-    "workspace": {
-      "workspace-implies-authority": {
-        "docs/adr/0028-workspace-project-folder-manifest.md": 1,
-        "docs/interface-matrix.md": 1,
-        "docs/persistent-surface.md": 1,
-        "docs/relay.md": 2,
-        "relay/src/server/app-helpers.ts": 1
-      }
     }
   },
-  "generatedAt": "2026-05-20T21:46:49.096Z",
+  "generatedAt": "2026-05-23T14:17:29.971Z",
   "policy": "Reviewed conceptual vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/conceptual-vocabulary-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "protectedTerms": [
     "owner",
@@ -319,9 +264,12 @@
     "project",
     "agent",
     "surface",
+    "route",
     "host",
     "relay",
     "connector",
+    "grant",
+    "approval",
     "sync"
   ],
   "rationale": "Initial frozen baseline for docs, UI copy, and public/stable conceptual vocabulary surfaces.",
@@ -331,41 +279,13 @@
   },
   "schemaVersion": 1,
   "summary": {
-    "agent": {
-      "files": 4,
-      "occurrences": 4
-    },
-    "authority": {
-      "files": 12,
-      "occurrences": 22
-    },
-    "host": {
-      "files": 1,
-      "occurrences": 1
-    },
     "owner": {
-      "files": 135,
-      "occurrences": 1815
-    },
-    "project": {
-      "files": 4,
-      "occurrences": 5
-    },
-    "relay": {
-      "files": 2,
-      "occurrences": 2
-    },
-    "sync": {
-      "files": 8,
-      "occurrences": 17
+      "files": 150,
+      "occurrences": 1697
     },
     "tenant": {
-      "files": 97,
-      "occurrences": 1692
-    },
-    "workspace": {
-      "files": 5,
-      "occurrences": 6
+      "files": 95,
+      "occurrences": 1574
     }
   }
 }

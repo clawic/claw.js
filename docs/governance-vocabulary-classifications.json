@@ -457,6 +457,916 @@
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
       "maxOccurrences": 4,
       "steward": "clawjs-board"
+    },
+    {
+      "id": "current-owner_id-packages-clawjs-src-cli-search-source-indexers-primary",
+      "path": "packages/clawjs/src/cli-search-source-indexers-primary.ts",
+      "pattern": "owner_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_id-packages-clawjs-src-cli-search-source-indexers-secondary",
+      "path": "packages/clawjs/src/cli-search-source-indexers-secondary.ts",
+      "pattern": "owner_id",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-src-cli-dense-data-semantic-products",
+      "path": "packages/clawjs/src/cli-dense-data-semantic-products.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-src-cli-discovery-dense-data-primary-test-support",
+      "path": "packages/clawjs/src/cli-discovery-dense-data-primary.test-support.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-src-inspect-cli-agent-codebase-test",
+      "path": "packages/clawjs/src/inspect-cli-agent-codebase.test.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-src-v1-data-secondary-commands",
+      "path": "packages/clawjs/src/v1-data-secondary-commands.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-core-src-mac-care",
+      "path": "packages/clawjs-core/src/mac-care.ts",
+      "pattern": "owner_field",
+      "classification": "externalProviderSchema",
+      "rationale": "This path mirrors platform or provider vocabulary in a route/schema contract while authority remains explicit elsewhere.",
+      "canonicalDoc": "docs/adr/0023-mac-control-plane-v1.md",
+      "maxOccurrences": 31,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-sessions-src-runtime-jobs-test",
+      "path": "packages/clawjs-sessions/src/runtime-jobs.test.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-sessions-src-runtime-jobs",
+      "path": "packages/clawjs-sessions/src/runtime-jobs.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-sessions-src-types",
+      "path": "packages/clawjs-sessions/src/types.ts",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-owner_field-scripts-verify-testing-policy",
+      "path": "scripts/verify-testing-policy.mjs",
+      "pattern": "owner_field",
+      "classification": "legacySchemaReadOnly",
+      "rationale": "This path carries legacy owner vocabulary for compatibility or fixture coverage while canonical authority uses principals, grants, scopes, and stewards.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0001-claw-framework-host-boundary",
+      "path": "docs/adr/0001-claw-framework-host-boundary.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/host-ownership.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0002-testing-architecture",
+      "path": "docs/adr/0002-testing-architecture.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0003-source-file-boundaries",
+      "path": "docs/adr/0003-source-file-boundaries.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0012-domain-surface-registry-db-to-cli",
+      "path": "docs/adr/0012-domain-surface-registry-db-to-cli.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 10,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0016-code-hygiene-program",
+      "path": "docs/adr/0016-code-hygiene-program.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0019-search-v1-1-architecture",
+      "path": "docs/adr/0019-search-v1-1-architecture.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0027-governance-identity-scope-model",
+      "path": "docs/adr/0027-governance-identity-scope-model.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-adr-0049-surface-route-graph",
+      "path": "docs/adr/0049-surface-route-graph.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-cli",
+      "path": "docs/cli.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-decision-map",
+      "path": "docs/decision-map.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 14,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-governance-mac-control-plane-version-drift-audit",
+      "path": "docs/governance/mac-control-plane/version-drift-audit.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/host-ownership.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-governance-surface-route-graph-closure-matrix",
+      "path": "docs/governance/surface-route-graph/closure-matrix.json",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 10,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-docs-testing",
+      "path": "docs/testing.md",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-ownership_relation-packages-clawjs-src-cli-agent-resource-command-test",
+      "path": "packages/clawjs/src/cli-agent-resource-command.test.ts",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-ownership_relation-packages-clawjs-core-src-surface-registry-graph",
+      "path": "packages/clawjs-core/src/surface-registry-graph.ts",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-ownership_relation-packages-clawjs-node-src-create-claw-runtime-test",
+      "path": "packages/clawjs-node/src/create-claw-runtime.test.ts",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-node"
+    },
+    {
+      "id": "current-ownership_relation-qa-agent-coordination-manifest",
+      "path": "qa/agent-coordination.manifest.json",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 5,
+      "steward": "clawjs-qa"
+    },
+    {
+      "id": "current-ownership_relation-scripts-storage-boundary-guard",
+      "path": "scripts/storage-boundary-guard.mjs",
+      "pattern": "ownership_relation",
+      "classification": "governancePolicyReference",
+      "rationale": "This path references ownership terminology as existing governance canon or route documentation, not as a new authority field.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-tenant-docs-adr-0027-governance-identity-scope-model",
+      "path": "docs/adr/0027-governance-identity-scope-model.md",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-tenant-docs-hot-path-baseline",
+      "path": "docs/hot-path-baseline.json",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-tenant-docs-persistent-surface",
+      "path": "docs/persistent-surface.md",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 8,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-src-cli-legacy-open",
+      "path": "packages/clawjs/src/cli-legacy-open.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-src-index-projects-media-test",
+      "path": "packages/clawjs/src/index-projects-media.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 14,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-core-src-index-remote-contracts-test",
+      "path": "packages/clawjs-core/src/index-remote-contracts.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 10,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-core-src-surface-registry-contracts",
+      "path": "packages/clawjs-core/src/surface-registry-contracts.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-core-src-surface-registry-graph",
+      "path": "packages/clawjs-core/src/surface-registry-graph.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 5,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-tenant-relay-src-shared-protocol-test",
+      "path": "relay/src/shared/protocol.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenant-relay-tests-e2e-relay-e2e-test",
+      "path": "relay/tests/e2e/relay.e2e.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 107,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenantId-packages-clawjs-src-cli-legacy-open",
+      "path": "packages/clawjs/src/cli-legacy-open.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-tenantId-packages-clawjs-core-src-index-remote-contracts-test",
+      "path": "packages/clawjs-core/src/index-remote-contracts.test.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-tenantId-packages-clawjs-core-src-remote-sync-schemas",
+      "path": "packages/clawjs-core/src/remote-sync-schemas.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-tenantId-relay-src-shared-protocol-test",
+      "path": "relay/src/shared/protocol.test.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenantId-relay-src-shared-protocol",
+      "path": "relay/src/shared/protocol.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "This path uses tenant vocabulary for relay, remote, or compatibility technical isolation rather than product authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 10,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-profile-docs-adr-0005-canonical-data-catalog",
+      "path": "docs/adr/0005-canonical-data-catalog.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-adr-0037-capability-maturity-activation-governance",
+      "path": "docs/adr/0037-capability-maturity-activation-governance.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-constitution-map",
+      "path": "docs/constitution-map.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-decision-map",
+      "path": "docs/decision-map.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-discoverability",
+      "path": "docs/discoverability.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-discoverability-registry",
+      "path": "docs/discoverability.registry.json",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-governance-performance-governance",
+      "path": "docs/governance/performance-governance.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0036-performance-governance.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-governance-rfc-process",
+      "path": "docs/governance/rfc-process.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/governance/rfc-process.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-rfcs-template",
+      "path": "docs/rfcs/TEMPLATE.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/governance/rfc-process.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-rfcs-registry",
+      "path": "docs/rfcs/registry.json",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/governance/rfc-process.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-runtime-ecosystem-integration-manifest",
+      "path": "docs/runtime-ecosystem-integration.manifest.json",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-security-threat-model-coverage",
+      "path": "docs/security-threat-model.coverage.json",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-docs-surface-resource-contract-baseline",
+      "path": "docs/surface-resource-contract-baseline.json",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-docs"
+    },
+    {
+      "id": "current-profile-package",
+      "path": "package.json",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-packaging"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-cli-dense-data-semantic-health",
+      "path": "packages/clawjs/src/cli-dense-data-semantic-health.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-index-data-domains-test",
+      "path": "packages/clawjs/src/index-data-domains.test.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 11,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-inspect-cli-agent-codebase-test",
+      "path": "packages/clawjs/src/inspect-cli-agent-codebase.test.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-agents-v1-lifecycle",
+      "path": "packages/clawjs-core/src/agents-v1-lifecycle.ts",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 28,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-agents-v1-runtime",
+      "path": "packages/clawjs-core/src/agents-v1-runtime.ts",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 19,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-agents-v1-types",
+      "path": "packages/clawjs-core/src/agents-v1-types.ts",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-connector-control-plane",
+      "path": "packages/clawjs-core/src/connector-control-plane.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-index-productivity-contracts-test",
+      "path": "packages/clawjs-core/src/index-productivity-contracts.test.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-index-remote-contracts-test",
+      "path": "packages/clawjs-core/src/index-remote-contracts.test.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-surface-registry-contracts",
+      "path": "packages/clawjs-core/src/surface-registry-contracts.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 5,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-core-src-surface-registry-graph",
+      "path": "packages/clawjs-core/src/surface-registry-graph.ts",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0049-surface-route-graph.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profile-packages-clawjs-search-src-store-helpers",
+      "path": "packages/clawjs-search/src/store-helpers.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-search"
+    },
+    {
+      "id": "current-profile-packages-clawjs-sessions-readme",
+      "path": "packages/clawjs-sessions/README.md",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-profile-packages-clawjs-sessions-src-realistic-fixtures-test",
+      "path": "packages/clawjs-sessions/src/realistic-fixtures.test.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 5,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-profile-packages-clawjs-sessions-src-realistic-fixtures",
+      "path": "packages/clawjs-sessions/src/realistic-fixtures.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 12,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-profile-scripts-docs-alignment-check",
+      "path": "scripts/docs-alignment-check.mjs",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-scripts-no-irreversible-data-loss-check",
+      "path": "scripts/no-irreversible-data-loss-check.mjs",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 8,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-scripts-rfc-process-check",
+      "path": "scripts/rfc-process-check.mjs",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/governance/rfc-process.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-scripts-scale-lab-test",
+      "path": "scripts/scale-lab.test.mjs",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0036-performance-governance.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-scripts-scale-lab",
+      "path": "scripts/scale-lab.ts",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0036-performance-governance.md",
+      "maxOccurrences": 32,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-scripts-security-threat-model-check",
+      "path": "scripts/security-threat-model-check.mjs",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 9,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-scripts-test-lane",
+      "path": "scripts/test-lane.mjs",
+      "pattern": "profile",
+      "classification": "behaviorProfile",
+      "rationale": "This path uses profile to name behavior, runtime, or execution-shape configuration, not governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-governance"
+    },
+    {
+      "id": "current-profile-sessions-src-bin-cli",
+      "path": "sessions/src/bin/cli.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-profile-sessions-tests-e2e-canonical-core-e2e-test",
+      "path": "sessions/tests/e2e/canonical-core.e2e.test.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-sessions"
+    },
+    {
+      "id": "current-profile-skills-canonical-catalog-expansion-skill",
+      "path": "skills/canonical-catalog-expansion/SKILL.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-skills"
+    },
+    {
+      "id": "current-profile-skills-performance-investigation-skill",
+      "path": "skills/performance-investigation/SKILL.md",
+      "pattern": "profile",
+      "classification": "domainProfile",
+      "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0036-performance-governance.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-skills"
+    },
+    {
+      "id": "current-profileId-packages-clawjs-node-src-create-claw-runtime-test",
+      "path": "packages/clawjs-node/src/create-claw-runtime.test.ts",
+      "pattern": "profileId",
+      "classification": "profileProjection",
+      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-node"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-cli-dense-data-semantic-assets",
+      "path": "packages/clawjs/src/cli-dense-data-semantic-assets.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 12,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-cli-dense-data-semantic-company",
+      "path": "packages/clawjs/src/cli-dense-data-semantic-company.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 22,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-cli-dense-data-semantic-products",
+      "path": "packages/clawjs/src/cli-dense-data-semantic-products.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 19,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-cli-discovery-dense-data-primary-test-support",
+      "path": "packages/clawjs/src/cli-discovery-dense-data-primary.test-support.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 34,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-cli-discovery-dense-data-secondary-test-support",
+      "path": "packages/clawjs/src/cli-discovery-dense-data-secondary.test-support.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 21,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-index-data-domains-test",
+      "path": "packages/clawjs/src/index-data-domains.test.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-cli"
     }
   ]
 }
