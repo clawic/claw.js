@@ -332,6 +332,26 @@
       "adr": "docs/adr/0049-surface-route-graph.md",
       "notes": "Registers additive surface route graph, Mac Care sidecar/CLI, runtime manifest/env, private API, workspace storage/sheets, sessions export, and file binding event surfaces so the public baseline drift is covered by the evolution ledger and refreshed snapshot.",
       "createdAt": "2026-05-22T00:00:00.000Z"
+    },
+    {
+      "id": "evo_agent_resource_test_cli_surfaces",
+      "title": "Agent resource and test CLI surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.cli.command.agent-resource",
+        "claw.cli.command.test"
+      ],
+      "tests": [
+        "packages/clawjs/src/cli-agent-resource-command.test.ts",
+        "packages/clawjs/src/cli-test-command.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0002-testing-architecture.md",
+      "notes": "Registers additive coordination-aware agent resource and test CLI commands so shared validation resources, leases, and test planning are covered by the evolution ledger and refreshed public surface baseline.",
+      "createdAt": "2026-05-23T00:00:00.000Z"
     }
   ]
 }

@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1127,
-    "cliCommands": 167
+    "surfaces": 1129,
+    "cliCommands": 169
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:89a853f8",
-    "cliCommands": "fnv1a32:f1f3d3ce",
-    "combined": "fnv1a32:a37e7ff8"
+    "surfaces": "fnv1a32:8a1f4b12",
+    "cliCommands": "fnv1a32:82daf03a",
+    "combined": "fnv1a32:704a552f"
   },
   "surfaces": [
     {
@@ -1330,6 +1330,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "agenda",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.agent-resource",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "agent-resource",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -2671,6 +2680,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "templates",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.test",
+      "owner": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "test",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -9412,6 +9430,14 @@
       "jsonSchemaId": "claw.cli.agenda.v1"
     },
     {
+      "name": "agent-resource",
+      "kind": "canonical",
+      "usage": "agent-resource plan|acquire|heartbeat|release|status|waitlist|reap",
+      "family": "agent",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.agent-resource.v1"
+    },
+    {
       "name": "agents",
       "kind": "canonical",
       "usage": "agents list|get|upsert|delete|schema|evaluate-access|delegation-check|supervisor-check|route-check|resolve-external-identity|project-support-inbox|memory-check|budget-check|action-severity|autonomy-check|dispatch-plan|context-pack|tool-catalog|creation-review|storage-audit|audit-coverage|operational-snapshot|control-panel|privacy-plan|paperclip-import|surface-projection|config-revision|incident|activity-feed|blueprint|evaluation|retirement-plan",
@@ -10556,6 +10582,14 @@
       "family": "media",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.templates.v1"
+    },
+    {
+      "name": "test",
+      "kind": "canonical",
+      "usage": "test plan|require|status|reap",
+      "family": "diagnostics",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.test.v1"
     },
     {
       "name": "time",
