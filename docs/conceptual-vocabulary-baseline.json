@@ -47,9 +47,9 @@
         "docs/debt-ledger.md": 1,
         "docs/decision-map.md": 3,
         "docs/discoverability-golden-queries.json": 1,
-        "docs/evolution/baseline.json": 12,
+        "docs/evolution/baseline.json": 13,
         "docs/evolution/fixtures/v1-foundation.json": 15,
-        "docs/evolution/public-surface-baseline.json": 1132,
+        "docs/evolution/public-surface-baseline.json": 1143,
         "docs/evolution/schema.json": 2,
         "docs/getting-started.md": 1,
         "docs/governance-vocabulary-baseline.json": 12,
@@ -100,7 +100,6 @@
         "packages/clawjs-core/src/need-route-lab.ts": 1,
         "packages/clawjs-core/src/schemas-workspace.ts": 2,
         "packages/clawjs-core/src/schemas.ts": 1,
-        "packages/clawjs-core/src/surface-registry-contracts.ts": 1,
         "packages/clawjs-core/src/surface-registry-graph.ts": 4,
         "packages/clawjs-core/src/types-workspace.ts": 1,
         "packages/clawjs-index/src/routes/chats.ts": 1,
@@ -254,7 +253,7 @@
       }
     }
   },
-  "generatedAt": "2026-05-23T14:17:29.971Z",
+  "generatedAt": "2026-05-23T14:59:39.907Z",
   "policy": "Reviewed conceptual vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/conceptual-vocabulary-guard.mjs unless the occurrence is removed or this baseline is deliberately updated with rationale.",
   "protectedTerms": [
     "owner",
@@ -280,8 +279,8 @@
   "schemaVersion": 1,
   "summary": {
     "owner": {
-      "files": 150,
-      "occurrences": 1697
+      "files": 149,
+      "occurrences": 1708
     },
     "tenant": {
       "files": 95,

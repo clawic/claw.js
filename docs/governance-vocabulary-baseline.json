@@ -866,7 +866,7 @@
       "secrets/src/server/stores.ts": 28
     }
   },
-  "generatedAt": "2026-05-23T14:20:48.312Z",
+  "generatedAt": "2026-05-23T14:59:42.830Z",
   "policy": "Current governance vocabulary debt may shrink without review. Any increase in a tracked path or any new tracked path fails scripts/governance-scope-guard.mjs unless the occurrence is removed or classified in docs/governance-vocabulary-classifications.json with exact counts and rationale.",
   "schemaVersion": 1,
   "summary": {
