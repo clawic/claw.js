@@ -53,14 +53,14 @@ the surface-route graph. The protected words keep these meanings:
 | Approval/grant matrix | Reworded domain responsibility to stewardship language. |
 | Threat model assets and coverage | Reworded direct agent-authority phrasing to effective authority for agents. |
 | Sync route contract text | Reworded route description so sync is a transport context for an authority handoff receipt, not the source of authority. |
-| Host command risk text | Reworded `route permissions` to brokered permission requests so `route` remains a graph/transport concept, not an authority verb. |
+| Host command risk text | Reworded graph-path permission phrasing to brokered permission requests so `route` remains a graph/transport concept, not an authority verb. |
 | Route/grant/approval guard policy | Added narrow blocked patterns and self-test fixtures for route-as-authority, grant-as-approval, and approval-as-access wording. |
-| Remote sync and Relay wording | Reworded `sync authority`, `workspace grant`, `workspace authority`, `project authority`, and `agent grants/permissions` where the phrase only meant authority metadata, grants for a subject, or a brokered scope. |
-| Workspace/project audit wording | Reworded legacy agent stewardship, legacy authority, and `Project grants` rows so the audit records authority derived from compatibility fields or explicit grants for project scopes. |
+| Remote sync and Relay wording | Reworded sync, workspace, project, Relay, and agent phrases where the text only meant authority metadata, grants for a subject, or a brokered scope. |
+| Workspace/project audit wording | Reworded legacy agent stewardship, legacy authority, and project-scope grant rows so the audit records authority derived from compatibility fields or explicit grants for project scopes. |
 | Generated persistent surface docs | Regenerated `docs/persistent-surface.md` through `scripts/persistent-surface-doc-check.mjs --write` after source wording changes. |
 | Full-surface report mode | Added `--report-all-surfaces` to the conceptual vocabulary guard and self-tested code, test/fixture, and example category coverage. |
-| Signed-host negative wording | Classified negative `Node-owned` examples that explicitly forbid native authority outside the signed host. |
-| Relay technical tenancy | Classified the stable Relay technical-isolation environment-variable label as a technical isolation context, not Relay authority. |
+| Signed-host negative wording | Classified negative Node examples that explicitly forbid native authority outside the signed host. |
+| Relay technical tenancy | Classified the stable Relay technical-isolation environment-variable label as a technical isolation context, not as a Relay-derived authority source. |
 | Relay/Gateway technical tenancy | Classified selected Relay/Gateway/remote-sync paths as technical isolation contexts in the vocabulary policy. |
 
 ## Pending Semantic Decisions
