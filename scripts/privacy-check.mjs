@@ -2,8 +2,10 @@ import fs from "fs";
 import path from "path";
 import { execFileSync } from "child_process";
 import { fileURLToPath } from "url";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const allowedArgs = new Set(["--self-test"]);
 
 const blockedLiterals = [
   ["ka", "ppa"].join(""),
@@ -230,13 +232,117 @@ export function applyBaseline(findings, baseline = readBaseline()) {
   return unbaselined;
 }
 
+function privacyDiagnostic(item) {
+  if (typeof item === "string" && item.startsWith("unknown argument")) {
+    return createDiagnostic("privacy_check_usage_error", item, {
+      status: "USAGE",
+      location: "scripts/privacy-check.mjs",
+      suggestion: "Use --self-test or no arguments.",
+      safeNextStep: "Rerun node scripts/privacy-check.mjs with a supported argument.",
+    });
+  }
+  const finding = typeof item === "string"
+    ? { filePath: "scripts/privacy-check.mjs", line: 1, rule: "privacy", description: item }
+    : item;
+  const location = `${finding.filePath}:${finding.line}`;
+  if (finding.description?.startsWith("baseline expected")) {
+    return createDiagnostic("privacy_baseline_drift", `${finding.rule}: ${finding.description}`, {
+      location,
+      suggestion: "Refresh the privacy baseline only after confirming the removed or changed finding is intentional and public-safe.",
+      safeNextStep: "Inspect the named baseline entry, update docs/privacy-check-baseline.json if appropriate, then rerun this check.",
+    });
+  }
+  if (finding.rule === "private-user-path" || finding.rule === "codex-private-path") {
+    return createDiagnostic("privacy_private_path_detected", finding.description, {
+      location,
+      suggestion: "Replace private local paths with synthetic paths such as /Users/example or documented placeholders.",
+      safeNextStep: "Edit the named file to remove the private path, then rerun node scripts/privacy-check.mjs.",
+    });
+  }
+  if (finding.rule?.includes("session") || finding.rule?.includes("goal") || finding.rule?.includes("source")) {
+    return createDiagnostic("privacy_private_provenance_detected", finding.description, {
+      location,
+      suggestion: "Replace private session, source, or goal identifiers with public-safe aliases.",
+      safeNextStep: "Remove the private provenance reference, then rerun node scripts/privacy-check.mjs.",
+    });
+  }
+  if (finding.rule?.includes("token") || finding.rule?.includes("secret") || finding.rule?.includes("signing") || finding.rule?.includes("team")) {
+    return createDiagnostic("privacy_secret_literal_detected", finding.description, {
+      location,
+      suggestion: "Replace secret-like values with synthetic fixtures and keep real credentials outside public repos.",
+      safeNextStep: "Remove the secret-like literal, then rerun node scripts/privacy-check.mjs.",
+    });
+  }
+  if (finding.rule === "private-bundle-id") {
+    return createDiagnostic("privacy_private_bundle_id_detected", finding.description, {
+      location,
+      suggestion: "Use com.example placeholders or public-safe bundle identifiers in public artifacts.",
+      safeNextStep: "Replace the private bundle identifier, then rerun node scripts/privacy-check.mjs.",
+    });
+  }
+  return createDiagnostic("privacy_private_literal_detected", finding.description, {
+    location,
+    suggestion: "Replace private literals with synthetic fixtures or remove the public artifact reference.",
+    safeNextStep: "Fix the named file, then rerun node scripts/privacy-check.mjs.",
+  });
+}
+
+function printFindings(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "Privacy check failed:",
+    diagnostics: items.map(privacyDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const findings = scanText([
+    "path=/Users/privateperson/project",
+    "token=sk-test-secret-12345678901234567890",
+    "sourceConversationId 019e1234-1234-7abc-8abc-123456789abc",
+    "bundle identifier com.private.app",
+  ].join("\n"), "/Users/example/private-fixture.md");
+  if (!findings.some((finding) => finding.rule === "private-user-path")) throw new Error("self-test missing private path finding");
+  if (!findings.some((finding) => finding.rule === "secret-looking-literal")) throw new Error("self-test missing secret finding");
+  const baselineDrift = applyBaseline([], { entries: [{ filePath: "docs/example.md", rule: "private-user-path", count: 1 }] });
+  if (!baselineDrift.some((finding) => finding.description.startsWith("baseline expected"))) throw new Error("self-test missing baseline drift");
+  const chunks = [];
+  printFindings([
+    "unknown argument --bad-token-sk-test-secret-12345678901234567890",
+    ...findings,
+    ...baselineDrift,
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  for (const code of [
+    "privacy_check_usage_error",
+    "privacy_private_path_detected",
+    "privacy_secret_literal_detected",
+    "privacy_private_provenance_detected",
+    "privacy_private_bundle_id_detected",
+    "privacy_baseline_drift",
+  ]) {
+    if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
+  }
+  if (!output.includes("suggestion: Replace secret-like values")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret")) throw new Error("self-test leaked private data");
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const args = process.argv.slice(2);
+  for (const arg of args) {
+    if (!allowedArgs.has(arg)) {
+      printFindings([`unknown argument ${arg}`]);
+      process.exit(64);
+    }
+  }
+  if (args.includes("--self-test")) {
+    runSelfTest();
+    console.log("Privacy check self-test passed.");
+    process.exit(0);
+  }
   const findings = applyBaseline(scanRepository());
   if (findings.length > 0) {
-    console.error("Privacy check failed. Replace real/private data with synthetic fixtures:");
-    for (const finding of findings) {
-      console.error(`${finding.filePath}:${finding.line} ${finding.rule}`);
-    }
+    printFindings(findings);
     process.exit(1);
   }
   console.log("Privacy check passed.");
