@@ -25,6 +25,8 @@ events. It maps every event kind to collapsed, active, expanded, everyday, and
 coding disclosure states, with localization keys, payload caps, expansion
 routes, outcomes, and fixtures. `src/render-matrix.test.ts` keeps the matrix
 exhaustive and ensures unknown events render through a visible capped fallback.
+Use `capSessionRenderPreview()` and `capSessionRenderDetailPayload()` to apply
+those caps consistently without mutating the canonical stored payload.
 
 ## Realistic fixtures
 

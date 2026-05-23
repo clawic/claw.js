@@ -69,6 +69,11 @@ event kind without a matrix row fails TypeScript, and
 bounded payload caps, localization-key registration shape, expansion routing,
 and unknown-event fallback behavior.
 
+Renderers should apply those limits through `capSessionRenderPreview()` and
+`capSessionRenderDetailPayload()` instead of truncating ad hoc. These helpers
+use the matrix row for the event kind, preserve the canonical stored payload,
+and fall back to the unknown-event caps for provider-specific event types.
+
 ## Which Surface To Use
 
 | Need | Use | Why |

@@ -4,6 +4,7 @@ export * from "./client.ts";
 export * from "./config.ts";
 export * from "./json-contracts.ts";
 export * from "./realistic-fixtures.ts";
+export * from "./render-caps.ts";
 export * from "./render-matrix.ts";
 export * from "./runtime-jobs.ts";
 export * from "./search-indexer.ts";

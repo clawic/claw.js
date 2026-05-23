@@ -442,9 +442,9 @@ The docs check script validates that every current export from
     RealtimeHub
     RealtimeHubMetrics
     RealtimeHubOptions
-    RebuildSessionProjectionResult
     RebuildSessionMemoryExtractsInput
     RebuildSessionMemoryExtractsResult
+    RebuildSessionProjectionResult
     RebuildSessionProjectionsInput
     RebuildSessionProjectionsResult
     RecordChangeEvent
@@ -516,6 +516,7 @@ The docs check script validates that every current export from
     SESSION_FILE_EXTENSION
     SESSION_JSON_CONTRACT_VERSION
     SESSION_MESSAGE_APPENDED_EVENT_MAX_BYTES
+    SESSION_RENDER_TRUNCATION_MARKER
     SKILLS_CONFIG_FILE
     SKILLS_DIR
     SKILLS_HOME_DIR
@@ -546,32 +547,35 @@ The docs check script validates that every current export from
     SessionAttachment
     SessionCliInvocation
     SessionContextChip
+    SessionDatabaseJsonProjection
     SessionDocumentRef
     SessionDynamicToolRecord
     SessionEvent
     SessionEventSearchHit
     SessionEventType
     SessionGatewayDescriptor
-    SessionMessage
-    SessionDatabaseJsonProjection
     SessionJsonContractErrorCode
     SessionJsonContractId
     SessionJsonParseResult
+    SessionMemoryExtractRecord
+    SessionMemoryExtractStatus
+    SessionMessage
     SessionMessageRecord
     SessionMessageUpdatedDelta
     SessionMessageUpdatedPayload
-    SessionMemoryExtractRecord
-    SessionMemoryExtractStatus
     SessionOriginRecord
     SessionProjectionMetaRecord
     SessionProjectionStatus
     SessionRecord
     SessionRecordAlias
+    SessionRenderCapPolicy
+    SessionRenderDetailCap
     SessionRenderDisclosureMode
     SessionRenderFixture
     SessionRenderMatrixRow
     SessionRenderOutcome
     SessionRenderState
+    SessionRenderTextCap
     SessionRuntime
     SessionSearchDocumentInput
     SessionSearchHit
@@ -812,6 +816,10 @@ The docs check script validates that every current export from
     callTelegramApi
     canonicalActorAssertionPayload
     canonicalizeCompatSnapshotFile
+    capSessionRenderDetailPayload
+    capSessionRenderDetailText
+    capSessionRenderPreview
+    capSessionRenderText
     clawAdapter
     clawPersistentSurfaceRegistry
     cleanupOpenClawAuthLoginState
@@ -921,6 +929,7 @@ The docs check script validates that every current export from
     invokeChannelProcessor
     ironclawAdapter
     isOpenClawProviderEnabled
+    isSessionStructuredEventKind
     launchOpenClawAuthLogin
     libraryProjectionTargetFile
     listClawRuntimeModels
@@ -1082,6 +1091,7 @@ The docs check script validates that every current export from
     saveAuthStore
     saveProviderApiKey
     seedRealisticSessionsFixture
+    sessionRenderCapPolicyFor
     sessionRenderFixtures
     sessionRenderMatrix
     sessionRenderMatrixRowFor
@@ -1101,6 +1111,7 @@ The docs check script validates that every current export from
     streamOpenClawSessionEvents
     streamRuntimeSession
     streamRuntimeSessionEvents
+    stringifySessionRenderPayload
     stringifyYaml
     suggestSessionTitle
     summarizeAuthProfiles
