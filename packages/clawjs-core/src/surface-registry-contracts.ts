@@ -699,6 +699,7 @@ export const clawStorageFiles = {
   secretsDatabase: "secrets.sqlite",
   searchDatabase: "search.sqlite",
   macCareDatabase: MAC_CARE_SIDECAR_FILENAME,
+  agentCoordinationDatabase: "agent-coordination.sqlite",
 } as const;
 
 export const clawExportExtensions = {
@@ -710,6 +711,7 @@ export const clawExportExtensions = {
 export const clawWorkspaceLayout = {
   root: ".claw",
   manifest: ".claw/manifest.json",
+  agentCoordination: ".claw/agent-coordination",
   desiredState: ".claw/state/desired",
   observedState: ".claw/state/observed",
   projections: ".claw/projections",
@@ -728,9 +730,11 @@ export const clawGlobalHomeLayout = {
   config: "~/.claw/config.yaml",
   data: "~/.claw/data",
   state: "~/.claw/state",
+  agentCoordinationState: "~/.claw/state/agent-coordination.sqlite",
   cache: "~/.claw/cache",
   logs: "~/.claw/logs",
   run: "~/.claw/run",
+  agentCoordinationRun: "~/.claw/run/agent-coordination",
   tmp: "~/.claw/tmp",
   skills: "~/.claw/skills",
 } as const;

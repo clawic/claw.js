@@ -57,7 +57,7 @@ secret reference value or resolved credential.
   non-matching scoped policies do not block unrelated actors.
 - Defaults and fallbacks are included in decision traces.
 - Control-plane audit declarations preserve selected context refs, field refs,
-  secret refs, default refs, fallback rule ids, approval grant id, and reason
+  secret refs, default refs, fallback rule ids, approval-bound grant id, and reason
   codes without private values or plaintext credentials.
 - Provider schemas cite source documentation and are checked by the doctor
   report.

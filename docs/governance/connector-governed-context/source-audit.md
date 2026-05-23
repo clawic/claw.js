@@ -61,8 +61,8 @@ local session paths.
 | CGC-014 | `default_resolution` | validated | `resolveConnectorContextDefaultRefs` matches global/workspace/project/app/environment/provider/operation/agent/role scope and priority; core and CLI tests cover scoped defaults. |
 | CGC-015 | `fallback_behavior` | validated | `ConnectorContextFallbackRule` captures ordered fallback intent; RevenueCat tests assert v2 default falls back to v1 only with traced fallback rule id. |
 | CGC-016 | `agent_visibility` | validated | Redaction returns private values as `redacted` and secret material as null/`secret_ref`; CLI explain/export tests assert redacted output. |
-| CGC-017 | `approval_requirements` | validated | Context policy supports `requires_approval`; control-plane tests require approval grants for risk/policy-sensitive flows and include approval grant ids in audit. |
-| CGC-018 | `usage_audit` | validated | `ConnectorAuditDeclaration` and `connector_context_audit_events` record provider, operation, actor/request ids, context refs, field refs, secret refs, defaults, fallback rules, approval grants, decisions, and reason codes. |
+| CGC-017 | `approval_requirements` | validated | Context policy supports `requires_approval`; control-plane tests require approval-bound grant records for risk/policy-sensitive flows and include their ids in audit. |
+| CGC-018 | `usage_audit` | validated | `ConnectorAuditDeclaration` and `connector_context_audit_events` record provider, operation, actor/request ids, context refs, field refs, secret refs, defaults, fallback rules, approval-bound grant records, decisions, and reason codes. |
 | CGC-019 | `cli_authority` | implemented | The final CLI preserves both human and technical roles: `accounts` for human operations and `connectors context` for technical authority, with `resources` only as reference projection. |
 | CGC-020 | `accounts_role` | implemented | `accounts list/show/explain/upsert/link-secret/defaults/export` exposes provider accounts, projects, apps, ids, products, and secret refs in operational terms. |
 | CGC-021 | `resources_role` | implemented | `resources` remains generic; governed context creates opaque `res_*` projections and `accounts show res_*` resolves them without moving primary management to `resources`. |
@@ -106,7 +106,7 @@ local session paths.
 | CGC-059 | `adr_depth` | documented | ADR 0029 includes context, decision, consequences, storage, CLI, policy, security, provider schemas, completion gates, and validation. |
 | CGC-060 | `agent_instructions` | documented | `skills/secrets-boundary-review`, `skills/integration-qa-lab`, and `skills/public-hygiene-review` include governed context, defaults, policy, secret refs, guidance, audit, and public hygiene checks. |
 | CGC-061 | `apple_acceptance` | validated | Core, control-plane, and CLI tests cover Apple signing/release context, including Team ID/Bundle ID/SKU requirements, blocked context, missing fields, redaction, and remedies. |
-| CGC-062 | `revenuecat_acceptance` | validated | Core, control-plane, and CLI tests cover RevenueCat v2 default, v1 fallback, secret refs, fallback trace, approval grant, and audit metadata. |
+| CGC-062 | `revenuecat_acceptance` | validated | Core, control-plane, and CLI tests cover RevenueCat v2 default, v1 fallback, secret refs, fallback trace, approval-bound grant metadata, and audit metadata. |
 | CGC-063 | `current_provider_acceptance` | validated | `buildConnectorContextDoctorReport()` returns ok for all builtin providers and tests assert zero gaps. |
 | CGC-064 | `cli_aliases` | validated | CLI accepts `accounts` and `acct`; CLI tests cover both. |
 | CGC-065 | `technical_command_length` | validated | CLI accepts `connectors context` and `connectors ctx`; CLI tests cover both. |

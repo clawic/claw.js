@@ -365,14 +365,14 @@ export function evaluateConnectorControlPlaneRequest(input: {
   if (request.operation.requiresApproval && !matchingGrant) {
     reasons.push({
       code: "approval_required",
-      message: `Operation ${request.operation.id} requires a scoped approval grant.`,
+      message: `Operation ${request.operation.id} requires a scoped grant tied to approval evidence.`,
     });
   }
 
   if (approvalGrant && !matchingGrant) {
     reasons.push({
       code: "approval_expired",
-      message: `Approval grant ${approvalGrant.id} is expired or outside the requested scope.`,
+      message: `Approval-bound grant ${approvalGrant.id} is expired or outside the requested scope.`,
     });
   }
 

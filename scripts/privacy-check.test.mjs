@@ -22,6 +22,11 @@ test("flags private public-boundary categories", () => {
   const privateSessionId = ["019e2b2c", "ec6d", "7ea0", "943f", "4cad5b2ad6a1"].join("-");
   const privateThreadId = ["019e2b2c", "ec6d", "7ea0", "943f", "7cad5b2ad6a1"].join("-");
   const privateToken = ["ghp", "123456789012345678901234567890123456"].join("_");
+  const privateRuntimeAlias = ["private", "runtime", "conversation"].join("-") + ":system-telemetry";
+  const privatePlaceholder = ["private", "session", "not", "published"].join("-");
+  const currentThreadAlias = ["current", "thread", "2026", "05", "21"].join("-");
+  const sourceSessionRef = ["source", "Session", "Ref"].join("");
+  const privateCodename = ["Source Code Aging", "Program"].join(" ");
   const rolloutPath = [
     "rollout",
     "2026-05-15T12-27-04",
@@ -39,6 +44,11 @@ test("flags private public-boundary categories", () => {
     "bundle_id=com.private.app",
     `${[["App", "le"].join(""), "Distribution"].join(" ")}: Private Org (ABCDE12345)`,
     ["release", "output"].join("-"),
+    privateRuntimeAlias,
+    privatePlaceholder,
+    currentThreadAlias,
+    sourceSessionRef,
+    privateCodename,
   ].join("\n"));
   for (const rule of [
     "private-user-path",
@@ -52,6 +62,11 @@ test("flags private public-boundary categories", () => {
     "private-bundle-id",
     "signing-identity",
     "release-artifact-output-reference",
+    "private-runtime-source-alias",
+    "private-session-placeholder",
+    "current-thread-source-alias",
+    "private-provenance-source-field",
+    "private-codename",
   ]) {
     assert.equal(findings.some((finding) => finding.rule === rule), true, `expected ${rule}`);
   }
@@ -83,7 +98,7 @@ test("allows synthetic fixtures and redacted placeholders", () => {
     "/Users/person/Desktop/private-screenshot.png",
     "<private-root>",
     "<sessionId>",
-    "private-session-not-published",
+    "<private-provenance-ledger>",
     "TEAM123",
     "TEAM-WRONG",
     "SKU123",

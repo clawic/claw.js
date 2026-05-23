@@ -648,7 +648,7 @@ describe("MCP connector control plane", () => {
     }
   });
 
-  it("allows MCP tool calls only through a scoped approval grant", async () => {
+  it("allows MCP tool calls only through an approval-bound scoped grant", async () => {
     const { app, config } = buildFixtureApp();
     try {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);

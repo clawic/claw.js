@@ -100,6 +100,13 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.equal(Array.isArray(coreDatabase.outgoingEdges), true);
   assert.equal(Array.isArray(coreDatabase.routes), true);
 
+  const coordinationShow = await runCliCapture(["inspect", "show", "claw.database.agentCoordination", "--json"], process.cwd());
+  assert.equal(coordinationShow.code, CLI_EXIT_OK);
+  const coordinationDatabase = parseCliJson<{ id: string; path: string; resourceContract: { storage: string; validation: string } }>(coordinationShow.stdout).data;
+  assert.equal(coordinationDatabase.id, "claw.database.agentCoordination");
+  assert.equal(coordinationDatabase.path, "~/.claw/state/agent-coordination.sqlite");
+  assert.match(coordinationDatabase.resourceContract.storage, /SQLite/);
+
   const narrativeShow = await runCliCapture(["inspect", "show", "claw.contracts", "--json"], process.cwd());
   assert.equal(narrativeShow.code, CLI_EXIT_OK);
   const narrativeSurface = parseCliJson<{

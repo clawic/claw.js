@@ -963,12 +963,24 @@ test("persistent surface registry exposes framework and host storage nodes", () 
   assert.equal(coreDatabase?.path, "~/.claw/data/core.sqlite");
   assert.deepEqual(coreDatabase?.envOverrides?.includes("CLAW_DATABASE_DB_PATH"), true);
 
+  const coordinationDatabase = findClawPersistentSurfaceNode("claw.database.agentCoordination");
+  assert.equal(coordinationDatabase?.kind, "database");
+  assert.equal(coordinationDatabase?.path, "~/.claw/state/agent-coordination.sqlite");
+  assert.equal(coordinationDatabase?.resourceContract?.validation.includes("cli-agent-resource-command.test.ts"), true);
+
+  const coordinationRun = findClawPersistentSurfaceNode("claw.run.agentCoordination");
+  assert.equal(coordinationRun?.kind, "folder");
+  assert.equal(coordinationRun?.path, "~/.claw/run/agent-coordination");
+  assert.equal(coordinationRun?.lifecycle, "ephemeral");
+
   const contracts = findClawPersistentSurfaceNode("claw.contracts");
   assert.equal(contracts?.name, "Claw stable contract surface");
 
   const workspaceChildren = listClawPersistentSurfaceNodes("claw.workspace");
   assert.equal(workspaceChildren.some((node) => node.id === "claw.workspace.manifest"), true);
+  assert.equal(workspaceChildren.some((node) => node.id === "claw.workspace.agentCoordination"), true);
   assert.equal(findClawPersistentSurfaceNode(".claw/manifest.json")?.id, "claw.workspace.manifest");
+  assert.equal(findClawPersistentSurfaceNode(".claw/agent-coordination")?.id, "claw.workspace.agentCoordination");
   assert.equal(resolveClawPersistentSurfacePath("claw.workspace.styles", "/repo/app", "brand"), "/repo/app/.claw/styles/brand");
 
   const externalCodex = findClawPersistentSurfaceNode("claw.external.codex");

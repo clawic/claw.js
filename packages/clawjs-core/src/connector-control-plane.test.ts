@@ -254,7 +254,7 @@ test("deny rules win and raw trace mode remains explicit", () => {
   assert.equal(decision.audit.rawTraceRequiresOptIn, true);
 });
 
-test("unknown cost blocks unless a scoped approval grant allows it", () => {
+test("unknown cost blocks unless an approval-bound scoped grant allows it", () => {
   const costRequest: ConnectorExecutionRequest = {
     ...baseRequest,
     expectedCost: undefined,

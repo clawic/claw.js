@@ -65,6 +65,31 @@ const patterns = [
     regex: /\b(?:Source conversation|sourceConversationId|conversationId|sourcePlanId|planId|Reference plan item|Binding plan item|Plan item|source session|sourceSession)[^\n]{0,160}\b019e[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-plan)?\b/gi,
   },
   {
+    id: "private-runtime-source-alias",
+    description: "private runtime conversation or plan alias",
+    regex: /\bprivate-runtime-(?:conversation|plan):[A-Za-z0-9._:-]+\b/g,
+  },
+  {
+    id: "private-session-placeholder",
+    description: "private session placeholder that has no public value",
+    regex: /\bprivate-session-not-published\b|\bprivate session,\s*not published\b/gi,
+  },
+  {
+    id: "current-thread-source-alias",
+    description: "private current-thread source alias",
+    regex: /\bcurrent-thread-20\d{2}-\d{2}-\d{2}\b/g,
+  },
+  {
+    id: "private-provenance-source-field",
+    description: "private source-session provenance field in public artifact",
+    regex: /\bsourceSession(?:Ref|Alias)\b/g,
+  },
+  {
+    id: "private-codename",
+    description: "private internal codename",
+    regex: /\b(?:Source Code Aging Program|Provocation Not Publish)\b/g,
+  },
+  {
     id: "contextual-team-id",
     description: "private Team ID in signing or release context",
     regex: /\b(?:DEVELOPMENT_TEAM|TEAM_ID|team_id|teamId|Team ID|team identifier)\b[^\n]{0,60}\b[A-Z0-9]{10}\b/g,

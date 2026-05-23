@@ -14,7 +14,7 @@ connector runtime executes.
 The repository already separates secrets, host approvals, public CLI surfaces,
 and integration runtimes. The missing layer is a deterministic control plane
 that joins provider trust, operation support, credential bindings, policy,
-budgets, network proof, approval grants, and audit declarations into one
+budgets, network proof, approval-bound grant records, and audit declarations into one
 decision.
 
 ## Decision
@@ -36,7 +36,7 @@ The pipeline is:
 - policy
 - budget
 - network
-- approval grant
+- approval-bound grant check
 - credential broker lease
 - runtime
 - redaction
