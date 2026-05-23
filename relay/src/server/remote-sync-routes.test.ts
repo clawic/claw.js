@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -26,6 +27,7 @@ import {
 
 import { buildRelayApp } from "./app.ts";
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const registeredRouteIds = () => (clawPersistentSurfaceRegistry.routes ?? []).map((route) => route.id);
 const expectedRelayClassifications = () => clawPersistentSurfaceRegistry.nodes
   .filter((node) => node.programmaticSurfaces?.includes("relay") || node.surfaceGaps?.some((gap) => gap.surface === "relay"))
@@ -364,7 +366,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(externalValidationReportPayload.items.some((entry) => entry.requirementId === "physical_iroh_handshake" && entry.missingArtifacts.includes("RemoteTransportHandshakeReceipt")), true);
     assert.equal(externalValidationReportPayload.items.every((entry) => !entry.clearable && entry.status === "external_pending" && !entry.approvedRunRefPresent && !entry.writes), true);
 
-    const externalValidationArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/governance/remote-gateway-sync/external-validation-evidence.json"), "utf8")) as { evidence: unknown[] };
+    const externalValidationArtifact = JSON.parse(fs.readFileSync(path.join(repoRoot, "docs/governance/remote-gateway-sync/external-validation-evidence.json"), "utf8")) as { evidence: unknown[] };
     const artifactExternalValidationReport = await built.app.inject({
       method: "POST",
       url: "/v1/remote/external-validation-report",
@@ -477,7 +479,7 @@ test("relay exposes remote Gateway and Sync conformance API routes", async () =>
     assert.equal(decisionReviewPayload.blockers.includes("external_validation"), true);
     assert.equal(decisionReviewPayload.items.every((entry) => entry.reviewStatus === "missing" && entry.disposition === null && !entry.writes), true);
 
-    const sourceQaReviewArtifact = JSON.parse(fs.readFileSync(path.resolve("docs/governance/remote-gateway-sync/source-review.json"), "utf8")) as { items: unknown[] };
+    const sourceQaReviewArtifact = JSON.parse(fs.readFileSync(path.join(repoRoot, "docs/governance/remote-gateway-sync/source-review.json"), "utf8")) as { items: unknown[] };
     const reviewedDecisionReview = await built.app.inject({
       method: "POST",
       url: "/v1/remote/decision-review",
