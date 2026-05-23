@@ -46,9 +46,139 @@ const publicCredentialLeaseRefInputSchema = {
   },
 };
 
+/**
+ * Computer Use tool surface. Ergonomic per-action tools (`computer_use.*`) that
+ * target a Mac app by name and act on Accessibility elements by `element_index`,
+ * routed to the signed host `mac.app.*` capabilities. The signed host performs
+ * the action with AXUIElement + per-process events, so the system pointer never
+ * moves and the target app stays backgrounded. Mutating actions come back as
+ * `approval_required` from the host until the host UI approves them.
+ */
+export function computerUseExposedTools(macSignedHostBridge: MacSignedHostBridge | null): MCPExposedTool[] {
+  const defaultActor = { kind: "agent", id: "clawjs-agent" } as const;
+  const defaultHost = { hostId: "clawjs-host", bundleId: "clawjs.host" } as const;
+
+  function buildRequest(capabilityId: string, args: Record<string, unknown>, actionArgs: Record<string, unknown>) {
+    const actor = args.actor && typeof args.actor === "object" ? args.actor : defaultActor;
+    const host = args.host && typeof args.host === "object" ? args.host : defaultHost;
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(actionArgs)) {
+      if (value !== undefined && value !== null) cleaned[key] = value;
+    }
+    return macActionRequestSchema.parse({
+      // clawContractVersionV1
+      schemaVersion: 1,
+      requestId: typeof args.requestId === "string"
+        ? args.requestId
+        : `macreq_cu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      capabilityId,
+      actor,
+      host,
+      arguments: cleaned,
+      dryRun: args.dryRun === true,
+      reason: typeof args.reason === "string" ? args.reason : undefined,
+    });
+  }
+
+  function tool(
+    name: string,
+    description: string,
+    capabilityId: string,
+    properties: Record<string, unknown>,
+    required: string[],
+    mapArgs: (args: Record<string, unknown>) => Record<string, unknown>,
+  ): MCPExposedTool {
+    return {
+      name,
+      description,
+      inputSchema: { type: "object", properties, additionalProperties: true, ...(required.length ? { required } : {}) },
+      handler: async (args) => {
+        const request = buildRequest(capabilityId, args, mapArgs(args));
+        if (macSignedHostBridge) return macSignedHostBridge.execute(request);
+        return {
+          status: "signed_host_required",
+          request,
+          reason: "Computer Use must run through the active signed host broker.",
+        };
+      },
+    };
+  }
+
+  const appProp = { app: { type: "string", description: "Target app name (or bundle id, or \"frontmost\")." } };
+  const indexProp = { element_index: { type: "integer", minimum: 0, description: "Element index from get_app_state." } };
+
+  return [
+    tool(
+      "computer_use.list_apps",
+      "List running apps so Computer Use can target one by name.",
+      "mac.app.list",
+      {},
+      [],
+      () => ({}),
+    ),
+    tool(
+      "computer_use.get_app_state",
+      "Read the indexed accessibility element tree of a running app.",
+      "mac.app.state",
+      { ...appProp, max_depth: { type: "integer", minimum: 1 }, max_elements: { type: "integer", minimum: 1 } },
+      ["app"],
+      (args) => ({ app: args.app, max_depth: args.max_depth, max_elements: args.max_elements }),
+    ),
+    tool(
+      "computer_use.click",
+      "Click a UI element by Computer Use element index.",
+      "mac.app.click",
+      { ...appProp, ...indexProp },
+      ["app", "element_index"],
+      (args) => ({ app: args.app, element_index: args.element_index }),
+    ),
+    tool(
+      "computer_use.type_text",
+      "Type text into the focused field of a running app.",
+      "mac.app.type",
+      { ...appProp, text: { type: "string" } },
+      ["app", "text"],
+      (args) => ({ app: args.app, text: args.text }),
+    ),
+    tool(
+      "computer_use.press_key",
+      "Send a key chord (e.g. cmd+n, shift+tab) to a running app.",
+      "mac.app.key",
+      { ...appProp, key: { type: "string" } },
+      ["app", "key"],
+      (args) => ({ app: args.app, key: args.key }),
+    ),
+    tool(
+      "computer_use.scroll",
+      "Scroll a running app by a pixel delta.",
+      "mac.app.scroll",
+      { ...appProp, delta_x: { type: "integer" }, delta_y: { type: "integer" } },
+      ["app"],
+      (args) => ({ app: args.app, delta_x: args.delta_x, delta_y: args.delta_y }),
+    ),
+    tool(
+      "computer_use.set_value",
+      "Set the value of a UI element by Computer Use element index.",
+      "mac.app.set_value",
+      { ...appProp, ...indexProp, value: { type: "string" } },
+      ["app", "element_index", "value"],
+      (args) => ({ app: args.app, element_index: args.element_index, value: args.value }),
+    ),
+    tool(
+      "computer_use.perform_action",
+      "Perform a named accessibility action (e.g. AXShowMenu) on an element.",
+      "mac.app.action",
+      { ...appProp, ...indexProp, ax_action: { type: "string" } },
+      ["app", "element_index", "ax_action"],
+      (args) => ({ app: args.app, element_index: args.element_index, ax_action: args.ax_action }),
+    ),
+  ];
+}
+
 export function defaultExposedTools(options: DefaultExposedToolsOptions = {}): MCPExposedTool[] {
   const macSignedHostBridge = options.macSignedHostBridge ?? null;
   return [
+    ...computerUseExposedTools(macSignedHostBridge),
     {
       name: "clawjs_ping",
       description: "Health-check tool exposed by ClawJS MCP server.",
