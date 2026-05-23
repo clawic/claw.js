@@ -11,6 +11,7 @@ import {
   parseMacActionReceiptJson,
   parseMacActionRequestJson,
   parseMacPermissionStateJson,
+  parseSyncResourceManifestJson,
 } from "./index.ts";
 import { clawCommandRequestSchema } from "./host-contracts.ts";
 
@@ -101,6 +102,30 @@ const validProjectManifest = {
   resources: {},
 };
 
+const validSyncResourceManifest = {
+  schemaVersion: 1,
+  resourceId: "sync.sessions.local",
+  kind: "sessions",
+  ownerNodeId: "node.local",
+  authority: "primary",
+  residency: ["node.local"],
+  driver: "sessions",
+  conflictPolicy: "detect_and_elevate",
+  cachePolicy: {
+    encrypted: true,
+    ttlSeconds: 3600,
+    storesSecrets: false,
+    storesAuthoritativeState: false,
+  },
+  allowedPeerNodeIds: [],
+  routeIds: ["sync.driver.sessions"],
+  secretPolicy: {
+    plaintextReplication: false,
+    secretRefsOnly: true,
+    brokerLeaseRequired: true,
+  },
+};
+
 const boundaryFixtures = [
   {
     contractId: "claw.protocol.hostCommand.v1",
@@ -143,6 +168,13 @@ const boundaryFixtures = [
     valid: validProjectManifest,
     maxBytes: clawCrossProcessJsonContractLimits["claw.workspace.manifest"],
     requiredField: "projectId",
+  },
+  {
+    contractId: "claw.api.sync.manifests",
+    parse: parseSyncResourceManifestJson,
+    valid: validSyncResourceManifest,
+    maxBytes: clawCrossProcessJsonContractLimits["claw.api.sync.manifests"],
+    requiredField: "resourceId",
   },
 ] as const;
 

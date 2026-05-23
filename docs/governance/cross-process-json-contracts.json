@@ -55,8 +55,8 @@
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs/src/cli-unknown-command.ts", "packages/clawjs/src/cli-needs.test.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs/src/cli-json.ts", "packages/clawjs-core/src/cli-command-registry.ts"] },
         "extraFields": { "status": "not_applicable", "absenceReason": "CLI output envelopes are producers, not strict input decoders; additive output fields are allowed pre-V1 while schemaVersion and canonicalCommand remain pinned." },
-        "oversized": { "status": "blocked", "absenceReason": "CLI stdout is stream output and currently has no global envelope byte ceiling.", "producer": "claw CLI command handlers", "consumer": "agent and host process readers", "risk": "A future command could emit an unexpectedly large JSON document and block a host reader." },
-        "truncated": { "status": "blocked", "absenceReason": "Consumers parse process stdout; no shared truncated-output fixture exists for all host readers.", "producer": "claw CLI process", "consumer": "Clawix and MCP host adapters", "risk": "A killed subprocess can produce partial JSON that consumers must classify without treating it as success." },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs/src/cli-json.ts", "packages/clawjs/src/cli-json.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs/src/cli-json.ts", "packages/clawjs/src/cli-json.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs/src/cli-json.ts", "packages/clawjs/src/cli-guidance-resources.test.ts"] }
       }
     },
@@ -216,9 +216,9 @@
         "parseableError": { "status": "covered", "evidence": ["packages/clawjs-core/src/index-remote-contracts.test.ts"] },
         "incomplete": { "status": "covered", "evidence": ["packages/clawjs-core/src/remote-sync-schemas.ts"] },
         "versioning": { "status": "covered", "evidence": ["packages/clawjs-core/src/remote-sync-schemas.ts"] },
-        "extraFields": { "status": "blocked", "absenceReason": "No unknown-field fixture exists for sync manifest payloads.", "producer": "Sync service", "consumer": "remote clients and connectors", "risk": "Authority or secret-policy fields could be silently ignored." },
-        "oversized": { "status": "blocked", "absenceReason": "No sync manifest byte or item limit is declared.", "producer": "Sync service", "consumer": "remote clients", "risk": "Large manifests can exhaust client cache or slow first sync." },
-        "truncated": { "status": "blocked", "absenceReason": "No truncated sync manifest fixture exists.", "producer": "Sync service", "consumer": "remote clients", "risk": "Partial sync manifest could leave cache state ambiguous." },
+        "extraFields": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "oversized": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
+        "truncated": { "status": "covered", "evidence": ["packages/clawjs-core/src/cross-process-json-boundary.ts", "packages/clawjs-core/src/cross-process-json-boundary.test.ts"] },
         "partialErrors": { "status": "covered", "evidence": ["packages/clawjs-core/src/index-remote-contracts.test.ts"] }
       }
     },

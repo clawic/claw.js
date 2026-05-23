@@ -8,6 +8,18 @@ export type CliJsonMeta = Record<string, unknown> & {
   guidance?: unknown[];
 };
 
+export const CLI_JSON_ENVELOPE_MAX_BYTES = 4 * 1024 * 1024;
+
+export type CliJsonEnvelopeParseErrorCode =
+  | "cli_json_envelope_oversized"
+  | "cli_json_envelope_truncated"
+  | "cli_json_envelope_malformed"
+  | "cli_json_envelope_invalid";
+
+export type CliJsonEnvelopeParseResult<TData = unknown> =
+  | { ok: true; byteLength: number; envelope: { ok: boolean; data?: TData; error?: { code: string; message: string }; meta?: CliJsonMeta } }
+  | { ok: false; byteLength: number; error: { code: CliJsonEnvelopeParseErrorCode; message: string; maxBytes?: number } };
+
 let cliJsonMetaProvider: (() => CliJsonMeta) | null = null;
 
 const SENSITIVE_KEY_PATTERN = /(key|token|secret|authorization|apiKey)/i;
@@ -42,6 +54,82 @@ export function writeJsonLine(stream: NodeJS.WritableStream, payload: unknown): 
 
 export function stringifyCliJson(payload: unknown): string {
   return JSON.stringify(redactSecrets(payload), null, 2);
+}
+
+function cliJsonByteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
+}
+
+function normalizeCliJsonInput(input: string | Uint8Array): string {
+  return typeof input === "string" ? input : new TextDecoder("utf8", { fatal: false }).decode(input);
+}
+
+function isCliJsonTruncationError(error: unknown, text: string): boolean {
+  const trimmed = text.trim();
+  const looksCutOff = (trimmed.startsWith("{") && !/[}\]]$/.test(trimmed))
+    || (trimmed.startsWith("[") && !/[\]}]$/.test(trimmed));
+  return error instanceof SyntaxError
+    && (looksCutOff || /unexpected end|unterminated|end of json input|after property value in json|after array element in json/i.test(error.message));
+}
+
+function isCliJsonEnvelope(value: unknown): value is { ok: boolean; data?: unknown; error?: { code: string; message: string }; meta?: CliJsonMeta } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  if (typeof record.ok !== "boolean") return false;
+  if ("meta" in record && (record.meta === null || typeof record.meta !== "object" || Array.isArray(record.meta))) return false;
+  if (record.ok === false) {
+    if (!record.error || typeof record.error !== "object" || Array.isArray(record.error)) return false;
+    const error = record.error as Record<string, unknown>;
+    return typeof error.code === "string" && error.code.length > 0
+      && typeof error.message === "string" && error.message.length > 0;
+  }
+  return true;
+}
+
+export function parseCliJsonEnvelope<TData = unknown>(
+  input: string | Uint8Array,
+  maxBytes = CLI_JSON_ENVELOPE_MAX_BYTES,
+): CliJsonEnvelopeParseResult<TData> {
+  const text = normalizeCliJsonInput(input);
+  const byteLength = cliJsonByteLength(text);
+  if (byteLength > maxBytes) {
+    return {
+      ok: false,
+      byteLength,
+      error: {
+        code: "cli_json_envelope_oversized",
+        message: `CLI JSON envelope exceeds ${maxBytes} bytes`,
+        maxBytes,
+      },
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    return {
+      ok: false,
+      byteLength,
+      error: {
+        code: isCliJsonTruncationError(error, text) ? "cli_json_envelope_truncated" : "cli_json_envelope_malformed",
+        message: error instanceof Error ? error.message : "CLI JSON envelope is malformed",
+      },
+    };
+  }
+
+  if (!isCliJsonEnvelope(parsed)) {
+    return {
+      ok: false,
+      byteLength,
+      error: {
+        code: "cli_json_envelope_invalid",
+        message: "CLI JSON envelope must include ok and a parseable error object when ok is false",
+      },
+    };
+  }
+
+  return { ok: true, byteLength, envelope: parsed as { ok: boolean; data?: TData; error?: { code: string; message: string }; meta?: CliJsonMeta } };
 }
 
 function redactString(value: string): string {

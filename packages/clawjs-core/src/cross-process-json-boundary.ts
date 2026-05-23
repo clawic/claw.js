@@ -10,6 +10,7 @@ import {
   macPermissionStateSchema,
 } from "./mac-control-plane.ts";
 import { clawProjectManifestSchema } from "./project-manifest.ts";
+import { syncResourceManifestSchema } from "./remote-sync-schemas.ts";
 
 export const clawCrossProcessJsonContractLimits = {
   "claw.protocol.hostCommand.v1": 64 * 1024,
@@ -18,6 +19,7 @@ export const clawCrossProcessJsonContractLimits = {
   "claw.mac.actionReceipt.v1": 128 * 1024,
   "claw.mac.permissionState.v1": 64 * 1024,
   "claw.workspace.manifest": 256 * 1024,
+  "claw.api.sync.manifests": 256 * 1024,
 } as const;
 
 export type ClawCrossProcessJsonContractId = keyof typeof clawCrossProcessJsonContractLimits;
@@ -289,6 +291,27 @@ export function parseClawProjectManifestJson(input: string | Uint8Array) {
       "resources",
       "createdAt",
       "updatedAt",
+    ],
+  });
+}
+
+export function parseSyncResourceManifestJson(input: string | Uint8Array) {
+  return parseCrossProcessJsonContract(input, syncResourceManifestSchema, {
+    contractId: "claw.api.sync.manifests",
+    maxBytes: clawCrossProcessJsonContractLimits["claw.api.sync.manifests"],
+    allowedTopLevelKeys: [
+      "schemaVersion",
+      "resourceId",
+      "kind",
+      "ownerNodeId",
+      "authority",
+      "residency",
+      "driver",
+      "conflictPolicy",
+      "cachePolicy",
+      "allowedPeerNodeIds",
+      "routeIds",
+      "secretPolicy",
     ],
   });
 }
