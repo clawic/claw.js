@@ -352,6 +352,29 @@
       "adr": "docs/adr/0002-testing-architecture.md",
       "notes": "Registers additive coordination-aware agent resource and test CLI commands so shared validation resources, leases, and test planning are covered by the evolution ledger and refreshed public surface baseline.",
       "createdAt": "2026-05-23T00:00:00.000Z"
+    },
+    {
+      "id": "evo_agent_coordination_storage_surfaces",
+      "title": "Agent coordination storage surfaces",
+      "class": "additive",
+      "status": "active",
+      "owner": "claw",
+      "surfaces": [
+        "claw.database.agentCoordination",
+        "claw.global.agentCoordinationRun",
+        "claw.global.agentCoordinationState",
+        "claw.run.agentCoordination",
+        "claw.workspace.agentCoordination"
+      ],
+      "tests": [
+        "packages/clawjs-core/src/index.test.ts",
+        "packages/clawjs/src/cli-agent-resource-command.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "notes": "Registers additive agent coordination database, global state/run, and workspace override/cache surfaces so shared validation leases and reusable work records remain explicit in the public surface baseline.",
+      "createdAt": "2026-05-23T00:00:00.000Z"
     }
   ]
 }

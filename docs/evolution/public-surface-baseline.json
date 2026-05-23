@@ -6,13 +6,13 @@
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1129,
-    "cliCommands": 169
+    "surfaces": 1132,
+    "cliCommands": 170
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:8a1f4b12",
-    "cliCommands": "fnv1a32:82daf03a",
-    "combined": "fnv1a32:704a552f"
+    "surfaces": "fnv1a32:17156cd7",
+    "cliCommands": "fnv1a32:a281df73",
+    "combined": "fnv1a32:9dcd79bb"
   },
   "surfaces": [
     {
@@ -3045,6 +3045,13 @@
       "path": "daemon",
       "surfaceClass": "protocol",
       "stability": "v1"
+    },
+    {
+      "id": "claw.database.agentCoordination",
+      "owner": "claw",
+      "kind": "database",
+      "parentId": "claw.global",
+      "path": "~/.claw/state/agent-coordination.sqlite"
     },
     {
       "id": "claw.database.audio",
@@ -8726,6 +8733,13 @@
       "stability": "v1"
     },
     {
+      "id": "claw.run.agentCoordination",
+      "owner": "claw",
+      "kind": "folder",
+      "parentId": "claw.global",
+      "path": "~/.claw/run/agent-coordination"
+    },
+    {
       "id": "claw.runtime.agent",
       "owner": "claw",
       "kind": "root",
@@ -8980,6 +8994,13 @@
       "owner": "claw",
       "kind": "root",
       "path": ".claw"
+    },
+    {
+      "id": "claw.workspace.agentCoordination",
+      "owner": "claw",
+      "kind": "folder",
+      "parentId": "claw.workspace",
+      "path": ".claw/agent-coordination"
     },
     {
       "id": "claw.workspace.audit",
@@ -10084,6 +10105,14 @@
       "family": "runtime",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.mcp.v1"
+    },
+    {
+      "name": "media",
+      "kind": "canonical",
+      "usage": "media status|list|plan|coverage [--dry-run]",
+      "family": "mac-control",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.media.v1"
     },
     {
       "name": "media",
