@@ -1,4 +1,4 @@
-import { SessionsApiClient, buildSessionsApp } from "@clawjs/sessions";
+import { SessionsApiClient, SessionsServiceStore, buildSessionsApp, seedRealisticSessionsFixture } from "@clawjs/sessions";
 
 function parseFlags(argv: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
@@ -58,6 +58,7 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
     "  sessions visibility --id ID --visible true|false",
     "  sessions project --id ID [--path PATH | --clear]",
     "  sessions delete --id ID",
+    "  sessions seed-realistic [--db-path PATH] [--profile smoke|large]",
     "  sessions import codex [--dir CODEX_SESSIONS_DIR] [--force]",
     "",
     "Service flags shared by client commands:",
@@ -68,6 +69,24 @@ if (argv.includes("--help") || argv.includes("-h") || !group) {
 }
 
 async function main(): Promise<void> {
+  if (group === "seed-realistic") {
+    const dbPath = flags["db-path"];
+    if (!dbPath) throw new Error("--db-path required");
+    const store = new SessionsServiceStore(dbPath);
+    try {
+      write(seedRealisticSessionsFixture(store, {
+        profile: flags.profile === "smoke" ? "smoke" : "large",
+        ...(flags.projects ? { projectCount: Number(flags.projects) } : {}),
+        ...(flags.sessions ? { sessionCount: Number(flags.sessions) } : {}),
+        ...(flags.messages ? { longSessionMessageCount: Number(flags.messages) } : {}),
+        ...(flags["workspace-root"] ? { workspaceRoot: flags["workspace-root"] } : {}),
+      }));
+    } finally {
+      store.close();
+    }
+    return;
+  }
+
   if (group === "serve") {
     const { app } = buildSessionsApp({
       config: {

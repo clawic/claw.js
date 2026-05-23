@@ -8,23 +8,37 @@ import Database from "better-sqlite3";
 
 import type {
   AppendMessageInput,
+  AppendSessionEventInput,
   CreateProjectInput,
   CreateSessionInput,
+  HydrateSessionInput,
+  HydratedSessionResult,
+  ListSessionDynamicToolsOptions,
+  ListSessionEventsFilter,
   ListProjectsFilter,
   ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
   MessageRole,
   ProjectRecord,
+  RebuildSessionProjectionResult,
   SearchSessionsInput,
+  SearchSessionEventsInput,
   SidebarBootstrapResult,
+  SessionDynamicToolRecord,
+  SessionEventSearchHit,
   SessionMessageRecord,
   SessionOriginRecord,
+  SessionProjectionMetaRecord,
+  SessionProjectionStatus,
   SessionRecord,
+  SessionStructuredEventRecord,
   SessionSearchHit,
   SessionStatus,
+  SessionTurnSummaryRecord,
   SessionWithMessages,
   UpdateProjectInput,
+  UpsertSessionDynamicToolInput,
   UpsertOriginInput,
   ExportTrajectoryOptions,
   ImportSessionBatchInput,
@@ -32,6 +46,10 @@ import type {
 
 const DEFAULT_MESSAGE_LIST_LIMIT = 200;
 const MAX_MESSAGE_LIST_LIMIT = 1000;
+const DEFAULT_EVENT_LIST_LIMIT = 200;
+const MAX_EVENT_LIST_LIMIT = 1000;
+const SESSION_PROJECTION_SCHEMA_VERSION = 1;
+const SESSION_PROJECTION_PARSER_VERSION = "codex-rollout-events-v1";
 const DEFAULT_EXPORT_SESSION_LIMIT = 100;
 const MAX_EXPORT_SESSION_LIMIT = 500;
 const DEFAULT_EXPORT_MESSAGE_LIMIT = 1000;
@@ -84,6 +102,8 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_sessions_status         ON sessions(status, last_message_at DESC);
   CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_bootstrap
     ON sessions(archived, sidebar_visible, pinned, last_message_at DESC, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sessions_agent_runtime_recent
+    ON sessions(agent, runtime, last_message_at DESC);
 
   CREATE TABLE IF NOT EXISTS session_messages (
     id                 TEXT PRIMARY KEY,
@@ -121,6 +141,138 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_origins_path            ON session_origins(native_path);
   CREATE INDEX IF NOT EXISTS idx_origins_format          ON session_origins(native_format);
 
+  CREATE TABLE IF NOT EXISTS session_events (
+    id                 TEXT PRIMARY KEY,
+    session_id         TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    turn_id            TEXT,
+    item_id            TEXT,
+    call_id            TEXT,
+    event_kind         TEXT NOT NULL,
+    event_type         TEXT,
+    role               TEXT,
+    timestamp          INTEGER NOT NULL,
+    source_native_id   TEXT NOT NULL,
+    source_line        INTEGER,
+    payload_json       TEXT NOT NULL,
+    rendered_summary   TEXT,
+    searchable_text    TEXT,
+    created_at         INTEGER NOT NULL,
+    UNIQUE (session_id, source_native_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_session_events_session_time
+    ON session_events(session_id, timestamp, source_line);
+  CREATE INDEX IF NOT EXISTS idx_session_events_turn_time
+    ON session_events(session_id, turn_id, timestamp, source_line);
+  CREATE INDEX IF NOT EXISTS idx_session_events_call
+    ON session_events(session_id, call_id);
+  CREATE INDEX IF NOT EXISTS idx_session_events_kind_time
+    ON session_events(event_kind, event_type, timestamp DESC);
+
+  CREATE VIRTUAL TABLE IF NOT EXISTS fts_session_events USING fts5(
+    searchable_text,
+    rendered_summary,
+    content='session_events',
+    content_rowid='rowid',
+    tokenize='porter unicode61'
+  );
+
+  CREATE TRIGGER IF NOT EXISTS session_events_ai AFTER INSERT ON session_events BEGIN
+    INSERT INTO fts_session_events(rowid, searchable_text, rendered_summary)
+    VALUES (new.rowid, COALESCE(new.searchable_text, ''), COALESCE(new.rendered_summary, ''));
+  END;
+  CREATE TRIGGER IF NOT EXISTS session_events_ad AFTER DELETE ON session_events BEGIN
+    INSERT INTO fts_session_events(fts_session_events, rowid, searchable_text, rendered_summary)
+    VALUES('delete', old.rowid, COALESCE(old.searchable_text, ''), COALESCE(old.rendered_summary, ''));
+  END;
+  CREATE TRIGGER IF NOT EXISTS session_events_au AFTER UPDATE ON session_events BEGIN
+    INSERT INTO fts_session_events(fts_session_events, rowid, searchable_text, rendered_summary)
+    VALUES('delete', old.rowid, COALESCE(old.searchable_text, ''), COALESCE(old.rendered_summary, ''));
+    INSERT INTO fts_session_events(rowid, searchable_text, rendered_summary)
+    VALUES (new.rowid, COALESCE(new.searchable_text, ''), COALESCE(new.rendered_summary, ''));
+  END;
+
+  CREATE TABLE IF NOT EXISTS session_turn_summaries (
+    session_id              TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    turn_id                 TEXT NOT NULL,
+    started_at              INTEGER NOT NULL,
+    completed_at            INTEGER,
+    ended_at                INTEGER,
+    duration_ms             INTEGER,
+    status                  TEXT NOT NULL DEFAULT 'unknown',
+    assistant_message_id    TEXT,
+    user_message_id         TEXT,
+    title                   TEXT,
+    prompt_preview          TEXT,
+    response_preview        TEXT,
+    tool_call_count         INTEGER NOT NULL DEFAULT 0,
+    failed_tool_call_count  INTEGER NOT NULL DEFAULT 0,
+    diff_file_count         INTEGER NOT NULL DEFAULT 0,
+    web_search_count        INTEGER NOT NULL DEFAULT 0,
+    subagent_count          INTEGER NOT NULL DEFAULT 0,
+    compacted               INTEGER NOT NULL DEFAULT 0,
+    token_input             INTEGER,
+    token_output            INTEGER,
+    token_usage_json        TEXT,
+    summary_json            TEXT,
+    has_compaction          INTEGER NOT NULL DEFAULT 0,
+    aborted                 INTEGER NOT NULL DEFAULT 0,
+    interrupted             INTEGER NOT NULL DEFAULT 0,
+    event_count             INTEGER NOT NULL DEFAULT 0,
+    updated_at              INTEGER NOT NULL,
+    PRIMARY KEY (session_id, turn_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_session_turn_summaries_session_time
+    ON session_turn_summaries(session_id, started_at DESC);
+
+  CREATE TABLE IF NOT EXISTS session_projection_meta (
+    session_id          TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    source_native_path  TEXT,
+    source_native_format TEXT,
+    source_mtime_ms     REAL,
+    source_size         INTEGER,
+    source_ino          INTEGER,
+    source_dev          INTEGER,
+    source_cursor_line  INTEGER,
+    source_cursor_hash  TEXT,
+    mirror_hash         TEXT,
+    last_imported_at    INTEGER,
+    last_projected_at   INTEGER,
+    projection_version  INTEGER NOT NULL DEFAULT 1,
+    schema_version      INTEGER NOT NULL,
+    parser_version      TEXT NOT NULL,
+    projection_status   TEXT NOT NULL,
+    event_count         INTEGER NOT NULL DEFAULT 0,
+    summary_count       INTEGER NOT NULL DEFAULT 0,
+    projected_at        INTEGER,
+    stale_reason        TEXT,
+    error               TEXT,
+    last_error          TEXT,
+    updated_at          INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_session_projection_meta_status
+    ON session_projection_meta(projection_status, updated_at DESC);
+
+  CREATE TABLE IF NOT EXISTS session_dynamic_tools (
+    session_id          TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    position            INTEGER NOT NULL,
+    name                TEXT NOT NULL,
+    namespace           TEXT,
+    description         TEXT NOT NULL DEFAULT '',
+    input_schema_json   TEXT NOT NULL DEFAULT '{}',
+    schema_hash         TEXT NOT NULL,
+    defer_loading       INTEGER NOT NULL DEFAULT 0,
+    source              TEXT,
+    created_at          INTEGER NOT NULL,
+    updated_at          INTEGER NOT NULL,
+    PRIMARY KEY (session_id, position)
+  );
+  CREATE INDEX IF NOT EXISTS idx_session_dynamic_tools_session
+    ON session_dynamic_tools(session_id, position);
+  CREATE INDEX IF NOT EXISTS idx_session_dynamic_tools_namespace_name
+    ON session_dynamic_tools(namespace, name);
+  CREATE INDEX IF NOT EXISTS idx_session_dynamic_tools_schema_hash
+    ON session_dynamic_tools(schema_hash);
+
   CREATE VIRTUAL TABLE IF NOT EXISTS fts_messages USING fts5(
     content_text,
     content='session_messages',
@@ -140,7 +292,7 @@ const SCHEMA_DDL = `
   END;
 `;
 const SESSIONS_SCHEMA_META_TABLE = "sessions_service_schema_meta";
-const SESSIONS_SCHEMA_VERSION = 2;
+const SESSIONS_SCHEMA_VERSION = 4;
 
 interface SessionRow {
   id: string;
@@ -205,6 +357,94 @@ interface OriginRow {
   source_dev: number | null;
   source_cursor_line: number | null;
   source_cursor_hash: string | null;
+}
+
+interface SessionEventRow {
+  id: string;
+  session_id: string;
+  turn_id: string | null;
+  item_id: string | null;
+  call_id: string | null;
+  event_kind: SessionStructuredEventRecord["eventKind"];
+  event_type: string | null;
+  role: string | null;
+  timestamp: number;
+  source_native_id: string;
+  source_line: number | null;
+  payload_json: string;
+  rendered_summary: string | null;
+  searchable_text: string | null;
+  created_at: number;
+}
+
+interface TurnSummaryRow {
+  session_id: string;
+  turn_id: string;
+  started_at: number;
+  completed_at: number | null;
+  ended_at: number | null;
+  duration_ms: number | null;
+  status: SessionTurnSummaryRecord["status"];
+  assistant_message_id: string | null;
+  user_message_id: string | null;
+  title: string | null;
+  prompt_preview: string | null;
+  response_preview: string | null;
+  tool_call_count: number;
+  failed_tool_call_count: number;
+  diff_file_count: number;
+  web_search_count: number;
+  subagent_count: number;
+  compacted: number;
+  token_input: number | null;
+  token_output: number | null;
+  token_usage_json: string | null;
+  summary_json: string | null;
+  has_compaction: number;
+  aborted: number;
+  interrupted: number;
+  event_count: number;
+  updated_at: number;
+}
+
+interface ProjectionMetaRow {
+  session_id: string;
+  source_native_path: string | null;
+  source_native_format: string | null;
+  source_mtime_ms: number | null;
+  source_size: number | null;
+  source_ino: number | null;
+  source_dev: number | null;
+  source_cursor_line: number | null;
+  source_cursor_hash: string | null;
+  mirror_hash: string | null;
+  last_imported_at: number | null;
+  last_projected_at: number | null;
+  projection_version: number;
+  schema_version: number;
+  parser_version: string;
+  projection_status: SessionProjectionStatus;
+  event_count: number;
+  summary_count: number;
+  projected_at: number | null;
+  stale_reason: string | null;
+  error: string | null;
+  last_error: string | null;
+  updated_at: number;
+}
+
+interface DynamicToolRow {
+  session_id: string;
+  position: number;
+  name: string;
+  namespace: string | null;
+  description: string;
+  input_schema_json: string;
+  schema_hash: string;
+  defer_loading: number;
+  source: string | null;
+  created_at: number;
+  updated_at: number;
 }
 
 function parseJson<T>(value: string | null): T | null {
@@ -307,6 +547,154 @@ function rowToOrigin(row: OriginRow): SessionOriginRecord {
   };
 }
 
+function rowToStructuredEvent(row: SessionEventRow): SessionStructuredEventRecord {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    turnId: row.turn_id,
+    itemId: row.item_id,
+    callId: row.call_id,
+    eventKind: row.event_kind,
+    eventType: row.event_type,
+    role: row.role,
+    timestamp: row.timestamp,
+    sourceNativeId: row.source_native_id,
+    sourceLine: row.source_line,
+    payloadJson: parseJson<unknown>(row.payload_json),
+    renderedSummary: row.rendered_summary,
+    searchableText: row.searchable_text,
+    createdAt: row.created_at,
+  };
+}
+
+function rowToTurnSummary(row: TurnSummaryRow): SessionTurnSummaryRecord {
+  return {
+    sessionId: row.session_id,
+    turnId: row.turn_id,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    endedAt: row.ended_at,
+    durationMs: row.duration_ms,
+    status: row.status,
+    assistantMessageId: row.assistant_message_id,
+    userMessageId: row.user_message_id,
+    title: row.title,
+    promptPreview: row.prompt_preview,
+    responsePreview: row.response_preview,
+    toolCallCount: row.tool_call_count,
+    failedToolCallCount: row.failed_tool_call_count,
+    diffFileCount: row.diff_file_count,
+    webSearchCount: row.web_search_count,
+    subagentCount: row.subagent_count,
+    compacted: row.compacted === 1,
+    tokenInput: row.token_input,
+    tokenOutput: row.token_output,
+    tokenUsage: parseJson<unknown>(row.token_usage_json),
+    summary: parseJson<unknown>(row.summary_json),
+    hasCompaction: row.has_compaction === 1,
+    aborted: row.aborted === 1,
+    interrupted: row.interrupted === 1,
+    eventCount: row.event_count,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToProjectionMeta(row: ProjectionMetaRow): SessionProjectionMetaRecord {
+  return {
+    sessionId: row.session_id,
+    sourceNativePath: row.source_native_path,
+    sourceNativeFormat: row.source_native_format,
+    sourceMtimeMs: row.source_mtime_ms,
+    sourceSize: row.source_size,
+    sourceIno: row.source_ino,
+    sourceDev: row.source_dev,
+    sourceCursorLine: row.source_cursor_line,
+    sourceCursorHash: row.source_cursor_hash,
+    mirrorHash: row.mirror_hash,
+    lastImportedAt: row.last_imported_at,
+    lastProjectedAt: row.last_projected_at,
+    projectionVersion: row.projection_version,
+    schemaVersion: row.schema_version,
+    parserVersion: row.parser_version,
+    projectionStatus: row.projection_status,
+    eventCount: row.event_count,
+    summaryCount: row.summary_count,
+    projectedAt: row.projected_at,
+    staleReason: row.stale_reason,
+    error: row.error,
+    lastError: row.last_error,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToDynamicTool(row: DynamicToolRow, includeSchema: boolean): SessionDynamicToolRecord {
+  const deferLoading = row.defer_loading === 1;
+  return {
+    sessionId: row.session_id,
+    position: row.position,
+    name: row.name,
+    namespace: row.namespace,
+    description: row.description,
+    inputSchemaJson: deferLoading && !includeSchema ? null : parseJson<unknown>(row.input_schema_json),
+    schemaHash: row.schema_hash,
+    deferLoading,
+    source: row.source,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function stableEventId(sessionId: string, sourceNativeId: string): string {
+  return `event_${createHash("sha1").update(`${sessionId}\0${sourceNativeId}`).digest("hex")}`;
+}
+
+function previewText(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (!compact) return null;
+  return compact.length > 240 ? compact.slice(0, 240) : compact;
+}
+
+function payloadObject(event: SessionStructuredEventRecord): Record<string, unknown> {
+  return typeof event.payloadJson === "object" && event.payloadJson !== null && !Array.isArray(event.payloadJson)
+    ? event.payloadJson as Record<string, unknown>
+    : {};
+}
+
+function numberPayloadField(payload: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  }
+  return null;
+}
+
+function nestedNumberPayloadField(payload: Record<string, unknown>, paths: string[][]): number | null {
+  for (const pathParts of paths) {
+    let value: unknown = payload;
+    for (const part of pathParts) {
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        value = undefined;
+        break;
+      }
+      value = (value as Record<string, unknown>)[part];
+    }
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  }
+  return null;
+}
+
+function looksLikeFailedTool(event: SessionStructuredEventRecord): boolean {
+  const payload = payloadObject(event);
+  const status = typeof payload.status === "string" ? payload.status.toLowerCase() : "";
+  if (status === "failed" || status === "error") return true;
+  if (typeof payload.error === "string" && payload.error.trim()) return true;
+  const text = `${event.renderedSummary ?? ""}\n${event.searchableText ?? ""}`.toLowerCase();
+  return /\b(exit code|code)\s+([1-9]\d*)\b/.test(text) || /\b(error|failed|failure|traceback)\b/.test(text);
+}
+
 export class SessionsServiceStore {
   private readonly db: Database.Database;
 
@@ -353,6 +741,9 @@ export class SessionsServiceStore {
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_runtime_adapter ON sessions(runtime_adapter)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_project_id ON sessions(project_id)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_bootstrap ON sessions(archived, sidebar_visible, pinned, last_message_at DESC, created_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_sidebar_project_recent ON sessions(archived, sidebar_visible, project_id, last_message_at DESC, created_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_project_active_recent ON sessions(project_id, archived, sidebar_visible, last_message_at DESC)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_agent_runtime_recent ON sessions(agent, runtime, last_message_at DESC)").run();
     this.db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_resource_id ON projects(resource_id) WHERE resource_id IS NOT NULL").run();
     this.ensureColumn("session_messages", "timeline", "TEXT");
     this.ensureColumn("session_messages", "streaming_state", "TEXT");
@@ -362,6 +753,28 @@ export class SessionsServiceStore {
     this.ensureColumn("session_origins", "source_dev", "INTEGER");
     this.ensureColumn("session_origins", "source_cursor_line", "INTEGER");
     this.ensureColumn("session_origins", "source_cursor_hash", "TEXT");
+    this.db.exec(SCHEMA_DDL);
+    this.ensureColumn("session_turn_summaries", "completed_at", "INTEGER");
+    this.ensureColumn("session_turn_summaries", "status", "TEXT NOT NULL DEFAULT 'unknown'");
+    this.ensureColumn("session_turn_summaries", "assistant_message_id", "TEXT");
+    this.ensureColumn("session_turn_summaries", "user_message_id", "TEXT");
+    this.ensureColumn("session_turn_summaries", "subagent_count", "INTEGER NOT NULL DEFAULT 0");
+    this.ensureColumn("session_turn_summaries", "compacted", "INTEGER NOT NULL DEFAULT 0");
+    this.ensureColumn("session_turn_summaries", "token_usage_json", "TEXT");
+    this.ensureColumn("session_turn_summaries", "summary_json", "TEXT");
+    this.ensureColumn("session_projection_meta", "source_native_path", "TEXT");
+    this.ensureColumn("session_projection_meta", "source_native_format", "TEXT");
+    this.ensureColumn("session_projection_meta", "source_mtime_ms", "REAL");
+    this.ensureColumn("session_projection_meta", "source_size", "INTEGER");
+    this.ensureColumn("session_projection_meta", "source_ino", "INTEGER");
+    this.ensureColumn("session_projection_meta", "source_dev", "INTEGER");
+    this.ensureColumn("session_projection_meta", "source_cursor_line", "INTEGER");
+    this.ensureColumn("session_projection_meta", "source_cursor_hash", "TEXT");
+    this.ensureColumn("session_projection_meta", "mirror_hash", "TEXT");
+    this.ensureColumn("session_projection_meta", "last_imported_at", "INTEGER");
+    this.ensureColumn("session_projection_meta", "last_projected_at", "INTEGER");
+    this.ensureColumn("session_projection_meta", "projection_version", "INTEGER NOT NULL DEFAULT 1");
+    this.ensureColumn("session_projection_meta", "last_error", "TEXT");
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -527,6 +940,112 @@ export class SessionsServiceStore {
     if (!session) return null;
     const messages = this.listMessages(id, limit);
     return { session, messages };
+  }
+
+  upsertSessionDynamicTool(input: UpsertSessionDynamicToolInput): SessionDynamicToolRecord {
+    const session = this.getSession(input.sessionId);
+    if (!session) throw new Error(`session not found: ${input.sessionId}`);
+    const position = clampInt(input.position, 0, Number.MAX_SAFE_INTEGER, 0);
+    const inputSchemaJson = JSON.stringify(input.inputSchemaJson ?? {});
+    const schemaHash = input.schemaHash ?? createHash("sha256").update(inputSchemaJson).digest("hex");
+    const now = Date.now();
+    const createdAt = input.createdAt ?? now;
+    const updatedAt = input.updatedAt ?? now;
+    this.db.prepare(`
+      INSERT INTO session_dynamic_tools (
+        session_id, position, name, namespace, description, input_schema_json,
+        schema_hash, defer_loading, source, created_at, updated_at
+      ) VALUES (
+        @session_id, @position, @name, @namespace, @description, @input_schema_json,
+        @schema_hash, @defer_loading, @source, @created_at, @updated_at
+      )
+      ON CONFLICT(session_id, position) DO UPDATE SET
+        name=excluded.name,
+        namespace=excluded.namespace,
+        description=excluded.description,
+        input_schema_json=excluded.input_schema_json,
+        schema_hash=excluded.schema_hash,
+        defer_loading=excluded.defer_loading,
+        source=excluded.source,
+        updated_at=excluded.updated_at
+    `).run({
+      session_id: input.sessionId,
+      position,
+      name: input.name,
+      namespace: input.namespace ?? null,
+      description: input.description ?? "",
+      input_schema_json: inputSchemaJson,
+      schema_hash: schemaHash,
+      defer_loading: input.deferLoading ? 1 : 0,
+      source: input.source ?? null,
+      created_at: createdAt,
+      updated_at: updatedAt,
+    });
+    const row = this.db.prepare("SELECT * FROM session_dynamic_tools WHERE session_id = ? AND position = ?").get(input.sessionId, position) as DynamicToolRow;
+    return rowToDynamicTool(row, true);
+  }
+
+  replaceSessionDynamicTools(sessionId: string, tools: Omit<UpsertSessionDynamicToolInput, "sessionId">[]): SessionDynamicToolRecord[] {
+    const session = this.getSession(sessionId);
+    if (!session) throw new Error(`session not found: ${sessionId}`);
+    const tx = this.db.transaction(() => {
+      this.db.prepare("DELETE FROM session_dynamic_tools WHERE session_id = ?").run(sessionId);
+      return tools.map((tool) => this.upsertSessionDynamicTool({ ...tool, sessionId }));
+    });
+    return tx();
+  }
+
+  listSessionDynamicTools(sessionId: string, options: ListSessionDynamicToolsOptions = {}): SessionDynamicToolRecord[] {
+    const rows = this.db.prepare(`
+      SELECT * FROM session_dynamic_tools
+      WHERE session_id = ?
+      ORDER BY position ASC
+    `).all(sessionId) as DynamicToolRow[];
+    return rows.map((row) => rowToDynamicTool(row, options.includeDeferredSchemas === true));
+  }
+
+  hydrateSession(input: HydrateSessionInput): HydratedSessionResult | null {
+    const session = this.getSession(input.sessionId);
+    if (!session) return null;
+    const messageLimit = clampInt(input.messageLimit, 1, MAX_MESSAGE_LIST_LIMIT, DEFAULT_MESSAGE_LIST_LIMIT);
+    const requestedOffset = clampInt(input.messageOffset, 0, Number.MAX_SAFE_INTEGER, 0);
+    const messageOffset = input.recent === false
+      ? Math.min(requestedOffset, Math.max(0, session.messageCount - 1))
+      : Math.max(0, session.messageCount - messageLimit);
+    const messages = this.listMessages(session.id, messageLimit, messageOffset);
+    const visibleMessageIds = new Set(messages.map((message) => message.id));
+    const allSummaries = this.listTurnSummaries(session.id);
+    const matchedSummaries = allSummaries.filter((summary) => (
+      (summary.userMessageId !== null && visibleMessageIds.has(summary.userMessageId))
+      || (summary.assistantMessageId !== null && visibleMessageIds.has(summary.assistantMessageId))
+    ));
+    const summarySource = matchedSummaries.length > 0 ? matchedSummaries : allSummaries;
+    const summaryLimit = clampInt(input.summaryLimit, 1, MAX_EVENT_LIST_LIMIT, DEFAULT_EVENT_LIST_LIMIT);
+    const turnSummaries = summarySource.slice(0, summaryLimit);
+    const projectionMeta = this.getProjectionMeta(session.id);
+    const dynamicTools = this.listSessionDynamicTools(session.id, { includeDeferredSchemas: false });
+    const events = input.includeEvents
+      ? this.listSessionEvents({
+          sessionId: session.id,
+          turnId: input.eventTurnId,
+          limit: input.eventLimit,
+          offset: input.eventOffset,
+        })
+      : null;
+    return {
+      session,
+      messages,
+      messageOffset,
+      messageLimit,
+      hasOlderMessages: messageOffset > 0,
+      hasNewerMessages: messageOffset + messages.length < session.messageCount,
+      turnSummaries,
+      projectionMeta,
+      dynamicTools,
+      events,
+      eventsLoaded: input.includeEvents === true,
+      fallbackRequired: projectionMeta === null || projectionMeta.projectionStatus === "stale" || projectionMeta.projectionStatus === "failed",
+    };
   }
 
   listSessions(filter: ListSessionsFilter = {}): ListSessionsResult {
@@ -730,10 +1249,82 @@ export class SessionsServiceStore {
         `).run({ session_id: message.sessionId, timestamp });
         messagesInserted += 1;
       }
+      for (const event of input.events ?? []) {
+        this.appendSessionEventResult(event);
+      }
       if (input.origin) this.upsertOrigin(input.origin);
       return { messagesInserted };
     });
     return tx();
+  }
+
+  appendSessionEvent(input: AppendSessionEventInput): SessionStructuredEventRecord {
+    return this.appendSessionEventResult(input).event;
+  }
+
+  appendSessionEventResult(input: AppendSessionEventInput): { event: SessionStructuredEventRecord; inserted: boolean } {
+    const id = input.id ?? stableEventId(input.sessionId, input.sourceNativeId);
+    const timestamp = input.timestamp ?? Date.now();
+    const createdAt = input.createdAt ?? Date.now();
+    const payloadJson = JSON.stringify(input.payloadJson ?? null);
+    const tx = this.db.transaction(() => {
+      const existing = this.db.prepare(
+        "SELECT id FROM session_events WHERE session_id = ? AND source_native_id = ?",
+      ).get(input.sessionId, input.sourceNativeId) as { id: string } | undefined;
+      if (existing) return { id: existing.id, inserted: false };
+      this.db.prepare(`
+        INSERT INTO session_events (
+          id, session_id, turn_id, item_id, call_id, event_kind, event_type, role,
+          timestamp, source_native_id, source_line, payload_json, rendered_summary,
+          searchable_text, created_at
+        ) VALUES (
+          @id, @session_id, @turn_id, @item_id, @call_id, @event_kind, @event_type, @role,
+          @timestamp, @source_native_id, @source_line, @payload_json, @rendered_summary,
+          @searchable_text, @created_at
+        )
+      `).run({
+        id,
+        session_id: input.sessionId,
+        turn_id: input.turnId ?? null,
+        item_id: input.itemId ?? null,
+        call_id: input.callId ?? null,
+        event_kind: input.eventKind,
+        event_type: input.eventType ?? null,
+        role: input.role ?? null,
+        timestamp,
+        source_native_id: input.sourceNativeId,
+        source_line: input.sourceLine ?? null,
+        payload_json: payloadJson,
+        rendered_summary: input.renderedSummary ?? null,
+        searchable_text: input.searchableText ?? null,
+        created_at: createdAt,
+      });
+      return { id, inserted: true };
+    });
+    const resolved = tx();
+    const row = this.db.prepare("SELECT * FROM session_events WHERE id = ?").get(resolved.id) as SessionEventRow | undefined;
+    if (!row) throw new Error(`appendSessionEvent: failed to read back ${resolved.id}`);
+    return { event: rowToStructuredEvent(row), inserted: resolved.inserted };
+  }
+
+  listSessionEvents(filter: ListSessionEventsFilter): SessionStructuredEventRecord[] {
+    const conditions = ["session_id = @session_id"];
+    const params: Record<string, unknown> = { session_id: filter.sessionId };
+    if (filter.eventKind) { conditions.push("event_kind = @event_kind"); params.event_kind = filter.eventKind; }
+    if (filter.eventType) { conditions.push("event_type = @event_type"); params.event_type = filter.eventType; }
+    if (filter.turnId) { conditions.push("turn_id = @turn_id"); params.turn_id = filter.turnId; }
+    if (filter.callId) { conditions.push("call_id = @call_id"); params.call_id = filter.callId; }
+    const limit = clampInt(filter.limit, 1, MAX_EVENT_LIST_LIMIT, DEFAULT_EVENT_LIST_LIMIT);
+    const offset = clampInt(filter.offset, 0, Number.MAX_SAFE_INTEGER, 0);
+    params.limit = limit;
+    params.offset = offset;
+    const rows = this.db.prepare(`
+      SELECT * FROM session_events
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY timestamp ASC, source_line ASC
+      LIMIT @limit OFFSET @offset
+    `).all(params) as SessionEventRow[];
+    return rows.map(rowToStructuredEvent);
   }
 
   updateMessage(id: string, patch: Partial<Pick<AppendMessageInput, "contentText" | "contentBlocks" | "toolCalls" | "timeline" | "workSummary" | "streamingState" | "attachments">>): SessionMessageRecord | null {
@@ -851,6 +1442,318 @@ export class SessionsServiceStore {
       snippet: row.snippet,
       rank: row.rank,
     }));
+  }
+
+  searchSessionEvents(input: SearchSessionEventsInput): SessionEventSearchHit[] {
+    const query = input.query.trim();
+    if (!query) return [];
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = { query, limit: Math.min(input.limit ?? 50, 200) };
+    if (input.sessionId) { conditions.push("e.session_id = @session_id"); params.session_id = input.sessionId; }
+    if (input.eventKind) { conditions.push("e.event_kind = @event_kind"); params.event_kind = input.eventKind; }
+    if (input.eventType) { conditions.push("e.event_type = @event_type"); params.event_type = input.eventType; }
+    const extra = conditions.length ? `AND ${conditions.join(" AND ")}` : "";
+    const rows = this.db.prepare(`
+      SELECT e.*,
+             snippet(fts_session_events, 0, '<<', '>>', '...', 32) AS snippet,
+             bm25(fts_session_events) AS rank
+      FROM fts_session_events
+      JOIN session_events e ON e.rowid = fts_session_events.rowid
+      WHERE fts_session_events MATCH @query
+      ${extra}
+      ORDER BY rank ASC
+      LIMIT @limit
+    `).all(params) as Array<SessionEventRow & { snippet: string; rank: number }>;
+    return rows.map((row) => ({
+      event: rowToStructuredEvent(row),
+      snippet: row.snippet,
+      rank: row.rank,
+    }));
+  }
+
+  listTurnSummaries(sessionId: string, turnIds?: string[]): SessionTurnSummaryRecord[] {
+    const params: Record<string, unknown> = { session_id: sessionId };
+    let turnFilter = "";
+    if (turnIds?.length) {
+      const placeholders = turnIds.map((_, index) => `@turn_id_${index}`);
+      turnIds.forEach((turnId, index) => { params[`turn_id_${index}`] = turnId; });
+      turnFilter = `AND turn_id IN (${placeholders.join(", ")})`;
+    }
+    const rows = this.db.prepare(`
+      SELECT * FROM session_turn_summaries
+      WHERE session_id = @session_id
+      ${turnFilter}
+      ORDER BY started_at ASC, turn_id ASC
+    `).all(params) as TurnSummaryRow[];
+    return rows.map(rowToTurnSummary);
+  }
+
+  getProjectionMeta(sessionId: string): SessionProjectionMetaRecord | null {
+    const row = this.db.prepare("SELECT * FROM session_projection_meta WHERE session_id = ?").get(sessionId) as ProjectionMetaRow | undefined;
+    return row ? rowToProjectionMeta(row) : null;
+  }
+
+  markSessionProjectionStale(sessionId: string, reason: string): SessionProjectionMetaRecord {
+    const now = Date.now();
+    this.db.prepare(`
+      INSERT INTO session_projection_meta (
+        session_id, schema_version, parser_version, projection_status, projection_version,
+        event_count, summary_count, projected_at, last_projected_at, stale_reason,
+        error, last_error, updated_at
+      ) VALUES (
+        @session_id, @schema_version, @parser_version, 'stale', @projection_version,
+        0, 0, NULL, NULL, @stale_reason, NULL, NULL, @updated_at
+      )
+      ON CONFLICT(session_id) DO UPDATE SET
+        schema_version=excluded.schema_version,
+        parser_version=excluded.parser_version,
+        projection_version=excluded.projection_version,
+        projection_status='stale',
+        stale_reason=excluded.stale_reason,
+        error=NULL,
+        last_error=NULL,
+        updated_at=excluded.updated_at
+    `).run({
+      session_id: sessionId,
+      schema_version: SESSION_PROJECTION_SCHEMA_VERSION,
+      parser_version: SESSION_PROJECTION_PARSER_VERSION,
+      projection_version: SESSION_PROJECTION_SCHEMA_VERSION,
+      stale_reason: reason,
+      updated_at: now,
+    });
+    const meta = this.getProjectionMeta(sessionId);
+    if (!meta) throw new Error(`markSessionProjectionStale: failed to read back ${sessionId}`);
+    return meta;
+  }
+
+  rebuildSessionProjection(sessionId: string): RebuildSessionProjectionResult {
+    const events = (this.db.prepare(`
+      SELECT * FROM session_events
+      WHERE session_id = ?
+      ORDER BY timestamp ASC, source_line ASC
+    `).all(sessionId) as SessionEventRow[]).map(rowToStructuredEvent);
+    const now = Date.now();
+    const origin = this.listOrigins(sessionId)[0] ?? null;
+    const byTurn = new Map<string, SessionStructuredEventRecord[]>();
+    for (const event of events) {
+      if (!event.turnId) continue;
+      const bucket = byTurn.get(event.turnId) ?? [];
+      bucket.push(event);
+      byTurn.set(event.turnId, bucket);
+    }
+
+    const summaries: SessionTurnSummaryRecord[] = [...byTurn.entries()].map(([turnId, turnEvents]) => {
+      const sorted = [...turnEvents].sort((a, b) => a.timestamp - b.timestamp || (a.sourceLine ?? 0) - (b.sourceLine ?? 0));
+      const startedAt = sorted[0]?.timestamp ?? now;
+      const endedAt = sorted.at(-1)?.timestamp ?? null;
+      let promptPreview: string | null = null;
+      let responsePreview: string | null = null;
+      let toolCallCount = 0;
+      let failedToolCallCount = 0;
+      let diffFileCount = 0;
+      let webSearchCount = 0;
+      let subagentCount = 0;
+      let tokenInput: number | null = null;
+      let tokenOutput: number | null = null;
+      let hasCompaction = false;
+      let aborted = false;
+      let interrupted = false;
+      let completed = false;
+      let userMessageId: string | null = null;
+      let assistantMessageId: string | null = null;
+
+      for (const event of sorted) {
+        const payload = payloadObject(event);
+        if (event.eventKind === "message" && event.role === "user") {
+          if (!promptPreview) promptPreview = previewText(event.renderedSummary ?? event.searchableText);
+          userMessageId ??= event.itemId;
+        }
+        if (event.eventKind === "message" && event.role === "assistant") {
+          if (!responsePreview) responsePreview = previewText(event.renderedSummary ?? event.searchableText);
+          assistantMessageId ??= event.itemId;
+        }
+        if (event.eventKind === "tool_call" || event.eventKind === "subagent" || event.eventKind === "question" || event.eventKind === "mcp") toolCallCount += 1;
+        if (event.eventKind === "subagent") subagentCount += 1;
+        if (event.eventKind === "tool_output" && looksLikeFailedTool(event)) failedToolCallCount += 1;
+        if (event.eventKind === "patch") diffFileCount += 1;
+        if (event.eventKind === "search") webSearchCount += 1;
+        if (event.eventKind === "usage") {
+          const input = numberPayloadField(payload, ["input_tokens", "inputTokens", "prompt_tokens", "promptTokens"])
+            ?? nestedNumberPayloadField(payload, [["usage", "input_tokens"], ["usage", "prompt_tokens"], ["total_token_usage", "input_tokens"]]);
+          const output = numberPayloadField(payload, ["output_tokens", "outputTokens", "completion_tokens", "completionTokens"])
+            ?? nestedNumberPayloadField(payload, [["usage", "output_tokens"], ["usage", "completion_tokens"], ["total_token_usage", "output_tokens"]]);
+          if (input !== null) tokenInput = (tokenInput ?? 0) + input;
+          if (output !== null) tokenOutput = (tokenOutput ?? 0) + output;
+        }
+        hasCompaction ||= event.eventKind === "compaction";
+        aborted ||= event.eventType === "event_msg.turn_aborted";
+        interrupted ||= event.eventType === "event_msg.turn_interrupted" || payload.status === "interrupted";
+        completed ||= event.eventType === "event_msg.task_complete" || event.eventType === "event_msg.item_completed";
+      }
+      const status: SessionTurnSummaryRecord["status"] = aborted
+        ? "aborted"
+        : interrupted
+          ? "interrupted"
+          : failedToolCallCount > 0
+            ? "failed"
+            : completed
+              ? "completed"
+              : endedAt === null
+                ? "running"
+                : "unknown";
+      const tokenUsage = tokenInput !== null || tokenOutput !== null ? { input: tokenInput, output: tokenOutput } : null;
+      const summary = {
+        title: promptPreview ?? responsePreview,
+        promptPreview,
+        responsePreview,
+        eventCount: sorted.length,
+      };
+
+      return {
+        sessionId,
+        turnId,
+        startedAt,
+        completedAt: status === "completed" || status === "failed" || status === "aborted" || status === "interrupted" ? endedAt : null,
+        endedAt,
+        durationMs: endedAt === null ? null : Math.max(0, endedAt - startedAt),
+        status,
+        assistantMessageId,
+        userMessageId,
+        title: promptPreview ?? responsePreview,
+        promptPreview,
+        responsePreview,
+        toolCallCount,
+        failedToolCallCount,
+        diffFileCount,
+        webSearchCount,
+        subagentCount,
+        compacted: hasCompaction,
+        tokenInput,
+        tokenOutput,
+        tokenUsage,
+        summary,
+        hasCompaction,
+        aborted,
+        interrupted,
+        eventCount: sorted.length,
+        updatedAt: now,
+      };
+    });
+
+    const tx = this.db.transaction(() => {
+      this.db.prepare("DELETE FROM session_turn_summaries WHERE session_id = ?").run(sessionId);
+      const insertSummary = this.db.prepare(`
+        INSERT INTO session_turn_summaries (
+          session_id, turn_id, started_at, completed_at, ended_at, duration_ms,
+          status, assistant_message_id, user_message_id, title,
+          prompt_preview, response_preview, tool_call_count, failed_tool_call_count,
+          diff_file_count, web_search_count, subagent_count, compacted,
+          token_input, token_output, token_usage_json, summary_json,
+          has_compaction, aborted, interrupted, event_count, updated_at
+        ) VALUES (
+          @session_id, @turn_id, @started_at, @completed_at, @ended_at, @duration_ms,
+          @status, @assistant_message_id, @user_message_id, @title,
+          @prompt_preview, @response_preview, @tool_call_count, @failed_tool_call_count,
+          @diff_file_count, @web_search_count, @subagent_count, @compacted,
+          @token_input, @token_output, @token_usage_json, @summary_json,
+          @has_compaction, @aborted, @interrupted, @event_count, @updated_at
+        )
+      `);
+      for (const summary of summaries) {
+        insertSummary.run({
+          session_id: summary.sessionId,
+          turn_id: summary.turnId,
+          started_at: summary.startedAt,
+          completed_at: summary.completedAt,
+          ended_at: summary.endedAt,
+          duration_ms: summary.durationMs,
+          status: summary.status,
+          assistant_message_id: summary.assistantMessageId,
+          user_message_id: summary.userMessageId,
+          title: summary.title,
+          prompt_preview: summary.promptPreview,
+          response_preview: summary.responsePreview,
+          tool_call_count: summary.toolCallCount,
+          failed_tool_call_count: summary.failedToolCallCount,
+          diff_file_count: summary.diffFileCount,
+          web_search_count: summary.webSearchCount,
+          subagent_count: summary.subagentCount,
+          compacted: summary.compacted ? 1 : 0,
+          token_input: summary.tokenInput,
+          token_output: summary.tokenOutput,
+          token_usage_json: summary.tokenUsage != null ? JSON.stringify(summary.tokenUsage) : null,
+          summary_json: summary.summary != null ? JSON.stringify(summary.summary) : null,
+          has_compaction: summary.hasCompaction ? 1 : 0,
+          aborted: summary.aborted ? 1 : 0,
+          interrupted: summary.interrupted ? 1 : 0,
+          event_count: summary.eventCount,
+          updated_at: summary.updatedAt,
+        });
+      }
+      this.db.prepare(`
+        INSERT INTO session_projection_meta (
+          session_id, source_native_path, source_native_format, source_mtime_ms,
+          source_size, source_ino, source_dev, source_cursor_line, source_cursor_hash,
+          mirror_hash, last_imported_at, last_projected_at, projection_version,
+          schema_version, parser_version, projection_status, event_count,
+          summary_count, projected_at, stale_reason, error, last_error, updated_at
+        ) VALUES (
+          @session_id, @source_native_path, @source_native_format, @source_mtime_ms,
+          @source_size, @source_ino, @source_dev, @source_cursor_line, @source_cursor_hash,
+          @mirror_hash, @last_imported_at, @last_projected_at, @projection_version,
+          @schema_version, @parser_version, 'current', @event_count,
+          @summary_count, @projected_at, NULL, NULL, NULL, @updated_at
+        )
+        ON CONFLICT(session_id) DO UPDATE SET
+          source_native_path=excluded.source_native_path,
+          source_native_format=excluded.source_native_format,
+          source_mtime_ms=excluded.source_mtime_ms,
+          source_size=excluded.source_size,
+          source_ino=excluded.source_ino,
+          source_dev=excluded.source_dev,
+          source_cursor_line=excluded.source_cursor_line,
+          source_cursor_hash=excluded.source_cursor_hash,
+          mirror_hash=excluded.mirror_hash,
+          last_imported_at=excluded.last_imported_at,
+          last_projected_at=excluded.last_projected_at,
+          projection_version=excluded.projection_version,
+          schema_version=excluded.schema_version,
+          parser_version=excluded.parser_version,
+          projection_status='current',
+          event_count=excluded.event_count,
+          summary_count=excluded.summary_count,
+          projected_at=excluded.projected_at,
+          stale_reason=NULL,
+          error=NULL,
+          last_error=NULL,
+          updated_at=excluded.updated_at
+      `).run({
+        session_id: sessionId,
+        source_native_path: origin?.nativePath ?? null,
+        source_native_format: origin?.nativeFormat ?? null,
+        source_mtime_ms: origin?.sourceMtimeMs ?? null,
+        source_size: origin?.sourceSize ?? null,
+        source_ino: origin?.sourceIno ?? null,
+        source_dev: origin?.sourceDev ?? null,
+        source_cursor_line: origin?.sourceCursorLine ?? null,
+        source_cursor_hash: origin?.sourceCursorHash ?? null,
+        mirror_hash: origin?.mirrorHash ?? null,
+        last_imported_at: origin?.lastSyncedAt ?? null,
+        last_projected_at: now,
+        projection_version: SESSION_PROJECTION_SCHEMA_VERSION,
+        schema_version: SESSION_PROJECTION_SCHEMA_VERSION,
+        parser_version: SESSION_PROJECTION_PARSER_VERSION,
+        event_count: events.length,
+        summary_count: summaries.length,
+        projected_at: now,
+        updated_at: now,
+      });
+    });
+    tx();
+
+    const meta = this.getProjectionMeta(sessionId);
+    if (!meta) throw new Error(`rebuildSessionProjection: failed to read back ${sessionId}`);
+    return { meta, summaries: this.listTurnSummaries(sessionId) };
   }
 
   upsertOrigin(input: UpsertOriginInput): SessionOriginRecord {

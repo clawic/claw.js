@@ -129,10 +129,16 @@ const BUILTIN_SEARCH_SOURCES: SearchSourceManifest[] = createBuiltinSearchSource
 import { resolveMainDbPath, resolveSessionsDbPath } from "./cli-search-source-indexers-secondary.ts";
 
 export const SESSIONS_CHATS_INDEX_CURSOR_VERSION = 2;
+export const SESSIONS_EVENTS_INDEX_CURSOR_VERSION = 1;
 
 export interface SessionsChatsIndexCursor {
   updatedAt: string;
   sessionId: string;
+}
+
+export interface SessionsEventsIndexCursor {
+  timestamp: number;
+  eventId: string;
 }
 
 export function ensureSessionsChatsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
@@ -274,6 +280,201 @@ export function ensureSessionChatResourceIndexed(store: SearchStore, flags: Reco
   } finally {
     db.close();
   }
+}
+
+interface SessionEventIndexRow {
+  id: string;
+  session_id: string;
+  turn_id: string | null;
+  item_id: string | null;
+  call_id: string | null;
+  event_kind: string;
+  event_type: string | null;
+  role: string | null;
+  timestamp: number;
+  payload_json: string;
+  rendered_summary: string | null;
+  searchable_text: string | null;
+  title: string;
+  agent: string;
+  runtime: string | null;
+  project_id: string | null;
+  project_path: string | null;
+}
+
+export function ensureSessionsEventsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {
+  const dbPath = resolveSessionsDbPath(flags);
+  if (!fs.existsSync(dbPath)) {
+    store.setSourceState("sessions.events", "enabled", {
+      backlog: 0,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return 0;
+  }
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!SearchDocuments.hasTable(db, "session_events") || !SearchDocuments.hasTable(db, "sessions")) {
+      store.setSourceState("sessions.events", "degraded", {
+        backlog: 0,
+        error: "sessions sidecar does not contain session_events and sessions",
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 0;
+    }
+    const batchSize = SearchDocuments.boundedNumberFlag(flags["sessions-index-batch-size"], 100, 1, 1000);
+    const eventsAfterCursor = db.prepare(`
+      SELECT e.*, s.title, s.agent, s.runtime, s.project_id, s.project_path
+      FROM session_events e
+      JOIN sessions s ON s.id = e.session_id
+      WHERE e.timestamp > ?
+        OR (e.timestamp = ? AND e.id > ?)
+      ORDER BY e.timestamp ASC, e.id ASC
+      LIMIT ?
+    `);
+    const eventsFromStart = db.prepare(`
+      SELECT e.*, s.title, s.agent, s.runtime, s.project_id, s.project_path
+      FROM session_events e
+      JOIN sessions s ON s.id = e.session_id
+      ORDER BY e.timestamp ASC, e.id ASC
+      LIMIT ?
+    `);
+    let indexed = 0;
+    let cursor = sessionsEventsIndexCursor(store);
+    while (true) {
+      const events = cursor
+        ? eventsAfterCursor.all(cursor.timestamp, cursor.timestamp, cursor.eventId, batchSize) as SessionEventIndexRow[]
+        : eventsFromStart.all(batchSize) as SessionEventIndexRow[];
+      if (events.length === 0) break;
+      store.upsertDocuments(events.map(sessionEventSearchDocument));
+      const lastEvent = events.at(-1);
+      if (lastEvent) {
+        cursor = { timestamp: lastEvent.timestamp, eventId: lastEvent.id };
+        store.setCursor(sessionsEventsCursorInput(cursor, batchSize));
+      }
+      indexed += events.length;
+    }
+    store.setSourceState("sessions.events", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return indexed;
+  } finally {
+    db.close();
+  }
+}
+
+export function sessionsEventsIndexCursor(store: SearchStore): SessionsEventsIndexCursor | null {
+  const cursor = store.getCursor("sessions.events");
+  const metadata = cursor?.metadata ?? {};
+  if (
+    metadata.version === SESSIONS_EVENTS_INDEX_CURSOR_VERSION
+    && typeof metadata.timestamp === "number"
+    && typeof metadata.eventId === "string"
+  ) {
+    return { timestamp: metadata.timestamp, eventId: metadata.eventId };
+  }
+  return null;
+}
+
+export function sessionsEventsCursorInput(cursor: SessionsEventsIndexCursor, batchSize: number): { source: string; cursor: string; watermark: string; metadata: Record<string, unknown> } {
+  return {
+    source: "sessions.events",
+    cursor: `v${SESSIONS_EVENTS_INDEX_CURSOR_VERSION}:${cursor.timestamp}:${cursor.eventId}`,
+    watermark: new Date(cursor.timestamp).toISOString(),
+    metadata: {
+      sidecar: "sessions.sqlite",
+      version: SESSIONS_EVENTS_INDEX_CURSOR_VERSION,
+      timestamp: cursor.timestamp,
+      eventId: cursor.eventId,
+      batchSize,
+    },
+  };
+}
+
+export function ensureSessionEventsResourceIndexed(store: SearchStore, flags: Record<string, string>, sessionId: string): number {
+  const dbPath = resolveSessionsDbPath(flags);
+  if (!fs.existsSync(dbPath)) return 0;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    if (!SearchDocuments.hasTable(db, "session_events") || !SearchDocuments.hasTable(db, "sessions")) return 0;
+    const events = db.prepare(`
+      SELECT e.*, s.title, s.agent, s.runtime, s.project_id, s.project_path
+      FROM session_events e
+      JOIN sessions s ON s.id = e.session_id
+      WHERE e.session_id = ?
+      ORDER BY e.timestamp ASC, e.id ASC
+    `).all(sessionId) as SessionEventIndexRow[];
+    store.tombstone({ source: "sessions.events", resourceId: sessionId, reason: "session events refresh" });
+    if (!events.length) {
+      store.setSourceState("sessions.events", "enabled", {
+        backlog: 0,
+        error: null,
+        lastIndexedAt: new Date().toISOString(),
+      });
+      return 1;
+    }
+    store.upsertDocuments(events.map(sessionEventSearchDocument));
+    store.setSourceState("sessions.events", "enabled", {
+      backlog: 0,
+      error: null,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return events.length;
+  } finally {
+    db.close();
+  }
+}
+
+function sessionEventSearchDocument(event: SessionEventIndexRow): SearchDocumentInput {
+  const payload = SearchDocuments.parseJsonRecord(event.payload_json);
+  const toolName = typeof payload.name === "string" && payload.name.trim() ? payload.name : null;
+  const status = typeof payload.status === "string" && payload.status.trim() ? payload.status : null;
+  const hasFailedTool = event.event_kind === "tool_output" && looksLikeFailedSessionEvent(event, payload, status);
+  const body = [event.rendered_summary, event.searchable_text].filter(Boolean).join("\n");
+  return {
+    id: `sessions.events:${event.id}`,
+    source: "sessions.events",
+    domain: "sessions",
+    type: event.event_kind,
+    resourceId: event.session_id,
+    title: [event.event_kind, event.event_type].filter(Boolean).join(" ") || "session event",
+    subtitle: event.title,
+    snippet: event.rendered_summary ?? event.searchable_text ?? undefined,
+    body,
+    path: `session:${event.session_id}`,
+    updatedAt: new Date(event.timestamp).toISOString(),
+    metadata: {
+      sessionId: event.session_id,
+      eventId: event.id,
+      turnId: event.turn_id,
+      itemId: event.item_id,
+      callId: event.call_id,
+      projectId: event.project_id,
+      projectPath: event.project_path,
+      agent: event.agent,
+      runtime: event.runtime,
+      role: event.role,
+      eventKind: event.event_kind,
+      eventType: event.event_type,
+      toolName,
+      status,
+      hasDiff: event.event_kind === "patch",
+      hasFailedTool,
+      hasWebSearch: event.event_kind === "search",
+      hasCompaction: event.event_kind === "compaction",
+      hasGoal: event.event_kind === "goal",
+    },
+    permissions: { canOpen: true, canPreview: true, redacted: false },
+    rankingHints: hasFailedTool ? { importance: 2 } : undefined,
+  };
+}
+
+function looksLikeFailedSessionEvent(event: SessionEventIndexRow, payload: Record<string, unknown>, status: string | null): boolean {
+  if (status === "failed" || status === "error") return true;
+  if (typeof payload.error === "string" && payload.error.trim()) return true;
+  const text = `${event.rendered_summary ?? ""}\n${event.searchable_text ?? ""}`.toLowerCase();
+  return /\b(exit code|code)\s+([1-9]\d*)\b/.test(text) || /\b(error|failed|failure|traceback)\b/.test(text);
 }
 
 export function ensureDatabaseRecordsSourceIndexed(store: SearchStore, flags: Record<string, string>): number {

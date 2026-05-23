@@ -57,6 +57,26 @@ export function scheduleSessionChatSearchEvent(input: {
   });
 }
 
+export function scheduleSessionEventsSearchEvent(input: {
+  operation: "upsert" | "delete";
+  sessionId: string;
+  dataDir: string;
+  flags?: Record<string, string>;
+  observedAt?: string;
+}): SearchEventScheduleResult {
+  return scheduleSearchIndexEvent({
+    source: "sessions.events",
+    operation: input.operation,
+    resourceId: input.sessionId,
+    dataDir: input.dataDir,
+    flags: input.flags,
+    observedAt: input.observedAt,
+    payload: {
+      sessionId: input.sessionId,
+    },
+  });
+}
+
 export function scheduleDocumentBlocksSearchEvent(input: {
   operation: "upsert" | "delete";
   namespaceId: string;

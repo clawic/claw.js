@@ -4,7 +4,13 @@ import { createInterface } from "node:readline";
 import { createHash } from "node:crypto";
 
 import type { SessionsServiceStore } from "../store.ts";
-import type { CreateSessionInput, AppendMessageInput, MessageRole } from "../types.ts";
+import type {
+  AppendSessionEventInput,
+  CreateSessionInput,
+  AppendMessageInput,
+  MessageRole,
+  SessionStructuredEventKind,
+} from "../types.ts";
 
 const NATIVE_FORMAT = "codex-rollout-jsonl-v1";
 const DEFAULT_IMPORT_BATCH_SIZE = 500;
@@ -136,6 +142,7 @@ function updateNormalizedLineHash(hash: ReturnType<typeof createHash>, line: str
 interface CodexImportBatch {
   sessions: CreateSessionInput[];
   messages: AppendMessageInput[];
+  events: AppendSessionEventInput[];
 }
 
 interface StreamImportState {
@@ -190,6 +197,103 @@ function fallbackSessionInput(filePath: string, sessionId: string, timestamp: nu
   };
 }
 
+function stringField(payload: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+function eventTypeFor(topLevelType: string, payload: Record<string, unknown>): string {
+  const payloadType = typeof payload.type === "string" && payload.type.length > 0 ? payload.type : null;
+  if (topLevelType === "response_item" && payloadType) return `response_item.${payloadType}`;
+  if (topLevelType === "event_msg" && payloadType) return `event_msg.${payloadType}`;
+  return topLevelType;
+}
+
+function eventKindFor(topLevelType: string, payload: Record<string, unknown>, eventType: string): SessionStructuredEventKind {
+  const name = stringField(payload, ["name"]);
+  if (eventType === "response_item.message" || eventType === "event_msg.user_message" || eventType === "event_msg.agent_message") return "message";
+  if (eventType === "response_item.reasoning" || eventType === "event_msg.agent_reasoning") return "lifecycle";
+  if (eventType === "response_item.function_call") {
+    if (name === "request_user_input") return "question";
+    if (name === "spawn_agent" || name === "wait_agent" || name === "close_agent" || name === "send_input") return "subagent";
+    return "tool_call";
+  }
+  if (eventType === "response_item.function_call_output") return "tool_output";
+  if (eventType === "response_item.custom_tool_call" || eventType === "response_item.custom_tool_call_output" || eventType === "event_msg.patch_apply_end") return "patch";
+  if (eventType === "response_item.web_search_call" || eventType === "event_msg.web_search_end") return "search";
+  if (eventType === "event_msg.token_count") return "usage";
+  if (eventType === "event_msg.thread_goal_updated") return "goal";
+  if (eventType === "event_msg.context_compacted" || topLevelType === "compacted" || topLevelType === "context_compacted") return "compaction";
+  if (eventType === "event_msg.thread_rolled_back") return "rollback";
+  if (eventType === "event_msg.mcp_tool_call_end") return "mcp";
+  if (eventType.startsWith("event_msg.task_") || eventType === "event_msg.item_completed" || eventType === "event_msg.turn_aborted" || topLevelType === "turn_context" || topLevelType === "session_meta") return "lifecycle";
+  return "unknown";
+}
+
+function collectContentText(payload: Record<string, unknown>): string | null {
+  const content = payload.content;
+  if (!Array.isArray(content)) return null;
+  const text = content
+    .map((block) => {
+      if (typeof block !== "object" || block === null) return "";
+      const value = (block as Record<string, unknown>).text;
+      return typeof value === "string" ? value : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+  return text.trim() ? text : null;
+}
+
+function summarizePayload(payload: Record<string, unknown>, eventType: string): string | null {
+  const contentText = collectContentText(payload);
+  if (contentText) return contentText;
+  const direct = stringField(payload, ["message", "text", "summary", "last_agent_message", "output", "error"]);
+  if (direct) return direct;
+  const name = stringField(payload, ["name"]);
+  if (name) return `${eventType} ${name}`;
+  return eventType;
+}
+
+function truncateSearchableText(text: string | null): string | null {
+  if (!text) return null;
+  const max = 8192;
+  return text.length > max ? text.slice(0, max) : text;
+}
+
+function appendStructuredEvent(
+  batch: CodexImportBatch,
+  input: {
+    filePath: string;
+    lineIndex: number;
+    sourceNativeId: string;
+    sessionId: string;
+    timestamp: number;
+    topLevelType: string;
+    payload: Record<string, unknown>;
+  },
+): void {
+  const eventType = eventTypeFor(input.topLevelType, input.payload);
+  const summary = summarizePayload(input.payload, eventType);
+  batch.events.push({
+    sessionId: input.sessionId,
+    turnId: stringField(input.payload, ["turn_id", "turnId"]),
+    itemId: stringField(input.payload, ["item_id", "itemId", "id"]),
+    callId: stringField(input.payload, ["call_id", "callId"]),
+    eventKind: eventKindFor(input.topLevelType, input.payload, eventType),
+    eventType,
+    role: stringField(input.payload, ["role"]),
+    timestamp: input.timestamp,
+    sourceNativeId: input.sourceNativeId,
+    sourceLine: input.lineIndex,
+    payloadJson: input.payload,
+    renderedSummary: summary,
+    searchableText: truncateSearchableText(summary),
+  });
+}
+
 function parseRolloutLineToBatch(
   filePath: string,
   line: string,
@@ -207,6 +311,7 @@ function parseRolloutLineToBatch(
   const type = parsed.type;
   const payload = parsed.payload ?? {};
   const lineTimestamp = isoToMillis(parsed.timestamp);
+  const sourceNativeId = `${rolloutBasename(filePath)}::line:${lineIndex}`;
 
   if (type === "session_meta") {
     const meta = payload as SessionMetaPayload;
@@ -215,6 +320,15 @@ function parseRolloutLineToBatch(
     state.sessionId = targetId;
     batch.sessions.push(sessionMetaInput(meta, targetId, options.machine));
     state.sessionInitialized = true;
+    appendStructuredEvent(batch, {
+      filePath,
+      lineIndex,
+      sourceNativeId,
+      sessionId: targetId,
+      timestamp: lineTimestamp,
+      topLevelType: type,
+      payload,
+    });
     return;
   }
 
@@ -224,6 +338,16 @@ function parseRolloutLineToBatch(
     batch.sessions.push(fallbackSessionInput(filePath, state.sessionId, lineTimestamp, options.machine));
     state.sessionInitialized = true;
   }
+
+  appendStructuredEvent(batch, {
+    filePath,
+    lineIndex,
+    sourceNativeId,
+    sessionId: state.sessionId,
+    timestamp: lineTimestamp,
+    topLevelType: type ?? "unknown",
+    payload,
+  });
 
   if (type === "response_item") {
     const item = payload as ResponseMessagePayload;
@@ -238,7 +362,7 @@ function parseRolloutLineToBatch(
       contentText: bodyText,
       contentBlocks: Array.isArray(item.content) ? (item.content as unknown[]) : null,
       timestamp: lineTimestamp,
-      sourceNativeId: `${rolloutBasename(filePath)}::line:${lineIndex}`,
+      sourceNativeId,
     });
     return;
   }
@@ -251,21 +375,22 @@ function parseRolloutLineToBatch(
         role: "user",
         contentText: ev.message,
         timestamp: lineTimestamp,
-        sourceNativeId: `${rolloutBasename(filePath)}::line:${lineIndex}`,
+        sourceNativeId,
       });
     }
   }
 }
 
 function shouldFlush(batch: CodexImportBatch, batchSize: number): boolean {
-  return batch.messages.length >= batchSize || batch.sessions.length >= batchSize;
+  return batch.messages.length >= batchSize || batch.sessions.length >= batchSize || batch.events.length >= batchSize;
 }
 
 function flushBatch(store: SessionsServiceStore, batch: CodexImportBatch): number {
-  if (batch.sessions.length === 0 && batch.messages.length === 0) return 0;
+  if (batch.sessions.length === 0 && batch.messages.length === 0 && batch.events.length === 0) return 0;
   const result = store.importSessionBatch({
     sessions: batch.sessions.splice(0),
     messages: batch.messages.splice(0),
+    events: batch.events.splice(0),
   });
   return result.messagesInserted;
 }
@@ -281,7 +406,7 @@ async function streamCodexRolloutFile(
   const hash = createHash("sha1");
   const prefixHash = cursor ? createHash("sha1") : null;
   const batchSize = Math.max(1, Math.floor(options.batchSize ?? DEFAULT_IMPORT_BATCH_SIZE));
-  const batch: CodexImportBatch = { sessions: [], messages: [] };
+  const batch: CodexImportBatch = { sessions: [], messages: [], events: [] };
   const state: StreamImportState = {
     sessionId: cursor ? store.findOriginByPath(filePath)?.sessionId ?? rolloutSessionIdFromName(filePath) : rolloutSessionIdFromName(filePath),
     sessionInitialized: cursor ? true : false,

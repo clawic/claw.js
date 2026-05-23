@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 
 import { resolveClawPersistentSurfacePath, resolveCodexConfigPath, resolveCodexProjectConfigPath } from "@clawjs/core";
 import { DatabaseServiceStore } from "@clawjs/database";
-import { scheduleAppsCatalogSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleDesignResourcesSearchEvent, scheduleMcpServersSearchEvent, scheduleSessionChatSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
+import { loadSessionsConfig, runSessionsRuntimeJobs, SessionsRuntimeJobStore, type SessionsRuntimeSessionChangedEvent } from "@clawjs/sessions";
+import { scheduleAppsCatalogSearchEvent, scheduleConnectorCatalogSearchEvent, scheduleDesignResourcesSearchEvent, scheduleMcpServersSearchEvent, scheduleRuntimeEventsSearchEvent, scheduleSessionChatSearchEvent, scheduleSessionEventsSearchEvent, scheduleSheetsWorkbookSearchEvent, scheduleSkillsRegistrySearchEvent } from "./cli-search-events.ts";
 import {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
@@ -554,10 +555,13 @@ export function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceSt
   return usageError(input, usage(input.binName, "skills"));
 }
 
-export function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceStore): number | null {
+export async function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceStore): Promise<number | null> {
   const command = input.positionals[1];
   if ((command === "list" || command === "search") && input.flags.workspace) {
     return null;
+  }
+  if (command === "runtime") {
+    return runSessionsRuntimeCommand(input);
   }
   if (command === "index") {
     const roots = sessionRoots(input);
@@ -608,4 +612,189 @@ export function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseSe
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "sessions"));
+}
+
+async function runSessionsRuntimeCommand(input: V1DataCliInput): Promise<number> {
+  const action = input.positionals[2] || "jobs";
+  const paths = resolveSessionsRuntimePaths(input);
+  if (action === "enqueue") {
+    const jobType = input.positionals[3] || input.flags.kind;
+    const store = new SessionsRuntimeJobStore(paths.runtimeDbPath);
+    try {
+      if (jobType === "import-codex" || jobType === "sessions.import_codex") {
+        const dir = input.flags.dir || input.flags["codex-dir"] || paths.codexSessionsDir;
+        const job = store.enqueueJob({
+          id: input.flags.id,
+          kind: "sessions.import_codex",
+          title: input.flags.title,
+          resourceId: input.flags["resource-id"] ?? "codex",
+          priority: numberFlag(input.flags.priority, 20),
+          scheduledAt: input.flags["scheduled-at"] || input.flags["run-at"],
+          maxAttempts: numberFlag(input.flags["max-attempts"], 3),
+          payload: {
+            dir,
+            mode: input.flags.mode,
+            machine: input.flags.machine,
+            forceReimport: truthy(input.flags["force-reimport"]),
+            budgetMs: optionalNumberFlag(input.flags["budget-ms"]),
+            maxFiles: optionalNumberFlag(input.flags["max-files"]),
+            batchSize: optionalNumberFlag(input.flags["batch-size"]),
+          },
+        });
+        scheduleRuntimeJobSearch(input, job.id);
+        writeSuccess(input, { item: job, paths: publicSessionsRuntimePaths(paths) });
+        return V1_DATA_EXIT_OK;
+      }
+      if (jobType === "rebuild-projection" || jobType === "sessions.rebuild_projection") {
+        const sessionId = input.flags["session-id"] || input.flags.session || input.flags["resource-id"] || input.positionals[4];
+        if (!sessionId) return usageError(input, `Usage: ${input.binName} sessions runtime enqueue rebuild-projection --session-id SESSION_ID [--json]`);
+        const job = store.enqueueJob({
+          id: input.flags.id,
+          kind: "sessions.rebuild_projection",
+          title: input.flags.title,
+          resourceId: sessionId,
+          priority: numberFlag(input.flags.priority, 10),
+          scheduledAt: input.flags["scheduled-at"] || input.flags["run-at"],
+          maxAttempts: numberFlag(input.flags["max-attempts"], 3),
+          payload: { sessionId },
+        });
+        scheduleRuntimeJobSearch(input, job.id);
+        writeSuccess(input, { item: job, paths: publicSessionsRuntimePaths(paths) });
+        return V1_DATA_EXIT_OK;
+      }
+    } finally {
+      store.close();
+    }
+    return usageError(input, `Usage: ${input.binName} sessions runtime enqueue import-codex|rebuild-projection [--json]`);
+  }
+  if (action === "run-once") {
+    const searchEvents: unknown[] = [];
+    const result = await runSessionsRuntimeJobs({
+      runtimeDbPath: paths.runtimeDbPath,
+      sessionsDbPath: paths.sessionsDbPath,
+      codexSessionsDir: paths.codexSessionsDir,
+      owner: input.flags.owner,
+      maxJobs: numberFlag(input.flags.limit ?? input.flags["max-jobs"], 10),
+      maxRuntimeMs: numberFlag(input.flags["max-runtime-ms"], 30_000),
+      maxFailures: numberFlag(input.flags["max-failures"], 10),
+      leaseMs: numberFlag(input.flags["lease-ms"], 30_000),
+      now: input.flags.now,
+      onSessionChanged: (event) => {
+        searchEvents.push(...scheduleSessionChangedSearchEvents(input, paths, event));
+      },
+    });
+    writeSuccess(input, { worker: result, searchEvents, paths: publicSessionsRuntimePaths(paths) });
+    return V1_DATA_EXIT_OK;
+  }
+  if (action === "jobs" || action === "list") {
+    const store = new SessionsRuntimeJobStore(paths.runtimeDbPath);
+    try {
+      const items = store.listJobs({
+        status: input.flags.status as never,
+        kind: input.flags.kind,
+        limit: numberFlag(input.flags.limit, 100),
+      });
+      writeSuccess(input, { items, paths: publicSessionsRuntimePaths(paths) });
+      return V1_DATA_EXIT_OK;
+    } finally {
+      store.close();
+    }
+  }
+  if (action === "job") {
+    const subaction = input.positionals[3] || "get";
+    const id = input.flags.id || input.positionals[4];
+    if (!id) return usageError(input, `Usage: ${input.binName} sessions runtime job get|cancel ID [--json]`);
+    const store = new SessionsRuntimeJobStore(paths.runtimeDbPath);
+    try {
+      if (subaction === "get") {
+        const job = store.getJob(id);
+        writeSuccess(input, { item: job, paths: publicSessionsRuntimePaths(paths) });
+        return job ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+      }
+      if (subaction === "cancel") {
+        const job = store.cancelJob(id);
+        if (job) scheduleRuntimeJobSearch(input, id);
+        writeSuccess(input, { item: job, cancelled: Boolean(job), paths: publicSessionsRuntimePaths(paths) });
+        return job ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
+      }
+    } finally {
+      store.close();
+    }
+  }
+  return usageError(input, `Usage: ${input.binName} sessions runtime enqueue|run-once|jobs|job [--json]`);
+}
+
+function scheduleSessionChangedSearchEvents(input: V1DataCliInput, paths: SessionsRuntimePaths, event: SessionsRuntimeSessionChangedEvent): unknown[] {
+  const flags = { ...input.flags, "data-dir": paths.dataDir, "sessions-db-path": paths.sessionsDbPath };
+  return [
+    {
+      source: "sessions.chats",
+      sessionId: event.sessionId,
+      result: scheduleSessionChatSearchEvent({
+        operation: "upsert",
+        sessionId: event.sessionId,
+        dataDir: paths.dataDir,
+        flags,
+      }),
+    },
+    {
+      source: "sessions.events",
+      sessionId: event.sessionId,
+      result: scheduleSessionEventsSearchEvent({
+        operation: "upsert",
+        sessionId: event.sessionId,
+        dataDir: paths.dataDir,
+        flags,
+      }),
+    },
+  ];
+}
+
+function scheduleRuntimeJobSearch(input: V1DataCliInput, jobId: string): void {
+  scheduleRuntimeEventsSearchEvent({
+    operation: "upsert",
+    kind: "job",
+    id: jobId,
+    dataDir: resolveClawjsDataRoot(input.flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: input.flags["data-dir"] } : process.env),
+    flags: input.flags,
+  });
+}
+
+interface SessionsRuntimePaths {
+  dataDir: string;
+  sessionsDbPath: string;
+  runtimeDbPath: string;
+  codexSessionsDir: string;
+}
+
+function resolveSessionsRuntimePaths(input: V1DataCliInput): SessionsRuntimePaths {
+  const explicitDataDir = input.flags["data-dir"]
+    ? path.resolve(input.cwd, expandHome(input.flags["data-dir"]))
+    : undefined;
+  const config = loadSessionsConfig(explicitDataDir ? {
+    dataDir: explicitDataDir,
+    dbPath: path.join(explicitDataDir, "sessions.sqlite"),
+  } : {});
+  const dataDir = explicitDataDir ?? config.dataDir;
+  return {
+    dataDir,
+    sessionsDbPath: path.resolve(input.cwd, expandHome(input.flags["sessions-db-path"] || input.flags["sessions-db"] || config.dbPath)),
+    runtimeDbPath: path.resolve(input.cwd, expandHome(input.flags["runtime-db-path"] || input.flags["runtime-db"] || path.join(dataDir, "runtime.sqlite"))),
+    codexSessionsDir: path.resolve(input.cwd, expandHome(input.flags["codex-dir"] || input.flags.dir || config.codexSessionsDir)),
+  };
+}
+
+function publicSessionsRuntimePaths(paths: SessionsRuntimePaths): SessionsRuntimePaths {
+  return paths;
+}
+
+function numberFlag(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function optionalNumberFlag(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }

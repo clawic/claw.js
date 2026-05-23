@@ -238,7 +238,7 @@ function shouldHandleV1DataCommand(group: string | undefined, command: string | 
     "skill-collections": new Set(["list", "get", "upsert", "delete", "help"]),
     connections: new Set(["list", "get", "upsert", "delete", "help"]),
     snippets: new Set(["list", "upsert", "delete", "help"]),
-    sessions: new Set(["index", "list", "get", "search", "help"]),
+    sessions: new Set(["index", "list", "get", "search", "runtime", "help"]),
   };
   if (!group || !(group in commandsByGroup)) return false;
   if (wantsHelp || !command) return true;

@@ -59,6 +59,7 @@ import {
   scheduleProvidersRoutingSearchEvent,
   scheduleRuntimeEventsSearchEvent,
   scheduleSessionChatSearchEvent,
+  scheduleSessionEventsSearchEvent,
   scheduleSheetsWorkbookSearchEvent,
   scheduleSignalsObservationsSearchEvent,
   scheduleSkillsRegistrySearchEvent,
@@ -145,6 +146,8 @@ import {
   ensureNotesPageResourceIndexed,
   ensureNotesPagesSourceIndexed,
   ensureSessionChatResourceIndexed,
+  ensureSessionEventsResourceIndexed,
+  ensureSessionsEventsSourceIndexed,
   ensureSessionsChatsSourceIndexed,
   ensureSignalsObservationsResourceIndexed,
   ensureSignalsObservationsSourceIndexed,
@@ -226,7 +229,7 @@ export async function runSearchRebuildCli(input: {
   context: CliContext;
   wantsJson: boolean;
 }): Promise<number> {
-  const store = openCliSearchStore(input.flags);
+  const store = openCliSearchStore(input.flags, { recoverRebuildableIndex: true });
   try {
     const selectedSources = SearchDocuments.parseListFlag(input.flags.sources ?? input.flags.source);
     const selectedShards = SearchDocuments.parseListFlag(input.flags.shards ?? input.flags.shard);
@@ -292,9 +295,10 @@ export async function runSearchRebuildCli(input: {
       writeCanonicalSearchSourceState,
     });
     const rebuildsSource = (source: string) => (!selectedSources || selectedSources.includes(source)) && importedSourceCanIndex(store, source);
-    const commandsIndexed = rebuildsSource("commands") ? importedEnsureCommandSourceIndexed(store) : 0;
-    const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
-    const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
+  const commandsIndexed = rebuildsSource("commands") ? importedEnsureCommandSourceIndexed(store) : 0;
+  const sessionsIndexed = rebuildsSource("sessions.chats") ? ensureSessionsChatsSourceIndexed(store, input.flags) : 0;
+  const sessionEventsIndexed = rebuildsSource("sessions.events") ? ensureSessionsEventsSourceIndexed(store, input.flags) : 0;
+  const databaseIndexed = rebuildsSource("database.records") ? ensureDatabaseRecordsSourceIndexed(store, input.flags) : 0;
     const workIndexed = rebuildsSource("work.items") ? ensureWorkItemsSourceIndexed(store, input.flags) : 0;
     const documentsIndexed = rebuildsSource("documents.blocks") ? ensureDocumentsBlocksSourceIndexed(store, input.flags) : 0;
     const notesIndexed = rebuildsSource("notes.pages") ? ensureNotesPagesSourceIndexed(store, input.flags) : 0;
@@ -335,6 +339,7 @@ export async function runSearchRebuildCli(input: {
     const indexedSourceIds = new Set([
       ...(commandsIndexed > 0 ? ["commands"] : []),
       ...(sessionsIndexed > 0 ? ["sessions.chats"] : []),
+      ...(sessionEventsIndexed > 0 ? ["sessions.events"] : []),
       ...(databaseIndexed > 0 ? ["database.records"] : []),
       ...(workIndexed > 0 ? ["work.items"] : []),
       ...(documentsIndexed > 0 ? ["documents.blocks"] : []),
@@ -382,7 +387,7 @@ export async function runSearchRebuildCli(input: {
       mode: selectedSources && selectedShards ? "shard_scoped" : selectedSources ? "scoped" : "full",
       selectedSources: selectedSources ?? null,
       selectedShards: selectedShards ?? null,
-      reindexed: commandsIndexed + sessionsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + surfaceRegistryIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
+      reindexed: commandsIndexed + sessionsIndexed + sessionEventsIndexed + databaseIndexed + workIndexed + documentsIndexed + notesIndexed + knowledgeIndexed + signalsIndexed + calendarIndexed + financeIndexed + elnIndexed + imagesIndexed + mediaIndexed + slidesIndexed + sheetsIndexed + generationsIndexed + codeIndexed + docsIndexed + skillsIndexed + providersIndexed + snippetsIndexed + agentsIndexed + marketplaceIndexed + contentIndexed + businessIndexed + socialIndexed + iotIndexed + connectorsIndexed + mcpIndexed + appsIndexed + designIndexed + runtimeIndexed + surfacesIndexed + surfaceRegistryIndexed + localFilesIndexed + webIndexed + externalIndexed + nativeSystemIndexed,
       embeddings: 0,
       sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
       storage: searchStorageMetadata(input.flags),
@@ -390,6 +395,7 @@ export async function runSearchRebuildCli(input: {
       indexedBySource: {
         commands: commandsIndexed,
         "sessions.chats": sessionsIndexed,
+        "sessions.events": sessionEventsIndexed,
         "database.records": databaseIndexed,
         "work.items": workIndexed,
         "documents.blocks": documentsIndexed,
@@ -689,6 +695,17 @@ export function scheduleSearchChangedSourceEvent(input: {
       const sessionId = input.flags["session-id"] ?? input.flags["resource-id"] ?? input.flags.session ?? input.positionals[5];
       if (!sessionId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sessions.chats --session-id <session-id>" };
       return scheduleSessionChatSearchEvent({
+        operation: input.operation,
+        sessionId,
+        dataDir,
+        flags: input.flags,
+        observedAt,
+      });
+    }
+    case "sessions.events": {
+      const sessionId = input.flags["session-id"] ?? input.flags["resource-id"] ?? input.flags.session ?? input.positionals[5];
+      if (!sessionId) return { ok: false, error: "Usage: claw search changes schedule <upsert|delete> --source sessions.events --session-id <session-id>" };
+      return scheduleSessionEventsSearchEvent({
         operation: input.operation,
         sessionId,
         dataDir,
@@ -1068,6 +1085,7 @@ function changedScheduleResourceId(input: { flags: Record<string, string>; posit
 function typedChangedSourceList(): string {
   return [
     "sessions.chats",
+    "sessions.events",
     "docs.pages",
     "sheets.workbooks",
     "code.symbols",
@@ -1163,6 +1181,8 @@ function runSearchIndexJob(store: SearchStore, job: SearchIndexJob, flags: Recor
       return importedEnsureCommandSourceIndexed(store);
     case "sessions.chats":
       return ensureSessionsChatsSourceIndexed(store, jobFlags);
+    case "sessions.events":
+      return ensureSessionsEventsSourceIndexed(store, jobFlags);
     case "database.records":
       return ensureDatabaseRecordsSourceIndexed(store, jobFlags);
     case "work.items":
@@ -1250,6 +1270,8 @@ function runSearchResourceIndexJob(store: SearchStore, job: SearchIndexJob, flag
   switch (job.source) {
     case "sessions.chats":
       return indexJobResource(job, "sessionId", (sessionId) => ensureSessionChatResourceIndexed(store, flags, sessionId));
+    case "sessions.events":
+      return indexJobResource(job, "sessionId", (sessionId) => ensureSessionEventsResourceIndexed(store, flags, sessionId));
     case "database.records":
       return ensureDatabaseRecordResourceIndexed(store, flags, job);
     case "work.items":
@@ -1587,14 +1609,31 @@ export function parseSearchPolicyMode(value: string | undefined): "strict" | "no
   throw new CliHandledError("invalid_policy_mode", "Use --policy-mode strict, normal, or authorized_automation.", CLI_EXIT_USAGE);
 }
 
-export function openCliSearchStore(flags: Record<string, string>): SearchStore {
+export function openCliSearchStore(flags: Record<string, string>, options: { recoverRebuildableIndex?: boolean } = {}): SearchStore {
   const dbPath = resolveSearchDbPath(flags);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   try {
     return new SearchStore(dbPath);
   } catch (error) {
+    if (options.recoverRebuildableIndex && isRebuildableSearchStorageError(error)) {
+      quarantineRebuildableSearchIndex(dbPath);
+      return new SearchStore(dbPath);
+    }
     if (hasExplicitSearchStorage(flags)) throw error;
     return new SearchStore(searchFallbackDbPath());
+  }
+}
+
+export function isRebuildableSearchStorageError(error: unknown): boolean {
+  return error instanceof Error
+    && /file is not a database|database disk image is malformed|not a database|SQLITE_CORRUPT|SQLITE_NOTADB|malformed database schema/i.test(error.message);
+}
+
+function quarantineRebuildableSearchIndex(dbPath: string): void {
+  const suffix = new Date().toISOString().replace(/[:.]/g, "-");
+  for (const candidate of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
+    if (!fs.existsSync(candidate)) continue;
+    fs.renameSync(candidate, `${candidate}.corrupt.${suffix}`);
   }
 }
 

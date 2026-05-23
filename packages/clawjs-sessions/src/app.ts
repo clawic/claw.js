@@ -16,10 +16,13 @@ import type {
   AppendMessageInput,
   CreateProjectInput,
   CreateSessionInput,
+  HydrateSessionInput,
+  ListSessionEventsFilter,
   ListProjectsFilter,
   ListSessionsFilter,
   MessageRole,
   SearchSessionsInput,
+  SearchSessionEventsInput,
   SessionEvent,
   SessionMessageUpdatedDelta,
   SessionMessageUpdatedPayload,
@@ -336,6 +339,26 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return session;
   });
 
+  app.get(clawApiPath("sessions/:id/hydrate"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const query = readQuery(request);
+    const input: HydrateSessionInput = {
+      sessionId: params.id,
+      messageLimit: asNumber(query.messageLimit ?? query.limit),
+      messageOffset: asNumber(query.messageOffset ?? query.offset),
+      recent: asBool(query.recent),
+      summaryLimit: asNumber(query.summaryLimit),
+      includeEvents: asBool(query.includeEvents),
+      eventLimit: asNumber(query.eventLimit),
+      eventOffset: asNumber(query.eventOffset),
+      eventTurnId: asString(query.eventTurnId ?? query.turnId),
+    };
+    const hydrated = await store.hydrateSession(input);
+    if (!hydrated) return await reply.code(404).send({ error: "session_not_found" });
+    return hydrated;
+  });
+
   app.get(clawApiPath("sessions"), async (request, reply) => {
     if (!requireSecret(request, reply, config.sharedSecret)) return;
     const query = readQuery(request);
@@ -371,6 +394,21 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
       limit: asNumber(query.limit),
     };
     return { items: await store.searchMessages(input) };
+  });
+
+  app.get(clawApiPath("sessions/events/search"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const query = readQuery(request);
+    const q = asString(query.q);
+    if (!q) return await reply.code(400).send({ error: "q query param is required" });
+    const input: SearchSessionEventsInput = {
+      query: q,
+      sessionId: asString(query.sessionId),
+      eventKind: asString(query.eventKind) as SearchSessionEventsInput["eventKind"],
+      eventType: asString(query.eventType),
+      limit: asNumber(query.limit),
+    };
+    return { items: await store.searchSessionEvents(input) };
   });
 
   app.patch(clawApiPath("sessions/:id"), async (request, reply) => {
@@ -434,6 +472,46 @@ export function buildSessionsApp(options: BuildSessionsAppOptions = {}) {
     return {
       items: await store.listMessages(params.id, asNumber(query.limit) ?? 200, asNumber(query.offset) ?? 0),
     };
+  });
+
+  app.get(clawApiPath("sessions/:id/events"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const query = readQuery(request);
+    const filter: ListSessionEventsFilter = {
+      sessionId: params.id,
+      eventKind: asString(query.eventKind) as ListSessionEventsFilter["eventKind"],
+      eventType: asString(query.eventType),
+      turnId: asString(query.turnId),
+      callId: asString(query.callId),
+      limit: asNumber(query.limit),
+      offset: asNumber(query.offset),
+    };
+    return { items: await store.listSessionEvents(filter) };
+  });
+
+  app.get(clawApiPath("sessions/:id/turn-summaries"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    const query = readQuery(request);
+    const turnIds = asString(query.turnIds)?.split(",").map((value) => value.trim()).filter(Boolean);
+    return { items: await store.listTurnSummaries(params.id, turnIds) };
+  });
+
+  app.get(clawApiPath("sessions/:id/projection"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    const params = request.params as { id: string };
+    return { meta: await store.getProjectionMeta(params.id) };
+  });
+
+  app.post(clawApiPath("sessions/:id/projection/rebuild"), async (request, reply) => {
+    if (!requireSecret(request, reply, config.sharedSecret)) return;
+    try {
+      const params = request.params as { id: string };
+      return await store.rebuildSessionProjection(params.id);
+    } catch (error) {
+      return await reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   app.patch(clawApiPath("sessions/:sessionId/messages/:messageId"), async (request, reply) => {

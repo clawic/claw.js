@@ -63,6 +63,35 @@ function appendAssistantMessage(filePath: string, text: string, seconds = 2): vo
   })}\n`);
 }
 
+function appendRolloutLine(filePath: string, line: Record<string, unknown>): void {
+  fs.appendFileSync(filePath, `${JSON.stringify(line)}\n`);
+}
+
+function fileSnapshot(rootDir: string): Array<{ relativePath: string; size: number; mtimeMs: number; mode: number }> {
+  const snapshot: Array<{ relativePath: string; size: number; mtimeMs: number; mode: number }> = [];
+  const stack = [rootDir];
+  while (stack.length) {
+    const dir = stack.pop();
+    if (!dir) continue;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const stat = fs.statSync(full);
+      snapshot.push({
+        relativePath: path.relative(rootDir, full),
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+        mode: stat.mode,
+      });
+    }
+  }
+  return snapshot.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
+}
+
 test("Codex import persists file fingerprints and skips unchanged files without rereading JSONL", async () => {
   const rootDir = tempRoot("clawjs-codex-import-");
   const dbPath = path.join(rootDir, "sessions.sqlite");
@@ -74,6 +103,7 @@ test("Codex import persists file fingerprints and skips unchanged files without 
   assert.equal(first.scanned, 1);
   assert.equal(first.changedFiles, 1);
   assert.equal(first.imported[0]?.messagesImported, 1);
+  assert.equal(store.listSessionEvents({ sessionId: THREAD_A }).length, 2);
 
   const origin = store.findOriginByPath(filePath);
   assert.equal(origin?.sourceSize, fs.statSync(filePath).size);
@@ -88,6 +118,7 @@ test("Codex import persists file fingerprints and skips unchanged files without 
   assert.equal(second.skipped, 1);
   assert.equal(second.imported[0]?.reason, "unchanged_fingerprint");
   assert.equal(store.getSessionWithMessages(THREAD_A)?.messages.length, 1);
+  assert.equal(store.listSessionEvents({ sessionId: THREAD_A }).length, 2);
   store.close();
 });
 
@@ -128,9 +159,143 @@ test("Codex import only parses appended rollout lines when cursor prefix matches
     store.getSessionWithMessages(THREAD_A)?.messages.map((message) => message.contentText),
     ["first message", "appended reply"],
   );
+  assert.deepEqual(
+    store.listSessionEvents({ sessionId: THREAD_A }).map((event) => event.eventType),
+    ["session_meta", "response_item.message", "response_item.message"],
+  );
   const updatedOrigin = store.findOriginByPath(filePath);
   assert.equal(updatedOrigin?.sourceCursorLine, 2);
   assert.notEqual(updatedOrigin?.sourceCursorHash, initialOrigin?.sourceCursorHash);
+  store.close();
+});
+
+test("Codex import stores structured tool, patch, compaction and unknown events", async () => {
+  const rootDir = tempRoot("clawjs-codex-events-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const codexDir = path.join(rootDir, "codex-sessions");
+  const filePath = writeRollout(codexDir, THREAD_A, "first message");
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:02.000Z",
+    type: "response_item",
+    payload: {
+      type: "function_call",
+      name: "exec_command",
+      call_id: "call_exec",
+      turn_id: "turn_1",
+      arguments: "{\"cmd\":\"false\"}",
+    },
+  });
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:03.000Z",
+    type: "response_item",
+    payload: {
+      type: "function_call_output",
+      call_id: "call_exec",
+      turn_id: "turn_1",
+      output: "Process exited with code 1\nOutput:\nboom failure",
+    },
+  });
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:04.000Z",
+    type: "event_msg",
+    payload: {
+      type: "patch_apply_end",
+      call_id: "call_patch",
+      turn_id: "turn_1",
+      status: "success",
+      stdout: "changed file",
+    },
+  });
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:05.000Z",
+    type: "event_msg",
+    payload: {
+      type: "context_compacted",
+      turn_id: "turn_1",
+      text: "Context compacted",
+    },
+  });
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:06.000Z",
+    type: "event_msg",
+    payload: {
+      type: "token_count",
+      turn_id: "turn_1",
+      input_tokens: 12,
+      output_tokens: 7,
+    },
+  });
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:07.000Z",
+    type: "event_msg",
+    payload: {
+      type: "turn_aborted",
+      turn_id: "turn_1",
+      status: "interrupted",
+    },
+  });
+  appendRolloutLine(filePath, {
+    timestamp: "2026-05-20T10:00:08.000Z",
+    type: "mystery_event",
+    payload: {
+      text: "unknown but preserved",
+    },
+  });
+  const store = new SessionsServiceStore(dbPath);
+
+  const result = await importCodexSessionsDir(store, codexDir);
+
+  assert.equal(result.changedFiles, 1);
+  const events = store.listSessionEvents({ sessionId: THREAD_A });
+  assert.deepEqual(events.map((event) => event.eventKind), [
+    "lifecycle",
+    "message",
+    "tool_call",
+    "tool_output",
+    "patch",
+    "compaction",
+    "usage",
+    "lifecycle",
+    "unknown",
+  ]);
+  assert.equal(events.find((event) => event.callId === "call_exec")?.eventType, "response_item.function_call");
+  assert.equal(events.find((event) => event.eventKind === "tool_output")?.searchableText?.includes("boom failure"), true);
+  assert.equal(store.searchSessionEvents({ query: "boom", eventKind: "tool_output" }).length, 1);
+  const projection = store.rebuildSessionProjection(THREAD_A);
+  assert.equal(projection.meta.projectionStatus, "current");
+  assert.equal(projection.meta.eventCount, events.length);
+  assert.equal(projection.summaries.length, 1);
+  assert.equal(projection.summaries[0]?.turnId, "turn_1");
+  assert.equal(projection.summaries[0]?.status, "aborted");
+  assert.equal(projection.summaries[0]?.completedAt, Date.parse("2026-05-20T10:00:07.000Z"));
+  assert.equal(projection.summaries[0]?.toolCallCount, 1);
+  assert.equal(projection.summaries[0]?.failedToolCallCount, 1);
+  assert.equal(projection.summaries[0]?.diffFileCount, 1);
+  assert.equal(projection.summaries[0]?.hasCompaction, true);
+  assert.equal(projection.summaries[0]?.tokenInput, 12);
+  assert.equal(projection.summaries[0]?.tokenOutput, 7);
+  assert.equal(projection.summaries[0]?.aborted, true);
+  assert.equal(projection.summaries[0]?.interrupted, true);
+
+  const reimport = await importCodexSessionsDir(store, codexDir, { forceReimport: true });
+  assert.equal(reimport.imported[0]?.messagesImported, 0);
+  assert.equal(store.listSessionEvents({ sessionId: THREAD_A }).length, events.length);
+  store.close();
+});
+
+test("Codex import and projection rebuild leave the source rollout tree read-only", async () => {
+  const rootDir = tempRoot("clawjs-codex-readonly-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const codexDir = path.join(rootDir, "codex-sessions");
+  writeRollout(codexDir, THREAD_A, "read-only source");
+  const before = fileSnapshot(codexDir);
+  const store = new SessionsServiceStore(dbPath);
+
+  const result = await importCodexSessionsDir(store, codexDir);
+  assert.equal(result.changedFiles, 1);
+  assert.equal(store.rebuildSessionProjection(THREAD_A).meta.projectionStatus, "current");
+
+  assert.deepEqual(fileSnapshot(codexDir), before);
   store.close();
 });
 
@@ -252,5 +417,38 @@ test("sessions import/codex endpoint accepts incremental budget options", async 
   assert.equal(body.imported.length, 1);
   assert.equal(body.budgetExhausted, true);
   assert.equal(body.changedFiles, 1);
+
+  const importedSessionId = (body.imported[0] as { sessionId: string | null }).sessionId;
+  assert.ok(importedSessionId);
+  const eventsResponse = await app.inject({
+    method: "GET",
+    url: `/v1/sessions/${encodeURIComponent(importedSessionId)}/events?limit=10`,
+    headers: { authorization: "Bearer test-secret" },
+  });
+  assert.equal(eventsResponse.statusCode, 200);
+  const eventsBody = JSON.parse(eventsResponse.body) as { items: Array<{ eventType: string; searchableText: string | null }> };
+  assert.deepEqual(eventsBody.items.map((event) => event.eventType), ["session_meta", "response_item.message"]);
+  const importedMessageText = eventsBody.items.find((event) => event.eventType === "response_item.message")?.searchableText;
+  assert.ok(importedMessageText);
+
+  const eventSearchResponse = await app.inject({
+    method: "GET",
+    url: `/v1/sessions/events/search?q=${encodeURIComponent(importedMessageText)}&eventKind=message`,
+    headers: { authorization: "Bearer test-secret" },
+  });
+  assert.equal(eventSearchResponse.statusCode, 200);
+  const eventSearchBody = JSON.parse(eventSearchResponse.body) as { items: unknown[] };
+  assert.equal(eventSearchBody.items.length, 1);
+
+  const projectionResponse = await app.inject({
+    method: "POST",
+    url: `/v1/sessions/${encodeURIComponent(importedSessionId)}/projection/rebuild`,
+    headers: { authorization: "Bearer test-secret" },
+  });
+  assert.equal(projectionResponse.statusCode, 200);
+  const projectionBody = JSON.parse(projectionResponse.body) as { meta: { projectionStatus: string; eventCount: number; summaryCount: number } };
+  assert.equal(projectionBody.meta.projectionStatus, "current");
+  assert.equal(projectionBody.meta.eventCount, 2);
+  assert.equal(projectionBody.meta.summaryCount, 0);
   await app.close();
 });

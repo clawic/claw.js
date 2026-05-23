@@ -6,18 +6,27 @@ import type {
   CreateProjectInput,
   CreateSessionInput,
   ExportTrajectoryOptions,
+  HydrateSessionInput,
+  HydratedSessionResult,
+  ListSessionEventsFilter,
   ListProjectsFilter,
   ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
   ProjectRecord,
+  RebuildSessionProjectionResult,
   SearchSessionsInput,
+  SearchSessionEventsInput,
+  SessionEventSearchHit,
   SessionMessageRecord,
   SessionOriginRecord,
+  SessionProjectionMetaRecord,
   SessionRecord,
+  SessionStructuredEventRecord,
   SessionSearchHit,
   SessionStatus,
   SessionStorageMetrics,
+  SessionTurnSummaryRecord,
   SessionWithMessages,
   SidebarBootstrapResult,
   TrajectoryRecord,
@@ -107,6 +116,10 @@ export class AsyncSessionsServiceStore {
     return this.call("getSessionWithMessages", id, limit);
   }
 
+  hydrateSession(input: HydrateSessionInput): Promise<HydratedSessionResult | null> {
+    return this.call("hydrateSession", input);
+  }
+
   listSessions(filter: ListSessionsFilter = {}): Promise<ListSessionsResult> {
     return this.call("listSessions", filter);
   }
@@ -165,6 +178,30 @@ export class AsyncSessionsServiceStore {
 
   searchMessages(input: SearchSessionsInput): Promise<SessionSearchHit[]> {
     return this.call("searchMessages", input);
+  }
+
+  listSessionEvents(filter: ListSessionEventsFilter): Promise<SessionStructuredEventRecord[]> {
+    return this.call("listSessionEvents", filter);
+  }
+
+  searchSessionEvents(input: SearchSessionEventsInput): Promise<SessionEventSearchHit[]> {
+    return this.call("searchSessionEvents", input);
+  }
+
+  listTurnSummaries(sessionId: string, turnIds?: string[]): Promise<SessionTurnSummaryRecord[]> {
+    return this.call("listTurnSummaries", sessionId, turnIds);
+  }
+
+  getProjectionMeta(sessionId: string): Promise<SessionProjectionMetaRecord | null> {
+    return this.call("getProjectionMeta", sessionId);
+  }
+
+  markSessionProjectionStale(sessionId: string, reason: string): Promise<SessionProjectionMetaRecord> {
+    return this.call("markSessionProjectionStale", sessionId, reason);
+  }
+
+  rebuildSessionProjection(sessionId: string): Promise<RebuildSessionProjectionResult> {
+    return this.call("rebuildSessionProjection", sessionId);
   }
 
   upsertOrigin(input: UpsertOriginInput): Promise<SessionOriginRecord> {

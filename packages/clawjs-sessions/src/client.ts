@@ -3,17 +3,26 @@ import type {
   AppendMessageInput,
   CreateProjectInput,
   CreateSessionInput,
+  HydrateSessionInput,
+  HydratedSessionResult,
   ListProjectsFilter,
   ListProjectsResult,
   ListSessionsFilter,
   ListSessionsResult,
+  ListSessionEventsFilter,
   ProjectRecord,
+  RebuildSessionProjectionResult,
   SearchSessionsInput,
+  SearchSessionEventsInput,
   SidebarBootstrapResult,
   SessionEvent,
+  SessionEventSearchHit,
   SessionMessageRecord,
+  SessionProjectionMetaRecord,
   SessionRecord,
   SessionSearchHit,
+  SessionStructuredEventRecord,
+  SessionTurnSummaryRecord,
   SessionWithMessages,
   StartTurnInput,
   UpdateProjectInput,
@@ -116,6 +125,19 @@ export class SessionsApiClient {
     return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(id)}${buildQuery({ includeMessages: true, limit })}`));
   }
 
+  hydrateSession(sessionId: string, input: Omit<HydrateSessionInput, "sessionId"> = {}): Promise<HydratedSessionResult> {
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/hydrate${buildQuery({
+      messageLimit: input.messageLimit,
+      messageOffset: input.messageOffset,
+      recent: input.recent,
+      summaryLimit: input.summaryLimit,
+      includeEvents: input.includeEvents,
+      eventLimit: input.eventLimit,
+      eventOffset: input.eventOffset,
+      eventTurnId: input.eventTurnId,
+    })}`));
+  }
+
   list(filter: ListSessionsFilter = {}): Promise<ListSessionsResult> {
     return this.call("GET", clawApiPath(`sessions${buildQuery({
       agent: filter.agent,
@@ -151,6 +173,16 @@ export class SessionsApiClient {
     })}`));
   }
 
+  searchEvents(input: SearchSessionEventsInput): Promise<{ items: SessionEventSearchHit[] }> {
+    return this.call("GET", clawApiPath(`sessions/events/search${buildQuery({
+      q: input.query,
+      sessionId: input.sessionId,
+      eventKind: input.eventKind,
+      eventType: input.eventType,
+      limit: input.limit,
+    })}`));
+  }
+
   update(id: string, patch: {
     title?: string;
     pinned?: boolean;
@@ -177,6 +209,31 @@ export class SessionsApiClient {
 
   listMessages(sessionId: string, opts: { limit?: number; offset?: number } = {}): Promise<{ items: SessionMessageRecord[] }> {
     return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/messages${buildQuery(opts)}`));
+  }
+
+  listEvents(sessionId: string, opts: Omit<ListSessionEventsFilter, "sessionId"> = {}): Promise<{ items: SessionStructuredEventRecord[] }> {
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/events${buildQuery({
+      eventKind: opts.eventKind,
+      eventType: opts.eventType,
+      turnId: opts.turnId,
+      callId: opts.callId,
+      limit: opts.limit,
+      offset: opts.offset,
+    })}`));
+  }
+
+  listTurnSummaries(sessionId: string, turnIds?: string[]): Promise<{ items: SessionTurnSummaryRecord[] }> {
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/turn-summaries${buildQuery({
+      turnIds: turnIds?.join(","),
+    })}`));
+  }
+
+  getProjection(sessionId: string): Promise<{ meta: SessionProjectionMetaRecord | null }> {
+    return this.call("GET", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/projection`));
+  }
+
+  rebuildProjection(sessionId: string): Promise<RebuildSessionProjectionResult> {
+    return this.call("POST", clawApiPath(`sessions/${encodeURIComponent(sessionId)}/projection/rebuild`), {});
   }
 
   importCodex(input: {

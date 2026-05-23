@@ -1784,7 +1784,7 @@ export function usage(binName: string, group: string): string {
     case "connections": return `Usage: ${binName} connections list|get|upsert|delete [--json]`;
     case "providers": return `Usage: ${binName} providers routing list|set|delete FEATURE --capability CAP --provider PROVIDER [--model MODEL] [--account-ref REF] [--json]\n       ${binName} providers settings list|set|delete PROVIDER --enabled true|false [--json]`;
     case "snippets": return `Usage: ${binName} snippets list|upsert|delete SLUG --title TITLE --body TEXT [--kind prompt|template|slash] [--json]`;
-    case "sessions": return `Usage: ${binName} sessions index|list|get|search [--json]`;
+    case "sessions": return `Usage: ${binName} sessions index|list|get|search|runtime [--json]`;
     default:
       return `Usage: ${binName} data doctor [--json]`;
   }

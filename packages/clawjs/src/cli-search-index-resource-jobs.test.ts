@@ -20,6 +20,7 @@ import {
   runSearchProvidersSnippetsFastPathScenario,
 } from "./cli-search-framework-fast-path-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
+import { SessionsServiceStore } from "../../clawjs-sessions/src/store.ts";
 test("search service upsert jobs refresh only the targeted database resource", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-resource-db-"));
   const dataRoot = path.join(workspaceRoot, ".claw", "data");
@@ -466,5 +467,76 @@ test("sessions.chats event jobs refresh and tombstone individual chats", async (
     assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
     const afterDeletePayload = JSON.parse(afterDelete.stdout) as { data: { results: unknown[] } };
     assert.deepEqual(afterDeletePayload.data.results, []);
+  });
+});
+
+test("sessions.events service jobs index structured event facets from sessions.sqlite", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-session-event-docs-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+    CLAW_SESSIONS_DB_PATH: undefined,
+  }, async () => {
+    const sessionsDbPath = path.join(dataRoot, "sessions.sqlite");
+    const sessionsStore = new SessionsServiceStore(sessionsDbPath);
+    const sessionId = "44444444-5555-4666-8777-888888888888";
+    try {
+      sessionsStore.createSession({ id: sessionId, agent: "codex", runtime: "codex-cli", title: "Event Search" });
+      sessionsStore.appendSessionEvent({
+        sessionId,
+        turnId: "turn-1",
+        callId: "call-1",
+        eventKind: "tool_output",
+        eventType: "response_item.function_call_output",
+        timestamp: Date.parse("2026-05-18T10:00:00.000Z"),
+        sourceNativeId: "rollout::line:10",
+        payloadJson: { name: "exec_command", status: "failed", output: "structured-event-boom" },
+        renderedSummary: "structured-event-boom",
+        searchableText: "structured-event-boom exit code 1",
+      });
+    } finally {
+      sessionsStore.close();
+    }
+
+    const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "sessions.events", "--session-id", sessionId, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+    const scheduledPayload = JSON.parse(scheduled.stdout) as {
+      data: { item?: { source: string; operation: string; resourceId?: string; payload?: { sessionId?: string } } };
+    };
+    assert.equal(scheduledPayload.data.item?.source, "sessions.events");
+    assert.equal(scheduledPayload.data.item?.operation, "upsert");
+    assert.equal(scheduledPayload.data.item?.resourceId, sessionId);
+    assert.equal(scheduledPayload.data.item?.payload?.sessionId, sessionId);
+
+    const serviceRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.events", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(serviceRun.code, CLI_EXIT_OK, serviceRun.stderr || serviceRun.stdout);
+    const serviceRunPayload = JSON.parse(serviceRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    assert.deepEqual(
+      serviceRunPayload.data.worker?.items.map((entry) => ({ source: entry.source, operation: entry.operation, status: entry.status, indexed: entry.indexed })),
+      [{ source: "sessions.events", operation: "upsert", status: "done", indexed: 1 }],
+    );
+
+    const query = await runCliCapture(["search", "query", "structured-event-boom", "--source", "sessions.events", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK, query.stderr || query.stdout);
+    const queryPayload = JSON.parse(query.stdout) as {
+      data: { results: Array<{ source: string; resourceId?: string; metadata?: { eventKind?: string; hasFailedTool?: boolean } }> };
+    };
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === sessionId);
+    assert.equal(result?.source, "sessions.events");
+    assert.equal(result?.metadata?.eventKind, "tool_output");
+    assert.equal(result?.metadata?.hasFailedTool, true);
+
+    const deleted = await runCliCapture(["search", "changes", "schedule", "delete", "--source", "sessions.events", "--session-id", sessionId, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(deleted.code, CLI_EXIT_OK, deleted.stderr || deleted.stdout);
+    const deleteRun = await runCliCapture(["search", "service", "run-once", "--source", "sessions.events", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "1"], workspaceRoot);
+    assert.equal(deleteRun.code, CLI_EXIT_OK, deleteRun.stderr || deleteRun.stdout);
+    const afterDelete = await runCliCapture(["search", "query", "structured-event-boom", "--source", "sessions.events", "--data-dir", dataRoot, "--sessions-db-path", sessionsDbPath, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(afterDelete.code, CLI_EXIT_DEGRADED);
   });
 });
