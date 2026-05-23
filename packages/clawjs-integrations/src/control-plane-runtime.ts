@@ -9,6 +9,7 @@ import {
   type ConnectorPolicy,
   type ConnectorProvider,
   type ConnectorRiskTier,
+  type ConnectorScopedGrant,
   type CredentialBinding,
 } from "@clawjs/core";
 
@@ -26,6 +27,11 @@ export interface ConnectorRuntimeControlPlaneOptions {
   budgets?: ConnectorBudget[];
   networkPolicies?: ConnectorNetworkPolicy[];
   networkProof?: ConnectorNetworkProof;
+  scopedGrant?: ConnectorScopedGrant;
+  /**
+   * @deprecated Use scopedGrant. Kept for callers on the legacy connector
+   * grant option name.
+   */
   approvalGrant?: ConnectorApprovalGrant;
   expectedCost?: number;
   requestedHost?: string;
@@ -82,6 +88,7 @@ export function assertConnectorRuntimeControlPlane(input: {
     budgets: controlPlane.budgets,
     networkPolicies: controlPlane.networkPolicies,
     networkProof: controlPlane.networkProof,
+    scopedGrant: controlPlane.scopedGrant,
     approvalGrant: controlPlane.approvalGrant,
   });
   if (!decision.allowed) {

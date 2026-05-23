@@ -648,7 +648,7 @@ describe("MCP connector control plane", () => {
     }
   });
 
-  it("allows MCP tool calls only through an approval-bound scoped grant", async () => {
+  it("allows MCP tool calls only through a scoped connector grant", async () => {
     const { app, config } = buildFixtureApp();
     try {
       await registerAndRefreshFixtureServer(app, config.sharedSecret);
@@ -661,9 +661,10 @@ describe("MCP connector control plane", () => {
           args: { text: "hello" },
           controlPlane: {
             ...fixtureControlPlane(),
-            approvalGrant: {
+            scopedGrant: {
               id: "grant_mcp",
               expiresAt: "2026-05-15T12:10:00.000Z",
+              approvalEvidenceId: "approval_mcp",
               providerIds: ["mcp:srv_fixture"],
               capabilityIds: ["mcp.tool.call"],
               riskTiers: ["system"],
@@ -810,9 +811,10 @@ function fixtureAgentPolicy(input: { assignmentStatus?: "active" | "paused" } = 
 function fixtureApprovedControlPlane() {
   return {
     ...fixtureControlPlane(),
-    approvalGrant: {
+    scopedGrant: {
       id: "grant_mcp",
       expiresAt: "2026-05-15T12:10:00.000Z",
+      approvalEvidenceId: "approval_mcp",
       providerIds: ["mcp:srv_fixture"],
       capabilityIds: ["mcp.tool.call"],
       riskTiers: ["system"],

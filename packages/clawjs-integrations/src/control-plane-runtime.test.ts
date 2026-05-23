@@ -100,9 +100,10 @@ describe("connector runtime control plane", () => {
           used: 1,
           unknownCostBehavior: "block",
         }],
-        approvalGrant: {
+        scopedGrant: {
           id: "grant_unknown_cost",
           expiresAt: "2026-05-15T12:10:00.000Z",
+          approvalEvidenceId: "approval_unknown_cost",
           providerIds: ["image_service"],
           capabilityIds: ["media.image.edit"],
           riskTiers: ["cost"],

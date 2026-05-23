@@ -112,9 +112,10 @@ function fixtureControlPlane() {
       capabilityIds: ["issues.create.record"],
       enabled: true,
     },
-    approvalGrant: {
+    scopedGrant: {
       id: "grant_cli",
       expiresAt: "2026-05-15T12:10:00.000Z",
+      approvalEvidenceId: "approval_cli",
       providerIds: ["github"],
       capabilityIds: ["issues.create.record"],
       riskTiers: ["write"],

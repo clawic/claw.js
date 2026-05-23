@@ -12,6 +12,7 @@ import {
   type ConnectorNetworkProof,
   type ConnectorPolicy,
   type ConnectorProvider,
+  type ConnectorScopedGrant,
   type RegulatedDecisionEffect,
   type RegulatedDomain,
 } from "@clawjs/core";
@@ -26,6 +27,11 @@ export interface MCPConnectorControlPlaneInput {
   budgets?: ConnectorBudget[];
   networkPolicies?: ConnectorNetworkPolicy[];
   networkProof?: ConnectorNetworkProof;
+  scopedGrant?: ConnectorScopedGrant;
+  /**
+   * @deprecated Use scopedGrant. Kept for callers on the legacy connector
+   * grant option name.
+   */
   approvalGrant?: ConnectorApprovalGrant;
   regulatedDomains?: RegulatedDomain[];
   decisionEffects?: RegulatedDecisionEffect[];
@@ -110,6 +116,7 @@ export function assertMCPToolControlPlane(input: {
     budgets: controlPlane.budgets,
     networkPolicies: controlPlane.networkPolicies,
     networkProof: controlPlane.networkProof,
+    scopedGrant: controlPlane.scopedGrant,
     approvalGrant: controlPlane.approvalGrant,
   });
   if (!decision.allowed) {
