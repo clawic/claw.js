@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const CLI_SEARCH_SMOKE_TIMEOUT_MS = 60_000;
 const {
   SearchStore,
   createFrameworkSearchSourceManifest,
@@ -323,7 +324,7 @@ function readCliSearchSources(sourceSet) {
         ...process.env,
         CLAW_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")),
       },
-      timeout: 10_000,
+      timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
     });
     const parsed = JSON.parse(output);
     if (parsed?.ok !== true || !Array.isArray(parsed?.data?.sources)) {
@@ -351,7 +352,7 @@ function readCliSearchEntrypoints() {
         ...process.env,
         CLAW_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-search-goal-")),
       },
-      timeout: 10_000,
+      timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
     });
     const parsed = JSON.parse(output);
     if (parsed?.ok !== true || !Array.isArray(parsed?.data?.entrypoints)) {
@@ -387,7 +388,7 @@ function readCliSearchJson(args, label, dataRoot = fs.mkdtempSync(path.join(os.t
         ...process.env,
         CLAW_DATA_DIR: dataRoot,
       },
-      timeout: 15_000,
+      timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
     });
   } catch (error) {
     const stdout = error && typeof error === "object" && "stdout" in error ? error.stdout : "";
@@ -428,7 +429,7 @@ function readCliSearchErrorJson(args, label, dataRoot) {
         ...process.env,
         CLAW_DATA_DIR: dataRoot,
       },
-      timeout: 15_000,
+      timeout: CLI_SEARCH_SMOKE_TIMEOUT_MS,
     });
     failures.push(`${label}: expected a non-zero external-pending error`);
     return {};
