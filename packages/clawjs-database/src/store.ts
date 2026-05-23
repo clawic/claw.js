@@ -137,6 +137,17 @@ function validateRecordIndex(collection: CollectionDefinition, index: IndexDefin
   }
 }
 
+function indexFieldsExist(fields: FieldDefinition[], index: IndexDefinition): boolean {
+  const availableFields = new Set([
+    "id",
+    "createdAt",
+    "updatedAt",
+    ...fields.map((field) => field.name),
+    ...RECORD_PAGE_FIELDS,
+  ]);
+  return index.fields.every((field) => availableFields.has(field));
+}
+
 function recordIndexSqlDefinition(collection: CollectionDefinition, index: IndexDefinition): RecordIndexSqlDefinition {
   validateRecordIndex(collection, index);
   const fields = index.fields.map(recordFieldSqlExpression);
@@ -683,7 +694,11 @@ export class DatabaseServiceStore {
         throw new Error(`Protected collection ${name} cannot remove core field ${fieldName}.`);
       }
     }
-    const indexes = input.indexes ? input.indexes.map(normalizeIndex) : current.indexes;
+    const indexes = input.indexes
+      ? input.indexes.map(normalizeIndex)
+      : input.fields
+        ? current.indexes.filter((index) => indexFieldsExist(fields, index))
+        : current.indexes;
     const now = nowIso();
     const update = this.sqlite.transaction((): CollectionDefinition => {
       this.sqlite.prepare(`
