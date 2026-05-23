@@ -7,10 +7,13 @@ import {
 import {
   clawCliCommandRegistry,
 } from "../packages/clawjs-core/src/cli-command-registry.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const outputPath = path.join(rootDir, "packages", "clawjs", "src", "cli-router.generated.ts");
-const check = process.argv.includes("--check");
+const args = new Set(process.argv.slice(2));
+const allowedArgs = new Set(["--check", "--self-test"]);
+const check = args.has("--check");
 
 const REMOVED_PUBLIC_COMMANDS = [
   ["data", "Use `claw database ...` for technical database operations or `claw work export|import|backup ...` for productivity snapshots."],
@@ -133,6 +136,63 @@ function tsConst(value) {
   return JSON.stringify(value, null, 2).replace(/^(\s*)"([A-Za-z_$][A-Za-z0-9_$]*)":/gm, "$1$2:");
 }
 
+function generatorDiagnostic(error) {
+  if (error.startsWith("unknown argument")) {
+    return createDiagnostic("cli_router_generator_usage_error", error, {
+      status: "USAGE",
+      location: "scripts/generate-cli-router.mjs",
+      suggestion: "Use --check, --self-test, or no arguments.",
+      safeNextStep: "Rerun node --import tsx scripts/generate-cli-router.mjs with a supported argument.",
+    });
+  }
+  if (error.includes("is stale")) {
+    return createDiagnostic("cli_router_generated_file_stale", error, {
+      location: path.relative(rootDir, outputPath),
+      suggestion: "Regenerate the CLI router metadata from the public CLI registry.",
+      safeNextStep: "Run node --import tsx scripts/generate-cli-router.mjs, review packages/clawjs/src/cli-router.generated.ts, then rerun --check.",
+    });
+  }
+  return createDiagnostic("cli_router_generator_failed", error, {
+    location: "scripts/generate-cli-router.mjs",
+    suggestion: "Inspect the CLI registry and generated router inputs.",
+    safeNextStep: "Fix the generator input or output file, then rerun node --import tsx scripts/generate-cli-router.mjs --check.",
+  });
+}
+
+function printErrors(items, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "CLI router generator failed:",
+    diagnostics: items.map(generatorDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
+function runSelfTest() {
+  const chunks = [];
+  printErrors([
+    "unknown argument --bad-token-sk-test-secret-123456",
+    "packages/clawjs/src/cli-router.generated.ts is stale. Run: node --import tsx ./scripts/generate-cli-router.mjs from /Users/example/private",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  if (!output.includes("code: cli_router_generator_usage_error")) throw new Error("self-test missing usage code");
+  if (!output.includes("code: cli_router_generated_file_stale")) throw new Error("self-test missing stale code");
+  if (!output.includes("suggestion: Regenerate the CLI router metadata")) throw new Error("self-test missing actionable suggestion");
+  if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
+}
+
+for (const arg of args) {
+  if (!allowedArgs.has(arg)) {
+    printErrors([`unknown argument ${arg}`]);
+    process.exit(64);
+  }
+}
+
+if (args.has("--self-test")) {
+  runSelfTest();
+  console.log("CLI router generator self-test passed");
+  process.exit(0);
+}
+
 const commands = clawCliCommandRegistry.commands.map(compactCommand);
 const routeGroups = {};
 for (const entry of commands) {
@@ -213,7 +273,7 @@ export const GENERATED_JSON_HELP_REQUIRED_COMMANDS = ${tsConst(JSON_HELP_REQUIRE
 if (check) {
   const existing = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, "utf8") : "";
   if (existing !== generated) {
-    console.error(`${path.relative(rootDir, outputPath)} is stale. Run: node --import tsx ./scripts/generate-cli-router.mjs`);
+    printErrors([`${path.relative(rootDir, outputPath)} is stale. Run: node --import tsx ./scripts/generate-cli-router.mjs`]);
     process.exit(1);
   }
   process.exit(0);
