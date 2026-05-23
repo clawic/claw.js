@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const DEFAULT_WARNING_LINES = 800;
 const DEFAULT_BASELINE_REQUIRED_LINES = 1200;
@@ -124,12 +125,26 @@ function analyzeSource(text, config) {
 }
 
 function checkSourceSizes(scanRoot, filePath) {
-  const baseline = loadBaseline(filePath);
   const failures = [];
   const warnings = [];
   const signals = [];
   const top = [];
   const seen = new Set();
+  let baseline;
+  try {
+    baseline = loadBaseline(filePath);
+  } catch (error) {
+    failures.push(`${toPosix(path.relative(scanRoot, filePath))} is not valid JSON: ${error.message}`);
+    baseline = {
+      warningLines: DEFAULT_WARNING_LINES,
+      baselineRequiredLines: DEFAULT_BASELINE_REQUIRED_LINES,
+      maxNewFileLines: DEFAULT_MAX_NEW_FILE_LINES,
+      emergencyLines: DEFAULT_EMERGENCY_LINES,
+      longLineWarning: DEFAULT_LONG_LINE_WARNING,
+      longLineCritical: DEFAULT_LONG_LINE_CRITICAL,
+      files: {},
+    };
+  }
 
   for (const relativePath of collectSourceFiles(scanRoot)) {
     const absolutePath = path.join(scanRoot, relativePath);
@@ -192,6 +207,62 @@ function checkSourceSizes(scanRoot, filePath) {
   return { failures, warnings, signals, top: top.slice(0, 10), config: baseline };
 }
 
+function sourceSizeDiagnostic(failure) {
+  if (failure.startsWith("unknown argument")) {
+    return createDiagnostic("source_size_usage_error", failure, {
+      status: "USAGE",
+      location: "scripts/source-size-check.mjs",
+      suggestion: "Use --self-test or --json.",
+      safeNextStep: "Rerun node scripts/source-size-check.mjs with a supported argument.",
+    });
+  }
+  const invalidJson = failure.match(/^(.+) is not valid JSON:/);
+  if (invalidJson) {
+    return createDiagnostic("source_size_baseline_invalid_json", failure, {
+      location: invalidJson[1],
+      suggestion: "Fix the source-size baseline JSON before trusting size results.",
+      safeNextStep: `Repair ${invalidJson[1]}, then rerun node scripts/source-size-check.mjs.`,
+    });
+  }
+  const tooLarge = failure.match(/^(.+) has \d+ lines and needs/);
+  if (tooLarge) {
+    return createDiagnostic("source_size_new_file_too_large", failure, {
+      location: tooLarge[1],
+      suggestion: "Split the new file or add a reviewed source-size baseline exception with a concrete reason.",
+      safeNextStep: `Split ${tooLarge[1]} or update docs/source-size-baseline.json, then rerun node scripts/source-size-check.mjs.`,
+    });
+  }
+  const grew = failure.match(/^(.+) grew from baseline/);
+  if (grew) {
+    return createDiagnostic("source_size_baseline_growth_blocked", failure, {
+      location: grew[1],
+      suggestion: "Reduce file growth or update the baseline only after confirming the larger file remains maintainable.",
+      safeNextStep: `Reduce ${grew[1]} or update docs/source-size-baseline.json with review evidence, then rerun node scripts/source-size-check.mjs.`,
+    });
+  }
+  const baselineEntry = failure.match(/^(.+) baseline entry needs/);
+  if (baselineEntry) {
+    return createDiagnostic("source_size_baseline_entry_invalid", failure, {
+      location: "docs/source-size-baseline.json",
+      suggestion: "Fix the baseline entry with a valid line count and human-readable reason.",
+      safeNextStep: `Update the ${baselineEntry[1]} entry in docs/source-size-baseline.json, then rerun node scripts/source-size-check.mjs.`,
+    });
+  }
+  return createDiagnostic("source_size_check_failed", failure, {
+    location: "scripts/source-size-check.mjs",
+    suggestion: "Inspect the reported source-size invariant and restore the expected split or baseline.",
+    safeNextStep: "Fix the reported source-size issue, then rerun node scripts/source-size-check.mjs.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "source size check failed:",
+    diagnostics: failures.map(sourceSizeDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function runSelfTest() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "source-size-check-"));
   try {
@@ -232,8 +303,25 @@ function runSelfTest() {
     if (result.failures.some((failure) => failure.includes("known.ts grew"))) {
       throw new Error("expected ordinary baseline growth to warn, not fail");
     }
+    const chunks = [];
+    printFailures([
+      "/Users/example/private/src/too-large.ts has 2100 lines and needs a split or docs/source-size-baseline.json exception token sk-test-secret-123456",
+      "docs/source-size-baseline.json is not valid JSON: Unexpected token",
+    ], { stream: { write: (chunk) => chunks.push(chunk) } });
+    const output = chunks.join("");
+    if (!output.includes("code: source_size_new_file_too_large")) throw new Error("self-test missing large-file code");
+    if (!output.includes("code: source_size_baseline_invalid_json")) throw new Error("self-test missing baseline JSON code");
+    if (!output.includes("suggestion: Split the new file")) throw new Error("self-test missing suggestion");
+    if (output.includes("/Users/example") || output.includes("sk-test-secret-123456")) throw new Error("self-test leaked private data");
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+for (const arg of process.argv.slice(2)) {
+  if (!["--self-test", "--json"].includes(arg)) {
+    printFailures([`unknown argument ${arg}`]);
+    process.exit(64);
   }
 }
 
@@ -250,8 +338,7 @@ if (json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
   if (result.failures.length) {
-    console.error("source size check failed:");
-    for (const failure of result.failures) console.error(`- ${failure}`);
+    printFailures(result.failures);
   }
   console.log(
     `source size check ${result.failures.length ? "failed" : "passed"} ` +
