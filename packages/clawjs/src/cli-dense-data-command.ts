@@ -6,10 +6,9 @@ import path from "path";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeJsonOk } from "./cli-json.ts";
-import { runMagicDbCli } from "./database-magic.ts";
-import { materializedSemanticViewForIntent } from "./cli-dense-data-semantic-views.ts";
 import type { ProfessionalRecordsCliInput } from "./cli-dense-data-semantic-common.ts";
-import { openMainDataStore } from "./v1-data.ts";
+
+type MagicDbCliInput = Parameters<(typeof import("./database-magic.ts"))["runMagicDbCli"]>[0];
 
 const INSPECTION_ACTIONS = new Set(["overview", "gaps", "intents", "schema"]);
 const CRUD_ACTIONS = new Set(["list", "get", "create", "update", "delete", "query", "schema", "add"]);
@@ -68,14 +67,19 @@ const PROFESSIONAL_RECORDS_COLLECTION_BY_COMMAND = new Map(
   ),
 );
 
+async function runDenseMagicDbCli(input: MagicDbCliInput): Promise<number> {
+  const command = await import("./database-magic.ts");
+  return command.runMagicDbCli(input);
+}
+
 export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInput): Promise<number | null> {
   const phrase = input.positionals.join(" ");
   const group = input.positionals[0];
   const action = input.positionals[1];
   if (!group || !action) return null;
-  if (DENSE_FIXTURE_COMMANDS.has(group)) return runDenseFixtureCli(input, action);
+  if (DENSE_FIXTURE_COMMANDS.has(group)) return await runDenseFixtureCli(input, action);
   const directSemanticView = semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input);
-  if (directSemanticView) return writeDenseSemanticView(input, resolveClawProfessionalRecordsIntent(phrase), directSemanticView, group, action);
+  if (directSemanticView) return await writeDenseSemanticView(input, resolveClawProfessionalRecordsIntent(phrase), directSemanticView, group, action);
   if (!isProfessionalRecordsCommandGroup(group)) return null;
   if (group === "finance" && ["upsert", "list", "get", "delete"].includes(action)) return null;
 
@@ -89,14 +93,14 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
 
   const intent = resolveClawProfessionalRecordsIntent(phrase);
   const semanticView = intent.status === "data_gap" ? undefined : (semanticViewForIntent(intent) ?? semanticComposedViewForRoute(input) ?? semanticTimelineViewForRoute(input));
-  if (semanticView) return writeDenseSemanticView(input, intent, semanticView, group, action);
+  if (semanticView) return await writeDenseSemanticView(input, intent, semanticView, group, action);
 
   const foundationCollectionName = collectionForFoundationRoute(group);
   const foundationDbAction = action === "add" ? "create" : action;
   if (foundationCollectionName && CRUD_ACTIONS.has(action) && foundationDbAction !== "purge") {
     const fastEmptyListExit = writeEmptyDenseListIfStoreMissing(input, foundationCollectionName, foundationDbAction, group);
     if (fastEmptyListExit !== null) return fastEmptyListExit;
-    return await runMagicDbCli({
+    return await runDenseMagicDbCli({
       argv: denseDbArgv(input.argv, foundationCollectionName, foundationDbAction),
       positionals: [group, foundationCollectionName, foundationDbAction, ...input.positionals.slice(2)],
       flags: input.flags,
@@ -111,14 +115,14 @@ export async function runProfessionalRecordsCli(input: ProfessionalRecordsCliInp
   if (intent.status === "data_gap") return null;
   const nestedRoute = nestedDenseDbRoute(input);
   if (nestedRoute) {
-    return await runMagicDbCli(nestedRoute);
+    return await runDenseMagicDbCli(nestedRoute);
   }
   const collectionName = collectionForDenseRoute(input.positionals[0], intent.center?.collectionName);
   const dbAction = action === "add" ? "create" : action;
   if (collectionName && CRUD_ACTIONS.has(action) && dbAction !== "purge") {
     const fastEmptyListExit = writeEmptyDenseListIfStoreMissing(input, collectionName, dbAction, input.positionals[0] ?? "dense");
     if (fastEmptyListExit !== null) return fastEmptyListExit;
-    return await runMagicDbCli({
+    return await runDenseMagicDbCli({
       argv: denseDbArgv(input.argv, collectionName, dbAction),
       positionals: [input.positionals[0] ?? "dense", collectionName, dbAction, ...input.positionals.slice(2)],
       flags: denseDbFlags(input.flags, collectionName),
@@ -188,8 +192,9 @@ function writeEmptyDenseListIfStoreMissing(input: ProfessionalRecordsCliInput, c
   return CLI_EXIT_OK;
 }
 
-function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: string): number | null {
+async function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: string): Promise<number | null> {
   if (action !== "seed") return null;
+  const { openMainDataStore } = await import("./v1-data.ts");
   const namespaceId = input.flags.namespace ?? "main";
   const dataDir = resolveClawPersistentSurfacePath("claw.workspace.data", input.workspaceRoot);
   fs.mkdirSync(dataDir, { recursive: true });
@@ -264,13 +269,14 @@ function semanticComposedViewForRoute(input: ProfessionalRecordsCliInput) {
   return listClawProfessionalRecordsSemanticViewEntries().find((entry) => entry.id === viewId);
 }
 
-function writeDenseSemanticView(
+async function writeDenseSemanticView(
   input: ProfessionalRecordsCliInput,
   intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>,
   semanticView: NonNullable<ReturnType<typeof semanticTimelineViewForRoute>>,
   group: string,
   action: string,
-): number {
+): Promise<number> {
+  const { materializedSemanticViewForIntent } = await import("./cli-dense-data-semantic-views.ts");
   const materializedView = materializedSemanticViewForIntent(input, intent, semanticView);
   const recordsMaterialized = Boolean(materializedView);
   const operation = intent.operation ?? intent.system?.operations.find((entry) => entry.id === semanticView.operationId);
