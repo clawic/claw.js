@@ -132,6 +132,7 @@ type CliMediaClaw = ClawInstance & {
 };
 
 const REMOVED_CONTENT_PORTAL_COMMANDS = new Set(["posts", "campaigns", "publications"]);
+const MEDIA_GENERATION_COMMANDS = new Set(["list", "search", "read", "download", "share"]);
 const DENSE_FOUNDATION_OPTIONAL_GROUPS = [
   "dense-fixture",
   "dense-fixtures",
@@ -489,7 +490,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "sync") return await runSyncCli({ positionals, flags, context, wantsJson, binName });
   if (group === "nodes") return await runNodesCli({ positionals, flags, context, wantsJson, binName });
   if (group === "gateway") return await runGatewayCli({ positionals, flags, context, wantsJson, binName });
-  if (isMacControlCliRoot(group)) return await runMacControlCli({ argv, positionals, flags, context, wantsJson, binName });
+  if (isMacControlCliRoot(group) && !(group === "media" && command && MEDIA_GENERATION_COMMANDS.has(command))) return await runMacControlCli({ argv, positionals, flags, context, wantsJson, binName });
 
   const runtimePortalExit = await runRuntimePortalCli({
     group,
