@@ -145,28 +145,6 @@ export function isSensitiveRecord(payload: Record<string, unknown>): boolean {
   return ["sensitive", "private", "secret", "restricted"].includes(sensitivity);
 }
 
-export interface ConversationSessionRow {
-  session_id: string;
-  source: string;
-  artifact_path: string;
-  title: string;
-  cwd: string | null;
-  updated_at: string;
-  snippet: string | null;
-  metadata_json: string | null;
-  archived: number;
-  pinned: number;
-}
-
-export interface ConversationMessageRow {
-  id: string;
-  role: string;
-  text: string;
-  turn_index: number;
-  created_at: string | null;
-  metadata_json: string | null;
-}
-
 export function parseJsonRecord(value: string | null | undefined): Record<string, unknown> {
   if (!value) return {};
   try {
@@ -237,6 +215,10 @@ export function financeRecordKind(collectionName: string, payload: Record<string
 
 export function isSensitiveKnowledge(sensitivity: string): boolean {
   return ["sensitive", "private", "secret", "restricted"].includes(sensitivity.toLowerCase());
+}
+
+export function stringMetadata(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 export function parseListFlag(value: string | undefined): string[] | undefined {

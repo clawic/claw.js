@@ -118,6 +118,26 @@ export interface SignalsObservationRow {
   created_at: string;
   updated_at: string;
 }
+export interface ConversationSessionRow {
+  session_id: string;
+  source: string;
+  artifact_path: string;
+  title: string;
+  cwd: string | null;
+  updated_at: string;
+  snippet: string | null;
+  metadata_json: string | null;
+  archived: number;
+  pinned: number;
+}
+export interface ConversationMessageRow {
+  id: string;
+  role: string;
+  text: string;
+  turn_index: number;
+  created_at: string | null;
+  metadata_json: string | null;
+}
 export interface CalendarEventRow {
   id: string;
   title: string;

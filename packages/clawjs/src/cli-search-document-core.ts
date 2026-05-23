@@ -286,9 +286,6 @@ export function elnRecordShard(payload: Record<string, unknown>): "hot" | "cold"
   if (["archived", "closed", "void", "voided", "superseded"].includes(status)) return "cold";
   return "hot";
 }
-export function stringMetadata(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
 export function documentBlocksSearchDocument(row: DatabaseRecordRow, blockRows: DatabaseRecordRow[]): SearchDocumentInput | null {
   const payload = parseJsonRecord(row.data_json);
   if (payload.archivedAt || payload.archived_at || payload.deletedAt || payload.deleted_at) return null;

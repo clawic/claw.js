@@ -672,7 +672,7 @@ function denseDbFlags(flags: Record<string, string>, collectionName: string): Re
   return nextFlags;
 }
 
-function nestedDenseDbRoute(input: ProfessionalRecordsCliInput): Parameters<typeof runMagicDbCli>[0] | null {
+function nestedDenseDbRoute(input: ProfessionalRecordsCliInput): MagicDbCliInput | null {
   return nestedParentDbRoute(input, {
     parentCommand: "patient",
     relationFlag: "patient-id",
@@ -1096,7 +1096,7 @@ function nestedParentDbRoute(input: ProfessionalRecordsCliInput, config: {
   relationFlag: string;
   relationField: string;
   collections: Record<string, string>;
-}): Parameters<typeof runMagicDbCli>[0] | null {
+}): MagicDbCliInput | null {
   if (input.positionals[0] !== config.parentCommand) return null;
   const patientId = input.positionals[1];
   const noun = input.positionals[2];

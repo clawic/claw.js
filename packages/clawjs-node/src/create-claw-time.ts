@@ -1,5 +1,5 @@
 import { EmbeddedTimeEngine, TimeClient, type TimeServiceLike } from "./time/index.ts";
-import type { TemporalItem } from "@clawjs/claw";
+import type { TemporalItem } from "@clawjs/core";
 import type { CreateClawTimeOptions, TemporalTarget, TemporalWatchInput } from "./create-claw-options.ts";
 
 const TIME_CLIENT_KEYS = new Set(["mode", "baseUrl", "token"]);

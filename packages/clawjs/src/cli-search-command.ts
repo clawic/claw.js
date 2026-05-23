@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { clawCliCommandRegistry, detectClawPublicRepositories, type ClawCliSearchResult, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
+import { clawCliCommandRegistry, detectClawPublicRepositories, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
 import { writeJsonOk } from "./cli-json.ts";
-import { buildCommandHelp, searchCliDiscovery } from "./cli-surface.ts";
+import { buildCommandHelp, searchCliDiscovery, type ClawCliSearchResult } from "./cli-surface.ts";
 import { SEARCH_ADMIN_COMMANDS } from "./cli-search-command-constants.ts";
 
 export function isSearchAdminCommand(command: string | undefined): boolean {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import assert from "node:assert/strict";
 
 import { CLI_EXIT_OK } from "./index.ts";

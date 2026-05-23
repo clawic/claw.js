@@ -149,6 +149,7 @@ function writeMacCareHelp(input: MacCareCliInput): number {
 function macCareSidecarDescriptor(): Record<string, string> {
   const surface = findClawPersistentSurfaceNode(MAC_CARE_SIDECAR_SURFACE_ID);
   if (!surface) throw new Error(`Mac Care sidecar surface is not registered: ${MAC_CARE_SIDECAR_SURFACE_ID}`);
+  if (!surface.path) throw new Error(`Mac Care sidecar surface path is not registered: ${MAC_CARE_SIDECAR_SURFACE_ID}`);
   return {
     filename: MAC_CARE_SIDECAR_FILENAME,
     surfaceId: MAC_CARE_SIDECAR_SURFACE_ID,
