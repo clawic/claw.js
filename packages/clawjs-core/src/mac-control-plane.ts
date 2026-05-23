@@ -584,6 +584,7 @@ function capability(input: Omit<MacAtlasCapabilityInput, "schemaVersion">): MacA
 const wifiPermissions: string[] = [];
 const windowPermissions = ["mac.permission.accessibility"];
 const screenPermissions = ["mac.permission.screen_capture"];
+const approvedMediaPlaybackApps = new Set(["Music", "Podcasts", "TV"]);
 
 export const MAC_CAPABILITY_ATLAS: MacAtlasCapability[] = [
   capability({
@@ -1008,11 +1009,15 @@ export function buildMacActionPlan(input: BuildMacActionPlanInput): MacActionPla
   const missingWindowResizeArgs =
     capability.id === "mac.window.resize" &&
     (!isPositiveIntegerLike(input.request.arguments.width) || !isPositiveIntegerLike(input.request.arguments.height));
+  const mediaPlaybackNeedsApprovedApp =
+    capability.id.startsWith("mac.media.playback.") &&
+    (typeof input.request.arguments.app !== "string" || !approvedMediaPlaybackApps.has(input.request.arguments.app));
   const blockedReasons = [
     ...(!executable ? [`coverage_state:${capability.coverageState}`] : []),
     ...(plaintextWifiPassword ? ["secret_blocked:plaintext_wifi_password"] : []),
     ...(missingWindowMoveArgs ? ["arguments_required:x,y"] : []),
     ...(missingWindowResizeArgs ? ["arguments_required:width,height"] : []),
+    ...(mediaPlaybackNeedsApprovedApp ? ["target_blocked:approved_media_app_required"] : []),
     ...permissionRequirements
       .filter((permission) => permission.currentOsState === "denied" || permission.currentOsState === "restricted" || permission.currentFrameworkGrant === "denied")
       .map((permission) => `permission_blocked:${permission.permissionId}`),
