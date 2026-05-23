@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const outputs = ["guard/test añadido", "ADR/regla añadida", "deuda explícita con expiry"];
@@ -63,6 +64,38 @@ function validate(overrides = new Map()) {
   return failures;
 }
 
+function failureDiagnostic(failure) {
+  const missingFile = failure.match(/^missing (.+)$/);
+  if (missingFile) {
+    return createDiagnostic("problem_guardrail_required_file_missing", failure, {
+      location: missingFile[1],
+      suggestion: "Restore the required ADR, rule, skill, or package hook that documents the guardrail loop.",
+      safeNextStep: `Add or restore ${missingFile[1]}, then rerun node scripts/problem-to-guardrail-check.mjs.`,
+    });
+  }
+  const missingSnippet = failure.match(/^(.+) must include (.+)$/);
+  if (missingSnippet) {
+    return createDiagnostic("problem_guardrail_required_text_missing", failure, {
+      location: missingSnippet[1],
+      suggestion: "Put the missing loop requirement back in the documented public contract.",
+      safeNextStep: `Update ${missingSnippet[1]}, then rerun node scripts/problem-to-guardrail-check.mjs.`,
+    });
+  }
+  return createDiagnostic("problem_guardrail_check_failed", failure, {
+    location: "scripts/problem-to-guardrail-check.mjs",
+    suggestion: "Inspect the listed guardrail contract and restore the expected invariant.",
+    safeNextStep: "Fix the reported problem-to-guardrail contract, then rerun node scripts/problem-to-guardrail-check.mjs.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "problem-to-guardrail check failed:",
+    diagnostics: failures.map(failureDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function runSelfTest() {
   assert.deepEqual(validate(), []);
   const broken = new Map([[
@@ -70,6 +103,19 @@ function runSelfTest() {
     read("docs/agent-rules/index.md").replaceAll("2 ciclos seguidos", "more governance"),
   ]]);
   assert.match(validate(broken).join("\n"), /2 ciclos seguidos/);
+
+  const chunks = [];
+  printFailures([
+    "missing /Users/example/private/docs/adr/missing.md",
+    "docs/agent-rules/index.md must include \"2 ciclos seguidos\"",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: problem_guardrail_required_file_missing/);
+  assert.match(output, /code: problem_guardrail_required_text_missing/);
+  assert.match(output, /location: docs\/agent-rules\/index\.md/);
+  assert.match(output, /suggestion: Put the missing loop requirement back/);
+  assert.match(output, /next: Update docs\/agent-rules\/index\.md/);
+  assert.doesNotMatch(output, /\/Users\/example/);
 }
 
 if (process.argv.includes("--self-test")) {
@@ -85,8 +131,7 @@ if (process.argv.includes("--self-test")) {
 
 const failures = validate();
 if (failures.length > 0) {
-  console.error("problem-to-guardrail check failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures(failures);
   process.exit(1);
 }
 
