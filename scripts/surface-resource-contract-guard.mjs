@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { clawPersistentSurfaceRegistry } from "../packages/clawjs-core/src/catalogs.ts";
 import { v1MainSchemaSurfaceNodes } from "../packages/clawjs/src/v1-data-surface.ts";
+import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const baselinePath = path.join(rootDir, "docs/surface-resource-contract-baseline.json");
@@ -154,6 +155,43 @@ function validateSurfaceResourceContracts(registry = clawPersistentSurfaceRegist
   return failures;
 }
 
+function resourceContractDiagnostic(failure) {
+  if (failure.includes("baseline drift")) {
+    return createDiagnostic("surface_resource_contract_baseline_drift", failure, {
+      location: "docs/surface-resource-contract-baseline.json",
+      suggestion: "Backfill resourceContract on new surfaces, or intentionally update the baseline after classifying the debt.",
+      safeNextStep: "Run node --import tsx scripts/surface-resource-contract-guard.mjs --update-baseline only after documenting owner, risk, expiry, and reentry condition.",
+    });
+  }
+  if (failure.includes("resourceContract.")) {
+    return createDiagnostic("surface_resource_contract_field_missing", failure, {
+      location: "packages/clawjs-core/src/catalogs.ts",
+      suggestion: "Complete every resourceContract dimension: startup, idle, memory, streaming, storage, hotPath, scale, and validation.",
+      safeNextStep: "Add the missing resourceContract field, then rerun node --import tsx scripts/surface-resource-contract-guard.mjs.",
+    });
+  }
+  if (failure.includes("baseline") || failure.includes("missingResourceContract")) {
+    return createDiagnostic("surface_resource_contract_baseline_invalid", failure, {
+      location: "docs/surface-resource-contract-baseline.json",
+      suggestion: "Fix the baseline envelope, sorted ids, count, hash, expiry, or classification.",
+      safeNextStep: "Repair docs/surface-resource-contract-baseline.json, then rerun node --import tsx scripts/surface-resource-contract-guard.mjs.",
+    });
+  }
+  return createDiagnostic("surface_resource_contract_guard_failed", failure, {
+    location: "scripts/surface-resource-contract-guard.mjs",
+    suggestion: "Inspect the surface resource contract guard and restore the expected invariant.",
+    safeNextStep: "Fix the reported resource contract issue, then rerun node --import tsx scripts/surface-resource-contract-guard.mjs.",
+  });
+}
+
+function printFailures(failures, options = {}) {
+  printActionableFailureReport({
+    title: options.title ?? "surface resource contract guard failed:",
+    diagnostics: failures.map(resourceContractDiagnostic),
+    stream: options.stream ?? process.stderr,
+  });
+}
+
 function buildBaseline(registry = clawPersistentSurfaceRegistry) {
   const { nodes, routes } = inspectableRegistry(registry);
   const missingNodes = missingResourceContractIds(nodes);
@@ -214,6 +252,21 @@ function runSelfTest() {
     routes: [],
   }, buildBaseline({ nodes: [], routes: [] }));
   assert.match(malformedContractFailures.join("\n"), /resourceContract\.memory must be a non-empty string/);
+
+  const chunks = [];
+  printFailures([
+    "/Users/example/private node self.node resourceContract.memory must be a non-empty string",
+    "nodes without resourceContract baseline drift: expected 1/abc, got 2/def (added nodes: self.node.new)",
+    "entry.missingResourceContract.nodes.ids must be sorted",
+  ], { stream: { write: (chunk) => chunks.push(chunk) } });
+  const output = chunks.join("");
+  assert.match(output, /code: surface_resource_contract_field_missing/);
+  assert.match(output, /code: surface_resource_contract_baseline_drift/);
+  assert.match(output, /code: surface_resource_contract_baseline_invalid/);
+  assert.match(output, /location: docs\/surface-resource-contract-baseline\.json/);
+  assert.match(output, /suggestion: Backfill resourceContract on new surfaces/);
+  assert.match(output, /next: Add the missing resourceContract field/);
+  assert.doesNotMatch(output, /\/Users\/example/);
 }
 
 if (process.argv.includes("--self-test")) {
@@ -230,8 +283,7 @@ if (process.argv.includes("--update-baseline")) {
 
 const failures = validateSurfaceResourceContracts();
 if (failures.length > 0) {
-  console.error("surface resource contract guard failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
+  printFailures(failures);
   process.exit(1);
 }
 
