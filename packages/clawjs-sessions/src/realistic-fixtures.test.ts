@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { test } from "vitest";
 
 import { buildRealisticSessionsFixtureCorpus, seedRealisticSessionsFixture } from "./realistic-fixtures.ts";
@@ -88,4 +89,67 @@ test("large realistic sessions fixture represents thousands of synthetic convers
   assert.ok(corpus.coverage.toolEvents > 1_000);
   assert.ok(corpus.coverage.providerErrors > 100);
   assert.ok(corpus.coverage.recoverableCorruptions > 100);
+});
+
+test("realistic sessions fixture measures bounded hot-path reads on a large synthetic store", () => {
+  const rootDir = tempRoot("clawjs-realistic-sessions-perf-");
+  const store = new SessionsServiceStore(path.join(rootDir, "sessions.sqlite"));
+  try {
+    const seedStart = performance.now();
+    const result = seedRealisticSessionsFixture(store, {
+      profile: "large",
+      projectCount: 12,
+      sessionCount: 300,
+      longSessionMessageCount: 160,
+      workspaceRoot: path.join(rootDir, "workspace"),
+      rebuildProjections: false,
+    });
+    const seedMs = performance.now() - seedStart;
+
+    const sidebarStart = performance.now();
+    const sidebar = store.sidebarBootstrap({ recentLimit: 50 });
+    const sidebarMs = performance.now() - sidebarStart;
+
+    const hydrateStart = performance.now();
+    const hydrated = store.hydrateSession({ sessionId: "fixture_session_0008", messageLimit: 25 });
+    const hydrateMs = performance.now() - hydrateStart;
+
+    const searchStart = performance.now();
+    const search = store.searchMessages({ query: "bounded state", limit: 25 });
+    const searchMs = performance.now() - searchStart;
+
+    const rebuildStart = performance.now();
+    const projection = store.rebuildSessionProjection("fixture_session_0008");
+    const rebuildMs = performance.now() - rebuildStart;
+
+    const metrics = {
+      seedMs: Math.round(seedMs),
+      sidebarMs: Math.round(sidebarMs),
+      hydrateMs: Math.round(hydrateMs),
+      searchMs: Math.round(searchMs),
+      rebuildMs: Math.round(rebuildMs),
+      sessionsSeeded: result.sessionsSeeded,
+      messagesSeeded: result.messagesSeeded,
+      eventsSeeded: result.eventsSeeded,
+    };
+    console.info("realistic sessions hot-path measurement", metrics);
+
+    assert.equal(result.sessionsSeeded, 300);
+    assert.ok(result.messagesSeeded > 4_000);
+    assert.ok(result.eventsSeeded > result.messagesSeeded);
+    assert.equal(sidebar.recent.length, 50);
+    assert.ok(sidebar.totalActiveVisible >= 300);
+    assert.equal(hydrated?.messages.length, 25);
+    assert.equal(search.length > 0, true);
+    assert.equal(projection.meta.projectionStatus, "current");
+
+    assert.ok(seedMs < 20_000, `seed fixture took ${seedMs}ms`);
+    assert.ok(sidebarMs < 1_000, `sidebar hot path took ${sidebarMs}ms`);
+    assert.ok(hydrateMs < 1_000, `hydrate hot path took ${hydrateMs}ms`);
+    assert.ok(searchMs < 2_000, `search hot path took ${searchMs}ms`);
+    assert.ok(rebuildMs < 2_000, `single projection rebuild took ${rebuildMs}ms`);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });

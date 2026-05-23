@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { test, vi } from "vitest";
 
 import { buildSessionsApp } from "./app.ts";
@@ -47,6 +48,40 @@ function writeRollout(rootDir: string, threadId: string, message: string): strin
       },
     },
   ];
+  fs.writeFileSync(filePath, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`);
+  return filePath;
+}
+
+function writeLargeRollout(rootDir: string, index: number, messageCount: number): string {
+  const threadId = `019e5${String(index).padStart(3, "0")}-cafe-7000-8000-${String(index).padStart(12, "0")}`;
+  const dir = path.join(rootDir, "2026", "05", "23");
+  fs.mkdirSync(dir, { recursive: true });
+  const filePath = path.join(dir, `rollout-2026-05-23T11-00-${String(index % 60).padStart(2, "0")}-${threadId}.jsonl`);
+  const lines: unknown[] = [
+    {
+      timestamp: "2026-05-23T11:00:00.000Z",
+      type: "session_meta",
+      payload: {
+        id: threadId,
+        timestamp: "2026-05-23T11:00:00.000Z",
+        cwd: rootDir,
+        originator: "codex-cli",
+        cli_version: "test",
+        git: { branch: "main" },
+      },
+    },
+  ];
+  for (let messageIndex = 0; messageIndex < messageCount; messageIndex += 1) {
+    lines.push({
+      timestamp: `2026-05-23T11:${String(Math.floor(messageIndex / 60)).padStart(2, "0")}:${String(messageIndex % 60).padStart(2, "0")}.000Z`,
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: messageIndex % 2 === 0 ? "user" : "assistant",
+        content: [{ type: messageIndex % 2 === 0 ? "input_text" : "output_text", text: `large import needle ${index}-${messageIndex}` }],
+      },
+    });
+  }
   fs.writeFileSync(filePath, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`);
   return filePath;
 }
@@ -451,4 +486,69 @@ test("sessions import/codex endpoint accepts incremental budget options", async 
   assert.equal(projectionBody.meta.eventCount, 2);
   assert.equal(projectionBody.meta.summaryCount, 0);
   await app.close();
+});
+
+test("Codex JSONL import measures bounded synthetic rollout ingestion and hot reads", async () => {
+  const rootDir = tempRoot("clawjs-codex-large-import-");
+  const dbPath = path.join(rootDir, "sessions.sqlite");
+  const codexDir = path.join(rootDir, "codex-sessions");
+  const fileCount = 24;
+  const messagesPerFile = 12;
+  for (let index = 0; index < fileCount; index += 1) {
+    writeLargeRollout(codexDir, index + 1, messagesPerFile);
+  }
+  const beforeSnapshot = fileSnapshot(codexDir);
+  const store = new SessionsServiceStore(dbPath);
+  try {
+    const importStart = performance.now();
+    const result = await importCodexSessionsDir(store, codexDir, {
+      mode: "incremental",
+      batchSize: 12,
+    });
+    const importMs = performance.now() - importStart;
+
+    const sidebarStart = performance.now();
+    const sidebar = store.sidebarBootstrap({ recentLimit: 50 });
+    const sidebarMs = performance.now() - sidebarStart;
+
+    const importedSessionId = result.imported.find((item) => item.sessionId)?.sessionId;
+    assert.ok(importedSessionId);
+    const hydrateStart = performance.now();
+    const hydrated = store.hydrateSession({ sessionId: importedSessionId, messageLimit: 12 });
+    const hydrateMs = performance.now() - hydrateStart;
+
+    const rebuildStart = performance.now();
+    const projection = store.rebuildSessionProjection(importedSessionId);
+    const rebuildMs = performance.now() - rebuildStart;
+
+    const metrics = {
+      importMs: Math.round(importMs),
+      sidebarMs: Math.round(sidebarMs),
+      hydrateMs: Math.round(hydrateMs),
+      rebuildMs: Math.round(rebuildMs),
+      scanned: result.scanned,
+      changedFiles: result.changedFiles,
+      importedMessages: result.imported.reduce((sum, item) => sum + item.messagesImported, 0),
+      sidebarRecent: sidebar.recent.length,
+      hydratedMessages: hydrated?.messages.length ?? 0,
+      projectionStatus: projection.meta.projectionStatus,
+    };
+    console.info("session jsonl import hot-path measurement", metrics);
+
+    assert.equal(result.scanned, fileCount);
+    assert.equal(result.changedFiles, fileCount);
+    assert.equal(metrics.importedMessages, fileCount * messagesPerFile);
+    assert.equal(sidebar.recent.length, fileCount);
+    assert.equal(hydrated?.messages.length, 12);
+    assert.equal(projection.meta.projectionStatus, "current");
+    assert.deepEqual(fileSnapshot(codexDir), beforeSnapshot);
+
+    assert.ok(importMs < 10_000, `session import took ${importMs}ms`);
+    assert.ok(sidebarMs < 1_000, `sidebar after import took ${sidebarMs}ms`);
+    assert.ok(hydrateMs < 1_000, `hydrate after import took ${hydrateMs}ms`);
+    assert.ok(rebuildMs < 2_000, `projection rebuild after import took ${rebuildMs}ms`);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });
