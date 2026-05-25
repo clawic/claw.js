@@ -97,6 +97,25 @@ test("commands record writes only the explicit workspace ledger", async () => {
   assert.equal(listPayload.data.intents[0]?.phrase, "archive client dashboard");
 });
 
+test("commands list reports corrupt workspace ledgers as stable command errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-command-intents-corrupt-"));
+  const ledgerDir = path.join(workspaceRoot, ".claw", "command-intents");
+  fs.mkdirSync(ledgerDir, { recursive: true });
+  fs.writeFileSync(path.join(ledgerDir, "command-intents.json"), "{bad json\n");
+
+  const result = await runCliCapture(["commands", "list", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(result.code, 1);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; message: string; location: string; safeNextStep: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_command_intent_ledger");
+  assert.equal(payload.error.location, "claw.workspace.command_intents.ledger");
+  assert.match(payload.error.message, /Command intent ledger/);
+  assert.match(payload.error.safeNextStep, /\.claw\/command-intents\/command-intents\.json/);
+});
+
 test("commands opportunities and promote produce review packets", async () => {
   const opportunities = await runCliCapture(["commands", "opportunities", "--status", "future", "--json"], process.cwd());
   assert.equal(opportunities.code, CLI_EXIT_OK);

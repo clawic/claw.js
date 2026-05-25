@@ -3,7 +3,7 @@ import { CLAW_CLI_COMMAND_INTENT_STATUSES, commandIntentToNeedOpportunity, merge
 import type { NeedOpportunity } from "@clawjs/core";
 import type { ClawCliCommandIntentEntry, ClawCliCommandIntentSource, ClawCliCommandIntentStatus } from "@clawjs/core/catalogs";
 
-import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CliHandledError, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
@@ -219,7 +219,15 @@ function commandIntentLedgerPath(workspaceRoot: string): string {
 function readCommandIntentLedger(workspaceRoot: string): CommandIntentLedger {
   const file = commandIntentLedgerPath(workspaceRoot);
   if (!fs.existsSync(file)) return { schemaVersion: 1, intents: [], updatedAt: new Date(0).toISOString() };
-  return normalizeCommandIntentLedger(JSON.parse(fs.readFileSync(file, "utf8")));
+  try {
+    return normalizeCommandIntentLedger(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch {
+    throw new CliHandledError("invalid_command_intent_ledger", "Command intent ledger is not valid JSON or does not match the command-intent ledger shape.", CLI_EXIT_FAILURE, {
+      location: "claw.workspace.command_intents.ledger",
+      suggestion: "Repair or remove the workspace command-intent ledger before resolving, listing, or promoting command intents.",
+      safeNextStep: "Inspect .claw/command-intents/command-intents.json, restore valid JSON, then rerun `claw commands list --json`.",
+    });
+  }
 }
 
 function writeCommandIntentLedger(workspaceRoot: string, ledger: CommandIntentLedger): void {
