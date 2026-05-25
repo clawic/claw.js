@@ -79,10 +79,15 @@ interface TestRequirementAcquisition {
   resource: string;
   fingerprint: string;
   reused: AgentWorkResultRow | null;
-  result: (ReturnType<AgentCoordinationStore["acquireMany"]> & { lease?: AgentResourceLeaseRow }) | { status: "pending"; lease: undefined; demand: AgentResourceDemandRow; conflicts: AgentResourceLeaseRow[] } | null;
+  result: TestCoordinationAcquisition | null;
   repair: AgentRepairOwnershipRow | null;
   deduplicated?: boolean;
 }
+
+type TestCoordinationAcquisition = ReturnType<AgentCoordinationStore["acquireMany"]> & {
+  lease?: AgentResourceLeaseRow;
+  demand?: AgentResourceDemandRow;
+};
 
 export async function runTestCli(input: TestCliInput): Promise<number> {
   const command = input.positionals[1];
@@ -152,7 +157,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
           reason: `repair active for ${check.id}`,
           metadata: { command: "claw test require", lane: check.lane, fingerprint, repairId: repair.id },
         });
-        const entry: TestRequirementAcquisition = { check, resource, fingerprint, reused: reusable, result: { status: "pending" as const, lease: undefined, demand, conflicts: [] }, repair };
+        const entry: TestRequirementAcquisition = { check, resource, fingerprint, reused: reusable, result: pendingTestAcquisition(demand, []), repair };
         acquisitionsByKey.set(acquisitionKey, entry);
         return entry;
       }
@@ -242,6 +247,8 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         check: check.id,
         fingerprint,
         demand: publicDemand(demand),
+        demands: [publicDemand(demand)],
+        conflicts: [],
         repair: publicRepairOwnership(repair),
       }, { subcommand: command, lane }, CLI_EXIT_DEGRADED);
     }
@@ -270,7 +277,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
         metadata: { dryRun: true, command: check.command },
       });
       store.releaseRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: intent.id });
-      if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${acquisition.lease.id}.`, CLI_EXIT_DEGRADED);
+      if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${primaryLease.id}.`, CLI_EXIT_DEGRADED);
       return ok(input, {
         status: "DRY_RUN",
         intent: { id: intent.id, repo, lane },
@@ -311,7 +318,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
       ? store.claimRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: intent.id, ownerAgentId: input.flags.agent || process.env.CLAW_AGENT_ID || process.env.USER || "agent", ttlSeconds: check.timeoutSeconds })
       : null;
     if (status === "passed") store.releaseRepairOwnership({ checkId: check.id, fingerprint, ownerIntentId: null });
-    if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${acquisition.lease.id}.`, CLI_EXIT_DEGRADED);
+    if (!released) throw new CliHandledError("test_lease_missing", `Could not release test lease ${primaryLease.id}.`, CLI_EXIT_DEGRADED);
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "test", {
         status: status === "passed" ? "PASS" : status === "external_pending" ? "EXTERNAL_PENDING" : "FAIL",
@@ -416,10 +423,20 @@ function acquireCheckResources(
   fingerprint: string,
   input: TestCliInput,
   reason: string,
-): ReturnType<AgentCoordinationStore["acquireMany"]> & { lease?: AgentResourceLeaseRow } {
+): TestCoordinationAcquisition {
   const requests = resourceRequestsForCheck(repo, check, intentId, fingerprint, input, reason);
   const result = store.acquireMany(requests);
-  return { ...result, lease: result.leases[0] };
+  return { ...result, lease: result.leases[0], demand: result.demands[0] };
+}
+
+function pendingTestAcquisition(demand: AgentResourceDemandRow, conflicts: AgentResourceLeaseRow[]): TestCoordinationAcquisition {
+  return {
+    status: "pending",
+    leases: [],
+    demands: [demand],
+    conflicts,
+    demand,
+  };
 }
 
 function resourceRequestsForCheck(
@@ -491,7 +508,7 @@ function releaseCheckLeases(
   store: AgentCoordinationStore,
   leases: AgentResourceLeaseRow[],
   primaryLeaseId: string,
-  input: Parameters<AgentCoordinationStore["release"]>[0],
+  input: Omit<Parameters<AgentCoordinationStore["release"]>[0], "leaseId" | "recordResult">,
 ): AgentResourceLeaseRow | null {
   let primary: AgentResourceLeaseRow | null = null;
   for (const lease of leases) {
