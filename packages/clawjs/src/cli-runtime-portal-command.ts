@@ -2647,6 +2647,67 @@ function historyNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
   }
 }
 
+function verifyHermesCreateRoundTrip(session: any, createdSessionId: unknown, requestedTitle: unknown) {
+  const id = createdSessionId ? String(createdSessionId) : "";
+  const title = typeof requestedTitle === "string" && requestedTitle.trim() ? requestedTitle.trim() : "";
+  if (!id) {
+    return {
+      status: "missing_created_session_id",
+      writesRuntime: false,
+      checked: [],
+      safeDefault: "do_not_claim_round_trip_without_created_session_id",
+    };
+  }
+  if (!session?.sessionPath) {
+    return {
+      status: "unavailable_no_native_session_store",
+      id,
+      writesRuntime: false,
+      checked: [],
+      safeDefault: "keep_create_claim_unpromoted_until_native_store_can_be_read",
+    };
+  }
+
+  const byId = resolveNativeSessionFromPath("hermes", session, id);
+  if (byId.found) {
+    return {
+      status: "verified",
+      id: byId.id,
+      title: byId.title ?? null,
+      matchedBy: byId.matchedBy,
+      writesRuntime: false,
+      nativeIdentifier: byId.nativeIdentifier,
+      provenance: byId.provenance,
+      checked: ["sessionId"],
+    };
+  }
+
+  if (title) {
+    const byTitle = resolveNativeSessionFromPath("hermes", session, title);
+    if (byTitle.found) {
+      return {
+        status: "verified",
+        id: byTitle.id,
+        title: byTitle.title ?? title,
+        matchedBy: byTitle.matchedBy,
+        writesRuntime: false,
+        nativeIdentifier: byTitle.nativeIdentifier,
+        provenance: byTitle.provenance,
+        checked: ["sessionId", "sessionTitle"],
+      };
+    }
+  }
+
+  return {
+    status: "not_found",
+    id,
+    title: title || null,
+    writesRuntime: false,
+    checked: title ? ["sessionId", "sessionTitle"] : ["sessionId"],
+    safeDefault: "keep_create_claim_fixture_or_production_round_trip_blocked_until_native_list_sees_created_session",
+  };
+}
+
 function isTruthyFlag(input, name: string) {
   return input.argv?.includes(`--${name}`) || input.flags[name] === "true";
 }
@@ -3055,6 +3116,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       if (title && createdSessionId) {
         titleGateway = await callHermesTuiGatewayJsonRpc(input, "title", String(createdSessionId), undefined, { title });
       }
+      const roundTripVerification = verifyHermesCreateRoundTrip(payload.domainData.sessions.session, createdSessionId, title);
       if (titleGateway && !titleGateway.ok) {
         writePayload(input, {
           runtimeId,
@@ -3080,6 +3142,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
               endpoint: gateway.endpoint,
             },
             titleError: titleGateway.reason,
+            roundTripVerification,
             gatewayResult: gateway.result,
           },
           supportContract,
@@ -3116,6 +3179,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
             requestId: titleGateway.request.id,
             endpoint: titleGateway.endpoint,
           } : null,
+          roundTripVerification,
           gatewayResult: gateway.result,
           titleGatewayResult: titleGateway?.result ?? null,
         },

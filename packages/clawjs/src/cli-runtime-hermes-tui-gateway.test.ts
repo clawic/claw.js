@@ -298,6 +298,8 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
     assert.equal(create.payload.data.result.id, "created-tui-session");
     assert.equal(create.payload.data.result.titleApplied, true);
     assert.equal(create.payload.data.result.titleGatewayReceipt.method, "session.title");
+    assert.equal(create.payload.data.result.roundTripVerification.status, "not_found");
+    assert.equal(create.payload.data.result.roundTripVerification.writesRuntime, false);
 
     assert.deepEqual(gateway.requests.map((entry) => entry.method), [
       "prompt.submit",
@@ -342,6 +344,11 @@ test("Hermes TUI gateway create round-trips through the official SQLite session 
     assert.equal(create.payload.data.status, "ok");
     assert.equal(create.payload.data.result.id, "created-tui-session");
     assert.equal(create.payload.data.result.titleApplied, true);
+    assert.equal(create.payload.data.result.roundTripVerification.status, "verified");
+    assert.equal(create.payload.data.result.roundTripVerification.id, "created-tui-session");
+    assert.equal(create.payload.data.result.roundTripVerification.matchedBy, "sessionId");
+    assert.equal(create.payload.data.result.roundTripVerification.writesRuntime, false);
+    assert.equal(create.payload.data.result.roundTripVerification.provenance.source, "runtime-session-sqlite");
     assert.deepEqual(gateway.requests.map((entry) => entry.method), [
       "session.create",
       "session.title",
