@@ -42,6 +42,18 @@ test("published CLI package does not depend on the retired Index package", () =>
   assert.equal(indexLauncher.includes('import("@clawjs/index")'), false);
 });
 
+test("published runtime package depends on registry packages for installed users", () => {
+  const runtimePackageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "packages/clawjs-runtime/package.json"), "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+
+  assert.equal(runtimePackageJson.dependencies?.["@clawjs/sessions"], "0.1.0");
+  assert.equal(runtimePackageJson.dependencies?.["@clawjs/user-model"], "0.1.0");
+  for (const dependency of ["@clawjs/sessions", "@clawjs/user-model"]) {
+    assert.equal(runtimePackageJson.dependencies?.[dependency]?.startsWith("file:"), false, `${dependency} must install from the registry in published runtime packages`);
+  }
+});
+
 test("published CLI base install runs safe commands without native local data packs", { concurrency: false }, async (t) => {
   const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-thin-packages-"));
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-thin-installed-"));
