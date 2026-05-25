@@ -1017,6 +1017,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     const payload = JSON.parse(stdout.getOutput()) as { data?: { runtimeId?: string } };
     assert.equal(payload.data?.runtimeId, "hermes", command.label);
   }
+  const hermesSupportClaimStdout = captureStream();
+  const hermesSupportClaimExit = await runCli(["runtime", "hermes", "support", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesSupportClaimStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesSupportClaimExit), true);
+  const hermesSupportClaimPayload = JSON.parse(hermesSupportClaimStdout.getOutput()) as {
+    data: { supportStage?: string; recommended?: boolean; production?: boolean; uiParityClaim?: string };
+  };
+  assert.equal(hermesSupportClaimPayload.data.supportStage, "dev_only");
+  assert.equal(hermesSupportClaimPayload.data.recommended, false);
+  assert.equal(hermesSupportClaimPayload.data.production, false);
+  assert.equal(hermesSupportClaimPayload.data.uiParityClaim, "partial_runtime_lens");
   for (const invalidCommand of [
     {
       label: "missing Hermes resource domain",

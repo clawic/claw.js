@@ -224,7 +224,7 @@
       "supportStage": "dev_only",
       "recommended": false,
       "production": false,
-      "uiParityClaim": "partial_template_only",
+      "uiParityClaim": "partial_runtime_lens",
       "officialSnapshot": {
         "capturedAt": "2026-05-25",
         "sourceType": "official_docs",
