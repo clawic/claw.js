@@ -24,9 +24,11 @@ function captureStream() {
 }
 
 async function createFakeSecretsServer() {
+  let brokerRequestCount = 0;
   const server = http.createServer((request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
     if (url.pathname === `${clawPublicApiPrefix}/tenants/demo-tenant/broker/http` && request.method === "POST") {
+      brokerRequestCount += 1;
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
         ok: true,
@@ -45,6 +47,7 @@ async function createFakeSecretsServer() {
   const port = typeof address === "object" && address ? address.port : 0;
   return {
     baseUrl: `http://127.0.0.1:${port}`,
+    brokerRequestCount: () => brokerRequestCount,
     async close() {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     },
@@ -94,6 +97,33 @@ test("secrets broker CLI requires risk tier and infers explicit declared fields"
     });
     assert.equal(missingRisk, CLI_EXIT_USAGE);
     assert.match(stderr.getOutput(), /--risk-tier is required/);
+  } finally {
+    await secrets.close();
+  }
+});
+
+test("secrets broker CLI rejects unsupported risk tiers before contacting backend", async () => {
+  const secrets = await createFakeSecretsServer();
+  try {
+    const stdout = captureStream();
+    const exitCode = await runCli([
+      ...secretsArgs(secrets.baseUrl, "clawjs-secrets-cli-broker-invalid-risk-"),
+      "secrets", "broker", "http",
+      "--url", "https://registry.npmjs.org/-/whoami",
+      "--headers-json", JSON.stringify({ Authorization: "Bearer {{npm_token_main.token}}" }),
+      "--risk-tier", "admin",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(exitCode, CLI_EXIT_USAGE);
+    const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_secret_risk_tier");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(secrets.brokerRequestCount(), 0);
   } finally {
     await secrets.close();
   }

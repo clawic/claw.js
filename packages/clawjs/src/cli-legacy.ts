@@ -134,6 +134,7 @@ type CliMediaClaw = ClawInstance & {
 
 const REMOVED_CONTENT_PORTAL_COMMANDS = new Set(["posts", "campaigns", "publications"]);
 const MEDIA_GENERATION_COMMANDS = new Set(["list", "search", "read", "download", "share"]);
+const SECRET_BROKER_RISK_TIERS = new Set(["read", "write", "destructive", "cost", "system"]);
 const DENSE_FOUNDATION_OPTIONAL_GROUPS = [
   "dense-fixture",
   "dense-fixtures",
@@ -1750,6 +1751,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     if (!riskTier) {
       context.stderr.write("--risk-tier is required\n");
       return CLI_EXIT_USAGE;
+    }
+    if (!SECRET_BROKER_RISK_TIERS.has(riskTier)) {
+      throw new CliHandledError("invalid_secret_risk_tier", `--risk-tier must be one of: ${[...SECRET_BROKER_RISK_TIERS].join(", ")}.`, CLI_EXIT_USAGE);
     }
     const body = flags.body;
     const declaredFields = inferBrokerDeclaredFields({ url, headers, body });
