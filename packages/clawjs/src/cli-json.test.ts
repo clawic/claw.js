@@ -47,6 +47,14 @@ test("CLI JSON envelope parser returns stable errors for malformed, truncated an
   const partialError = parseCliJsonEnvelope(JSON.stringify({ ok: false, error: { code: "bad_input" } }));
   assert.equal(partialError.ok, false);
   if (!partialError.ok) assert.equal(partialError.error.code, "cli_json_envelope_invalid");
+
+  const contradictorySuccess = parseCliJsonEnvelope(JSON.stringify({
+    ok: true,
+    error: { code: "bad_input", message: "Bad input" },
+    meta: { schemaVersion: 1 },
+  }));
+  assert.equal(contradictorySuccess.ok, false);
+  if (!contradictorySuccess.ok) assert.equal(contradictorySuccess.error.code, "cli_json_envelope_invalid");
 });
 
 test("CLI JSON envelope parser enforces a declared stdout byte ceiling", () => {

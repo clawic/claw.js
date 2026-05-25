@@ -77,6 +77,7 @@ function isCliJsonEnvelope(value: unknown): value is { ok: boolean; data?: unkno
   const record = value as Record<string, unknown>;
   if (typeof record.ok !== "boolean") return false;
   if ("meta" in record && (record.meta === null || typeof record.meta !== "object" || Array.isArray(record.meta))) return false;
+  if (record.ok === true && "error" in record) return false;
   if (record.ok === false) {
     if (!record.error || typeof record.error !== "object" || Array.isArray(record.error)) return false;
     const error = record.error as Record<string, unknown>;
