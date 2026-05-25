@@ -127,11 +127,7 @@ export async function decideApproval(approvalId: string, decision: "approved" | 
   const approval = await getApproval(approvalId);
   if (!approval) throw new Error(`Approval ${approvalId} not found`);
   if (approval.status !== "pending") return approval;
-  const updated = await updateApproval(approvalId, {
-    status: decision,
-    decidedAt: new Date().toISOString(),
-    decidedByUserId: LOCAL_BOARD_USER_ID,
-  });
+  let approvedHireAgentUpdate: { agentId: string; instructionsMarkdown: string } | null = null;
   if (decision === "approved" && approval.type === "hire_agent") {
     const payload = (approval.payload ?? {}) as Record<string, unknown>;
     const agentId = typeof payload.agentId === "string" ? payload.agentId : null;
@@ -148,9 +144,17 @@ export async function decideApproval(approvalId: string, decision: "approved" | 
       reportsToTitle: reportsToAgent?.title,
       goalTitles: goals.map((goal) => goal.title),
     });
-    await updateAgent(agent.id, {
+    approvedHireAgentUpdate = { agentId: agent.id, instructionsMarkdown };
+  }
+  const updated = await updateApproval(approvalId, {
+    status: decision,
+    decidedAt: new Date().toISOString(),
+    decidedByUserId: LOCAL_BOARD_USER_ID,
+  });
+  if (approvedHireAgentUpdate) {
+    await updateAgent(approvedHireAgentUpdate.agentId, {
       status: "active",
-      instructionsMarkdown,
+      instructionsMarkdown: approvedHireAgentUpdate.instructionsMarkdown,
     });
   }
   return updated;
