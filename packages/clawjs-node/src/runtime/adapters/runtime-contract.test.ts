@@ -123,17 +123,40 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   fs.mkdirSync(path.join(homeDir, ".hermes", "memories"), { recursive: true });
   fs.mkdirSync(path.join(homeDir, ".hermes", "skills", "checks"), { recursive: true });
   fs.mkdirSync(path.join(homeDir, ".hermes", "cron"), { recursive: true });
+  fs.mkdirSync(path.join(homeDir, ".hermes", "plugins", "memory-provider"), { recursive: true });
+  fs.mkdirSync(path.join(homeDir, ".hermes", "mcp"), { recursive: true });
+  fs.writeFileSync(path.join(homeDir, ".hermes", "mcp", "github.json"), "{}\n");
+  fs.writeFileSync(path.join(homeDir, ".hermes", "config.yaml"), [
+    "model: anthropic/claude-sonnet-4",
+    "provider: anthropic",
+    "terminal:",
+    "  backend: docker",
+    "channels:",
+    "  slack:",
+    "    enabled: true",
+    "plugins:",
+    "  disabled:",
+    "    memory-provider: false",
+  ].join("\n"));
+  fs.writeFileSync(path.join(homeDir, ".hermes", "auth.json"), JSON.stringify({
+    providers: {
+      anthropic: { apiKey: "sk-ant-secret-value" },
+    },
+  }, null, 2));
   fs.writeFileSync(path.join(homeDir, ".hermes", "memories", "MEMORY.md"), "remember this\n");
   fs.writeFileSync(path.join(homeDir, ".hermes", "cron", "daily.yaml"), "schedule: daily\n");
 
   const runner = new FakeRunner({
     "which hermes": { stdout: "/usr/local/bin/hermes\n" },
     "hermes --version": { stdout: "hermes 0.9.0\n" },
-    "hermes models list --json": { stdout: "[\"openai/gpt-5-mini\"]" },
-    "hermes auth login --provider test-provider": { fail: true, stderr: "interactive" },
-    "hermes cron list": { stdout: "[]" },
+    "hermes auth": { fail: true, stderr: "interactive" },
+    "hermes cron status": { stdout: "{}" },
     "hermes gateway status": { stdout: "{}" },
     "hermes skills list": { stdout: "[]" },
+    "hermes memory status": { stdout: "{}" },
+    "hermes plugins list": { stdout: "[]" },
+    "hermes tools --summary": { stdout: "{}" },
+    "hermes status --all": { stdout: "{}" },
   });
 
   const options = {
@@ -145,11 +168,21 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(status.capabilityMap.scheduler.supported, true);
   assert.equal(status.capabilityMap.sandbox.supported, true);
   assert.equal(status.capabilityMap.sandbox.status, "degraded");
+  assert.equal(status.capabilityMap.plugins.supported, true);
 
   const resources = await getRuntimeResourceCatalogs(hermesAdapter, runner, options);
+  assert.equal(resources.models.defaultModel?.modelId, "anthropic/claude-sonnet-4");
+  assert.equal(resources.models.models.some((entry) => entry.id === "anthropic/claude-sonnet-4" && entry.source === "config"), true);
+  assert.equal(resources.auth.providers.anthropic?.hasAuth, true);
+  assert.equal(resources.auth.providers.anthropic?.maskedCredential?.includes("sk-ant-secret-value"), false);
   assert.equal(resources.memory.memory.some((entry) => entry.path?.endsWith("MEMORY.md")), true);
+  assert.equal(resources.memory.memory.some((entry) => entry.summary?.includes("not exposed by default")), true);
   assert.equal(resources.skills.skills.some((entry) => entry.id === "checks"), true);
   assert.equal(resources.schedulers.schedulers.some((entry) => entry.id === "daily"), true);
+  assert.equal(resources.channels.channels.some((entry) => entry.id === "slack" && entry.status === "configured"), true);
+  assert.equal(resources.channels.channels.some((entry) => JSON.stringify(entry).includes("secret")), false);
+  assert.equal(resources.plugins.plugins.some((entry) => entry.id === "memory-provider" && entry.metadata?.kind === "plugin"), true);
+  assert.equal(resources.plugins.plugins.some((entry) => entry.id === "mcp-github" && entry.metadata?.kind === "mcp_server"), true);
 
   const conversation = getRuntimeSessionDescriptor(hermesAdapter, options);
   assert.equal(conversation.transport.kind, "hybrid");
@@ -163,6 +196,7 @@ test("hermes adapter does not duplicate an already resolved runtime home", async
   const parentHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-home-"));
   const hermesHome = path.join(parentHome, ".hermes");
   fs.mkdirSync(path.join(hermesHome, "memories"), { recursive: true });
+  fs.writeFileSync(path.join(hermesHome, "memories", "MEMORY.md"), "memory\n");
 
   const runner = new FakeRunner({
     "which hermes": { fail: true, stderr: "missing" },
@@ -179,6 +213,27 @@ test("hermes adapter does not duplicate an already resolved runtime home", async
     homeDir: hermesHome,
   });
   assert.equal(resources.memory.memory[0]?.path?.includes(`${path.sep}.hermes${path.sep}.hermes`), false);
+});
+
+test("hermes adapter does not treat provider config as authentication", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-auth-config-"));
+  const hermesHome = path.join(homeDir, ".hermes");
+  fs.mkdirSync(hermesHome, { recursive: true });
+  fs.writeFileSync(path.join(hermesHome, "config.yaml"), [
+    "model: anthropic/claude-sonnet-4",
+    "provider: anthropic",
+  ].join("\n"));
+
+  const auth = await hermesAdapter.getProviderAuth(new FakeRunner({}), {
+    adapter: "hermes",
+    homeDir,
+    env: {},
+  });
+
+  assert.equal(auth.anthropic?.hasAuth, false);
+  assert.equal(auth.anthropic?.hasApiKey, false);
+  assert.equal(auth.anthropic?.authType, null);
+  assert.equal(auth.anthropic?.source, "missing");
 });
 
 test("nanobot adapter exposes normalized channels, memory, and sandbox limitations", async () => {

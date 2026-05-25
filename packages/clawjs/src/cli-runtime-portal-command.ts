@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { RuntimeAdapterId } from "@clawjs/core";
-import { getRuntimeAdapter, getRuntimeSessionDescriptor, listRuntimeAdapters } from "@clawjs/claw";
+import { getRuntimeAdapter, getRuntimeSessionDescriptor, listRuntimeAdapters, NodeProcessHost } from "@clawjs/claw";
 
 import { RUNTIME_ADAPTER_IDS } from "./cli-constants.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -377,7 +377,20 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
   };
 }
 
-async function readResources(claw, domain: string, status) {
+async function readResources(claw, domain: string, status, adapter?, runtimeOptions?) {
+  async function readPluginResources() {
+    if (status.adapter === "openclaw") {
+      return { plugins: await claw.runtime.plugins.status() };
+    }
+    const pluginCatalog = adapter?.resources?.getPluginCatalog
+      ? await adapter.resources.getPluginCatalog(new NodeProcessHost(), runtimeOptions)
+      : { plugins: [] };
+    return {
+      plugins: pluginCatalog.plugins ?? [],
+      status: status.capabilityMap?.plugins ?? { supported: false, status: "unsupported", strategy: "unsupported" },
+    };
+  }
+
   switch (domain) {
     case "sessions":
     case "gateway":
@@ -400,14 +413,9 @@ async function readResources(claw, domain: string, status) {
     case "channels":
       return { channels: await claw.channels.list() };
     case "plugins":
-      if (status.adapter !== "openclaw") {
-        return {
-          plugins: [],
-          status: status.capabilityMap?.plugins ?? { supported: false, status: "unsupported", strategy: "unsupported" },
-        };
-      }
-      return { plugins: await claw.runtime.plugins.status() };
+      return readPluginResources();
     default:
+      const pluginResources = await readPluginResources();
       return {
         providers: await claw.providers.list(),
         models: await claw.models.list(),
@@ -417,6 +425,8 @@ async function readResources(claw, domain: string, status) {
         memory: await claw.memory.list(),
         skills: await claw.skills.list(),
         channels: await claw.channels.list(),
+        plugins: pluginResources.plugins,
+        status: pluginResources.status,
       };
   }
 }
@@ -1982,8 +1992,9 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
     return CLI_EXIT_OK;
   }
 
+  const runtimeOptions = runtimeOptionsFromInput(input, runtimeId);
   const status = await claw.runtime.status();
-  const session = getRuntimeSessionDescriptor(adapter, runtimeOptionsFromInput(input, runtimeId));
+  const session = getRuntimeSessionDescriptor(adapter, runtimeOptions);
   const workspace = {
     managedFiles: await claw.workspace.listManagedFiles(),
     canonicalPaths: claw.workspace.canonicalPaths(),
@@ -2001,7 +2012,7 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
       : operation === "sessions"
         ? "sessions"
         : "all";
-  const resources = await readResources(claw, requestedResourceDomain, status);
+  const resources = await readResources(claw, requestedResourceDomain, status, adapter, runtimeOptions);
   const payload = {
     runtimeId,
     runtimeName: adapter.runtimeName,

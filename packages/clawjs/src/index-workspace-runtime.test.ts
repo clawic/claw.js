@@ -918,7 +918,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   const hermesHome = path.join(hermesHomeRoot, ".hermes");
   const hermesSessions = path.join(hermesHome, "sessions", "2026", "05", "21");
   fs.mkdirSync(hermesSessions, { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, "plugins", "memory-provider"), { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, "mcp"), { recursive: true });
   fs.writeFileSync(path.join(hermesSessions, "runtime-session.jsonl"), "{\"type\":\"metadata\",\"content\":\"hermes native preview\"}\n");
+  fs.writeFileSync(path.join(hermesHome, "mcp", "github.json"), "{}\n");
   const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "docs/runtime-ecosystem-integration.manifest.json"), "utf8")) as {
     requiredDomains: string[];
     sessionActionContracts: Record<string, Array<{ action: string; status: string; writesRuntime: boolean; wouldWriteRuntime?: boolean; authority: string; requiredEvidence?: string[] }>>;
@@ -1404,6 +1407,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "list")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "preview")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "create")?.writesRuntime, false);
+  assert.equal(hermesPayload.data.domainData.plugins?.plugins?.some((entry) => entry.id === "memory-provider" && entry.metadata?.kind === "plugin"), true);
+  assert.equal(hermesPayload.data.domainData.plugins?.plugins?.some((entry) => entry.id === "mcp-github" && entry.metadata?.kind === "mcp_server"), true);
   const hermesChannels = hermesPayload.data.domains.find((entry) => entry.domain === "channels");
   assert.equal(hermesChannels?.claim, "inventoried");
   assert.equal(hermesChannels?.writeBackPolicy, "external_pending_live_accounts");
