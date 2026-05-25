@@ -72,7 +72,15 @@ function resolveLanAdvertiseHost(flags: Record<string, string>): string {
 }
 
 function appendQueryParam(url: string, key: string, value: string): string {
-  const parsed = new URL(url);
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new CliHandledError("invalid_preview_share_url", "--share-url must be a valid http or https URL.", CLI_EXIT_USAGE);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new CliHandledError("invalid_preview_share_url", "--share-url must use http or https.", CLI_EXIT_USAGE);
+  }
   parsed.searchParams.set(key, value);
   return parsed.toString();
 }
@@ -272,7 +280,7 @@ export function runTailscalePreviewShare(input: {
   const tailscaleBin = input.flags["tailscale-bin"] || findExecutable("tailscale");
   const port = input.targetUrl.port || (input.targetUrl.protocol === "https:" ? "443" : "80");
   const command = [tailscaleBin || "tailscale", "serve", "--bg", port];
-  const baseShareUrl = input.flags["share-url"] || `https://<tailnet-device>/${input.targetUrl.pathname.replace(/^\//, "")}`;
+  const baseShareUrl = input.flags["share-url"] || `https://tailnet-device.invalid/${input.targetUrl.pathname.replace(/^\//, "")}`;
   const payload: PreviewSharePayload = {
     ok: true,
     mode: "tailscale",
@@ -313,7 +321,7 @@ export async function runCloudflarePreviewShare(input: {
   const cloudflaredBin = input.flags["cloudflared-bin"] || findExecutable("cloudflared");
   const providerCommand = [cloudflaredBin || "cloudflared", "tunnel", "--url", input.targetUrl.toString()];
   if (input.dryRun || mockUrl) {
-    const shareUrl = appendQueryParam(mockUrl || "https://<trycloudflare-preview>/", tokenParam, token);
+    const shareUrl = appendQueryParam(mockUrl || "https://trycloudflare-preview.invalid/", tokenParam, token);
     const payload: PreviewSharePayload = {
       ok: true,
       mode: "cloudflare",
