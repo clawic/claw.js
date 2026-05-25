@@ -265,7 +265,24 @@ function assertDirectory(directory: string | undefined, label: string): string {
   if (!directory) {
     throw new Error(`This project does not define a ${label} directory in ${PROJECT_CONFIG_FILE}.`);
   }
-  return directory;
+  const normalized = normalizeProjectDirectory(directory, label);
+  return normalized;
+}
+
+function normalizeProjectDirectory(directory: string, label: string): string {
+  const trimmed = directory.trim();
+  const normalized = path.posix.normalize(trimmed.replace(/\\/g, "/"));
+  if (
+    !trimmed
+    || trimmed.includes("\0")
+    || path.isAbsolute(trimmed)
+    || /^[A-Za-z]:[\\/]/.test(trimmed)
+    || normalized === ".."
+    || normalized.startsWith("../")
+  ) {
+    throw new Error(`Invalid project ${label} directory in ${PROJECT_CONFIG_FILE}: ${directory}`);
+  }
+  return normalized;
 }
 
 function buildSkillContent(slug: string, title: string, pascal: string): string {
