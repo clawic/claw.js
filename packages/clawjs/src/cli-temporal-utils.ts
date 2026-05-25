@@ -87,6 +87,15 @@ export function parseRoutineStaggerMs(flags: Record<string, string>, argv: strin
   return parsed;
 }
 
+function parseHeartbeatLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_heartbeat_limit", "--limit must be a positive integer.", CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
 function parseActiveHours(raw: string | undefined, timezone: string | undefined): NonNullable<NonNullable<TemporalItem["heartbeat"]>["activeHours"]> | undefined {
   if (!raw) return undefined;
   const match = raw.trim().match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
@@ -121,6 +130,7 @@ export function buildRoutineHeartbeat(argv: string[], flags: Record<string, stri
   const allowedCustomChecks = collectFlagValues(argv, "allow-custom-check");
   const gate = parseHeartbeatGate(flags.gate);
   const cooldownMs = flags.cooldown ? parseSimpleDurationMs(flags.cooldown) : undefined;
+  const limit = parseHeartbeatLimit(flags.limit);
   if (flags.cooldown && cooldownMs === null) {
     throw new CliHandledError("invalid_duration", `Unsupported cooldown "${flags.cooldown}". Use durations like 30s, 5m, or 1h.`, CLI_EXIT_USAGE);
   }
@@ -141,7 +151,7 @@ export function buildRoutineHeartbeat(argv: string[], flags: Record<string, stri
     throw new CliHandledError("usage_error", "--target must be main or isolated.", CLI_EXIT_USAGE);
   }
   const deliver = flags.deliver ? { target: flags.deliver, mode: "summary" as const } : undefined;
-  if (when.length === 0 && stopWhen.length === 0 && !gate && !flags.prompt && !activeHours && cooldownMs === undefined && !maxWakes && !target && !deliver) return undefined;
+  if (when.length === 0 && stopWhen.length === 0 && !gate && !flags.prompt && !activeHours && cooldownMs === undefined && !maxWakes && !target && !deliver && limit === undefined) return undefined;
   const missingCustomChecks = [...when, ...stopWhen]
     .filter((condition) => condition.startsWith("custom:"))
     .map((condition) => condition.slice("custom:".length).trim())
@@ -153,7 +163,7 @@ export function buildRoutineHeartbeat(argv: string[], flags: Record<string, stri
     when,
     ...(stopWhen.length > 0 ? { stopWhen } : {}),
     context: "diff",
-    limit: flags.limit ? Number(flags.limit) : 20,
+    limit: limit ?? 20,
     ...(target ? { target } : {}),
     ...(deliver ? { deliver } : {}),
     ...(activeHours ? { activeHours } : {}),
