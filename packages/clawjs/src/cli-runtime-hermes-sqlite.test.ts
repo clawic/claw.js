@@ -17,13 +17,23 @@ function createHermesStateDatabase(databasePath: string) {
         title TEXT,
         source TEXT,
         model TEXT,
+        parent_session_id TEXT,
         started_at REAL,
         ended_at REAL,
         end_reason TEXT,
         message_count INTEGER,
         tool_call_count INTEGER,
         input_tokens INTEGER,
-        output_tokens INTEGER
+        output_tokens INTEGER,
+        cache_read_tokens INTEGER,
+        cache_write_tokens INTEGER,
+        reasoning_tokens INTEGER,
+        billing_provider TEXT,
+        billing_mode TEXT,
+        estimated_cost_usd REAL,
+        actual_cost_usd REAL,
+        cost_status TEXT,
+        api_call_count INTEGER
       );
       CREATE TABLE messages (
         id TEXT PRIMARY KEY,
@@ -34,9 +44,9 @@ function createHermesStateDatabase(databasePath: string) {
       );
     `);
     db.prepare(`
-      INSERT INTO sessions (id, title, source, model, started_at, ended_at, end_reason, message_count, tool_call_count, input_tokens, output_tokens)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run("sqlite-native-session", "SQLite Native Session", "cli", "openai/gpt-4.1", 1779700000, null, null, 3, 0, 11, 23);
+      INSERT INTO sessions (id, title, source, model, parent_session_id, started_at, ended_at, end_reason, message_count, tool_call_count, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, billing_provider, billing_mode, estimated_cost_usd, actual_cost_usd, cost_status, api_call_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run("sqlite-native-session", "SQLite Native Session", "cli", "openai/gpt-4.1", "parent-session", 1779700000, null, null, 3, 0, 11, 23, 5, 7, 13, "openai", "api_key", 0.0123, 0.0101, "estimated", 2);
     const insertMessage = db.prepare("INSERT INTO messages (id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)");
     insertMessage.run("msg-1", "sqlite-native-session", "user", "hermes sqlite preview", 1779700001);
     insertMessage.run("msg-2", "sqlite-native-session", "assistant", "Hermes reply with api_key=TEST_SECRET_1234567890", 1779700002);
@@ -68,7 +78,19 @@ test("runCli reads Hermes sessions from the official SQLite session store", asyn
           id?: string;
           title?: string;
           model?: string;
+          parentSessionId?: string;
           messageCount?: number;
+          inputTokens?: number;
+          outputTokens?: number;
+          cacheReadTokens?: number;
+          cacheWriteTokens?: number;
+          reasoningTokens?: number;
+          billingProvider?: string;
+          billingMode?: string;
+          estimatedCostUsd?: number;
+          actualCostUsd?: number;
+          costStatus?: string;
+          apiCallCount?: number;
           nativeIdentifier?: { name?: string };
           sessionStorageContract?: string;
           provenance?: { source?: string; table?: string };
@@ -81,7 +103,19 @@ test("runCli reads Hermes sessions from the official SQLite session store", asyn
   assert.equal(listed?.id, "sqlite-native-session");
   assert.equal(listed?.title, "SQLite Native Session");
   assert.equal(listed?.model, "openai/gpt-4.1");
+  assert.equal(listed?.parentSessionId, "parent-session");
   assert.equal(listed?.messageCount, 3);
+  assert.equal(listed?.inputTokens, 11);
+  assert.equal(listed?.outputTokens, 23);
+  assert.equal(listed?.cacheReadTokens, 5);
+  assert.equal(listed?.cacheWriteTokens, 7);
+  assert.equal(listed?.reasoningTokens, 13);
+  assert.equal(listed?.billingProvider, "openai");
+  assert.equal(listed?.billingMode, "api_key");
+  assert.equal(listed?.estimatedCostUsd, 0.0123);
+  assert.equal(listed?.actualCostUsd, 0.0101);
+  assert.equal(listed?.costStatus, "estimated");
+  assert.equal(listed?.apiCallCount, 2);
   assert.equal(listed?.nativeIdentifier?.name, "sessionId");
   assert.equal(listed?.sessionStorageContract, "sqlite_with_gateway_transcripts");
   assert.equal(listed?.provenance?.source, "runtime-session-sqlite");
