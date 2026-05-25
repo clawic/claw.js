@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 function tempStateDir(): string {
@@ -173,6 +173,70 @@ test("agent-resource allows concurrent read leases and release clears active sta
   const statusPayload = payload(status.stdout);
   assert.equal(statusPayload.data.activeLeases.length, 1);
   assert.equal(statusPayload.data.recentResults[0].status, "passed");
+});
+
+test("agent-resource heartbeat cannot revive a released lease", async () => {
+  const stateDir = tempStateDir();
+  const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-agent-coordination-run-"));
+  const acquired = await runCliCapture([
+    "agent-resource",
+    "acquire",
+    "--state-dir",
+    stateDir,
+    "--run-dir",
+    runDir,
+    "--resource",
+    "fixture:terminal-lease",
+    "--mode",
+    "exclusive",
+    "--intent",
+    "terminal-intent",
+    "--json",
+  ], process.cwd());
+  assert.equal(acquired.code, CLI_EXIT_OK, acquired.stderr || acquired.stdout);
+  const leaseId = payload(acquired.stdout).data.lease.id;
+
+  const release = await runCliCapture([
+    "agent-resource",
+    "release",
+    "--state-dir",
+    stateDir,
+    "--run-dir",
+    runDir,
+    "--lease",
+    leaseId,
+    "--status",
+    "passed",
+    "--json",
+  ], process.cwd());
+  assert.equal(release.code, CLI_EXIT_OK, release.stderr || release.stdout);
+  assert.equal(fs.existsSync(path.join(runDir, `${leaseId}.heartbeat.json`)), false);
+
+  const heartbeat = await runCliCapture([
+    "agent-resource",
+    "heartbeat",
+    "--state-dir",
+    stateDir,
+    "--run-dir",
+    runDir,
+    "--lease",
+    leaseId,
+    "--status",
+    "running",
+    "--json",
+  ], process.cwd());
+  assert.equal(heartbeat.code, CLI_EXIT_FAILURE);
+  assert.equal(payload(heartbeat.stdout).error.code, "lease_not_found");
+
+  const status = await runCliCapture(["agent-resource", "status", "--state-dir", stateDir, "--run-dir", runDir, "--json"], process.cwd());
+  assert.equal(status.code, CLI_EXIT_OK, status.stderr || status.stdout);
+  assert.equal(payload(status.stdout).data.activeLeases.length, 0);
+
+  const sqlite = new Database(path.join(stateDir, "agent-coordination.sqlite"), { readonly: true });
+  const row = sqlite.prepare("SELECT status FROM resource_leases WHERE id = ?").get(leaseId) as { status: string };
+  sqlite.close();
+  assert.equal(row.status, "released");
+  assert.equal(fs.existsSync(path.join(runDir, `${leaseId}.heartbeat.json`)), false);
 });
 
 test("agent-resource heartbeats, waitlists, and reaps only stale leases", async () => {

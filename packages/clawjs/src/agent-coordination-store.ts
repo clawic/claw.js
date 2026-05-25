@@ -476,6 +476,7 @@ export class AgentCoordinationStore {
     if (input.status && !VALID_HEARTBEAT_STATUSES.has(input.status)) throw new Error(`Invalid heartbeat status: ${input.status}`);
     const existing = this.lease(input.leaseId);
     if (!existing) return null;
+    if (!ACTIVE_LEASE_STATUSES.has(existing.status)) return null;
     const now = nowIso();
     const expiresAt = input.ttlSeconds && input.ttlSeconds > 0 ? new Date(Date.now() + input.ttlSeconds * 1000).toISOString() : existing.expires_at;
     const metadata = input.metadata ? JSON.stringify({ ...parseJsonObject(existing.metadata_json), ...input.metadata }) : existing.metadata_json;
