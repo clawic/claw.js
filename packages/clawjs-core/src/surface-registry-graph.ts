@@ -2090,13 +2090,29 @@ export function withSurfaceChildren(nodes: ClawPersistentSurfaceNode[]): ClawPer
   }));
 }
 
+function surfaceEdgeTouchesNode(edge: ClawSurfaceEdge, nodeId: string): boolean {
+  return edge.fromId === nodeId
+    || edge.toId === nodeId
+    || edge.contractId === nodeId;
+}
+
+function surfaceRouteStepTouchesNode(step: ClawSurfaceRouteStep, nodeId: string): boolean {
+  return step.fromId === nodeId
+    || step.toId === nodeId
+    || step.contractId === nodeId;
+}
+
 export function listClawSurfaceEdges(nodeId?: string): ClawSurfaceEdge[] {
-  return nodeId ? clawSurfaceGraphEdges.filter((edge) => edge.fromId === nodeId || edge.toId === nodeId) : [...clawSurfaceGraphEdges];
+  return nodeId ? clawSurfaceGraphEdges.filter((edge) => surfaceEdgeTouchesNode(edge, nodeId)) : [...clawSurfaceGraphEdges];
 }
 
 export function listClawSurfaceRoutes(nodeId?: string): ClawSurfaceRoute[] {
   if (!nodeId) return [...clawSurfaceGraphRoutes];
-  return clawSurfaceGraphRoutes.filter((route) => route.fromId === nodeId || route.toId === nodeId || route.steps.some((step) => step.fromId === nodeId || step.toId === nodeId));
+  return clawSurfaceGraphRoutes.filter((route) =>
+    route.fromId === nodeId
+    || route.toId === nodeId
+    || route.steps.some((step) => surfaceRouteStepTouchesNode(step, nodeId))
+  );
 }
 
 export function findClawSurfaceRoute(routeId: string): ClawSurfaceRoute | undefined {
