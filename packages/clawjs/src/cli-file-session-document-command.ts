@@ -25,6 +25,40 @@ function requireWorkspaceRelativeFilePath(filePath: string): string {
   return filePath;
 }
 
+function requireReadableDocumentSourcePath(sourceFile: string, cwd: string): string {
+  const filePath = path.resolve(cwd, sourceFile);
+  let stats: fs.Stats;
+  try {
+    stats = fs.statSync(filePath);
+  } catch {
+    throw new CliHandledError("document_source_not_found", `Document source file does not exist: ${sourceFile}`, CLI_EXIT_USAGE, {
+      location: "cli.documents.file",
+      suggestion: "Check the --file path before uploading or registering a document.",
+      safeNextStep: "Retry the documents command with a readable source file.",
+      details: { file: sourceFile },
+    });
+  }
+  if (!stats.isFile()) {
+    throw new CliHandledError("invalid_document_source", `Document source is not a file: ${sourceFile}`, CLI_EXIT_USAGE, {
+      location: "cli.documents.file",
+      suggestion: "--file must point to a readable file, not a directory or special path.",
+      safeNextStep: "Retry the documents command with a regular file path.",
+      details: { file: sourceFile },
+    });
+  }
+  try {
+    fs.accessSync(filePath, fs.constants.R_OK);
+  } catch {
+    throw new CliHandledError("document_source_unreadable", `Document source file is not readable: ${sourceFile}`, CLI_EXIT_USAGE, {
+      location: "cli.documents.file",
+      suggestion: "Check file permissions before uploading or registering a document.",
+      safeNextStep: "Retry the documents command after making the source file readable.",
+      details: { file: sourceFile },
+    });
+  }
+  return filePath;
+}
+
 export async function runFileSessionDocumentCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
@@ -346,7 +380,7 @@ if (group === "documents" && command === "upload") {
     context.stderr.write("--file is required\n");
     return CLI_EXIT_USAGE;
   }
-  const filePath = path.resolve(context.cwd, sourceFile);
+  const filePath = requireReadableDocumentSourcePath(sourceFile, context.cwd);
   const data = fs.readFileSync(filePath);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const document = await claw.documents.upload({
@@ -369,7 +403,7 @@ if (group === "documents" && command === "register") {
     context.stderr.write("--file is required\n");
     return CLI_EXIT_USAGE;
   }
-  const filePath = path.resolve(context.cwd, sourceFile);
+  const filePath = requireReadableDocumentSourcePath(sourceFile, context.cwd);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const document = await claw.documents.register({
     filePath,

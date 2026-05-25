@@ -299,6 +299,30 @@ test("runCli can upload, search, read, and download documents", async () => {
   assert.equal(downloadLegal.legalLabel, "Document download - human reviewed");
 });
 
+test("runCli reports missing document source files as usage errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-documents-missing-source-"));
+  const missingFile = path.join(workspaceRoot, "missing.txt");
+
+  for (const command of ["upload", "register"]) {
+    const result = await runCliCapture([
+      "documents",
+      command,
+      "--workspace", workspaceRoot,
+      "--file", missingFile,
+      "--json",
+    ], {
+      cwd: process.cwd(),
+    });
+    const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string; location: string } };
+
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "document_source_not_found");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.documents.file");
+  }
+});
+
 test("runCli can generate text through the inference command", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-inference-"));
   const { binDir, openclawLog } = createFakeOpenClawToolchain();
