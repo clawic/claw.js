@@ -144,7 +144,7 @@ export async function runPlanCli(input: {
       context.stderr.write(`Usage: ${binName} plan review <planId> --agent AGENT [--decision approve|reject]\n`);
       return CLI_EXIT_USAGE;
     }
-    const decision = flags.decision === "reject" ? "reject" : "approve";
+    const decision = parsePlanReviewDecision(flags.decision);
     plan.reviewerAgentId = reviewerAgentId;
     plan.reviewReason = flags.reason ?? `${reviewerAgentId} ${decision}d this plan.`;
     plan.status = decision === "approve" ? "approved" : "rejected";
@@ -228,6 +228,15 @@ export async function runPlanCli(input: {
 
   context.stderr.write(`Usage: ${binName} plan create|list|show|run|approve|reject|review|complete|fail|cancel|policy\n`);
   return CLI_EXIT_USAGE;
+}
+
+function parsePlanReviewDecision(value: string | undefined): "approve" | "reject" {
+  if (value === undefined || value === "approve") return "approve";
+  if (value === "reject") return "reject";
+  throw new CliHandledError("invalid_plan_review_decision", "--decision must be approve or reject.", CLI_EXIT_USAGE, {
+    location: "cli.plan.review.decision",
+    details: { flag: "--decision", value },
+  });
 }
 
 function writePlanJson(stream: NodeJS.WritableStream, data: unknown, subcommand: string | undefined): void {
