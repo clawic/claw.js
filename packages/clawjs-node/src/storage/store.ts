@@ -114,8 +114,11 @@ export interface StorageStoreOptions {
 }
 
 function normalizeStorageListLimit(value: number | undefined): number {
-  if (value === undefined || !Number.isFinite(value)) return Number.MAX_SAFE_INTEGER;
-  return Math.max(1, Math.floor(value));
+  if (value === undefined) return Number.MAX_SAFE_INTEGER;
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error("Storage list limit must be a positive safe integer.");
+  }
+  return value;
 }
 
 interface ObjectRow {
@@ -245,7 +248,9 @@ function normalizeExpiresAt(input: { expiresAt?: string | null; ttlMs?: number }
     return parsed.toISOString();
   }
   if (input.ttlMs !== undefined) {
-    if (!Number.isFinite(input.ttlMs) || input.ttlMs <= 0) throw new Error("Storage share ttlMs must be positive.");
+    if (!Number.isSafeInteger(input.ttlMs) || input.ttlMs <= 0) {
+      throw new Error("Storage share ttlMs must be a positive safe integer.");
+    }
     return new Date(Date.now() + input.ttlMs).toISOString();
   }
   return null;

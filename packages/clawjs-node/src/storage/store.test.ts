@@ -37,7 +37,7 @@ test("local storage scopes objects by agent prefix and rejects unsafe keys", (t)
   assert.throws(() => storage.writeText({ key: "../escape.txt", content: "no" }), /Invalid storage key/);
 });
 
-test("local storage list normalizes non-finite limits", (t) => {
+test("local storage list requires explicit limits to be positive safe integers", (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-limit-"));
   useIsolatedStorageDataDir(t, workspaceDir);
   const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
@@ -45,9 +45,22 @@ test("local storage list normalizes non-finite limits", (t) => {
   storage.writeText({ key: "notes/a.txt", content: "a" });
   storage.writeText({ key: "notes/b.txt", content: "b" });
 
-  assert.equal(storage.list({ limit: Number.NaN }).length, 2);
-  assert.equal(storage.list({ limit: Number.POSITIVE_INFINITY }).length, 2);
-  assert.equal(storage.list({ limit: 1.9 }).length, 1);
+  assert.equal(storage.list().length, 2);
+  assert.equal(storage.list({ limit: 1 }).length, 1);
+
+  for (const limit of [
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    0,
+    -1,
+    1.9,
+    Number.MAX_SAFE_INTEGER + 1,
+  ]) {
+    assert.throws(
+      () => storage.list({ limit }),
+      /Storage list limit must be a positive safe integer/,
+    );
+  }
 });
 
 test("storage HTTP rejects invalid object list limits before querying", async (t) => {
@@ -172,4 +185,58 @@ test("local storage shares through a configured adapter", async (t) => {
   assert.equal(share.legalLabel, "Exported content - human reviewed");
   assert.equal(share.approvalId, "approval_storage_share");
   assert.equal(await storage.revokeShare(share.id), true);
+});
+
+test("local storage share ttlMs must be a positive safe integer", async (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-share-ttl-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
+  let adapterCreateCalls = 0;
+  const storage = createLocalStorageStore({
+    workspaceDir,
+    agentId: "agent-a",
+    grants: [{
+      bucket: "workspace",
+      prefix: "agents/agent-a/",
+      operations: ["shares:create"],
+    }],
+    shareAdapter: {
+      async create(object) {
+        adapterCreateCalls += 1;
+        return { url: `https://share.local/${object.sha256}` };
+      },
+      async revoke() {},
+    },
+  });
+
+  storage.writeText({ key: "deliverable.txt", content: "done" });
+  for (const ttlMs of [
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    0,
+    -1,
+    1.5,
+    Number.MAX_SAFE_INTEGER + 1,
+  ]) {
+    await assert.rejects(
+      () => storage.createShare({
+        key: "deliverable.txt",
+        label: "Deliverable",
+        legalLabel: "Exported content - human reviewed",
+        approvalId: "approval_storage_share",
+        ttlMs,
+      }),
+      /Storage share ttlMs must be a positive safe integer/,
+    );
+  }
+  assert.equal(adapterCreateCalls, 0);
+
+  const share = await storage.createShare({
+    key: "deliverable.txt",
+    label: "Deliverable",
+    legalLabel: "Exported content - human reviewed",
+    approvalId: "approval_storage_share",
+    ttlMs: 1,
+  });
+  assert.ok(share.expiresAt);
+  assert.equal(adapterCreateCalls, 1);
 });
