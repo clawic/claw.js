@@ -378,6 +378,9 @@ export function verifyPortableArchiveManifest(manifest: unknown, checkedAt = new
     if (entry.canonical && !entry.hash) issues.push({ code: "missing_hash", severity: "error", message: `${entry.id} is canonical but has no hash.`, path: entry.portablePath });
     if (entryLooksLikePlaintextSecret(entry)) issues.push({ code: "plaintext_secret", severity: "error", message: `${entry.id} looks like plaintext secret material.`, path: entry.portablePath });
   }
+  for (const issue of manifestCountIssues(value)) {
+    issues.push(issue);
+  }
   for (const source of value.externalSources) {
     if (source.sourceKind === "external_read_only" && source.copied) {
       issues.push({ code: "external_source_copied", severity: "error", message: `${source.id} copied an external read-only source without local mirror policy.` });
@@ -476,8 +479,28 @@ function mappedCountsForManifest(manifest: PortableArchiveManifestV1): PortableA
     files: manifest.inventory.filter((entry) => ["workspace_state", "skill", "instruction", "file_blob", "project_manifest"].includes(entry.kind)).length,
     grants: manifest.inventory.filter((entry) => entry.kind === "grant").reduce((sum, entry) => sum + (entry.recordCount ?? 0), 0),
     policies: manifest.inventory.filter((entry) => entry.kind === "policy").reduce((sum, entry) => sum + (entry.recordCount ?? 0), 0),
-    secretsEnvelopes: manifest.counts.secretsEnvelopes,
+    secretsEnvelopes: manifest.inventory.filter((entry) => entry.kind === "secrets_envelope").length,
   };
+}
+
+function manifestCountIssues(manifest: PortableArchiveManifestV1): PortableArchiveVerificationReport["issues"] {
+  const expected = {
+    inventoryEntries: manifest.inventory.length,
+    canonicalEntries: manifest.inventory.filter((entry) => entry.canonical).length,
+    externalReferences: manifest.externalSources.length,
+    rebuildableExcluded: manifest.inventory.filter((entry) => entry.kind === "rebuildable_cache").length,
+    secretsEnvelopes: manifest.inventory.filter((entry) => entry.kind === "secrets_envelope").length,
+  };
+  return Object.entries(expected).flatMap(([field, actual]) => {
+    const declared = manifest.counts[field as keyof PortableArchiveManifestV1["counts"]];
+    if (declared === actual) return [];
+    return [{
+      code: "manifest_count_mismatch",
+      severity: "error" as const,
+      message: `counts.${field} declares ${declared} but inventory resolves to ${actual}.`,
+      path: `counts.${field}`,
+    }];
+  });
 }
 
 function entryLooksLikePlaintextSecret(entry: PortableArchiveManifestV1["inventory"][number]): boolean {
