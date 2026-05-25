@@ -241,6 +241,9 @@ export class AgentCoordinationStore {
         metadata_json TEXT NOT NULL DEFAULT '{}'
       );
       CREATE INDEX IF NOT EXISTS resource_leases_active_idx ON resource_leases(resource_id, status, expires_at);
+      CREATE INDEX IF NOT EXISTS resource_leases_active_started_idx
+        ON resource_leases(started_at)
+        WHERE status IN ('running', 'repairing', 'blocked', 'releasing');
       CREATE TABLE IF NOT EXISTS resource_demands (
         id TEXT PRIMARY KEY,
         resource_id TEXT NOT NULL,
@@ -253,6 +256,9 @@ export class AgentCoordinationStore {
         metadata_json TEXT NOT NULL DEFAULT '{}'
       );
       CREATE INDEX IF NOT EXISTS resource_demands_pending_idx ON resource_demands(resource_id, status, created_at);
+      CREATE INDEX IF NOT EXISTS resource_demands_pending_created_idx
+        ON resource_demands(created_at)
+        WHERE status = 'pending';
       CREATE TABLE IF NOT EXISTS work_results (
         id TEXT PRIMARY KEY,
         intent_id TEXT NOT NULL,
@@ -271,6 +277,7 @@ export class AgentCoordinationStore {
         metadata_json TEXT NOT NULL DEFAULT '{}'
       );
       CREATE INDEX IF NOT EXISTS work_results_fingerprint_idx ON work_results(repo, check_id, fingerprint, finished_at);
+      CREATE INDEX IF NOT EXISTS work_results_finished_idx ON work_results(finished_at DESC);
       CREATE TABLE IF NOT EXISTS repair_ownership (
         id TEXT PRIMARY KEY,
         check_id TEXT NOT NULL,

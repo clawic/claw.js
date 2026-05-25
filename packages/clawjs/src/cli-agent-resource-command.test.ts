@@ -56,6 +56,48 @@ test("agent-resource status is read-only when coordination state is absent", asy
   assert.equal(fs.existsSync(stateDir), false);
 });
 
+test("agent-resource status uses snapshot indexes for global coordination lists", async () => {
+  const stateDir = tempStateDir();
+  const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-agent-coordination-run-"));
+  await openAgentCoordinationStore(resolveAgentCoordinationPaths({ stateDir, runDir }));
+
+  const sqlite = new Database(path.join(stateDir, "agent-coordination.sqlite"), { readonly: true });
+  const activeLeasePlan = sqlite
+    .prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT * FROM resource_leases
+      WHERE status IN ('running', 'repairing', 'blocked', 'releasing')
+      ORDER BY started_at ASC
+    `)
+    .all() as Array<{ detail: string }>;
+  assert.equal(activeLeasePlan.some((row) => row.detail.includes("resource_leases_active_started_idx")), true);
+  assert.equal(activeLeasePlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+
+  const pendingDemandPlan = sqlite
+    .prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT * FROM resource_demands
+      WHERE status = 'pending'
+      ORDER BY created_at ASC
+      LIMIT 100
+    `)
+    .all() as Array<{ detail: string }>;
+  assert.equal(pendingDemandPlan.some((row) => row.detail.includes("resource_demands_pending_created_idx")), true);
+  assert.equal(pendingDemandPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+
+  const recentResultsPlan = sqlite
+    .prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT * FROM work_results
+      ORDER BY finished_at DESC
+      LIMIT 50
+    `)
+    .all() as Array<{ detail: string }>;
+  sqlite.close();
+  assert.equal(recentResultsPlan.some((row) => row.detail.includes("work_results_finished_idx")), true);
+  assert.equal(recentResultsPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+});
+
 test("agent-resource acquires exclusive leases and records conflicts as pending demand", async () => {
   const stateDir = tempStateDir();
   const first = await runCliCapture([
