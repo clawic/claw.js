@@ -428,6 +428,8 @@ export function createAgentRetirementPlan(input: AgentRetirementInput): AgentRet
 export function evaluateAgentAssignmentRoute(input: AgentAssignmentRouteRequest): AgentAssignmentRouteResult {
   const reasons: string[] = [];
   const now = normalizeTime(input.now);
+  const nowMs = now.getTime();
+  if (!Number.isFinite(nowMs)) reasons.push("route: invalid now");
   const assignment = input.assignment;
   if (!assignment) {
     reasons.push("assignment: missing");
@@ -439,8 +441,16 @@ export function evaluateAgentAssignmentRoute(input: AgentAssignmentRouteRequest)
     if (assignment.privacyPolicy === "raw_with_retention" && !hasValidTelemetryRetention(assignment)) {
       reasons.push("assignment: raw telemetry retention requires telemetryRetentionDays");
     }
-    if (assignment.startsAt && new Date(assignment.startsAt).getTime() > now.getTime()) reasons.push("assignment: not started");
-    if (assignment.expiresAt && new Date(assignment.expiresAt).getTime() <= now.getTime()) reasons.push("assignment: expired");
+    if (assignment.startsAt) {
+      const startsAtMs = new Date(assignment.startsAt).getTime();
+      if (!Number.isFinite(startsAtMs)) reasons.push("assignment: invalid startsAt");
+      else if (Number.isFinite(nowMs) && startsAtMs > nowMs) reasons.push("assignment: not started");
+    }
+    if (assignment.expiresAt) {
+      const expiresAtMs = new Date(assignment.expiresAt).getTime();
+      if (!Number.isFinite(expiresAtMs)) reasons.push("assignment: invalid expiresAt");
+      else if (Number.isFinite(nowMs) && expiresAtMs <= nowMs) reasons.push("assignment: expired");
+    }
   }
   const disclosureRequired = !assignment || assignment.externalDisclosure !== "custom_agent_wording";
   return {

@@ -431,6 +431,33 @@ test("Agents V1 raw visitor telemetry requires explicit retention on assignments
   assert.deepEqual(allowed.reasons, []);
 });
 
+test("Agents V1 assignment routing fails closed on invalid route timestamps", () => {
+  const assignment: AgentAssignmentRoute = {
+    id: "assignment.web",
+    agentId: "agent.support",
+    kind: "external_web_chat",
+    status: "active",
+    channel: "chat",
+    endpointRef: "web:support",
+    externalDisclosure: "transparent_agent",
+    startsAt: "not-a-date",
+    expiresAt: "also-not-a-date",
+  };
+  const result = evaluateAgentAssignmentRoute({
+    assignment,
+    kind: "external_web_chat",
+    channel: "chat",
+    endpointRef: "web:support",
+    now: "still-not-a-date",
+  });
+  assert.equal(result.allowed, false);
+  assert.deepEqual(result.reasons, [
+    "route: invalid now",
+    "assignment: invalid startsAt",
+    "assignment: invalid expiresAt",
+  ]);
+});
+
 test("Agents V1 external identity projects strong identifiers to contacts and hashes telemetry by default", () => {
   const identity = resolveAgentExternalIdentity({
     provider: "telegram",
