@@ -123,11 +123,20 @@ export class CommitmentStore {
   }
 
   readState(): CommitmentState {
-    try {
-      return commitmentStateSchema.parse(JSON.parse(this.filesystem.readText(this.statePath))) as CommitmentState;
-    } catch {
+    if (!this.filesystem.exists(this.statePath)) {
       return { schemaVersion: 1, commitments: [], updatedAt: nowIso() };
     }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(this.filesystem.readText(this.statePath)) as unknown;
+    } catch (error) {
+      throw new Error(`Invalid commitment state JSON at ${this.statePath}: ${(error as Error).message}`);
+    }
+    const state = commitmentStateSchema.safeParse(parsed);
+    if (!state.success) {
+      throw new Error(`Invalid commitment state record at ${this.statePath}: ${state.error.message}`);
+    }
+    return state.data as CommitmentState;
   }
 
   writeState(state: CommitmentState): CommitmentState {
