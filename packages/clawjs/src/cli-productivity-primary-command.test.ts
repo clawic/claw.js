@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { test } from "vitest";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, parseCliJsonPayload, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 import type { TestContext } from "vitest";
 
@@ -90,4 +90,22 @@ test("work backup requires confirmation, approval, and persistent legal label", 
   assert.equal(manifest.kind, "claw.work.backup.legal");
   assert.equal(manifest.approvalId, "approval_work_backup");
   assert.equal(manifest.legalLabel, "Work backup - human reviewed");
+});
+
+test("work import rejects invalid JSON before importing", async (t) => {
+  const cwd = useWorkTestRoot(t, "clawjs-work-import-invalid-");
+  const input = path.join(cwd, "bad-snapshot.json");
+  fs.writeFileSync(input, "{bad", "utf8");
+
+  const stdout = captureStream();
+  assert.equal(await runCli(["work", "import", input, "--json"], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+
+  const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_work_import_json");
+  assert.equal(payload.error.status, "USAGE");
 });
