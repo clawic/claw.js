@@ -75,10 +75,10 @@ export class AgentStoreFS {
   private presetsDir() { return this.dir("presets"); }
   private publicMemoryDir() { return this.dir("memory"); }
 
-  private agentDir(id: string) { return join(this.agentsDir(), id); }
-  private personalityDir(id: string) { return join(this.personalitiesDir(), id); }
-  private collectionDir(id: string) { return join(this.collectionsDir(), id); }
-  private connectionDir(id: string) { return join(this.connectionsDir(), id); }
+  private agentDir(id: string) { return join(this.agentsDir(), assertRecordId(id)); }
+  private personalityDir(id: string) { return join(this.personalitiesDir(), assertRecordId(id)); }
+  private collectionDir(id: string) { return join(this.collectionsDir(), assertRecordId(id)); }
+  private connectionDir(id: string) { return join(this.connectionsDir(), assertRecordId(id)); }
 
   private ensureDirs() {
     for (const d of [
@@ -495,4 +495,11 @@ export class AgentStoreFS {
 
 function toStr(value: string) {
   return { kind: "string" as const, value };
+}
+
+function assertRecordId(id: string): string {
+  if (id.length === 0 || id === "." || id === ".." || id.includes("/") || id.includes("\\") || id.includes("\0")) {
+    throw new Error(`Invalid agent store record id: ${JSON.stringify(id)}`);
+  }
+  return id;
 }

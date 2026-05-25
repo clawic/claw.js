@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { AgentStoreFS, resolveAgentStoreHome } from "./store.ts";
+import { defaultAgent } from "./schemas.ts";
 
 function tempHome(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agents-store-"));
@@ -74,5 +75,20 @@ describe("AgentStoreFS connection secrets", () => {
     });
 
     expect(fs.existsSync(path.join(connectionDir, "auth.encrypted"))).toBe(false);
+  });
+
+  test("rejects path-like record ids before touching files outside the store", () => {
+    const home = tempHome();
+    const store = new AgentStoreFS({ home });
+    const outsidePath = path.join(home, "escaped", "agent.yaml");
+
+    expect(() =>
+      store.writeAgent(defaultAgent({ id: "../escaped", name: "Escaped" })),
+    ).toThrow(/Invalid agent store record id/);
+    expect(() => store.readAgent("../escaped")).toThrow(/Invalid agent store record id/);
+    expect(() => store.writeConnectionSecretRef("../escaped", "secret_ref:connection.escaped.auth")).toThrow(
+      /Invalid agent store record id/,
+    );
+    expect(fs.existsSync(outsidePath)).toBe(false);
   });
 });
