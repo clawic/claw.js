@@ -39,19 +39,47 @@ test("media generation list commands reject invalid limits", async () => {
     ["generations", "list"],
     ["voice-notes", "list"],
   ]) {
-    const result = await runCliCapture([
-      ...args,
-      "--workspace",
-      workspaceRoot,
-      "--limit",
-      "nope",
-      "--json",
-    ], workspaceRoot);
-    assert.equal(result.code, CLI_EXIT_USAGE, result.stdout || result.stderr);
-    const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string } };
-    assert.equal(payload.ok, false);
-    assert.equal(payload.error.code, "invalid_media_limit");
-    assert.equal(payload.error.status, "USAGE");
+    for (const limit of ["nope", "1e3", "0x10", "9007199254740992", "01"]) {
+      const result = await runCliCapture([
+        ...args,
+        "--workspace",
+        workspaceRoot,
+        "--limit",
+        limit,
+        "--json",
+      ], workspaceRoot);
+      assert.equal(result.code, CLI_EXIT_USAGE, `${args.join(" ")} --limit ${limit}\n${result.stdout || result.stderr}`);
+      const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string } };
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, "invalid_media_limit");
+      assert.equal(payload.error.status, "USAGE");
+    }
+  }
+});
+
+test("media generation list commands accept canonical decimal limits", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-media-valid-limits-"));
+
+  for (const args of [
+    ["media", "list"],
+    ["image", "list"],
+    ["video", "list"],
+    ["generations", "list"],
+    ["voice-notes", "list"],
+  ]) {
+    for (const limit of ["1", "25"]) {
+      const result = await runCliCapture([
+        ...args,
+        "--workspace",
+        workspaceRoot,
+        "--limit",
+        limit,
+        "--json",
+      ], workspaceRoot);
+      assert.notEqual(result.code, CLI_EXIT_USAGE, `${args.join(" ")} --limit ${limit}\n${result.stdout || result.stderr}`);
+      const payload = JSON.parse(result.stdout) as { ok: boolean };
+      assert.equal(payload.ok, true);
+    }
   }
 });
 

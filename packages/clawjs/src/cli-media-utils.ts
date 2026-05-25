@@ -29,10 +29,11 @@ export function buildMediaListInput(flags: Record<string, string>): MediaListInp
   };
 }
 
-function parseMediaLimit(value: string | undefined): number | undefined {
+export function parseMediaLimit(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
+  const isCanonicalPositiveDecimal = /^[1-9][0-9]*$/.test(value);
   const limit = Number(value);
-  if (!Number.isInteger(limit) || limit < 1) {
+  if (!isCanonicalPositiveDecimal || !Number.isSafeInteger(limit)) {
     throw new CliHandledError("invalid_media_limit", "--limit must be a positive integer.", CLI_EXIT_USAGE, {
       location: "cli.media.limit",
     });

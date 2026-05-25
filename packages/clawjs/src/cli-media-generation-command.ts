@@ -12,7 +12,7 @@ import { requireCliExportReview, writeCliLegalSidecar } from "./cli-export-revie
 import { scheduleGenerationArtifactSearchEvent, scheduleImageDerivedSearchEvent, scheduleMediaAssetSearchEvent } from "./cli-search-events.ts";
 import { parseRuleHints } from "./cli-rule-utils.ts";
 import { parseImageOperation, parseImageProvenance, parseImageType } from "./cli-image-parsers.ts";
-import { buildImageSharedInput, buildMediaListInput, buildMediaMetadata } from "./cli-media-utils.ts";
+import { buildImageSharedInput, buildMediaListInput, buildMediaMetadata, parseMediaLimit } from "./cli-media-utils.ts";
 import { inferAudioExtension, inferMimeTypeFromPath, parseContextBlock, parseInferenceMessages, type GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 
 type CliContext = { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream; cwd: string };
@@ -108,17 +108,6 @@ function resolveMediaCanonicalCommand(group: string | undefined, mediaGroup: Gen
   if (mediaGroup === "image") return "images";
   if (mediaGroup === "audio" || mediaGroup === "video") return mediaGroup;
   return group ?? "media";
-}
-
-function parsePositiveIntegerFlag(raw: string | undefined, flagName: string): number | undefined {
-  if (raw === undefined) return undefined;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < 1) {
-    throw new CliHandledError("invalid_media_limit", `--${flagName} must be a positive integer.`, CLI_EXIT_USAGE, {
-      location: `cli.media.${flagName}`,
-    });
-  }
-  return value;
 }
 
 function parseMediaConfigNumberFlag(raw: string | undefined, flagName: string): number | undefined {
@@ -542,7 +531,7 @@ if (group === "voice-notes" && (command === "add" || command === "create")) {
 
 if (group === "voice-notes" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-  const limit = parsePositiveIntegerFlag(flags.limit, "limit");
+  const limit = parseMediaLimit(flags.limit);
   const notes = claw.voiceNotes.list({
     origin: flags.origin,
     provider: flags.provider,
@@ -819,7 +808,7 @@ if (mediaGroup && command === "generate") {
 }
 
 if (mediaGroup && command === "list") {
-  const limit = parsePositiveIntegerFlag(flags.limit, "limit");
+  const limit = parseMediaLimit(flags.limit);
   if (mediaGroup === "image") {
     const imageType = parseImageType(flags.type);
     const provenance = parseImageProvenance(flags.provenance);
@@ -985,7 +974,7 @@ if (group === "generations" && command === "create") {
 
 if (group === "generations" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-  const limit = parsePositiveIntegerFlag(flags.limit, "limit");
+  const limit = parseMediaLimit(flags.limit);
   const records = claw.generations.list({
     ...(flags.kind ? { kind: flags.kind as "image" | "video" | "audio" | "document" } : {}),
     ...(flags.backend ? { backendId: flags.backend } : {}),
