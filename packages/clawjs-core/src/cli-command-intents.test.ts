@@ -120,22 +120,28 @@ test("CLI command intent resolution covers runtime ecosystem portal actions", ()
   const send = resolveClawCliCommandIntent({ phrase: "runtime sessions send" });
   assert.equal(send.status, "covered");
   assert.equal(send.execute, false);
-  assert.equal(send.intent.mappedCommand, "runtime openclaw sessions send");
+  assert.equal(send.intent.mappedCommand, "runtime <runtime-id> sessions send");
+  assert.equal(send.intent.relatedCommands.includes("hermes"), true);
   assert.equal(send.intent.risk.includes("local_write"), true);
+  assert.equal(send.intent.evidence.some((entry) => entry.includes("Codex/Hermes return structured blocked responses")), true);
   assert.equal(send.intent.nextSteps.some((entry) => entry.includes("--confirm-runtime-write")), true);
 
   const inject = resolveClawCliCommandIntent({ phrase: "runtime sessions inject" });
   assert.equal(inject.status, "covered");
   assert.equal(inject.execute, false);
-  assert.equal(inject.intent.mappedCommand, "runtime openclaw sessions inject");
+  assert.equal(inject.intent.mappedCommand, "runtime <runtime-id> sessions inject");
+  assert.equal(inject.intent.relatedCommands.includes("hermes"), true);
   assert.equal(inject.intent.risk.includes("local_write"), true);
+  assert.equal(inject.intent.evidence.some((entry) => entry.includes("official inject contracts")), true);
   assert.equal(inject.intent.nextSteps.some((entry) => entry.includes("--confirm-runtime-write")), true);
 
   const abort = resolveClawCliCommandIntent({ phrase: "runtime sessions abort" });
   assert.equal(abort.status, "covered");
   assert.equal(abort.execute, false);
-  assert.equal(abort.intent.mappedCommand, "runtime openclaw sessions abort");
+  assert.equal(abort.intent.mappedCommand, "runtime <runtime-id> sessions abort");
+  assert.equal(abort.intent.relatedCommands.includes("hermes"), true);
   assert.equal(abort.intent.risk.includes("external_service"), true);
+  assert.equal(abort.intent.evidence.some((entry) => entry.includes("official abort contracts")), true);
   assert.equal(abort.intent.nextSteps.some((entry) => entry.includes("runtime control action")), true);
 
   const create = resolveClawCliCommandIntent({ phrase: "runtime sessions create" });

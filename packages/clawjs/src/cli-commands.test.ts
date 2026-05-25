@@ -44,11 +44,13 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   const resolved = await runCliCapture(["commands", "resolve", "runtime", "sessions", "send", "--json"], process.cwd());
   assert.equal(resolved.code, CLI_EXIT_OK);
   const resolvedPayload = JSON.parse(resolved.stdout) as {
-    data: { resolution: { status: string; execute: boolean; intent: { mappedCommand: string; risk: string[]; nextSteps: string[] } } };
+    data: { resolution: { status: string; execute: boolean; intent: { mappedCommand: string; relatedCommands: string[]; evidence: string[]; risk: string[]; nextSteps: string[] } } };
   };
   assert.equal(resolvedPayload.data.resolution.status, "covered");
   assert.equal(resolvedPayload.data.resolution.execute, false);
-  assert.equal(resolvedPayload.data.resolution.intent.mappedCommand, "runtime openclaw sessions send");
+  assert.equal(resolvedPayload.data.resolution.intent.mappedCommand, "runtime <runtime-id> sessions send");
+  assert.equal(resolvedPayload.data.resolution.intent.relatedCommands.includes("hermes"), true);
+  assert.equal(resolvedPayload.data.resolution.intent.evidence.some((entry) => entry.includes("structured blocked responses")), true);
   assert.equal(resolvedPayload.data.resolution.intent.risk.includes("local_write"), true);
   assert.equal(resolvedPayload.data.resolution.intent.nextSteps.some((entry) => entry.includes("--confirm-runtime-write")), true);
 
@@ -65,8 +67,9 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_preview"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_resolve" && entry.mappedCommand === "runtime <runtime-id> sessions resolve"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_history" && entry.mappedCommand === "runtime <runtime-id> sessions history"), true);
-  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_inject"), true);
-  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_abort"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_send" && entry.mappedCommand === "runtime <runtime-id> sessions send"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_inject" && entry.mappedCommand === "runtime <runtime-id> sessions inject"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_abort" && entry.mappedCommand === "runtime <runtime-id> sessions abort"), true);
 });
 
 test("commands record writes only the explicit workspace ledger", async () => {
