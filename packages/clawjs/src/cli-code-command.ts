@@ -26,6 +26,18 @@ function parseCodeNonNegativeIntegerFlag(value: string | undefined, flagName: st
   return parsed;
 }
 
+function parseCodeServePortFlag(value: string | undefined): number {
+  if (value === undefined) return 0;
+  const port = Number(value);
+  if (!value.trim() || !Number.isInteger(port) || port < 0 || port > 65_535) {
+    throw new CliHandledError("invalid_code_serve_port", `Expected --port to be an integer from 0 to 65535, got ${value}.`, CLI_EXIT_USAGE, {
+      suggestion: "Pass a valid local port such as --port 8787, or omit --port to use an ephemeral port.",
+      safeNextStep: "Rerun claw code serve with a valid --port value.",
+    });
+  }
+  return port;
+}
+
 function resolveCodeIntentId(positionals: string[], flags: Record<string, string>, index = 2): string {
   const id = flags.intent ?? flags["intent-id"] ?? flags.id ?? positionals[index];
   if (!id) throw new CliHandledError("usage_error", "A code intent id is required.", CLI_EXIT_USAGE);
@@ -179,7 +191,7 @@ export async function runCodeCli(input: {
     }
 
     if (command === "serve") {
-      const port = input.flags.port ? Number(input.flags.port) : 0;
+      const port = parseCodeServePortFlag(input.flags.port);
       const server = await startCodeServer(globalIndex, { host: input.flags.host || "127.0.0.1", port });
       if (input.wantsJson) writeCommandJsonOkLine(input.context.stdout, "code", { url: server.url }, jsonMeta());
       else input.context.stdout.write(`${server.url}\n`);

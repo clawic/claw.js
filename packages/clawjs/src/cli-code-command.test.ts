@@ -11,6 +11,18 @@ function payload(text: string): any {
   return JSON.parse(text);
 }
 
+test("code serve rejects invalid ports before starting a server", async () => {
+  const codeHome = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-serve-port-"));
+  const result = await runCliCapture(["code", "serve", "--code-home", codeHome, "--port", "nope", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  const resultPayload = payload(result.stdout);
+  assert.equal(resultPayload.ok, false);
+  assert.equal(resultPayload.error.code, "invalid_code_serve_port");
+  assert.equal(resultPayload.error.status, "USAGE");
+  assert.equal(resultPayload.meta.canonicalCommand, "code");
+  assert.equal(resultPayload.meta.subcommand, "serve");
+});
+
 test("code agents list rejects invalid offline thresholds", async () => {
   const codeHome = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-agents-"));
   const registered = await runCliCapture(["code", "agents", "register", "agent-alpha", "--code-home", codeHome, "--json"], process.cwd());
