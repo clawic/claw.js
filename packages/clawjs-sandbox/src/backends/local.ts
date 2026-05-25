@@ -40,6 +40,7 @@ export const localBackend: BackendAdapter = {
       let stderrBytes = 0;
       let timedOut = false;
       let resolved = false;
+      let stdinError: Error | null = null;
 
       child.stdout?.on("data", (chunk: Buffer) => {
         stdoutBytes += chunk.byteLength;
@@ -48,6 +49,9 @@ export const localBackend: BackendAdapter = {
       child.stderr?.on("data", (chunk: Buffer) => {
         stderrBytes += chunk.byteLength;
         if (stderrBytes <= STREAM_LIMIT_BYTES * 2) stderrChunks.push(chunk);
+      });
+      child.stdin?.on("error", (err: Error) => {
+        stdinError = err;
       });
 
       const timeout = request.timeoutMs && request.timeoutMs > 0
@@ -77,12 +81,16 @@ export const localBackend: BackendAdapter = {
         const stdout = clip(Buffer.concat(stdoutChunks), STREAM_LIMIT_BYTES).text;
         const stderr = clip(Buffer.concat(stderrChunks), STREAM_LIMIT_BYTES).text;
         if (timedOut) {
+          const errorDetails = [
+            `command timed out after ${request.timeoutMs}ms (signal=${signal ?? "none"})`,
+            stdinError ? `stdin write failed: ${stdinError.message}` : null,
+          ].filter(Boolean).join("; ");
           resolve({
             status: "timeout",
             exitCode: code,
             stdout,
             stderr,
-            error: `command timed out after ${request.timeoutMs}ms (signal=${signal ?? "none"})`,
+            error: errorDetails,
           });
           return;
         }
@@ -95,14 +103,22 @@ export const localBackend: BackendAdapter = {
           exitCode: code,
           stdout,
           stderr,
-          error: signal ? `exited via signal ${signal}` : null,
+          error: signal
+            ? `exited via signal ${signal}`
+            : stdinError
+              ? `stdin write failed: ${stdinError.message}`
+              : null,
         });
       });
 
+      const rememberStdinError = (err: Error | null | undefined) => {
+        if (err) stdinError = err;
+      };
+
       if (request.stdin) {
-        child.stdin?.write(request.stdin);
+        child.stdin?.write(request.stdin, rememberStdinError);
       }
-      child.stdin?.end();
+      child.stdin?.end(rememberStdinError);
     });
   },
 };
