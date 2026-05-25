@@ -5,6 +5,8 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 
+import { CLI_EXIT_FAILURE, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { runCliCapture } from "./index-test-utils.ts";
 import {
   doctorPayload,
   ensureV1MainSchema,
@@ -111,6 +113,64 @@ test("connector control plane storage is durable, brokered, and resettable", () 
     ].sort());
   } finally {
     vault.close();
+    if (previousDataDir === undefined) delete process.env.CLAW_DATA_DIR;
+    else process.env.CLAW_DATA_DIR = previousDataDir;
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("connectors operation upsert rejects unsupported catalog enums before persistence", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-connector-operation-cli-"));
+  const cwd = path.join(tempRoot, "workspace");
+  const dataRoot = path.join(tempRoot, "data");
+  fs.mkdirSync(cwd, { recursive: true });
+  const previousDataDir = process.env.CLAW_DATA_DIR;
+  process.env.CLAW_DATA_DIR = dataRoot;
+
+  try {
+    const invalidRuntime = await runCliCapture([
+      "connectors",
+      "operation",
+      "upsert",
+      "github.webhook.create",
+      "--provider",
+      "github",
+      "--runtime-kind",
+      "totally-real",
+      "--support",
+      "supported",
+      "--json",
+    ], cwd);
+    assert.equal(invalidRuntime.code, CLI_EXIT_USAGE, invalidRuntime.stderr || invalidRuntime.stdout);
+    const invalidRuntimePayload = JSON.parse(invalidRuntime.stdout) as { ok: boolean; error: { code: string; message: string } };
+    assert.equal(invalidRuntimePayload.ok, false);
+    assert.equal(invalidRuntimePayload.error.code, "usage");
+    assert.match(invalidRuntimePayload.error.message, /Invalid --runtime-kind totally-real/);
+
+    const missing = await runCliCapture(["connectors", "operation", "get", "github.webhook.create", "--json"], cwd);
+    assert.equal(missing.code, CLI_EXIT_FAILURE, missing.stderr || missing.stdout);
+    const missingPayload = JSON.parse(missing.stdout) as { ok: boolean; data: unknown };
+    assert.equal(missingPayload.ok, true);
+    assert.equal(missingPayload.data, null);
+
+    const invalidSupport = await runCliCapture([
+      "connectors",
+      "operation",
+      "upsert",
+      "github.webhook.create",
+      "--provider",
+      "github",
+      "--runtime-kind",
+      "webhook",
+      "--support",
+      "partial",
+      "--json",
+    ], cwd);
+    assert.equal(invalidSupport.code, CLI_EXIT_USAGE, invalidSupport.stderr || invalidSupport.stdout);
+    const invalidSupportPayload = JSON.parse(invalidSupport.stdout) as { ok: boolean; error: { message: string } };
+    assert.equal(invalidSupportPayload.ok, false);
+    assert.match(invalidSupportPayload.error.message, /Invalid --support partial/);
+  } finally {
     if (previousDataDir === undefined) delete process.env.CLAW_DATA_DIR;
     else process.env.CLAW_DATA_DIR = previousDataDir;
     fs.rmSync(tempRoot, { recursive: true, force: true });

@@ -29,6 +29,10 @@ import {
 } from "./v1-data-core.ts";
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
 
+const connectorRuntimeKinds = ["api", "sdk", "mcp", "cli", "webhook", "oauth", "browser"] as const;
+const connectorSupportStates = ["supported", "unsupported", "external_pending"] as const;
+const connectorRiskTiers = ["read", "write", "destructive", "cost", "system"] as const;
+
 export function runMcpCommand(input: V1DataCliInput): number {
   const command = input.positionals[1];
   const configPath = input.flags.config || resolveCodexConfigPath(input.homeDir);
@@ -152,8 +156,20 @@ export function runConnectorsCommand(input: V1DataCliInput, store: DatabaseServi
     const providerDisplayName = input.flags["provider-name"] || input.flags["provider-display-name"] || providerId;
     const providerTrustTier = input.flags["provider-trust-tier"] || input.flags["trust-tier"] || "external_saas";
     const providerEnabled = input.flags["provider-enabled"] === undefined ? 1 : (truthy(input.flags["provider-enabled"]) ? 1 : 0);
+    const runtimeKind = input.flags["runtime-kind"] || input.flags.runtime || "api";
+    if (!isConnectorRuntimeKind(runtimeKind)) {
+      return usageError(input, `Invalid --runtime-kind ${runtimeKind}. Expected one of: ${connectorRuntimeKinds.join(", ")}`);
+    }
+    const support = input.flags.support || "external_pending";
+    if (!isConnectorSupportState(support)) {
+      return usageError(input, `Invalid --support ${support}. Expected one of: ${connectorSupportStates.join(", ")}`);
+    }
     const capabilityIds = parseConnectorStringList(input.flags.capabilities || input.flags.capability || input.flags["capability-ids"]);
     const riskTiers = parseConnectorStringList(input.flags["risk-tiers"] || input.flags.risk);
+    const invalidRiskTier = riskTiers.find((tier) => !isConnectorRiskTier(tier));
+    if (invalidRiskTier) {
+      return usageError(input, `Invalid --risk-tiers value ${invalidRiskTier}. Expected values from: ${connectorRiskTiers.join(", ")}`);
+    }
     const metadata = input.flags.metadata ? parseMaybeJson(input.flags.metadata) : {};
     const metadataJson = JSON.stringify(isRecord(metadata) ? metadata : { value: metadata });
     const existing = store.sqlite.prepare("SELECT created_at FROM connector_operations WHERE id = ?").get(id) as { created_at?: string } | undefined;
@@ -188,8 +204,8 @@ export function runConnectorsCommand(input: V1DataCliInput, store: DatabaseServi
     `).run(
       id,
       providerId,
-      input.flags["runtime-kind"] || input.flags.runtime || "api",
-      input.flags.support || "external_pending",
+      runtimeKind,
+      support,
       input.flags["native-name"] || input.flags.native || null,
       JSON.stringify(capabilityIds),
       JSON.stringify(riskTiers),
@@ -233,6 +249,18 @@ function parseConnectorStringList(value: string | undefined): string[] {
   const parsed = parseCsvOrJson(value);
   const entries = Array.isArray(parsed) ? parsed : (parsed === undefined ? [] : [parsed]);
   return entries.map((entry) => String(entry).trim()).filter(Boolean);
+}
+
+function isConnectorRuntimeKind(value: string): boolean {
+  return (connectorRuntimeKinds as readonly string[]).includes(value);
+}
+
+function isConnectorSupportState(value: string): boolean {
+  return (connectorSupportStates as readonly string[]).includes(value);
+}
+
+function isConnectorRiskTier(value: string): boolean {
+  return (connectorRiskTiers as readonly string[]).includes(value);
 }
 
 export function runSheetsCommand(input: V1DataCliInput): number {
