@@ -89,15 +89,22 @@ export async function runCliDiscoverySearch(input: {
 
 function parseDiscoverySearchLimit(raw: string | undefined): number {
   if (raw === undefined) return 20;
-  const limit = Number(raw);
-  if (!Number.isFinite(limit) || limit <= 0) {
-    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a positive number, got ${raw}.`, CLI_EXIT_USAGE, {
+  if (!/^[1-9][0-9]*$/.test(raw)) {
+    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a positive decimal integer, got ${raw}.`, CLI_EXIT_USAGE, {
       location: "cli.search.limit",
-      suggestion: "Pass a positive limit such as --limit 20.",
-      safeNextStep: "Rerun claw search with a positive --limit value.",
+      suggestion: "Pass a positive decimal integer such as --limit 20.",
+      safeNextStep: "Rerun claw search with a positive decimal integer --limit value.",
     });
   }
-  return Math.min(1000, Math.floor(limit));
+  const limit = Number(raw);
+  if (!Number.isSafeInteger(limit)) {
+    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a safe positive decimal integer, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.search.limit",
+      suggestion: "Pass a positive decimal integer up to 1000 such as --limit 20.",
+      safeNextStep: "Rerun claw search with a safe positive decimal integer --limit value.",
+    });
+  }
+  return Math.min(1000, limit);
 }
 
 function searchRegisteredRepositoryFiles(query: string, repositories: ClawRepositoryRoot[]): ClawCliSearchResult[] {

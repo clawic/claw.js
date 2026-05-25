@@ -56,14 +56,16 @@ test("runCli rejects invalid discovery search limits", async () => {
   const textPayload = JSON.parse(textLimit.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string } };
   assert.equal(textPayload.ok, false);
   assert.equal(textPayload.error.code, "invalid_search_limit");
-  assert.match(textPayload.error.message, /positive number/);
+  assert.match(textPayload.error.message, /positive decimal integer/);
   assert.equal(textPayload.meta.canonicalCommand, "search");
 
-  const negativeLimit = await runCliCapture(["search", "routing", "--limit", "-1", "--json"], process.cwd());
-  assert.equal(negativeLimit.code, CLI_EXIT_USAGE);
-  const negativePayload = JSON.parse(negativeLimit.stdout) as { ok: boolean; error: { code: string } };
-  assert.equal(negativePayload.ok, false);
-  assert.equal(negativePayload.error.code, "invalid_search_limit");
+  for (const invalidLimit of ["-1", "0", "1e3", "0x10", "1.9", "9007199254740992"]) {
+    const result = await runCliCapture(["search", "routing", "--limit", invalidLimit, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_USAGE, `${invalidLimit} should be rejected`);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_search_limit");
+  }
 });
 
 test("dense data commands use persistent workspace data routes", () => {
