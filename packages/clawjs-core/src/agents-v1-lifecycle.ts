@@ -399,6 +399,18 @@ export function createAgentIncident(input: AgentIncidentInput): AgentIncident {
 
 export function createAgentActivityFeed(input: AgentActivityFeedInput): AgentActivityFeed {
   const redaction = input.redaction ?? "strict";
+  const requestedLimit = input.limit;
+  const limit = typeof requestedLimit === "number" && Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : undefined;
+  if (limit) {
+    const candidates = recentActivityCandidates(input, limit);
+    return {
+      schemaVersion: 1,
+      feedKind: "claw_agent_activity_feed",
+      agentId: input.agentId,
+      items: candidates.map((candidate) => activityItem(input.agentId, candidate.kind, candidate.record, redaction)),
+      redaction,
+    };
+  }
   const items = [
     ...(input.assignments ?? []).map((record) => activityItem(input.agentId, "assignment", record, redaction)),
     ...(input.runs ?? []).map((record) => activityItem(input.agentId, "run", record, redaction)),
@@ -408,13 +420,11 @@ export function createAgentActivityFeed(input: AgentActivityFeedInput): AgentAct
     ...(input.configRevisions ?? []).map((record) => activityItem(input.agentId, "config_revision", record, redaction)),
     ...(input.audits ?? []).map((record) => activityItem(input.agentId, "audit", record, redaction)),
   ].sort((a, b) => b.happenedAt.localeCompare(a.happenedAt));
-  const requestedLimit = input.limit;
-  const limit = typeof requestedLimit === "number" && Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : undefined;
   return {
     schemaVersion: 1,
     feedKind: "claw_agent_activity_feed",
     agentId: input.agentId,
-    items: limit ? items.slice(0, limit) : items,
+    items,
     redaction,
   };
 }
@@ -828,6 +838,73 @@ export function activityItem(agentId: string, kind: AgentActivityFeedItemKind, r
     ...(sessionId ? { sessionId } : {}),
     metadata: activityMetadata(record, redaction),
   };
+}
+
+interface ActivityCandidate {
+  kind: AgentActivityFeedItemKind;
+  record: Record<string, unknown>;
+  happenedAt: string;
+  sequence: number;
+}
+
+function compareActivityCandidates(left: ActivityCandidate, right: ActivityCandidate): number {
+  return right.happenedAt.localeCompare(left.happenedAt) || left.sequence - right.sequence;
+}
+
+function activityCandidateIsWorse(left: ActivityCandidate, right: ActivityCandidate): boolean {
+  return compareActivityCandidates(left, right) > 0;
+}
+
+function siftActivityCandidateUp(heap: ActivityCandidate[], index: number): void {
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2);
+    if (!activityCandidateIsWorse(heap[index], heap[parent])) return;
+    [heap[index], heap[parent]] = [heap[parent], heap[index]];
+    index = parent;
+  }
+}
+
+function siftActivityCandidateDown(heap: ActivityCandidate[], index: number): void {
+  for (;;) {
+    const left = index * 2 + 1;
+    const right = left + 1;
+    let worst = index;
+    if (left < heap.length && activityCandidateIsWorse(heap[left], heap[worst])) worst = left;
+    if (right < heap.length && activityCandidateIsWorse(heap[right], heap[worst])) worst = right;
+    if (worst === index) return;
+    [heap[index], heap[worst]] = [heap[worst], heap[index]];
+    index = worst;
+  }
+}
+
+function recentActivityCandidates(input: AgentActivityFeedInput, limit: number): ActivityCandidate[] {
+  const selected: ActivityCandidate[] = [];
+  let sequence = 0;
+  const addCandidate = (candidate: ActivityCandidate) => {
+    if (selected.length < limit) {
+      selected.push(candidate);
+      siftActivityCandidateUp(selected, selected.length - 1);
+      return;
+    }
+    if (compareActivityCandidates(candidate, selected[0]) < 0) {
+      selected[0] = candidate;
+      siftActivityCandidateDown(selected, 0);
+    }
+  };
+  const visit = (kind: AgentActivityFeedItemKind, records: Array<Record<string, unknown>> | undefined) => {
+    for (const record of records ?? []) {
+      addCandidate({ kind, record, happenedAt: activityTimestamp(record), sequence });
+      sequence += 1;
+    }
+  };
+  visit("assignment", input.assignments);
+  visit("run", input.runs);
+  visit("session", input.sessions);
+  visit("evaluation", input.evaluations);
+  visit("incident", input.incidents);
+  visit("config_revision", input.configRevisions);
+  visit("audit", input.audits);
+  return selected.sort(compareActivityCandidates);
 }
 
 export function activityTitle(kind: AgentActivityFeedItemKind, record: Record<string, unknown>): string {

@@ -1427,6 +1427,39 @@ test("Agents V1 activity feed projects human-readable redacted timeline", () => 
   assert.equal((feed.items[2]?.metadata.outcome as Record<string, unknown>).rawTracePath, "[REDACTED]");
 });
 
+test("Agents V1 activity feed materializes only limited recent items", () => {
+  const oldRecords = Array.from({ length: 100 }, (_value, index) => {
+    const record: Record<string, unknown> = {
+      id: `run_old_${index}`,
+      status: "completed",
+      startedAt: "2026-05-17T08:00:00.000Z",
+    };
+    Object.defineProperty(record, "metadata", {
+      enumerable: true,
+      get() {
+        throw new Error("old metadata should not be materialized");
+      },
+    });
+    return record;
+  });
+  const feed = createAgentActivityFeed({
+    agentId: "agent.support",
+    limit: 1,
+    runs: oldRecords,
+    incidents: [{
+      id: "incident_recent",
+      severity: "high",
+      status: "open",
+      summary: "Recent incident",
+      detectedAt: "2026-05-17T10:00:00.000Z",
+    }],
+  });
+
+  assert.equal(feed.items.length, 1);
+  assert.equal(feed.items[0]?.sourceId, "incident_recent");
+  assert.equal(feed.items[0]?.title, "Recent incident");
+});
+
 test("Agents V1 blueprints produce redacted portable templates", () => {
   const blueprint = createAgentBlueprint({
     name: "Support blueprint",
