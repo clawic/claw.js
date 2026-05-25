@@ -33,6 +33,10 @@ function validateSchema(schema: JsonSchema, value: unknown, path: string, errors
     validateObjectSchema(schema, value, path, errors);
   }
 
+  if ((schema.type === "array" || schema.items) && Array.isArray(value)) {
+    validateArraySchema(schema, value, path, errors);
+  }
+
   if (typeof value === "number" && typeof schema.minimum === "number" && value < schema.minimum) {
     errors.push(`${path} must be >= ${schema.minimum}`);
   }
@@ -44,6 +48,14 @@ function validateSchema(schema: JsonSchema, value: unknown, path: string, errors
       errors.push(`${path} has invalid schema pattern`);
     }
   }
+}
+
+function validateArraySchema(schema: JsonSchema, value: unknown[], path: string, errors: string[]): void {
+  const itemsSchema = schema.items;
+  if (!itemsSchema || typeof itemsSchema !== "object" || Array.isArray(itemsSchema)) return;
+  value.forEach((item, index) => {
+    validateSchema(itemsSchema as JsonSchema, item, `${path}[${index}]`, errors);
+  });
 }
 
 function validateObjectSchema(schema: JsonSchema, value: Record<string, unknown>, path: string, errors: string[]): void {
