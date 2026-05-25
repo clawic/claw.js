@@ -174,12 +174,50 @@ export function resolveAuthStorePath(agentDir: string): string {
   return path.join(agentDir, "auth-profiles.json");
 }
 
-export function loadAuthStore(agentDir: string, filesystem: AuthStoreFilesystem = new NodeFileSystemHost()): OpenClawAuthStore {
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function isOpenClawAuthCredential(value: unknown): value is OpenClawAuthCredential {
+  if (!isPlainRecord(value)) return false;
+  if (value.type !== "api_key" && value.type !== "token" && value.type !== "oauth") return false;
+  if (typeof value.provider !== "string" || value.provider.length === 0) return false;
+  if ("key" in value && typeof value.key !== "string") return false;
+  if ("token" in value && typeof value.token !== "string") return false;
+  if ("maskedCredential" in value && typeof value.maskedCredential !== "string") return false;
+  return true;
+}
+
+function parseAuthStore(raw: string, filePath: string): OpenClawAuthStore {
+  let parsed: unknown;
   try {
-    return JSON.parse(filesystem.readText(resolveAuthStorePath(agentDir))) as OpenClawAuthStore;
-  } catch {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error(`Invalid auth store JSON at ${filePath}: ${error instanceof Error ? error.message : "unknown error"}`);
+  }
+
+  if (!isPlainRecord(parsed) || typeof parsed.version !== "number" || !isPlainRecord(parsed.profiles)) {
+    throw new Error(`Invalid auth store record at ${filePath}: expected { version, profiles }`);
+  }
+
+  for (const [profileId, credential] of Object.entries(parsed.profiles)) {
+    if (!isOpenClawAuthCredential(credential)) {
+      throw new Error(`Invalid auth store profile at ${filePath}: ${profileId}`);
+    }
+  }
+
+  return {
+    version: parsed.version,
+    profiles: parsed.profiles as Record<string, OpenClawAuthCredential>,
+  };
+}
+
+export function loadAuthStore(agentDir: string, filesystem: AuthStoreFilesystem = new NodeFileSystemHost()): OpenClawAuthStore {
+  const filePath = resolveAuthStorePath(agentDir);
+  if (!filesystem.exists(filePath)) {
     return { version: 1, profiles: {} };
   }
+  return parseAuthStore(filesystem.readText(filePath), filePath);
 }
 
 export function saveAuthStore(agentDir: string, store: OpenClawAuthStore, filesystem: AuthStoreFilesystem = new NodeFileSystemHost()): void {

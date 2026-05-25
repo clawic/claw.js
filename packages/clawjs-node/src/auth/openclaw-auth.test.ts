@@ -361,6 +361,27 @@ test("saveProviderApiKey upserts a masked profile summary", () => {
   assert.equal(saved.profiles["anthropic:manual"]?.provider, "anthropic");
 });
 
+test("loadAuthStore fails closed for corrupt or invalid auth stores before writes", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-auth-corrupt-"));
+  const agentDir = path.join(tempRoot, "agent");
+  fs.mkdirSync(agentDir, { recursive: true });
+  const storePath = path.join(agentDir, "auth-profiles.json");
+
+  const corrupt = "{ this is not json";
+  fs.writeFileSync(storePath, corrupt, "utf8");
+
+  assert.throws(() => loadAuthStore(agentDir), /Invalid auth store JSON/);
+  assert.throws(() => saveProviderApiKey(agentDir, "anthropic", "sk-ant-secret-12345678"), /Invalid auth store JSON/);
+  assert.equal(fs.readFileSync(storePath, "utf8"), corrupt);
+
+  const invalidShape = `${JSON.stringify({ version: 1, profiles: [] })}\n`;
+  fs.writeFileSync(storePath, invalidShape, "utf8");
+
+  assert.throws(() => loadAuthStore(agentDir), /Invalid auth store record/);
+  assert.throws(() => saveProviderApiKey(agentDir, "anthropic", "sk-ant-secret-12345678"), /Invalid auth store record/);
+  assert.equal(fs.readFileSync(storePath, "utf8"), invalidShape);
+});
+
 test("persistProviderApiKey uses runtime commands when available and falls back otherwise", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-auth-persist-"));
   const agentDir = path.join(tempRoot, "agent");
