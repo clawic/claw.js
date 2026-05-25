@@ -139,12 +139,18 @@ function runHostAppStateCli(input: {
   binName: string;
 }): number {
   const action = input.positionals[2] || "projection";
+  const projectionLimits = action === "projection" || action === "snapshot"
+    ? {
+        sidebarLimit: parsePositiveDecimalIntegerFlag(input.flags.limit, "limit", "invalid_app_state_projection_limit"),
+        receiptLimit: parsePositiveDecimalIntegerFlag(input.flags["receipt-limit"], "receipt-limit", "invalid_app_state_projection_receipt_limit", 20),
+      }
+    : undefined;
   const store = openMainDataStore();
   try {
     if (action === "projection" || action === "snapshot") {
       writeCommandJsonOk(input.context.stdout, "host", readAppStateProjection(store.sqlite, {
-        sidebarLimit: Number(input.flags.limit ?? 200),
-        receiptLimit: Number(input.flags["receipt-limit"] ?? 20),
+        sidebarLimit: projectionLimits?.sidebarLimit ?? 200,
+        receiptLimit: projectionLimits?.receiptLimit ?? 20,
       }), { subcommand: "host app-state projection" });
       return CLI_EXIT_OK;
     }
@@ -169,4 +175,22 @@ function runHostAppStateCli(input: {
   } finally {
     store.close();
   }
+}
+
+function parsePositiveDecimalIntegerFlag(raw: string | undefined, flagName: string, code: string, defaultValue = 200): number {
+  if (raw === undefined) return defaultValue;
+  if (!/^[1-9][0-9]*$/.test(raw)) {
+    throw new CliHandledError(code, `Expected --${flagName} to be a positive decimal integer, got ${raw}.`, CLI_EXIT_USAGE, {
+      suggestion: `Pass a positive decimal integer such as --${flagName} ${defaultValue}.`,
+      safeNextStep: `Rerun claw host app-state projection with a valid --${flagName} value.`,
+    });
+  }
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value)) {
+    throw new CliHandledError(code, `Expected --${flagName} to be a safe positive decimal integer, got ${raw}.`, CLI_EXIT_USAGE, {
+      suggestion: `Pass a positive decimal integer no larger than ${Number.MAX_SAFE_INTEGER}.`,
+      safeNextStep: `Rerun claw host app-state projection with a valid --${flagName} value.`,
+    });
+  }
+  return value;
 }
