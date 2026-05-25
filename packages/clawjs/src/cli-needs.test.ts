@@ -62,6 +62,19 @@ test("runCli rejects invalid need route limits instead of expanding work", async
   assert.equal(payload.error.code, "invalid_limit");
 });
 
+test("runCli reports corrupt need route ledgers as usage errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-needs-corrupt-ledger-"));
+  const ledgerPath = path.join(workspaceRoot, ".claw", "need-routes", "need-route-lab.json");
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.writeFileSync(ledgerPath, "{nope");
+
+  const result = await runCliCapture(["needs", "opportunities", "list", "--json"], workspaceRoot);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_need_route_ledger_json");
+});
+
 test("runCli dedupes and promotes need opportunities without executing external publication", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-needs-promote-"));
   await runCliCapture(["needs", "evaluate", "--save", "--json"], workspaceRoot);

@@ -272,7 +272,11 @@ function readNeedRouteLedger(workspaceRoot: string): NeedRouteLedger {
   if (!fs.existsSync(file)) {
     return { schemaVersion: 1, routes: [], evaluations: [], opportunities: [], updatedAt: new Date(0).toISOString() };
   }
-  return normalizeNeedRouteLedger(JSON.parse(fs.readFileSync(file, "utf8")));
+  try {
+    return normalizeNeedRouteLedger(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch {
+    throw new CliHandledError("invalid_need_route_ledger_json", `Need route ledger must contain valid JSON: ${file}`, CLI_EXIT_USAGE);
+  }
 }
 
 function normalizeNeedRouteLedger(value: unknown): NeedRouteLedger {
