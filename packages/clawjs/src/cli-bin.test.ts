@@ -63,6 +63,27 @@ test("package bin keeps help output parseable when json is requested", () => {
   assert.match(commandPayload.data.help, /Usage: claw system /);
 });
 
+test("package bin routes help topics through the canonical router", () => {
+  const textHelp = runClawBin(["help", "search"]);
+  assert.equal(textHelp.status, 0, textHelp.stderr);
+  assert.match(textHelp.stdout, /Usage: claw search /);
+  assert.doesNotMatch(textHelp.stdout, /Safe base commands:/);
+
+  const jsonHelp = runClawBin(["help", "search", "--json"]);
+  assert.equal(jsonHelp.status, 0, jsonHelp.stderr);
+  const payload = JSON.parse(jsonHelp.stdout) as {
+    ok: boolean;
+    data: { command: string; help: string };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.command, "search");
+  assert.match(payload.data.help, /Usage: claw search /);
+  assert.equal(payload.meta.canonicalCommand, "search");
+  assert.equal(payload.meta.invokedCommand, "help");
+  assert.equal(payload.meta.subcommand, "search");
+});
+
 test("package bin delegates inspect and collection discovery to the canonical router", () => {
   const commands = runClawBin(["inspect", "commands", "--json"]);
   assert.equal(commands.status, 0, commands.stderr);

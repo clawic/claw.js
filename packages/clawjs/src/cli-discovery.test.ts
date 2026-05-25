@@ -659,6 +659,23 @@ test("runCli returns registry help JSON when a command needs a subcommand", asyn
   }
 });
 
+test("runCli routes help topics to command help", async () => {
+  const jsonHelp = await runCliCapture(["help", "search", "--json"], process.cwd());
+  assert.equal(jsonHelp.code, CLI_EXIT_OK);
+  const jsonPayload = JSON.parse(jsonHelp.stdout) as { ok: boolean; data: { command: string; help: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(jsonPayload.ok, true);
+  assert.equal(jsonPayload.data.command, "search");
+  assert.match(jsonPayload.data.help, /Usage: claw search /);
+  assert.equal(jsonPayload.meta.canonicalCommand, "search");
+  assert.equal(jsonPayload.meta.invokedCommand, "help");
+  assert.equal(jsonPayload.meta.subcommand, "search");
+
+  const textHelp = await runCliCapture(["help", "search"], process.cwd());
+  assert.equal(textHelp.code, CLI_EXIT_OK);
+  assert.match(textHelp.stdout, /Usage: claw search /);
+  assert.doesNotMatch(textHelp.stdout, /Usage: claw <command> \[options\]/);
+});
+
 test("runCli returns agents codex JSON in the common envelope", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-agents-json-"));
   useIsolatedClawDataRoot(t, workspaceRoot);

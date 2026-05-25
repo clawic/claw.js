@@ -86,20 +86,26 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (removedPublicCommandExit !== null) return removedPublicCommandExit;
 
   if (wantsHelp || group === "help") {
+    const helpTarget = group === "help" ? command : group;
     if (wantsJson) {
-      if (!group || group === "help") {
+      if (!helpTarget) {
         writeCommandJsonOk(context.stdout, "claw", { command: "claw", help: usage }, { invokedCommand: group ?? "claw", subcommand: command ?? null });
         return CLI_EXIT_OK;
       }
-      const commandHelp = buildCommandHelp(binName, group);
-      writeCommandJsonOk(context.stdout, canonicalCommand, { command: canonicalCommand, help: commandHelp ?? usage }, { invokedCommand: group, subcommand: command ?? null, ...(subcommand ? { operation: subcommand } : {}) });
+      const targetCanonicalCommand = canonicalCommandFor(helpTarget);
+      const commandHelp = buildCommandHelp(binName, helpTarget);
+      writeCommandJsonOk(context.stdout, targetCanonicalCommand, { command: targetCanonicalCommand, help: commandHelp ?? usage }, {
+        invokedCommand: group ?? helpTarget,
+        subcommand: group === "help" ? helpTarget : command ?? null,
+        ...(subcommand ? { operation: subcommand } : {}),
+      });
       return CLI_EXIT_OK;
     }
-    if (!group || group === "help") {
+    if (!helpTarget) {
       context.stdout.write(`${usage}\n`);
       return CLI_EXIT_OK;
     }
-    const commandHelp = buildCommandHelp(binName, group);
+    const commandHelp = buildCommandHelp(binName, helpTarget);
     context.stdout.write(`${commandHelp ?? usage}\n`);
     return CLI_EXIT_OK;
   }
