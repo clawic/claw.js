@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import type { TestContext } from "vitest";
+import Database from "better-sqlite3";
 
 import { clawStorageApiRoutes } from "@clawjs/core";
 
@@ -185,6 +186,36 @@ test("local storage shares through a configured adapter", async (t) => {
   assert.equal(share.legalLabel, "Exported content - human reviewed");
   assert.equal(share.approvalId, "approval_storage_share");
   assert.equal(await storage.revokeShare(share.id), true);
+});
+
+test("local storage indexes blob reference cleanup lookups", (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-blob-indexes-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+  t.after(() => storage.close());
+
+  storage.writeText({ key: "notes/a.txt", content: "a" });
+
+  const sqlite = new Database(path.join(workspaceDir, ".data", "drive.sqlite"));
+  t.after(() => sqlite.close());
+
+  const objectIndexes = sqlite.prepare("PRAGMA index_list(storage_objects)").all() as Array<{ name: string }>;
+  assert.equal(objectIndexes.some((index) => index.name === "storage_objects_blob_path_idx"), true);
+
+  const shareIndexes = sqlite.prepare("PRAGMA index_list(storage_shares)").all() as Array<{ name: string }>;
+  assert.equal(shareIndexes.some((index) => index.name === "storage_shares_snapshot_blob_path_idx"), true);
+
+  const objectPlan = sqlite
+    .prepare("EXPLAIN QUERY PLAN SELECT COUNT(*) AS count FROM storage_objects WHERE blob_path = ?")
+    .all("aa/blob") as Array<{ detail: string }>;
+  assert.equal(objectPlan.some((row) => row.detail.includes("storage_objects_blob_path_idx")), true);
+  assert.equal(objectPlan.some((row) => row.detail.includes("SCAN storage_objects")), false);
+
+  const sharePlan = sqlite
+    .prepare("EXPLAIN QUERY PLAN SELECT COUNT(*) AS count FROM storage_shares WHERE snapshot_blob_path = ?")
+    .all("bb/blob") as Array<{ detail: string }>;
+  assert.equal(sharePlan.some((row) => row.detail.includes("storage_shares_snapshot_blob_path_idx")), true);
+  assert.equal(sharePlan.some((row) => row.detail.includes("SCAN storage_shares")), false);
 });
 
 test("local storage share ttlMs must be a positive safe integer", async (t) => {
