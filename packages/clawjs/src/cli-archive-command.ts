@@ -337,29 +337,49 @@ function isPortableArchiveManifest(value: unknown): value is PortableArchiveMani
 }
 
 function writeLocalArchive(archivePath: string, manifest: PortableArchiveManifestV1): { manifestPath: string; verification: PortableArchiveVerificationReport } {
-  fs.mkdirSync(archivePath, { recursive: true });
-  const materialized = materializeReceiptFiles(archivePath, materializeManifestFiles(archivePath, manifest));
   const manifestPath = path.join(archivePath, PORTABLE_ARCHIVE_MANIFEST_PATH);
+  const materializedInventory = materializeManifestFiles(archivePath, manifest, manifest.createdAt);
+  if (materializedInventory.verification) {
+    return { manifestPath, verification: materializedInventory.verification };
+  }
+  fs.mkdirSync(archivePath, { recursive: true });
+  const materialized = materializeReceiptFiles(archivePath, materializedInventory.manifest);
   fs.writeFileSync(manifestPath, `${JSON.stringify(materialized, null, 2)}\n`, "utf8");
   return { manifestPath, verification: verifyLocalArchive(archivePath, materialized, materialized.createdAt) };
 }
 
-function materializeManifestFiles(archivePath: string, manifest: PortableArchiveManifestV1): PortableArchiveManifestV1 {
-  const inventory = manifest.inventory.map((entry) => {
+function materializeManifestFiles(
+  archivePath: string,
+  manifest: PortableArchiveManifestV1,
+  checkedAt: string,
+): { manifest: PortableArchiveManifestV1; verification?: PortableArchiveVerificationReport } {
+  const prepared = manifest.inventory.map((entry) => {
     if (entry.restoreStrategy === "reference_external" || entry.restoreStrategy === "rebuild_from_canonical") return entry;
     const portablePath = normalizePortablePath(entry.portablePath, entry.id, entry.format);
+    const absolutePath = path.resolve(archivePath, portablePath);
+    return { ...entry, portablePath, absolutePath };
+  });
+  const escapeIssues = prepared.flatMap((entry) => {
+    if (!("absolutePath" in entry) || isInside(archivePath, entry.absolutePath)) return [];
+    return [archivePathEscapeIssue(entry.id, entry.portablePath)];
+  });
+  if (escapeIssues.length > 0) {
+    return { manifest, verification: archivePathEscapeVerification(manifest, checkedAt, escapeIssues) };
+  }
+
+  const inventory = prepared.map((entry) => {
+    if (!("absolutePath" in entry)) return entry;
     const body = archivePayloadForEntry(entry.id, entry.kind);
-    const absolutePath = path.join(archivePath, portablePath);
-    fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
-    fs.writeFileSync(absolutePath, body, "utf8");
+    fs.mkdirSync(path.dirname(entry.absolutePath), { recursive: true });
+    fs.writeFileSync(entry.absolutePath, body, "utf8");
+    const { absolutePath: _absolutePath, ...materializedEntry } = entry;
     return {
-      ...entry,
-      portablePath,
+      ...materializedEntry,
       bytes: Buffer.byteLength(body),
       hash: { algorithm: "sha256" as const, value: sha256(body) },
     };
   });
-  return { ...manifest, inventory };
+  return { manifest: { ...manifest, inventory } };
 }
 
 function materializeReceiptFiles(archivePath: string, manifest: PortableArchiveManifestV1): PortableArchiveManifestV1 {
@@ -390,7 +410,7 @@ function verifyLocalArchive(archivePath: string, manifest: unknown, checkedAt: s
     if (!entry.hash || entry.restoreStrategy === "reference_external" || entry.restoreStrategy === "rebuild_from_canonical") continue;
     const absolutePath = path.join(archivePath, entry.portablePath);
     if (!isInside(archivePath, absolutePath)) {
-      issues.push({ code: "archive_path_escape", severity: "error", message: `${entry.id} escapes the archive root.`, path: entry.portablePath });
+      issues.push(archivePathEscapeIssue(entry.id, entry.portablePath));
       continue;
     }
     if (!fs.existsSync(absolutePath)) {
@@ -429,6 +449,24 @@ function normalizePortablePath(portablePath: string, id: string, format: string)
   if (portablePath.includes("*")) return portablePath.replace("*", id).replace(/\/$/, `/${id}${extension}`);
   if (portablePath.endsWith("/")) return `${portablePath}${id}${extension}`;
   return portablePath;
+}
+
+function archivePathEscapeVerification(
+  manifest: PortableArchiveManifestV1,
+  checkedAt: string,
+  escapeIssues: PortableArchiveVerificationReport["issues"],
+): PortableArchiveVerificationReport {
+  const base = verifyPortableArchiveManifest(manifest, checkedAt);
+  const issues = [...base.issues, ...escapeIssues];
+  return portableArchiveVerificationReportSchema.parse({
+    ...base,
+    status: "failed",
+    issues,
+  });
+}
+
+function archivePathEscapeIssue(id: string, portablePath: string): PortableArchiveVerificationReport["issues"][number] {
+  return { code: "archive_path_escape", severity: "error", message: `${id} escapes the archive root.`, path: portablePath };
 }
 
 function archivePayloadForEntry(id: string, kind: PortableArchiveManifestV1["inventory"][number]["kind"]): string {
