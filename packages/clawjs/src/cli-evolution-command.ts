@@ -230,9 +230,9 @@ function readEvolutionFixtures(directory: string): ClawEvolutionVersionFixture[]
     .map((entry) => readEvolutionJson(path.join(directory, entry), "invalid_evolution_fixture_json", clawEvolutionVersionFixtureSchema));
 }
 
-function readEvolutionJson<TValue>(file: string, code: string, schema: z.ZodType<TValue>): TValue {
+function readEvolutionJson<TSchema extends z.ZodTypeAny>(file: string, code: string, schema: TSchema): z.infer<TSchema> {
   try {
-    return schema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+    return schema.parse(JSON.parse(fs.readFileSync(file, "utf8"))) as z.infer<TSchema>;
   } catch (error) {
     throw new CliHandledError(code, `Invalid evolution JSON at ${file}: ${error instanceof Error ? error.message : "parse error"}`, CLI_EXIT_USAGE);
   }
