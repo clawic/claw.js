@@ -30,6 +30,7 @@ test("local storage scopes objects by agent prefix and rejects unsafe keys", (t)
   assert.equal(object.key, "agents/agent-a/notes/plan.txt");
   assert.equal(storage.readText({ key: "notes/plan.txt" }), "ship storage");
   assert.equal(storage.list().length, 1);
+  assert.deepEqual(storage.list({ prefix: "notes" }).map((entry) => entry.key), ["agents/agent-a/notes/plan.txt"]);
   assert.throws(() => storage.writeText({ key: "../escape.txt", content: "no" }), /Invalid storage key/);
 });
 

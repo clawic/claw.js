@@ -445,7 +445,11 @@ export class LocalStorageStore {
   }
 
   private resolvePrefix(prefix?: string): string {
-    if (prefix?.trim()) return normalizePrefix(prefix);
+    if (prefix?.trim()) {
+      const normalized = normalizePrefix(prefix);
+      if (this.options.rawKeys || normalized.startsWith("agents/") || normalized.startsWith("shared/")) return normalized;
+      return `agents/${this.options.agentId}/${normalized}`;
+    }
     if (this.options.ownerMode) return "";
     return `agents/${this.options.agentId}/`;
   }
