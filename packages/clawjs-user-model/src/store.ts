@@ -86,6 +86,39 @@ function parseJson<T>(value: string | null): T | null {
   }
 }
 
+function parseUserProfileSnapshot(value: string): UserProfileSnapshot | null {
+  const parsed = parseJson<unknown>(value);
+  if (!isRecord(parsed)) return null;
+  if (!Array.isArray(parsed.items)) return null;
+  if (typeof parsed.capturedAt !== "number") return null;
+  if (parsed.lastRefreshAt !== null && typeof parsed.lastRefreshAt !== "number") return null;
+  const items = parsed.items.filter(isUserProfileItem);
+  if (items.length !== parsed.items.length) return null;
+  return {
+    items,
+    capturedAt: parsed.capturedAt,
+    lastRefreshAt: parsed.lastRefreshAt,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUserProfileItem(value: unknown): value is UserProfileItem {
+  if (!isRecord(value)) return false;
+  if (typeof value.id !== "string") return false;
+  if (!USER_MODEL_SECTIONS.includes(value.section as UserModelSection)) return false;
+  if (typeof value.contentText !== "string") return false;
+  if (value.confidence !== null && typeof value.confidence !== "number") return false;
+  if (typeof value.source !== "string") return false;
+  if (value.topic !== null && typeof value.topic !== "string") return false;
+  if (typeof value.createdAt !== "number") return false;
+  if (typeof value.updatedAt !== "number") return false;
+  if (value.metadata !== null && !isRecord(value.metadata)) return false;
+  return true;
+}
+
 function rowToItem(row: ItemRow): UserProfileItem {
   return {
     id: row.id,
@@ -288,12 +321,18 @@ export class UserModelServiceStore {
     const rows = this.db.prepare(
       "SELECT * FROM user_profile_history ORDER BY snapshot_at DESC LIMIT ?",
     ).all(Math.min(limit, 500)) as HistoryRow[];
-    return rows.map((row) => ({
-      id: row.id,
-      snapshot: JSON.parse(row.snapshot_json) as UserProfileSnapshot,
-      snapshotAt: row.snapshot_at,
-      reason: row.reason,
-    }));
+    const history: UserProfileHistoryRecord[] = [];
+    for (const row of rows) {
+      const snapshot = parseUserProfileSnapshot(row.snapshot_json);
+      if (!snapshot) continue;
+      history.push({
+        id: row.id,
+        snapshot,
+        snapshotAt: row.snapshot_at,
+        reason: row.reason,
+      });
+    }
+    return history;
   }
 
   setRefreshMetadata(reason?: string | null): void {
@@ -319,9 +358,14 @@ export class UserModelServiceStore {
       snapshot_json: string;
     }>;
     const update = this.db.prepare("UPDATE user_profile_history SET snapshot_json = ? WHERE id = ?");
+    const removeUnreadable = this.db.prepare("DELETE FROM user_profile_history WHERE id = ?");
 
     for (const row of rows) {
-      const snapshot = JSON.parse(row.snapshot_json) as UserProfileSnapshot;
+      const snapshot = parseUserProfileSnapshot(row.snapshot_json);
+      if (!snapshot) {
+        removeUnreadable.run(row.id);
+        continue;
+      }
       const retainedItems = snapshot.items.filter((item) => !forgottenIds.has(item.id));
       if (retainedItems.length === snapshot.items.length) {
         continue;
