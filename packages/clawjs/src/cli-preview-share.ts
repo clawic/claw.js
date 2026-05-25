@@ -59,6 +59,13 @@ function resolvePreviewShareTtlMs(flags: Record<string, string>): number {
   return parsed;
 }
 
+function parseCanonicalDecimalPort(value: string): number | null {
+  if (!/^(0|[1-9][0-9]*)$/.test(value)) return null;
+  const port = Number(value);
+  if (port < 0 || port > 65535) return null;
+  return port;
+}
+
 function resolveLanAdvertiseHost(flags: Record<string, string>): string {
   if (flags["advertise-host"]?.trim()) return flags["advertise-host"].trim();
   if (flags.host?.trim() && flags.host.trim() !== "0.0.0.0") return flags.host.trim();
@@ -216,9 +223,9 @@ export async function runLanPreviewShare(input: {
   dryRun: boolean;
 }): Promise<number> {
   const ttlMs = resolvePreviewShareTtlMs(input.flags);
-  const listenPort = Number(input.flags["share-port"] || input.flags["listen-port"] || "0");
-  if (!Number.isInteger(listenPort) || listenPort < 0 || listenPort > 65535) {
-    throw new CliHandledError("usage_error", "--share-port must be a valid TCP port.", CLI_EXIT_USAGE);
+  const listenPort = parseCanonicalDecimalPort(input.flags["share-port"] ?? input.flags["listen-port"] ?? "0");
+  if (listenPort === null) {
+    throw new CliHandledError("usage_error", "--share-port/--listen-port must be a canonical decimal TCP port.", CLI_EXIT_USAGE);
   }
 
   const serverReachable = await probeHttpServer(input.targetUrl);

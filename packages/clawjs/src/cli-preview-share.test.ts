@@ -55,23 +55,30 @@ test("preview share rejects invalid explicit share URLs", async () => {
 });
 
 test("preview share validates LAN listen port before probing target", async () => {
-  const result = await runCliCapture([
-    "preview",
-    "share",
-    "--mode",
-    "lan",
-    "--url",
-    "http://127.0.0.1:1",
-    "--share-port",
-    "nope",
-    "--dry-run",
-    "--json",
-  ], process.cwd());
+  for (const [flag, value] of [
+    ["--share-port", "1e3"],
+    ["--share-port", "0x10"],
+    ["--share-port", "1.0"],
+    ["--listen-port", "1e3"],
+  ] as const) {
+    const result = await runCliCapture([
+      "preview",
+      "share",
+      "--mode",
+      "lan",
+      "--url",
+      "http://127.0.0.1:1",
+      flag,
+      value,
+      "--dry-run",
+      "--json",
+    ], process.cwd());
 
-  assert.equal(result.code, CLI_EXIT_USAGE);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string; status: string } };
-  assert.equal(payload.ok, false);
-  assert.equal(payload.error.code, "usage_error");
-  assert.equal(payload.error.status, "USAGE");
-  assert.match(payload.error.message, /--share-port/);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "usage_error");
+    assert.equal(payload.error.status, "USAGE");
+    assert.match(payload.error.message, /--share-port/);
+  }
 });
