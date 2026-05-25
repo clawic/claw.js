@@ -66,3 +66,37 @@ test("ChannelRunStore records stop requests and failed recovery state", () => {
   assert.equal(failed?.status, "failed");
   assert.equal(failed?.lastError, "runtime failed");
 });
+
+test("ChannelRunStore normalizes non-finite numeric options", () => {
+  const { sessions, runs } = fixture();
+  const session = sessions.createSession("Telegram numeric options");
+  const run = runs.resolveOrCreateChannelRun({
+    provider: "telegram",
+    accountId: "test-account",
+    targetId: "test-chat-003",
+    sessionId: session.sessionId,
+    options: {
+      coalescingWindowMs: Number.NaN,
+      compactionThresholdChars: Number.POSITIVE_INFINITY,
+      maxRecentMessages: 2.9,
+    },
+  });
+
+  assert.equal(run.coalescingWindowMs, 1_500);
+  assert.equal(run.compactionThresholdChars, 32_000);
+  assert.equal(run.maxRecentMessages, 2);
+
+  sessions.appendMessage(session.sessionId, { role: "user", content: "alpha" });
+  sessions.appendMessage(session.sessionId, { role: "assistant", content: "beta" });
+  sessions.appendMessage(session.sessionId, { role: "user", content: "gamma" });
+  const compacted = runs.compactChannelSession({
+    runKey: run.runKey,
+    sessionId: session.sessionId,
+    maxRecentMessages: Number.NaN,
+    maxSummaryChars: Number.POSITIVE_INFINITY,
+    force: true,
+  });
+
+  assert.equal(compacted.compacted, true);
+  assert.match(compacted.summary, /Earlier conversation summary/);
+});

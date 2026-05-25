@@ -75,6 +75,11 @@ function normalizeAccountId(value: string | undefined): string {
   return value?.trim() || "default";
 }
 
+function positiveInteger(value: number | undefined, fallback: number): number {
+  if (value === undefined || !Number.isFinite(value)) return fallback;
+  return Math.max(1, Math.floor(value));
+}
+
 export function resolveChannelRunKey(input: ChannelRunTarget): string {
   return [
     input.provider,
@@ -165,9 +170,9 @@ export class ChannelRunStore {
           sessionId: input.sessionId,
           queuePolicy: input.options?.queuePolicy ?? existing.queuePolicy ?? "coalesce",
           deliveryMode: input.options?.deliveryMode ?? existing.deliveryMode ?? "final",
-          coalescingWindowMs: input.options?.coalescingWindowMs ?? existing.coalescingWindowMs ?? DEFAULT_COALESCING_WINDOW_MS,
-          compactionThresholdChars: input.options?.compactionThresholdChars ?? existing.compactionThresholdChars ?? DEFAULT_COMPACTION_THRESHOLD_CHARS,
-          maxRecentMessages: input.options?.maxRecentMessages ?? existing.maxRecentMessages ?? DEFAULT_MAX_RECENT_MESSAGES,
+          coalescingWindowMs: positiveInteger(input.options?.coalescingWindowMs, positiveInteger(existing.coalescingWindowMs, DEFAULT_COALESCING_WINDOW_MS)),
+          compactionThresholdChars: positiveInteger(input.options?.compactionThresholdChars, positiveInteger(existing.compactionThresholdChars, DEFAULT_COMPACTION_THRESHOLD_CHARS)),
+          maxRecentMessages: positiveInteger(input.options?.maxRecentMessages, positiveInteger(existing.maxRecentMessages, DEFAULT_MAX_RECENT_MESSAGES)),
           updatedAt: timestamp,
         };
         state.runs[runKey] = next;
@@ -184,9 +189,9 @@ export class ChannelRunStore {
         queuePolicy: input.options?.queuePolicy ?? "coalesce",
         deliveryMode: input.options?.deliveryMode ?? "final",
         queue: [],
-        coalescingWindowMs: input.options?.coalescingWindowMs ?? DEFAULT_COALESCING_WINDOW_MS,
-        compactionThresholdChars: input.options?.compactionThresholdChars ?? DEFAULT_COMPACTION_THRESHOLD_CHARS,
-        maxRecentMessages: input.options?.maxRecentMessages ?? DEFAULT_MAX_RECENT_MESSAGES,
+        coalescingWindowMs: positiveInteger(input.options?.coalescingWindowMs, DEFAULT_COALESCING_WINDOW_MS),
+        compactionThresholdChars: positiveInteger(input.options?.compactionThresholdChars, DEFAULT_COMPACTION_THRESHOLD_CHARS),
+        maxRecentMessages: positiveInteger(input.options?.maxRecentMessages, DEFAULT_MAX_RECENT_MESSAGES),
         createdAt: timestamp,
         updatedAt: timestamp,
       };
@@ -287,9 +292,9 @@ export class ChannelRunStore {
         queuePolicy: input.options?.queuePolicy ?? "coalesce",
         deliveryMode: input.options?.deliveryMode ?? "final",
         queue: [],
-        coalescingWindowMs: input.options?.coalescingWindowMs ?? DEFAULT_COALESCING_WINDOW_MS,
-        compactionThresholdChars: input.options?.compactionThresholdChars ?? DEFAULT_COMPACTION_THRESHOLD_CHARS,
-        maxRecentMessages: input.options?.maxRecentMessages ?? DEFAULT_MAX_RECENT_MESSAGES,
+        coalescingWindowMs: positiveInteger(input.options?.coalescingWindowMs, DEFAULT_COALESCING_WINDOW_MS),
+        compactionThresholdChars: positiveInteger(input.options?.compactionThresholdChars, DEFAULT_COMPACTION_THRESHOLD_CHARS),
+        maxRecentMessages: positiveInteger(input.options?.maxRecentMessages, DEFAULT_MAX_RECENT_MESSAGES),
         createdAt: state.runs[runKey]?.createdAt ?? timestamp,
         updatedAt: timestamp,
       };
@@ -304,12 +309,12 @@ export class ChannelRunStore {
     if (!sessionId) return { run, summary: "", compacted: false };
     const session = this.sessionStore.getSession(sessionId);
     if (!session) return { run, summary: "", compacted: false };
-    const maxRecentMessages = input.maxRecentMessages ?? run?.maxRecentMessages ?? DEFAULT_MAX_RECENT_MESSAGES;
+    const maxRecentMessages = positiveInteger(input.maxRecentMessages, positiveInteger(run?.maxRecentMessages, DEFAULT_MAX_RECENT_MESSAGES));
     const olderMessages = session.messages.filter((message) => message.metadata?.source !== "channel-run-compaction").slice(0, Math.max(0, session.messages.length - maxRecentMessages));
     if (!input.force && olderMessages.length === 0) {
       return { run, summary: run?.summary ?? "", compacted: false };
     }
-    const summary = buildSummary(olderMessages.length > 0 ? olderMessages : session.messages, input.maxSummaryChars ?? 2_400);
+    const summary = buildSummary(olderMessages.length > 0 ? olderMessages : session.messages, positiveInteger(input.maxSummaryChars, 2_400));
     const summaryMessageId = `channel-compact-${hashStableId(`${sessionId}:${summary}`)}`;
     this.sessionStore.appendMessageOnce(sessionId, {
       id: summaryMessageId,
