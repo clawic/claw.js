@@ -6,6 +6,7 @@ import type { DatabaseServiceStore } from "@clawjs/database";
 import {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
+  V1_DATA_EXIT_USAGE,
   expandHome,
   normalizeDbRow,
   nowIso,
@@ -13,6 +14,7 @@ import {
   resolveClawjsDataRoot,
   usage,
   usageError,
+  writeError,
   writeSuccess,
 } from "./v1-data-core.ts";
 import type { V1DataCliInput } from "./v1-data-core.ts";
@@ -37,6 +39,10 @@ export function runProviderRoutingCommand(input: V1DataCliInput, store: Database
       return usageError(input, "Usage: claw providers routing set FEATURE --capability CAP --provider PROVIDER [--model MODEL] [--account-ref REF]");
     }
     const id = input.flags.id || `${feature}:${capability}`;
+    const policyJson = parseProviderJsonFlag(input, "policy", "routing");
+    if (policyJson === null) return V1_DATA_EXIT_USAGE;
+    const metadataJson = parseProviderJsonFlag(input, "metadata", "routing");
+    if (metadataJson === null) return V1_DATA_EXIT_USAGE;
     const now = nowIso();
     store.sqlite.prepare(`
       INSERT INTO provider_routing (id, feature, capability, provider, model, account_ref, policy_json, metadata_json, created_at, updated_at)
@@ -51,8 +57,8 @@ export function runProviderRoutingCommand(input: V1DataCliInput, store: Database
       provider,
       input.flags.model || null,
       input.flags["account-ref"] || null,
-      input.flags.policy ? JSON.stringify(JSON.parse(input.flags.policy)) : "{}",
-      input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}",
+      policyJson,
+      metadataJson,
       now,
       now,
     );
@@ -116,6 +122,10 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
       return usageError(input, "Usage: claw providers settings set PROVIDER --enabled true|false [--json]");
     }
     const id = input.flags.id || `provider:${provider}`;
+    const policyJson = parseProviderJsonFlag(input, "policy", "settings");
+    if (policyJson === null) return V1_DATA_EXIT_USAGE;
+    const metadataJson = parseProviderJsonFlag(input, "metadata", "settings");
+    if (metadataJson === null) return V1_DATA_EXIT_USAGE;
     const now = nowIso();
     store.sqlite.prepare(`
       INSERT INTO provider_settings (id, provider, enabled, policy_json, metadata_json, created_at, updated_at)
@@ -127,8 +137,8 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
       id,
       provider,
       enabled ? 1 : 0,
-      input.flags.policy ? JSON.stringify(JSON.parse(input.flags.policy)) : "{}",
-      input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}",
+      policyJson,
+      metadataJson,
       now,
       now,
     );
@@ -173,6 +183,17 @@ function parseProviderEnabledFlag(value: string): boolean | null {
   if (["true", "1", "yes"].includes(normalized)) return true;
   if (["false", "0", "no"].includes(normalized)) return false;
   return null;
+}
+
+function parseProviderJsonFlag(input: V1DataCliInput, flag: "policy" | "metadata", surface: "routing" | "settings"): string | null {
+  const value = input.flags[flag];
+  if (value === undefined) return "{}";
+  try {
+    return JSON.stringify(JSON.parse(value));
+  } catch {
+    writeError(input, `invalid_provider_${surface}_${flag}_json`, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return null;
+  }
 }
 
 export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
