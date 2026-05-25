@@ -1017,6 +1017,54 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     const payload = JSON.parse(stdout.getOutput()) as { data?: { runtimeId?: string } };
     assert.equal(payload.data?.runtimeId, "hermes", command.label);
   }
+  for (const invalidCommand of [
+    {
+      label: "missing Hermes resource domain",
+      args: ["runtime", "hermes", "resources"],
+      code: "missing_runtime_resource_domain",
+      operation: "resources",
+      domain: undefined,
+    },
+    {
+      label: "unknown Hermes resource domain",
+      args: ["runtime", "hermes", "resources", "unknown-domain"],
+      code: "unknown_runtime_resource_domain",
+      operation: "resources",
+      domain: "unknown-domain",
+    },
+    {
+      label: "missing Hermes domain",
+      args: ["runtime", "hermes", "domain"],
+      code: "missing_runtime_domain",
+      operation: "domain",
+      domain: undefined,
+    },
+    {
+      label: "unknown Hermes domain",
+      args: ["runtime", "hermes", "domain", "unknown-domain"],
+      code: "unknown_runtime_domain",
+      operation: "domain",
+      domain: "unknown-domain",
+    },
+  ]) {
+    const stdout = captureStream();
+    assert.equal(await runCli([...invalidCommand.args, "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_USAGE, invalidCommand.label);
+    const payload = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: { code?: string };
+      meta: { canonicalCommand?: string; operation?: string; runtimeId?: string; domain?: string };
+    };
+    assert.equal(payload.ok, false, invalidCommand.label);
+    assert.equal(payload.error.code, invalidCommand.code, invalidCommand.label);
+    assert.equal(payload.meta.canonicalCommand, "runtime", invalidCommand.label);
+    assert.equal(payload.meta.operation, invalidCommand.operation, invalidCommand.label);
+    assert.equal(payload.meta.runtimeId, "hermes", invalidCommand.label);
+    assert.equal(payload.meta.domain, invalidCommand.domain, invalidCommand.label);
+  }
 
   const adaptersStdout = captureStream();
   assert.equal(await runCli(["runtime", "adapters", "--json"], {
