@@ -520,7 +520,12 @@ function parsePolicy(effect: string, reason: string | undefined) {
 
 function parseJsonObjectFlag(value: string | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
-  const parsed = JSON.parse(value) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value) as unknown;
+  } catch {
+    throw new CliHandledError("invalid_json_object", "Expected a valid JSON object.", CLI_EXIT_USAGE);
+  }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new CliHandledError("invalid_json_object", "Expected a JSON object.", CLI_EXIT_USAGE);
   }

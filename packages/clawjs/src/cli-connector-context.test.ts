@@ -443,6 +443,26 @@ test("accounts preserve desired observed and verification metadata across edits"
   });
 });
 
+test("accounts reject invalid metadata JSON as usage", async () => {
+  const result = await withTempConnectorContext((cwd) => runCliCapture([
+    "accounts",
+    "upsert",
+    "google_play_app",
+    "--provider",
+    "google",
+    "--kind",
+    "app",
+    "--desired",
+    "{bad",
+    "--json",
+  ], cwd));
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_json_object");
+  assert.equal(payload.error.status, "USAGE");
+});
+
 test("accounts explain uses persisted context before fixtures", async () => {
   await withTempConnectorContext(async (cwd) => {
     await runCliCapture([
