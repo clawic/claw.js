@@ -1,4 +1,5 @@
 import { TEMPLATE_SCHEMA_VERSION, type TemplateManifest } from "./schema.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 
 const FRONTMATTER_OPEN = "---json";
 const FRONTMATTER_CLOSE = "---";
@@ -50,8 +51,25 @@ export function parseTemplateMd(content: string): TemplateManifest {
   const closeIndex = fromBody.indexOf(`\n${FRONTMATTER_CLOSE}`);
   if (closeIndex < 0) throw new Error(`TEMPLATE.md frontmatter missing closing '${FRONTMATTER_CLOSE}'`);
   const head = fromBody.slice(0, closeIndex);
-  const parsed = JSON.parse(head) as Partial<TemplateManifest>;
+  const parsed = parseTemplateFrontmatterJson(head);
   return normalizeTemplateManifest(parsed);
+}
+
+function parseTemplateFrontmatterJson(head: string): Partial<TemplateManifest> {
+  try {
+    return JSON.parse(head) as Partial<TemplateManifest>;
+  } catch (error) {
+    throw new CliHandledError(
+      "invalid_template_frontmatter_json",
+      `TEMPLATE.md frontmatter must be valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      CLI_EXIT_USAGE,
+      {
+        location: "template.frontmatter",
+        suggestion: "Fix the JSON block between the ---json and --- fences before reading the template.",
+        safeNextStep: "Validate TEMPLATE.md as JSON frontmatter, then rerun the template command with --json.",
+      },
+    );
+  }
 }
 
 export function normalizeTemplateManifest(input: Partial<TemplateManifest>): TemplateManifest {

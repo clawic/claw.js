@@ -1,4 +1,5 @@
 import { STYLE_SCHEMA_VERSION, type StyleManifest } from "./schema.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 
 const FRONTMATTER_OPEN = "---json";
 const FRONTMATTER_CLOSE = "---";
@@ -74,10 +75,27 @@ export function parseStyleMd(content: string): StyleManifest {
   if (closeIndex < 0) throw new Error(`STYLE.md frontmatter missing closing '${FRONTMATTER_CLOSE}'`);
   const head = fromBody.slice(0, closeIndex);
   const body = fromBody.slice(closeIndex + 1 + FRONTMATTER_CLOSE.length).replace(/^\s*\n/, "");
-  const parsed = JSON.parse(head) as Partial<StyleManifest>;
+  const parsed = parseStyleFrontmatterJson(head);
   const manifest = normalizeStyleManifest(parsed);
   const sectionalised = applyBodyToBrand(manifest, body);
   return sectionalised;
+}
+
+function parseStyleFrontmatterJson(head: string): Partial<StyleManifest> {
+  try {
+    return JSON.parse(head) as Partial<StyleManifest>;
+  } catch (error) {
+    throw new CliHandledError(
+      "invalid_style_frontmatter_json",
+      `STYLE.md frontmatter must be valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      CLI_EXIT_USAGE,
+      {
+        location: "style.frontmatter",
+        suggestion: "Fix the JSON block between the ---json and --- fences before importing the style.",
+        safeNextStep: "Validate STYLE.md as JSON frontmatter, then rerun claw style import --json.",
+      },
+    );
+  }
 }
 
 export function normalizeStyleManifest(input: Partial<StyleManifest>): StyleManifest {
