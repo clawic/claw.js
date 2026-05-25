@@ -238,6 +238,10 @@ const SCHEMA_DDL = `
   );
   CREATE INDEX IF NOT EXISTS idx_session_turn_summaries_session_time
     ON session_turn_summaries(session_id, started_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_session_turn_summaries_user_message
+    ON session_turn_summaries(session_id, user_message_id);
+  CREATE INDEX IF NOT EXISTS idx_session_turn_summaries_assistant_message
+    ON session_turn_summaries(session_id, assistant_message_id);
 
   CREATE TABLE IF NOT EXISTS session_projection_meta (
     session_id          TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
@@ -808,6 +812,8 @@ export class SessionsServiceStore {
     this.ensureColumn("session_turn_summaries", "status", "TEXT NOT NULL DEFAULT 'unknown'");
     this.ensureColumn("session_turn_summaries", "assistant_message_id", "TEXT");
     this.ensureColumn("session_turn_summaries", "user_message_id", "TEXT");
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_session_turn_summaries_user_message ON session_turn_summaries(session_id, user_message_id)").run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_session_turn_summaries_assistant_message ON session_turn_summaries(session_id, assistant_message_id)").run();
     this.ensureColumn("session_turn_summaries", "subagent_count", "INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("session_turn_summaries", "compacted", "INTEGER NOT NULL DEFAULT 0");
     this.ensureColumn("session_turn_summaries", "token_usage_json", "TEXT");
@@ -1133,15 +1139,12 @@ export class SessionsServiceStore {
       ? Math.min(requestedOffset, Math.max(0, session.messageCount - 1))
       : Math.max(0, session.messageCount - messageLimit);
     const messages = this.listMessages(session.id, messageLimit, messageOffset);
-    const visibleMessageIds = new Set(messages.map((message) => message.id));
-    const allSummaries = this.listTurnSummaries(session.id);
-    const matchedSummaries = allSummaries.filter((summary) => (
-      (summary.userMessageId !== null && visibleMessageIds.has(summary.userMessageId))
-      || (summary.assistantMessageId !== null && visibleMessageIds.has(summary.assistantMessageId))
-    ));
-    const summarySource = matchedSummaries.length > 0 ? matchedSummaries : allSummaries;
     const summaryLimit = clampInt(input.summaryLimit, 1, MAX_EVENT_LIST_LIMIT, DEFAULT_EVENT_LIST_LIMIT);
-    const turnSummaries = summarySource.slice(0, summaryLimit);
+    const visibleMessageIds = messages.map((message) => message.id);
+    const matchedSummaries = this.listTurnSummariesForMessageIds(session.id, visibleMessageIds, summaryLimit);
+    const turnSummaries = matchedSummaries.length > 0
+      ? matchedSummaries
+      : this.listTurnSummaries(session.id, undefined, summaryLimit);
     const projectionMeta = this.getProjectionMeta(session.id);
     const dynamicTools = this.listSessionDynamicTools(session.id, { includeDeferredSchemas: false });
     const events = input.includeEvents
@@ -1671,7 +1674,7 @@ export class SessionsServiceStore {
     }));
   }
 
-  listTurnSummaries(sessionId: string, turnIds?: string[]): SessionTurnSummaryRecord[] {
+  listTurnSummaries(sessionId: string, turnIds?: string[], limit?: number): SessionTurnSummaryRecord[] {
     const params: Record<string, unknown> = { session_id: sessionId };
     let turnFilter = "";
     if (turnIds?.length) {
@@ -1679,11 +1682,38 @@ export class SessionsServiceStore {
       turnIds.forEach((turnId, index) => { params[`turn_id_${index}`] = turnId; });
       turnFilter = `AND turn_id IN (${placeholders.join(", ")})`;
     }
+    const resolvedLimit = limit === undefined ? null : clampInt(limit, 1, MAX_EVENT_LIST_LIMIT, DEFAULT_EVENT_LIST_LIMIT);
     const rows = this.db.prepare(`
       SELECT * FROM session_turn_summaries
       WHERE session_id = @session_id
       ${turnFilter}
       ORDER BY started_at ASC, turn_id ASC
+      ${resolvedLimit === null ? "" : "LIMIT @limit"}
+    `).all(resolvedLimit === null ? params : { ...params, limit: resolvedLimit }) as TurnSummaryRow[];
+    return rows.map(rowToTurnSummary);
+  }
+
+  listTurnSummariesForMessageIds(sessionId: string, messageIds: string[], limit = DEFAULT_EVENT_LIST_LIMIT): SessionTurnSummaryRecord[] {
+    const uniqueMessageIds = [...new Set(messageIds.filter((id) => id.trim().length > 0))];
+    if (!uniqueMessageIds.length) return [];
+    const params: Record<string, unknown> = {
+      session_id: sessionId,
+      limit: clampInt(limit, 1, MAX_EVENT_LIST_LIMIT, DEFAULT_EVENT_LIST_LIMIT),
+    };
+    const placeholders = uniqueMessageIds.map((id, index) => {
+      const key = `message_id_${index}`;
+      params[key] = id;
+      return `@${key}`;
+    }).join(", ");
+    const rows = this.db.prepare(`
+      SELECT * FROM session_turn_summaries
+      WHERE session_id = @session_id
+        AND (
+          user_message_id IN (${placeholders})
+          OR assistant_message_id IN (${placeholders})
+        )
+      ORDER BY started_at ASC, turn_id ASC
+      LIMIT @limit
     `).all(params) as TurnSummaryRow[];
     return rows.map(rowToTurnSummary);
   }

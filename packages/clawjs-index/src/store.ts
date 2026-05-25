@@ -14,6 +14,7 @@ import type {
 } from "./types.ts";
 
 type IndexEventListener = (event: IndexEvent) => void;
+const MAX_ENTITY_QUERY_OFFSET = 5_000;
 
 function readSchema(): string {
   const candidates = [
@@ -396,6 +397,9 @@ export class IndexStore {
     const orderSql = `ORDER BY e.${order.field} ${order.direction.toUpperCase()}, e.id ${order.direction.toUpperCase()}`;
     const limit = Math.max(1, Math.min(500, Math.floor(input.limit ?? 200)));
     const offset = input.cursor ? 0 : Math.max(0, Math.floor(input.offset ?? 0));
+    if (offset > MAX_ENTITY_QUERY_OFFSET) {
+      throw new Error(`entity query offset is capped at ${MAX_ENTITY_QUERY_OFFSET}; use nextCursor for deep pagination`);
+    }
     const rows = this.db.prepare(`${this.selectEntity()} ${joins.join(" ")} ${where} ${orderSql} LIMIT ? OFFSET ?`).all(...params, limit + 1, offset);
     const entities = rows.slice(0, limit).map((r) => entityFromRow(r));
     const last = entities.at(-1);

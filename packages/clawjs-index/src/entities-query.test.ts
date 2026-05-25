@@ -119,3 +119,18 @@ test("entities/query pages with a stable cursor and rejects filter mismatches", 
     assert.match(mismatch.body.error, /cursor/i);
   });
 });
+
+test("entities/query rejects deep offset pagination in favor of cursors", async () => {
+  await withIndexApp(async (request) => {
+    await seedEntity(request, { type: "article", title: "Offset Cap", observedAt: "2026-05-21T10:00:00.000Z" });
+
+    const response = await request("POST", `${API}/entities/query`, {
+      type: "article",
+      limit: 100,
+      offset: 5_001,
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.match(response.body.error, /nextCursor/);
+  });
+});
