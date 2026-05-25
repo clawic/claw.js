@@ -2708,6 +2708,74 @@ function verifyHermesCreateRoundTrip(session: any, createdSessionId: unknown, re
   };
 }
 
+function verifyHermesMessageRoundTrip(session: any, sessionKey: unknown, message: unknown, action: string) {
+  const key = sessionKey ? String(sessionKey) : "";
+  const expected = typeof message === "string" ? message : "";
+  if (!key || !expected) {
+    return {
+      status: "missing_session_or_message",
+      writesRuntime: false,
+      checked: [],
+      safeDefault: "do_not_claim_message_round_trip_without_session_and_message",
+    };
+  }
+  if (!session?.sessionPath) {
+    return {
+      status: "unavailable_no_native_session_store",
+      id: key,
+      writesRuntime: false,
+      checked: [],
+      safeDefault: "keep_action_claim_unpromoted_until_native_store_can_be_read",
+    };
+  }
+
+  const resolved = resolveNativeSessionFromPath("hermes", session, key);
+  const nativeSessionId = resolved.found ? resolved.id : key;
+  const history = readHermesSqliteSessionMessages(session, nativeSessionId, true, 240);
+  if (!history) {
+    return {
+      status: "unavailable_no_sqlite_history",
+      id: nativeSessionId,
+      writesRuntime: false,
+      checked: ["sqlite_messages"],
+      safeDefault: "keep_action_claim_unpromoted_until_native_history_can_be_read",
+    };
+  }
+
+  const matched = history.messages.find((entry) => (
+    typeof entry.contentPreview === "string" && entry.contentPreview.includes(expected)
+  ));
+  if (matched) {
+    return {
+      status: "verified",
+      id: nativeSessionId,
+      matchedBy: "messageContent",
+      action,
+      writesRuntime: false,
+      messageIndex: matched.index,
+      messageRole: matched.role,
+      nativeIdentifier: { name: "sessionId" },
+      provenance: {
+        source: "runtime-session-sqlite",
+        runtimeId: "hermes",
+        path: session.sessionDatabasePath,
+        table: "messages",
+      },
+      checked: ["sqlite_messages"],
+    };
+  }
+
+  return {
+    status: "not_found",
+    id: nativeSessionId,
+    action,
+    writesRuntime: false,
+    totalAvailableInStore: history.totalAvailable,
+    checked: ["sqlite_messages"],
+    safeDefault: "keep_action_claim_fixture_or_production_round_trip_blocked_until_native_history_sees_message",
+  };
+}
+
 function isTruthyFlag(input, name: string) {
   return input.argv?.includes(`--${name}`) || input.flags[name] === "true";
 }
@@ -2956,6 +3024,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
             requestId: gateway.request.id,
             endpoint: gateway.endpoint,
           },
+          roundTripVerification: verifyHermesMessageRoundTrip(payload.domainData.sessions.session, sessionKey, message, action),
           gatewayResult: gateway.result,
         },
         supportContract,

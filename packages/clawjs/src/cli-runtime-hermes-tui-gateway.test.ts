@@ -38,6 +38,14 @@ async function createHermesTuiGatewayFixture(options: {
     if (payload.method === "session.title" && options.stateDatabasePath && sessionId) {
       updateHermesStateSessionTitle(options.stateDatabasePath, String(sessionId), String(payload.params?.title ?? ""));
     }
+    if ((payload.method === "prompt.submit" || payload.method === "session.steer") && options.stateDatabasePath && sessionId) {
+      insertHermesStateMessage(
+        options.stateDatabasePath,
+        String(sessionId),
+        payload.method === "prompt.submit" ? "user" : "system",
+        String(payload.params?.text ?? ""),
+      );
+    }
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({
       jsonrpc: "2.0",
@@ -117,6 +125,23 @@ function updateHermesStateSessionTitle(databasePath: string, sessionId: string, 
   const db = new BetterSqlite3(databasePath);
   try {
     db.prepare("UPDATE sessions SET title = ? WHERE id = ?").run(title, sessionId);
+  } finally {
+    db.close();
+  }
+}
+
+function insertHermesStateMessage(databasePath: string, sessionId: string, role: string, content: string) {
+  const db = new BetterSqlite3(databasePath);
+  try {
+    db.prepare("UPDATE sessions SET message_count = COALESCE(message_count, 0) + 1 WHERE id = ?").run(sessionId);
+    const count = db.prepare("SELECT COUNT(*) AS count FROM messages WHERE session_id = ?").get(sessionId) as { count?: number };
+    db.prepare("INSERT INTO messages (id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)").run(
+      `fixture-message-${Number(count.count ?? 0) + 1}`,
+      sessionId,
+      role,
+      content,
+      1779746100 + Number(count.count ?? 0),
+    );
   } finally {
     db.close();
   }
@@ -379,6 +404,68 @@ test("Hermes TUI gateway create round-trips through the official SQLite session 
     assert.equal(resolve.payload.data.result.matchedBy, "sessionTitle");
     assert.equal(resolve.payload.data.result.writesRuntime, false);
     assert.equal(resolve.payload.data.result.provenance.source, "runtime-session-sqlite");
+  } finally {
+    await gateway.close();
+  }
+});
+
+test("Hermes TUI gateway send and inject round-trip through native SQLite history fixture", async (t) => {
+  const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+  const stateDatabasePath = path.join(hermesHome, "state.db");
+  createHermesStateDatabase(stateDatabasePath);
+  insertHermesStateSession(stateDatabasePath, "message-roundtrip-session", "Message Round Trip Session");
+  const gateway = await createHermesTuiGatewayFixture({ stateDatabasePath });
+  try {
+    const common = [
+      "--gateway-url", gateway.url,
+      "--confirm-runtime-write",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ];
+
+    const send = await runHermesAction([
+      "runtime", "hermes", "sessions", "send",
+      "--session-key", "message-roundtrip-session",
+      "--message", "fixture visible message",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(send.exitCode), true);
+    assert.equal(send.payload.data.status, "ok");
+    assert.equal(send.payload.data.result.roundTripVerification.status, "verified");
+    assert.equal(send.payload.data.result.roundTripVerification.id, "message-roundtrip-session");
+    assert.equal(send.payload.data.result.roundTripVerification.matchedBy, "messageContent");
+    assert.equal(send.payload.data.result.roundTripVerification.messageRole, "user");
+    assert.equal(send.payload.data.result.roundTripVerification.writesRuntime, false);
+    assert.equal(send.payload.data.result.roundTripVerification.provenance.table, "messages");
+
+    const inject = await runHermesAction([
+      "runtime", "hermes", "sessions", "inject",
+      "--session-key", "message-roundtrip-session",
+      "--message", "fixture steering note",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(inject.exitCode), true);
+    assert.equal(inject.payload.data.status, "ok");
+    assert.equal(inject.payload.data.result.roundTripVerification.status, "verified");
+    assert.equal(inject.payload.data.result.roundTripVerification.messageRole, "system");
+    assert.equal(inject.payload.data.result.roundTripVerification.provenance.source, "runtime-session-sqlite");
+
+    const history = await runHermesAction([
+      "runtime", "hermes", "sessions", "history",
+      "--session-key", "message-roundtrip-session",
+      "--include-content",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(history.exitCode), true);
+    assert.equal(history.payload.data.result.messages.some((entry: { contentPreview?: string }) => entry.contentPreview === "fixture visible message"), true);
+    assert.equal(history.payload.data.result.messages.some((entry: { contentPreview?: string }) => entry.contentPreview === "fixture steering note"), true);
+    assert.deepEqual(gateway.requests.map((entry) => entry.method), [
+      "prompt.submit",
+      "session.steer",
+    ]);
   } finally {
     await gateway.close();
   }
