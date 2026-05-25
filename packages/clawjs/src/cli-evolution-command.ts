@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 
+import type { z } from "zod";
+
 import { clawEvolutionLedgerSchema, clawEvolutionPolicy, clawEvolutionPublicSurfaceBaselineSchema, clawEvolutionVersionFixtureSchema, createEvolutionOperatorPlan, createEvolutionPublicSurfaceBaseline, createEvolutionRepairReport, createEvolutionReceipt, createEvolutionRollbackReport, diffEvolutionPublicSurfaceBaseline, runEvolutionMigratorLab, summarizeEvolutionLedger } from "@clawjs/core";
 import { clawCliCommandRegistry, clawPersistentSurfaceRegistry } from "@clawjs/core/catalogs";
 import type { ClawEvolutionLedger, ClawEvolutionOperatorAction, ClawEvolutionPublicSurfaceBaseline, ClawEvolutionVersionFixture } from "@clawjs/core";
@@ -212,12 +214,12 @@ function readEvolutionLedger(file: string): ClawEvolutionLedger {
   if (!fs.existsSync(file)) {
     throw new CliHandledError("evolution_ledger_missing", `Missing evolution ledger at ${file}.`, CLI_EXIT_USAGE);
   }
-  return clawEvolutionLedgerSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+  return readEvolutionJson(file, "invalid_evolution_ledger_json", clawEvolutionLedgerSchema);
 }
 
 function readPublicSurfaceBaseline(file: string): ClawEvolutionPublicSurfaceBaseline | null {
   if (!fs.existsSync(file)) return null;
-  return clawEvolutionPublicSurfaceBaselineSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+  return readEvolutionJson(file, "invalid_evolution_public_surface_baseline_json", clawEvolutionPublicSurfaceBaselineSchema);
 }
 
 function readEvolutionFixtures(directory: string): ClawEvolutionVersionFixture[] {
@@ -225,7 +227,15 @@ function readEvolutionFixtures(directory: string): ClawEvolutionVersionFixture[]
   return fs.readdirSync(directory)
     .filter((entry) => entry.endsWith(".json"))
     .sort()
-    .map((entry) => clawEvolutionVersionFixtureSchema.parse(JSON.parse(fs.readFileSync(path.join(directory, entry), "utf8"))));
+    .map((entry) => readEvolutionJson(path.join(directory, entry), "invalid_evolution_fixture_json", clawEvolutionVersionFixtureSchema));
+}
+
+function readEvolutionJson<TValue>(file: string, code: string, schema: z.ZodType<TValue>): TValue {
+  try {
+    return schema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch (error) {
+    throw new CliHandledError(code, `Invalid evolution JSON at ${file}: ${error instanceof Error ? error.message : "parse error"}`, CLI_EXIT_USAGE);
+  }
 }
 
 function createCurrentPublicSurfaceBaseline(): ClawEvolutionPublicSurfaceBaseline {

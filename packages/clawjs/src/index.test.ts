@@ -526,6 +526,20 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(receiptPayload.receipt.notes.some((note) => note.includes("/Users/") || note.includes("prompt:")), false);
 });
 
+test("runCli reports malformed evolution ledger JSON as usage", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-evolution-invalid-json-"));
+  fs.mkdirSync(path.join(cwd, "docs", "evolution"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, "docs", "evolution", "baseline.json"), "{");
+
+  const result = await runCliCapture(["evolution", "verify", "--root", cwd, "--json"], cwd);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; message: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_evolution_ledger_json");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /docs\/evolution\/baseline\.json/);
+});
+
 test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets, providers and controls", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-cli-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");
