@@ -15,7 +15,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
@@ -43,7 +43,7 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
   const signedHostAvailable = readBooleanFlag(argv, input.flags, "signed-host", false);
   const sourceRoot = input.flags.root ?? input.flags["claw-home"] ?? input.context.cwd;
   const targetRoot = input.flags.target ?? "$CLAW_HOME.restore-preview";
-  const checkedAt = input.flags["checked-at"] ?? "2026-05-21T00:00:00.000Z";
+  const checkedAt = readCheckedAt(input.flags["checked-at"]);
   const archivePath = input.flags.archive ?? input.flags.input;
   const outputPath = input.flags.output;
   const resolvedArchivePath = archivePath ? resolvePath(input.context.cwd, archivePath) : undefined;
@@ -222,6 +222,19 @@ function writeArchiveResult(input: ArchiveCliInput, action: string, data: unknow
 
 function resolvePath(cwd: string, candidate: string): string {
   return path.isAbsolute(candidate) ? candidate : path.resolve(cwd, candidate);
+}
+
+function readCheckedAt(value: string | undefined): string {
+  const checkedAt = value ?? "2026-05-21T00:00:00.000Z";
+  if (Number.isNaN(Date.parse(checkedAt))) {
+    throw new CliHandledError("invalid_archive_checked_at", "--checked-at must be a valid date/time string.", CLI_EXIT_USAGE, {
+      location: "cli.archive.checked_at",
+      suggestion: "Pass --checked-at as an ISO timestamp such as 2026-05-21T00:00:00.000Z.",
+      safeNextStep: "Rerun the archive command with a valid --checked-at timestamp.",
+      details: { checkedAt },
+    });
+  }
+  return checkedAt;
 }
 
 function readManifestFromLocalArchive(archivePath: string, checkedAt: string): unknown {

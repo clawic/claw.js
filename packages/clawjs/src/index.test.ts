@@ -137,6 +137,21 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   assert.equal(plan.expectedManifest.format, ".clawbackup");
   assert.equal(plan.expectedManifest.manifestPath, "manifest.json");
 
+  const invalidCheckedAtStdout = captureStream();
+  assert.equal(await runCli(["archive", "plan", "--checked-at", "nope", "--json"], {
+    stdout: invalidCheckedAtStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+  const invalidCheckedAt = JSON.parse(invalidCheckedAtStdout.getOutput()) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(invalidCheckedAt.ok, false);
+  assert.equal(invalidCheckedAt.error.code, "invalid_archive_checked_at");
+  assert.equal(invalidCheckedAt.error.status, "USAGE");
+  assert.match(invalidCheckedAt.error.message, /--checked-at/);
+
   const verifyStdout = captureStream();
   assert.equal(await runCli(["archive", "verify", "--json"], {
     stdout: verifyStdout.stream,
