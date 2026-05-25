@@ -102,31 +102,23 @@ test("guidance match rejects invalid limits before matching", async (t) => {
   useIsolatedClawDataRoot(t, cwd);
   const guidanceDir = path.join(cwd, "guidance");
 
-  const invalidText = await runCliCapture([
-    "guidance", "match",
-    "--command", "resources list",
-    "--limit", "nope",
-    "--guidance-dir", guidanceDir,
-    "--json",
-  ], cwd);
-  assert.equal(invalidText.code, CLI_EXIT_USAGE);
-  const invalidTextPayload = JSON.parse(invalidText.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
-  assert.equal(invalidTextPayload.ok, false);
-  assert.equal(invalidTextPayload.error.code, "invalid_guidance_limit");
-  assert.equal(invalidTextPayload.error.status, "USAGE");
-  assert.equal(invalidTextPayload.error.location, "cli.guidance.limit");
+  for (const value of ["nope", "-1", "+1", "01", "1e2", "0x10", " 1", "1 "]) {
+    const result = await runCliCapture([
+      "guidance", "match",
+      "--command", "resources list",
+      "--limit", value,
+      "--guidance-dir", guidanceDir,
+      "--json",
+    ], cwd);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_guidance_limit");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.guidance.limit");
+  }
 
-  const negative = await runCliCapture([
-    "guidance", "match",
-    "--command", "resources list",
-    "--limit", "-1",
-    "--guidance-dir", guidanceDir,
-    "--json",
-  ], cwd);
-  assert.equal(negative.code, CLI_EXIT_USAGE);
-  const negativePayload = JSON.parse(negative.stdout) as { ok: boolean; error: { code: string } };
-  assert.equal(negativePayload.ok, false);
-  assert.equal(negativePayload.error.code, "invalid_guidance_limit");
+  assert.equal(fs.existsSync(path.join(guidanceDir, "guidance.json")), false);
 });
 
 test("guidance match rejects invalid actor and risk enum flags before matching", async (t) => {
@@ -288,6 +280,23 @@ test("guidance create rejects invalid enum and integer flags before writing stat
     assert.equal(payload.error.location, location);
   }
 
+  for (const value of ["+1", "01", "-0", "1e2", "0x10", " 1", "1 ", "9007199254740992"]) {
+    const result = await runCliCapture([
+      "guidance", "create",
+      "--title", "Bad guidance",
+      "--capsule", "This should not be written.",
+      "--priority", value,
+      "--guidance-dir", guidanceDir,
+      "--json",
+    ], cwd);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_guidance_priority");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.guidance.priority");
+  }
+
   assert.equal(fs.existsSync(path.join(guidanceDir, "guidance.json")), false);
 });
 
@@ -307,7 +316,7 @@ test("resources read rejects invalid max byte limits before reading", async (t) 
   assert.equal(registered.code, CLI_EXIT_OK);
   const registeredPayload = JSON.parse(registered.stdout) as { data: { id: string } };
 
-  for (const value of ["nope", "-1", "0", "256001"]) {
+  for (const value of ["nope", "-1", "0", "256001", "+1", "01", "1e2", "0x10", " 1", "1 "]) {
     const read = await runCliCapture([
       "resources", "read", registeredPayload.data.id,
       "--max-bytes", value,

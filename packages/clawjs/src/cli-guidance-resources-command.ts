@@ -293,8 +293,8 @@ function isResourceReadPayload(value: unknown): value is { content?: string } {
 }
 
 function parseNonNegativeIntegerFlag(value: string, label: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  const parsed = parseCanonicalDecimalInteger(value, { signed: false });
+  if (parsed === null || parsed < 0) {
     throw new CliHandledError("invalid_guidance_limit", `${label} must be a non-negative integer.`, CLI_EXIT_USAGE, {
       location: "cli.guidance.limit",
     });
@@ -303,8 +303,8 @@ function parseNonNegativeIntegerFlag(value: string, label: string): number {
 }
 
 function parseGuidancePriorityFlag(value: string): number {
-  const parsed = Number(value);
-  if (!value.trim() || !Number.isInteger(parsed)) {
+  const parsed = parseCanonicalDecimalInteger(value, { signed: true });
+  if (parsed === null) {
     throw new CliHandledError("invalid_guidance_priority", "guidance create --priority must be an integer.", CLI_EXIT_USAGE, {
       location: "cli.guidance.priority",
     });
@@ -334,12 +334,20 @@ function parseAllowedCsvFlag<TValue extends string>(
 }
 
 function parseResourceMaxBytesFlag(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 256_000) {
+  const parsed = parseCanonicalDecimalInteger(value, { signed: false });
+  if (parsed === null || parsed < 1 || parsed > 256_000) {
     throw new CliHandledError("invalid_resource_max_bytes", "resources read --max-bytes must be an integer between 1 and 256000.", CLI_EXIT_USAGE, {
       location: "cli.resources.max_bytes",
     });
   }
+  return parsed;
+}
+
+function parseCanonicalDecimalInteger(value: string, options: { signed: boolean }): number | null {
+  const pattern = options.signed ? /^-?(?:0|[1-9]\d*)$/ : /^(?:0|[1-9]\d*)$/;
+  if (!pattern.test(value) || value === "-0") return null;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) return null;
   return parsed;
 }
 
