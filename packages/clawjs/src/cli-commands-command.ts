@@ -32,8 +32,7 @@ export async function runCommandsCli(input: CommandsCliInput): Promise<number> {
   if (!action) return writeCommandsUsage(input);
 
   if (action === "resolve") {
-    const phrase = resolvePhrase(input, 2);
-    if (!phrase) throw new CliHandledError("missing_command_intent_phrase", `Usage: ${input.binName} commands resolve <phrase> --json`, CLI_EXIT_USAGE);
+    const phrase = requiredCommandText(resolvePhrase(input, 2), "missing_command_intent_phrase", `Usage: ${input.binName} commands resolve <phrase> --json`);
     const ledger = readCommandIntentLedger(input.workspaceRoot);
     return writeCommandsResult(input, {
       resolution: resolveClawCliCommandIntent({ phrase, ledgerEntries: ledger.intents }),
@@ -42,9 +41,8 @@ export async function runCommandsCli(input: CommandsCliInput): Promise<number> {
   }
 
   if (action === "record") {
-    const phrase = resolvePhrase(input, 2);
-    const purpose = input.flags.purpose || input.flags.for || input.flags.use;
-    if (!phrase || !purpose) throw new CliHandledError("missing_command_intent_record_fields", `Usage: ${input.binName} commands record --phrase <phrase> --purpose <purpose> --json`, CLI_EXIT_USAGE);
+    const phrase = requiredCommandText(resolvePhrase(input, 2), "missing_command_intent_record_fields", `Usage: ${input.binName} commands record --phrase <phrase> --purpose <purpose> --json`);
+    const purpose = requiredCommandText(input.flags.purpose || input.flags.for || input.flags.use, "missing_command_intent_record_fields", `Usage: ${input.binName} commands record --phrase <phrase> --purpose <purpose> --json`);
     const ledger = readCommandIntentLedger(input.workspaceRoot);
     const resolution = resolveClawCliCommandIntent({ phrase, ledgerEntries: ledger.intents });
     const status = parseStatus(input.flags.status) ?? resolution.status;
@@ -149,6 +147,12 @@ function writeCommandsResult(input: CommandsCliInput, data: unknown): number {
 
 function resolvePhrase(input: CommandsCliInput, startIndex: number): string {
   return input.flags.phrase || input.positionals.slice(startIndex).join(" ");
+}
+
+function requiredCommandText(value: string | undefined, code: string, message: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) throw new CliHandledError(code, message, CLI_EXIT_USAGE);
+  return trimmed;
 }
 
 function parseStatus(value: string | undefined): ClawCliCommandIntentStatus | undefined {

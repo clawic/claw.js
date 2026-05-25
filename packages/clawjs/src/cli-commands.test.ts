@@ -4,7 +4,7 @@ import path from "path";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 test("commands resolve returns the canonical future fixture without execution", async () => {
@@ -98,6 +98,44 @@ test("commands record writes only the explicit workspace ledger", async () => {
   const listPayload = JSON.parse(list.stdout) as { data: { intents: Array<{ id: string; phrase: string; source: string }> } };
   assert.deepEqual(listPayload.data.intents.map((entry) => entry.id), [recordPayload.data.record.id]);
   assert.equal(listPayload.data.intents[0]?.phrase, "archive client dashboard");
+});
+
+test("commands record rejects blank phrases and purposes before writing", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-command-intents-blank-"));
+
+  const blankPhrase = await runCliCapture([
+    "commands",
+    "record",
+    "--phrase",
+    "   ",
+    "--purpose",
+    "Explain the dashboard workflow.",
+    "--workspace",
+    workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(blankPhrase.code, CLI_EXIT_USAGE);
+  const blankPhrasePayload = JSON.parse(blankPhrase.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(blankPhrasePayload.ok, false);
+  assert.equal(blankPhrasePayload.error.code, "missing_command_intent_record_fields");
+  assert.equal(blankPhrasePayload.error.status, "USAGE");
+
+  const blankPurpose = await runCliCapture([
+    "commands",
+    "record",
+    "--phrase",
+    "dashboard explain",
+    "--purpose",
+    "   ",
+    "--workspace",
+    workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(blankPurpose.code, CLI_EXIT_USAGE);
+  const blankPurposePayload = JSON.parse(blankPurpose.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(blankPurposePayload.error.code, "missing_command_intent_record_fields");
+  assert.equal(blankPurposePayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "command-intents", "command-intents.json")), false);
 });
 
 test("commands list reports corrupt workspace ledgers as stable command errors", async () => {
