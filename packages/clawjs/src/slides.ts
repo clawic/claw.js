@@ -144,6 +144,7 @@ const SLIDE_H = 720;
 const PPTX_W = 12192000;
 const PPTX_H = 6858000;
 const SAFE_DECK_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const SLIDES_SUBCOMMANDS = ["create", "add", "validate", "delete", "render", "share", "themes", "layouts"] as const;
 
 type SlideThemeStyle = {
   bg: string;
@@ -379,7 +380,23 @@ export async function runSlidesCli(options: SlidesCliOptions): Promise<number> {
     return SLIDES_OK;
   }
 
-  context.stderr.write(`Usage: ${context.binName} slides create|add|validate|delete|render|share|themes|layouts\n`);
+  if (wantsJson) {
+    throw new CliHandledError(
+      "unknown_slides_subcommand",
+      command ? `Unknown slides subcommand: ${command}.` : "Missing slides subcommand.",
+      SLIDES_USAGE,
+      {
+        location: "cli.slides.subcommand",
+        suggestion: `Use one of: ${SLIDES_SUBCOMMANDS.join(", ")}.`,
+        safeNextStep: `Run ${context.binName} slides themes --json, ${context.binName} slides layouts --json, or ${context.binName} help slides --json.`,
+        details: {
+          received: command ?? null,
+          validSubcommands: [...SLIDES_SUBCOMMANDS],
+        },
+      },
+    );
+  }
+  context.stderr.write(`Usage: ${context.binName} slides ${SLIDES_SUBCOMMANDS.join("|")}\n`);
   return SLIDES_USAGE;
 }
 

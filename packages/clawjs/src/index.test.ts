@@ -111,6 +111,31 @@ test("slides add rejects invalid table rows JSON as usage", async () => {
   assert.match(payload.error.message, /--rows-json/);
 });
 
+test("slides returns JSON usage errors for unknown subcommands", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-slides-unknown-"));
+
+  const result = await runCliCapture(["slides", "definitely_missing", "--json"], cwd);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string | null; validSubcommands?: string[] };
+    };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_slides_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.slides.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw slides themes --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["create", "add", "validate", "delete", "render", "share", "themes", "layouts"]);
+});
+
 test("slides render rejects external deck ids that escape the output root", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-slides-safe-id-workspace-"));
   const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-slides-safe-id-external-"));

@@ -117,12 +117,6 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.deepEqual(maturityTierEnvelope.data.maturityOrder, ["incomplete", "experimental", "beta", "stable", "retired"]);
   assert.equal(maturityTierEnvelope.data.blockedCode, "maturity_blocked");
 
-  const invalidMaturity = await runCliCapture(["maturity", "unknown", "--json"], process.cwd());
-  assert.equal(invalidMaturity.code, CLI_EXIT_USAGE);
-  const invalidMaturityEnvelope = parseCliJson<unknown>(invalidMaturity.stdout);
-  assert.equal(invalidMaturityEnvelope.ok, false);
-  assert.equal(invalidMaturityEnvelope.error?.code, "invalid_maturity_action");
-
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());
   assert.equal(show.code, CLI_EXIT_OK);
   const coreDatabase = parseCliJson<{ id: string; path: string; incomingEdges?: unknown[]; outgoingEdges?: unknown[]; routes?: unknown[] }>(show.stdout).data;
@@ -200,6 +194,26 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.match(mermaid.stdout, /^flowchart TD/);
   assert.match(mermaid.stdout, /claw_database_core/);
   assert.match(mermaid.stdout, /claw_relay/);
+});
+
+test("maturity returns JSON usage errors for unknown subcommands", async () => {
+  const invalidMaturity = await runCliCapture(["maturity", "unknown", "--json"], process.cwd());
+  assert.equal(invalidMaturity.code, CLI_EXIT_USAGE);
+  const invalidMaturityEnvelope = parseCliJson<{
+    error: {
+      code: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string | null; validSubcommands?: string[] };
+    };
+  }>(invalidMaturity.stdout);
+  assert.equal(invalidMaturityEnvelope.ok, false);
+  assert.equal(invalidMaturityEnvelope.error?.code, "unknown_maturity_subcommand");
+  assert.equal(invalidMaturityEnvelope.error?.location, "cli.maturity.subcommand");
+  assert.equal(invalidMaturityEnvelope.error?.details?.received, "unknown");
+  assert.deepEqual(invalidMaturityEnvelope.error?.details?.validSubcommands, ["list", "show", "audit", "tier"]);
+  assert.match(invalidMaturityEnvelope.error?.safeNextStep ?? "", /maturity list --json/);
+  assert.match(invalidMaturityEnvelope.error?.safeNextStep ?? "", /help maturity --json/);
 });
 
 test("runCli exposes pre-v1 version governance through inspect", async () => {

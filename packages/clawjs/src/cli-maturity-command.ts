@@ -17,6 +17,7 @@ interface MaturityCliInput {
 
 const activationTierOrder = ["stable", "beta", "experimental", "dev"] as const;
 const maturityOrder = ["incomplete", "experimental", "beta", "stable", "retired"] as const;
+const MATURITY_SUBCOMMANDS = ["list", "show", "audit", "tier"] as const;
 
 export async function runMaturityCli(input: MaturityCliInput): Promise<number> {
   const action = input.positionals[1] || "list";
@@ -73,7 +74,20 @@ function writeMaturityUsage(input: MaturityCliInput): number {
     writeCommandJsonError(
       input.context.stdout,
       "maturity",
-      new CliHandledError("invalid_maturity_action", "Use maturity list, show, audit, or tier.", CLI_EXIT_USAGE),
+      new CliHandledError(
+        "unknown_maturity_subcommand",
+        `Unknown maturity subcommand: ${input.positionals[1] ?? ""}`,
+        {
+          exitCode: CLI_EXIT_USAGE,
+          location: "cli.maturity.subcommand",
+          suggestion: "Use one of error.details.validSubcommands for the maturity command.",
+          safeNextStep: `Run ${input.binName} maturity list --json to inspect capability maturity, or ${input.binName} help maturity --json for the maturity command surface.`,
+          details: {
+            received: input.positionals[1] ?? null,
+            validSubcommands: [...MATURITY_SUBCOMMANDS],
+          },
+        },
+      ),
       { jsonSchemaId: "claw.cli.maturity.v1" },
     );
     return CLI_EXIT_USAGE;
