@@ -4,6 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import Database from "better-sqlite3";
+
 import { AudioServiceStore } from "./store.ts";
 
 test("catalog asset imports use stable v1 provider metadata", () => {
@@ -65,6 +67,46 @@ test("register does not leak an existing audio record across apps", () => {
     );
 
     assert.equal(store.getById("shared-audio-id", "other-app"), null);
+  } finally {
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("list and get tolerate corrupt persisted audio metadata", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-audio-store-"));
+  const dbPath = path.join(root, "audio.sqlite");
+  const store = new AudioServiceStore(dbPath, path.join(root, "audio"));
+
+  try {
+    store.register({
+      id: "interrupted-metadata-audio",
+      kind: "dictation",
+      appId: "clawix",
+      originActor: "user",
+      mimeType: "audio/wav",
+      bytesBase64: Buffer.from("audio bytes").toString("base64"),
+      durationMs: 1100,
+      metadata: { source: "fixture" },
+    });
+
+    const db = new Database(dbPath);
+    try {
+      db.prepare("UPDATE audio_assets SET metadata_json = ? WHERE id = ?").run(
+        "{interrupted-json",
+        "interrupted-metadata-audio",
+      );
+    } finally {
+      db.close();
+    }
+
+    const listed = store.list({ appId: "clawix" });
+    assert.equal(listed.total, 1);
+    assert.equal(listed.items[0]?.asset.id, "interrupted-metadata-audio");
+    assert.equal(listed.items[0]?.asset.metadata, null);
+
+    const fetched = store.getById("interrupted-metadata-audio", "clawix");
+    assert.equal(fetched?.asset.metadata, null);
   } finally {
     store.close();
     fs.rmSync(root, { recursive: true, force: true });

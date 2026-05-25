@@ -96,6 +96,17 @@ function mimeToExtension(mimeType: string): string {
   return "bin";
 }
 
+function parseMetadataJson(value: string | null): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 function rowToAsset(row: AssetRow): AudioAsset {
   return {
     id: row.id,
@@ -110,7 +121,7 @@ function rowToAsset(row: AssetRow): AudioAsset {
     sessionId: row.session_id,
     threadId: row.thread_id,
     linkedMessageId: row.linked_message_id,
-    metadata: row.metadata_json ? JSON.parse(row.metadata_json) : null,
+    metadata: parseMetadataJson(row.metadata_json),
   };
 }
 
