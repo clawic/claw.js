@@ -12,6 +12,16 @@ import { timelineRange } from "./cli-runtime-utils.ts";
 import { archiveOrRemoveProductivityRecord, runCoreProductivityDbCli } from "./cli-productivity-command.ts";
 import { requireCliExportReview } from "./cli-export-review.ts";
 
+function parseProductivityDashboardLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const trimmed = raw.trim();
+  const limit = Number(trimmed);
+  if (!/^\d+$/.test(trimmed) || !Number.isSafeInteger(limit)) {
+    throw new CliHandledError("invalid_productivity_limit", "--limit must be a non-negative integer.", CLI_EXIT_USAGE);
+  }
+  return limit;
+}
+
 export async function runPrimaryProductivityCli(input: {
   argv: string[];
   group: string | undefined;
@@ -158,8 +168,9 @@ export async function runPrimaryProductivityCli(input: {
     }
     if (workCommand === "my-work") {
       const claw = await getClaw();
+      const limit = parseProductivityDashboardLimit(flags.limit);
       const myWork = await claw.productivity.myWork({
-        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        ...(limit !== undefined ? { limit } : {}),
       });
       if (wantsJson) writePrimaryJson(myWork);
       else context.stdout.write(`triage=${myWork.summary.triageThreads} ready=${myWork.summary.readyTasks} blocked=${myWork.summary.blockedTasks} blockers=${myWork.summary.activeBlockers} decisions=${myWork.summary.pendingDecisions}\n`);
@@ -167,8 +178,9 @@ export async function runPrimaryProductivityCli(input: {
     }
     if (workCommand === "team-work") {
       const claw = await getClaw();
+      const limit = parseProductivityDashboardLimit(flags.limit);
       const teamWork = await claw.productivity.teamWork({
-        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        ...(limit !== undefined ? { limit } : {}),
       });
       if (wantsJson) writePrimaryJson(teamWork);
       else context.stdout.write(`assignments=${teamWork.summary.activeAssignments} handoffs=${teamWork.summary.pendingHandoffs} approvals=${teamWork.summary.pendingApprovals} overloaded=${teamWork.summary.overloadedAgents}\n`);

@@ -109,3 +109,24 @@ test("work import rejects invalid JSON before importing", async (t) => {
   assert.equal(payload.error.code, "invalid_work_import_json");
   assert.equal(payload.error.status, "USAGE");
 });
+
+test("productivity dashboards reject invalid limits", async (t) => {
+  const cwd = useWorkTestRoot(t, "clawjs-productivity-dashboard-limit-");
+
+  for (const args of [
+    ["my-work", "--limit", "nope", "--json"],
+    ["team-work", "--limit", "-1", "--json"],
+  ]) {
+    const stdout = captureStream();
+    assert.equal(await runCli(args, {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+
+    const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_productivity_limit");
+    assert.equal(payload.error.status, "USAGE");
+  }
+});
