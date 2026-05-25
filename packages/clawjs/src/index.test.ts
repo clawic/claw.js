@@ -141,6 +141,16 @@ test("runCli supports non-mutating database collection discovery aliases", async
   assert.equal(dbList.collections.some((collection) => collection.name === "tasks"), true);
   assert.equal(dbList.visibility, "active");
 
+  const explicitActiveStdout = captureStream();
+  assert.equal(await runCli(["collections", "list", "--available", "false", "--json"], {
+    stdout: explicitActiveStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const explicitActive = parseCliJsonPayload<{ collections: Array<{ state: string }>; visibility: string }>(explicitActiveStdout.getOutput());
+  assert.equal(explicitActive.visibility, "active");
+  assert.equal(explicitActive.collections.every((collection) => collection.state === "enabled"), true);
+
   const commandFirstSchemaStdout = captureStream();
   assert.equal(await runCli(["collections", "schema", "tasks", "--json"], {
     stdout: commandFirstSchemaStdout.stream,

@@ -4,7 +4,7 @@ import { BUILTIN_COLLECTIONS } from "@clawjs/core/catalogs";
 import type { CliContext } from "./index.ts";
 import { CORE_PRODUCTIVITY_DB_COLLECTIONS } from "./cli-constants.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { formatCliTable } from "./cli-flag-parsers.ts";
+import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { activeCollectionFilterForModules, readEffectiveModuleConfigForCli } from "./cli-modules-command.ts";
 
@@ -25,7 +25,7 @@ export async function runCollectionsCli(input: {
   }
 
   const limit = parseCollectionsLimit(input.flags.limit);
-  const includeAvailable = input.argv.includes("--available") || input.flags.available === "true";
+  const includeAvailable = readBooleanFlag(input.argv, input.flags, "available", false);
   const moduleConfig = readEffectiveModuleConfigForCli(input.flags, input.context.cwd);
   const activeFilter = activeCollectionFilterForModules(moduleConfig);
   const productivityCollections = PRODUCTIVITY_COLLECTION_DEFINITIONS.map((collection) => ({
