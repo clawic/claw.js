@@ -98,6 +98,7 @@ ClawJS writes new canonical workspace state under `.claw/` even when runtimes di
 
 - [Runtime](/runtime) for the adapter lifecycle, capability model, and transport policy.
 - [Diagnostics & Repair](/diagnostics) for compat refresh and doctor flows.
+- [Governance Doctor](/cli#governance-doctor) for read-only agent routing before broad governance, docs, or cross-repo work.
 - [Authentication](/authentication) for provider login and auth state.
 
 ### Use services

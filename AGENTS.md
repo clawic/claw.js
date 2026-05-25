@@ -47,6 +47,9 @@ claw collections <collection> schema --json
 claw db <collection> list|query --json
 ```
 
+For broad governance, docs, or Clawix/ClawJS cross-repo work, run
+`claw governance doctor --json` before choosing the detailed reading path.
+
 Treat source files as evidence after the CLI/registry map. If `claw` is not
 available, say so and use direct docs/source reads.
 
