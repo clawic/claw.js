@@ -178,6 +178,40 @@ test("safety check validates boolean guard flags", async () => {
   assert.equal(falsePayload.data.decision.reasonCodes.includes("external_review_required"), false);
 });
 
+test("safety check rejects unknown requested uses before producing labels", async () => {
+  const result = await runCliCapture([
+    "safety",
+    "check",
+    "--domain",
+    "legal",
+    "--effect",
+    "summary",
+    "--use",
+    "nonsense",
+    "--json",
+  ], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location?: string;
+      details?: {
+        received?: string;
+        validUses?: string[];
+      };
+    };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_requested_use");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.safety.requested_use");
+  assert.equal(payload.error.details?.received, "nonsense");
+  assert.ok(payload.error.details?.validUses?.includes("legal_strategy_as_final_advice"));
+});
+
 test("safety explain returns policy evidence for regulated domains", async () => {
   const result = await runCliCapture(["safety", "explain", "legal", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);

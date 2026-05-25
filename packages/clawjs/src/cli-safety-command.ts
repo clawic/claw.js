@@ -29,6 +29,12 @@ interface SafetyCliInput {
 }
 
 const SAFETY_SUBCOMMANDS = ["domains", "classify", "check", "explain", "disclaimers"] as const;
+type RegulatedRequestedUse = NonNullable<Parameters<typeof evaluateRegulatedAction>[0]["requestedUse"]>;
+const SAFETY_REQUESTED_USES: RegulatedRequestedUse[] = Array.from(new Set<RegulatedRequestedUse>([
+  ...allowedRegulatedUses,
+  ...blockedRegulatedUses,
+  ...prohibitedRegulatedPractices,
+]));
 
 export async function runSafetyCli(input: SafetyCliInput): Promise<number> {
   const action = input.positionals[1];
@@ -63,11 +69,11 @@ export async function runSafetyCli(input: SafetyCliInput): Promise<number> {
       throw new CliHandledError("invalid_regulated_domain", `Use --domain with one of: ${regulatedDomains.join(", ")}.`, CLI_EXIT_USAGE);
     }
     const decisionEffect = parseDecisionEffect(input.flags.effect || input.flags["decision-effect"] || input.positionals[3] || "summary");
-    const requestedUse = input.flags.use || input.flags["requested-use"];
+    const requestedUse = parseRequestedUse(input.flags.use || input.flags["requested-use"]);
     const decision = evaluateRegulatedAction({
       regulatedDomain: domain,
       decisionEffect,
-      requestedUse: requestedUse as Parameters<typeof evaluateRegulatedAction>[0]["requestedUse"],
+      requestedUse,
       minorInvolved: readSafetyBooleanFlag(input, ["minor", "minor-involved"]),
       externalAction: readSafetyBooleanFlag(input, ["external", "external-action"]),
       sensitiveExport: readSafetyBooleanFlag(input, ["export", "sensitive-export"]),
@@ -131,6 +137,21 @@ function parsePolicyMode(value: string | undefined): "strict" | "normal" | "auth
   const allowed = ["strict", "normal", "authorized_automation"];
   if (allowed.includes(value)) return value as "strict" | "normal" | "authorized_automation";
   throw new CliHandledError("invalid_policy_mode", `Use one of: ${allowed.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function parseRequestedUse(value: string | undefined): Parameters<typeof evaluateRegulatedAction>[0]["requestedUse"] | undefined {
+  if (!value) return undefined;
+  if (SAFETY_REQUESTED_USES.includes(value as RegulatedRequestedUse)) {
+    return value as RegulatedRequestedUse;
+  }
+  throw new CliHandledError("invalid_requested_use", `Use one of: ${SAFETY_REQUESTED_USES.join(", ")}.`, CLI_EXIT_USAGE, {
+    location: "cli.safety.requested_use",
+    suggestion: "Use a registered regulated-domain action so the safety decision cannot be misclassified.",
+    details: {
+      received: value,
+      validUses: SAFETY_REQUESTED_USES,
+    },
+  });
 }
 
 function readSafetyBooleanFlag(input: SafetyCliInput, names: string[]): boolean {
