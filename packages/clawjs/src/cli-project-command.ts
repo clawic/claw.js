@@ -1,7 +1,7 @@
 import path from "path";
 
 import type { CliContext } from "./index.ts";
-import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { requireCliExportReview } from "./cli-export-review.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
@@ -13,6 +13,31 @@ import {
   inspectProjectFolder,
   syncProjectHandoff,
 } from "./project.ts";
+
+function resolveProjectExportOutputPath(outputPath: string, workspaceRoot: string): string {
+  const requested = outputPath.trim();
+  if (!requested) {
+    throw new CliHandledError("invalid_project_output_path", "--output must not be empty.", CLI_EXIT_USAGE, {
+      location: "cli.project.output",
+      suggestion: "Use a workspace-relative output path such as exports/project.clawexport.",
+      safeNextStep: "Retry project export with an output path inside the current workspace.",
+    });
+  }
+  const workspacePath = path.resolve(workspaceRoot);
+  const resolvedOutputPath = path.isAbsolute(requested)
+    ? path.resolve(requested)
+    : path.resolve(workspacePath, requested);
+  const relativePath = path.relative(workspacePath, resolvedOutputPath);
+  if (relativePath === "" || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new CliHandledError("invalid_project_output_path", "--output must stay inside the current workspace.", CLI_EXIT_USAGE, {
+      location: "cli.project.output",
+      suggestion: "Use a workspace-relative output path such as exports/project.clawexport.",
+      safeNextStep: "Retry project export with an output path inside the current workspace.",
+      details: { outputPath },
+    });
+  }
+  return resolvedOutputPath;
+}
 
 export async function runProjectManifestCli(input: {
   argv: string[];
@@ -101,7 +126,7 @@ export async function runProjectManifestCli(input: {
 
   if (action === "export") {
     const output = input.flags.output || input.flags.path;
-    const outputPath = output ? path.resolve(input.context.cwd, output) : undefined;
+    const outputPath = output ? resolveProjectExportOutputPath(output, input.context.cwd) : undefined;
     const review = requireCliExportReview({ argv: input.argv, flags: input.flags, operation: "project export" });
     const handoff = await exportProjectHandoff(projectRoot, outputPath, {
       approvalId: review.approvalId,

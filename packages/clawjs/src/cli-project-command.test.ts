@@ -186,6 +186,43 @@ test("claw project detach and export keep folder data while producing safe hando
   assert.doesNotMatch(fs.readFileSync(output, "utf8"), /token|password|credential/i);
 });
 
+test("claw project export rejects output paths outside the workspace", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-export-path-"));
+  const folder = path.join(cwd, "project");
+  fs.mkdirSync(folder, { recursive: true });
+
+  assert.equal(await runCli(["project", "attach", folder, "--workspace-id", "workspace-main", "--accept", "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+
+  const escapedOutput = path.join(path.dirname(cwd), `${path.basename(cwd)}.clawexport`);
+  const stdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "export",
+    folder,
+    "--output",
+    `../${path.basename(escapedOutput)}`,
+    "--confirm",
+    "--approval-id",
+    "approval_project_export_path",
+    "--legal-label",
+    "Project export path reviewed",
+    "--json",
+  ], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+
+  const payload = JSON.parse(stdout.getOutput()) as { error: { code: string; status: string } };
+  assert.equal(payload.error.code, "invalid_project_output_path");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(fs.existsSync(escapedOutput), false);
+});
+
 test("claw project import previews and restores safe handoff into a new workspace", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-import-"));
   const source = path.join(cwd, "source-project");
