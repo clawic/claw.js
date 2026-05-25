@@ -247,7 +247,7 @@ function isPortableArchiveManifest(value: unknown): value is PortableArchiveMani
 
 function writeLocalArchive(archivePath: string, manifest: PortableArchiveManifestV1): { manifestPath: string; verification: PortableArchiveVerificationReport } {
   fs.mkdirSync(archivePath, { recursive: true });
-  const materialized = materializeManifestFiles(archivePath, manifest);
+  const materialized = materializeReceiptFiles(archivePath, materializeManifestFiles(archivePath, manifest));
   const manifestPath = path.join(archivePath, PORTABLE_ARCHIVE_MANIFEST_PATH);
   fs.writeFileSync(manifestPath, `${JSON.stringify(materialized, null, 2)}\n`, "utf8");
   return { manifestPath, verification: verifyLocalArchive(archivePath, materialized, materialized.createdAt) };
@@ -271,6 +271,26 @@ function materializeManifestFiles(archivePath: string, manifest: PortableArchive
   return { ...manifest, inventory };
 }
 
+function materializeReceiptFiles(archivePath: string, manifest: PortableArchiveManifestV1): PortableArchiveManifestV1 {
+  return {
+    ...manifest,
+    receipts: {
+      ...manifest.receipts,
+      entries: manifest.receipts.entries.map((receipt) => {
+        const body = `${JSON.stringify({ id: receipt.id, redaction: manifest.receipts.redaction, fixture: "portable_archive_receipt" })}\n`;
+        const absolutePath = path.join(archivePath, receipt.receiptPath);
+        if (!isInside(archivePath, absolutePath)) throw new Error(`Receipt path escapes archive root: ${receipt.receiptPath}`);
+        fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+        fs.writeFileSync(absolutePath, body, "utf8");
+        return {
+          ...receipt,
+          hash: { algorithm: "sha256" as const, value: sha256(body) },
+        };
+      }),
+    },
+  };
+}
+
 function verifyLocalArchive(archivePath: string, manifest: unknown, checkedAt: string): PortableArchiveVerificationReport {
   const base = verifyPortableArchiveManifest(manifest, checkedAt);
   if (!isPortableArchiveManifest(manifest)) return base;
@@ -289,6 +309,21 @@ function verifyLocalArchive(archivePath: string, manifest: unknown, checkedAt: s
     const actual = sha256(fs.readFileSync(absolutePath));
     if (actual !== entry.hash.value) {
       issues.push({ code: "hash_mismatch", severity: "error", message: `${entry.id} hash does not match archive contents.`, path: entry.portablePath });
+    }
+  }
+  for (const receipt of manifest.receipts.entries) {
+    const absolutePath = path.join(archivePath, receipt.receiptPath);
+    if (!isInside(archivePath, absolutePath)) {
+      issues.push({ code: "receipt_path_escape", severity: "error", message: `${receipt.id} receipt escapes the archive root.`, path: receipt.receiptPath });
+      continue;
+    }
+    if (!fs.existsSync(absolutePath)) {
+      issues.push({ code: "missing_receipt_file", severity: "error", message: `${receipt.id} receipt is missing from the archive.`, path: receipt.receiptPath });
+      continue;
+    }
+    const actual = sha256(fs.readFileSync(absolutePath));
+    if (actual !== receipt.hash.value) {
+      issues.push({ code: "receipt_hash_mismatch", severity: "error", message: `${receipt.id} receipt hash does not match archive contents.`, path: receipt.receiptPath });
     }
   }
   return portableArchiveVerificationReportSchema.parse({

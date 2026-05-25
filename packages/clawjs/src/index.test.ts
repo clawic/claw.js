@@ -159,6 +159,9 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   assert.equal(exported.archivePath, archivePath);
   assert.equal(exported.verification.status, "ok");
   assert.equal(fs.existsSync(path.join(archivePath, "manifest.json")), true);
+  const manifest = JSON.parse(fs.readFileSync(path.join(archivePath, "manifest.json"), "utf8")) as { receipts: { entries: Array<{ receiptPath: string }> } };
+  const receiptPath = path.join(archivePath, manifest.receipts.entries[0].receiptPath);
+  assert.equal(fs.existsSync(receiptPath), true);
 
   const localVerifyStdout = captureStream();
   assert.equal(await runCli(["archive", "verify", "--archive", archivePath, "--json"], {
@@ -179,6 +182,17 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   assert.equal(preview.status, "ready");
   assert.equal(preview.canRestore, true);
   assert.ok(preview.mappedCounts.records > 0);
+
+  fs.writeFileSync(receiptPath, "tampered receipt\n", "utf8");
+  const corruptReceiptStdout = captureStream();
+  assert.equal(await runCli(["archive", "verify", "--archive", archivePath, "--json"], {
+    stdout: corruptReceiptStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const corruptReceiptVerification = parseCliJsonPayload<{ status: string; issues: Array<{ code: string }> }>(corruptReceiptStdout.getOutput());
+  assert.equal(corruptReceiptVerification.status, "failed");
+  assert.equal(corruptReceiptVerification.issues.some((issue) => issue.code === "receipt_hash_mismatch"), true);
 
   fs.writeFileSync(path.join(archivePath, "data", "core.sqlite"), "tampered\n", "utf8");
   const corruptVerifyStdout = captureStream();
