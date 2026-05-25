@@ -137,7 +137,10 @@ test("tasks reject invalid numeric planning flags before creating records", asyn
   for (const entry of [
     { args: ["tasks", "create", "Bad rank", "--rank", "nope", "--json"], code: "invalid_task_rank" },
     { args: ["tasks", "create", "Bad estimate", "--estimate-minutes", "1.5", "--json"], code: "invalid_task_estimate_minutes" },
+    { args: ["tasks", "create", "Bad estimate exponent", "--estimate-minutes", "1e3", "--json"], code: "invalid_task_estimate_minutes" },
+    { args: ["tasks", "create", "Bad estimate hex", "--estimate-minutes", "0x10", "--json"], code: "invalid_task_estimate_minutes" },
     { args: ["tasks", "create", "Bad actual", "--actual-minutes", "-1", "--json"], code: "invalid_task_actual_minutes" },
+    { args: ["tasks", "create", "Bad actual unsafe", "--actual-minutes", "9007199254740992", "--json"], code: "invalid_task_actual_minutes" },
     { args: ["tasks", "create", "Bad story", "--story-points", "-0.5", "--json"], code: "invalid_task_story_points" },
   ]) {
     const stdout = captureStream();

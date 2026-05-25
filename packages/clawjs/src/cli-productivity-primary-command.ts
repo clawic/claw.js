@@ -29,6 +29,14 @@ function parseProductivityNumberFlag(raw: string | undefined, name: string, opti
 }): number | undefined {
   if (raw === undefined) return undefined;
   const trimmed = raw.trim();
+  if (options.integer && !/^[0-9]+$/.test(trimmed)) {
+    const min = options.min ?? Number.NEGATIVE_INFINITY;
+    const range = Number.isFinite(min) ? ` greater than or equal to ${min}` : "";
+    throw new CliHandledError(options.code, `--${name} must be a finite integer${range}.`, CLI_EXIT_USAGE, {
+      location: `cli.productivity.${name}`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
   const value = Number(trimmed);
   const min = options.min ?? Number.NEGATIVE_INFINITY;
   if (!trimmed || !Number.isFinite(value) || value < min || (options.integer && !Number.isSafeInteger(value))) {
