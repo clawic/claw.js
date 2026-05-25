@@ -1800,6 +1800,150 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesHistoryContentPayload.data.result.messages?.some((entry) => entry.contentPreview?.includes("Hermes reply")), true);
   assert.equal(hermesHistoryContentPayload.data.result.messages?.some((entry) => entry.contentPreview?.includes("TEST_SECRET_1234567890")), false);
 
+  const hermesSummaryStdout = captureStream();
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "summary", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesSummaryStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  })), true);
+  const hermesSummaryPayload = JSON.parse(hermesSummaryStdout.getOutput()) as { data: { runtimeId: string; domains?: unknown[]; supportAudit?: { allDomainsAccountedFor?: boolean } } };
+  assert.equal(hermesSummaryPayload.data.runtimeId, "hermes");
+  assert.equal(hermesSummaryPayload.data.domains?.length, manifest.requiredDomains.length);
+  assert.equal(hermesSummaryPayload.data.supportAudit?.allDomainsAccountedFor, true);
+
+  const hermesStatusStdout = captureStream();
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "status", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesStatusStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  })), true);
+  const hermesStatusPayload = JSON.parse(hermesStatusStdout.getOutput()) as { data: { runtimeId: string; status?: { adapter?: string; diagnostics?: { locations?: { homeDir?: string } } } } };
+  assert.equal(hermesStatusPayload.data.runtimeId, "hermes");
+  assert.equal(hermesStatusPayload.data.status?.adapter, "hermes");
+  assert.equal(hermesStatusPayload.data.status?.diagnostics?.locations?.homeDir, hermesHome);
+
+  const hermesSessionDescriptorStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesSessionDescriptorStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesSessionDescriptorPayload = JSON.parse(hermesSessionDescriptorStdout.getOutput()) as { data: { runtimeId: string; session?: { sessionPath?: string; supportsGateway?: boolean; primaryTransport?: string } } };
+  assert.equal(hermesSessionDescriptorPayload.data.runtimeId, "hermes");
+  assert.equal(hermesSessionDescriptorPayload.data.session?.sessionPath?.endsWith(".hermes/sessions"), true);
+  assert.equal(hermesSessionDescriptorPayload.data.session?.primaryTransport, "gateway");
+  assert.equal(hermesSessionDescriptorPayload.data.session?.supportsGateway, true);
+
+  const hermesWorkspaceStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "workspace", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesWorkspaceStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesWorkspacePayload = JSON.parse(hermesWorkspaceStdout.getOutput()) as { data: { runtimeId: string; workspace?: { canonicalPaths?: Record<string, string>; managedFiles?: string[] } } };
+  assert.equal(hermesWorkspacePayload.data.runtimeId, "hermes");
+  assert.equal(Object.keys(hermesWorkspacePayload.data.workspace?.canonicalPaths ?? {}).includes("SOUL"), true);
+  assert.equal(Array.isArray(hermesWorkspacePayload.data.workspace?.managedFiles), true);
+
+  const hermesSessionsListStdout = captureStream();
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "sessions", "list", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesSessionsListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  })), true);
+  const hermesSessionsListPayload = JSON.parse(hermesSessionsListStdout.getOutput()) as { data: { runtimeId: string; action: string; writesRuntime: boolean; result?: { totalProjected?: number; sessions?: Array<{ id?: string; provenance?: { source?: string } }> } } };
+  assert.equal(hermesSessionsListPayload.data.runtimeId, "hermes");
+  assert.equal(hermesSessionsListPayload.data.action, "list");
+  assert.equal(hermesSessionsListPayload.data.writesRuntime, false);
+  assert.equal(hermesSessionsListPayload.data.result?.totalProjected, 1);
+  assert.equal(hermesSessionsListPayload.data.result?.sessions?.[0]?.id, "2026/05/21/runtime-session");
+  assert.equal(hermesSessionsListPayload.data.result?.sessions?.[0]?.provenance?.source, "runtime-session-store");
+
+  for (const blockedAction of ["send", "inject"]) {
+    const blockedStdout = captureStream();
+    assert.equal(await runCli(["runtime", "hermes", "sessions", blockedAction, "--session-key", "2026/05/21/runtime-session", "--message", "hello", "--confirm-runtime-write", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+      stdout: blockedStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_DEGRADED);
+    const blockedPayload = JSON.parse(blockedStdout.getOutput()) as { data: { runtimeId: string; action: string; status: string; writesRuntime: boolean; reason?: string } };
+    assert.equal(blockedPayload.data.runtimeId, "hermes");
+    assert.equal(blockedPayload.data.action, blockedAction);
+    assert.equal(blockedPayload.data.status, "blocked");
+    assert.equal(blockedPayload.data.writesRuntime, false);
+    assert.match(blockedPayload.data.reason ?? "", /fixture-backed official/);
+  }
+
+  const hermesAbortStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "abort", "--session-key", "2026/05/21/runtime-session", "--confirm-runtime-write", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesAbortStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_DEGRADED);
+  const hermesAbortPayload = JSON.parse(hermesAbortStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; reason?: string } };
+  assert.equal(hermesAbortPayload.data.action, "abort");
+  assert.equal(hermesAbortPayload.data.status, "blocked");
+  assert.equal(hermesAbortPayload.data.writesRuntime, false);
+  assert.match(hermesAbortPayload.data.reason ?? "", /fixture-backed official abort contract/);
+
+  const hermesCreateStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "create", "--title", "Native Draft", "--confirm-runtime-write", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesCreateStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_DEGRADED);
+  const hermesCreatePayload = JSON.parse(hermesCreateStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; wouldWriteRuntime: boolean; createPlan?: { requested?: { title?: string }; rejectedFallbacks?: string[] } } };
+  assert.equal(hermesCreatePayload.data.action, "create");
+  assert.equal(hermesCreatePayload.data.status, "blocked");
+  assert.equal(hermesCreatePayload.data.writesRuntime, false);
+  assert.equal(hermesCreatePayload.data.wouldWriteRuntime, true);
+  assert.equal(hermesCreatePayload.data.createPlan?.requested?.title, "Native Draft");
+  assert.equal(hermesCreatePayload.data.createPlan?.rejectedFallbacks?.includes("do_not_write_directly_to_runtime_store"), true);
+
+  const hermesPinStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "pin", "--session-key", "2026/05/21/runtime-session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesPinStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesPinPayload = JSON.parse(hermesPinStdout.getOutput()) as { data: { action: string; status: string; authority: string; writesRuntime: boolean; writesLocalOverlay: boolean; result?: { pinned?: boolean; overlayThreadId?: string } } };
+  assert.equal(hermesPinPayload.data.action, "pin");
+  assert.equal(hermesPinPayload.data.status, "local_overlay_applied");
+  assert.equal(hermesPinPayload.data.authority, "clawix_local_overlay");
+  assert.equal(hermesPinPayload.data.writesRuntime, false);
+  assert.equal(hermesPinPayload.data.writesLocalOverlay, true);
+  assert.equal(hermesPinPayload.data.result?.pinned, true);
+  assert.equal(hermesPinPayload.data.result?.overlayThreadId, "runtime:hermes:sessions:2026%2F05%2F21%2Fruntime-session");
+
+  const hermesConflictsStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "conflicts", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesConflictsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesConflictsPayload = JSON.parse(hermesConflictsStdout.getOutput()) as { data: { action: string; authority: string; writesRuntime: boolean; result?: { totalOverlays?: number; totalConflicts?: number; overlays?: Array<{ id?: string; nativeFound?: boolean; conflictStatus?: string }> } } };
+  assert.equal(hermesConflictsPayload.data.action, "conflicts");
+  assert.equal(hermesConflictsPayload.data.authority, "clawix_local_overlay");
+  assert.equal(hermesConflictsPayload.data.writesRuntime, false);
+  assert.equal(hermesConflictsPayload.data.result?.totalOverlays, 1);
+  assert.equal(hermesConflictsPayload.data.result?.totalConflicts, 1);
+  assert.equal(hermesConflictsPayload.data.result?.overlays?.[0]?.id, "2026/05/21/runtime-session");
+  assert.equal(hermesConflictsPayload.data.result?.overlays?.[0]?.nativeFound, true);
+  assert.equal(hermesConflictsPayload.data.result?.overlays?.[0]?.conflictStatus, "local_only");
+
+  const hermesUnpinStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "unpin", "--session-key", "2026/05/21/runtime-session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesUnpinStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesUnpinPayload = JSON.parse(hermesUnpinStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; writesLocalOverlay: boolean; result?: { pinned?: boolean } } };
+  assert.equal(hermesUnpinPayload.data.action, "unpin");
+  assert.equal(hermesUnpinPayload.data.status, "local_overlay_applied");
+  assert.equal(hermesUnpinPayload.data.writesRuntime, false);
+  assert.equal(hermesUnpinPayload.data.writesLocalOverlay, true);
+  assert.equal(hermesUnpinPayload.data.result?.pinned, false);
+
   const openclawSessionStdout = captureStream();
   assert.equal(await runCli(["runtime", "openclaw", "session", "--workspace", workspaceRoot, "--json"], {
     stdout: openclawSessionStdout.stream,
