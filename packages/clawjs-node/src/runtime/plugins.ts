@@ -266,14 +266,24 @@ function readSelectedContextEngine(options: RuntimeAdapterOptions = DEFAULT_PLUG
   const config = readOpenClawRuntimeConfig({
     configPath: options.gateway?.configPath ?? options.configPath,
     env: options.env,
+    strict: true,
   });
   return config?.plugins?.slots?.contextEngine ?? null;
+}
+
+function tryReadSelectedContextEngine(options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS): string | null {
+  try {
+    return readSelectedContextEngine(options);
+  } catch {
+    return null;
+  }
 }
 
 function setSelectedContextEngine(id: string, options: RuntimeAdapterOptions = DEFAULT_PLUGIN_OPTIONS): string {
   const config = readOpenClawRuntimeConfig({
     configPath: options.gateway?.configPath ?? options.configPath,
     env: options.env,
+    strict: true,
   }) ?? {};
   const next = {
     ...config,
@@ -296,6 +306,7 @@ function clearSelectedContextEngine(options: RuntimeAdapterOptions = DEFAULT_PLU
   const config = readOpenClawRuntimeConfig({
     configPath: options.gateway?.configPath ?? options.configPath,
     env: options.env,
+    strict: true,
   }) ?? {};
   const slots = { ...config.plugins?.slots };
   delete slots.contextEngine;
@@ -371,7 +382,7 @@ export async function getOpenClawPluginBridgeStatus(
       contextPlugin: {
         ...normalizePluginRecord(undefined, CLAW_CONTEXT_PLUGIN_ID, policy.contextEnginePackageSpec),
         selected: false,
-        selectedEngineId: readSelectedContextEngine(options),
+        selectedEngineId: tryReadSelectedContextEngine(options),
       },
     };
   }
@@ -503,9 +514,10 @@ export async function enableManagedOpenClawPlugins(
       actions.push(`enable:${CLAW_PLUGIN_ID}`);
       changed = true;
     } else {
+      const selectedEngineId = readSelectedContextEngine(options);
       await enableOpenClawPlugin(CLAW_CONTEXT_PLUGIN_ID, runner, options);
       actions.push(`enable:${CLAW_CONTEXT_PLUGIN_ID}`);
-      if (readSelectedContextEngine(options) !== CLAW_CONTEXT_PLUGIN_ID) {
+      if (selectedEngineId !== CLAW_CONTEXT_PLUGIN_ID) {
         setSelectedContextEngine(CLAW_CONTEXT_PLUGIN_ID, options);
         actions.push(`select-context:${CLAW_CONTEXT_PLUGIN_ID}`);
       }
@@ -532,9 +544,10 @@ export async function disableManagedOpenClawPlugins(
       await disableOpenClawPlugin(CLAW_PLUGIN_ID, runner, options);
       actions.push(`disable:${CLAW_PLUGIN_ID}`);
     } else {
+      const selectedEngineId = readSelectedContextEngine(options);
       await disableOpenClawPlugin(CLAW_CONTEXT_PLUGIN_ID, runner, options);
       actions.push(`disable:${CLAW_CONTEXT_PLUGIN_ID}`);
-      if (readSelectedContextEngine(options) === CLAW_CONTEXT_PLUGIN_ID) {
+      if (selectedEngineId === CLAW_CONTEXT_PLUGIN_ID) {
         clearSelectedContextEngine(options);
         actions.push("select-context:runtime-default");
       }

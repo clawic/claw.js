@@ -59,6 +59,10 @@ export interface ResolveOpenClawContextOptions extends GatewayConfigOptions {
   sessionsDir?: string;
 }
 
+export interface OpenClawRuntimeConfigReadOptions extends Pick<ResolveOpenClawContextOptions, "configPath" | "env"> {
+  strict?: boolean;
+}
+
 export interface OpenClawRuntimeContext {
   stateDir: string;
   configPath: string;
@@ -77,16 +81,36 @@ function readValue(value?: string | null): string | null {
   return trimmed ? expandHome(trimmed) : null;
 }
 
-function readConfigFile(configPath: string): OpenClawConfigFile | null {
+function invalidRuntimeConfigError(code: string, configPath: string, details: string): Error {
+  return new Error(`${code}: ${configPath}: ${details}`);
+}
+
+function readConfigFile(configPath: string, options: { strict?: boolean } = {}): OpenClawConfigFile | null {
   try {
-    return JSON.parse(fs.readFileSync(configPath, "utf8")) as OpenClawConfigFile;
-  } catch {
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as OpenClawConfigFile;
+    }
+    if (options.strict) {
+      throw invalidRuntimeConfigError("invalid_openclaw_runtime_config", configPath, "expected a JSON object");
+    }
+    return null;
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    if (options.strict) {
+      if (error instanceof SyntaxError) {
+        throw invalidRuntimeConfigError("invalid_openclaw_runtime_config_json", configPath, error.message);
+      }
+      throw error;
+    }
     return null;
   }
 }
 
-export function readOpenClawRuntimeConfig(options: Pick<ResolveOpenClawContextOptions, "configPath" | "env"> = {}): OpenClawConfigFile | null {
-  return readConfigFile(resolveOpenClawConfigPath(options));
+export function readOpenClawRuntimeConfig(options: OpenClawRuntimeConfigReadOptions = {}): OpenClawConfigFile | null {
+  return readConfigFile(resolveOpenClawConfigPath(options), { strict: options.strict });
 }
 
 export function writeOpenClawRuntimeConfig(

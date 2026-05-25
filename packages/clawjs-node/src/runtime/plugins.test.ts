@@ -7,6 +7,7 @@ import path from "path";
 import {
   disableManagedOpenClawPlugins,
   doctorOpenClawPlugins,
+  enableManagedOpenClawPlugins,
   ensureOpenClawPluginBridge,
   getOpenClawPluginBridgeStatus,
   listOpenClawHooks,
@@ -252,4 +253,33 @@ test("disableManagedOpenClawPlugins clears the managed context engine selection"
   assert.equal(result.actions.includes("disable:clawjs-context"), true);
   assert.equal(result.actions.includes("select-context:runtime-default"), true);
   assert.equal(config.plugins?.slots?.contextEngine, undefined);
+});
+
+test("managed context selection rejects corrupt runtime config before changing plugin state", async () => {
+  const runner = new FakePluginRunner();
+  const options = createRuntimeOptions();
+  const policy = resolveOpenClawPluginBridgePolicy("openclaw", {
+    enableContextEngine: true,
+  });
+
+  runner.plugins.set("clawjs-context", {
+    id: "clawjs-context",
+    name: "clawjs-context",
+    version: "0.1.0",
+    source: "npm",
+    origin: "@clawjs/openclaw-context-engine",
+    enabled: false,
+    status: "installed",
+  });
+
+  fs.writeFileSync(options.configPath, "{bad", "utf8");
+
+  await assert.rejects(
+    () => enableManagedOpenClawPlugins("context", runner, options, policy),
+    /invalid_openclaw_runtime_config_json/,
+  );
+
+  assert.equal(runner.plugins.get("clawjs-context")?.enabled, false);
+  assert.equal(fs.readFileSync(options.configPath, "utf8"), "{bad");
+  assert.equal(runner.calls.some((call) => call === "openclaw plugins enable clawjs-context"), false);
 });
