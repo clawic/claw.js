@@ -509,6 +509,9 @@ export class IotServiceStore {
 
   denyApproval(homeId: string | undefined, approvalId: string, actor = "operator") {
     const home = this.resolveHome(homeId);
+    const approval = this.listApprovals(home.id).find((entry) => entry.id === approvalId);
+    if (!approval) throw new Error(`Unknown approval ${approvalId}`);
+    if (approval.status !== "pending") throw new Error(`Approval ${approvalId} is already ${approval.status}`);
     const result = this.db.prepare(`
       UPDATE approvals
       SET status = 'denied', updated_at = ?

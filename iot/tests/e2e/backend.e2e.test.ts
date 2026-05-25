@@ -61,6 +61,18 @@ test("iot backend supports semantic actions, scenes, automations, and approvals"
   assert.equal(approvedPayload.result.approval.status, "executed");
   assert.equal(approvedPayload.result.result.status, "executed");
 
+  const deniedAfterExecution = await fetch(`${server.baseUrl}/v1/approvals/${approvalId}/deny`, {
+    method: "POST",
+  });
+  assert.equal(deniedAfterExecution.ok, false);
+
+  const approvalsAfterDenyAttempt = await fetch(`${server.baseUrl}/v1/approvals`);
+  const approvalsAfterDenyAttemptPayload = await approvalsAfterDenyAttempt.json() as { approvals: Array<{ id: string; status: string }> };
+  assert.equal(
+    approvalsAfterDenyAttemptPayload.approvals.find((approval) => approval.id === approvalId)?.status,
+    "executed",
+  );
+
   const scene = await fetch(`${server.baseUrl}/v1/scenes/scene_good_night/activate`, {
     method: "POST",
   });
