@@ -108,6 +108,8 @@ export class SshClient extends EventEmitter {
     const conn = new Ssh2Client();
     const presentedFingerprintRef: { value: string | null } = { value: null };
     const knownRecord = await this.knownHostsStore.get(hostId);
+    const expectedFingerprint =
+      host.ssh.knownHostFingerprint ?? knownRecord?.fingerprintSha256;
     const config: ConnectConfig = {
       host: sshEndpoint.host,
       port: sshEndpoint.port,
@@ -117,7 +119,7 @@ export class SshClient extends EventEmitter {
         const keyBuffer = typeof key === "string" ? Buffer.from(key) : key;
         const presented = fingerprintHostKey(keyBuffer);
         presentedFingerprintRef.value = presented;
-        if (knownRecord && knownRecord.fingerprintSha256 !== presented) {
+        if (expectedFingerprint && expectedFingerprint !== presented) {
           cb?.(false);
           return false;
         }
@@ -126,7 +128,7 @@ export class SshClient extends EventEmitter {
       },
       ...buildAuth(host.ssh.authMethod, secret),
     };
-    await this.connect(conn, config, hostId, knownRecord, presentedFingerprintRef);
+    await this.connect(conn, config, hostId, expectedFingerprint, presentedFingerprintRef);
     const fingerprint = presentedFingerprintRef.value ?? "";
     if (!knownRecord) {
       const record: KnownHostRecord = {
@@ -212,7 +214,7 @@ export class SshClient extends EventEmitter {
     conn: Ssh2Client,
     config: ConnectConfig,
     hostId: string,
-    knownRecord: KnownHostRecord | null,
+    expectedFingerprint: string | undefined,
     presentedRef: { value: string | null },
   ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -240,7 +242,7 @@ export class SshClient extends EventEmitter {
             new SshHostKeyError(
               err.message,
               presentedRef.value ?? "",
-              knownRecord?.fingerprintSha256,
+              expectedFingerprint,
               hostId,
             ),
           );

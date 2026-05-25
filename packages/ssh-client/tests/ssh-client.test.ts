@@ -118,6 +118,25 @@ test("open rejects when host key fingerprint mismatches a stored one", async () 
   }
 });
 
+test("open rejects when host ssh config pins a mismatched host key fingerprint", async () => {
+  const h = await makePasswordHarness();
+  try {
+    h.host.ssh = {
+      ...h.host.ssh!,
+      knownHostFingerprint: "BOGUS-FINGERPRINT",
+    };
+    await assert.rejects(
+      h.client.open(h.host.id),
+      (err: unknown) =>
+        err instanceof SshHostKeyError &&
+        err.expectedFingerprint === "BOGUS-FINGERPRINT" &&
+        err.presentedFingerprint !== "BOGUS-FINGERPRINT",
+    );
+  } finally {
+    await h.shutdown();
+  }
+});
+
 test("exec returns stdout, stderr and exit code", async () => {
   const h = await makePasswordHarness();
   try {
