@@ -343,11 +343,20 @@ async function parseRuntimeHttpBody(
   const contentType = response.headers.get("content-type") ?? "";
   if (!text) return null;
   if (responseBodyEncoding === "text") return text;
-  if (responseBodyEncoding === "json") return JSON.parse(text) as IntegrationJson;
+  if (responseBodyEncoding === "json") return parseRuntimeJsonBody(text, response.ok);
   if (isJsonContentType(contentType)) {
-    return JSON.parse(text) as IntegrationJson;
+    return parseRuntimeJsonBody(text, response.ok);
   }
   return text;
+}
+
+function parseRuntimeJsonBody(text: string, strict: boolean): IntegrationJson {
+  try {
+    return JSON.parse(text) as IntegrationJson;
+  } catch (error) {
+    if (!strict) return text;
+    throw error;
+  }
 }
 
 function isJsonContentType(contentType: string): boolean {

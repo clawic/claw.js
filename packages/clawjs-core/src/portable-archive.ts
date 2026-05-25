@@ -381,6 +381,9 @@ export function verifyPortableArchiveManifest(manifest: unknown, checkedAt = new
   for (const issue of manifestCountIssues(value)) {
     issues.push(issue);
   }
+  for (const issue of secretsPolicyIssues(value)) {
+    issues.push(issue);
+  }
   for (const source of value.externalSources) {
     if (source.sourceKind === "external_read_only" && source.copied) {
       issues.push({ code: "external_source_copied", severity: "error", message: `${source.id} copied an external read-only source without local mirror policy.` });
@@ -501,6 +504,55 @@ function manifestCountIssues(manifest: PortableArchiveManifestV1): PortableArchi
       path: `counts.${field}`,
     }];
   });
+}
+
+function secretsPolicyIssues(manifest: PortableArchiveManifestV1): PortableArchiveVerificationReport["issues"] {
+  const envelopeEntries = manifest.inventory.filter((entry) => entry.kind === "secrets_envelope");
+  const encryptedSecretsDeclared = manifest.secrets.mode === "encrypted_clawsecrets" || envelopeEntries.length > 0;
+  if (!encryptedSecretsDeclared) return [];
+
+  const issues: PortableArchiveVerificationReport["issues"] = [];
+  if (manifest.secrets.mode !== "encrypted_clawsecrets") {
+    issues.push({
+      code: "secrets_policy_mismatch",
+      severity: "error",
+      message: "Encrypted secrets envelopes require secrets.mode encrypted_clawsecrets.",
+      path: "secrets.mode",
+    });
+  }
+  if (!manifest.secrets.requiresIndependentPassphrase) {
+    issues.push({
+      code: "secrets_policy_mismatch",
+      severity: "error",
+      message: "Encrypted secrets envelopes require an independent backup passphrase.",
+      path: "secrets.requiresIndependentPassphrase",
+    });
+  }
+  if (!manifest.secrets.requiresSignedHost) {
+    issues.push({
+      code: "secrets_policy_mismatch",
+      severity: "error",
+      message: "Encrypted secrets envelopes require signed-host proof.",
+      path: "secrets.requiresSignedHost",
+    });
+  }
+  if (!manifest.secrets.envelopePath?.endsWith(PORTABLE_ARCHIVE_SECRETS_EXTENSION)) {
+    issues.push({
+      code: "secrets_policy_mismatch",
+      severity: "error",
+      message: "Encrypted secrets envelopes require a .clawsecrets envelope path.",
+      path: "secrets.envelopePath",
+    });
+  }
+  if (envelopeEntries.length === 0) {
+    issues.push({
+      code: "secrets_policy_mismatch",
+      severity: "error",
+      message: "encrypted_clawsecrets mode requires a secrets_envelope inventory entry.",
+      path: "inventory",
+    });
+  }
+  return issues;
 }
 
 function entryLooksLikePlaintextSecret(entry: PortableArchiveManifestV1["inventory"][number]): boolean {

@@ -95,6 +95,29 @@ test("portable archive verification fails closed on manifest count drift", () =>
   assert.equal(restore.status, "verification_failed");
 });
 
+test("portable archive verification fails closed when encrypted secrets drop host gates", () => {
+  const manifest = createPortableArchiveManifestFixture({ includeSecrets: true });
+  const tampered: PortableArchiveManifestV1 = {
+    ...manifest,
+    secrets: {
+      ...manifest.secrets,
+      requiresIndependentPassphrase: false,
+      requiresSignedHost: false,
+    },
+  };
+
+  const report = verifyPortableArchiveManifest(tampered);
+  const preview = createPortableArchiveImportPreview({ manifest: tampered, targetRoot: "/tmp/restore", signedHostAvailable: true });
+  const restore = createPortableArchiveRestoreReport({ preview, approved: true });
+
+  assert.equal(report.status, "failed");
+  assert.equal(report.issues.some((issue) => issue.code === "secrets_policy_mismatch"), true);
+  assert.equal(preview.status, "verification_failed");
+  assert.equal(preview.canRestore, false);
+  assert.equal(restore.status, "verification_failed");
+  assert.equal(restore.restoredCounts.secretsEnvelopes, 0);
+});
+
 test("portable archive restore is two phase and approval gated", () => {
   const manifest = createPortableArchiveManifestFixture({ includeSecrets: true });
   const blockedPreview = createPortableArchiveImportPreview({ manifest, targetRoot: "/tmp/restore", signedHostAvailable: false });

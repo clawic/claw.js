@@ -379,6 +379,37 @@ describe("connector runtime http transport", () => {
     assert.deepEqual(response.body, { ok: true });
   });
 
+  it("retries retryable responses with malformed JSON error bodies", async () => {
+    let calls = 0;
+    const response = await executeConnectorRuntimeRequestPlan({
+      baseUrl: "https://api.example.invalid/",
+      secrets: {},
+      maxRetries: 1,
+      retryDelayMs: 25,
+      sleep: async () => {},
+      plan: {
+        method: "GET",
+        endpoint: "items",
+        auth: [],
+        body: {},
+      },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("{\"error\":\"upstream truncated\"", {
+            status: 500,
+            statusText: "Internal Server Error",
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return Response.json({ ok: true });
+      },
+    });
+
+    assert.equal(calls, 2);
+    assert.deepEqual(response.body, { ok: true });
+  });
+
   it("does not retry non-retryable client errors", async () => {
     let calls = 0;
     await assert.rejects(
