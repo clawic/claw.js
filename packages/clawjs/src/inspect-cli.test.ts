@@ -1624,3 +1624,64 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(gatewayAuditPayload.state.durable, true);
   assert.equal(gatewayAuditPayload.state.coordinatorSignature?.verified, true);
 });
+
+test("nodes mesh commands reject invalid action flags before persistence", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-remote-invalid-actions-"));
+
+  const invalidInvite = await runCliCapture([
+    "nodes",
+    "invite",
+    "--issuer-mesh",
+    "mesh.home",
+    "--recipient-mesh",
+    "mesh.server",
+    "--allowed-resources",
+    "skills:default",
+    "--actions",
+    "superadmin",
+    "--state-dir",
+    stateDir,
+    "--record",
+    "true",
+    "--json",
+  ], process.cwd());
+  assert.equal(invalidInvite.code, CLI_EXIT_USAGE);
+  const invalidInvitePayload = JSON.parse(invalidInvite.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(invalidInvitePayload.ok, false);
+  assert.equal(invalidInvitePayload.error.code, "invalid_mesh_action");
+  assert.equal(invalidInvitePayload.error.status, "USAGE");
+  assert.match(invalidInvitePayload.error.message, /superadmin/);
+
+  const invalidShare = await runCliCapture([
+    "nodes",
+    "share",
+    "--issuer-mesh",
+    "mesh.home",
+    "--to-mesh",
+    "mesh.server",
+    "--resource-id",
+    "skills:default",
+    "--driver",
+    "skills",
+    "--actions",
+    "read,superadmin",
+    "--state-dir",
+    stateDir,
+    "--record",
+    "true",
+    "--json",
+  ], process.cwd());
+  assert.equal(invalidShare.code, CLI_EXIT_USAGE);
+  const invalidSharePayload = JSON.parse(invalidShare.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(invalidSharePayload.ok, false);
+  assert.equal(invalidSharePayload.error.code, "invalid_mesh_action");
+  assert.equal(invalidSharePayload.error.status, "USAGE");
+  assert.match(invalidSharePayload.error.message, /superadmin/);
+  assert.equal(fs.existsSync(path.join(stateDir, "remote-sync-state.json")), false);
+});

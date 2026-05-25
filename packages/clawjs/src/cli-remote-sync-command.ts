@@ -282,8 +282,17 @@ function parseSourceQaReviews(value: string | undefined, filePath: string | unde
 
 function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
   const allowed = new Set<MeshShareAction>(["read", "sync", "search", "execute", "lease_secret"]);
-  const parsed = listFlag(value, fallback).filter((entry): entry is MeshShareAction => allowed.has(entry as MeshShareAction));
-  return parsed.length ? parsed : fallback;
+  if (!value) return fallback;
+  const entries = listFlag(value, []);
+  const invalid = entries.find((entry) => !allowed.has(entry as MeshShareAction));
+  if (!entries.length || invalid) {
+    throw new CliHandledError(
+      "invalid_mesh_action",
+      `--actions must contain only read, sync, search, execute, or lease_secret.${invalid ? ` Invalid action: ${invalid}.` : ""}`,
+      CLI_EXIT_USAGE,
+    );
+  }
+  return entries as MeshShareAction[];
 }
 
 function remoteCompatibilityClientKind(value: string | undefined): RemoteCompatibilityClientKind {
