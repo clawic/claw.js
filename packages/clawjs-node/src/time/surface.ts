@@ -10,8 +10,11 @@ const schemaSurfaceNodes = [
   clawPersistentSurface.index({ id: `claw.database.core.index.temporal_items_kind_status_idx`, name: "temporal_items_kind_status_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
   clawPersistentSurface.index({ id: `claw.database.core.index.temporal_items_anchor_idx`, name: "temporal_items_anchor_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
   clawPersistentSurface.index({ id: `claw.database.core.index.temporal_items_next_run_idx`, name: "temporal_items_next_run_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
+  clawPersistentSurface.index({ id: `claw.database.core.index.temporal_items_active_next_run_due_idx`, name: "temporal_items_active_next_run_due_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
   clawPersistentSurface.index({ id: `claw.database.core.index.temporal_executions_item_schedule`, name: "temporal_executions_item_schedule", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
-  clawPersistentSurface.index({ id: `claw.database.core.index.temporal_run_log_item_idx`, name: "temporal_run_log_item_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source })
+  clawPersistentSurface.index({ id: `claw.database.core.index.temporal_run_log_item_idx`, name: "temporal_run_log_item_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
+  clawPersistentSurface.index({ id: `claw.database.core.index.temporal_run_log_completed_idx`, name: "temporal_run_log_completed_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source }),
+  clawPersistentSurface.index({ id: `claw.database.core.index.temporal_projections_item_updated_idx`, name: "temporal_projections_item_updated_idx", parentId: "claw.database.core", databaseId: "claw.database.core", source })
 ];
 
 export const TIME_STORE_SCHEMA_SQL = String.raw`
@@ -39,6 +42,9 @@ export const TIME_STORE_SCHEMA_SQL = String.raw`
         ON temporal_items(anchor_type, anchor_id);
       CREATE INDEX IF NOT EXISTS temporal_items_next_run_idx
         ON temporal_items(next_run_at);
+      CREATE INDEX IF NOT EXISTS temporal_items_active_next_run_due_idx
+        ON temporal_items(next_run_at)
+        WHERE status = 'active' AND next_run_at IS NOT NULL;
       CREATE TABLE IF NOT EXISTS temporal_executions (
         id TEXT PRIMARY KEY,
         item_id TEXT NOT NULL,
@@ -67,6 +73,8 @@ export const TIME_STORE_SCHEMA_SQL = String.raw`
       );
       CREATE INDEX IF NOT EXISTS temporal_run_log_item_idx
         ON temporal_run_log(item_id, completed_at DESC);
+      CREATE INDEX IF NOT EXISTS temporal_run_log_completed_idx
+        ON temporal_run_log(completed_at DESC);
       CREATE TABLE IF NOT EXISTS temporal_projections (
         id TEXT PRIMARY KEY,
         item_id TEXT NOT NULL,
@@ -77,4 +85,6 @@ export const TIME_STORE_SCHEMA_SQL = String.raw`
         detail TEXT,
         updated_at TEXT NOT NULL
       );
+      CREATE INDEX IF NOT EXISTS temporal_projections_item_updated_idx
+        ON temporal_projections(item_id, updated_at DESC);
     `;

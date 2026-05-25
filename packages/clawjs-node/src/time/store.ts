@@ -105,6 +105,19 @@ export class TimeServiceStore {
     return rows.map((row) => this.hydrateItem(row));
   }
 
+  listDueItems(nowIso: string, limit: number): TemporalItem[] {
+    const safeLimit = Math.max(1, Math.min(5000, Math.floor(limit)));
+    const rows = this.sqlite.prepare(`
+      SELECT * FROM temporal_items
+      WHERE status = 'active'
+        AND next_run_at IS NOT NULL
+        AND next_run_at <= ?
+      ORDER BY next_run_at ASC
+      LIMIT ?
+    `).all(nowIso, safeLimit) as Array<Record<string, unknown>>;
+    return rows.map((row) => this.hydrateItem(row));
+  }
+
   getItem(id: string): TemporalItem | null {
     const row = this.sqlite.prepare("SELECT * FROM temporal_items WHERE id = ?").get(id) as Record<string, unknown> | undefined;
     return row ? this.hydrateItem(row) : null;

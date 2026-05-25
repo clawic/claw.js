@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import Database from "better-sqlite3";
 
 import { buildTimeApp } from "../../../../time/src/server/app.ts";
 import { TimeClient } from "./index.ts";
+import { TimeServiceStore } from "./store.ts";
 
 test("TimeClient can create items, read v1 views, and cancel follow-ups", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-client-"));
@@ -80,6 +82,74 @@ test("time run-log rejects invalid limit query values", async () => {
     assert.equal(Array.isArray(payload.entries), true);
   } finally {
     await built.app.close();
+  }
+});
+
+test("time store indexes global run-log and item projection lookups", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-indexes-"));
+  const dbPath = path.join(tmpDir, "data", "core.sqlite");
+  const store = new TimeServiceStore(dbPath);
+
+  try {
+    const item = store.putItem({
+      id: "item-indexed",
+      kind: "routine",
+      status: "active",
+      title: "Indexed",
+      createdAt: "2026-04-09T08:00:00.000Z",
+      updatedAt: "2026-04-09T08:00:00.000Z",
+      projections: [{
+        id: "projection-indexed",
+        itemId: "item-indexed",
+        target: "calendar",
+        status: "synced",
+        updatedAt: "2026-04-09T08:00:00.000Z",
+      }],
+    });
+    store.appendRunLog({
+      id: "log-indexed",
+      itemId: item.id,
+      status: "done",
+      scheduledFor: "2026-04-09T08:00:00.000Z",
+      startedAt: "2026-04-09T08:00:00.000Z",
+      completedAt: "2026-04-09T08:00:01.000Z",
+      durationMs: 1000,
+      triggeredBy: "scheduler",
+    });
+    store.close();
+
+    const sqlite = new Database(dbPath, { readonly: true });
+    try {
+      const runLogPlan = sqlite
+        .prepare("EXPLAIN QUERY PLAN SELECT payload FROM temporal_run_log ORDER BY completed_at DESC LIMIT ?")
+        .all(100) as Array<{ detail: string }>;
+      assert.equal(runLogPlan.some((row) => row.detail.includes("temporal_run_log_completed_idx")), true);
+      assert.equal(runLogPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+
+      const projectionPlan = sqlite
+        .prepare("EXPLAIN QUERY PLAN SELECT * FROM temporal_projections WHERE item_id = ? ORDER BY updated_at DESC")
+        .all(item.id) as Array<{ detail: string }>;
+      assert.equal(projectionPlan.some((row) => row.detail.includes("temporal_projections_item_updated_idx")), true);
+      assert.equal(projectionPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+
+      const duePlan = sqlite
+        .prepare(`
+          EXPLAIN QUERY PLAN
+          SELECT * FROM temporal_items
+          WHERE status = 'active'
+            AND next_run_at IS NOT NULL
+            AND next_run_at <= ?
+          ORDER BY next_run_at ASC
+          LIMIT ?
+        `)
+        .all("2026-04-09T08:00:00.000Z", 10) as Array<{ detail: string }>;
+      assert.equal(duePlan.some((row) => row.detail.includes("temporal_items_active_next_run_due_idx")), true);
+      assert.equal(duePlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+    } finally {
+      sqlite.close();
+    }
+  } finally {
+    store.close();
   }
 });
 

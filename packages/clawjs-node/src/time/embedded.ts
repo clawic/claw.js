@@ -489,10 +489,8 @@ export class EmbeddedTimeEngine {
     const now = new Date();
     const completed: TemporalExecution[] = [];
     try {
-    const dueItems = this.store.listItems({ status: "active" })
-      .filter((item) => item.nextRunAt && item.nextRunAt <= now.toISOString())
-      .sort((left, right) => String(left.nextRunAt).localeCompare(String(right.nextRunAt)));
     const maxCatchUp = Math.max(1, Math.floor(this.config.maxCatchUpPerCycle ?? DEFAULT_MAX_CATCH_UP_PER_CYCLE));
+    const dueItems = this.store.listDueItems(now.toISOString(), maxCatchUp * 2);
     const runnableItems = dueItems.slice(0, maxCatchUp);
     const deferredItems = dueItems.slice(maxCatchUp);
     const staggerMs = Math.max(0, Math.floor(this.config.missedJobStaggerMs ?? DEFAULT_MISSED_JOB_STAGGER_MS));
