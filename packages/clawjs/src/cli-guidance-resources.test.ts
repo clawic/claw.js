@@ -162,6 +162,34 @@ test("guidance and resources list reject invalid status filters", async (t) => {
   assert.equal(resourcesPayload.error.location, "cli.resources.status");
 });
 
+test("guidance create rejects invalid enum and integer flags before writing state", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-create-flags-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const guidanceDir = path.join(cwd, "guidance");
+
+  for (const [flag, value, code, location] of [
+    ["--severity", "urgent", "invalid_guidance_severity", "cli.guidance.severity"],
+    ["--priority", "soon", "invalid_guidance_priority", "cli.guidance.priority"],
+  ] as const) {
+    const result = await runCliCapture([
+      "guidance", "create",
+      "--title", "Bad guidance",
+      "--capsule", "This should not be written.",
+      flag, value,
+      "--guidance-dir", guidanceDir,
+      "--json",
+    ], cwd);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, code);
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, location);
+  }
+
+  assert.equal(fs.existsSync(path.join(guidanceDir, "guidance.json")), false);
+});
+
 test("resources read rejects invalid max byte limits before reading", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-resources-max-bytes-"));
   useIsolatedClawDataRoot(t, cwd);
