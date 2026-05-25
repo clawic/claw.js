@@ -784,6 +784,16 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.equal(watchLines.every((line) => line.data.samples.some((sample) => sample.key === "system.memory.used")), true);
 });
 
+test("runCli rejects unknown system snapshot sources", async () => {
+  const result = await runCliCapture(["system", "snapshot", "--source", "signed", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; message: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_snapshot_source");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /--source local or --source host/);
+});
+
 test("runCli plans system controls without executing hardware mutations", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-control-plan-"));
   const plan = await runCliCapture([
@@ -1460,6 +1470,23 @@ test("runCli can scaffold a workspace-first project with the new command surface
   const projectConfig = JSON.parse(fs.readFileSync(path.join(projectRoot, "claw.project.json"), "utf8"));
   assert.equal(projectConfig.type, "workspace");
   assert.equal(projectConfig.directories.skills, "claw/skills");
+});
+
+test("runCli scaffolds npm-safe package names from common title separators", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-new-safe-name-"));
+  const stdout = captureStream();
+
+  const exitCode = await runCli(["new", "workspace", "_Demo Workspace_", "--dir", "demo-workspace", "--no-install", "--json"], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CLI_EXIT_OK);
+  assert.match(stdout.getOutput(), /"name": "demo-workspace"/);
+
+  const packageJson = JSON.parse(fs.readFileSync(path.join(tempRoot, "demo-workspace", "package.json"), "utf8"));
+  assert.equal(packageJson.name, "demo-workspace");
 });
 
 test("runCli scaffolds agent skills where the generated project looks for them", async () => {

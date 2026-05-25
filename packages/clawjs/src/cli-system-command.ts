@@ -591,7 +591,9 @@ function safeOsUptime(): number | null {
 
 function requestedSnapshotSource(flags: Record<string, string>): "local" | "host" {
   const source = flags.source ?? flags["snapshot-source"] ?? flags.adapter;
-  return source === "host" || source === "signed_host" || source === "signed-host" ? "host" : "local";
+  if (source === undefined || source === "local" || source === "node") return "local";
+  if (source === "host" || source === "signed_host" || source === "signed-host") return "host";
+  throw new CliHandledError("invalid_snapshot_source", "Use --source local or --source host.", CLI_EXIT_USAGE);
 }
 
 function splitHostCommand(command: string | undefined): string[] | null {
