@@ -172,6 +172,8 @@ const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
   ]
 }`);
 
+const RUNTIME_PORTAL_PRIVATE_FIELD_NAMES = new Set(["env", "headers", "token"]);
+
 function normalizeDomain(value: string | undefined): string {
   const normalized = value?.trim().toLowerCase().replaceAll("_", "-") || "summary";
   return DOMAIN_ALIASES.get(normalized) ?? normalized;
@@ -213,7 +215,7 @@ function stripRuntimePortalPrivateFields(value) {
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value)
-        .filter(([key]) => key !== "env")
+        .filter(([key]) => !RUNTIME_PORTAL_PRIVATE_FIELD_NAMES.has(key))
         .map(([key, entry]) => [key, stripRuntimePortalPrivateFields(entry)]),
     );
   }

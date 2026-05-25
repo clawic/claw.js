@@ -20,3 +20,31 @@ test("runtime domain requires an explicit manifest domain in JSON mode", async (
   assert.equal(payload.meta?.operation, "domain");
   assert.equal(payload.meta?.runtimeId, "codex");
 });
+
+test("runtime session metadata omits gateway credentials in JSON mode", async () => {
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "session",
+    "--gateway-url",
+    "http://127.0.0.1:18181",
+    "--gateway-token",
+    "secret-runtime-token-12345678",
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      session?: {
+        gateway?: { token?: string; headers?: Record<string, string> };
+        fallbackGateway?: { token?: string; headers?: Record<string, string> };
+      };
+    };
+  };
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout.includes("secret-runtime-token-12345678"), false);
+  assert.equal(payload.data?.session?.gateway?.token, undefined);
+  assert.equal(payload.data?.session?.gateway?.headers, undefined);
+  assert.equal(payload.data?.session?.fallbackGateway?.token, undefined);
+  assert.equal(payload.data?.session?.fallbackGateway?.headers, undefined);
+});
