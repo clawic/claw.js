@@ -279,6 +279,35 @@ function main() {
         if (openclawSessionCommands.includes(staleCommand)) errors.push(`OpenClaw sessions official command inventory still includes stale command: ${staleCommand}`);
       }
     }
+    if (runtimeId === "hermes") {
+      const hermesSurface = new Map((matrix.nativeSurface ?? []).map((row) => [row.domain, row.officialCommands ?? []]));
+      const requiredHermesCommands = {
+        sessions: ["hermes chat", "hermes -z <prompt>", "hermes sessions browse", "hermes sessions export <output> [--session-id ID]", "hermes sessions delete <session-id>", "hermes sessions prune", "hermes sessions stats"],
+        skills: ["hermes skills browse", "hermes skills inspect", "hermes bundles list", "hermes curator run --dry-run"],
+        memory: ["hermes memory setup", "hermes memory status", "hermes memory off"],
+        channels: ["hermes gateway run", "hermes pairing list", "hermes webhook subscribe", "hermes portal status"],
+        providers: ["hermes fallback list", "hermes portal status"],
+        auth: ["hermes auth", "hermes auth list", "hermes auth status <provider>", "hermes auth logout <provider>"],
+        models: ["hermes chat --model <model>", "hermes fallback clear", "/model <model> --global"],
+        scheduler: ["hermes cron tick", "hermes webhook subscribe", "hermes kanban"],
+        plugins: ["hermes plugins list", "hermes mcp serve", "hermes tools --summary", "hermes computer-use status"],
+        gateway: ["hermes gateway status", "hermes gateway install", "hermes portal tools", "hermes logs gateway"],
+        doctorCompat: ["hermes status --all", "hermes dump", "hermes debug share --local", "hermes update --check"],
+        sandboxPermissions: ["hermes setup terminal", "hermes chat --yolo", "hermes security audit"],
+        configuration: ["hermes config show", "hermes config set <key> <value>", "hermes config migrate", "hermes dashboard --status", "hermes profile show <name>"],
+      };
+      for (const [domain, commands] of Object.entries(requiredHermesCommands)) {
+        const officialCommands = hermesSurface.get(domain) ?? [];
+        for (const command of commands) {
+          if (!officialCommands.includes(command)) errors.push(`Hermes ${domain} official command inventory missing current docs command: ${command}`);
+        }
+      }
+      for (const staleCommand of ["OpenClaw migrate memories", "cron scheduling docs", "MCP integration docs"]) {
+        for (const [domain, officialCommands] of hermesSurface.entries()) {
+          if (officialCommands.includes(staleCommand)) errors.push(`Hermes ${domain} official command inventory still includes stale placeholder: ${staleCommand}`);
+        }
+      }
+    }
 
     const manifestActions = manifest.sessionActionContracts?.[runtimeId] ?? [];
     const portalActions = portalSessionActionContracts?.[runtimeId] ?? [];

@@ -1377,6 +1377,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.deepEqual(hermesPayload.data.domains.map((entry) => entry.domain), manifest.requiredDomains);
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("hermes --continue"), true);
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("/sessions"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("hermes sessions export <output> [--session-id ID]"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("hermes sessions stats"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "skills")?.officialCommands?.includes("hermes skills inspect"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "memory")?.officialCommands?.includes("hermes memory status"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "auth")?.officialCommands?.includes("hermes auth status <provider>"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "scheduler")?.officialCommands?.includes("hermes cron tick"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "plugins")?.officialCommands?.includes("hermes mcp serve"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "gateway")?.officialCommands?.includes("hermes gateway status"), true);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "configuration")?.officialCommands?.includes("hermes config migrate"), true);
   assert.equal(
     hermesPayload.data.domains.find((entry) => entry.domain === "auth")?.count,
     Object.keys(hermesPayload.data.domainData.auth?.auth ?? {}).length,
@@ -1405,7 +1414,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesChannels?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.currentBehavior, "read_only_projection_or_degraded_snapshot_only");
   assert.equal(hermesChannels?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.claimEffect, "blocks_recommended_production_native_parity");
   assert.equal(hermesChannels?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.productDecision, "external_live_claim_not_supported_without_approved_redacted_evidence");
-  assert.equal(hermesChannels?.officialCommands?.includes("hermes gateway"), true);
+  assert.equal(hermesChannels?.officialCommands?.includes("hermes gateway status"), true);
   assert.equal(hermesChannels?.provenance?.source, "runtime-ecosystem-manifest");
 
   const hermesSupportStdout = captureStream();
