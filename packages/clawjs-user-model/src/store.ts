@@ -234,6 +234,9 @@ export class UserModelServiceStore {
     const ids = idRows.map((row) => row.id);
     if (ids.length === 0) return { forgottenCount: 0, forgottenIds: [] };
     const info = this.db.prepare(`DELETE FROM user_profile_items WHERE ${where}`).run(params);
+    if (info.changes > 0) {
+      this.removeItemsFromHistorySnapshots(ids);
+    }
     return { forgottenCount: info.changes, forgottenIds: ids };
   }
 
@@ -307,5 +310,23 @@ export class UserModelServiceStore {
     ).all() as Array<{ section: UserModelSection; n: number }>;
     for (const row of rows) result[row.section] = row.n;
     return result;
+  }
+
+  private removeItemsFromHistorySnapshots(ids: string[]): void {
+    const forgottenIds = new Set(ids);
+    const rows = this.db.prepare("SELECT id, snapshot_json FROM user_profile_history").all() as Array<{
+      id: number;
+      snapshot_json: string;
+    }>;
+    const update = this.db.prepare("UPDATE user_profile_history SET snapshot_json = ? WHERE id = ?");
+
+    for (const row of rows) {
+      const snapshot = JSON.parse(row.snapshot_json) as UserProfileSnapshot;
+      const retainedItems = snapshot.items.filter((item) => !forgottenIds.has(item.id));
+      if (retainedItems.length === snapshot.items.length) {
+        continue;
+      }
+      update.run(JSON.stringify({ ...snapshot, items: retainedItems }), row.id);
+    }
   }
 }
