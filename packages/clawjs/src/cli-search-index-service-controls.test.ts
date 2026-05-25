@@ -195,6 +195,28 @@ test("search command fallback is explicit and does not broaden section search by
     assert.deepEqual(scopedPayload.data.commandFallback, { policy: "off", applied: false, reason: "disabled", added: 0 });
     const rebuildCommands = await runCliCapture(["search", "rebuild", "--source", "commands", "--data-dir", dataRoot, "--json"], workspaceRoot);
     assert.equal(rebuildCommands.code, CLI_EXIT_OK);
+    for (const invalidLimit of ["1e3", "1.5", "0x10", "0", "9007199254740992"]) {
+      const invalidFallbackLimit = await runCliCapture([
+        "search",
+        "query",
+        "system capabilities",
+        "--domains",
+        "database",
+        "--command-fallback",
+        "empty",
+        "--command-fallback-limit",
+        invalidLimit,
+        "--data-dir",
+        dataRoot,
+        "--json",
+        "--limit",
+        "5",
+      ], workspaceRoot);
+      assert.equal(invalidFallbackLimit.code, CLI_EXIT_USAGE, invalidLimit);
+      const invalidPayload = JSON.parse(invalidFallbackLimit.stdout) as { error: { code: string; details?: { value?: string } } };
+      assert.equal(invalidPayload.error.code, "invalid_command_fallback_limit", invalidLimit);
+      assert.equal(invalidPayload.error.details?.value, invalidLimit);
+    }
     const fallback = await runCliCapture([
       "search",
       "query",

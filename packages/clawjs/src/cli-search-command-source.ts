@@ -5,6 +5,7 @@ import {
   type SearchQueryInput,
   type SearchQueryOutput,
 } from "@clawjs/search";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import type { CommandFallbackPolicy } from "./cli-search-command-constants.ts";
 
 export function sourceCanIndex(store: SearchStore, source: string): boolean {
@@ -197,7 +198,23 @@ function commandSearchDocument(command: ClawCliCommandRegistryEntry): SearchDocu
 }
 
 function boundedCommandFallbackLimit(value: string | undefined, fallback: number, min: number, max: number): number {
-  const number = value ? Number(value) : fallback;
-  if (!Number.isFinite(number)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(number)));
+  if (value === undefined) return fallback;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw invalidCommandFallbackLimitError(value);
+  }
+  const number = Number(trimmed);
+  if (!Number.isSafeInteger(number) || number < min) {
+    throw invalidCommandFallbackLimitError(value);
+  }
+  return Math.min(max, number);
+}
+
+function invalidCommandFallbackLimitError(value: string): CliHandledError {
+  return new CliHandledError("invalid_command_fallback_limit", "--command-fallback-limit must be a positive safe decimal integer.", CLI_EXIT_USAGE, {
+    location: "cli.search.commandFallback.limit",
+    suggestion: "Use a whole-number decimal fallback limit such as --command-fallback-limit 5.",
+    safeNextStep: "Fix --command-fallback-limit and rerun the search query.",
+    details: { value },
+  });
 }
