@@ -252,10 +252,14 @@ server.listen(config.port, config.host);
 export function parseSurfacePortOverrides(value: string | undefined): Record<string, number> {
   const ports: Record<string, number> = {};
   for (const entry of parseCsvFlag(value)) {
-    const [name, rawPort] = entry.split("=");
+    const match = /^([^=]+)=([0-9]+)$/.exec(entry);
+    if (!match) {
+      throw new CliHandledError("usage_error", `Invalid --surface-port entry "${entry}". Use surface=port.`, CLI_EXIT_USAGE);
+    }
+    const [, name, rawPort] = match;
     const surface = resolveOpenSurface(name);
-    const port = Number(rawPort);
-    if (!surface || !Number.isInteger(port) || port <= 0 || port > 65_535) {
+    const port = parseDecimalPort(rawPort);
+    if (!surface || port === null) {
       throw new CliHandledError("usage_error", `Invalid --surface-port entry "${entry}". Use surface=port.`, CLI_EXIT_USAGE);
     }
     ports[surface.id] = port;
@@ -268,10 +272,18 @@ export function surfaceTargetPort(surface: OpenSurface, flags: Record<string, st
 }
 
 export function parseDomainsProxyPort(value: string | undefined): number {
-  const port = Number(value || "80");
-  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+  const rawPort = value || "80";
+  const port = parseDecimalPort(rawPort);
+  if (port === null) {
     throw new CliHandledError("invalid_port", `Invalid port: ${value}`, CLI_EXIT_USAGE);
   }
+  return port;
+}
+
+function parseDecimalPort(value: string): number | null {
+  if (!/^[0-9]+$/.test(value)) return null;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) return null;
   return port;
 }
 

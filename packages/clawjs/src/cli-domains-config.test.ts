@@ -49,6 +49,14 @@ test("domains config rejects invalid proxy ports before generating service confi
     /Invalid port: nope/,
   );
   assert.throws(
+    () => domainsInstallPlan({ port: "0x50" }),
+    /Invalid port: 0x50/,
+  );
+  assert.throws(
+    () => domainsInstallPlan({ port: "1e3" }),
+    /Invalid port: 1e3/,
+  );
+  assert.throws(
     () => domainsInstallPlan({ port: "0" }),
     /Invalid port: 0/,
   );
@@ -59,6 +67,25 @@ test("domains config rejects invalid proxy ports before generating service confi
       nodePath: "/usr/bin/node",
     }),
     /Invalid port: 65536/,
+  );
+});
+
+test("domains config rejects malformed surface port overrides", () => {
+  assert.throws(
+    () => buildDomainsServiceConfig({ "surface-port": "memory=0x1234" }, "/tmp/workspace", {
+      repoRoot: "/tmp/repo",
+      cliEntryPath: "/tmp/repo/packages/clawjs/bin/claw.mjs",
+      nodePath: "/usr/bin/node",
+    }),
+    /Invalid --surface-port entry "memory=0x1234"/,
+  );
+  assert.throws(
+    () => buildDomainsServiceConfig({ "surface-port": "memory=123=456" }, "/tmp/workspace", {
+      repoRoot: "/tmp/repo",
+      cliEntryPath: "/tmp/repo/packages/clawjs/bin/claw.mjs",
+      nodePath: "/usr/bin/node",
+    }),
+    /Invalid --surface-port entry "memory=123=456"/,
   );
 });
 
