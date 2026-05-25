@@ -1758,7 +1758,7 @@ export const GENERATED_CLI_COMMANDS = [
     name: "inspect",
     kind: "canonical",
     summary: "Read-only stable surface inspection.",
-    usage: "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|surfaces|external|render",
+    usage: "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|surfaces|surface-parity|external|render",
     schemaVersion: 1,
     jsonSchemaId: "claw.cli.inspect.v1",
     support: {

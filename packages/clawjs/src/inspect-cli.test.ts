@@ -48,7 +48,7 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.match(allHelp.stdout, /^\s+inspect\s+canonical/m);
   const inspectHelp = await runCliCapture(["inspect", "--help"], process.cwd());
   assert.equal(inspectHelp.code, CLI_EXIT_OK);
-  for (const subcommand of ["command-intents", "remote-sync", "version-governance", "custom-app-sdk", "surfaces"]) {
+  for (const subcommand of ["command-intents", "remote-sync", "version-governance", "custom-app-sdk", "surfaces", "surface-parity"]) {
     assert.match(inspectHelp.stdout, new RegExp(`\\b${subcommand}\\b`));
   }
 
@@ -249,7 +249,7 @@ test("runCli explains discoverability artifacts through inspect why", async () =
 });
 
 test("runCli explains inspect subcommands through inspect why", async () => {
-  const result = await runCliCapture(["inspect", "why", "command-intents", "--json"], process.cwd());
+  const result = await runCliCapture(["inspect", "why", "surface-parity", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
   const payload = parseCliJson<{
     type: string;

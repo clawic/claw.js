@@ -917,7 +917,7 @@ function inspectSubcommandWhyPayload(subcommand: string) {
   const inspectCommand = resolveClawCliCommand("inspect");
   if (!inspectCommand) return null;
   const supported = new Set([
-    "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "apis", "protocols", "events", "schemas", "ids", "cli", "surfaces", "external", "render",
+    "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "apis", "protocols", "events", "schemas", "ids", "cli", "surfaces", "surface-parity", "external", "render",
   ]);
   if (!supported.has(subcommand)) return null;
   return {
@@ -1725,7 +1725,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|surface-parity|external|render`, CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {
