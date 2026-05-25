@@ -1370,7 +1370,7 @@ function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) 
 
 function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reason: string, supportContract, extra = {}) {
   const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
-  const requiredEvidence = extra.requiredEvidence ?? actionContract.requiredEvidence ?? [
+  const requiredEvidence = extra.requiredEvidence ?? actionContract.requiredEvidence ?? runtimeWriteActionEvidence(action) ?? [
     "official_runtime_cli_or_api",
     "non_destructive_fixture",
     "round_trip_native_visibility",
@@ -1410,6 +1410,14 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
     supportContract,
     ...extra,
   };
+}
+
+function runtimeWriteActionEvidence(action: string): string[] | null {
+  if (action === "send") return ["official_send_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_native_visibility"];
+  if (action === "inject") return ["official_inject_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_native_visibility"];
+  if (action === "abort") return ["official_abort_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_control_receipt"];
+  if (action === "create") return ["official_create_command_or_api", "non_destructive_fixture", "confirmation_or_dry_run_policy", "round_trip_native_list_evidence"];
+  return null;
 }
 
 function nextPinSortOrder(pinnedThreads): number {

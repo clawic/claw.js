@@ -1125,6 +1125,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(codexSessionsPayload.data.data.supportContract?.evidenceRequirements?.find((entry) => entry.id === "codex.sessions.write_back_contract")?.userVisibleContract, "read_only_projection_or_local_overlay_only");
   assert.deepEqual(codexSessionsPayload.data.data.actionContracts?.map((entry) => entry.action), manifest.sessionActionContracts.codex.map((entry) => entry.action));
   assert.equal(codexSessionsPayload.data.data.actionContracts?.find((entry) => entry.action === "send")?.status, "blocked");
+  assert.equal(codexSessionsPayload.data.data.actionContracts?.find((entry) => entry.action === "send")?.wouldWriteRuntime, true);
+  assert.equal(codexSessionsPayload.data.data.actionContracts?.find((entry) => entry.action === "send")?.requiredEvidence?.includes("official_send_command_or_api"), true);
   assert.equal(codexSessionsPayload.data.data.actionContracts?.find((entry) => entry.action === "create")?.wouldWriteRuntime, true);
   assert.equal(codexSessionsPayload.data.data.actionContracts?.find((entry) => entry.action === "pin")?.authority, "clawix_local_overlay");
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "list")?.status, "implemented");
@@ -1134,7 +1136,11 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "create")?.wouldWriteRuntime, true);
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "create")?.requiredEvidence?.includes("official_create_command_or_api"), true);
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "inject")?.status, "blocked");
+  assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "inject")?.wouldWriteRuntime, true);
+  assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "inject")?.requiredEvidence?.includes("official_inject_command_or_api"), true);
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "abort")?.status, "blocked");
+  assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "abort")?.wouldWriteRuntime, true);
+  assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "abort")?.requiredEvidence?.includes("round_trip_control_receipt"), true);
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "pin")?.authority, "clawix_local_overlay");
   assert.equal(codexSessionsPayload.data.data.actionPolicy?.find((entry) => entry.action === "pin")?.writesRuntime, false);
 
@@ -1466,12 +1472,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.scheduler?.schedulers?.some((entry) => entry.id === "daily-summary" && entry.kind === "cron"), true);
   assert.deepEqual(hermesPayload.data.domainData.sessions?.actionContracts?.map((entry) => entry.action), manifest.sessionActionContracts.hermes.map((entry) => entry.action));
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.status, "blocked");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.wouldWriteRuntime, true);
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.requiredEvidence?.includes("official_send_command_or_api"), true);
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "create")?.wouldWriteRuntime, true);
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.authority, "clawix_local_overlay");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "list")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "preview")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "resolve")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "history")?.status, "implemented");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "send")?.wouldWriteRuntime, true);
+  assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "send")?.requiredEvidence?.includes("round_trip_native_visibility"), true);
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "create")?.writesRuntime, false);
   assert.match(
     hermesPayload.data.commands?.executableByClawCli?.find((entry) => entry.command === "runtime hermes sessions resolve --session-key <id>")?.delegatesTo ?? "",
@@ -1871,7 +1881,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       data: {
         totalProjected?: number;
         supportContract?: { writeBackAllowed?: boolean; evidenceRequirements?: Array<{ id?: string; blockerClass?: string; safeDefault?: string }> };
-        actionPolicy?: Array<{ action?: string; status?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean; authority?: string; guard?: string }>;
+        actionPolicy?: Array<{ action?: string; status?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean; authority?: string; guard?: string; requiredEvidence?: string[] }>;
         overlayState?: { overlayAuthority?: string; writesRuntime?: boolean; writeBackStatus?: string; conflictPolicy?: string };
       };
     };
@@ -1885,6 +1895,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesActionByName.get("preview")?.status, "implemented");
   assert.equal(hermesActionByName.get("send")?.status, "blocked");
   assert.equal(hermesActionByName.get("send")?.writesRuntime, false);
+  assert.equal(hermesActionByName.get("send")?.wouldWriteRuntime, true);
+  assert.equal(hermesActionByName.get("send")?.requiredEvidence?.includes("official_send_command_or_api"), true);
+  assert.equal(hermesActionByName.get("inject")?.requiredEvidence?.includes("official_inject_command_or_api"), true);
+  assert.equal(hermesActionByName.get("abort")?.requiredEvidence?.includes("round_trip_control_receipt"), true);
   assert.equal(hermesActionByName.get("create")?.wouldWriteRuntime, true);
   assert.equal(hermesActionByName.get("pin")?.authority, "clawix_local_overlay");
   assert.equal(hermesDomainSessionsPayload.data.data.overlayState?.overlayAuthority, "clawix_local_overlay");
@@ -1958,7 +1972,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(blockedPayload.data.blockerClass, "direct_blocker");
     assert.equal(blockedPayload.data.officialContractRequired, true);
     assert.equal(blockedPayload.data.fixtureRequired, true);
-    assert.equal(blockedPayload.data.requiredEvidence?.includes("official_runtime_cli_or_api"), true);
+    assert.equal(blockedPayload.data.requiredEvidence?.includes(`official_${blockedAction}_command_or_api`), true);
+    assert.equal(blockedPayload.data.requiredEvidence?.includes("non_destructive_fixture"), true);
     assert.equal(blockedPayload.data.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
     assert.equal(blockedPayload.data.userVisibleContract, "non_executable_action_plan_only_until_runtime_contract_exists");
     assert.equal(blockedPayload.data.claimEffect, "blocks_recommended_production_native_parity");
