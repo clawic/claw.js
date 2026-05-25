@@ -218,6 +218,15 @@ test("hermes adapter honors an explicit binary path for runtime probes", async (
   assert.equal(status.version, "hermes 2.0.0");
   assert.equal(runner.calls.includes("which hermes"), false);
   assert.equal(runner.calls.every((call) => call === "custom-hermes --version" || call.startsWith("custom-hermes ")), true);
+
+  const conversation = getRuntimeSessionDescriptor(hermesAdapter, {
+    adapter: "hermes",
+    binaryPath: "custom-hermes",
+  });
+  assert.equal(conversation.buildCliInvocation({
+    sessionId: "session-1",
+    prompt: "hello",
+  }).command, "custom-hermes");
 });
 
 test("hermes adapter honors explicit config, auth store, and workspace paths", async () => {

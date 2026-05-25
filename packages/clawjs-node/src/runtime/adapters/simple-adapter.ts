@@ -111,6 +111,18 @@ function runtimeBinary(spec: SimpleRuntimeAdapterSpec, options: RuntimeAdapterOp
   return options.binaryPath?.trim() || spec.binary;
 }
 
+function buildSessionCliInvocation(
+  spec: SimpleRuntimeAdapterSpec,
+  options: RuntimeAdapterOptions,
+  input: Parameters<RuntimeSessionAdapter["buildCliInvocation"]>[0],
+): SessionCliInvocation {
+  const invocation = spec.conversationCli(input);
+  const binary = runtimeBinary(spec, options);
+  return invocation.command === spec.binary
+    ? { ...invocation, command: binary }
+    : invocation;
+}
+
 function readConfig(locations: RuntimeLocations): Record<string, unknown> {
   return readJsonFile<Record<string, unknown>>(locations.configPath ?? "") ?? {};
 }
@@ -770,7 +782,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
             ...(options.gateway.token ? { token: options.gateway.token } : {}),
           } : null,
           buildCliInvocation(input) {
-            return spec.conversationCli(input);
+            return buildSessionCliInvocation(spec, options, input);
           },
           supportsGateway: !!spec.gatewaySupport,
           ...(details.primaryTransport ? { primaryTransport: details.primaryTransport } : {}),
@@ -1135,7 +1147,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
           ...(options.gateway.token ? { token: options.gateway.token } : {}),
         } : null,
         buildCliInvocation(input) {
-          return spec.conversationCli(input);
+          return buildSessionCliInvocation(spec, options, input);
         },
         supportsGateway: !!spec.gatewaySupport,
         ...(details.primaryTransport ? { primaryTransport: details.primaryTransport } : {}),
