@@ -157,6 +157,7 @@ export interface ConnectorContextRequirement {
 
 export type ConnectorContextDecisionReasonCode =
   | "context_required"
+  | "context_decision_mismatch"
   | "context_record_missing"
   | "context_field_missing"
   | "context_secret_binding_missing"

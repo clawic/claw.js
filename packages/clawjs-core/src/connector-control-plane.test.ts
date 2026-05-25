@@ -341,6 +341,59 @@ test("connector control plane fails closed when governed context is required but
   assert.equal(decision.audit.reasonCodes?.includes("context_object_blocked"), true);
 });
 
+test("connector control plane rejects governed context decisions from a different provider operation", () => {
+  const operation: ConnectorExecutionRequest["operation"] = {
+    ...baseRequest.operation,
+    id: "apple.upload",
+    providerId: "apple",
+    capabilityIds: ["app.upload.release"],
+    contextRequirements: [
+      { kind: "team", fields: ["team_id"] },
+      { kind: "app", fields: ["bundle_id", "sku"] },
+    ],
+  };
+  const request: ConnectorExecutionRequest = {
+    ...baseRequest,
+    provider: { id: "apple", displayName: "Apple App Store Connect", trustTier: "third_party", enabled: true },
+    operation,
+    capabilityId: "app.upload.release",
+    credentialBinding: {
+      id: "cred-apple",
+      providerId: "apple",
+      secretRef: "secret://apple/app-store-connect",
+      credentialKind: "api_key",
+      operationIds: ["apple.upload"],
+      capabilityIds: ["app.upload.release"],
+      enabled: true,
+    },
+    governedContext: explainConnectorContextChoice({
+      providerId: "revenuecat",
+      operationId: "revenuecat.project_configuration.read",
+      requirements: [{ kind: "key", fields: ["api_version", "api_key"] }],
+      candidates: [{
+        id: "revenuecat_api_v2",
+        providerId: "revenuecat",
+        kind: "key",
+        displayName: "RevenueCat API v2",
+        state: "active",
+        fields: {
+          api_version: { value: "v2", sensitivity: "public" },
+          api_key: { sensitivity: "secret_ref", secretRef: "secret://revenuecat/v2" },
+        },
+      }],
+    }),
+  };
+
+  const decision = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+  });
+
+  assert.equal(decision.allowed, false);
+  assert.equal(decision.reasons.some((reason) => reason.code === "context_decision_mismatch"), true);
+  assert.equal(decision.audit.reasonCodes?.includes("context_decision_mismatch"), true);
+});
+
 test("connector control plane audit declares governed context refs, secret refs, defaults, fallback rules, and approvals", () => {
   const operation: ConnectorExecutionRequest["operation"] = {
     ...baseRequest.operation,

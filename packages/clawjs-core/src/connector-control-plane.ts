@@ -4,7 +4,12 @@ import {
   type RegulatedDomain,
   type SensitiveRecordClass,
 } from "./regulated-domain-safety.ts";
-import type { ConnectorContextChoice, ConnectorContextDecisionReasonCode, ConnectorContextRequirement } from "./connector-governed-context.ts";
+import {
+  explainConnectorContextChoice,
+  type ConnectorContextChoice,
+  type ConnectorContextDecisionReasonCode,
+  type ConnectorContextRequirement,
+} from "./connector-governed-context.ts";
 import type { NetworkPolicyEvaluation } from "./network-control-plane.ts";
 
 export const connectorControlPlaneVersion = 1;
@@ -492,10 +497,36 @@ function evaluateGovernedContext(
     });
     return;
   }
-  if (request.governedContext.allowed) {
+  if (
+    request.governedContext.trace.providerId !== request.provider.id
+    || request.governedContext.trace.operationId !== request.operation.id
+  ) {
+    reasons.push({
+      code: "context_decision_mismatch",
+      message: `Governed context decision must match provider ${request.provider.id} and operation ${request.operation.id}.`,
+    });
     return;
   }
-  for (const reason of request.governedContext.reasons) {
+  if (!request.governedContext.allowed) {
+    for (const reason of request.governedContext.reasons) {
+      reasons.push({
+        code: reason.code,
+        message: reason.message,
+      });
+    }
+    return;
+  }
+
+  const rechecked = explainConnectorContextChoice({
+    providerId: request.provider.id,
+    operationId: request.operation.id,
+    environment: request.governedContext.trace.environment,
+    actorId: request.context?.actorId,
+    requirements: request.operation.contextRequirements,
+    defaultRefs: request.governedContext.trace.defaultRefs,
+    candidates: request.governedContext.selected,
+  });
+  for (const reason of rechecked.reasons) {
     reasons.push({
       code: reason.code,
       message: reason.message,
