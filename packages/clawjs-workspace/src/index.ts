@@ -252,9 +252,10 @@ const PRODUCTIVITY_SCHEMA_HASH = "productivity-v6-human-productivity-core";
 
 async function createWorkspaceExtension(
   claw: ClawInstance,
-  workspaceDir: string,
+  workspaceDirInput: string,
   options: WorkspaceExtensionOptions = {},
 ): Promise<WorkspaceClawInstance> {
+  const workspaceDir = path.resolve(workspaceDirInput);
   const audit = new WorkspaceAuditLog();
   const data = createSqliteWorkspaceCollectionStore(workspaceDir);
   const useTimeService = options.useTimeService === true;
@@ -1955,8 +1956,15 @@ async function createWorkspaceExtension(
 
 export async function createWorkspaceClaw(options: CreateWorkspaceClawOptions): Promise<WorkspaceClawInstance> {
   const { productivity, ...baseOptions } = options;
-  const claw = await createClaw(baseOptions);
-  return createWorkspaceExtension(claw, options.workspace.rootDir, { ...productivity, useTimeService: claw.time.configured });
+  const rootDir = path.resolve(options.workspace.rootDir);
+  const claw = await createClaw({
+    ...baseOptions,
+    workspace: {
+      ...baseOptions.workspace,
+      rootDir,
+    },
+  });
+  return createWorkspaceExtension(claw, rootDir, { ...productivity, useTimeService: claw.time.configured });
 }
 
 export async function extendClawWithWorkspace(claw: ClawInstance, options: { workspaceDir: string; productivity?: WorkspaceExtensionOptions }): Promise<WorkspaceClawInstance> {

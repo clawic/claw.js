@@ -246,3 +246,35 @@ test("createWorkspaceClaw builds context blocks and augments session streaming",
     globalThis.fetch = originalFetch;
   }
 });
+
+test("createWorkspaceClaw anchors relative workspace roots before cwd changes", { concurrency: false }, async (t) => {
+  const sandbox = createWorkspaceDir("relative-root");
+  const originalCwd = process.cwd();
+  const parentDir = path.join(sandbox, "parent");
+  const otherDir = path.join(sandbox, "other");
+  fs.mkdirSync(parentDir, { recursive: true });
+  fs.mkdirSync(otherDir, { recursive: true });
+  useIsolatedClawDataRoot(t, sandbox);
+  t.after(() => {
+    process.chdir(originalCwd);
+  });
+
+  process.chdir(parentDir);
+  const claw = await createWorkspaceClaw({
+    runtime: { adapter: "demo" },
+    workspace: {
+      appId: "demo",
+      workspaceId: "workspace-relative-root",
+      agentId: "agent-relative-root",
+      rootDir: "workspace",
+    },
+  });
+
+  process.chdir(otherDir);
+  await claw.tasks.create({ title: "Keep audit under the original workspace" });
+
+  const expectedAuditPath = path.join(parentDir, "workspace", ".claw", "audit", "audit.jsonl");
+  const wrongAuditPath = path.join(otherDir, "workspace", ".claw", "audit", "audit.jsonl");
+  assert.equal(fs.existsSync(expectedAuditPath), true);
+  assert.equal(fs.existsSync(wrongAuditPath), false);
+});
