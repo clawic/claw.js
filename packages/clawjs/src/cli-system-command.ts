@@ -993,6 +993,9 @@ function parseRangeMs(value: string | undefined): number {
   const match = value.match(/^(\d+)(m|h|d)$/);
   if (!match) throw new CliHandledError("invalid_range", "Use --range with values like 15m, 1h or 24h.", CLI_EXIT_USAGE);
   const amount = Number(match[1]);
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new CliHandledError("invalid_range", "Use --range with a positive duration like 15m, 1h or 24h.", CLI_EXIT_USAGE);
+  }
   const unit = match[2];
   if (unit === "m") return amount * 60_000;
   if (unit === "h") return amount * 3_600_000;

@@ -660,6 +660,13 @@ test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets
   assert.deepEqual(historyPayload.chart, { kind: "line", source: "empty", empty: true, points: [], metricKey: "system.cpu.load1", unit: "count" });
   assert.equal(fs.existsSync(monitorDb), false);
 
+  const invalidHistoryRange = await runCliCapture(["system", "history", "system.cpu.load1", "--range", "0m", "--json"], process.cwd());
+  assert.equal(invalidHistoryRange.code, CLI_EXIT_USAGE);
+  const invalidHistoryRangePayload = JSON.parse(invalidHistoryRange.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(invalidHistoryRangePayload.ok, false);
+  assert.equal(invalidHistoryRangePayload.error.code, "invalid_range");
+  assert.equal(invalidHistoryRangePayload.error.status, "USAGE");
+
   const rules = await runCliCapture(["system", "rules", "list", "--json"], process.cwd());
   assert.equal(rules.code, CLI_EXIT_OK);
   assert.equal(parseCliJsonPayload<{ rules: unknown[] }>(rules.stdout).rules.length > 0, true);
