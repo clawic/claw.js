@@ -232,6 +232,55 @@ test("accounts upsert, link-secret, defaults, and state changes persist in core 
   });
 });
 
+test("accounts defaults reject invalid priority before persistence", async () => {
+  await withTempConnectorContext(async (cwd, dataRoot) => {
+    const upsert = await runCliCapture([
+      "accounts",
+      "upsert",
+      "revenuecat_api_v2",
+      "--provider",
+      "revenuecat",
+      "--kind",
+      "key",
+      "--set",
+      "api_version=v2",
+      "--json",
+    ], cwd);
+    assert.equal(upsert.code, CLI_EXIT_OK, upsert.stderr || upsert.stdout);
+
+    const invalid = await runCliCapture([
+      "connectors",
+      "ctx",
+      "defaults",
+      "set",
+      "--context",
+      "revenuecat_api_v2",
+      "--provider",
+      "revenuecat",
+      "--scope",
+      "provider:revenuecat",
+      "--priority",
+      "nope",
+      "--json",
+    ], cwd);
+    assert.equal(invalid.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(invalid.stdout) as { ok: boolean; error: { code: string; status: string; location: string; details?: Record<string, unknown> } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_context_default_priority");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.accounts.defaults.priority");
+    assert.deepEqual(payload.error.details, { flag: "--priority", value: "nope" });
+
+    const sqlite = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: dataRoot } as NodeJS.ProcessEnv), { readonly: true });
+    try {
+      const count = (sqlite.prepare("SELECT COUNT(*) AS count FROM connector_context_defaults").get() as { count: number }).count;
+      assert.equal(count, 0);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
 test("accounts export defaults to redacted records and audits the export", async () => {
   await withTempConnectorContext(async (cwd, dataRoot) => {
     await runCliCapture([

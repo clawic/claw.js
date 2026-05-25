@@ -231,7 +231,7 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
           providerId: input.flags.provider,
           operationIds: input.flags.operation ? input.flags.operation.split(",").map((entry) => entry.trim()).filter(Boolean) : undefined,
           contextRef,
-          priority: input.flags.priority ? Number(input.flags.priority) : undefined,
+          priority: parseDefaultPriorityFlag(input.flags.priority),
           condition: input.flags.condition,
         });
         return writeConnectorContextResult(input, canonicalCommand, action, { default: rule, durable: true, store: "core.sqlite" });
@@ -550,6 +550,18 @@ function parseNonNegativeIntegerFlag(value: string | undefined, name: string): n
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
     throw new CliHandledError(`invalid_${name}`, `--${name} must be a non-negative integer.`, CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
+function parseDefaultPriorityFlag(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!value.trim() || !Number.isSafeInteger(parsed)) {
+    throw new CliHandledError("invalid_context_default_priority", "--priority must be an integer.", CLI_EXIT_USAGE, {
+      location: "cli.accounts.defaults.priority",
+      details: { flag: "--priority", value },
+    });
   }
   return parsed;
 }
