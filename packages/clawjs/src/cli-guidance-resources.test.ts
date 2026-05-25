@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
 test("guidance and resources commands expose JIT metadata only when requested", async (t) => {
@@ -95,4 +95,36 @@ test("guidance and resources commands expose JIT metadata only when requested", 
   assert.equal(listedOffPayload.meta.actor.actorKind, "agent");
   assert.equal(listedOffPayload.meta.actor.trustSource, "untrusted");
   assert.equal("guidance" in listedOffPayload.meta, false);
+});
+
+test("guidance match rejects invalid limits before matching", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-limit-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const guidanceDir = path.join(cwd, "guidance");
+
+  const invalidText = await runCliCapture([
+    "guidance", "match",
+    "--command", "resources list",
+    "--limit", "nope",
+    "--guidance-dir", guidanceDir,
+    "--json",
+  ], cwd);
+  assert.equal(invalidText.code, CLI_EXIT_USAGE);
+  const invalidTextPayload = JSON.parse(invalidText.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+  assert.equal(invalidTextPayload.ok, false);
+  assert.equal(invalidTextPayload.error.code, "invalid_guidance_limit");
+  assert.equal(invalidTextPayload.error.status, "USAGE");
+  assert.equal(invalidTextPayload.error.location, "cli.guidance.limit");
+
+  const negative = await runCliCapture([
+    "guidance", "match",
+    "--command", "resources list",
+    "--limit", "-1",
+    "--guidance-dir", guidanceDir,
+    "--json",
+  ], cwd);
+  assert.equal(negative.code, CLI_EXIT_USAGE);
+  const negativePayload = JSON.parse(negative.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(negativePayload.ok, false);
+  assert.equal(negativePayload.error.code, "invalid_guidance_limit");
 });

@@ -162,7 +162,7 @@ function runGuidanceCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & {
       agent: flags.agent,
       actorKind: flags["actor-kind"] as "human" | "agent" | "automation" | "unknown" | undefined,
       riskClass: flags["risk-class"] as "read" | "write" | "destructive" | "cost" | "native-permission" | "secret" | undefined,
-      ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      ...(flags.limit !== undefined ? { limit: parseNonNegativeIntegerFlag(flags.limit, "guidance match limit") } : {}),
     });
     if (wantsJson) write(result);
     else context.stdout.write(`${result.hints.map((hint) => `${hint.severity} ${hint.id} ${hint.capsule}`).join("\n")}\n`);
@@ -235,6 +235,16 @@ function runResourcesCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & 
 
 function isResourceReadPayload(value: unknown): value is { content?: string } {
   return typeof value === "object" && value !== null && "content" in value;
+}
+
+function parseNonNegativeIntegerFlag(value: string, label: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new CliHandledError("invalid_guidance_limit", `${label} must be a non-negative integer.`, CLI_EXIT_USAGE, {
+      location: "cli.guidance.limit",
+    });
+  }
+  return parsed;
 }
 
 function resolveResourceLocator(value: string | undefined, flags: Record<string, string>) {
