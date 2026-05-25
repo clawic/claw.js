@@ -170,6 +170,38 @@ test("ACL: capability unlocks a denied field", () => {
   assert.ok(res.allowedFields.includes("contact"));
 });
 
+test("ACL: forged capability does not unlock a denied field", () => {
+  const owner = makeNode("owner");
+  const viewer = makeNode("viewer");
+  const { block } = newBlock({
+    archetype: "standalone",
+    vertical: "item",
+    audience: { groups: ["public"] },
+    fieldsPerLevel: { title: ["public"], contact: ["interested-in-listing"] },
+    content: { title: "Bike", contact: "+34 600 600 600" },
+    rolePubkey: owner.role.publicKey,
+    roleCertificate: owner.roleCert,
+  });
+  const forged = {
+    capId: "forged0000",
+    blockId: block.blockId,
+    level: "interested-in-listing",
+    issuedTo: viewer.root.publicKey,
+    issuedAt: Math.floor(Date.now() / 1000),
+    expiresAt: Math.floor(Date.now() / 1000) + 60,
+  };
+  const res = resolveAcl({
+    viewerRootPubkey: viewer.root.publicKey,
+    block,
+    ownerGroups: [],
+    presentedCapabilities: [forged],
+  });
+
+  assert.equal(res.canRead, true);
+  assert.equal(res.allowedFields.includes("contact"), false);
+  assert.deepEqual(res.capabilityLevels, []);
+});
+
 test("ACL: projectBlock removes denied fields from overlay/content", () => {
   const owner = makeNode("owner");
   const viewer = makeNode("viewer");

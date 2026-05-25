@@ -10,6 +10,7 @@
 
 import type { Block, Group, AudienceLevel, CapabilityRef } from "./types.ts";
 import { AUDIENCE_BREADTH, BUILTIN_AUDIENCE_LEVELS } from "./types.ts";
+import { verifyCapability } from "./capabilities.ts";
 
 export interface AclQuery {
   viewerRootPubkey: Uint8Array;
@@ -56,7 +57,8 @@ export function resolveAcl(query: AclQuery): AclResult {
   const validCaps = (query.presentedCapabilities ?? []).filter((c) =>
     bytesEqual(c.blockId, block.blockId) &&
     c.expiresAt >= now &&
-    (!c.issuedTo || bytesEqual(c.issuedTo, query.viewerRootPubkey)),
+    (!c.issuedTo || bytesEqual(c.issuedTo, query.viewerRootPubkey)) &&
+    (block.rolePubkey ? verifyCapability(c, block.rolePubkey, now) : false),
   );
   const capabilityLevels = validCaps.map((c) => c.level);
   if (!isInAudience && validCaps.length === 0) {

@@ -45,9 +45,9 @@ export function issueCapability(input: IssueCapabilityInput): CapabilityRef {
   return { ...draft, capId, signature };
 }
 
-export function verifyCapability(cap: CapabilityRef, rolePubkey: Uint8Array): boolean {
+export function verifyCapability(cap: CapabilityRef, rolePubkey: Uint8Array, now = Math.floor(Date.now() / 1000)): boolean {
   if (!cap.signature) return false;
-  if (Math.floor(Date.now() / 1000) > cap.expiresAt) return false;
+  if (now > cap.expiresAt) return false;
   const canonical = canonicalize(cap);
   if (computeCapId(canonical) !== cap.capId) return false;
   return ed25519.verify(cap.signature, canonical, rolePubkey);
