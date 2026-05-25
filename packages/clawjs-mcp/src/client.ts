@@ -41,11 +41,29 @@ export class MCPProtocolClient {
       throw new Error(`MCPProtocolClient currently supports http/sse transport only (got ${this.options.server.transport})`);
     }
     const request: JsonRpcRequest = { jsonrpc: "2.0", id: Date.now(), method, params };
-    const response = await this.fetchImpl(this.options.server.endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(request),
-    });
+    const timeoutMs = this.options.timeoutMs;
+    const controller = typeof timeoutMs === "number" && Number.isFinite(timeoutMs) && timeoutMs > 0
+      ? new AbortController()
+      : null;
+    const timeout = controller
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : null;
+    let response: Response;
+    try {
+      response = await this.fetchImpl(this.options.server.endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request),
+        ...(controller ? { signal: controller.signal } : {}),
+      });
+    } catch (error) {
+      if (controller?.signal.aborted) {
+        throw new Error(`mcp rpc ${method} timed out after ${timeoutMs}ms`);
+      }
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
     if (!response.ok) {
       throw new Error(`mcp rpc ${method} -> ${response.status}: ${await response.text()}`);
     }
