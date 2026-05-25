@@ -427,6 +427,13 @@ function positiveIntegerFlag(value: string | undefined, fallback: number, flagNa
   throw new CliHandledError("invalid_positive_integer", `${flagName} must be a positive integer.`, CLI_EXIT_USAGE);
 }
 
+function nonNegativeIntegerFlag(value: string | undefined, fallback: number, flagName: string, errorCode: string): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed >= 0) return parsed;
+  throw new CliHandledError(errorCode, `${flagName} must be a non-negative integer.`, CLI_EXIT_USAGE);
+}
+
 function agentServiceAssignmentFromFlags(input: RemoteSyncCliInput) {
   const tenantId = input.flags["tenant-id"] ?? "tenant.demo";
   const agentId = input.flags["agent-id"] ?? "agent.service";
@@ -453,8 +460,8 @@ function agentServiceBudgetFromFlags(input: RemoteSyncCliInput, assignment: Retu
     budgetId: input.flags["budget-id"] ?? assignment.budgetId,
     tenantId: input.flags["budget-tenant-id"] ?? assignment.tenantId,
     billingAccountId: input.flags["billing-account"] ?? assignment.billingAccountId,
-    limitCents: numberFlag(input.flags["limit-cents"], 5000),
-    usedCents: numberFlag(input.flags["used-cents"], 0),
+    limitCents: nonNegativeIntegerFlag(input.flags["limit-cents"], 5000, "--limit-cents", "invalid_agent_service_budget_limit"),
+    usedCents: nonNegativeIntegerFlag(input.flags["used-cents"], 0, "--used-cents", "invalid_agent_service_budget_used"),
     billingMeterId: input.flags["billing-meter"] ?? "meter.agent-service",
   };
 }
@@ -921,7 +928,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
       agentId: input.flags["agent-id"] ?? assignment.agentId,
       assignmentId: input.flags["assignment-id"] ?? assignment.assignmentId,
       routeId: input.flags["route-id"] ?? "gateway.multiTenantAgentService",
-      estimatedCostCents: numberFlag(input.flags["estimated-cost-cents"], 0),
+      estimatedCostCents: nonNegativeIntegerFlag(input.flags["estimated-cost-cents"], 0, "--estimated-cost-cents", "invalid_agent_service_estimated_cost"),
       now: input.flags.now ?? "2026-05-17T10:10:00.000Z",
     };
     const decision = evaluateRemoteAgentServiceAccess({
