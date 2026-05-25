@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import Database from "better-sqlite3";
 import { afterEach, test } from "vitest";
 
 import { createCodeLedger } from "./index.ts";
+import { CODE_LEDGER_SCHEMA_SQL } from "./surface.ts";
 
 const previousClawDataDir = process.env.CLAW_DATA_DIR;
 
@@ -77,4 +79,37 @@ test("code ledger policy rejects unsafe numeric thresholds", () => {
     () => ledger.validatePolicy(),
     /Invalid code policy risk\.largeDiffThreshold: expected a safe positive integer, got "many"\./,
   );
+});
+
+test("code ledger status queries use ordered snapshot indexes", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-ledger-indexes-"));
+  const db = new Database(path.join(root, "code.sqlite"));
+  try {
+    db.exec(CODE_LEDGER_SCHEMA_SQL);
+    db.prepare(`
+      INSERT INTO code_repositories (id, root_dir, default_branch, current_head, created_at, updated_at)
+      VALUES ('repo-indexed', ?, 'main', 'head', '2026-05-25T00:00:00.000Z', '2026-05-25T00:00:00.000Z')
+    `).run(root);
+
+    const intentPlan = db
+      .prepare("EXPLAIN QUERY PLAN SELECT * FROM code_intents WHERE repo_id = ? ORDER BY created_at DESC")
+      .all("repo-indexed") as Array<{ detail: string }>;
+    assert.equal(intentPlan.some((row) => row.detail.includes("code_intents_repo_created_idx")), true);
+    assert.equal(intentPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+
+    const blockedPlan = db
+      .prepare("EXPLAIN QUERY PLAN SELECT * FROM code_intents WHERE repo_id = ? AND status = ? ORDER BY created_at DESC")
+      .all("repo-indexed", "blocked") as Array<{ detail: string }>;
+    assert.equal(blockedPlan.some((row) => row.detail.includes("code_intents_repo_status_created_idx")), true);
+    assert.equal(blockedPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+
+    const queuePlan = db
+      .prepare("EXPLAIN QUERY PLAN SELECT * FROM code_queue WHERE status = 'queued' ORDER BY created_at ASC")
+      .all() as Array<{ detail: string }>;
+    assert.equal(queuePlan.some((row) => row.detail.includes("code_queue_status_created_idx")), true);
+    assert.equal(queuePlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+  } finally {
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

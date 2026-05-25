@@ -16,9 +16,12 @@ const schemaSurfaceNodes = [
   clawPersistentSurface.table({ id: `claw.database.runtime.table.code_projects`, name: "code_projects", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.table({ id: `claw.database.runtime.table.code_agents`, name: "code_agents", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_intents_repo_status_idx`, name: "code_intents_repo_status_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_intents_repo_created_idx`, name: "code_intents_repo_created_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_intents_repo_status_created_idx`, name: "code_intents_repo_status_created_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_reservations_active_idx`, name: "code_reservations_active_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_checks_intent_name_idx`, name: "code_checks_intent_name_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_reviews_intent_idx`, name: "code_reviews_intent_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
+  clawPersistentSurface.index({ id: `claw.database.runtime.index.code_queue_status_created_idx`, name: "code_queue_status_created_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_gate_runs_intent_idx`, name: "code_gate_runs_intent_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_projects_status_idx`, name: "code_projects_status_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source }),
   clawPersistentSurface.index({ id: `claw.database.runtime.index.code_agents_project_idx`, name: "code_agents_project_idx", parentId: "claw.database.runtime", databaseId: "claw.database.runtime", source })
@@ -57,6 +60,8 @@ export const CODE_LEDGER_SCHEMA_SQL = String.raw`
         host_url TEXT
       );
       CREATE INDEX IF NOT EXISTS code_intents_repo_status_idx ON code_intents(repo_id, status, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS code_intents_repo_created_idx ON code_intents(repo_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS code_intents_repo_status_created_idx ON code_intents(repo_id, status, created_at DESC);
       CREATE TABLE IF NOT EXISTS code_reservations (
         id TEXT PRIMARY KEY,
         intent_id TEXT NOT NULL,
@@ -106,6 +111,7 @@ export const CODE_LEDGER_SCHEMA_SQL = String.raw`
         updated_at TEXT NOT NULL,
         error TEXT
       );
+      CREATE INDEX IF NOT EXISTS code_queue_status_created_idx ON code_queue(status, created_at ASC);
       CREATE TABLE IF NOT EXISTS code_host_syncs (
         id TEXT PRIMARY KEY,
         intent_id TEXT NOT NULL,
