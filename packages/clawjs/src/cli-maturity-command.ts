@@ -16,7 +16,7 @@ interface MaturityCliInput {
 }
 
 const activationTierOrder = ["stable", "beta", "experimental", "dev"] as const;
-const maturityOrder = ["incomplete", "experimental", "beta", "stable"] as const;
+const maturityOrder = ["incomplete", "experimental", "beta", "stable", "retired"] as const;
 
 export async function runMaturityCli(input: MaturityCliInput): Promise<number> {
   const action = input.positionals[1] || "list";
