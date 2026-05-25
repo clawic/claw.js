@@ -260,6 +260,47 @@ test("DatabaseServiceStore materializes record indexes for list filters and uniq
   }
 });
 
+test("DatabaseServiceStore syncs record indexes with one sqlite_master scan", () => {
+  const rootDir = tempRoot("clawjs-database-record-index-sync-");
+  const store = new DatabaseServiceStore(path.join(rootDir, "core.sqlite"), path.join(rootDir, "files"));
+  try {
+    for (let index = 0; index < 8; index += 1) {
+      store.createCollection("main", {
+        name: `indexed_records_${index}`,
+        displayName: `Indexed Records ${index}`,
+        fields: [
+          { name: "status", type: "text" },
+          { name: "rank", type: "number" },
+        ],
+        indexes: [
+          { name: "status_rank_idx", fields: ["status", "rank"] },
+          { name: "rank_idx", fields: ["rank"] },
+        ],
+      });
+    }
+
+    const originalPrepare = store.sqlite.prepare.bind(store.sqlite);
+    let sqliteMasterIndexScans = 0;
+    store.sqlite.prepare = ((source: string) => {
+      if (
+        source.includes("FROM sqlite_master")
+        && source.includes("tbl_name = 'records'")
+        && source.includes("name LIKE ?")
+      ) {
+        sqliteMasterIndexScans += 1;
+      }
+      return originalPrepare(source);
+    }) as typeof store.sqlite.prepare;
+
+    (store as unknown as { syncAllRecordIndexes(): void }).syncAllRecordIndexes();
+
+    assert.equal(sqliteMasterIndexScans, 1);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("DatabaseServiceStore rolls back record note side effects when record insert fails", () => {
   const rootDir = tempRoot("clawjs-database-record-atomicity-");
   const store = new DatabaseServiceStore(path.join(rootDir, "core.sqlite"), path.join(rootDir, "files"));

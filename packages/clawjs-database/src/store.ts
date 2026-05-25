@@ -62,6 +62,11 @@ interface RecordIndexSqlDefinition {
   sql: string;
 }
 
+interface RecordIndexRow {
+  name: string;
+  sql: string | null;
+}
+
 const RECORD_INDEX_NAME_PREFIX = "claw_records_";
 
 function buildRecordListQuery(collection: CollectionDefinition, options: ListRecordsOptions): RecordListQuery {
@@ -170,6 +175,21 @@ function recordIndexSqlName(namespaceId: string, collectionName: string, indexNa
 
 function recordIndexPredicate(namespaceId: string, collectionName: string): string {
   return `namespace_id = ${sqlStringLiteral(namespaceId)} AND collection_name = ${sqlStringLiteral(collectionName)}`;
+}
+
+function recordIndexCollectionKey(namespaceId: string, collectionName: string): string {
+  return `${namespaceId}\0${collectionName}`;
+}
+
+function parseSqlStringLiteral(value: string): string {
+  return value.replace(/''/g, "'");
+}
+
+function recordIndexCollectionKeyFromSql(sql: string | null): string | null {
+  if (!sql) return null;
+  const match = /\bWHERE\s+namespace_id\s*=\s*'((?:''|[^'])*)'\s+AND\s+collection_name\s*=\s*'((?:''|[^'])*)'/i.exec(sql);
+  if (!match) return null;
+  return recordIndexCollectionKey(parseSqlStringLiteral(match[1]), parseSqlStringLiteral(match[2]));
 }
 
 function quoteSqlIdentifier(identifier: string): string {
@@ -468,17 +488,20 @@ export class DatabaseServiceStore {
   }
 
   private syncAllRecordIndexes(): void {
+    const existingRowsByCollection = this.recordIndexRowsByCollection();
     for (const namespace of this.listNamespaces()) {
       for (const collection of this.listCollections(namespace.id)) {
-        this.syncRecordIndexes(collection);
+        this.syncRecordIndexes(
+          collection,
+          existingRowsByCollection.get(recordIndexCollectionKey(collection.namespaceId, collection.name)) ?? [],
+        );
       }
     }
   }
 
-  private syncRecordIndexes(collection: CollectionDefinition): void {
+  private syncRecordIndexes(collection: CollectionDefinition, existingRows = this.recordIndexRowsForCollection(collection.namespaceId, collection.name)): void {
     const definitions = collection.indexes.map((index) => recordIndexSqlDefinition(collection, index));
     const expectedNames = new Set(definitions.map((definition) => definition.name));
-    const existingRows = this.recordIndexRowsForCollection(collection.namespaceId, collection.name);
     const existingByName = new Map(existingRows.map((row) => [row.name, row]));
 
     for (const row of existingRows) {
@@ -504,13 +527,30 @@ export class DatabaseServiceStore {
     }
   }
 
-  private recordIndexRowsForCollection(namespaceId: string, collectionName: string): Array<{ name: string; sql: string | null }> {
+  private recordIndexRowsByCollection(): Map<string, RecordIndexRow[]> {
+    const grouped = new Map<string, RecordIndexRow[]>();
+    const rows = this.sqlite.prepare(`
+      SELECT name, sql
+      FROM sqlite_master
+      WHERE type = 'index' AND tbl_name = 'records' AND name LIKE ?
+    `).all(`${RECORD_INDEX_NAME_PREFIX}%`) as RecordIndexRow[];
+    for (const row of rows) {
+      const key = recordIndexCollectionKeyFromSql(row.sql);
+      if (!key) continue;
+      const entries = grouped.get(key) ?? [];
+      entries.push(row);
+      grouped.set(key, entries);
+    }
+    return grouped;
+  }
+
+  private recordIndexRowsForCollection(namespaceId: string, collectionName: string): RecordIndexRow[] {
     const predicate = `WHERE ${recordIndexPredicate(namespaceId, collectionName)}`;
     return (this.sqlite.prepare(`
       SELECT name, sql
       FROM sqlite_master
       WHERE type = 'index' AND tbl_name = 'records' AND name LIKE ?
-    `).all(`${RECORD_INDEX_NAME_PREFIX}%`) as Array<{ name: string; sql: string | null }>)
+    `).all(`${RECORD_INDEX_NAME_PREFIX}%`) as RecordIndexRow[])
       .filter((row) => row.sql?.includes(predicate));
   }
 
