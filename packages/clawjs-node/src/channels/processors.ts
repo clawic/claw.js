@@ -116,9 +116,12 @@ export async function invokeChannelProcessor(
 
     let stdout = "";
     let stderr = "";
+    const timeoutMs = options.timeoutMs ?? 30_000;
+    let timedOut = false;
     const timeout = setTimeout(() => {
+      timedOut = true;
       child.kill("SIGKILL");
-    }, options.timeoutMs ?? 30_000);
+    }, timeoutMs);
 
     child.stdout?.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
@@ -130,9 +133,21 @@ export async function invokeChannelProcessor(
       clearTimeout(timeout);
       reject(error);
     });
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timeout);
-      const exitCode = code ?? 0;
+      if (timedOut) {
+        reject(new Error(`channel processor ${processor.id} timed out after ${timeoutMs}ms`));
+        return;
+      }
+      if (signal) {
+        reject(new Error(`channel processor ${processor.id} terminated by ${signal}`));
+        return;
+      }
+      if (code == null) {
+        reject(new Error(`channel processor ${processor.id} terminated without an exit code`));
+        return;
+      }
+      const exitCode = code;
       if (exitCode !== 0) {
         reject(new Error(stderr.trim() || `channel processor ${processor.id} exited with ${exitCode}`));
         return;
