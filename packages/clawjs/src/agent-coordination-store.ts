@@ -14,6 +14,11 @@ type SqliteDatabase = {
   transaction<TArgs extends unknown[], TResult>(fn: (...args: TArgs) => TResult): (...args: TArgs) => TResult;
 };
 
+type SqliteDatabaseConstructor = new (
+  filename: string,
+  options?: { readonly?: boolean; fileMustExist?: boolean },
+) => SqliteDatabase;
+
 export type AgentResourceLeaseMode = "read" | "write" | "exclusive";
 export type AgentResourceLeaseStatus = "running" | "repairing" | "blocked" | "releasing" | "released" | "stale";
 export type AgentIntentStatus = "planned" | "running" | "blocked" | "completed" | "abandoned";
@@ -165,7 +170,7 @@ export async function openAgentCoordinationStore(paths: AgentCoordinationPaths):
   fs.mkdirSync(paths.stateDir, { recursive: true });
   fs.mkdirSync(paths.runDir, { recursive: true });
   const imported = await import("better-sqlite3");
-  const Database = imported.default as new (filename: string) => SqliteDatabase;
+  const Database = imported.default as SqliteDatabaseConstructor;
   const sqlite = new Database(paths.databasePath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("busy_timeout = 5000");
@@ -173,6 +178,25 @@ export async function openAgentCoordinationStore(paths: AgentCoordinationPaths):
   const store = new AgentCoordinationStore(sqlite, paths);
   store.ensureSchema();
   return store;
+}
+
+export async function openAgentCoordinationStoreReadOnly(paths: AgentCoordinationPaths): Promise<AgentCoordinationStore | null> {
+  if (!fs.existsSync(paths.databasePath)) return null;
+  const imported = await import("better-sqlite3");
+  const Database = imported.default as SqliteDatabaseConstructor;
+  const sqlite = new Database(paths.databasePath, { readonly: true, fileMustExist: true });
+  sqlite.pragma("query_only = ON");
+  sqlite.pragma("busy_timeout = 5000");
+  return new AgentCoordinationStore(sqlite, paths);
+}
+
+export function emptyAgentCoordinationStatus(paths: AgentCoordinationPaths) {
+  return {
+    activeLeases: [] as AgentResourceLeaseRow[],
+    pendingDemands: [] as AgentResourceDemandRow[],
+    recentResults: [] as AgentWorkResultRow[],
+    paths,
+  };
 }
 
 export class AgentCoordinationStore {

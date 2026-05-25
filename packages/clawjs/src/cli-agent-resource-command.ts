@@ -3,7 +3,9 @@ import path from "node:path";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import {
+  emptyAgentCoordinationStatus,
   openAgentCoordinationStore,
+  openAgentCoordinationStoreReadOnly,
   publicAuditEvent,
   publicDemand,
   publicLease,
@@ -31,7 +33,19 @@ const VALID_RELEASE_STATUSES = new Set(["passed", "failed", "partial", "external
 export async function runAgentResourceCli(input: AgentResourceCliInput): Promise<number> {
   const command = input.positionals[1];
   if (!command || command === "help") return writeHelp(input);
-  const store = await openAgentCoordinationStore(resolvePaths(input));
+  const paths = resolvePaths(input);
+  if (command === "status") {
+    const store = await openAgentCoordinationStoreReadOnly(paths);
+    const status = store?.status() ?? emptyAgentCoordinationStatus(paths);
+    return ok(input, {
+      activeLeases: status.activeLeases.map(publicLease),
+      pendingDemands: status.pendingDemands.map(publicDemand),
+      recentResults: status.recentResults.map(publicWorkResult),
+      paths: status.paths,
+    }, { subcommand: command });
+  }
+
+  const store = await openAgentCoordinationStore(paths);
 
   if (command === "plan") {
     const intent = store.createIntent({
@@ -104,16 +118,6 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
     });
     if (!lease) return fail(input, command, "lease_not_found", `Unknown coordination lease: ${leaseId}`, CLI_EXIT_FAILURE);
     return ok(input, { status: "RELEASED", lease: publicLease(lease) }, { subcommand: command });
-  }
-
-  if (command === "status") {
-    const status = store.status();
-    return ok(input, {
-      activeLeases: status.activeLeases.map(publicLease),
-      pendingDemands: status.pendingDemands.map(publicDemand),
-      recentResults: status.recentResults.map(publicWorkResult),
-      paths: status.paths,
-    }, { subcommand: command });
   }
 
   if (command === "waitlist") {

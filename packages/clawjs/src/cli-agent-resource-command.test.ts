@@ -43,6 +43,18 @@ function fixtureCheck(overrides: Record<string, unknown> = {}): Record<string, u
   };
 }
 
+test("agent-resource status is read-only when coordination state is absent", async () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "claw-agent-coordination-empty-parent-"));
+  const stateDir = path.join(parent, "missing-state");
+  const result = await runCliCapture(["agent-resource", "status", "--state-dir", stateDir, "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
+  const resultPayload = payload(result.stdout);
+  assert.equal(resultPayload.data.activeLeases.length, 0);
+  assert.equal(resultPayload.data.pendingDemands.length, 0);
+  assert.equal(resultPayload.data.recentResults.length, 0);
+  assert.equal(fs.existsSync(stateDir), false);
+});
+
 test("agent-resource acquires exclusive leases and records conflicts as pending demand", async () => {
   const stateDir = tempStateDir();
   const first = await runCliCapture([

@@ -7,7 +7,9 @@ import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from 
 import { parseCsvFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import {
+  emptyAgentCoordinationStatus,
   openAgentCoordinationStore,
+  openAgentCoordinationStoreReadOnly,
   publicDemand,
   publicLease,
   publicRepairOwnership,
@@ -95,8 +97,9 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
   }
 
   if (command === "status") {
-    const store = await openAgentCoordinationStore(resolvePaths(input));
-    const status = store.status();
+    const paths = resolvePaths(input);
+    const store = await openAgentCoordinationStoreReadOnly(paths);
+    const status = store?.status() ?? emptyAgentCoordinationStatus(paths);
     return ok(input, {
       activeLeases: status.activeLeases.map(publicLease),
       pendingDemands: status.pendingDemands.map(publicDemand),
