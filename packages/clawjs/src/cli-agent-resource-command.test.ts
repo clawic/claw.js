@@ -7,6 +7,7 @@ import Database from "better-sqlite3";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
+import { openAgentCoordinationStore, resolveAgentCoordinationPaths } from "./agent-coordination-store.ts";
 
 function tempStateDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "claw-agent-coordination-"));
@@ -120,6 +121,52 @@ test("agent-resource malformed input returns an actionable JSON error", async ()
   assert.equal(resultPayload.ok, false);
   assert.equal(resultPayload.error.code, "invalid_agent_resource_mode");
   assert.match(resultPayload.error.message, /Invalid resource lease mode/);
+});
+
+test("agent-resource rejects blank resource ids before writing ledger rows", async () => {
+  const stateDir = tempStateDir();
+  const result = await runCliCapture([
+    "agent-resource",
+    "acquire",
+    "--state-dir",
+    stateDir,
+    "--resource",
+    "   ",
+    "--mode",
+    "exclusive",
+    "--intent",
+    "blank-resource-intent",
+    "--json",
+  ], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  const resultPayload = payload(result.stdout);
+  assert.equal(resultPayload.ok, false);
+  assert.equal(resultPayload.error.code, "missing_agent_resource_flag");
+  assert.equal(resultPayload.error.status, "USAGE");
+
+  const sqlite = new Database(path.join(stateDir, "agent-coordination.sqlite"), { readonly: true });
+  const leaseCount = sqlite.prepare("SELECT count(*) AS count FROM resource_leases").get() as { count: number };
+  const demandCount = sqlite.prepare("SELECT count(*) AS count FROM resource_demands").get() as { count: number };
+  sqlite.close();
+  assert.equal(leaseCount.count, 0);
+  assert.equal(demandCount.count, 0);
+});
+
+test("coordination store rejects blank resource ids for programmatic callers", async () => {
+  const stateDir = tempStateDir();
+  const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-agent-coordination-run-"));
+  const store = await openAgentCoordinationStore(resolveAgentCoordinationPaths({ stateDir, runDir }));
+
+  assert.throws(() => store.acquire({
+    resourceId: "   ",
+    mode: "exclusive",
+    intentId: "programmatic-blank-resource",
+  }), /Invalid resource id/);
+
+  const sqlite = new Database(path.join(stateDir, "agent-coordination.sqlite"), { readonly: true });
+  const leaseCount = sqlite.prepare("SELECT count(*) AS count FROM resource_leases").get() as { count: number };
+  sqlite.close();
+  assert.equal(leaseCount.count, 0);
 });
 
 test("agent-resource allows concurrent read leases and release clears active status", async () => {

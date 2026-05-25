@@ -307,7 +307,7 @@ export class AgentCoordinationStore {
   }): AgentIntentRow {
     const now = nowIso();
     const row: AgentIntentRow = {
-      id: input.id || `intent-${randomUUID()}`,
+      id: input.id ? requireNonBlankCoordinationValue(input.id, "intent id") : `intent-${randomUUID()}`,
       repo: input.repo ?? null,
       workspace_root: input.workspaceRoot ?? null,
       agent_id: input.agentId || defaultAgentId(),
@@ -346,6 +346,8 @@ export class AgentCoordinationStore {
 
   acquire(input: AgentCoordinationAcquireInput): AgentCoordinationAcquireResult {
     if (!VALID_LEASE_MODES.has(input.mode)) throw new Error(`Invalid lease mode: ${input.mode}`);
+    requireNonBlankCoordinationValue(input.resourceId, "resource id");
+    requireNonBlankCoordinationValue(input.intentId, "intent id");
     const run = this.sqlite.transaction(() => {
       const now = nowIso();
       const agentId = input.agentId || defaultAgentId();
@@ -404,6 +406,8 @@ export class AgentCoordinationStore {
     if (inputs.length === 0) return { status: "acquired", leases: [], demands: [], conflicts: [] };
     for (const input of inputs) {
       if (!VALID_LEASE_MODES.has(input.mode)) throw new Error(`Invalid lease mode: ${input.mode}`);
+      requireNonBlankCoordinationValue(input.resourceId, "resource id");
+      requireNonBlankCoordinationValue(input.intentId, "intent id");
     }
     const run = this.sqlite.transaction(() => {
       const now = nowIso();
@@ -474,6 +478,7 @@ export class AgentCoordinationStore {
 
   heartbeat(input: { leaseId: string; status?: "running" | "repairing" | "blocked"; ttlSeconds?: number; metadata?: Record<string, unknown> }): AgentResourceLeaseRow | null {
     if (input.status && !VALID_HEARTBEAT_STATUSES.has(input.status)) throw new Error(`Invalid heartbeat status: ${input.status}`);
+    requireNonBlankCoordinationValue(input.leaseId, "lease id");
     const existing = this.lease(input.leaseId);
     if (!existing) return null;
     if (!ACTIVE_LEASE_STATUSES.has(existing.status)) return null;
@@ -510,6 +515,7 @@ export class AgentCoordinationStore {
     recordResult?: boolean;
   }): AgentResourceLeaseRow | null {
     if (!VALID_RELEASE_STATUSES.has(input.status)) throw new Error(`Invalid release status: ${input.status}`);
+    requireNonBlankCoordinationValue(input.leaseId, "lease id");
     const run = this.sqlite.transaction(() => {
       const existing = this.lease(input.leaseId);
       if (!existing) return null;
@@ -565,6 +571,8 @@ export class AgentCoordinationStore {
   }
 
   waitlist(input: { resourceId: string; intentId: string; agentId?: string; reason?: string; requiredBy?: string | null; metadata?: Record<string, unknown> }): AgentResourceDemandRow {
+    requireNonBlankCoordinationValue(input.resourceId, "resource id");
+    requireNonBlankCoordinationValue(input.intentId, "intent id");
     const now = nowIso();
     const demand: AgentResourceDemandRow = {
       id: `demand-${randomUUID()}`,
@@ -677,6 +685,8 @@ export class AgentCoordinationStore {
   }
 
   recordBypass(input: { intentId: string; agentId?: string | null; resourceId?: string | null; reason: string; metadata?: Record<string, unknown> }): AgentCoordinationAuditRow {
+    requireNonBlankCoordinationValue(input.intentId, "intent id");
+    if (input.resourceId !== null && input.resourceId !== undefined) requireNonBlankCoordinationValue(input.resourceId, "resource id");
     return this.audit("coordination.bypassed", {
       agentId: input.agentId || defaultAgentId(),
       intentId: input.intentId,
@@ -846,6 +856,11 @@ function nowIso(): string {
 
 function defaultAgentId(): string {
   return process.env.CLAW_AGENT_ID || process.env.USER || "agent";
+}
+
+function requireNonBlankCoordinationValue(value: string, label: string): string {
+  if (value.trim().length === 0) throw new Error(`Invalid ${label}: expected a non-empty string`);
+  return value;
 }
 
 function parseJsonObject(value: string): Record<string, unknown> {

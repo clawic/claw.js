@@ -189,7 +189,7 @@ function fail(input: AgentResourceCliInput, subcommand: string, code: string, me
 
 function requiredFlag(input: AgentResourceCliInput, name: string, command: string): string {
   const value = input.flags[name];
-  if (!value) throw new CliHandledError("missing_agent_resource_flag", `agent-resource ${command} requires --${name}`, CLI_EXIT_USAGE);
+  if (!value || value.trim().length === 0) throw new CliHandledError("missing_agent_resource_flag", `agent-resource ${command} requires --${name}`, CLI_EXIT_USAGE);
   return value;
 }
 
