@@ -918,6 +918,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   const hermesHome = path.join(hermesHomeRoot, ".hermes");
   const hermesSessions = path.join(hermesHome, "sessions", "2026", "05", "21");
   fs.mkdirSync(hermesSessions, { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, "skills", "browser-helper"), { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, "memories"), { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, "cron"), { recursive: true });
   fs.mkdirSync(path.join(hermesHome, "plugins", "memory-provider"), { recursive: true });
   fs.mkdirSync(path.join(hermesHome, "mcp"), { recursive: true });
   fs.writeFileSync(path.join(hermesSessions, "runtime-session.jsonl"), [
@@ -926,6 +929,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     "{\"role\":\"user\",\"content\":\"follow up\"}",
     "",
   ].join("\n"));
+  fs.writeFileSync(path.join(hermesHome, "config.yaml"), [
+    "model: openai/gpt-4.1",
+    "provider: openai",
+    "fallback_model: anthropic/claude-3-5-sonnet",
+    "channels:",
+    "  slack:",
+    "    enabled: true",
+  ].join("\n"));
+  fs.writeFileSync(path.join(hermesHome, "memories", "profile.md"), "fixture memory content must not be exposed\n");
+  fs.writeFileSync(path.join(hermesHome, "cron", "daily-summary.yaml"), "schedule: 0 9 * * *\n");
   fs.writeFileSync(path.join(hermesHome, "mcp", "github.json"), "{}\n");
   const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "docs/runtime-ecosystem-integration.manifest.json"), "utf8")) as {
     requiredDomains: string[];
@@ -1321,6 +1334,19 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           actionPolicy?: Array<{ action: string; status: string; writesRuntime: boolean }>;
           sessions?: Array<{ id: string; kind: string; path: string; provenance?: { source?: string } }>;
         };
+        skills?: {
+          skills?: Array<{ id: string; enabled?: boolean; path?: string; scope?: string }>;
+        };
+        memory?: {
+          memory?: Array<{ id: string; path?: string; summary?: string }>;
+        };
+        models?: {
+          models?: Array<{ id: string; modelId?: string; provider?: string; source?: string; isDefault?: boolean }>;
+          defaultModel?: { modelId?: string; provider?: string };
+        };
+        scheduler?: {
+          schedulers?: Array<{ id: string; kind?: string; status?: string; enabled?: boolean }>;
+        };
       };
       domains: Array<{
         domain: string;
@@ -1401,10 +1427,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "gateway")?.count, 1);
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "doctorCompat")?.count, 1);
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sandboxPermissions")?.count, 1);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "skills")?.count, 1);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "memory")?.count, 1);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "models")?.count, 2);
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "scheduler")?.count, 1);
   assert.ok((hermesPayload.data.domains.find((entry) => entry.domain === "configuration")?.count ?? 0) > 0);
   assert.equal(hermesPayload.data.domainData.sessions?.sessions?.[0]?.id, "2026/05/21/runtime-session");
   assert.equal(hermesPayload.data.domainData.sessions?.sessions?.[0]?.kind, "session");
   assert.equal(hermesPayload.data.domainData.sessions?.sessions?.[0]?.provenance?.source, "runtime-session-store");
+  assert.equal(hermesPayload.data.domainData.skills?.skills?.some((entry) => entry.id === "browser-helper" && entry.scope === "runtime"), true);
+  assert.equal(hermesPayload.data.domainData.memory?.memory?.some((entry) => entry.id === "hermes-memory-profile" && entry.summary?.includes("not exposed by default")), true);
+  assert.equal(hermesPayload.data.domainData.models?.defaultModel?.modelId, "openai/gpt-4.1");
+  assert.equal(hermesPayload.data.domainData.models?.models?.some((entry) => entry.id === "openai/gpt-4.1" && entry.isDefault === true), true);
+  assert.equal(hermesPayload.data.domainData.models?.models?.some((entry) => entry.id === "anthropic/claude-3-5-sonnet" && entry.source === "config"), true);
+  assert.equal(hermesPayload.data.domainData.scheduler?.schedulers?.some((entry) => entry.id === "daily-summary" && entry.kind === "cron"), true);
   assert.deepEqual(hermesPayload.data.domainData.sessions?.actionContracts?.map((entry) => entry.action), manifest.sessionActionContracts.hermes.map((entry) => entry.action));
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.status, "blocked");
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "create")?.wouldWriteRuntime, true);
@@ -1450,6 +1486,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           providers?: unknown[];
           models?: unknown[];
           defaultModel?: unknown;
+          skills?: unknown[];
+          memory?: unknown[];
+          schedulers?: unknown[];
         };
       };
     };
@@ -1462,6 +1501,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       assert.equal(resourcePayload.data.data.models, undefined);
       assert.equal(resourcePayload.data.data.defaultModel, undefined);
     }
+    if (resourceDomain === "skills") assert.equal(Array.isArray(resourcePayload.data.data.skills), true);
+    if (resourceDomain === "memory") assert.equal(Array.isArray(resourcePayload.data.data.memory), true);
+    if (resourceDomain === "scheduler") assert.equal(Array.isArray(resourcePayload.data.data.schedulers), true);
   }
 
   const hermesSupportStdout = captureStream();
