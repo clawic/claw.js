@@ -77,6 +77,35 @@ function parseChannelPositiveIntegerFlag(flags: Record<string, string>, name: st
   return value;
 }
 
+function parseTelegramPositiveSafeIntegerIdFlag(flags: Record<string, string>, name: string, code: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const trimmed = raw.trim();
+  if (!/^[1-9]\d*$/.test(trimmed)) {
+    throw new CliHandledError(code, `--${name} must be a canonical positive safe integer.`, CLI_EXIT_USAGE, {
+      location: `telegram.flags.${name}`,
+      suggestion: `Pass --${name} as base-10 digits only, without decimals, exponents, prefixes, signs, or leading zeroes.`,
+      safeNextStep: `Rerun the Telegram command with a valid --${name} value before contacting Telegram or changing channel state.`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  const value = Number(trimmed);
+  if (!Number.isSafeInteger(value)) {
+    throw new CliHandledError(code, `--${name} must be a canonical positive safe integer.`, CLI_EXIT_USAGE, {
+      location: `telegram.flags.${name}`,
+      suggestion: `Pass --${name} as a base-10 integer no larger than ${Number.MAX_SAFE_INTEGER}.`,
+      safeNextStep: `Rerun the Telegram command with a valid --${name} value before contacting Telegram or changing channel state.`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
+
+function resolveTelegramThreadIdFlag(flags: Record<string, string>): string | number | undefined {
+  const messageThreadId = parseTelegramPositiveSafeIntegerIdFlag(flags, "message-thread-id", "invalid_telegram_message_thread_id");
+  return flags["thread-id"] || messageThreadId;
+}
+
 const CHANNEL_PERMISSION_VALUES = new Set(["read", "write", "ingest", "admin"]);
 
 function parseChannelPermissions(flags: Record<string, string>): Array<"read" | "write" | "ingest" | "admin"> {
@@ -840,6 +869,7 @@ if (group === "channels" && command === "targets" && subcommand === "register") 
     context.stderr.write("--target-id is required\n");
     return CLI_EXIT_USAGE;
   }
+  const threadId = resolveTelegramThreadIdFlag(flags);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const target = claw.channels.targets.register({
     provider,
@@ -850,7 +880,7 @@ if (group === "channels" && command === "targets" && subcommand === "register") 
     title: flags.title,
     username: flags.username,
     parentTargetId: flags["parent-target-id"],
-    threadId: flags["thread-id"] || flags["message-thread-id"],
+    ...(threadId !== undefined ? { threadId } : {}),
   });
   if (wantsJson) {
     writeChannelJson(target);
@@ -882,8 +912,9 @@ if (group === "channels" && command === "targets" && (subcommand === "inspect" |
     context.stderr.write("--target-id is required\n");
     return CLI_EXIT_USAGE;
   }
+  const threadId = resolveTelegramThreadIdFlag(flags);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
-  const target = claw.channels.targets.get(provider, flags.account, targetId, flags["thread-id"] || flags["message-thread-id"]);
+  const target = claw.channels.targets.get(provider, flags.account, targetId, threadId);
   if (wantsJson) {
     writeChannelJson(target ?? { targetId, found: false });
   } else if (target) {
@@ -899,7 +930,7 @@ if (group === "channels" && command === "targets" && (subcommand === "update" ||
     context.stderr.write("--target-id is required\n");
     return CLI_EXIT_USAGE;
   }
-  const threadId = flags["thread-id"] || flags["message-thread-id"];
+  const threadId = resolveTelegramThreadIdFlag(flags);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const existing = claw.channels.targets.get(provider, flags.account, targetId, threadId);
   const metadata = parseJsonFlag<Record<string, unknown>>(flags.metadata, "--metadata") ?? {};
@@ -992,6 +1023,7 @@ if (group === "channels" && command === "messages" && subcommand === "send") {
     context.stderr.write("--text or --media is required\n");
     return CLI_EXIT_USAGE;
   }
+  const threadId = resolveTelegramThreadIdFlag(flags);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const message = await claw.channels.messages.send({
     provider: flags.provider || flags.channel || "telegram",
@@ -1000,7 +1032,7 @@ if (group === "channels" && command === "messages" && subcommand === "send") {
     text: flags.text,
     media: flags.media,
     mediaType: flags["media-type"] as "photo" | "video" | "document" | "audio" | "animation" | undefined,
-    threadId: flags["thread-id"] || flags["message-thread-id"],
+    ...(threadId !== undefined ? { threadId } : {}),
     parseMode: flags["parse-mode"] as "HTML" | "Markdown" | "MarkdownV2" | undefined,
     agentId: flags.agent,
   });
@@ -1227,6 +1259,8 @@ if (group === "telegram" && command === "send") {
     context.stderr.write("--text or --media is required\n");
     return CLI_EXIT_USAGE;
   }
+  const replyToMessageId = parseTelegramPositiveSafeIntegerIdFlag(flags, "reply-to-message-id", "invalid_telegram_reply_to_message_id");
+  const messageThreadId = parseTelegramPositiveSafeIntegerIdFlag(flags, "message-thread-id", "invalid_telegram_message_thread_id");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const response = flags.media
     ? await claw.telegram.sendMedia({
@@ -1235,15 +1269,15 @@ if (group === "telegram" && command === "send") {
       media: flags.media,
       caption: flags.caption,
       ...(flags["parse-mode"] ? { parseMode: flags["parse-mode"] as TelegramSendMediaInput["parseMode"] } : {}),
-      ...(flags["reply-to-message-id"] ? { replyToMessageId: Number(flags["reply-to-message-id"]) } : {}),
-      ...(flags["message-thread-id"] ? { messageThreadId: Number(flags["message-thread-id"]) } : {}),
+      ...(replyToMessageId !== undefined ? { replyToMessageId } : {}),
+      ...(messageThreadId !== undefined ? { messageThreadId } : {}),
     })
     : await claw.telegram.sendMessage({
       chatId,
       text: flags.text ?? "",
       ...(flags["parse-mode"] ? { parseMode: flags["parse-mode"] as TelegramSendMessageInput["parseMode"] } : {}),
-      ...(flags["reply-to-message-id"] ? { replyToMessageId: Number(flags["reply-to-message-id"]) } : {}),
-      ...(flags["message-thread-id"] ? { messageThreadId: Number(flags["message-thread-id"]) } : {}),
+      ...(replyToMessageId !== undefined ? { replyToMessageId } : {}),
+      ...(messageThreadId !== undefined ? { messageThreadId } : {}),
     });
   if (wantsJson) {
     writeChannelJson(response);

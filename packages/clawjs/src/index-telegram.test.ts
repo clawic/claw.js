@@ -453,6 +453,88 @@ test("runCli rejects invalid channel message numeric flags before access", async
   assert.deepEqual(syncTimeoutPayload.error.details, { flag: "--timeout", value: "NaN" });
 });
 
+test("runCli rejects non-canonical Telegram integer ID flags before backend access or persistence", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-id-flags-"));
+  const { proxyPath, statePath } = createFakeTelegramSecretsProxy();
+
+  await withPatchedEnv({
+    CLAW_SECRETS_PROXY_PATH: proxyPath,
+    FAKE_TELEGRAM_PROXY_STATE: statePath,
+  }, async () => {
+    const sendStdout = captureStream();
+    const sendExitCode = await runCli([
+      "telegram",
+      "send",
+      "--workspace",
+      workspaceRoot,
+      "--chat-id",
+      "1001",
+      "--text",
+      "hello",
+      "--reply-to-message-id",
+      "1e3",
+      "--json",
+    ], {
+      stdout: sendStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const targetStdout = captureStream();
+    const targetExitCode = await runCli([
+      "channels",
+      "targets",
+      "register",
+      "--workspace",
+      workspaceRoot,
+      "--provider",
+      "telegram",
+      "--target-id",
+      "1001",
+      "--message-thread-id",
+      "0x10",
+      "--json",
+    ], {
+      stdout: targetStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const listStdout = captureStream();
+    const listExitCode = await runCli([
+      "channels",
+      "targets",
+      "list",
+      "--workspace",
+      workspaceRoot,
+      "--provider",
+      "telegram",
+      "--json",
+    ], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    const sendPayload = JSON.parse(sendStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+    const targetPayload = JSON.parse(targetStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+    const listPayload = JSON.parse(listStdout.getOutput()) as { ok: boolean; data: unknown[] };
+    const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: unknown };
+
+    assert.equal(sendExitCode, CLI_EXIT_USAGE);
+    assert.equal(sendPayload.ok, false);
+    assert.equal(sendPayload.error.code, "invalid_telegram_reply_to_message_id");
+    assert.deepEqual(sendPayload.error.details, { flag: "--reply-to-message-id", value: "1e3" });
+    assert.equal(proxyState.lastSend, undefined);
+    assert.equal(targetExitCode, CLI_EXIT_USAGE);
+    assert.equal(targetPayload.ok, false);
+    assert.equal(targetPayload.error.code, "invalid_telegram_message_thread_id");
+    assert.deepEqual(targetPayload.error.details, { flag: "--message-thread-id", value: "0x10" });
+    assert.equal(listExitCode, CLI_EXIT_DEGRADED);
+    assert.deepEqual(listPayload.data, []);
+  });
+});
+
 test("runCli rejects invalid channel log lines before reading logs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-log-lines-"));
 
