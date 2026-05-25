@@ -243,7 +243,8 @@ export async function runConnectorContextCli(input: ConnectorContextCliInput): P
     }
 
     if (action === "audit") {
-      const rows = store.sqlite.prepare("SELECT * FROM connector_context_audit_events ORDER BY created_at DESC LIMIT ?").all(Number(input.flags.limit ?? 50));
+      const limit = parseNonNegativeIntegerFlag(input.flags.limit, "limit");
+      const rows = store.sqlite.prepare("SELECT * FROM connector_context_audit_events ORDER BY created_at DESC LIMIT ?").all(limit);
       return writeConnectorContextResult(input, canonicalCommand, action, { events: rows });
     }
 
@@ -542,4 +543,13 @@ function parseExportMode(value: string | undefined): "redacted" | "private-envel
   if (!value || value === "redacted") return "redacted";
   if (value === "private-envelope" || value === "private_envelope") return "private-envelope";
   throw new CliHandledError("invalid_export_mode", "Use export mode redacted or private-envelope.", CLI_EXIT_USAGE);
+}
+
+function parseNonNegativeIntegerFlag(value: string | undefined, name: string): number {
+  if (value === undefined) return 50;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new CliHandledError(`invalid_${name}`, `--${name} must be a non-negative integer.`, CLI_EXIT_USAGE);
+  }
+  return parsed;
 }

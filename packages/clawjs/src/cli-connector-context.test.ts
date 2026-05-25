@@ -378,6 +378,19 @@ test("accounts export private envelope includes private context but never plaint
   });
 });
 
+test("accounts audit rejects invalid limits with a usage error", async () => {
+  const result = await withTempConnectorContext((cwd) => runCliCapture(["accounts", "audit", "--limit", "nope", "--json"], cwd));
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string };
+  };
+
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_limit");
+  assert.equal(payload.error.status, "USAGE");
+});
+
 test("accounts preserve desired observed and verification metadata across edits", async () => {
   await withTempConnectorContext(async (cwd) => {
     const create = await runCliCapture([
