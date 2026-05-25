@@ -78,3 +78,35 @@ test("deep event search accepts bounded result pages", () => {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("structured event search uses redacted projection text", () => {
+  const rootDir = tempRoot("clawjs-event-search-redaction-");
+  const store = new SessionsServiceStore(path.join(rootDir, "sessions.sqlite"));
+  try {
+    store.createSession({ id: "session-redaction", agent: "codex", title: "Redaction", createdAt: 1 });
+    const event = store.appendSessionEvent({
+      sessionId: "session-redaction",
+      turnId: "turn-redaction",
+      eventKind: "tool_output",
+      eventType: "response_item.function_call_output",
+      timestamp: 2,
+      sourceNativeId: "fixture-redaction",
+      sourceLine: 1,
+      payloadJson: { output: "token=eventsecret needle" },
+      renderedSummary: "authorization: Bearer legacysecret needle",
+      searchableText: "tool output token=eventsecret needle",
+    });
+
+    assert.equal(event.searchableText?.includes("eventsecret"), false);
+    assert.equal(event.renderedSummary?.includes("legacysecret"), false);
+    assert.equal(store.searchSessionEvents({ query: "eventsecret" }).length, 0);
+
+    const hits = store.searchSessionEvents({ query: "needle" });
+    assert.equal(hits.length, 1);
+    assert.equal(hits[0]?.snippet.includes("eventsecret"), false);
+    assert.equal(hits[0]?.event.searchableText?.includes("eventsecret"), false);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});

@@ -690,6 +690,11 @@ function stableEventId(sessionId: string, sourceNativeId: string): string {
   return `event_${createHash("sha1").update(`${sessionId}\0${sourceNativeId}`).digest("hex")}`;
 }
 
+function redactOptionalSearchableText(text: string | null | undefined): string | null {
+  if (text == null) return null;
+  return redactSearchableText(text);
+}
+
 function previewText(value: string | null | undefined): string | null {
   if (!value) return null;
   const compact = value.replace(/\s+/g, " ").trim();
@@ -822,7 +827,24 @@ export class SessionsServiceStore {
     this.ensureColumn("session_projection_meta", "last_error", "TEXT");
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_session_memory_extracts_status ON session_memory_extracts(status, updated_at DESC)").run();
     this.db.prepare("CREATE INDEX IF NOT EXISTS idx_session_memory_extracts_extracted ON session_memory_extracts(last_extracted_at, last_extracted_event_count)").run();
+    this.ensureSessionEventSearchRedactions();
     this.ensureMessageSearchIndex();
+  }
+
+  private ensureSessionEventSearchRedactions(): void {
+    const rows = this.db.prepare("SELECT id, rendered_summary, searchable_text FROM session_events").all() as Array<{
+      id: string;
+      rendered_summary: string | null;
+      searchable_text: string | null;
+    }>;
+    const update = this.db.prepare("UPDATE session_events SET rendered_summary = ?, searchable_text = ? WHERE id = ?");
+    for (const row of rows) {
+      const renderedSummary = redactOptionalSearchableText(row.rendered_summary);
+      const searchableText = redactOptionalSearchableText(row.searchable_text);
+      if (row.rendered_summary !== renderedSummary || row.searchable_text !== searchableText) {
+        update.run(renderedSummary, searchableText, row.id);
+      }
+    }
   }
 
   private ensureMessageSearchIndex(): void {
@@ -1436,8 +1458,8 @@ export class SessionsServiceStore {
         source_native_id: input.sourceNativeId,
         source_line: input.sourceLine ?? null,
         payload_json: payloadJson,
-        rendered_summary: input.renderedSummary ?? null,
-        searchable_text: input.searchableText ?? null,
+        rendered_summary: redactOptionalSearchableText(input.renderedSummary),
+        searchable_text: redactOptionalSearchableText(input.searchableText),
         created_at: createdAt,
       });
       return { id, inserted: true };
