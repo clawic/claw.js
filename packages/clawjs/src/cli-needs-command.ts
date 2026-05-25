@@ -191,7 +191,12 @@ function selectRoutes(input: NeedsCliInput): NeedRoute[] {
 }
 
 function parseLimit(input: NeedsCliInput): number | undefined {
-  return input.flags.limit ? Number(input.flags.limit) : undefined;
+  if (!input.flags.limit) return undefined;
+  const limit = Number(input.flags.limit);
+  if (!Number.isInteger(limit) || limit < 0) {
+    throw new CliHandledError("invalid_limit", "Use --limit with a non-negative integer.", CLI_EXIT_USAGE);
+  }
+  return limit;
 }
 
 function parseGenerationMode(input: NeedsCliInput): NeedScenarioGenerationMode {

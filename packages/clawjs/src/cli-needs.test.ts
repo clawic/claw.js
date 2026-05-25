@@ -4,7 +4,7 @@ import path from "path";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, parseCliJsonPayload, runCliCapture } from "./index-test-utils.ts";
 
 test("runCli exposes need route lab dimensions through the public CLI", async () => {
@@ -52,6 +52,14 @@ test("runCli evaluates need routes in dry-run mode and saves a canonical workspa
   assert.equal(payload.save.ledgerPath, path.join(workspaceRoot, ".claw", "need-routes", "need-route-lab.json"));
   assert.equal(fs.existsSync(payload.save.ledgerPath), true);
   assert.ok(payload.opportunities.unique.some((opportunity) => opportunity.externalPending));
+});
+
+test("runCli rejects invalid need route limits instead of expanding work", async () => {
+  const result = await runCliCapture(["needs", "generate", "--limit", "-1", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_limit");
 });
 
 test("runCli dedupes and promotes need opportunities without executing external publication", async () => {
