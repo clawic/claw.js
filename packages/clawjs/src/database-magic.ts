@@ -53,6 +53,7 @@ const WORK_SEARCH_COLLECTIONS = new Set([
 type DbAction = "list" | "get" | "create" | "update" | "delete" | "schema" | "query";
 
 const DB_ACTIONS = new Set<DbAction>(["list", "get", "create", "update", "delete", "schema", "query"]);
+const STRICT_DATABASE_ALIAS_COMMANDS = new Set(["collections", "records"]);
 
 const PRODUCTIVITY_COLLECTION_ALIASES: Record<string, string> = {
   task: "tasks",
@@ -403,6 +404,10 @@ function resolveCollectionName(rawCollection: string): string {
 
 function isKnownDbAction(value: string | undefined): value is DbAction {
   return Boolean(value && DB_ACTIONS.has(value as DbAction));
+}
+
+function isStrictDatabaseAlias(value: string | undefined): boolean {
+  return Boolean(value && STRICT_DATABASE_ALIAS_COMMANDS.has(value));
 }
 
 function titleCaseCollection(name: string): string {
@@ -1169,6 +1174,35 @@ function buildExplicitCollectionHint(collectionName: string, binName = "claw"): 
   ].join(" ");
 }
 
+function writeUnsupportedDatabaseAction(input: {
+  positionals: string[];
+  stdout: Writable;
+  stderr: Writable;
+  wantsJson: boolean;
+}, collectionName: string, rawAction: string, binName: string): void {
+  const supportedActions = [...DB_ACTIONS].join(", ");
+  const error = new CliHandledError(
+    "unsupported_database_action",
+    `Unsupported database action "${rawAction}" for ${collectionName}. Supported actions: ${supportedActions}.`,
+    DB_EXIT_USAGE,
+    {
+      location: "cli.database.action",
+      suggestion: `Use one of: ${supportedActions}.`,
+      safeNextStep: `Run ${binName} collections ${collectionName} list --json, ${binName} records ${collectionName} list --json, or ${binName} db ${collectionName} create <title> --json.`,
+      details: {
+        collection: collectionName,
+        received: rawAction,
+        supportedActions: [...DB_ACTIONS],
+      },
+    },
+  );
+  if (input.wantsJson) {
+    writeCommandJsonError(input.stdout, "database", error, dbJsonMeta(input, collectionName, rawAction));
+  } else {
+    input.stderr.write(`${error.message}\n`);
+  }
+}
+
 export async function runMagicDbCli(input: {
   argv: string[];
   positionals: string[];
@@ -1205,9 +1239,8 @@ export async function runMagicDbCli(input: {
   const collectionName = resolveCollectionName(rawCollection);
   const invokedCommand = positionals[0];
   const isTopLevelCollectionAlias = Boolean(invokedCommand && invokedCommand !== "db" && invokedCommand !== "database" && resolveCollectionName(invokedCommand) === collectionName);
-  if (rawAction && !isKnownDbAction(rawAction) && isTopLevelCollectionAlias) {
-    const supportedActions = [...DB_ACTIONS].join(", ");
-    writeDbError(input, "unsupported_database_action", `Unsupported database action "${rawAction}" for ${collectionName}. Supported actions: ${supportedActions}.`, DB_EXIT_USAGE, dbJsonMeta(input, collectionName, rawAction));
+  if (rawAction && !isKnownDbAction(rawAction) && (isTopLevelCollectionAlias || isStrictDatabaseAlias(invokedCommand))) {
+    writeUnsupportedDatabaseAction(input, collectionName, rawAction, binName);
     return DB_EXIT_USAGE;
   }
 

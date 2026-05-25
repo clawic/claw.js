@@ -133,6 +133,7 @@ type CliMediaClaw = ClawInstance & {
 };
 
 const REMOVED_CONTENT_PORTAL_COMMANDS = new Set(["posts", "campaigns", "publications"]);
+const MAGIC_DB_ACTIONS = new Set(["list", "get", "create", "update", "delete", "schema", "query"]);
 const MEDIA_GENERATION_COMMANDS = new Set(["list", "search", "read", "download", "share"]);
 const SECRET_BROKER_RISK_TIERS = new Set(["read", "write", "destructive", "cost", "system"]);
 const DENSE_FOUNDATION_OPTIONAL_GROUPS = [
@@ -517,8 +518,34 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runNetworkCli({ argv, positionals, flags, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   }
 
-  if (group === "collections") return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });
-  if (group === "records") return await runCliUnsafe(["db", ...argv.slice(1)], context);
+  if (group === "collections") {
+    if (command && command !== "list" && !(command === "schema" && subcommand) && subcommand && !MAGIC_DB_ACTIONS.has(subcommand)) {
+      return await runMagicDbCli({
+        argv,
+        positionals,
+        flags,
+        workspaceRoot: flags.workspace || context.cwd,
+        stdout: context.stdout,
+        stderr: context.stderr,
+        wantsJson,
+        binName,
+      });
+    }
+    return await runCollectionsCli({ argv, positionals, flags, context, wantsJson, runCli: runCliUnsafe });
+  }
+  if (group === "records") {
+    if (!subcommand || MAGIC_DB_ACTIONS.has(subcommand)) return await runCliUnsafe(["db", ...argv.slice(1)], context);
+    return await runMagicDbCli({
+      argv,
+      positionals,
+      flags,
+      workspaceRoot: flags.workspace || context.cwd,
+      stdout: context.stdout,
+      stderr: context.stderr,
+      wantsJson,
+      binName,
+    });
+  }
   if (group === "needs") return await runNeedsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "commands") return await runCommandsCli({ positionals, flags, argv, context, wantsJson, binName, workspaceRoot: flags.workspace || context.cwd });
   if (group === "debt") return await runDebtCli({ argv, positionals, flags, context, wantsJson, binName });

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { parseCliJsonPayload, runCliCapture, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
 test("db refuses to create unknown custom collections implicitly", { concurrency: false }, async (t) => {
@@ -73,4 +73,53 @@ test("db list reports missing custom collections instead of returning an empty s
   assert.equal(payload.error.code, "not_found");
   assert.match(payload.error.message, /Collection prospects does not exist/);
   assert.match(payload.error.message, /database collection create/);
+});
+
+test("database aliases reject unknown actions after a collection before writing records", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-db-alias-unknown-action-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+
+  for (const alias of ["collections", "records"]) {
+    const result = await runCliCapture([
+      alias,
+      "tasks",
+      "definitely_missing",
+      "--workspace",
+      workspaceRoot,
+      "--json",
+    ], process.cwd());
+
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as {
+      ok: boolean;
+      error: {
+        code: string;
+        status: string;
+        safeNextStep: string;
+        details: { received: string; supportedActions: string[] };
+      };
+      meta: { invokedCommand: string; collection: string; action: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "unsupported_database_action");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.details.received, "definitely_missing");
+    assert.equal(payload.error.details.supportedActions.includes("create"), true);
+    assert.match(payload.error.safeNextStep, /records tasks list/);
+    assert.equal(payload.meta.invokedCommand, alias);
+    assert.equal(payload.meta.collection, "tasks");
+    assert.equal(payload.meta.action, "definitely_missing");
+  }
+
+  const list = await runCliCapture([
+    "db",
+    "tasks",
+    "list",
+    "--workspace",
+    workspaceRoot,
+    "--json",
+  ], process.cwd());
+  assert.equal(list.code, CLI_EXIT_OK);
+  const records = parseCliJsonPayload<Array<{ title?: string }>>(list.stdout);
+  assert.equal(records.some((record) => record.title === "definitely_missing"), false);
 });

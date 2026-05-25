@@ -851,14 +851,18 @@ test("runCli returns work import JSON parse errors as usage errors", { concurren
 test("runCli returns productivity database JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-db-json-"));
   useIsolatedClawDataRoot(t, workspaceRoot);
-  const result = await runCliCapture(["db", "tasks", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
+  const result = await runCliCapture(["collections", "tasks", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { collection: { name: string } }; meta: { canonicalCommand: string; invokedCommand: string; collection: string; subcommand: string } };
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { exists: boolean; autoCreateOnWrite: boolean; explicitCreateRequired: boolean; createHint: string | null; collection: { name: string } }; meta: { canonicalCommand: string; invokedCommand: string; collection: string; subcommand: string } };
   assert.equal(payload.ok, true);
   assert.equal(payload.meta.canonicalCommand, "database");
   assert.equal(payload.meta.invokedCommand, "db");
   assert.equal(payload.meta.collection, "tasks");
   assert.equal(payload.meta.subcommand, "schema");
+  assert.equal(payload.data.exists, true);
+  assert.equal(payload.data.autoCreateOnWrite, false);
+  assert.equal(payload.data.explicitCreateRequired, false);
+  assert.equal(payload.data.createHint, null);
   assert.equal(payload.data.collection.name, "tasks");
 
   const canonicalResult = await runCliCapture(["tasks", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
@@ -886,13 +890,15 @@ test("runCli returns productivity database JSON in the common envelope", { concu
 test("runCli keeps inspect schemas JSON inspectable for agents", async () => {
   const result = await runCliCapture(["inspect", "schemas", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; data: Array<{ id: string; surfaceClass?: string }>; meta: { canonicalCommand: string; subcommand: string; schemaVersion: number } };
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: Array<{ id: string; surfaceClass?: string; schemaId?: string; notes?: string }>; meta: { canonicalCommand: string; subcommand: string; schemaVersion: number } };
   assert.equal(payload.ok, true);
   assert.equal(payload.meta.schemaVersion, 1);
   assert.equal(payload.meta.canonicalCommand, "inspect");
   assert.equal(payload.meta.subcommand, "schemas");
   assert.equal(payload.data.some((entry) => entry.id === "claw.contracts.schemas"), true);
   assert.equal(payload.data.some((entry) => entry.id === "claw.schema.common.field.schemaVersion" && entry.surfaceClass === "schema"), true);
+  assert.equal(payload.data.some((entry) => entry.id === "claw.collection.tasks.schema" && entry.schemaId === "claw.collection.tasks.schema.v1" && entry.notes?.includes("claw collections tasks schema --json")), true);
+  assert.equal(payload.data.some((entry) => entry.id === "claw.collection.patients.schema" && entry.notes?.includes("claw collections patients schema --json")), true);
 });
 
 test("runCli keeps built-in collection schemas inspectable from a clean workspace", { concurrency: false }, async (t) => {
@@ -900,12 +906,15 @@ test("runCli keeps built-in collection schemas inspectable from a clean workspac
   useIsolatedClawDataRoot(t, workspaceRoot);
   const result = await runCliCapture(["collections", "patients", "schema", "--workspace", workspaceRoot, "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { exists: boolean; collection: { name: string; fields: Array<{ name: string; required?: boolean }> } }; meta: { schemaVersion: number; collection: string; action: string } };
+  const payload = JSON.parse(result.stdout) as { ok: boolean; data: { exists: boolean; autoCreateOnWrite: boolean; explicitCreateRequired: boolean; createHint: string | null; collection: { name: string; fields: Array<{ name: string; required?: boolean }> } }; meta: { schemaVersion: number; collection: string; action: string } };
   assert.equal(payload.ok, true);
   assert.equal(payload.meta.schemaVersion, 1);
   assert.equal(payload.meta.collection, "patients");
   assert.equal(payload.meta.action, "schema");
   assert.equal(payload.data.exists, true);
+  assert.equal(payload.data.autoCreateOnWrite, false);
+  assert.equal(payload.data.explicitCreateRequired, false);
+  assert.equal(payload.data.createHint, null);
   assert.equal(payload.data.collection.name, "patients");
   assert.equal(payload.data.collection.fields.some((field) => field.name === "displayName" && field.required === true), true);
 });

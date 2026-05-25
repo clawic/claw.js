@@ -115,6 +115,8 @@ export async function runCoreProductivityDbCli(input: {
         protected: true,
       },
       autoCreateOnWrite: false,
+      explicitCreateRequired: false,
+      createHint: null,
     });
     return CLI_EXIT_OK;
   }
