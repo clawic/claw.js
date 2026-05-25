@@ -103,7 +103,15 @@ function parseActiveHours(raw: string | undefined, timezone: string | undefined)
 function parseHeartbeatGate(pathValue: string | undefined): NonNullable<TemporalItem["heartbeat"]>["gate"] | undefined {
   if (!pathValue) return undefined;
   const gatePath = path.resolve(pathValue);
-  const policy = JSON.parse(fs.readFileSync(gatePath, "utf8")) as Record<string, unknown>;
+  let policy: unknown;
+  try {
+    policy = JSON.parse(fs.readFileSync(gatePath, "utf8"));
+  } catch (error) {
+    throw new CliHandledError("invalid_heartbeat_gate_json", `Invalid JSON for --gate ${gatePath}: ${error instanceof Error ? error.message : "parse error"}`, CLI_EXIT_USAGE);
+  }
+  if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
+    throw new CliHandledError("invalid_heartbeat_gate_json", `Invalid JSON for --gate ${gatePath}: expected an object.`, CLI_EXIT_USAGE);
+  }
   return { path: gatePath, policy };
 }
 
