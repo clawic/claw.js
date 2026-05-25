@@ -921,22 +921,27 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       const isBlocked = status === "blocked" || action.wouldWriteRuntime === true;
       const isLocalOverlayGap = status === "local_overlay_only" && String(action.guard ?? "").includes("official");
       const hasOfficialGatewayContract = String(action.guard ?? "").includes("tui_gateway") || typeof action.officialMethod === "string";
+      const isFixtureBackedGateway = status === "implemented_requires_confirmation" && action.fixtureBacked === true;
       if (!isBlocked && !isLocalOverlayGap) return [];
       const evidenceKind = isLocalOverlayGap ? "native_write_back_contract" : "action_contract";
       const evidenceDisposition = isLocalOverlayGap
         ? "local_overlay_until_official_runtime_write_back_contract"
-        : hasOfficialGatewayContract
-          ? "blocked_until_tui_gateway_wrapper_fixture"
-          : "blocked_until_official_runtime_action_contract";
+        : isFixtureBackedGateway
+          ? "fixture_backed_tui_gateway_bridge_pending_production_round_trip_evidence"
+          : hasOfficialGatewayContract
+            ? "blocked_until_tui_gateway_wrapper_fixture"
+            : "blocked_until_official_runtime_action_contract";
       return [{
         id: `${runtimeId}.sessions.${action.action}.${evidenceKind}`,
         blockerClass: "direct_blocker",
         approvalRequired: false,
         commandShape: isLocalOverlayGap
           ? `not_executable_until_official_runtime_${action.action}_api_exists`
-          : hasOfficialGatewayContract
-            ? `not_executable_until_tui_gateway_${action.action}_wrapper_fixture_exists`
-            : `not_executable_until_official_runtime_${action.action}_contract_exists`,
+          : isFixtureBackedGateway
+            ? `runtime_${runtimeId}_sessions_${action.action}_requires_confirm_runtime_write_and_loopback_tui_gateway_fixture`
+            : hasOfficialGatewayContract
+              ? `not_executable_until_tui_gateway_${action.action}_wrapper_fixture_exists`
+              : `not_executable_until_official_runtime_${action.action}_contract_exists`,
         expectedEvidence: action.requiredEvidence ?? [
           "official_runtime_cli_or_api",
           "non_destructive_fixture",
@@ -950,30 +955,40 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         evidenceDisposition,
         currentBehavior: isLocalOverlayGap
           ? "ClawJS local overlay only; writesRuntime=false"
-          : "non_executable_action_plan_only",
+          : isFixtureBackedGateway
+            ? "fixture_backed_tui_gateway_action_available_with_confirm_runtime_write"
+            : "non_executable_action_plan_only",
         fallbackPolicy: isLocalOverlayGap
           ? "do_not_write_runtime_pin_state_without_official_api"
           : "do_not_synthesize_native_runtime_action",
         claimEffect: "blocks_recommended_production_native_parity",
         reentryCondition: isLocalOverlayGap
           ? "add_official_runtime_pin_write_back_contract_fixture_and_round_trip_evidence"
-          : hasOfficialGatewayContract
-            ? "add_tui_gateway_json_rpc_wrapper_fixture_and_round_trip_evidence"
-            : "add_official_runtime_action_contract_fixture_and_round_trip_evidence",
+          : isFixtureBackedGateway
+            ? "replace_loopback_fixture_bridge_with_production_transport_lifecycle_policy_and_native_round_trip_evidence"
+            : hasOfficialGatewayContract
+              ? "add_tui_gateway_json_rpc_wrapper_fixture_and_round_trip_evidence"
+              : "add_official_runtime_action_contract_fixture_and_round_trip_evidence",
         productDecision: isLocalOverlayGap
           ? "native_pin_write_back_unsupported_until_official_runtime_api"
-          : hasOfficialGatewayContract
-            ? "native_session_action_unimplemented_until_tui_gateway_wrapper_fixture"
-            : "native_session_action_unsupported_until_official_runtime_contract",
+          : isFixtureBackedGateway
+            ? "native_session_action_fixture_backed_pending_production_transport_and_round_trip_evidence"
+            : hasOfficialGatewayContract
+              ? "native_session_action_unimplemented_until_tui_gateway_wrapper_fixture"
+              : "native_session_action_unsupported_until_official_runtime_contract",
         supportResolution: "explicitly_product_blocked_not_a_silent_gap",
         userVisibleContract: isLocalOverlayGap
           ? "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists"
+          : isFixtureBackedGateway
+            ? "executable_only_with_confirmation_and_loopback_tui_gateway_fixture_until_production_transport_is_validated"
+            : hasOfficialGatewayContract
+              ? "non_executable_until_tui_gateway_wrapper_fixture_exists"
+              : "non_executable_action_plan_only_until_runtime_contract_exists",
+        promotionGate: isFixtureBackedGateway
+          ? "session_action_claim_remains_blocked_until_production_transport_lifecycle_policy_and_round_trip_evidence_exist"
           : hasOfficialGatewayContract
-            ? "non_executable_until_tui_gateway_wrapper_fixture_exists"
-            : "non_executable_action_plan_only_until_runtime_contract_exists",
-        promotionGate: hasOfficialGatewayContract
-          ? "session_action_claim_remains_blocked_until_tui_gateway_wrapper_fixture_and_round_trip_evidence_exist"
-          : "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
+            ? "session_action_claim_remains_blocked_until_tui_gateway_wrapper_fixture_and_round_trip_evidence_exist"
+            : "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
         officialProtocol: action.officialProtocol,
         officialMethod: action.officialMethod,
         officialContractSource: action.officialContractSource,
@@ -1243,20 +1258,45 @@ function sessionActionContracts(runtimeId: RuntimeAdapterId) {
   return RUNTIME_SESSION_ACTION_CONTRACTS[runtimeId] ?? [];
 }
 
-function materializeSessionActionContract(contract, session) {
+function hasLoopbackTuiGateway(runtimeOptions): boolean {
+  const rawUrl = runtimeOptions?.gateway?.url;
+  return typeof rawUrl === "string" && rawUrl.trim().length > 0 && isLoopbackGatewayUrl(rawUrl.trim());
+}
+
+function materializeSessionActionContract(runtimeId: RuntimeAdapterId, contract, session, runtimeOptions?) {
   const hasSessionPath = Boolean(session.sessionPath);
-  return {
+  const materialized = {
     ...contract,
     status: hasSessionPath && contract.statusWhenSessionPath ? contract.statusWhenSessionPath : contract.status,
     persistence: hasSessionPath && contract.persistenceWhenSessionPath ? contract.persistenceWhenSessionPath : contract.persistence,
     delegatesTo: hasSessionPath && contract.delegatesToWhenSessionPath ? contract.delegatesToWhenSessionPath : contract.delegatesTo,
     guard: hasSessionPath && contract.guardWhenSessionPath ? contract.guardWhenSessionPath : contract.guard,
   };
+  const gatewayActionPersistence = {
+    send: "runtime_gateway_write",
+    inject: "runtime_gateway_write",
+    abort: "runtime_gateway_control",
+    create: "runtime_gateway_write",
+  }[contract.action];
+  if (runtimeId === "hermes" && gatewayActionPersistence && hasLoopbackTuiGateway(runtimeOptions)) {
+    return {
+      ...materialized,
+      status: "implemented_requires_confirmation",
+      writesRuntime: true,
+      wouldWriteRuntime: true,
+      persistence: gatewayActionPersistence,
+      guard: "requires_confirm_runtime_write",
+      materializedBy: "loopback_tui_gateway_fixture",
+      fixtureBacked: true,
+      productionTransportReady: false,
+    };
+  }
+  return materialized;
 }
 
-function sessionActionPolicy(runtimeId: RuntimeAdapterId, session, supportContract) {
+function sessionActionPolicy(runtimeId: RuntimeAdapterId, session, supportContract, runtimeOptions?) {
   void supportContract;
-  return sessionActionContracts(runtimeId).map((contract) => materializeSessionActionContract(contract, session));
+  return sessionActionContracts(runtimeId).map((contract) => materializeSessionActionContract(runtimeId, contract, session, runtimeOptions));
 }
 
 function runtimeSessionOverlayThreadId(runtimeId: RuntimeAdapterId, sessionKey: string): string {
@@ -1546,7 +1586,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       totalProjected: sessions.length,
       supportContract: sessionsSupportContract,
       actionContracts: sessionActionContracts(runtimeId),
-      actionPolicy: sessionActionPolicy(runtimeId, session, sessionsSupportContract),
+      actionPolicy: sessionActionPolicy(runtimeId, session, sessionsSupportContract, runtimeOptions),
       overlayState: runtimeSessionOverlayState(runtimeId, sessions),
     },
     skills: { skills: resources.skills ?? [], supportContract: buildSupportContract(runtimeId, status, "skills") },

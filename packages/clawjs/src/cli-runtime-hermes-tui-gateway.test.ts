@@ -97,6 +97,49 @@ test("Hermes TUI gateway session actions require confirmation before contacting 
   }
 });
 
+test("Hermes runtime portal materializes TUI gateway actions when a loopback fixture is configured", async (t) => {
+  const gateway = await createHermesTuiGatewayFixture();
+  try {
+    const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+    const { exitCode, payload } = await runHermesAction([
+      "runtime", "hermes", "domains",
+      "--gateway-url", gateway.url,
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(exitCode), true);
+    const actions = new Map((payload.data.domainData.sessions.actionPolicy ?? []).map((entry: { action?: string }) => [entry.action, entry]));
+    for (const action of ["send", "inject", "abort", "create"]) {
+      const materialized = actions.get(action) as {
+        status?: string;
+        writesRuntime?: boolean;
+        wouldWriteRuntime?: boolean;
+        guard?: string;
+        materializedBy?: string;
+        fixtureBacked?: boolean;
+        productionTransportReady?: boolean;
+      };
+      assert.equal(materialized?.status, "implemented_requires_confirmation");
+      assert.equal(materialized?.writesRuntime, true);
+      assert.equal(materialized?.wouldWriteRuntime, true);
+      assert.equal(materialized?.guard, "requires_confirm_runtime_write");
+      assert.equal(materialized?.materializedBy, "loopback_tui_gateway_fixture");
+      assert.equal(materialized?.fixtureBacked, true);
+      assert.equal(materialized?.productionTransportReady, false);
+    }
+    const sendRequirement = payload.data.supportAudit.evidenceRequirements.find((entry: { id?: string }) => entry.id === "hermes.sessions.send.action_contract");
+    assert.equal(sendRequirement?.evidenceDisposition, "fixture_backed_tui_gateway_bridge_pending_production_round_trip_evidence");
+    assert.equal(sendRequirement?.currentBehavior, "fixture_backed_tui_gateway_action_available_with_confirm_runtime_write");
+    assert.equal(sendRequirement?.userVisibleContract, "executable_only_with_confirmation_and_loopback_tui_gateway_fixture_until_production_transport_is_validated");
+    assert.match(sendRequirement?.promotionGate ?? "", /production_transport_lifecycle_policy/);
+    assert.equal(gateway.requests.length, 0);
+  } finally {
+    await gateway.close();
+  }
+});
+
 test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confirmed", async (t) => {
   const gateway = await createHermesTuiGatewayFixture();
   try {
