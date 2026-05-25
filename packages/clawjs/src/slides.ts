@@ -4,6 +4,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { pathToFileURL } from "url";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { scheduleSlidesDeckSearchEvent } from "./cli-search-events.ts";
 const SLIDE_LAYOUTS = [
   "title",
@@ -1181,7 +1182,7 @@ function buildSlideFromFlags(layout: SlideLayout, argv: string[], flags: Record<
     value: normalizeSlideText(metric.value),
     ...(metric.detail ? { detail: normalizeSlideText(metric.detail) } : {}),
   }));
-  const rows = parseRows(flags["rows-json"] || flags.rows).map((row) => row.map(normalizeSlideText));
+  const rows = parseRowsFlag(flags).map((row) => row.map(normalizeSlideText));
   const metadata = parseObjectFlag(flags["metadata-json"]);
   return {
     id: flags.id || `slide-${randomBytes(4).toString("hex")}`,
@@ -1303,8 +1304,10 @@ function parseFormats(value: string): SlideRenderFormat[] {
 
 function parseObjectFlag(value: string | undefined): Record<string, unknown> | undefined {
   if (!value?.trim()) return undefined;
-  const parsed = JSON.parse(value) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Expected JSON object.");
+  const parsed = parseJsonFlag(value, "invalid_slides_metadata_json", "--metadata-json must be a JSON object.");
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliHandledError("invalid_slides_metadata_json", "--metadata-json must be a JSON object.", CLI_EXIT_USAGE);
+  }
   return parsed as Record<string, unknown>;
 }
 
@@ -1326,7 +1329,7 @@ function readListFlag(argv: string[], flags: Record<string, string>, singular: s
 
 function parseMetrics(value: string | undefined): SlideMetric[] {
   if (!value?.trim()) return [];
-  if (value.trim().startsWith("[")) return JSON.parse(value) as SlideMetric[];
+  if (value.trim().startsWith("[")) return parseMetricsJson(value);
   return parseMetricEntries(value.split(","));
 }
 
@@ -1350,8 +1353,49 @@ function parseMetricEntries(entries: string[]): SlideMetric[] {
 
 function parseRows(value: string | undefined): string[][] {
   if (!value?.trim()) return [];
-  if (value.trim().startsWith("[")) return JSON.parse(value) as string[][];
+  if (value.trim().startsWith("[")) return parseRowsJson(value);
   return value.split(";").map((row) => row.split("|").map((cell) => cell.trim()));
+}
+
+function parseMetricsJson(value: string): SlideMetric[] {
+  const parsed = parseJsonFlag(value, "invalid_slides_metrics_json", "--metrics JSON must be an array of objects with string label/value fields.");
+  if (!Array.isArray(parsed) || parsed.some((metric) => !isSlideMetricJson(metric))) {
+    throw new CliHandledError("invalid_slides_metrics_json", "--metrics JSON must be an array of objects with string label/value fields.", CLI_EXIT_USAGE);
+  }
+  return parsed as SlideMetric[];
+}
+
+function isSlideMetricJson(value: unknown): value is SlideMetric {
+  return typeof value === "object"
+    && value !== null
+    && !Array.isArray(value)
+    && typeof (value as SlideMetric).label === "string"
+    && typeof (value as SlideMetric).value === "string"
+    && ((value as SlideMetric).detail === undefined || typeof (value as SlideMetric).detail === "string");
+}
+
+function parseRowsFlag(flags: Record<string, string>): string[][] {
+  if (flags["rows-json"] !== undefined) {
+    return parseRowsJson(flags["rows-json"]);
+  }
+  return parseRows(flags.rows);
+}
+
+function parseRowsJson(value: string): string[][] {
+  if (!value.trim()) return [];
+  const parsed = parseJsonFlag(value, "invalid_slides_rows_json", "--rows-json must be a JSON array of string arrays.");
+  if (!Array.isArray(parsed) || parsed.some((row) => !Array.isArray(row) || row.some((cell) => typeof cell !== "string"))) {
+    throw new CliHandledError("invalid_slides_rows_json", "--rows-json must be a JSON array of string arrays.", CLI_EXIT_USAGE);
+  }
+  return parsed as string[][];
+}
+
+function parseJsonFlag(value: string, code: string, message: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw new CliHandledError(code, message, CLI_EXIT_USAGE);
+  }
 }
 
 function parseDurationMs(value: string | undefined): number | undefined {

@@ -81,6 +81,36 @@ test("runCli rejects removed public pre-v1 namespaces before V1 routing", async 
   }
 });
 
+test("slides add rejects invalid table rows JSON as usage", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-slides-rows-json-"));
+
+  const created = await runCliCapture(["slides", "create", "Rows Deck", "--theme", "executive", "--json"], cwd);
+  assert.equal(created.code, CLI_EXIT_OK);
+  const createdPayload = parseCliJsonPayload<{ deck: { id: string } }>(created.stdout);
+
+  const invalidRows = await runCliCapture([
+    "slides",
+    "add",
+    createdPayload.deck.id,
+    "--layout",
+    "table-lite",
+    "--heading",
+    "Revenue table",
+    "--rows-json",
+    "[1]",
+    "--json",
+  ], cwd);
+  assert.equal(invalidRows.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(invalidRows.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_slides_rows_json");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /--rows-json/);
+});
+
 test("runCli supports non-mutating database collection discovery aliases", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-db-readonly-"));
   useIsolatedClawDataRoot(t, workspaceRoot);
