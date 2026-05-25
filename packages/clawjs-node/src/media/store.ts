@@ -75,10 +75,29 @@ function toBuffer(data: string | Uint8Array): Buffer {
   if (typeof data !== "string") return Buffer.from(data);
   const trimmed = data.trim();
   if (trimmed.startsWith("data:")) {
-    const [, base64 = ""] = trimmed.split(",", 2);
-    return Buffer.from(base64, "base64");
+    const commaIndex = trimmed.indexOf(",");
+    if (commaIndex < 0) throw new Error("Invalid media data: data URL must include a comma and base64 payload.");
+    return decodeBase64Payload(trimmed.slice(commaIndex + 1));
   }
-  return Buffer.from(trimmed, "base64");
+  return decodeBase64Payload(trimmed);
+}
+
+function decodeBase64Payload(payload: string): Buffer {
+  const normalized = payload.replace(/\s+/g, "");
+  if (!normalized) throw new Error("Invalid media data: base64 payload must not be empty.");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) throw new Error("Invalid media data: payload must be valid base64.");
+  const paddingIndex = normalized.indexOf("=");
+  if (paddingIndex >= 0 && paddingIndex < normalized.length - (normalized.endsWith("==") ? 2 : 1)) {
+    throw new Error("Invalid media data: payload must be valid base64.");
+  }
+  if (normalized.includes("=") && normalized.length % 4 !== 0) throw new Error("Invalid media data: payload must be valid base64.");
+  if (normalized.length % 4 === 1) throw new Error("Invalid media data: payload must be valid base64.");
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+  const buffer = Buffer.from(padded, "base64");
+  if (buffer.toString("base64").replace(/=+$/, "") !== normalized.replace(/=+$/, "")) {
+    throw new Error("Invalid media data: payload must be valid base64.");
+  }
+  return buffer;
 }
 
 function safeName(value: string | undefined, fallback: string): string {

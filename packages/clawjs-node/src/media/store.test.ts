@@ -21,6 +21,56 @@ function useIsolatedDataDir(t: TestContext, workspaceDir: string): void {
   });
 }
 
+test("media register rejects invalid base64 strings without corrupt stored bytes", (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-base64-"));
+  useIsolatedDataDir(t, workspaceDir);
+  const dataStore = createWorkspaceStorage(workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+  const media = createMediaStore({
+    dataStore,
+    storage,
+    workspaceId: "workspace-a",
+    agentId: "agent-a",
+  });
+
+  const validCases: Array<{ name: string; data: string | Uint8Array; expected: string }> = [
+    { name: "buffer.txt", data: Buffer.from("buffer"), expected: "buffer" },
+    { name: "uint8.txt", data: new Uint8Array(Buffer.from("uint8")), expected: "uint8" },
+    { name: "base64.txt", data: Buffer.from("base64").toString("base64"), expected: "base64" },
+    { name: "data-url.txt", data: `data:text/plain;base64,${Buffer.from("data-url").toString("base64")}`, expected: "data-url" },
+  ];
+
+  for (const valid of validCases) {
+    const record = media.register({
+      name: valid.name,
+      mimeType: "text/plain",
+      data: valid.data,
+    });
+    assert.equal(media.download(record.mediaId)?.buffer.toString("utf8"), valid.expected);
+  }
+
+  const invalidCases = [
+    "not valid base64!!!",
+    "abcde",
+    "ab=c",
+    "data:text/plain;base64",
+    "data:text/plain;base64,",
+  ];
+
+  for (const invalid of invalidCases) {
+    assert.throws(
+      () => media.register({
+        name: "invalid.txt",
+        mimeType: "text/plain",
+        data: invalid,
+      }),
+      /Invalid media data:/,
+    );
+  }
+
+  assert.equal(media.list().length, validCases.length);
+});
+
 test("media shares require explicit approval and persistent legal labels", async (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-share-"));
   useIsolatedDataDir(t, workspaceDir);
