@@ -152,3 +152,16 @@ test("skills-v2 sync preserves unmanaged target directories with matching slugs"
   assert.equal(report.synced.some((entry) => entry.slug === "cold-email"), false);
   assert.equal(report.warnings.some((warning) => warning.includes("refusing to replace unmanaged target")), true);
 });
+
+test("skills-v2 sync reports unknown target filters", async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-skills-v2-sync-missing-target-"));
+  const store = createSkillsStore({ homeDir: home });
+  const targetHome = path.join(home, "external-target");
+  store.registerSyncTarget({ id: "external", home: targetHome, mode: "copy" });
+
+  const report = await new SkillsSyncEngine({ store }).sync({ targets: ["missing"] });
+
+  assert.deepEqual(report.synced, []);
+  assert.deepEqual(report.removed, []);
+  assert.equal(report.warnings.includes("target missing: sync target not registered"), true);
+});

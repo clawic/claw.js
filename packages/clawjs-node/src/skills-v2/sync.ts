@@ -34,6 +34,15 @@ export class SkillsSyncEngine {
     const report: SkillSyncReport = { synced: [], removed: [], warnings: [] };
     const skills = this.store.list();
 
+    if (filterIds) {
+      const knownTargetIds = new Set(targets.map((target) => target.id));
+      for (const targetId of filterIds) {
+        if (!knownTargetIds.has(targetId)) {
+          report.warnings.push(`target ${targetId}: sync target not registered`);
+        }
+      }
+    }
+
     for (const target of activeTargets) {
       try {
         await this.syncTarget(target, skills, report);
