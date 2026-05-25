@@ -365,6 +365,7 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
     adapter: runtimeId,
     homeDir: input.flags["home-dir"],
     configPath: input.flags["config-path"],
+    binaryPath: input.flags["binary-path"],
     workspacePath: input.flags["runtime-workspace"] ?? input.workspaceRoot,
     authStorePath: input.flags["auth-store"],
     agentDir: input.flags["agent-dir"],

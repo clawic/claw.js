@@ -28,6 +28,7 @@ export async function createCliClaw(
       permissionMode: flags.sandbox as "read-only" | "workspace-write" | "danger-full-access" | undefined,
       homeDir: flags["home-dir"],
       configPath: flags["config-path"],
+      binaryPath: flags["binary-path"],
       workspacePath: flags["runtime-workspace"],
       authStorePath: flags["auth-store"],
       gateway: {
@@ -129,6 +130,7 @@ export async function createCliWorkspaceClaw(
       permissionMode: flags.sandbox as "read-only" | "workspace-write" | "danger-full-access" | undefined,
       homeDir: flags["home-dir"],
       configPath: flags["config-path"],
+      binaryPath: flags["binary-path"],
       workspacePath: flags["runtime-workspace"],
       authStorePath: flags["auth-store"],
       gateway: {

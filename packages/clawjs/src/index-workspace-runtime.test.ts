@@ -975,6 +975,19 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     "  slack:",
     "    enabled: true",
   ].join("\n"));
+  const hermesBinRoot = path.join(workspaceRoot, "bin");
+  fs.mkdirSync(hermesBinRoot, { recursive: true });
+  const hermesBinaryPath = path.join(hermesBinRoot, "custom-hermes");
+  fs.writeFileSync(hermesBinaryPath, [
+    "#!/bin/sh",
+    "if [ \"$1\" = \"--version\" ]; then",
+    "  echo \"hermes 9.9.9\"",
+    "  exit 0",
+    "fi",
+    "exit 0",
+    "",
+  ].join("\n"));
+  fs.chmodSync(hermesBinaryPath, 0o755);
   fs.writeFileSync(path.join(hermesHome, "memories", "profile.md"), "fixture memory content must not be exposed\n");
   fs.writeFileSync(path.join(hermesHome, "cron", "daily-summary.yaml"), "schedule: 0 9 * * *\n");
   fs.writeFileSync(path.join(hermesHome, "mcp", "github.json"), "{}\n");
@@ -1017,6 +1030,19 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     const payload = JSON.parse(stdout.getOutput()) as { data?: { runtimeId?: string } };
     assert.equal(payload.data?.runtimeId, "hermes", command.label);
   }
+  const hermesBinaryStatusStdout = captureStream();
+  const hermesBinaryStatusExit = await runCli(["runtime", "hermes", "status", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--binary-path", hermesBinaryPath, "--json"], {
+    stdout: hermesBinaryStatusStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(hermesBinaryStatusExit, CLI_EXIT_OK);
+  const hermesBinaryStatusPayload = JSON.parse(hermesBinaryStatusStdout.getOutput()) as {
+    data?: { status?: { cliAvailable?: boolean; version?: string | null; capabilities?: Record<string, boolean> } };
+  };
+  assert.equal(hermesBinaryStatusPayload.data?.status?.cliAvailable, true);
+  assert.equal(hermesBinaryStatusPayload.data?.status?.version, "hermes 9.9.9");
+  assert.equal(hermesBinaryStatusPayload.data?.status?.capabilities?.scheduler, true);
   const hermesSupportClaimStdout = captureStream();
   const hermesSupportClaimExit = await runCli(["runtime", "hermes", "support", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesSupportClaimStdout.stream,
