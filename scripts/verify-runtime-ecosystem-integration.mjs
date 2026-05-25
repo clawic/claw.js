@@ -14,6 +14,7 @@ const discoverabilityPath = path.join(rootDir, "docs/discoverability.registry.js
 const adrCoveragePath = path.join(rootDir, "docs/adr-operational-coverage.manifest.json");
 const runtimePortalPath = path.join(rootDir, "packages/clawjs/src/cli-runtime-portal-command.ts");
 const commandIntentsPath = path.join(rootDir, "packages/clawjs-core/src/cli-command-intents.ts");
+const runtimeAdapterRegistryPath = path.join(rootDir, "packages/clawjs-node/src/runtime/adapters/registry.ts");
 
 const requiredRuntimeIds = ["openclaw", "codex", "hermes"];
 const requiredDomains = [
@@ -143,7 +144,7 @@ function promotedClaimBlocked(runtime) {
 
 function main() {
   const errors = [];
-  for (const file of [manifestPath, standardPath, adrPath, supportMatrixPath, decisionMapPath, discoverabilityPath, adrCoveragePath, runtimePortalPath, commandIntentsPath]) {
+  for (const file of [manifestPath, standardPath, adrPath, supportMatrixPath, decisionMapPath, discoverabilityPath, adrCoveragePath, runtimePortalPath, commandIntentsPath, runtimeAdapterRegistryPath]) {
     if (!fs.existsSync(file)) errors.push(`missing required file ${path.relative(rootDir, file)}`);
   }
   if (errors.length > 0) {
@@ -215,6 +216,16 @@ function main() {
   ]) {
     if (!commandIntents.includes(id)) errors.push(`command-intent registry missing ${id}`);
     if (!commandIntents.includes(`mappedCommand: "${mappedCommand}"`)) errors.push(`command-intent registry missing mapped command ${mappedCommand}`);
+  }
+
+  const runtimeAdapterRegistry = fs.readFileSync(runtimeAdapterRegistryPath, "utf8");
+  for (const snippet of [
+    "import { hermesAdapter }",
+    "[hermesAdapter.id, hermesAdapter]",
+    "export function listRuntimeAdapters",
+    "export function getRuntimeAdapter",
+  ]) {
+    if (!runtimeAdapterRegistry.includes(snippet)) errors.push(`runtime adapter registry missing Hermes first-class registry contract: ${snippet}`);
   }
 
   const runtimes = new Map((manifest.runtimes ?? []).map((runtime) => [runtime.id, runtime]));
