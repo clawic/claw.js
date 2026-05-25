@@ -44,13 +44,20 @@ export class LocalGuidanceStore {
   }
 
   readState(): GuidanceState {
-    try {
-      const parsed = guidanceStateSchema.safeParse(JSON.parse(this.filesystem.readText(this.statePath())));
-      if (parsed.success) return parsed.data as GuidanceState;
-    } catch {
-      // Empty state.
+    if (!this.filesystem.exists(this.statePath())) {
+      return { schemaVersion: 1, records: [], updatedAt: nowIso() };
     }
-    return { schemaVersion: 1, records: [], updatedAt: nowIso() };
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(this.filesystem.readText(this.statePath())) as unknown;
+    } catch (error) {
+      throw new Error(`Invalid guidance state JSON at ${this.statePath()}: ${(error as Error).message}`);
+    }
+    const parsed = guidanceStateSchema.safeParse(parsedJson);
+    if (!parsed.success) {
+      throw new Error(`Invalid guidance state record at ${this.statePath()}: ${parsed.error.message}`);
+    }
+    return parsed.data as GuidanceState;
   }
 
   writeState(state: GuidanceState): GuidanceState {

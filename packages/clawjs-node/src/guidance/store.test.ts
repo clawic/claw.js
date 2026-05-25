@@ -26,3 +26,23 @@ test("guidance cwd prefix matching uses shared home expansion", () => {
   const match = store.match({ cwd: path.join(os.homedir(), "project", "app"), limit: 1 });
   assert.deepEqual(match.hints.map((hint) => hint.id), [record.id]);
 });
+
+test("guidance store rejects corrupt persisted JSON instead of resetting state", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-guidance-store-corrupt-"));
+  const store = createLocalGuidanceStore({ rootDir, env: {} });
+
+  assert.deepEqual(store.readState().records, []);
+
+  const corruptState = "{bad-json";
+  fs.mkdirSync(rootDir, { recursive: true });
+  fs.writeFileSync(store.statePath(), corruptState, "utf8");
+
+  assert.throws(
+    () => store.create({
+      title: "Do not overwrite",
+      capsule: "Keep corrupt guidance state for recovery.",
+    }),
+    /Invalid guidance state JSON/,
+  );
+  assert.equal(fs.readFileSync(store.statePath(), "utf8"), corruptState);
+});
