@@ -38,29 +38,63 @@ test("routines every reports invalid heartbeat gate JSON as usage", async () => 
 test("routines every rejects invalid heartbeat context limits as usage", async () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-temporal-limit-"));
 
-  const result = await runCliCapture([
-    "routines",
-    "every",
-    "5m",
-    "limited heartbeat",
-    "--when",
-    "idle",
-    "--limit",
-    "nope",
-    "--workspace",
-    workspace,
-    "--json",
-  ], process.cwd());
+  for (const value of ["nope", "1.5", "1e3", "0x10", "0"]) {
+    const result = await runCliCapture([
+      "routines",
+      "every",
+      "5m",
+      "limited heartbeat",
+      "--when",
+      "idle",
+      "--limit",
+      value,
+      "--workspace",
+      workspace,
+      "--json",
+    ], process.cwd());
 
-  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
-  const payload = JSON.parse(result.stdout) as {
-    ok: boolean;
-    error: { code: string; status: string; message: string };
-  };
-  assert.equal(payload.ok, false);
-  assert.equal(payload.error.code, "invalid_heartbeat_limit");
-  assert.equal(payload.error.status, "USAGE");
-  assert.match(payload.error.message, /--limit/);
+    assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+    const payload = JSON.parse(result.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; message: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_heartbeat_limit");
+    assert.equal(payload.error.status, "USAGE");
+    assert.match(payload.error.message, /--limit/);
+  }
+});
+
+test("routines every rejects non-decimal max wake counts as usage", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-temporal-max-wakes-"));
+
+  for (const value of ["1.5", "1e3", "0x10", "0"]) {
+    const result = await runCliCapture([
+      "routines",
+      "every",
+      "5m",
+      "limited heartbeat",
+      "--when",
+      "idle",
+      "--max-wakes",
+      value,
+      "--max-wakes-window",
+      "5m",
+      "--workspace",
+      workspace,
+      "--json",
+    ], process.cwd());
+
+    assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+    const payload = JSON.parse(result.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; message: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "usage_error");
+    assert.equal(payload.error.status, "USAGE");
+    assert.match(payload.error.message, /--max-wakes/);
+  }
 });
 
 test("routines every rejects impossible active hour windows as usage", async () => {

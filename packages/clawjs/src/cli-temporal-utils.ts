@@ -89,11 +89,18 @@ export function parseRoutineStaggerMs(flags: Record<string, string>, argv: strin
 
 function parseHeartbeatLimit(raw: string | undefined): number | undefined {
   if (raw === undefined) return undefined;
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+  const parsed = parsePositiveDecimalInteger(raw);
+  if (parsed === null) {
     throw new CliHandledError("invalid_heartbeat_limit", "--limit must be a positive integer.", CLI_EXIT_USAGE);
   }
   return parsed;
+}
+
+function parsePositiveDecimalInteger(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!/^[1-9]\d*$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function parseActiveHours(raw: string | undefined, timezone: string | undefined): NonNullable<NonNullable<TemporalItem["heartbeat"]>["activeHours"]> | undefined {
@@ -139,15 +146,16 @@ export function buildRoutineHeartbeat(argv: string[], flags: Record<string, stri
   if (flags.cooldown && cooldownMs === null) {
     throw new CliHandledError("invalid_duration", `Unsupported cooldown "${flags.cooldown}". Use durations like 30s, 5m, or 1h.`, CLI_EXIT_USAGE);
   }
-  const maxWakes = flags["max-wakes"] ? Number(flags["max-wakes"]) : undefined;
+  const hasMaxWakes = flags["max-wakes"] !== undefined;
+  const maxWakes = hasMaxWakes ? parsePositiveDecimalInteger(flags["max-wakes"]) : undefined;
   const maxWakesWindowMs = flags["max-wakes-window"] ? parseSimpleDurationMs(flags["max-wakes-window"]) : undefined;
-  if (flags["max-wakes"] && (!Number.isSafeInteger(maxWakes) || Number(maxWakes) <= 0)) {
+  if (hasMaxWakes && maxWakes === null) {
     throw new CliHandledError("usage_error", "--max-wakes must be a positive integer.", CLI_EXIT_USAGE);
   }
   if (flags["max-wakes-window"] && maxWakesWindowMs === null) {
     throw new CliHandledError("invalid_duration", `Unsupported max wake window "${flags["max-wakes-window"]}".`, CLI_EXIT_USAGE);
   }
-  if ((maxWakes && !maxWakesWindowMs) || (!maxWakes && maxWakesWindowMs)) {
+  if ((hasMaxWakes && !maxWakesWindowMs) || (!hasMaxWakes && maxWakesWindowMs)) {
     throw new CliHandledError("usage_error", "Use --max-wakes and --max-wakes-window together.", CLI_EXIT_USAGE);
   }
   const activeHours = parseActiveHours(flags["active-hours"], flags["active-timezone"]);
@@ -173,7 +181,7 @@ export function buildRoutineHeartbeat(argv: string[], flags: Record<string, stri
     ...(deliver ? { deliver } : {}),
     ...(activeHours ? { activeHours } : {}),
     ...(cooldownMs !== undefined && cooldownMs !== null ? { cooldownMs } : {}),
-    ...(maxWakes && maxWakesWindowMs ? { maxWakesPerWindow: { count: maxWakes, windowMs: maxWakesWindowMs } } : {}),
+    ...(maxWakes !== undefined && maxWakes !== null && maxWakesWindowMs ? { maxWakesPerWindow: { count: maxWakes, windowMs: maxWakesWindowMs } } : {}),
     ...(flags.prompt ? { prompt: flags.prompt } : {}),
     ...(gate ? { gate } : {}),
     ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
