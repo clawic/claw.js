@@ -1,4 +1,4 @@
-import type { RuntimeAdapterId } from "@clawjs/core";
+import { resourceKindSchema, type ResourceKind, type RuntimeAdapterId } from "@clawjs/core";
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -34,6 +34,7 @@ const GUIDANCE_SEVERITIES = ["info", "notice", "warning", "critical"] as const;
 const GUIDANCE_SUBCOMMANDS = ["status", "list", "show", "create", "archive", "match"] as const;
 const RESOURCE_LIST_STATUSES = ["active", "missing", "moved", "stale"] as const;
 const RESOURCE_SUBCOMMANDS = ["list", "register", "show", "resolve", "read", "status"] as const;
+const RESOURCE_LOCATOR_KINDS = ["path", "url", "hostname", "secret-ref", "opaque"] as const;
 
 export async function runGuidanceResourcesCli(input: {
   group: string | undefined;
@@ -224,7 +225,7 @@ function runResourcesCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & 
     if (!locator) throw new CliHandledError("usage", "Usage: claw resources register <path|url|hostname|secret-ref> [--kind file|directory|project|workspace|server|secret-ref|document|instruction|other]", CLI_EXIT_USAGE);
     const resource = resourcesFacade.register({
       id: flags.id,
-      kind: flags.kind as never,
+      kind: flags.kind ? parseResourceKindFlag(flags.kind) : undefined,
       locator,
       label: flags.label,
       scope: {
@@ -326,11 +327,24 @@ function parseResourceMaxBytesFlag(value: string): number {
   return parsed;
 }
 
+function parseResourceKindFlag(value: string): ResourceKind {
+  const parsed = resourceKindSchema.safeParse(value);
+  if (parsed.success) return parsed.data;
+  throw new CliHandledError("invalid_resource_kind", `resources register --kind must be one of: ${resourceKindSchema.options.join(", ")}.`, CLI_EXIT_USAGE, {
+    location: "cli.resources.kind",
+  });
+}
+
 function resolveResourceLocator(value: string | undefined, flags: Record<string, string>) {
   if (!value) return null;
   if (flags["secret-ref"]) return { kind: "secret-ref" as const, value };
   if (flags.hostname) return { kind: "hostname" as const, value };
   if (flags.url || /^https?:\/\//.test(value)) return { kind: "url" as const, value };
-  if (flags["locator-kind"]) return { kind: flags["locator-kind"] as "path" | "url" | "hostname" | "secret-ref" | "opaque", value };
+  if (flags["locator-kind"]) {
+    return {
+      kind: parseAllowedFlag(flags["locator-kind"], RESOURCE_LOCATOR_KINDS, "invalid_resource_locator_kind", "resources register --locator-kind", "cli.resources.locator_kind"),
+      value,
+    };
+  }
   return { kind: "path" as const, value };
 }

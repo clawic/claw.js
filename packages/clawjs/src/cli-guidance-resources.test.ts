@@ -304,3 +304,31 @@ test("resources read rejects invalid max byte limits before reading", async (t) 
   assert.equal(boundedPayload.data.content, "abc");
   assert.equal(boundedPayload.data.truncated, true);
 });
+
+test("resources register rejects invalid enum flags before writing state", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-resources-register-flags-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const resourcesDir = path.join(cwd, "resources");
+  const filePath = path.join(cwd, "notes.txt");
+  fs.writeFileSync(filePath, "hello\n", "utf8");
+
+  for (const [flag, value, code, location] of [
+    ["--kind", "nonsense", "invalid_resource_kind", "cli.resources.kind"],
+    ["--locator-kind", "moon", "invalid_resource_locator_kind", "cli.resources.locator_kind"],
+  ] as const) {
+    const result = await runCliCapture([
+      "resources", "register", filePath,
+      flag, value,
+      "--resources-dir", resourcesDir,
+      "--json",
+    ], cwd);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, code);
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, location);
+  }
+
+  assert.equal(fs.existsSync(path.join(resourcesDir, "resources.json")), false);
+});
