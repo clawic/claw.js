@@ -563,6 +563,39 @@ describe("MCP connector control plane", () => {
     }
   });
 
+  it("blocks MCP tool calls when the connector policy is disabled", async () => {
+    let toolCalled = false;
+    const { app, config } = buildFixtureApp(() => {
+      toolCalled = true;
+    });
+    try {
+      await registerAndRefreshFixtureServer(app, config.sharedSecret);
+      const response = await app.inject({
+        method: "POST",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: {
+          prefixedName: "mcp_fixture_echo",
+          args: { text: "hello" },
+          controlPlane: {
+            ...fixtureApprovedControlPlane(),
+            policy: {
+              ...fixtureControlPlane().policy,
+              enabled: false,
+            },
+          },
+          agentPolicy: fixtureAgentPolicy(),
+        },
+      });
+
+      assert.equal(response.statusCode, 403);
+      assert.match(response.body, /policy_disabled/);
+      assert.equal(toolCalled, false);
+    } finally {
+      await app.close();
+    }
+  });
+
   it("blocks MCP tool calls without an Agents V1 assignment policy", async () => {
     let toolCalled = false;
     const { app, config } = buildFixtureApp(() => {

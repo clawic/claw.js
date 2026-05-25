@@ -277,6 +277,7 @@ export interface ConnectorControlPlaneDecisionReason {
     | "credential_binding_required"
     | "credential_binding_disabled"
     | "credential_binding_scope_mismatch"
+    | "policy_disabled"
     | "policy_denied"
     | "policy_default_denied"
     | "budget_required"
@@ -353,6 +354,13 @@ export function evaluateConnectorControlPlaneRequest(input: {
   const scopedGrant = input.scopedGrant ?? input.approvalGrant;
   const reasons: ConnectorControlPlaneDecisionReason[] = [];
   const matchingGrant = connectorApprovalGrantMatches(scopedGrant, request) ? scopedGrant : undefined;
+
+  if (!policy.enabled) {
+    reasons.push({
+      code: "policy_disabled",
+      message: `Connector policy ${policy.id} is disabled.`,
+    });
+  }
 
   if (policy.requireContext && (!request.context?.actorId || !request.context?.purpose || !request.context?.requestId)) {
     reasons.push({

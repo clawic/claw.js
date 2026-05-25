@@ -73,6 +73,20 @@ test("connector control plane allows a scoped supported request", () => {
   assert.equal(decision.audit.traceMode, "redacted");
 });
 
+test("connector control plane fails closed when the policy is disabled", () => {
+  const decision = evaluateConnectorControlPlaneRequest({
+    request: baseRequest,
+    policy: {
+      ...basePolicy,
+      enabled: false,
+    },
+  });
+
+  assert.equal(decision.allowed, false);
+  assert.deepEqual(decision.reasons.map((reason) => reason.code), ["policy_disabled"]);
+  assert.deepEqual(decision.audit.reasonCodes, ["policy_disabled"]);
+});
+
 test("connector control plane blocks missing context, credentials, and unsupported operations", () => {
   const decision = evaluateConnectorControlPlaneRequest({
     request: {
