@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
+import os from "node:os";
 import path from "node:path";
 import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
@@ -8,26 +9,6 @@ const args = process.argv.slice(2);
 const ownerArgIndex = args.indexOf("--owner");
 const owner = ownerArgIndex >= 0 ? args[ownerArgIndex + 1] : "clawjs";
 const targets = args.filter((arg, index) => !arg.startsWith("--") && index !== ownerArgIndex + 1);
-
-if (process.argv.includes("--self-test")) {
-  runSelfTest();
-  process.exit(0);
-}
-
-if (!["clawjs", "clawix"].includes(owner)) {
-  printActionableFailureReport({
-    title: "Package surface guard usage error:",
-    diagnostics: [usageDiagnostic("package_surface_invalid_owner", `unsupported owner ${owner}`)],
-  });
-  process.exit(64);
-}
-if (targets.length === 0) {
-  printActionableFailureReport({
-    title: "Package surface guard usage error:",
-    diagnostics: [usageDiagnostic("package_surface_missing_target", "missing file-or-dir target")],
-  });
-  process.exit(64);
-}
 
 const ignoredDirs = new Set([
   "node_modules",
@@ -64,6 +45,26 @@ const clawjsAllowedBins = new Set([
 ]);
 const clawixAllowedUnscopedPackages = new Set(["clawix"]);
 const clawixAllowedBins = new Set(["clawix"]);
+
+if (process.argv.includes("--self-test")) {
+  runSelfTest();
+  process.exit(0);
+}
+
+if (!["clawjs", "clawix"].includes(owner)) {
+  printActionableFailureReport({
+    title: "Package surface guard usage error:",
+    diagnostics: [usageDiagnostic("package_surface_invalid_owner", `unsupported owner ${owner}`)],
+  });
+  process.exit(64);
+}
+if (targets.length === 0) {
+  printActionableFailureReport({
+    title: "Package surface guard usage error:",
+    diagnostics: [usageDiagnostic("package_surface_missing_target", "missing file-or-dir target")],
+  });
+  process.exit(64);
+}
 
 function listPackageFiles(targetPath) {
   const stat = fs.statSync(targetPath);
@@ -122,19 +123,59 @@ function packageNameViolation(name, file) {
 }
 
 function binViolations(bin, file) {
-  const keys = typeof bin === "string"
-    ? [path.basename(bin)]
+  const entries = typeof bin === "string"
+    ? [[path.basename(bin), bin]]
     : bin && typeof bin === "object" && !Array.isArray(bin)
-      ? Object.keys(bin)
+      ? Object.entries(bin)
       : [];
   const allowed = owner === "clawjs" ? clawjsAllowedBins : clawixAllowedBins;
-  return keys
-    .filter((key) => !allowed.has(key))
-    .map((key) => packageSurfaceDiagnostic("package_surface_bin_invalid", `${relative(file)} exposes unapproved bin "${key}"`, {
+  return entries.flatMap(([key, target]) => {
+    const findings = [];
+    if (!allowed.has(key)) {
+      findings.push(packageSurfaceDiagnostic("package_surface_bin_invalid", `${relative(file)} exposes unapproved bin "${key}"`, {
+        location: relative(file),
+        suggestion: "Expose only approved CLI binary names for this owner.",
+        safeNextStep: `Rename or remove bin "${key}" in ${relative(file)}, then rerun node scripts/package-surface-guard.mjs.`,
+      }));
+    }
+    findings.push(...binTargetViolations(key, target, file));
+    return findings;
+  });
+}
+
+function binTargetViolations(key, target, file) {
+  if (typeof target !== "string" || target.trim() === "") {
+    return [packageSurfaceDiagnostic("package_surface_bin_target_invalid", `${relative(file)} bin "${key}" must point to a package-local executable file`, {
       location: relative(file),
-      suggestion: "Expose only approved CLI binary names for this owner.",
-      safeNextStep: `Rename or remove bin "${key}" in ${relative(file)}, then rerun node scripts/package-surface-guard.mjs.`,
-    }));
+      suggestion: "Use a non-empty relative path for every package bin target.",
+      safeNextStep: `Set bin "${key}" in ${relative(file)} to an existing file inside its package directory.`,
+    })];
+  }
+  if (path.isAbsolute(target)) {
+    return [packageSurfaceDiagnostic("package_surface_bin_target_invalid", `${relative(file)} bin "${key}" must not use absolute path "${target}"`, {
+      location: relative(file),
+      suggestion: "Package bin targets must be relative paths inside the package.",
+      safeNextStep: `Replace bin "${key}" in ${relative(file)} with a package-local relative path.`,
+    })];
+  }
+  const packageDir = path.dirname(file);
+  const resolved = path.resolve(packageDir, target);
+  const relativeTarget = path.relative(packageDir, resolved);
+  if (relativeTarget.startsWith("..") || path.isAbsolute(relativeTarget)) {
+    return [packageSurfaceDiagnostic("package_surface_bin_target_invalid", `${relative(file)} bin "${key}" escapes its package directory`, {
+      location: relative(file),
+      suggestion: "Package bin targets must stay inside the owning package directory.",
+      safeNextStep: `Move bin "${key}" under ${relative(packageDir)} or remove the bin entry.`,
+    })];
+  }
+  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+    return [packageSurfaceDiagnostic("package_surface_bin_target_missing", `${relative(file)} bin "${key}" points to missing file "${target}"`, {
+      location: relative(file),
+      suggestion: "Package bin metadata must point at a checked-in executable entrypoint.",
+      safeNextStep: `Create ${relative(resolved)} or update bin "${key}" in ${relative(file)}.`,
+    })];
+  }
+  return [];
 }
 
 const packageFiles = targets.flatMap((target) => listPackageFiles(path.resolve(cwd, target)));
@@ -287,5 +328,22 @@ function runSelfTest() {
   assert.match(output, /next: Rename the package/);
   assert.doesNotMatch(output, /\/Users\/example/);
   assert.doesNotMatch(output, /sk-test-secret-123456/);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "package-surface-guard-"));
+  try {
+    const packageDir = path.join(tempRoot, "pkg");
+    fs.mkdirSync(path.join(packageDir, "bin"), { recursive: true });
+    const file = path.join(packageDir, "package.json");
+    fs.writeFileSync(path.join(packageDir, "bin", "claw.mjs"), "#!/usr/bin/env node\n");
+    const binFindings = binViolations({
+      claw: "bin/claw.mjs",
+      "create-claw-app": "bin/missing.mjs",
+      "create-claw-agent": "../escaped.mjs",
+      "create-claw-plugin": 42,
+    }, file);
+    assert.equal(binFindings.some((finding) => finding.code === "package_surface_bin_target_missing"), true);
+    assert.equal(binFindings.filter((finding) => finding.code === "package_surface_bin_target_invalid").length, 2);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
   console.log("package surface guard self-test passed");
 }
