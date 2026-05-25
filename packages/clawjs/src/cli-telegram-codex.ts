@@ -253,11 +253,26 @@ export function normalizeTelegramCodexAccount(flags: Record<string, string>): st
   return flags.account?.trim() || undefined;
 }
 
+function parseTelegramCodexListenerNumberFlag(flags: Record<string, string>, name: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw.trim());
+  if (!raw.trim() || !Number.isFinite(value) || value < 0) {
+    throw new CliHandledError("invalid_telegram_codex_listener_number", `--${name} must be a finite non-negative number.`, CLI_EXIT_USAGE, {
+      location: `telegram.codex.flags.${name}`,
+      suggestion: `Pass --${name} with a finite non-negative number, or omit it to use the default.`,
+      safeNextStep: "Rerun the Telegram Codex command with valid listener timing flags before changing bridge state.",
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
+
 export function resolveTelegramCodexListenerOptions(flags: Record<string, string>): { intervalMs: number; timeoutSeconds: number; processorTimeoutMs: number } {
   return {
-    intervalMs: flags["interval-ms"] ? Number(flags["interval-ms"]) : TELEGRAM_CODEX_DEFAULT_INTERVAL_MS,
-    timeoutSeconds: flags.timeout ? Number(flags.timeout) : TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS,
-    processorTimeoutMs: flags["processor-timeout-ms"] ? Number(flags["processor-timeout-ms"]) : TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS,
+    intervalMs: parseTelegramCodexListenerNumberFlag(flags, "interval-ms") ?? TELEGRAM_CODEX_DEFAULT_INTERVAL_MS,
+    timeoutSeconds: parseTelegramCodexListenerNumberFlag(flags, "timeout") ?? TELEGRAM_CODEX_DEFAULT_TIMEOUT_SECONDS,
+    processorTimeoutMs: parseTelegramCodexListenerNumberFlag(flags, "processor-timeout-ms") ?? TELEGRAM_CODEX_DEFAULT_PROCESSOR_TIMEOUT_MS,
   };
 }
 

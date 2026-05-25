@@ -271,6 +271,52 @@ process.stdin.on("end", () => process.stdout.write(JSON.stringify({ actions: [] 
   assert.deepEqual(payload.error.details, { flag: "--interval-ms", value: "nope" });
 });
 
+test("runCli rejects invalid Telegram Codex listener timing flags before setup", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-codex-timing-"));
+
+  const setupStdout = captureStream();
+  const setupExitCode = await runCli([
+    "channels",
+    "telegram",
+    "codex",
+    "setup",
+    "--workspace",
+    workspaceRoot,
+    "--interval-ms",
+    "nope",
+    "--json",
+  ], {
+    stdout: setupStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const statusStdout = captureStream();
+  const statusExitCode = await runCli([
+    "channels",
+    "telegram",
+    "codex",
+    "status",
+    "--workspace",
+    workspaceRoot,
+    "--json",
+  ], {
+    stdout: statusStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(setupStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  const statusPayload = JSON.parse(statusStdout.getOutput()) as { ok: boolean; data: { processorRegistered: boolean; listenerStatus: string } };
+  assert.equal(setupExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_telegram_codex_listener_number");
+  assert.deepEqual(payload.error.details, { flag: "--interval-ms", value: "nope" });
+  assert.equal(statusExitCode, CLI_EXIT_OK);
+  assert.equal(statusPayload.data.processorRegistered, false);
+  assert.equal(statusPayload.data.listenerStatus, "stopped");
+});
+
 test("runCli rejects invalid Telegram webhook max connections before configuring", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-webhook-max-"));
 
