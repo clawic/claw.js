@@ -2,7 +2,7 @@ import { auditClawCapabilityMaturityRegistry, listClawCapabilityMaturityEntries 
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface MaturityCliInput {
   positionals: string[];
@@ -69,6 +69,15 @@ export async function runMaturityCli(input: MaturityCliInput): Promise<number> {
 }
 
 function writeMaturityUsage(input: MaturityCliInput): number {
+  if (input.wantsJson) {
+    writeCommandJsonError(
+      input.context.stdout,
+      "maturity",
+      new CliHandledError("invalid_maturity_action", "Use maturity list, show, audit, or tier.", CLI_EXIT_USAGE),
+      { jsonSchemaId: "claw.cli.maturity.v1" },
+    );
+    return CLI_EXIT_USAGE;
+  }
   input.context.stderr.write(`Usage: ${input.binName} maturity list|show|audit|tier [--json]\n`);
   return CLI_EXIT_USAGE;
 }

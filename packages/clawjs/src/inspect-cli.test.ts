@@ -116,6 +116,12 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   assert.deepEqual(maturityTierEnvelope.data.activationTierOrder, ["stable", "beta", "experimental", "dev"]);
   assert.equal(maturityTierEnvelope.data.blockedCode, "maturity_blocked");
 
+  const invalidMaturity = await runCliCapture(["maturity", "unknown", "--json"], process.cwd());
+  assert.equal(invalidMaturity.code, CLI_EXIT_USAGE);
+  const invalidMaturityEnvelope = parseCliJson<unknown>(invalidMaturity.stdout);
+  assert.equal(invalidMaturityEnvelope.ok, false);
+  assert.equal(invalidMaturityEnvelope.error?.code, "invalid_maturity_action");
+
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());
   assert.equal(show.code, CLI_EXIT_OK);
   const coreDatabase = parseCliJson<{ id: string; path: string; incomingEdges?: unknown[]; outgoingEdges?: unknown[]; routes?: unknown[] }>(show.stdout).data;
