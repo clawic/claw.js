@@ -249,6 +249,26 @@ describe("OpenAPI connector runtime", () => {
     assert.deepEqual(offline.errors, []);
   });
 
+  it("fails closed when an OpenAPI path parameter is missing", () => {
+    const options = {
+      appId: "fixture_commerce",
+      authFieldName: "apiKey",
+      evidence: ["packages/clawjs-integrations/src/openapi-runtime.test.ts"],
+      fixtures: [],
+    };
+    const catalog = buildOpenApiConnectorCatalog(FIXTURE_OPENAPI, options);
+    const registry = [createOpenApiConnectorRuntimeImplementation(FIXTURE_OPENAPI, options)];
+    const operation = catalog.apps[0]?.operations.find((candidate) => candidate.id.endsWith("list-customer-items"));
+    assert.ok(operation);
+
+    assert.throws(
+      () => buildConnectorOperationRuntimePlan(operation, {
+        limit: 10,
+      }, { registry }),
+      /missing path parameter customerId/,
+    );
+  });
+
   it("preserves form body encoding from OpenAPI request bodies", () => {
     const document = {
       ...FIXTURE_OPENAPI,

@@ -304,6 +304,10 @@ function buildOpenApiRequestPlan(
     }
     body[field.sourceName] = value;
   }
+  const unresolvedPathParameter = endpoint.match(/{([^}]+)}/)?.[1];
+  if (unresolvedPathParameter) {
+    throw new Error(`OpenAPI runtime cannot build ${metadata.id} request: missing path parameter ${unresolvedPathParameter}`);
+  }
   return {
     method: metadata.method,
     endpoint,

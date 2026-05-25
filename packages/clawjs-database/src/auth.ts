@@ -59,7 +59,7 @@ export class DatabaseAuthService {
 
   async verifyAdminToken(token: string): Promise<AuthPrincipal | null> {
     try {
-      const verified = await jwtVerify(token, this.secret);
+      const verified = await jwtVerify(token, this.secret, { algorithms: ["HS256"] });
       const payload = verified.payload as Partial<AdminClaims> & { sub?: string };
       if (payload.kind !== "admin" || typeof payload.sub !== "string" || typeof payload.email !== "string") {
         return null;
