@@ -176,10 +176,13 @@ export async function openAgentCoordinationStore(paths: AgentCoordinationPaths):
 }
 
 export class AgentCoordinationStore {
-  constructor(
-    private readonly sqlite: SqliteDatabase,
-    readonly paths: AgentCoordinationPaths,
-  ) {}
+  private readonly sqlite: SqliteDatabase;
+  readonly paths: AgentCoordinationPaths;
+
+  constructor(sqlite: SqliteDatabase, paths: AgentCoordinationPaths) {
+    this.sqlite = sqlite;
+    this.paths = paths;
+  }
 
   // @clawjs-persistent-surface-ddl-source
   ensureSchema(): void {

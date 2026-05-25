@@ -78,6 +78,13 @@ async function importCoreCompactCatalogs() {
 }
 
 async function importCliRouter() {
+  const sourceEntry = new URL("../src/index.ts", import.meta.url);
+  try {
+    return await import(sourceEntry);
+  } catch (error) {
+    const code = error?.code;
+    if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND" && code !== "ERR_UNKNOWN_FILE_EXTENSION") throw error;
+  }
   const distEntry = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/index.js");
   try {
     return await import(distEntry);
@@ -139,9 +146,48 @@ function baseUsage() {
   ].join("\n");
 }
 
-if (!first || args.includes("--help") || args.includes("-h")) {
+async function runCliRouterAndExit() {
+  let runCli;
+  try {
+    ({ runCli } = await importCliRouter());
+  } catch {
+    return false;
+  }
+
+  const exitCode = await runCli(args, {
+    stdout: process.stdout,
+    stderr: process.stderr,
+    stdin: process.stdin,
+    cwd: process.cwd(),
+    binName: publicBinName,
+  });
+
+  process.exitCode = exitCode;
+  await new Promise((resolve) => process.stdout.write("", resolve));
+  await new Promise((resolve) => process.stderr.write("", resolve));
+  process.exit();
+}
+
+const wantsHelpFlag = args.includes("--help") || args.includes("-h");
+const rootHelp = !first || first === "help" || first === "--help" || first === "-h";
+if ((wantsHelpFlag && !(rootHelp && !args.includes("--all"))) || (first === "help" && args.includes("--all")) || args.includes("--version") || args.includes("-v")) {
+  if (await runCliRouterAndExit()) {
+    process.exit();
+  }
+}
+if (rootHelp && !args.includes("--all")) {
   console.log(baseUsage());
   process.exit(0);
+}
+if (
+  first === "setup" ||
+  first === "modules" ||
+  (first === "inspect" && (second === "commands" || second === "cli")) ||
+  (first === "collections" && (!second || second === "list"))
+) {
+  if (await runCliRouterAndExit()) {
+    process.exit();
+  }
 }
 if (first === "modules") {
   const command = second ?? "list";
@@ -251,6 +297,9 @@ if (LOCAL_DATA_LEGACY_GROUPS.has(args[0]) || RUNTIME_GROUPS.has(args[0])) {
   if (LOCAL_DATA_LEGACY_GROUPS.has(args[0]) && !(await hasPackage("@clawjs/local-data"))) {
     missingPack(args[0] === "db" ? "database" : args[0], "local-data", "@clawjs/local-data");
   }
+  if (await runCliRouterAndExit()) {
+    process.exit();
+  }
   const fs = await import("node:fs");
   const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist");
   const legacyChunk = fs.readdirSync(distDir)
@@ -304,20 +353,7 @@ if (first === "open" && args[1] === "sessions") {
 }
 
 // Fall back to the existing Claw CLI for everything else.
-let runCli;
-try {
-  ({ runCli } = await importCliRouter());
-} catch (err) {
-  console.error("[claw] CLI router not available:", err?.message ?? err);
+if (!(await runCliRouterAndExit())) {
+  console.error("[claw] CLI router not available");
   process.exit(1);
 }
-
-const exitCode = await runCli(args, {
-  stdout: process.stdout,
-  stderr: process.stderr,
-  stdin: process.stdin,
-  cwd: process.cwd(),
-  binName: publicBinName,
-});
-
-process.exitCode = exitCode;

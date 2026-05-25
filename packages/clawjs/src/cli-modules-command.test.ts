@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +14,32 @@ import {
 import { CLI_EXIT_OK } from "./cli-errors.ts";
 import { runCli } from "./index.ts";
 import { captureStream, runCliCapture } from "./index-test-utils.ts";
+
+test("local bin uses source router for setup and coordination planning", () => {
+  const binPath = new URL("../bin/claw.mjs", import.meta.url);
+  const setup = spawnSync(process.execPath, [binPath.pathname, "setup", "normal", "--json"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(setup.status, 0, setup.stderr);
+  const setupPayload = JSON.parse(setup.stdout) as {
+    data: { configPath: string; modules: Array<{ id: string; state: string }> };
+    meta: { jsonSchemaId: string };
+  };
+  assert.equal(setupPayload.meta.jsonSchemaId, "claw.cli.setup.v1");
+  assert.equal(setupPayload.data.configPath.endsWith(path.join(".claw", "config", "modules.json")), true);
+  assert.equal(setupPayload.data.modules.some((module) => module.id === "basic-productivity" && module.state === "enabled"), true);
+
+  const plan = spawnSync(process.execPath, [binPath.pathname, "test", "plan", "--repo", ".", "--lane", "changed", "--json"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(plan.status, 0, plan.stderr || plan.stdout);
+  const planPayload = JSON.parse(plan.stdout) as { data: { lane: string; checks: Array<{ id: string }> }; meta: { jsonSchemaId: string } };
+  assert.equal(planPayload.meta.jsonSchemaId, "claw.cli.test.v1");
+  assert.equal(planPayload.data.lane, "changed");
+  assert.equal(planPayload.data.checks.some((check) => check.id === "changed"), true);
+});
 
 test("modules config paths use Core storage helpers", () => {
   assert.equal(resolveClawModulesConfigPath("/Users/demo/.claw"), "/Users/demo/.claw/config/modules.json");
