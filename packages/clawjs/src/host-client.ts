@@ -68,7 +68,18 @@ async function sendUnixSocketCommand(socketPath: string, request: ClawCommandReq
 }
 
 async function sendHttpCommand(address: string, request: ClawCommandRequest): Promise<ClawCommandResponse> {
-  const url = new URL(address);
+  let url: URL;
+  try {
+    url = new URL(address);
+  } catch {
+    throw new HostClientError("host_endpoint_invalid", `Host HTTP endpoint ${address} is not a valid URL.`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new HostClientError("host_endpoint_invalid", `Host HTTP endpoint ${address} must use http or https.`);
+  }
+  if (url.username || url.password) {
+    throw new HostClientError("host_endpoint_invalid", "Host HTTP endpoints must not include credentials.");
+  }
   if (url.pathname === "/" || url.pathname === "") {
     url.pathname = clawHostApiRoutes.commands;
   }
