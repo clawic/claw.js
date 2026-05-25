@@ -486,13 +486,19 @@ export class SearchStore {
     const lexicalMatches = new Map<string, SearchLexicalMatch>();
     const ftsDocumentIds = new Set<string>();
     if (strategy !== "semantic" || !plannedQueryInput.embedding) {
-      const lexicalRows = this.lexicalRows(plannedQueryInput, sourceSet, match, candidateLimit);
-      for (const row of lexicalRows) {
-        rows.set(row.id, row);
-        ftsDocumentIds.add(row.id);
-      }
-      if (rows.size < candidateLimit && shouldRunFuzzyFallback(plannedQueryInput.query)) {
-        for (const row of this.fuzzyFallbackRows(plannedQueryInput, sourceSet, candidateLimit, rows, lexicalMatches)) {
+      if (match) {
+        const lexicalRows = this.lexicalRows(plannedQueryInput, sourceSet, match, candidateLimit);
+        for (const row of lexicalRows) {
+          rows.set(row.id, row);
+          ftsDocumentIds.add(row.id);
+        }
+        if (rows.size < candidateLimit && shouldRunFuzzyFallback(plannedQueryInput.query)) {
+          for (const row of this.fuzzyFallbackRows(plannedQueryInput, sourceSet, candidateLimit, rows, lexicalMatches)) {
+            rows.set(row.id, row);
+          }
+        }
+      } else if (this.hasStructuredSearchScope(plannedQueryInput)) {
+        for (const row of this.filteredRows(plannedQueryInput, sourceSet, candidateLimit)) {
           rows.set(row.id, row);
         }
       }
@@ -1594,6 +1600,30 @@ export class SearchStore {
         lexicalMatches.set(entry.row.id, entry.match);
         return entry.row;
       });
+  }
+
+  private filteredRows(input: SearchQueryInput, sourceSet: SearchSourceSetId, limit: number): SearchDocumentRow[] {
+    const { clauses, params } = buildDocumentClauses(input, sourceSet);
+    return this.db.prepare(`
+      SELECT d.*, 100 AS rank, NULL AS semantic_score
+      FROM search_documents d
+      JOIN search_sources s ON s.id = d.source
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY d.updated_at DESC, d.id ASC
+      LIMIT ?
+    `).all(...params, limit) as SearchDocumentRow[];
+  }
+
+  private hasStructuredSearchScope(input: SearchQueryInput): boolean {
+    return Boolean(
+      input.domains?.length
+      || input.sources?.length
+      || input.shards?.length
+      || Object.values(input.filters ?? {}).some((value) => {
+        if (Array.isArray(value)) return value.length > 0;
+        return value !== undefined && value !== null && value !== "";
+      }),
+    );
   }
 
   private materializeResults(rows: SearchDocumentRow[], input: SearchQueryInput, options: SearchMaterializationOptions = {}): SearchResult[] {

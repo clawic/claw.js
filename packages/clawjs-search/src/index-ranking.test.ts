@@ -186,6 +186,63 @@ test("SearchStore filters results by actor and required search scopes", () => {
   }
 });
 
+test("SearchStore handles filter-only inline queries without sending empty text to FTS", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-filter-only-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "documents.blocks",
+      domain: "documents",
+      name: "Documents",
+      resultTypes: ["document"],
+    }));
+    store.upsertDocument({
+      id: "commands:older",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "Older command",
+      body: "Command available to root search.",
+      updatedAt: "2026-05-17T11:00:00.000Z",
+    });
+    store.upsertDocument({
+      id: "commands:newer",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "Newer command",
+      body: "Command available to root search.",
+      updatedAt: "2026-05-17T12:00:00.000Z",
+    });
+    store.upsertDocument({
+      id: "documents.blocks:note",
+      source: "documents.blocks",
+      domain: "documents",
+      type: "document",
+      title: "Document note",
+      body: "Document should not appear in command-only search.",
+      updatedAt: "2026-05-17T12:30:00.000Z",
+    });
+
+    const output = store.query({ query: "domain:commands", limit: 10 });
+
+    assert.equal(output.query, "");
+    assert.deepEqual(output.results.map((result) => result.id), [
+      "commands:newer",
+      "commands:older",
+    ]);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore applies agent result budgets after ACL and ranking", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-agent-budget-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));
