@@ -264,7 +264,7 @@ test("collections list shows active safe catalog by default and full catalog onl
 });
 
 test("collections list rejects invalid limits before returning a misleading subset", async () => {
-  for (const value of ["nope", "1.9", " "]) {
+  for (const value of ["nope", "1.9", " ", "1e3", "0x10", "9007199254740992"]) {
     const result = await runCliCapture(["collections", "list", "--limit", value, "--json"], process.cwd());
     assert.equal(result.code, CLI_EXIT_USAGE);
     const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string } };
