@@ -60,6 +60,11 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
     data: { intents: Array<{ id: string; phrase: string; mappedCommand?: string }> };
   };
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_portal" && entry.mappedCommand === "runtime <runtime-id>"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_summary" && entry.mappedCommand === "runtime <runtime-id> summary"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_status" && entry.mappedCommand === "runtime <runtime-id> status"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_commands" && entry.mappedCommand === "runtime <runtime-id> commands"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_session" && entry.mappedCommand === "runtime <runtime-id> session"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_workspace" && entry.mappedCommand === "runtime <runtime-id> workspace"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_domains" && entry.mappedCommand === "runtime <runtime-id> domains"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_support" && entry.mappedCommand === "runtime <runtime-id> support"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_resources" && entry.mappedCommand === "runtime <runtime-id> resources <domain>"), true);

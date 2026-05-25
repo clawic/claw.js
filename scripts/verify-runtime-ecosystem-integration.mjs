@@ -203,6 +203,11 @@ function main() {
   const commandIntents = fs.readFileSync(commandIntentsPath, "utf8");
   for (const [id, mappedCommand] of [
     ["cmd_intent_runtime_portal", "runtime <runtime-id>"],
+    ["cmd_intent_runtime_summary", "runtime <runtime-id> summary"],
+    ["cmd_intent_runtime_status", "runtime <runtime-id> status"],
+    ["cmd_intent_runtime_commands", "runtime <runtime-id> commands"],
+    ["cmd_intent_runtime_session", "runtime <runtime-id> session"],
+    ["cmd_intent_runtime_workspace", "runtime <runtime-id> workspace"],
     ["cmd_intent_runtime_domains", "runtime <runtime-id> domains"],
     ["cmd_intent_runtime_support", "runtime <runtime-id> support"],
     ["cmd_intent_runtime_resources", "runtime <runtime-id> resources <domain>"],

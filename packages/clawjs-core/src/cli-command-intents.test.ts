@@ -75,6 +75,37 @@ test("CLI command intent resolution covers runtime ecosystem portal actions", ()
   assert.equal(portal.intent.mappedCommand, "runtime <runtime-id>");
   assert.equal(portal.intent.relatedCommands.includes("openclaw"), true);
 
+  const summary = resolveClawCliCommandIntent({ phrase: "runtime summary" });
+  assert.equal(summary.status, "covered");
+  assert.equal(summary.execute, false);
+  assert.equal(summary.intent.mappedCommand, "runtime <runtime-id> summary");
+  assert.equal(summary.intent.relatedCommands.includes("hermes"), true);
+  assert.equal(summary.intent.evidence.some((entry) => entry.includes("selected runtime only")), true);
+
+  const status = resolveClawCliCommandIntent({ phrase: "runtime status" });
+  assert.equal(status.status, "covered");
+  assert.equal(status.execute, false);
+  assert.equal(status.intent.mappedCommand, "runtime <runtime-id> status");
+  assert.equal(status.intent.nextSteps.some((entry) => entry.includes("--binary-path")), true);
+
+  const commands = resolveClawCliCommandIntent({ phrase: "runtime commands" });
+  assert.equal(commands.status, "covered");
+  assert.equal(commands.execute, false);
+  assert.equal(commands.intent.mappedCommand, "runtime <runtime-id> commands");
+  assert.equal(commands.intent.evidence.some((entry) => entry.includes("blocked/local-overlay dispositions")), true);
+
+  const session = resolveClawCliCommandIntent({ phrase: "runtime session" });
+  assert.equal(session.status, "covered");
+  assert.equal(session.execute, false);
+  assert.equal(session.intent.mappedCommand, "runtime <runtime-id> session");
+  assert.equal(session.intent.evidence.some((entry) => entry.includes("session transport")), true);
+
+  const workspace = resolveClawCliCommandIntent({ phrase: "runtime workspace" });
+  assert.equal(workspace.status, "covered");
+  assert.equal(workspace.execute, false);
+  assert.equal(workspace.intent.mappedCommand, "runtime <runtime-id> workspace");
+  assert.equal(workspace.intent.evidence.some((entry) => entry.includes("managed files")), true);
+
   const domains = resolveClawCliCommandIntent({ phrase: "runtime domains" });
   assert.equal(domains.status, "covered");
   assert.equal(domains.execute, false);
