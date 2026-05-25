@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { SemanticPlan } from "@clawjs/core";
 
-import { CLI_EXIT_FAILURE, CliHandledError } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 
 export type AgentPlanStatus = "draft" | "pending" | "approved" | "rejected" | "blocked" | "running" | "succeeded" | "failed" | "cancelled";
 export type AgentPlanDecision = "auto_run" | "require_approval" | "assign_reviewer" | "block" | "pending";
@@ -281,7 +281,7 @@ export function formatPlan(plan: AgentPlanRecord): string {
 }
 
 export async function createDelegationGraphForPlan(plan: AgentPlanRecord, flags: Record<string, string>): Promise<string> {
-  const url = (flags["delegation-url"] ?? process.env.DELEGATION_PLANE_URL ?? "http://127.0.0.1:4520").replace(/\/$/, "");
+  const url = normalizeDelegationPlaneUrl(flags["delegation-url"] ?? process.env.DELEGATION_PLANE_URL ?? "http://127.0.0.1:4520");
   let lastError: unknown;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
@@ -308,4 +308,29 @@ export async function createDelegationGraphForPlan(plan: AgentPlanRecord, flags:
     await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function normalizeDelegationPlaneUrl(value: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw invalidDelegationUrl(value, "must be a valid absolute URL");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw invalidDelegationUrl(value, "must use http or https");
+  }
+  if (parsed.username || parsed.password) {
+    throw invalidDelegationUrl(value, "must not include credentials");
+  }
+  return parsed.toString().replace(/\/$/, "");
+}
+
+function invalidDelegationUrl(value: string, reason: string): CliHandledError {
+  return new CliHandledError("invalid_delegation_url", `--delegation-url ${reason}.`, CLI_EXIT_USAGE, {
+    location: "cli.agentPlan.delegationUrl",
+    suggestion: "Pass an http(s) delegation plane URL without embedded credentials, such as --delegation-url http://127.0.0.1:4520.",
+    safeNextStep: "Fix --delegation-url and rerun the plan command.",
+    details: { value },
+  });
 }
