@@ -22,9 +22,11 @@ class FakeSseRaw extends EventEmitter implements SessionSseWritable {
   chunks: string[] = [];
   ended = false;
   writesBeforeBackpressure = Number.POSITIVE_INFINITY;
+  failWrites = false;
   private writes = 0;
 
   write(chunk: string): boolean {
+    if (this.failWrites) throw new Error("socket closed");
     this.chunks.push(chunk);
     this.writes += 1;
     return this.writes <= this.writesBeforeBackpressure;
@@ -178,6 +180,32 @@ test("SessionEventBroadcaster closes only the slow client on hard queue overflow
     droppedBytes: broadcaster.snapshotMetrics().droppedBytes,
     triggerType: clawSessionEvents.projectUpdated,
   });
+});
+
+test("SessionEventBroadcaster drops a failed subscriber without blocking healthy subscribers", () => {
+  const broadcaster = new SessionEventBroadcaster();
+  const failed = new FakeSseRaw();
+  failed.failWrites = true;
+  const fast = new FakeSseRaw();
+  broadcaster.subscribe(failed);
+  broadcaster.subscribe(fast);
+
+  assert.doesNotThrow(() => {
+    broadcaster.publish(event({ type: clawSessionEvents.updated, sessionId: "session-1" }));
+  });
+
+  assert.equal(failed.ended, true);
+  assert.deepEqual(decoded(fast).map((item) => item.type), [clawSessionEvents.updated]);
+  assert.equal(broadcaster.snapshotMetrics().subscribers, 1);
+  assert.equal(broadcaster.snapshotMetrics().closedFailedClients, 1);
+  assert.equal(broadcaster.snapshotMetrics().writeFailureCount, 1);
+
+  broadcaster.publish(event({ type: clawSessionEvents.messageAppended, sessionId: "session-1", messageId: "message-1" }));
+
+  assert.deepEqual(decoded(fast).map((item) => item.type), [
+    clawSessionEvents.updated,
+    clawSessionEvents.messageAppended,
+  ]);
 });
 
 test("SessionEventBroadcaster splits oversized message updates below max frame bytes", () => {

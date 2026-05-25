@@ -43,6 +43,8 @@ export interface SessionEventBroadcasterMetrics {
   overflowCount: number;
   lastFlushLatencyMs: number;
   closedSlowClients: number;
+  closedFailedClients: number;
+  writeFailureCount: number;
   rejectedSubscribers: number;
 }
 
@@ -160,6 +162,23 @@ class SessionEventClient implements SessionEventSubscription {
     this.onClose(this);
   }
 
+  private closeForWriteFailure(): void {
+    if (this.closed) return;
+    this.metrics.droppedEvents += this.queue.length;
+    this.metrics.droppedBytes += this.queuedBytes;
+    this.metrics.closedFailedClients += 1;
+    this.metrics.writeFailureCount += 1;
+    this.closed = true;
+    this.queue.length = 0;
+    this.coalesced.clear();
+    this.onClose(this);
+    try {
+      this.raw.end();
+    } catch {
+      // The transport already failed; subscriber removal and metrics are the durable recovery signal.
+    }
+  }
+
   private closeForOverflow(triggerEvent: SessionEvent, triggerBytes = 0): void {
     if (this.closed) return;
     const dropped = this.queue.length + 1;
@@ -205,7 +224,13 @@ class SessionEventClient implements SessionEventSubscription {
     try {
       while (this.queue.length > 0 && !this.closed) {
         const next = this.queue[0];
-        const accepted = this.raw.write(next.frame);
+        let accepted: boolean;
+        try {
+          accepted = this.raw.write(next.frame);
+        } catch {
+          this.closeForWriteFailure();
+          return;
+        }
         this.shiftWrittenEvent();
         this.metrics.lastFlushLatencyMs = Math.max(0, this.options.now() - next.queuedAt);
         if (!accepted) {
@@ -244,6 +269,8 @@ export class SessionEventBroadcaster {
     overflowCount: 0,
     lastFlushLatencyMs: 0,
     closedSlowClients: 0,
+    closedFailedClients: 0,
+    writeFailureCount: 0,
     rejectedSubscribers: 0,
   };
 
