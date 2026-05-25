@@ -98,7 +98,13 @@ export function resolveRuntimeFilePath(workspaceDir: string, fileName: string): 
 }
 
 export function resolveWorkspaceFilePath(workspaceDir: string, relativePath: string): string {
-  return path.join(workspaceDir, relativePath);
+  const workspaceRoot = path.resolve(workspaceDir);
+  const filePath = path.resolve(workspaceRoot, relativePath);
+  const relativeToWorkspace = path.relative(workspaceRoot, filePath);
+  if (relativeToWorkspace.startsWith("..") || path.isAbsolute(relativeToWorkspace)) {
+    throw new Error(`Workspace file path must stay inside the workspace: ${relativePath}`);
+  }
+  return filePath;
 }
 
 export function resolveWorkspaceLockPath(workspaceDir: string): string {

@@ -686,6 +686,29 @@ test("runCli can write, read and inspect workspace files", async () => {
   assert.match(inspectStdout.getOutput(), /managedBlocks/);
 });
 
+test("runCli blocks workspace file paths that escape the workspace", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-fileio-escape-"));
+  const outsideFile = path.join(path.dirname(workspaceRoot), "outside.txt");
+
+  const stdout = captureStream();
+  const exitCode = await runCli([
+    "files",
+    "write",
+    "--workspace", workspaceRoot,
+    "--file", "../outside.txt",
+    "--value", "escaped",
+    "--json",
+  ], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(exitCode, CLI_EXIT_USAGE);
+  assert.match(stdout.getOutput(), /invalid_workspace_file_path/);
+  assert.equal(fs.existsSync(outsideFile), false);
+});
+
 test("runCli removes auth profiles with equals-style flags", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-auth-"));
   const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-agent-"));

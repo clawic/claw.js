@@ -212,6 +212,16 @@ test("workspace file helpers read, preview, write and inspect managed blocks", (
   assert.equal(fs.existsSync(resolveClawWorkspaceSurfacePath("claw.workspace.observedState", workspaceDir)), false);
 });
 
+test("workspace file helpers reject paths outside the workspace", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-files-escape-"));
+
+  assert.throws(
+    () => writeWorkspaceFile(workspaceDir, "../outside.txt", "escaped"),
+    /must stay inside the workspace/,
+  );
+  assert.equal(fs.existsSync(path.join(path.dirname(workspaceDir), "outside.txt")), false);
+});
+
 test("writeWorkspaceFilePreservingManagedBlocks keeps original managed blocks intact", () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-workspace-managed-write-"));
   const relativePath = "USER.md";

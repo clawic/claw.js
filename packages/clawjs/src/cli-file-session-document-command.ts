@@ -3,7 +3,7 @@ import path from "path";
 
 import type { RuntimeAdapterId } from "@clawjs/core";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk, writeJsonLine } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
@@ -12,6 +12,18 @@ import { parseRuleHints } from "./cli-rule-utils.ts";
 import { inferMimeTypeFromPath, parseContextBlock } from "./cli-runtime-utils.ts";
 
 type CliContext = { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream; cwd: string };
+
+function requireWorkspaceRelativeFilePath(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  if (path.isAbsolute(filePath) || normalized.split("/").includes("..")) {
+    throw new CliHandledError("invalid_workspace_file_path", "--file must be a workspace-relative path that stays inside the workspace.", CLI_EXIT_USAGE, {
+      location: "cli.files.file",
+      suggestion: "Use a path such as SOUL.md or notes/example.md, without absolute paths or .. segments.",
+      safeNextStep: "Retry the files command with a workspace-relative --file value.",
+    });
+  }
+  return filePath;
+}
 
 export async function runFileSessionDocumentCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
@@ -26,7 +38,7 @@ export async function runFileSessionDocumentCli(input: {
     });
   };
 if (group === "files" && command === "diff") {
-  const targetFile = flags.file;
+  const targetFile = flags.file ? requireWorkspaceRelativeFilePath(flags.file) : undefined;
   const blockId = flags["block-id"];
   const settingsKey = flags.key || "value";
   const value = flags.value ?? "";
@@ -67,7 +79,7 @@ if (group === "files" && command === "apply-template-pack") {
 }
 
 if (group === "files" && command === "read") {
-  const targetFile = flags.file;
+  const targetFile = flags.file ? requireWorkspaceRelativeFilePath(flags.file) : undefined;
   if (!targetFile) {
     context.stderr.write("--file is required\n");
     return CLI_EXIT_USAGE;
@@ -83,7 +95,7 @@ if (group === "files" && command === "read") {
 }
 
 if (group === "files" && command === "write") {
-  const targetFile = flags.file;
+  const targetFile = flags.file ? requireWorkspaceRelativeFilePath(flags.file) : undefined;
   const value = flags.value ?? "";
   if (!targetFile) {
     context.stderr.write("--file is required\n");
@@ -100,7 +112,7 @@ if (group === "files" && command === "write") {
 }
 
 if (group === "files" && command === "inspect") {
-  const targetFile = flags.file;
+  const targetFile = flags.file ? requireWorkspaceRelativeFilePath(flags.file) : undefined;
   if (!targetFile) {
     context.stderr.write("--file is required\n");
     return CLI_EXIT_USAGE;
@@ -116,7 +128,7 @@ if (group === "files" && command === "inspect") {
 }
 
 if (group === "files" && command === "sync") {
-  const targetFile = flags.file;
+  const targetFile = flags.file ? requireWorkspaceRelativeFilePath(flags.file) : undefined;
   const blockId = flags["block-id"];
   const settingsKey = flags.key || "value";
   const value = flags.value ?? "";
