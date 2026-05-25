@@ -46,6 +46,11 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
   const allHelp = await runCliCapture(["--help", "--all"], process.cwd());
   assert.equal(allHelp.code, CLI_EXIT_OK);
   assert.match(allHelp.stdout, /^\s+inspect\s+canonical/m);
+  const inspectHelp = await runCliCapture(["inspect", "--help"], process.cwd());
+  assert.equal(inspectHelp.code, CLI_EXIT_OK);
+  for (const subcommand of ["command-intents", "remote-sync", "version-governance", "custom-app-sdk", "surfaces"]) {
+    assert.match(inspectHelp.stdout, new RegExp(`\\b${subcommand}\\b`));
+  }
 
   const tree = await runCliCapture(["inspect", "tree", "--json"], process.cwd());
   assert.equal(tree.code, CLI_EXIT_OK);
