@@ -186,9 +186,28 @@ function parseNetworkLimit(value: string | undefined, fallback: number): number 
   return parsed;
 }
 
+function parseNetworkPriority(value: string | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new CliHandledError("invalid_network_rule_priority", "--priority must be an integer.", CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
+function parseNetworkPort(value: string | undefined, fallback: number | undefined): number | undefined {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) {
+    throw new CliHandledError("invalid_network_rule_port", "--port must be an integer TCP port between 1 and 65535.", CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
 function upsertRule(state: NetworkControlState, flags: Record<string, string>, id: string): NetworkControlState {
   const existing = mergedRules(state).find((rule) => rule.id === id);
   const now = nowIso();
+  const port = parseNetworkPort(flags.port, existing?.endpoint?.port);
   const rule = networkRuleSchema.parse({
     schemaVersion: 1,
     id,
@@ -201,10 +220,10 @@ function upsertRule(state: NetworkControlState, flags: Record<string, string>, i
       kind: flags["endpoint-kind"] ?? existing?.endpoint?.kind,
       value: flags.endpoint ?? flags["endpoint-value"] ?? existing?.endpoint?.value,
       protocol: flags.protocol ?? existing?.endpoint?.protocol ?? "unknown",
-      ...(flags.port ? { port: Number(flags.port) } : existing?.endpoint?.port ? { port: existing.endpoint.port } : {}),
+      ...(port !== undefined ? { port } : {}),
     },
     networkPolicyProfileId: flags["network-policy"] ?? existing?.networkPolicyProfileId ?? "default",
-    priority: flags.priority === undefined ? existing?.priority ?? 0 : Number(flags.priority),
+    priority: parseNetworkPriority(flags.priority, existing?.priority ?? 0),
     enabled: parseBoolean(flags.enabled, existing?.enabled ?? true),
     lifetime: flags.lifetime ?? existing?.lifetime ?? "permanent",
     ruleSteward: { kind: "human", id: flags["rule-steward"] ?? "local" },

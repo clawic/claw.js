@@ -184,6 +184,65 @@ test("network CLI rejects invalid history limits before opening Monitor storage"
   assert.equal(fs.existsSync(monitorDb), false);
 });
 
+test("network CLI rejects invalid rule numeric flags before writing control state", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-network-invalid-rule-flags-"));
+  const statePath = path.join(workspace, ".claw", "data", "network-control-state.json");
+
+  const invalidPriority = await runCliCapture([
+    "network",
+    "rules",
+    "upsert",
+    "network.rule.invalid.priority",
+    "--workspace",
+    workspace,
+    "--action",
+    "deny",
+    "--subject-kind",
+    "gateway",
+    "--endpoint-kind",
+    "gateway_route",
+    "--endpoint",
+    "remote.searchGateway",
+    "--priority",
+    "nope",
+    "--json",
+  ], workspace);
+  assert.equal(invalidPriority.code, CLI_EXIT_USAGE);
+  const invalidPriorityPayload = JSON.parse(invalidPriority.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string };
+  };
+  assert.equal(invalidPriorityPayload.ok, false);
+  assert.equal(invalidPriorityPayload.error.code, "invalid_network_rule_priority");
+  assert.equal(invalidPriorityPayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(statePath), false);
+
+  const invalidPort = await runCliCapture([
+    "network",
+    "rules",
+    "upsert",
+    "network.rule.invalid.port",
+    "--workspace",
+    workspace,
+    "--action",
+    "deny",
+    "--subject-kind",
+    "gateway",
+    "--endpoint-kind",
+    "gateway_route",
+    "--endpoint",
+    "remote.searchGateway",
+    "--port",
+    "70000",
+    "--json",
+  ], workspace);
+  assert.equal(invalidPort.code, CLI_EXIT_USAGE);
+  const invalidPortPayload = JSON.parse(invalidPort.stdout) as { error: { code: string; status: string } };
+  assert.equal(invalidPortPayload.error.code, "invalid_network_rule_port");
+  assert.equal(invalidPortPayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(statePath), false);
+});
+
 test("network CLI applies rules to Gateway route explanations and suggestions never auto-apply", async () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-network-rules-"));
   const monitorDb = path.join(workspace, "monitor.sqlite");
