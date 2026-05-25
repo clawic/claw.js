@@ -301,6 +301,47 @@ test("agent-resource heartbeats, waitlists, and reaps only stale leases", async 
   assert.ok(eventTypes.includes("resource.reaped"));
 });
 
+test("agent-resource rejects invalid heartbeat statuses as usage", async () => {
+  const stateDir = tempStateDir();
+  const acquired = await runCliCapture([
+    "agent-resource",
+    "acquire",
+    "--state-dir",
+    stateDir,
+    "--resource",
+    "fixture:heartbeat-status",
+    "--mode",
+    "exclusive",
+    "--intent",
+    "heartbeat-status-intent",
+    "--json",
+  ], process.cwd());
+  assert.equal(acquired.code, CLI_EXIT_OK, acquired.stderr || acquired.stdout);
+  const leaseId = payload(acquired.stdout).data.lease.id;
+
+  const invalid = await runCliCapture([
+    "agent-resource",
+    "heartbeat",
+    "--state-dir",
+    stateDir,
+    "--lease",
+    leaseId,
+    "--status",
+    "waiting",
+    "--json",
+  ], process.cwd());
+  assert.equal(invalid.code, CLI_EXIT_USAGE);
+  const invalidPayload = payload(invalid.stdout);
+  assert.equal(invalidPayload.ok, false);
+  assert.equal(invalidPayload.error.code, "invalid_agent_resource_heartbeat_status");
+  assert.equal(invalidPayload.error.status, "USAGE");
+
+  const sqlite = new Database(path.join(stateDir, "agent-coordination.sqlite"), { readonly: true });
+  const row = sqlite.prepare("SELECT status FROM resource_leases WHERE id = ?").get(leaseId) as { status: string };
+  sqlite.close();
+  assert.equal(row.status, "running");
+});
+
 test("claw test require uses the same coordination ledger", async () => {
   const stateDir = tempStateDir();
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "claw-test-repo-"));

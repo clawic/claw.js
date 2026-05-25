@@ -28,6 +28,7 @@ interface AgentResourceCliInput {
 }
 
 const VALID_MODES = new Set(["read", "write", "exclusive"]);
+const VALID_HEARTBEAT_STATUSES = new Set(["running", "repairing", "blocked"]);
 const VALID_RELEASE_STATUSES = new Set(["passed", "failed", "partial", "external_pending", "blocked", "abandoned"]);
 
 export async function runAgentResourceCli(input: AgentResourceCliInput): Promise<number> {
@@ -94,7 +95,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
     const leaseId = requiredFlag(input, "lease", command);
     const lease = store.heartbeat({
       leaseId,
-      status: input.flags.status as "running" | "repairing" | "blocked" | undefined,
+      status: parseHeartbeatStatus(input.flags.status),
       ttlSeconds: input.flags.ttl ? parsePositiveInteger(input.flags.ttl, 600) : undefined,
       metadata: { command: "agent-resource heartbeat" },
     });
@@ -195,6 +196,12 @@ function requiredFlag(input: AgentResourceCliInput, name: string, command: strin
 function parseMode(value: string): AgentResourceLeaseMode {
   if (!VALID_MODES.has(value)) throw new CliHandledError("invalid_agent_resource_mode", `Invalid resource lease mode: ${value}`, CLI_EXIT_USAGE);
   return value as AgentResourceLeaseMode;
+}
+
+function parseHeartbeatStatus(value: string | undefined): "running" | "repairing" | "blocked" | undefined {
+  if (!value) return undefined;
+  if (!VALID_HEARTBEAT_STATUSES.has(value)) throw new CliHandledError("invalid_agent_resource_heartbeat_status", `Invalid heartbeat status: ${value}`, CLI_EXIT_USAGE);
+  return value as "running" | "repairing" | "blocked";
 }
 
 function parseReleaseStatus(value: string): AgentWorkResultStatus {
