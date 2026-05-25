@@ -105,3 +105,29 @@ test("audit log can query records by capability and entity id", () => {
   const created = audit.query(workspaceDir, { action: "created" });
   assert.deepEqual(created.map((record) => record.event), [clawWorkspaceAuditEvents.tasksCreated, clawWorkspaceAuditEvents.notesCreated]);
 });
+
+test("audit log excludes malformed timestamps from bounded queries", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-audit-bounds-"));
+  const audit = new WorkspaceAuditLog();
+
+  audit.append(workspaceDir, {
+    timestamp: "not-a-date",
+    event: clawWorkspaceAuditEvents.tasksCreated,
+    capability: "tasks",
+    detail: { taskId: "task-bad" },
+  });
+  audit.append(workspaceDir, {
+    timestamp: "2026-03-22T10:00:00.000Z",
+    event: clawWorkspaceAuditEvents.tasksUpdated,
+    capability: "tasks",
+    detail: { taskId: "task-good" },
+  });
+
+  const records = audit.query(workspaceDir, {
+    capability: "tasks",
+    since: "2026-03-22T09:00:00.000Z",
+    until: "2026-03-22T11:00:00.000Z",
+  });
+
+  assert.deepEqual(records.map((record) => record.detail?.taskId), ["task-good"]);
+});

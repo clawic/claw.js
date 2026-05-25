@@ -71,6 +71,7 @@ export class WorkspaceAuditLog {
           if (!detailValues.some((value) => String(value) === input.entityId)) return false;
         }
         const timestamp = Date.parse(record.timestamp);
+        if ((since !== null || until !== null) && Number.isNaN(timestamp)) return false;
         if (since !== null && !Number.isNaN(timestamp) && timestamp < since) return false;
         if (until !== null && !Number.isNaN(timestamp) && timestamp > until) return false;
         return true;
