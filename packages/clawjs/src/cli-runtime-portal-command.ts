@@ -2513,6 +2513,7 @@ function resolveNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
     startedAt: candidate.startedAt ?? null,
     updatedAt: candidate.updatedAt,
     endedAt: candidate.endedAt ?? null,
+    endReason: candidate.endReason ?? null,
     sizeBytes: candidate.sizeBytes,
     messageCount: candidate.messageCount ?? null,
     toolCallCount: candidate.toolCallCount ?? null,
@@ -2773,6 +2774,52 @@ function verifyHermesMessageRoundTrip(session: any, sessionKey: unknown, message
     totalAvailableInStore: history.totalAvailable,
     checked: ["sqlite_messages"],
     safeDefault: "keep_action_claim_fixture_or_production_round_trip_blocked_until_native_history_sees_message",
+  };
+}
+
+function verifyHermesAbortRoundTrip(session: any, sessionKey: unknown) {
+  const key = sessionKey ? String(sessionKey) : "";
+  if (!key) {
+    return {
+      status: "missing_session",
+      writesRuntime: false,
+      checked: [],
+      safeDefault: "do_not_claim_abort_round_trip_without_session",
+    };
+  }
+  if (!session?.sessionPath) {
+    return {
+      status: "unavailable_no_native_session_store",
+      id: key,
+      writesRuntime: false,
+      checked: [],
+      safeDefault: "keep_abort_claim_unpromoted_until_native_store_can_be_read",
+    };
+  }
+
+  const resolved = resolveNativeSessionFromPath("hermes", session, key);
+  if (resolved.found && (resolved.endedAt || resolved.endReason)) {
+    return {
+      status: "verified",
+      id: resolved.id,
+      matchedBy: resolved.matchedBy,
+      action: "abort",
+      writesRuntime: false,
+      endedAt: resolved.endedAt ?? null,
+      endReason: resolved.endReason ?? null,
+      nativeIdentifier: resolved.nativeIdentifier,
+      provenance: resolved.provenance,
+      checked: ["sqlite_sessions_control_state"],
+    };
+  }
+
+  return {
+    status: resolved.found ? "control_state_not_visible" : "not_found",
+    id: resolved.found ? resolved.id : key,
+    action: "abort",
+    writesRuntime: false,
+    checked: ["sqlite_sessions_control_state"],
+    safeDefault: "keep_abort_claim_fixture_or_production_round_trip_blocked_until_native_control_state_is_visible",
   };
 }
 
@@ -3119,6 +3166,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
             requestId: gateway.request.id,
             endpoint: gateway.endpoint,
           },
+          roundTripVerification: verifyHermesAbortRoundTrip(payload.domainData.sessions.session, sessionKey),
           gatewayResult: gateway.result,
         },
         supportContract,

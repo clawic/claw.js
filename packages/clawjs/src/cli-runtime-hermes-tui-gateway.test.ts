@@ -46,6 +46,9 @@ async function createHermesTuiGatewayFixture(options: {
         String(payload.params?.text ?? ""),
       );
     }
+    if (payload.method === "session.interrupt" && options.stateDatabasePath && sessionId) {
+      updateHermesStateSessionInterrupted(options.stateDatabasePath, String(sessionId));
+    }
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({
       jsonrpc: "2.0",
@@ -142,6 +145,15 @@ function insertHermesStateMessage(databasePath: string, sessionId: string, role:
       content,
       1779746100 + Number(count.count ?? 0),
     );
+  } finally {
+    db.close();
+  }
+}
+
+function updateHermesStateSessionInterrupted(databasePath: string, sessionId: string) {
+  const db = new BetterSqlite3(databasePath);
+  try {
+    db.prepare("UPDATE sessions SET ended_at = ?, end_reason = ? WHERE id = ?").run(1779746200, "interrupted", sessionId);
   } finally {
     db.close();
   }
@@ -466,6 +478,47 @@ test("Hermes TUI gateway send and inject round-trip through native SQLite histor
       "prompt.submit",
       "session.steer",
     ]);
+  } finally {
+    await gateway.close();
+  }
+});
+
+test("Hermes TUI gateway abort round-trips through native SQLite control state fixture", async (t) => {
+  const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+  const stateDatabasePath = path.join(hermesHome, "state.db");
+  createHermesStateDatabase(stateDatabasePath);
+  insertHermesStateSession(stateDatabasePath, "abort-roundtrip-session", "Abort Round Trip Session");
+  const gateway = await createHermesTuiGatewayFixture({ stateDatabasePath });
+  try {
+    const abort = await runHermesAction([
+      "runtime", "hermes", "sessions", "abort",
+      "--session-key", "abort-roundtrip-session",
+      "--gateway-url", gateway.url,
+      "--confirm-runtime-write",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(abort.exitCode), true);
+    assert.equal(abort.payload.data.status, "ok");
+    assert.equal(abort.payload.data.result.roundTripVerification.status, "verified");
+    assert.equal(abort.payload.data.result.roundTripVerification.id, "abort-roundtrip-session");
+    assert.equal(abort.payload.data.result.roundTripVerification.endReason, "interrupted");
+    assert.equal(abort.payload.data.result.roundTripVerification.endedAt, "2026-05-25T21:56:40.000Z");
+    assert.equal(abort.payload.data.result.roundTripVerification.writesRuntime, false);
+    assert.equal(abort.payload.data.result.roundTripVerification.provenance.table, "sessions");
+
+    const resolve = await runHermesAction([
+      "runtime", "hermes", "sessions", "resolve",
+      "--session-key", "abort-roundtrip-session",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(resolve.exitCode), true);
+    assert.equal(resolve.payload.data.result.endReason, "interrupted");
+    assert.equal(resolve.payload.data.result.endedAt, "2026-05-25T21:56:40.000Z");
+    assert.deepEqual(gateway.requests.map((entry) => entry.method), ["session.interrupt"]);
   } finally {
     await gateway.close();
   }
