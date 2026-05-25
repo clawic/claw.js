@@ -385,6 +385,120 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
   };
 }
 
+function boolLabel(value: boolean | undefined): string {
+  return value === true ? "true" : value === false ? "false" : "unknown";
+}
+
+function runtimeLocationDiagnostics(status): Record<string, string | undefined> {
+  const locations = status?.diagnostics?.locations;
+  return locations && typeof locations === "object" ? locations as Record<string, string | undefined> : {};
+}
+
+function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, runtimeOptions, session) {
+  const capability = domainCapability(status, "gateway");
+  const locations = runtimeLocationDiagnostics(status);
+  const gatewayOptions = runtimeOptions?.gateway ?? {};
+  const resources = [
+    {
+      id: "gateway-status",
+      label: "Gateway status",
+      status: status.gatewayAvailable ? "ready" : "degraded",
+      kind: session?.transport?.kind ?? "gateway",
+      enabled: Boolean(session?.supportsGateway),
+      summary: status.gatewayAvailable ? "Gateway endpoint configured." : "Gateway endpoint unavailable or not configured.",
+      limitations: capability?.limitations ?? [],
+      attributes: [
+        `runtime: ${runtimeId}`,
+        `primary transport: ${session?.primaryTransport ?? "unknown"}`,
+        `fallback transport: ${session?.fallbackTransport ?? "unknown"}`,
+        `streaming mode: ${session?.streamingMode ?? "unknown"}`,
+        `supports gateway: ${boolLabel(session?.supportsGateway)}`,
+      ],
+      provenance: {
+        source: "runtime-session-descriptor",
+        runtimeId,
+      },
+    },
+  ];
+  if (gatewayOptions.url || gatewayOptions.port || gatewayOptions.configPath || locations.gatewayConfigPath) {
+    resources.push({
+      id: "gateway-configuration",
+      label: "Gateway configuration",
+      status: gatewayOptions.url ? "configured" : "projected",
+      kind: "gateway_config",
+      path: gatewayOptions.configPath ?? locations.gatewayConfigPath,
+      enabled: Boolean(gatewayOptions.url || gatewayOptions.port || gatewayOptions.configPath || locations.gatewayConfigPath),
+      summary: gatewayOptions.url ? "Gateway endpoint configured; credential value is not exposed." : "Gateway configuration path projected.",
+      limitations: [],
+      attributes: [
+        `url configured: ${boolLabel(Boolean(gatewayOptions.url))}`,
+        `port configured: ${boolLabel(Boolean(gatewayOptions.port))}`,
+        `token configured: ${boolLabel(Boolean(gatewayOptions.token))}`,
+        "secret policy: redacted_presence_only",
+      ],
+      provenance: {
+        source: "runtime-options",
+        runtimeId,
+        path: gatewayOptions.configPath ?? locations.gatewayConfigPath,
+      },
+    });
+  }
+  return resources;
+}
+
+function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
+  const capability = domainCapability(status, "doctorCompat");
+  const lastError = status?.diagnostics?.lastError;
+  return [
+    {
+      id: "doctor-status",
+      label: "Doctor status",
+      status: status.cliAvailable ? "ready" : "degraded",
+      kind: capability?.strategy ?? "diagnostics",
+      enabled: Boolean(capability?.supported),
+      summary: lastError ?? status.version ?? "Runtime diagnostics available.",
+      limitations: capability?.limitations ?? [],
+      attributes: [
+        `runtime: ${runtimeId}`,
+        `cli available: ${boolLabel(status.cliAvailable)}`,
+        `installed: ${boolLabel(status.installed)}`,
+        `version available: ${boolLabel(Boolean(status.version))}`,
+        "secret policy: redacted_summary",
+      ],
+      provenance: {
+        source: "runtime-status",
+        runtimeId,
+      },
+    },
+  ];
+}
+
+function buildSandboxOperationalResources(runtimeId: RuntimeAdapterId, status, runtimeOptions) {
+  const capability = domainCapability(status, "sandboxPermissions");
+  const permissionMode = runtimeOptions?.permissionMode ?? "read-only";
+  return [
+    {
+      id: "sandbox-policy",
+      label: "Sandbox policy",
+      status: capability?.status ?? "degraded",
+      kind: capability?.strategy ?? "approval_policy",
+      enabled: Boolean(capability?.supported),
+      summary: "No runtime or host permission is changed by the runtime lens.",
+      limitations: capability?.limitations ?? [],
+      attributes: [
+        `runtime: ${runtimeId}`,
+        `permission mode: ${permissionMode}`,
+        "write policy: explicit_approval_only",
+        "conflict policy: no_silent_permission_change",
+      ],
+      provenance: {
+        source: "runtime-options",
+        runtimeId,
+      },
+    },
+  ];
+}
+
 async function readResources(claw, domain: string, status, adapter?, runtimeOptions?) {
   async function readPluginResources() {
     if (status.adapter === "openclaw") {
@@ -1283,7 +1397,7 @@ function listNativeSessions(runtimeId: RuntimeAdapterId, sessionPath: string | u
     .slice(0, limit));
 }
 
-function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspace, session, scopeDomain = "all") {
+function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspace, session, scopeDomain = "all", runtimeOptions?) {
   const includeSessions = scopeDomain === "all" || scopeDomain === "sessions";
   const sessions = includeSessions ? listNativeSessions(runtimeId, session.sessionPath) : [];
   const sessionsSupportContract = buildSupportContract(runtimeId, status, "sessions");
@@ -1305,14 +1419,22 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
     models: { models: resources.models ?? [], defaultModel: resources.defaultModel ?? null, supportContract: buildSupportContract(runtimeId, status, "models") },
     scheduler: { schedulers: resources.schedulers ?? [], supportContract: buildSupportContract(runtimeId, status, "scheduler") },
     plugins: { plugins: resources.plugins ?? [], status: resources.status ?? status.capabilityMap?.plugins ?? null, supportContract: buildSupportContract(runtimeId, status, "plugins") },
-    gateway: { gatewayAvailable: status.gatewayAvailable, capability: domainCapability(status, "gateway") ?? null, supportContract: buildSupportContract(runtimeId, status, "gateway") },
+    gateway: {
+      gatewayAvailable: status.gatewayAvailable,
+      resources: buildGatewayOperationalResources(runtimeId, status, runtimeOptions, session),
+      capability: domainCapability(status, "gateway") ?? null,
+      supportContract: buildSupportContract(runtimeId, status, "gateway"),
+    },
     doctorCompat: {
       runtimeVersion: status.version,
       diagnostics: status.diagnostics ?? {},
+      resources: buildDoctorOperationalResources(runtimeId, status),
       capability: domainCapability(status, "doctorCompat") ?? null,
       supportContract: buildSupportContract(runtimeId, status, "doctorCompat"),
     },
     sandboxPermissions: {
+      permissionMode: runtimeOptions?.permissionMode ?? "read-only",
+      resources: buildSandboxOperationalResources(runtimeId, status, runtimeOptions),
       capability: domainCapability(status, "sandboxPermissions") ?? null,
       supportContract: buildSupportContract(runtimeId, status, "sandboxPermissions"),
     },
@@ -1320,6 +1442,8 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       canonicalPaths: workspace.canonicalPaths,
       managedFiles: workspace.managedFiles,
       diagnostics: status.diagnostics ?? {},
+      runtimeLocations: runtimeLocationDiagnostics(status),
+      redactionPolicy: "redacted_paths_and_presence_only",
       supportContract: buildSupportContract(runtimeId, status, "configuration"),
     },
   };
@@ -2080,9 +2204,9 @@ function domainCount(domain: string, data) {
   if (domain === "models") return data.models?.models?.length;
   if (domain === "scheduler") return data.scheduler?.schedulers?.length;
   if (domain === "plugins") return data.plugins?.plugins?.length;
-  if (domain === "gateway") return data.gateway ? 1 : 0;
-  if (domain === "doctorCompat") return data.doctorCompat ? 1 : 0;
-  if (domain === "sandboxPermissions") return data.sandboxPermissions ? 1 : 0;
+  if (domain === "gateway") return data.gateway?.resources?.length ?? (data.gateway ? 1 : 0);
+  if (domain === "doctorCompat") return data.doctorCompat?.resources?.length ?? (data.doctorCompat ? 1 : 0);
+  if (domain === "sandboxPermissions") return data.sandboxPermissions?.resources?.length ?? (data.sandboxPermissions ? 1 : 0);
   if (domain === "configuration") {
     const managedFiles = data.configuration?.managedFiles?.length ?? 0;
     const canonicalPaths = data.configuration?.canonicalPaths ? Object.keys(data.configuration.canonicalPaths).length : 0;
@@ -2265,7 +2389,7 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
     session,
     workspace,
     resources,
-    domainData: buildDomainData(runtimeId, status, resources, workspace, session, requestedResourceDomain),
+    domainData: buildDomainData(runtimeId, status, resources, workspace, session, requestedResourceDomain, runtimeOptions),
     commands: buildCommandMatrix(adapter, runtimeId),
     domains: [],
   };

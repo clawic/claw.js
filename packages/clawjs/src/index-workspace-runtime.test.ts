@@ -1391,6 +1391,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         scheduler?: {
           schedulers?: Array<{ id: string; kind?: string; status?: string; enabled?: boolean }>;
         };
+        gateway?: {
+          resources?: Array<{ id: string; status?: string; kind?: string; summary?: string; attributes?: string[] }>;
+        };
+        doctorCompat?: {
+          resources?: Array<{ id: string; status?: string; kind?: string; summary?: string; attributes?: string[] }>;
+        };
+        sandboxPermissions?: {
+          permissionMode?: string;
+          resources?: Array<{ id: string; status?: string; kind?: string; summary?: string; attributes?: string[] }>;
+        };
+        configuration?: {
+          runtimeLocations?: Record<string, string>;
+          redactionPolicy?: string;
+        };
       };
       domains: Array<{
         domain: string;
@@ -1485,6 +1499,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.models?.models?.some((entry) => entry.id === "openai/gpt-4.1" && entry.isDefault === true), true);
   assert.equal(hermesPayload.data.domainData.models?.models?.some((entry) => entry.id === "anthropic/claude-3-5-sonnet" && entry.source === "config"), true);
   assert.equal(hermesPayload.data.domainData.scheduler?.schedulers?.some((entry) => entry.id === "daily-summary" && entry.kind === "cron"), true);
+  assert.equal(hermesPayload.data.domainData.gateway?.resources?.some((entry) => entry.id === "gateway-status" && entry.attributes?.includes("supports gateway: true")), true);
+  assert.equal(hermesPayload.data.domainData.doctorCompat?.resources?.some((entry) => entry.id === "doctor-status" && entry.attributes?.includes("secret policy: redacted_summary")), true);
+  assert.equal(hermesPayload.data.domainData.sandboxPermissions?.permissionMode, "read-only");
+  assert.equal(hermesPayload.data.domainData.sandboxPermissions?.resources?.some((entry) => entry.id === "sandbox-policy" && entry.attributes?.includes("write policy: explicit_approval_only")), true);
+  assert.equal(hermesPayload.data.domainData.configuration?.runtimeLocations?.homeDir, hermesHome);
+  assert.equal(hermesPayload.data.domainData.configuration?.redactionPolicy, "redacted_paths_and_presence_only");
   assert.deepEqual(hermesPayload.data.domainData.sessions?.actionContracts?.map((entry) => entry.action), manifest.sessionActionContracts.hermes.map((entry) => entry.action));
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.status, "blocked");
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.wouldWriteRuntime, true);
@@ -1537,6 +1557,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           skills?: unknown[];
           memory?: unknown[];
           schedulers?: unknown[];
+          resources?: Array<{ id?: string; attributes?: string[] }>;
+          permissionMode?: string;
+          runtimeLocations?: Record<string, string>;
+          redactionPolicy?: string;
         };
       };
     };
@@ -1552,6 +1576,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     if (resourceDomain === "skills") assert.equal(Array.isArray(resourcePayload.data.data.skills), true);
     if (resourceDomain === "memory") assert.equal(Array.isArray(resourcePayload.data.data.memory), true);
     if (resourceDomain === "scheduler") assert.equal(Array.isArray(resourcePayload.data.data.schedulers), true);
+    if (resourceDomain === "gateway") assert.equal(resourcePayload.data.data.resources?.some((entry) => entry.id === "gateway-status"), true);
+    if (resourceDomain === "doctorCompat") assert.equal(resourcePayload.data.data.resources?.some((entry) => entry.id === "doctor-status"), true);
+    if (resourceDomain === "sandboxPermissions") {
+      assert.equal(resourcePayload.data.data.permissionMode, "read-only");
+      assert.equal(resourcePayload.data.data.resources?.some((entry) => entry.id === "sandbox-policy"), true);
+    }
+    if (resourceDomain === "configuration") {
+      assert.equal(resourcePayload.data.data.runtimeLocations?.homeDir, hermesHome);
+      assert.equal(resourcePayload.data.data.redactionPolicy, "redacted_paths_and_presence_only");
+    }
   }
 
   const hermesSupportStdout = captureStream();
