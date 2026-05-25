@@ -597,6 +597,43 @@ test("runCli searches skill catalogs and reports omitted sources", async () => {
   });
 });
 
+test("runCli rejects invalid skills search limits before catalog lookup", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-skill-search-limit-"));
+  const { binDir, clawhubLog, npxLog } = createFakeSkillSourceToolchain();
+
+  await withPatchedEnv({
+    PATH: `${binDir}:${process.env.PATH ?? ""}`,
+  }, async () => {
+    const stdout = captureStream();
+    const exitCode = await runCli([
+      "skills",
+      "search",
+      "--workspace", workspaceRoot,
+      "--query", "support",
+      "--limit", "nope",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_USAGE);
+    const payload = JSON.parse(stdout.getOutput()) as {
+      error: { code: string; status: string; location: string; details?: Record<string, unknown> };
+      meta: { canonicalCommand: string; subcommand: string };
+    };
+    assert.equal(payload.error.code, "invalid_skills_search_limit");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.skills.limit");
+    assert.deepEqual(payload.error.details, { flag: "--limit", value: "nope" });
+    assert.equal(payload.meta.canonicalCommand, "skills");
+    assert.equal(payload.meta.subcommand, "search");
+    assert.equal(fs.existsSync(clawhubLog), false);
+    assert.equal(fs.existsSync(npxLog), false);
+  });
+});
+
 test("runCli can resolve exact skills.sh refs and install clawhub skills", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-skill-install-"));
   const { binDir, clawhubLog } = createFakeSkillSourceToolchain();

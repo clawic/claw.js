@@ -502,10 +502,11 @@ if (group === "skills" && command === "search") {
     context.stderr.write("--query is required\n");
     return CLI_EXIT_USAGE;
   }
+  const limit = parsePositiveIntegerFlag(flags.limit, "limit", "invalid_skills_search_limit");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const result = await claw.skills.search(query, {
     source: flags.source,
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
   });
   if (wantsJson) {
     writeSurfaceJson(result);
@@ -568,4 +569,16 @@ if (group === "skills" && command === "install") {
   return CLI_EXIT_OK;
 }
   return null;
+}
+
+function parsePositiveIntegerFlag(value: string | undefined, name: string, code: string): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new CliHandledError(code, `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location: `cli.skills.${name}`,
+      details: { flag: `--${name}`, value },
+    });
+  }
+  return parsed;
 }
