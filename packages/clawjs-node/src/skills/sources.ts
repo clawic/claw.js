@@ -199,6 +199,10 @@ function resolveWorkspaceSkillPath(workspaceDir: string, slug: string): string |
   return fs.existsSync(candidate) ? candidate : null;
 }
 
+function commandLimitArg(limit: number | undefined): string | undefined {
+  return Number.isSafeInteger(limit) && limit > 0 ? String(limit) : undefined;
+}
+
 // ── Built-in skill catalog ────────────────────────────────────────────
 // Provides a searchable catalog that works without any external CLI.
 //
@@ -372,9 +376,8 @@ const clawhubSource: SkillSourceAdapter = {
   },
   async search(query, options, context) {
     const args = ["--yes", "clawhub", "search", query];
-    if (typeof options.limit === "number" && Number.isFinite(options.limit)) {
-      args.push("--limit", String(Math.max(1, Math.trunc(options.limit))));
-    }
+    const limit = commandLimitArg(options.limit);
+    if (limit) args.push("--limit", limit);
     const result = await context.runner.exec("npx", args, {
       cwd: context.workspaceDir,
       env: context.env,
@@ -438,14 +441,13 @@ const clawicSource: SkillSourceAdapter = {
       label: "Clawic",
       status: ready ? "ready" : "unsupported",
       capabilities: this.capabilities,
-      summary: ready ? "Discover and install Clawic skills from GitHub." : "The `npx` command is not available.",
+      summary: ready ? "Discover and install Clawic skills from remote repositories." : "The `npx` command is not available.",
     };
   },
   async search(query, options, context) {
     const args = ["--yes", "clawic", "search", query];
-    if (typeof options.limit === "number" && Number.isFinite(options.limit)) {
-      args.push("--limit", String(Math.max(1, Math.trunc(options.limit))));
-    }
+    const limit = commandLimitArg(options.limit);
+    if (limit) args.push("--limit", limit);
     const result = await context.runner.exec("npx", args, {
       cwd: context.workspaceDir,
       env: context.env,
