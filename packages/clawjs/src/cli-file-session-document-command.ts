@@ -84,6 +84,34 @@ function resolveDocumentDownloadOutputPath(outputPath: string, workspaceRoot: st
   return resolvedOutputPath;
 }
 
+function readPositiveIntegerFlag(flags: Record<string, string>, name: string, location: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new CliHandledError("invalid_limit", `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location,
+      suggestion: `Use --${name} with a whole number greater than zero.`,
+      safeNextStep: `Retry the command with a valid --${name} value.`,
+    });
+  }
+  return value;
+}
+
+function readNonNegativeNumberFlag(flags: Record<string, string>, name: string, location: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new CliHandledError("invalid_min_score", `--${name} must be a non-negative number.`, CLI_EXIT_USAGE, {
+      location,
+      suggestion: `Use --${name} with zero or a positive number.`,
+      safeNextStep: `Retry the command with a valid --${name} value.`,
+    });
+  }
+  return value;
+}
+
 export async function runFileSessionDocumentCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
@@ -275,12 +303,14 @@ if (group === "sessions" && command === "search") {
     context.stderr.write("--query is required\n");
     return CLI_EXIT_USAGE;
   }
+  const limit = readPositiveIntegerFlag(flags, "limit", "cli.sessions.limit");
+  const minScore = readNonNegativeNumberFlag(flags, "min-score", "cli.sessions.min-score");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const results = await claw.sessions.searchSessions({
     query: query.trim(),
     strategy: (flags.strategy as "auto" | "local" | "openclaw-memory" | undefined) ?? "auto",
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
-    ...(flags["min-score"] ? { minScore: Number(flags["min-score"]) } : {}),
+    ...(limit ? { limit } : {}),
+    ...(minScore !== undefined ? { minScore } : {}),
     includeMessages: argv.includes("--no-messages") ? false : readBooleanFlag(argv, flags, "include-messages", true),
     fallbackToLocal: argv.includes("--no-local-fallback") ? false : readBooleanFlag(argv, flags, "fallback-to-local", true),
   });
@@ -385,10 +415,11 @@ if (group === "documents" && command === "search") {
     context.stderr.write("--query is required\n");
     return CLI_EXIT_USAGE;
   }
+  const limit = readPositiveIntegerFlag(flags, "limit", "cli.documents.limit");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const results = await claw.documents.search({
     query: query.trim(),
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+    ...(limit ? { limit } : {}),
     ...(flags["session-id"] ? { sessionId: flags["session-id"] } : {}),
   });
   if (wantsJson) {

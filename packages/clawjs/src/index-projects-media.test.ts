@@ -7,7 +7,7 @@ import path from "path";
 import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import {
   ONE_PIXEL_PNG,
   captureStream,
@@ -368,6 +368,39 @@ test("runCli reports missing document source files as usage errors", async () =>
     assert.equal(payload.error.code, "document_source_not_found");
     assert.equal(payload.error.status, "USAGE");
     assert.equal(payload.error.location, "cli.documents.file");
+  }
+});
+
+test("runCli rejects invalid search numeric flags for sessions and documents", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-search-numeric-flags-"));
+
+  const cases = [
+    {
+      args: ["sessions", "search", "--workspace", workspaceRoot, "--query", "alpha", "--limit", "nope", "--json"],
+      code: "invalid_limit",
+      location: "cli.sessions.limit",
+    },
+    {
+      args: ["sessions", "search", "--workspace", workspaceRoot, "--query", "alpha", "--min-score", "-1", "--json"],
+      code: "invalid_min_score",
+      location: "cli.sessions.min-score",
+    },
+    {
+      args: ["documents", "search", "--workspace", workspaceRoot, "--query", "alpha", "--limit", "0", "--json"],
+      code: "invalid_limit",
+      location: "cli.documents.limit",
+    },
+  ];
+
+  for (const entry of cases) {
+    const result = await runCliCapture(entry.args, { cwd: process.cwd() });
+    const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string; location: string } };
+
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, entry.code);
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, entry.location);
   }
 });
 
