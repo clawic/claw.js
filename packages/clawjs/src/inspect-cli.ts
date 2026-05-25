@@ -1105,6 +1105,13 @@ function parseInspectListFlag(value: string | undefined): string[] {
   return value?.split(",").map((entry) => entry.trim()).filter(Boolean) ?? [];
 }
 
+function requireInspectMatches<TEntry>(target: string | undefined, entries: TEntry[], noun: string): TEntry[] {
+  if (target && entries.length === 0) {
+    throw new InspectCliError("inspect_not_found", `No ${noun} found for ${target}.`, CLI_EXIT_USAGE);
+  }
+  return entries;
+}
+
 function inspectCustomAppSdkPayload() {
   return {
     cliRole: "inspection_validation_fallback_json",
@@ -1165,14 +1172,22 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "routes") {
-    const selected = target ? routes.filter((route) => route.id === target || route.fromId === target || route.toId === target || route.steps.some((step) => step.fromId === target || step.toId === target)) : routes;
+    const selected = requireInspectMatches(
+      target,
+      target ? routes.filter((route) => route.id === target || route.fromId === target || route.toId === target || route.steps.some((step) => step.fromId === target || step.toId === target)) : routes,
+      "surface route",
+    );
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectRouteText(selected)}\n`);
     return CLI_EXIT_OK;
   }
   if (command === "capabilities") {
     const fiches = listClawCapabilityFiches();
-    const selected = target ? fiches.filter((fiche) => fiche.id === target || fiche.system === target || fiche.routes.includes(target)) : fiches;
+    const selected = requireInspectMatches(
+      target,
+      target ? fiches.filter((fiche) => fiche.id === target || fiche.system === target || fiche.routes.includes(target)) : fiches,
+      "capability fiche",
+    );
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectCapabilityFicheText(selected)}\n`);
     return CLI_EXIT_OK;
@@ -1237,7 +1252,11 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "edges") {
-    const selected = target ? edges.filter((edge) => edge.id === target || edge.fromId === target || edge.toId === target) : edges;
+    const selected = requireInspectMatches(
+      target,
+      target ? edges.filter((edge) => edge.id === target || edge.fromId === target || edge.toId === target) : edges,
+      "surface edge",
+    );
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
     else input.context.stdout.write(`${inspectEdgeText(selected)}\n`);
     return CLI_EXIT_OK;

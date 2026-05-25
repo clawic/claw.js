@@ -778,6 +778,23 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   assert.equal(remoteInspectPayload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
 });
 
+test("inspect filtered collections fail when a target has no matches", async () => {
+  for (const [subcommand, missingTarget, expectedMessage] of [
+    ["routes", "missing.route", /No surface route found for missing\.route/],
+    ["edges", "missing.edge", /No surface edge found for missing\.edge/],
+    ["capabilities", "missing.capability", /No capability fiche found for missing\.capability/],
+  ] as const) {
+    const result = await runCliCapture(["inspect", subcommand, missingTarget, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const envelope = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string; subcommand: string } };
+    assert.equal(envelope.ok, false);
+    assert.equal(envelope.error.code, "inspect_not_found");
+    assert.match(envelope.error.message, expectedMessage);
+    assert.equal(envelope.meta.canonicalCommand, "inspect");
+    assert.equal(envelope.meta.subcommand, subcommand);
+  }
+});
+
 test("runCli exposes remote, sync, nodes, and gateway baseline commands", async () => {
   const remote = await runCliCapture(["remote", "conformance", "--json"], process.cwd());
   assert.equal(remote.code, CLI_EXIT_OK);
