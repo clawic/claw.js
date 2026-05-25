@@ -99,6 +99,10 @@ export async function runHostCli(input: {
   if (command === "use") {
     const hostId = hostIdArg ?? input.flags.id;
     if (!hostId) throw new CliHandledError("usage_error", `Usage: ${input.binName} host use <id>`, CLI_EXIT_USAGE);
+    const currentRegistry = readHostRegistry(options);
+    if (!currentRegistry.hosts.some((host) => host.id === hostId)) {
+      throw new CliHandledError("host_unavailable", `Host not registered: ${hostId}`, CLI_EXIT_DEGRADED);
+    }
     const registry = useHost(hostId, options);
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "host", { activeHostId: registry.activeHostId, registryPath: resolveHostRegistryFile(options) }, { subcommand: "use" });
     else input.context.stdout.write(`active host: ${registry.activeHostId}\n`);

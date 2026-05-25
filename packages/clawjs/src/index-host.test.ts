@@ -70,6 +70,21 @@ test("host registry CLI fails clearly when no active host exists", async () => {
   assert.equal(payload.meta.subcommand, "status");
 });
 
+test("host registry CLI reports missing active host ids without internal errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-use-missing-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+
+  const result = await runCliCapture(["host", "use", "missing-host", "--claw-home", clawHome, "--json"], workspaceRoot);
+
+  assert.equal(result.code, CLI_EXIT_DEGRADED);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "host_unavailable");
+  assert.equal(payload.error.status, "DEGRADED");
+  assert.equal(payload.meta.canonicalCommand, "host");
+  assert.equal(payload.meta.subcommand, "use");
+});
+
 test("direct domain CLI returns actionable host transport errors", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-xpc-"));
   const clawHome = path.join(workspaceRoot, "claw-home");
