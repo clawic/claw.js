@@ -1,11 +1,14 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 import { clawCliCommandRegistry, detectClawPublicRepositories, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { writeJsonOk } from "./cli-json.ts";
+import { writeCommandJsonOk, writeJsonOk } from "./cli-json.ts";
+import { parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { buildCommandHelp, searchCliDiscovery, type ClawCliSearchResult } from "./cli-surface.ts";
-import { SEARCH_ADMIN_COMMANDS } from "./cli-search-command-constants.ts";
+import { SEARCH_ADMIN_COMMANDS, WORKSPACE_SEARCH_DOMAINS, type CommandFallbackPolicy } from "./cli-search-command-constants.ts";
 
 export function isSearchAdminCommand(command: string | undefined): boolean {
   return !!command && SEARCH_ADMIN_COMMANDS.has(command);
@@ -19,6 +22,8 @@ export async function runSearchQueryCli(input: {
   wantsJson: boolean;
   binName: string;
 }): Promise<number> {
+  const missingIndexExit = tryRunMissingIndexSearchQuery(input);
+  if (missingIndexExit !== null) return missingIndexExit;
   const { runSearchQueryCli: runHeavySearchQueryCli } = await import("./cli-search-heavy-command.ts");
   return await runHeavySearchQueryCli(input);
 }
@@ -105,6 +110,101 @@ function parseDiscoverySearchLimit(raw: string | undefined): number {
     });
   }
   return Math.min(1000, limit);
+}
+
+function tryRunMissingIndexSearchQuery(input: {
+  positionals: string[];
+  flags: Record<string, string>;
+  argv?: string[];
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): number | null {
+  const query = input.positionals.slice(2).join(" ") || input.flags.query;
+  if (!query) return null;
+  const domains = parseListFlagLight(input.flags.domains);
+  if (domains?.some((domain) => WORKSPACE_SEARCH_DOMAINS.has(domain))) return null;
+  const scheduleRefresh = readBooleanFlag(input.argv ?? [], input.flags, "schedule-refresh");
+  const persistentQuery = readBooleanFlag(input.argv ?? [], input.flags, "persistent") || scheduleRefresh;
+  const searchDbPath = resolveSearchDbPathLight(input.flags);
+  if (persistentQuery || fs.existsSync(searchDbPath)) return null;
+
+  const strategy = parseSearchStrategyFlagLight(input.flags.strategy) ?? "lexical";
+  const data = {
+    query,
+    sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
+    results: [],
+    partial: false,
+    omittedSources: [],
+    stale: false,
+    staleSources: [],
+    elapsedMs: 0,
+    strategy,
+    embeddingModel: embeddingModelForMissingIndex(strategy, input.flags),
+    agentBudget: parseSearchAgentBudgetLight(input.flags) ?? null,
+    commandFallback: { policy: parseCommandFallbackPolicyLight(input.flags["command-fallback"] ?? input.flags["fallback-commands"]), applied: false, reason: "missing_index", added: 0 },
+    storage: { canonical: "core.sqlite", index: "search.sqlite", indexRebuildable: true },
+    indexState: "missing",
+  };
+  if (input.wantsJson) {
+    writeCommandJsonOk(input.context.stdout, "search", data, { subcommand: "query" });
+  } else {
+    input.context.stdout.write("");
+  }
+  return CLI_EXIT_DEGRADED;
+}
+
+function parseListFlagLight(value: string | undefined): string[] | undefined {
+  const entries = parseCsvFlag(value);
+  return entries.length ? entries : undefined;
+}
+
+function parseSearchStrategyFlagLight(value: string | undefined): "lexical" | "semantic" | "hybrid" | undefined {
+  return value === "semantic" || value === "hybrid" || value === "lexical" ? value : undefined;
+}
+
+function parseSearchAgentBudgetLight(flags: Record<string, string>): { maxResults?: number; maxResultsPerSource?: number; maxResultsPerDomain?: number } | undefined {
+  const maxResults = parseOptionalBoundedIntegerLight(flags["agent-result-limit"] ?? flags["agent-results-limit"], 1, 1000);
+  const maxResultsPerSource = parseOptionalBoundedIntegerLight(flags["agent-source-limit"] ?? flags["agent-results-per-source"], 1, 1000);
+  const maxResultsPerDomain = parseOptionalBoundedIntegerLight(flags["agent-domain-limit"] ?? flags["agent-results-per-domain"], 1, 1000);
+  if (maxResults === undefined && maxResultsPerSource === undefined && maxResultsPerDomain === undefined) return undefined;
+  return {
+    ...(maxResults === undefined ? {} : { maxResults }),
+    ...(maxResultsPerSource === undefined ? {} : { maxResultsPerSource }),
+    ...(maxResultsPerDomain === undefined ? {} : { maxResultsPerDomain }),
+  };
+}
+
+function parseOptionalBoundedIntegerLight(value: string | undefined, min: number, max: number): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
+}
+
+function parseCommandFallbackPolicyLight(value: string | undefined): CommandFallbackPolicy {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === "off" || normalized === "none" || normalized === "never" || normalized === "false" || normalized === "0") return "off";
+  if (normalized === "empty" || normalized === "empty-results" || normalized === "no-results" || normalized === "missing") return "empty";
+  if (normalized === "always" || normalized === "on" || normalized === "true" || normalized === "1") return "always";
+  return "off";
+}
+
+function embeddingModelForMissingIndex(strategy: "lexical" | "semantic" | "hybrid", flags: Record<string, string>): string | null {
+  if (strategy === "lexical") return null;
+  if (flags["embedding-model"] || flags.model || flags["local-embedding"] === "true") return flags["embedding-model"] ?? flags.model ?? "local-text-v1";
+  return null;
+}
+
+function resolveSearchDbPathLight(flags: Record<string, string>): string {
+  if (flags["search-db-path"]) return path.resolve(flags["search-db-path"]);
+  if (process.env.CLAW_SEARCH_DB_PATH) return path.resolve(process.env.CLAW_SEARCH_DB_PATH);
+  const env = flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env;
+  return path.join(resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(env.CLAW_DATA_DIR ? { dataDir: env.CLAW_DATA_DIR } : {}),
+    ...(env.CLAW_HOME ? { clawHome: env.CLAW_HOME } : {}),
+  }), "search.sqlite");
 }
 
 function searchRegisteredRepositoryFiles(query: string, repositories: ClawRepositoryRoot[]): ClawCliSearchResult[] {

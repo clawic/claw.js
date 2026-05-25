@@ -14,6 +14,7 @@ test("search command facade stays free of persistent search imports", () => {
   assert.equal(source.includes("cli-search-code-symbols-source"), false);
   assert.equal(source.includes("cli-search-docs-pages-source"), false);
   assert.equal(source.includes("cli-search-heavy-command"), true);
+  assert.equal(source.indexOf("tryRunMissingIndexSearchQuery") < source.indexOf('await import("./cli-search-heavy-command.ts")'), true);
 });
 
 test("basic search and query do not create search.sqlite without explicit persistence", async () => {
