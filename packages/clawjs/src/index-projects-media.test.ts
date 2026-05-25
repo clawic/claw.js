@@ -734,6 +734,29 @@ test("runCli supports temporal domain commands and schedule shortcut", async () 
     assert.match(watchStdout.getOutput(), /"kind": "follow_up"/);
     assert.match(watchStdout.getOutput(), /"anchorType": "thread"/);
 
+    const timeFollowUpStdout = captureStream();
+    const timeFollowUpExitCode = await runCli([
+      "time",
+      "create",
+      "follow_up",
+      "check thread later",
+      "--after", "24h",
+      "--anchor-type", "thread",
+      "--anchor-id", "thread-1",
+      "--anchor-at", "2026-04-09T08:00:00.000Z",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: timeFollowUpStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(timeFollowUpExitCode, CLI_EXIT_OK);
+    const timeFollowUp = parseCliJsonPayload<{ item: { nextRunAt: string; schedule: { relative: { offsetMs: number } } } }>(timeFollowUpStdout.getOutput());
+    assert.equal(timeFollowUp.item.schedule.relative.offsetMs, 24 * 60 * 60 * 1000);
+    assert.equal(timeFollowUp.item.nextRunAt, "2026-04-10T08:00:00.000Z");
+
     const listStdout = captureStream();
     const listExitCode = await runCli([
       "time",

@@ -447,6 +447,7 @@ export async function runTemporalCli(input: {
         context.stderr.write("Usage: claw time create <kind> <title> [--starts-at ISO|--cron EXPR|--rrule RRULE|--after 24h --anchor-type thread --anchor-id ID --anchor-at ISO]\n");
         return CLI_EXIT_USAGE;
       }
+      const relativeOffsetMs = flags["after"] ? parseRelativeAfterMs(flags["after"], flags["after-ms"]) : undefined;
       const payload = await claw.time.create({
         kind,
         title,
@@ -471,7 +472,7 @@ export async function runTemporalCli(input: {
                         anchorType: (flags["anchor-type"] || "thread") as NonNullable<TemporalItem["anchorType"]>,
                         anchorId: flags["anchor-id"] || "",
                         anchorAt: flags["anchor-at"] || new Date().toISOString(),
-                        offsetMs: Number(flags["after-ms"] || 0),
+                        offsetMs: relativeOffsetMs,
                         ...(flags["cancel-on"] ? { cancelOn: flags["cancel-on"] as "reply_received" | "task_completed" | "event_started" | "execution_succeeded" } : {}),
                       },
                     }
@@ -593,4 +594,17 @@ function scheduleLocalCalendarSearchEvent(flags: Record<string, string>, operati
     dataDir: resolveClawjsDataRoot(flags["data-dir"] ? { ...process.env, CLAW_DATA_DIR: flags["data-dir"] } : process.env),
     flags,
   });
+}
+
+function parseRelativeAfterMs(after: string, afterMs: string | undefined): number {
+  const parsed = parseSimpleDurationMs(after);
+  if (parsed === null) {
+    throw new CliHandledError("invalid_duration", `Unsupported duration "${after}". Use simple durations like 30m, 24h, or 2d.`, CLI_EXIT_USAGE);
+  }
+  if (!afterMs) return parsed;
+  const override = Number(afterMs);
+  if (!Number.isSafeInteger(override) || override < 0) {
+    throw new CliHandledError("usage_error", "--after-ms must be a non-negative integer.", CLI_EXIT_USAGE);
+  }
+  return override;
 }
