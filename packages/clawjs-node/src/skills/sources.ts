@@ -200,7 +200,7 @@ function resolveWorkspaceSkillPath(workspaceDir: string, slug: string): string |
 }
 
 function commandLimitArg(limit: number | undefined): string | undefined {
-  return Number.isSafeInteger(limit) && limit > 0 ? String(limit) : undefined;
+  return typeof limit === "number" && Number.isSafeInteger(limit) && limit > 0 ? String(limit) : undefined;
 }
 
 // ── Built-in skill catalog ────────────────────────────────────────────
