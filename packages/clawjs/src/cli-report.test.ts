@@ -20,6 +20,36 @@ function parsePayload<T>(stdout: string): { ok: boolean; data: T; error?: { code
   return JSON.parse(stdout);
 }
 
+test("report returns JSON usage errors for unknown subcommands", async () => {
+  const workspace = tempWorkspace();
+  const result = await runCliCapture(["report", "definitely_missing", "--workspace", workspace, "--json"], workspace);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string | null; validSubcommands?: string[] };
+    };
+    meta: { canonicalCommand: string; subcommand?: string | null };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.meta.canonicalCommand, "report");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+  assert.equal(payload.error.code, "unknown_report_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.report.subcommand");
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.equal(payload.error.details?.validSubcommands?.includes("templates"), true);
+  assert.equal(payload.error.details?.validSubcommands?.includes("submit"), true);
+  assert.match(payload.error.safeNextStep, /report templates --json/);
+  assert.match(payload.error.safeNextStep, /help report --json/);
+});
+
 async function startFakeGitHubServer(): Promise<{ url: string; requests: Array<{ method: string; path: string; body: unknown; authorization: string | null }>; close: () => Promise<void> }> {
   const requests: Array<{ method: string; path: string; body: unknown; authorization: string | null }> = [];
   const server = http.createServer(async (request, response) => {

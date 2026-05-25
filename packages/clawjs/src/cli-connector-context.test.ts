@@ -44,6 +44,34 @@ test("accounts exposes governed connector context catalog", async () => {
   assert.equal(payload.data.providers.some((provider) => provider.providerId === "revenuecat"), true);
 });
 
+test("accounts returns JSON usage errors for unknown subcommands", async () => {
+  const result = await withTempConnectorContext((cwd) => runCliCapture(["accounts", "definitely_missing", "--json"], cwd));
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string | null; validSubcommands?: string[] };
+    };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string | null };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_accounts_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.accounts.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw accounts list --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.equal(payload.error.details?.validSubcommands?.includes("list"), true);
+  assert.equal(payload.error.details?.validSubcommands?.includes("audit"), true);
+  assert.equal(payload.meta.canonicalCommand, "accounts");
+  assert.equal(payload.meta.invokedCommand, "accounts");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
 test("connectors context explains provider context choices without exposing private fields", async () => {
   const result = await withTempConnectorContext((cwd) => runCliCapture([
     "connectors",

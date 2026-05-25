@@ -64,6 +64,32 @@ test("runCli rejects invalid need route limits instead of expanding work", async
   }
 });
 
+test("runCli returns JSON usage errors for unknown needs subcommands", async () => {
+  const result = await runCliCapture(["needs", "definitely_missing", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details: { received: string; validSubcommands: string[] };
+    };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_needs_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.needs.subcommand");
+  assert.equal(payload.error.details.received, "definitely_missing");
+  assert.deepEqual(payload.error.details.validSubcommands, ["dimensions", "pilots", "generate", "evaluate", "opportunities"]);
+  assert.match(payload.error.safeNextStep, /claw needs dimensions --json/);
+  assert.equal(payload.meta.canonicalCommand, "needs");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
 test("runCli reports corrupt need route ledgers as usage errors", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-needs-corrupt-ledger-"));
   const ledgerPath = path.join(workspaceRoot, ".claw", "need-routes", "need-route-lab.json");

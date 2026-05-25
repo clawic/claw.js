@@ -100,6 +100,7 @@ type ReportGovernanceState = {
 const REPORT_KINDS: readonly ReportKind[] = ["bug", "crash", "regression", "feature", "translation", "docs", "performance", "ux_feedback", "security"];
 const REPORT_DESTINATIONS: readonly ReportDestination[] = ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "private_security_advisory", "local_draft", "canonical_comment", "pr_proposal"];
 const REPORT_STATUSES: readonly ReportStatus[] = ["draft", "blocked", "ready_for_review", "approved", "submitted", "external_pending"];
+const REPORT_SUBCOMMANDS = ["draft", "bug", "feature", "translation", "security", "check", "dedupe", "preview", "submit", "status", "triage", "templates", "github", "export", "delete", "prune", "budget"] as const;
 
 const REPORT_LABELS = {
   source: ["source:agent", "source:human-reviewed"],
@@ -381,13 +382,36 @@ export async function runReportCli(input: {
       }, dryRun || liveReceipt ? CLI_EXIT_OK : CLI_EXIT_DEGRADED);
     }
 
-    context.stderr.write(`Usage: ${binName} report draft|bug|feature|translation|security|check|dedupe|preview|submit|status|triage|templates|github|export|delete|prune|budget\n`);
-    return CLI_EXIT_USAGE;
+    return writeReportUsage({ context, wantsJson, binName, command });
   } catch (error) {
     if (wantsJson) writeCommandJsonError(context.stdout, "report", error);
     else context.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return error instanceof CliHandledError ? error.exitCode : CLI_EXIT_FAILURE;
   }
+}
+
+function writeReportUsage(input: { context: CliContext; wantsJson: boolean; binName: string; command: string | undefined }): number {
+  if (input.wantsJson) {
+    const received = input.command ?? null;
+    writeCommandJsonError(input.context.stdout, "report", new CliHandledError(
+      "unknown_report_subcommand",
+      received ? `Unknown report subcommand: ${received}.` : "Missing report subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.report.subcommand",
+        suggestion: "Use a registered report subcommand for report drafting, checking, preview, submission, retention, or budget work.",
+        safeNextStep: `Run ${input.binName} report templates --json to inspect valid report kinds and destinations, or ${input.binName} help report --json for the report command surface.`,
+        details: {
+          received,
+          validSubcommands: [...REPORT_SUBCOMMANDS],
+        },
+      },
+    ), { subcommand: received });
+    return CLI_EXIT_USAGE;
+  }
+
+  input.context.stderr.write(`Usage: ${input.binName} report ${REPORT_SUBCOMMANDS.join("|")}\n`);
+  return CLI_EXIT_USAGE;
 }
 
 function createReport(input: {

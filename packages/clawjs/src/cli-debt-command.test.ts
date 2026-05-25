@@ -40,6 +40,32 @@ test("debt list and audit expose the report-only public ledger", async () => {
   assert.equal(auditPayload.data.audit.privateSummary.included, false);
 });
 
+test("debt returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["debt", "definitely_missing", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location?: string;
+      safeNextStep?: string;
+      details?: {
+        received?: string;
+        validSubcommands?: string[];
+      };
+    };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_debt_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.debt.subcommand");
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["list", "show", "audit", "sources"]);
+  assert.match(payload.error.safeNextStep ?? "", /debt list --json/);
+});
+
 test("debt sources federate Clawix and ClawJS public repos from an overlay cwd", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-debt-overlay-"));
   const overlayRoot = path.join(tempRoot, "Clawix");

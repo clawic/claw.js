@@ -9,9 +9,10 @@ import type { ClawEvolutionLedger, ClawEvolutionOperatorAction, ClawEvolutionPub
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 const EVOLUTION_VERSION_TOKEN_PATTERN = /^(?:current|foundation|v[0-9]+(?:[._-][A-Za-z0-9]+)*)$/;
+const EVOLUTION_SUBCOMMANDS = ["list", "show", "diff", "plan", "dry-run", "apply", "verify", "doctor", "repair", "rollback", "backup", "receipt", "report"] as const;
 
 interface EvolutionCliInput {
   positionals: string[];
@@ -27,6 +28,9 @@ interface EvolutionCliInput {
 
 export async function runEvolutionCli(input: EvolutionCliInput): Promise<number> {
   const action = input.positionals[1] || "list";
+  if (!isEvolutionSubcommand(action)) {
+    return writeEvolutionUsage(input, action);
+  }
   const root = findEvolutionRoot(input.flags.root || input.context.cwd);
   const ledgerPath = path.join(root, clawEvolutionPolicy.ledger.baseline);
   const publicSurfaceBaselinePath = path.join(root, clawEvolutionPolicy.ledger.publicSurfaceBaseline);
@@ -177,11 +181,31 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     });
   }
 
-  return writeEvolutionUsage(input);
+  return writeEvolutionUsage(input, action);
 }
 
-function writeEvolutionUsage(input: EvolutionCliInput): number {
-  input.context.stderr.write(`Usage: ${input.binName} evolution list|show|diff|plan|dry-run|apply|verify|doctor|repair|rollback|backup|receipt|report [--root PATH] [--json]\n`);
+function isEvolutionSubcommand(action: string): action is typeof EVOLUTION_SUBCOMMANDS[number] {
+  return (EVOLUTION_SUBCOMMANDS as readonly string[]).includes(action);
+}
+
+function writeEvolutionUsage(input: EvolutionCliInput, received?: string): number {
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "evolution", new CliHandledError(
+      "unknown_evolution_subcommand",
+      received ? `Unknown evolution subcommand: ${received}` : "Unknown evolution subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.evolution.subcommand",
+        safeNextStep: "Run claw evolution verify --json to inspect evolution state, or claw help evolution --json for the evolution command surface.",
+        details: {
+          received: received ?? null,
+          validSubcommands: EVOLUTION_SUBCOMMANDS,
+        },
+      },
+    ), { subcommand: received ?? null });
+    return CLI_EXIT_USAGE;
+  }
+  input.context.stderr.write(`Usage: ${input.binName} evolution ${EVOLUTION_SUBCOMMANDS.join("|")} [--root PATH] [--json]\n`);
   return CLI_EXIT_USAGE;
 }
 

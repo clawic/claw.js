@@ -2,7 +2,7 @@ import { CLAW_DEBT_CONTROL_RELEASE_EFFECTS, CLAW_DEBT_CONTROL_SEVERITIES, CLAW_D
 
 import { CliHandledError, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface DebtCliInput {
   argv?: string[];
@@ -16,6 +16,8 @@ interface DebtCliInput {
   wantsJson: boolean;
   binName: string;
 }
+
+const DEBT_SUBCOMMANDS = ["list", "show", "audit", "sources"] as const;
 
 export async function runDebtCli(input: DebtCliInput): Promise<number> {
   const action = input.positionals[1] || "list";
@@ -50,6 +52,27 @@ export async function runDebtCli(input: DebtCliInput): Promise<number> {
 }
 
 function writeDebtUsage(input: DebtCliInput): number {
+  if (input.wantsJson) {
+    const received = input.positionals[1] ?? null;
+    writeCommandJsonError(input.context.stdout, "debt", new CliHandledError(
+      "unknown_debt_subcommand",
+      received ? `Unknown debt subcommand: ${received}.` : "Missing debt subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.debt.subcommand",
+        suggestion: "Use one of the registered debt subcommands.",
+        safeNextStep: `Run ${input.binName} debt list --json to inspect the debt ledger, or ${input.binName} help debt --json for the debt command surface.`,
+        details: {
+          received,
+          validSubcommands: [...DEBT_SUBCOMMANDS],
+        },
+      },
+    ), {
+      subcommand: received,
+    });
+    return CLI_EXIT_USAGE;
+  }
+
   input.context.stderr.write([
     `Usage: ${input.binName} debt list|show|audit|sources [options]`,
     "",

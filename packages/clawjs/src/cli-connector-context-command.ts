@@ -14,7 +14,7 @@ import { formatCliTable } from "./cli-flag-parsers.ts";
 import { parseSetFlags } from "./cli-value-utils.ts";
 import { openConnectorContextStore } from "./cli-connector-context-store.ts";
 import { requireCliExportReview } from "./cli-export-review.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface ConnectorContextCliInput {
   group: string | undefined;
@@ -30,6 +30,8 @@ interface ConnectorContextCliInput {
   wantsJson: boolean;
   binName: string;
 }
+
+const CONNECTOR_CONTEXT_ACTIONS = ["list", "show", "schema", "upsert", "edit", "link-secret", "defaults", "doctor", "validate", "explain", "export", "activate", "pause", "block", "retire", "audit"] as const;
 
 export async function runConnectorContextCli(input: ConnectorContextCliInput): Promise<number | null> {
   if (input.group === "connectors" && input.command !== "context" && input.command !== "ctx") return null;
@@ -273,8 +275,32 @@ function usagePrefix(input: ConnectorContextCliInput): string {
 }
 
 function writeConnectorContextUsage(input: ConnectorContextCliInput): number {
+  if (input.wantsJson) {
+    const invoked = input.group ?? "accounts";
+    const canonicalCommand = invoked === "connectors" ? "connectors" : "accounts";
+    const received = invoked === "connectors" ? input.positionals[2] ?? null : input.positionals[1] ?? null;
+    writeCommandJsonError(input.context.stdout, canonicalCommand, new CliHandledError(
+      `unknown_${canonicalCommand}_subcommand`,
+      received ? `Unknown ${canonicalCommand} subcommand: ${received}.` : `Missing ${canonicalCommand} subcommand.`,
+      CLI_EXIT_USAGE,
+      {
+        location: `cli.${canonicalCommand}.subcommand`,
+        suggestion: `Use one of: ${CONNECTOR_CONTEXT_ACTIONS.join(", ")}.`,
+        safeNextStep: `Run ${usagePrefix(input)} list --json to inspect governed context, or ${input.binName} help ${canonicalCommand} --json for the command surface.`,
+        details: {
+          received,
+          validSubcommands: [...CONNECTOR_CONTEXT_ACTIONS],
+        },
+      },
+    ), {
+      invokedCommand: invoked,
+      subcommand: invoked === "connectors" ? "context" : received,
+      ...(invoked === "connectors" ? { operation: received } : {}),
+    });
+    return CLI_EXIT_USAGE;
+  }
   input.context.stderr.write([
-    `Usage: ${usagePrefix(input)} list|show|schema|upsert|edit|link-secret|defaults|doctor|validate|explain|export|activate|pause|block|retire|audit [options]`,
+    `Usage: ${usagePrefix(input)} ${CONNECTOR_CONTEXT_ACTIONS.join("|")} [options]`,
     "",
     "Examples:",
     `  ${usagePrefix(input)} list --json`,

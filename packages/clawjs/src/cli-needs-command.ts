@@ -23,7 +23,7 @@ import type {
 
 import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface NeedsCliInput {
   positionals: string[];
@@ -46,6 +46,8 @@ interface NeedRouteLedger {
   opportunities: NeedOpportunity[];
   updatedAt: string;
 }
+
+const NEEDS_SUBCOMMANDS = ["dimensions", "pilots", "generate", "evaluate", "opportunities"] as const;
 
 export async function runNeedsCli(input: NeedsCliInput): Promise<number> {
   const action = input.positionals[1];
@@ -133,6 +135,30 @@ function writeNeedsUsage(input: NeedsCliInput): number {
     "  needs evaluate --pilot iot_home --dry-run --save --json",
     "  needs opportunities list|show|dedupe|promote --json",
   ].join("\n");
+  if (input.wantsJson) {
+    writeCommandJsonError(
+      input.context.stdout,
+      "needs",
+      new CliHandledError(
+        "unknown_needs_subcommand",
+        usage,
+        CLI_EXIT_USAGE,
+        {
+          location: "cli.needs.subcommand",
+          safeNextStep: "Run claw needs dimensions --json to inspect need dimensions, or claw help needs --json for the needs command surface.",
+          details: {
+            received: input.positionals[1] ?? null,
+            validSubcommands: [...NEEDS_SUBCOMMANDS],
+          },
+        },
+      ),
+      {
+        subcommand: input.positionals[1] ?? null,
+        operation: input.positionals[2] ?? null,
+      },
+    );
+    return CLI_EXIT_USAGE;
+  }
   input.context.stderr.write(`${usage}\n`);
   return CLI_EXIT_USAGE;
 }

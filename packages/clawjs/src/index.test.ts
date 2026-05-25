@@ -657,6 +657,30 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(receiptPayload.receipt.notes.some((note) => note.includes("/Users/") || note.includes("prompt:")), false);
 });
 
+test("runCli returns JSON usage errors for unknown evolution subcommands", async () => {
+  const result = await runCliCapture(["evolution", "definitely_missing", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details: { received: string; validSubcommands: string[] };
+    };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_evolution_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.evolution.subcommand");
+  assert.equal(payload.error.details.received, "definitely_missing");
+  assert.equal(payload.error.details.validSubcommands.includes("verify"), true);
+  assert.equal(payload.error.details.validSubcommands.includes("report"), true);
+  assert.match(payload.error.safeNextStep, /claw evolution verify --json/);
+});
+
 test("runCli reports malformed evolution ledger JSON as usage", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-evolution-invalid-json-"));
   fs.mkdirSync(path.join(cwd, "docs", "evolution"), { recursive: true });
