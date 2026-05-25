@@ -75,6 +75,10 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_send" && entry.mappedCommand === "runtime <runtime-id> sessions send"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_inject" && entry.mappedCommand === "runtime <runtime-id> sessions inject"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_abort" && entry.mappedCommand === "runtime <runtime-id> sessions abort"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_create" && entry.mappedCommand === "runtime <runtime-id> sessions create"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_pin" && entry.mappedCommand === "runtime <runtime-id> sessions pin"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_unpin" && entry.mappedCommand === "runtime <runtime-id> sessions unpin"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_conflicts" && entry.mappedCommand === "runtime <runtime-id> sessions conflicts"), true);
 });
 
 test("commands record writes only the explicit workspace ledger", async () => {
