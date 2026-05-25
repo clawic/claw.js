@@ -3,7 +3,43 @@ import { createWorkspaceClaw } from "@clawjs/workspace";
 import type { WorkspaceClawInstance } from "@clawjs/workspace";
 import type { RuntimeAdapterId } from "@clawjs/core";
 
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
+
+const MIN_GATEWAY_PORT = 1;
+const MAX_GATEWAY_PORT = 65535;
+
+export function parseCliGatewayPortFlag(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw invalidGatewayPortError(value);
+  }
+  const port = Number(trimmed);
+  if (!Number.isInteger(port) || port < MIN_GATEWAY_PORT || port > MAX_GATEWAY_PORT) {
+    throw invalidGatewayPortError(value);
+  }
+  return port;
+}
+
+function cliGatewayConfig(flags: Record<string, string>) {
+  const port = parseCliGatewayPortFlag(flags["gateway-port"]);
+  return {
+    url: flags["gateway-url"],
+    token: flags["gateway-token"],
+    ...(port === undefined ? {} : { port }),
+    configPath: flags["gateway-config"],
+  };
+}
+
+function invalidGatewayPortError(value: string): CliHandledError {
+  return new CliHandledError("invalid_gateway_port", "--gateway-port must be an integer TCP port between 1 and 65535.", CLI_EXIT_USAGE, {
+    location: "cli.gateway.port",
+    suggestion: "Use a whole-number port from 1 to 65535.",
+    safeNextStep: "Fix --gateway-port and rerun the same claw command.",
+    details: { value },
+  });
+}
 
 export async function createCliClaw(
   runtimeAdapter: RuntimeAdapterId,
@@ -31,12 +67,7 @@ export async function createCliClaw(
       binaryPath: flags["binary-path"],
       workspacePath: flags["runtime-workspace"],
       authStorePath: flags["auth-store"],
-      gateway: {
-        url: flags["gateway-url"],
-        token: flags["gateway-token"],
-        ...(flags["gateway-port"] ? { port: Number(flags["gateway-port"]) } : {}),
-        configPath: flags["gateway-config"],
-      },
+      gateway: cliGatewayConfig(flags),
     },
     workspace: {
       appId,
@@ -133,12 +164,7 @@ export async function createCliWorkspaceClaw(
       binaryPath: flags["binary-path"],
       workspacePath: flags["runtime-workspace"],
       authStorePath: flags["auth-store"],
-      gateway: {
-        url: flags["gateway-url"],
-        token: flags["gateway-token"],
-        ...(flags["gateway-port"] ? { port: Number(flags["gateway-port"]) } : {}),
-        configPath: flags["gateway-config"],
-      },
+      gateway: cliGatewayConfig(flags),
     },
     workspace: {
       appId,
