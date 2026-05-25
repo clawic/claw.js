@@ -506,13 +506,15 @@ export function runDesignCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const id = input.flags.id || input.positionals[3] || (kind ? `${kind}-${randomUUID().slice(0, 8)}` : "");
     const name = input.flags.name || id;
     if (!kind || !id || !name) return usageError(input, "Usage: claw design upsert KIND ID --name NAME [--path PATH]");
+    const manifest = parseDesignJsonFlag(input, "manifest");
+    if (manifest === undefined) return V1_DATA_EXIT_USAGE;
     const now = nowIso();
     store.sqlite.prepare(`
       INSERT INTO design_resources (id, kind, name, root_path, manifest_json, builtin, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, root_path = excluded.root_path,
         manifest_json = excluded.manifest_json, builtin = excluded.builtin, updated_at = excluded.updated_at
-    `).run(id, kind, name, input.flags.path ? path.resolve(input.cwd, expandHome(input.flags.path)) : null, input.flags.manifest ? JSON.stringify(JSON.parse(input.flags.manifest)) : "{}", truthy(input.flags.builtin) ? 1 : 0, now, now);
+    `).run(id, kind, name, input.flags.path ? path.resolve(input.cwd, expandHome(input.flags.path)) : null, manifest, truthy(input.flags.builtin) ? 1 : 0, now, now);
     scheduleDesignResourcesSearchEvent({
       operation: "upsert",
       resourceId: id,
@@ -539,6 +541,17 @@ export function runDesignCommand(input: V1DataCliInput, store: DatabaseServiceSt
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "design"));
+}
+
+function parseDesignJsonFlag(input: V1DataCliInput, flag: "manifest"): string | undefined {
+  const value = input.flags[flag];
+  if (value === undefined) return "{}";
+  try {
+    return JSON.stringify(JSON.parse(value));
+  } catch {
+    writeError(input, `invalid_design_${flag}_json`, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return undefined;
+  }
 }
 
 export function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
