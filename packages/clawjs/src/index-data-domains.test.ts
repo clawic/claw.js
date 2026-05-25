@@ -930,6 +930,44 @@ test("runCli rejects invalid knowledge fact confidence before persistence", asyn
   });
 });
 
+test("runCli rejects invalid finance amounts before persistence", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-finance-amount-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-finance-amount-cwd-"));
+    const stdout = captureStream();
+    assert.equal(await runCli([
+      "finance",
+      "upsert",
+      "--id",
+      "bad-amount",
+      "--amount",
+      "nope",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+    const payload = parseCliJsonError(stdout.getOutput());
+    assert.equal(payload.error.code, "invalid_finance_amount");
+    assert.equal(payload.error.status, "USAGE");
+
+    const sqlite = openMainDataStore().sqlite;
+    try {
+      const count = sqlite.prepare("SELECT COUNT(*) AS count FROM finance_records").get() as { count: number };
+      assert.equal(count.count, 0);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
 test("runCli reset covers V2 main DB retired service tables when present", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-reset-"));
   await withPatchedEnv({

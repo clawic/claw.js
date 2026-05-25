@@ -1200,8 +1200,12 @@ function runFinanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
   if (command === "upsert") {
     const now = nowIso();
     const id = input.flags.id || input.positionals[2] || `finance-${randomUUID()}`;
-    const amount = input.flags.amount ?? input.positionals[3];
-    if (amount === undefined) return usageError(input, "Usage: claw finance upsert --id ID --amount NUMBER [--currency USD]");
+    const amount = parseFinanceAmount(input.flags.amount ?? input.positionals[3]);
+    if (amount === null) return usageError(input, "Usage: claw finance upsert --id ID --amount NUMBER [--currency USD]");
+    if (amount === undefined) {
+      writeError(input, "invalid_finance_amount", "Expected --amount to be a finite number.", V1_DATA_EXIT_USAGE);
+      return V1_DATA_EXIT_USAGE;
+    }
     const pageId = input.flags.notes || input.flags.body
       ? upsertPageWithBlocks(store.sqlite, {
           id: input.flags["page-id"] || `page-${id}`,
@@ -1221,7 +1225,7 @@ function runFinanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
         amount = excluded.amount, currency = excluded.currency, occurred_at = excluded.occurred_at,
         merchant = excluded.merchant, category = excluded.category, page_id = excluded.page_id,
         metadata_json = excluded.metadata_json, updated_at = excluded.updated_at
-    `).run(id, input.flags.kind || "transaction", input.flags["account-id"] || null, Number(amount), input.flags.currency || "USD", input.flags.at || input.flags["occurred-at"] || now, input.flags.merchant || null, input.flags.category || null, pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
+    `).run(id, input.flags.kind || "transaction", input.flags["account-id"] || null, amount, input.flags.currency || "USD", input.flags.at || input.flags["occurred-at"] || now, input.flags.merchant || null, input.flags.category || null, pageId, input.flags.metadata ? JSON.stringify(parseMaybeJson(input.flags.metadata)) : "{}", now, now);
     scheduleFinanceRecordTableSearchEvent({
       operation: "upsert",
       recordId: id,
@@ -1252,6 +1256,15 @@ function runFinanceCommand(input: V1DataCliInput, store: DatabaseServiceStore): 
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete(input, store, "finance_records", "finance");
+}
+
+function parseFinanceAmount(raw: string | undefined): number | null | undefined {
+  if (raw === undefined) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value)) return undefined;
+  return value;
 }
 
 function runCalendarCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
