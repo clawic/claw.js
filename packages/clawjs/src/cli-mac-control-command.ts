@@ -16,7 +16,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { formatCliTable } from "./cli-flag-parsers.ts";
+import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import type { CliContext } from "./index.ts";
 
@@ -199,7 +199,7 @@ async function runMacFamily(input: {
     });
   }
 
-  if (input.argv.includes("--dry-run") || input.flags["dry-run"] === "true" || input.flags.dryRun === "true") {
+  if (readBooleanFlag(input.argv, input.flags, "dry-run") || readBooleanFlag(input.argv, input.flags, "dryRun")) {
     return writePayload(input, group, buildDryRunPlan(capability, input.flags, targetPositionals));
   }
 

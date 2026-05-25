@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("Mac control roots expose atlas and dry-run contracts without direct native execution", async () => {
@@ -85,6 +85,31 @@ test("Mac permissions root exposes central permission catalog and request plans"
   assert.equal(requestPayload.data.plan.status, "permission_plan");
   assert.equal(requestPayload.data.plan.nativePrompt, "just_in_time_only");
   assert.equal(requestPayload.data.plan.surprisePrompt, false);
+});
+
+test("Mac dry-run flag honors explicit false and rejects ambiguous values", async () => {
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: undefined }, async () => {
+    const explicitFalse = await runCliCapture(["wifi", "connect", "Office", "--dry-run", "false", "--json"], process.cwd());
+    assert.equal(explicitFalse.code, CLI_EXIT_OK);
+    const explicitFalsePayload = JSON.parse(explicitFalse.stdout) as {
+      ok: boolean;
+      data: { status: string; message: string };
+    };
+    assert.equal(explicitFalsePayload.ok, true);
+    assert.equal(explicitFalsePayload.data.status, "signed_host_required");
+    assert.match(explicitFalsePayload.data.message, /signed host/);
+
+    const ambiguous = await runCliCapture(["wifi", "connect", "Office", "--dry-run", "sometimes", "--json"], process.cwd());
+    assert.equal(ambiguous.code, CLI_EXIT_USAGE);
+    const ambiguousPayload = JSON.parse(ambiguous.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; message: string };
+    };
+    assert.equal(ambiguousPayload.ok, false);
+    assert.equal(ambiguousPayload.error.code, "invalid_boolean_flag");
+    assert.equal(ambiguousPayload.error.status, "USAGE");
+    assert.match(ambiguousPayload.error.message, /--dry-run/);
+  });
 });
 
 test("Mac direct roots and permission requests hand off to configured signed host", async () => {
