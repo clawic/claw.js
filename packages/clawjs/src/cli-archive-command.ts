@@ -42,11 +42,11 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
   const argv = input.argv ?? [];
   const includeSecrets = readBooleanFlag(argv, input.flags, "include-secrets", readBooleanFlag(argv, input.flags, "secrets", false));
   const signedHostAvailable = readBooleanFlag(argv, input.flags, "signed-host", false);
-  const sourceRoot = input.flags.root ?? input.flags["claw-home"] ?? input.context.cwd;
-  const targetRoot = input.flags.target ?? "$CLAW_HOME.restore-preview";
+  const sourceRoot = readNonBlankArchiveFlag(input.flags.root ?? input.flags["claw-home"], "root", input.context.cwd);
+  const targetRoot = readNonBlankArchiveFlag(input.flags.target, "target", "$CLAW_HOME.restore-preview");
   const checkedAt = readCheckedAt(input.flags["checked-at"]);
-  const archivePath = input.flags.archive ?? input.flags.input;
-  const outputPath = input.flags.output;
+  const archivePath = readOptionalArchiveFlag(input.flags.archive ?? input.flags.input, "archive");
+  const outputPath = readOptionalArchiveFlag(input.flags.output, "output");
   const resolvedArchivePath = archivePath ? resolvePath(input.context.cwd, archivePath) : undefined;
   const archiveFormatVerification = resolvedArchivePath ? verifyArchiveContainerFormat(resolvedArchivePath, checkedAt) : null;
   const readManifest = () => resolvedArchivePath
@@ -242,6 +242,27 @@ function writeArchiveResult(input: ArchiveCliInput, action: string, data: unknow
 
 function resolvePath(cwd: string, candidate: string): string {
   return path.isAbsolute(candidate) ? candidate : path.resolve(cwd, candidate);
+}
+
+function readNonBlankArchiveFlag(value: string | undefined, name: string, fallback: string): string {
+  if (value === undefined) return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) throw invalidArchiveFlag(name, value);
+  return value;
+}
+
+function readOptionalArchiveFlag(value: string | undefined, name: string): string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) throw invalidArchiveFlag(name, value);
+  return value;
+}
+
+function invalidArchiveFlag(name: string, value: string): CliHandledError {
+  return new CliHandledError("invalid_archive_flag", `--${name} must not be empty.`, CLI_EXIT_USAGE, {
+    location: `cli.archive.${name}`,
+    details: { flag: `--${name}`, value },
+  });
 }
 
 function readCheckedAt(value: string | undefined): string {
