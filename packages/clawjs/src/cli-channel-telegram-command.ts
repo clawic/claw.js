@@ -8,7 +8,7 @@ import type { TelegramSendMediaInput, TelegramSendMessageInput } from "@clawjs/c
 
 import { CODEX_AGENT_ID, normalizeTelegramCodexAccount, registerCodexAgentProcessor, resolveCodexRuntimeAdapterId, resolveTelegramCodexListenerOptions, runTelegramCodexProcessor } from "./cli-telegram-codex.ts";
 import { LEGACY_TELEGRAM_CODEX_PROCESSOR_ID, TELEGRAM_CODEX_BOT_COMMANDS } from "./cli-telegram-codex-constants.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { extractPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
@@ -16,6 +16,21 @@ import { channelListenerPaths, isProcessRunning, readListenerPid, readTail, wait
 import { currentCliEntryPath } from "./cli-open-state.ts";
 
 type CliContext = { stdout: NodeJS.WritableStream; stderr: NodeJS.WritableStream; cwd: string };
+
+function parseNonNegativeNumberFlag(flags: Record<string, string>, name: string, code: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw.trim());
+  if (!raw.trim() || !Number.isFinite(value) || value < 0) {
+    throw new CliHandledError(code, `--${name} must be a non-negative number.`, CLI_EXIT_USAGE, {
+      location: `channels.flags.${name}`,
+      suggestion: `Pass --${name} with a finite non-negative number, or omit it to use the default.`,
+      safeNextStep: `Rerun the command with a valid --${name} value before changing channel bindings.`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
 
 export async function runChannelTelegramCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; positionals: string[]; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; binName: string; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
@@ -100,7 +115,7 @@ if (group === "channels" && (command === "assign" || command === "unassign")) {
       accountId: account,
       targetId,
       permissions: ["read", "write", "ingest"],
-      priority: flags.priority ? Number(flags.priority) : 100,
+      priority: parseNonNegativeNumberFlag(flags, "priority", "invalid_channel_priority") ?? 100,
       metadata: {
         assignmentType: "channel-agent",
         processorId,
@@ -857,7 +872,7 @@ if (group === "channels" && command === "permissions" && subcommand === "grant")
     accountId: flags.account,
     targetId: flags["target-id"] || flags.target || flags["chat-id"],
     permissions: permissions as Array<"read" | "write" | "ingest" | "admin">,
-    ...(flags.priority ? { priority: Number(flags.priority) } : {}),
+    ...(flags.priority !== undefined ? { priority: parseNonNegativeNumberFlag(flags, "priority", "invalid_channel_priority") } : {}),
   });
   if (wantsJson) {
     writeChannelJson(binding);

@@ -5,7 +5,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, createFakeTelegramSecretsProxy, withPatchedEnv } from "./index-test-utils.ts";
 
 test("runCli can connect and inspect telegram state through the CLI", async () => {
@@ -127,6 +127,40 @@ test("runCli exposes structured channel accounts and permissions", async () => {
     assert.match(grantStdout.getOutput(), /support-agent:telegram:support:1001/);
     assert.match(listStdout.getOutput(), /telegram:support/);
   });
+});
+
+test("runCli rejects invalid channel permission priority before granting", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-priority-"));
+
+  const grantStdout = captureStream();
+  const grantExitCode = await runCli([
+    "channels",
+    "permissions",
+    "grant",
+    "--workspace",
+    workspaceRoot,
+    "--agent",
+    "support-agent",
+    "--channel",
+    "telegram",
+    "--target-id",
+    "1001",
+    "--permissions",
+    "read",
+    "--priority",
+    "urgent",
+    "--json",
+  ], {
+    stdout: grantStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(grantStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  assert.equal(grantExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_channel_priority");
+  assert.deepEqual(payload.error.details, { flag: "--priority", value: "urgent" });
 });
 
 test("runCli connects Telegram through channels and runs a processor listener once", async () => {
