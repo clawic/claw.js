@@ -215,18 +215,19 @@ export async function runLanPreviewShare(input: {
   wantsJson: boolean;
   dryRun: boolean;
 }): Promise<number> {
-  const serverReachable = await probeHttpServer(input.targetUrl);
-  if (!serverReachable) {
-    throw new CliHandledError("target_unreachable", `No local preview responded at ${input.targetUrl.toString()}`);
-  }
   const ttlMs = resolvePreviewShareTtlMs(input.flags);
-  const expiresAt = new Date(Date.now() + ttlMs);
-  const token = input.flags.token || randomBytes(18).toString("base64url");
-  const listenHost = input.flags.host || "0.0.0.0";
   const listenPort = Number(input.flags["share-port"] || input.flags["listen-port"] || "0");
   if (!Number.isInteger(listenPort) || listenPort < 0 || listenPort > 65535) {
     throw new CliHandledError("usage_error", "--share-port must be a valid TCP port.", CLI_EXIT_USAGE);
   }
+
+  const serverReachable = await probeHttpServer(input.targetUrl);
+  if (!serverReachable) {
+    throw new CliHandledError("target_unreachable", `No local preview responded at ${input.targetUrl.toString()}`);
+  }
+  const expiresAt = new Date(Date.now() + ttlMs);
+  const token = input.flags.token || randomBytes(18).toString("base64url");
+  const listenHost = input.flags.host || "0.0.0.0";
   if (input.dryRun) {
     const payload = buildLanPreviewSharePayload({ targetUrl: input.targetUrl, flags: input.flags, token, expiresAt, actualPort: listenPort || Number(input.targetUrl.port || "80") });
     if (input.wantsJson) writePreviewShareJson(input.stdout, payload);
