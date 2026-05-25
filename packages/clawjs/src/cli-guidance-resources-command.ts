@@ -29,6 +29,9 @@ type GuidanceResourcesClaw = Awaited<ReturnType<typeof createCliClaw>> & {
   resources: ResourcesCliFacade;
 };
 
+const GUIDANCE_LIST_STATUSES = ["active", "archived"] as const;
+const RESOURCE_LIST_STATUSES = ["active", "missing", "moved", "stale"] as const;
+
 export async function runGuidanceResourcesCli(input: {
   group: string | undefined;
   command: string | undefined;
@@ -88,7 +91,7 @@ function runGuidanceCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & {
     return CLI_EXIT_OK;
   }
   if (command === "list") {
-    const records = guidance.list({ ...(flags.status ? { status: flags.status as "active" | "archived" } : {}) });
+    const records = guidance.list({ ...(flags.status ? { status: parseAllowedFlag(flags.status, GUIDANCE_LIST_STATUSES, "invalid_guidance_status", "guidance list --status", "cli.guidance.status") } : {}) });
     if (wantsJson) write({ guidance: records });
     else context.stdout.write(`${records.map((record) => `${record.severity} ${record.status} ${record.id} ${record.title}`).join("\n")}\n`);
     return CLI_EXIT_OK;
@@ -184,7 +187,7 @@ function runResourcesCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & 
 
   if (!command || command === "list") {
     const resources = resourcesFacade.list({
-      ...(flags.status ? { status: flags.status as "active" | "missing" | "moved" | "stale" } : {}),
+      ...(flags.status ? { status: parseAllowedFlag(flags.status, RESOURCE_LIST_STATUSES, "invalid_resource_status", "resources list --status", "cli.resources.status") } : {}),
       ...(flags.kind ? { kind: flags.kind } : {}),
     });
     if (wantsJson) write({ resources });
@@ -245,6 +248,17 @@ function parseNonNegativeIntegerFlag(value: string, label: string): number {
     });
   }
   return parsed;
+}
+
+function parseAllowedFlag<TValue extends string>(
+  value: string,
+  allowed: readonly TValue[],
+  code: string,
+  label: string,
+  location: string,
+): TValue {
+  if ((allowed as readonly string[]).includes(value)) return value as TValue;
+  throw new CliHandledError(code, `${label} must be one of: ${allowed.join(", ")}.`, CLI_EXIT_USAGE, { location });
 }
 
 function parseResourceMaxBytesFlag(value: string): number {

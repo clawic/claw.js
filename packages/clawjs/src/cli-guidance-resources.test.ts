@@ -129,6 +129,39 @@ test("guidance match rejects invalid limits before matching", async (t) => {
   assert.equal(negativePayload.error.code, "invalid_guidance_limit");
 });
 
+test("guidance and resources list reject invalid status filters", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-status-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const guidanceDir = path.join(cwd, "guidance");
+  const resourcesDir = path.join(cwd, "resources");
+
+  const guidance = await runCliCapture([
+    "guidance", "list",
+    "--status", "nope",
+    "--guidance-dir", guidanceDir,
+    "--json",
+  ], cwd);
+  assert.equal(guidance.code, CLI_EXIT_USAGE);
+  const guidancePayload = JSON.parse(guidance.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+  assert.equal(guidancePayload.ok, false);
+  assert.equal(guidancePayload.error.code, "invalid_guidance_status");
+  assert.equal(guidancePayload.error.status, "USAGE");
+  assert.equal(guidancePayload.error.location, "cli.guidance.status");
+
+  const resources = await runCliCapture([
+    "resources", "list",
+    "--status", "nope",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(resources.code, CLI_EXIT_USAGE);
+  const resourcesPayload = JSON.parse(resources.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+  assert.equal(resourcesPayload.ok, false);
+  assert.equal(resourcesPayload.error.code, "invalid_resource_status");
+  assert.equal(resourcesPayload.error.status, "USAGE");
+  assert.equal(resourcesPayload.error.location, "cli.resources.status");
+});
+
 test("resources read rejects invalid max byte limits before reading", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-resources-max-bytes-"));
   useIsolatedClawDataRoot(t, cwd);
