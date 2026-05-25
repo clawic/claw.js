@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { clawCliCommandRegistry, detectClawPublicRepositories, type ClawRepositoryRoot } from "@clawjs/core/catalogs";
 import type { CliContext } from "./index.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeJsonOk } from "./cli-json.ts";
 import { buildCommandHelp, searchCliDiscovery, type ClawCliSearchResult } from "./cli-surface.ts";
 import { SEARCH_ADMIN_COMMANDS } from "./cli-search-command-constants.ts";
@@ -59,7 +59,7 @@ export async function runCliDiscoverySearch(input: {
     input.context.stdout.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
     return CLI_EXIT_OK;
   }
-  const limit = input.flags.limit ? Number(input.flags.limit) : 20;
+  const limit = parseDiscoverySearchLimit(input.flags.limit);
   const repositories = detectClawPublicRepositories(input.context.cwd, { includeFallback: true });
   const results = mergeSearchResults([
     ...searchCliDiscovery(query, { limit }),
@@ -85,6 +85,19 @@ export async function runCliDiscoverySearch(input: {
     input.context.stdout.write(`${results.map((result) => `${result.type}\t${result.name}\t${result.canonicalName ?? ""}\t${result.summary}`).join("\n")}\n`);
   }
   return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+function parseDiscoverySearchLimit(raw: string | undefined): number {
+  if (raw === undefined) return 20;
+  const limit = Number(raw);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a positive number, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.search.limit",
+      suggestion: "Pass a positive limit such as --limit 20.",
+      safeNextStep: "Rerun claw search with a positive --limit value.",
+    });
+  }
+  return Math.min(1000, Math.floor(limit));
 }
 
 function searchRegisteredRepositoryFiles(query: string, repositories: ClawRepositoryRoot[]): ClawCliSearchResult[] {
