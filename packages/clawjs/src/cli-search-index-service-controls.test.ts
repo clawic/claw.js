@@ -108,6 +108,28 @@ test("search jobs and service reject non-numeric limits as usage errors", async 
   });
 });
 
+test("search audit rejects unsafe decimal limits as usage errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-audit-invalid-limit-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    for (const value of ["1.5", "1e2", "9007199254740992", "0"]) {
+      const audit = await runCliCapture(["search", "audit", "--limit", value, "--data-dir", dataRoot, "--json"], workspaceRoot);
+      assert.equal(audit.code, CLI_EXIT_USAGE);
+      const payload = JSON.parse(audit.stdout) as { error: { code: string; status: string; location?: string } };
+      assert.equal(payload.error.code, "invalid_search_limit");
+      assert.equal(payload.error.status, "USAGE");
+      assert.equal(payload.error.location, "cli.search.audit.limit");
+    }
+    assert.equal(fs.existsSync(registeredSearchDatabasePath(dataRoot)), false);
+  });
+});
+
 test("search source controls persist canonical config in core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-core-config-"));
   const dataRoot = path.join(workspaceRoot, "data");

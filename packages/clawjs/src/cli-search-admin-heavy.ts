@@ -441,12 +441,13 @@ export async function runSearchAdminCli(input: {
   }
 
   if (command === "audit") {
+    const auditLimit = parseSearchAuditLimit(input.flags.limit);
     const store = openCliSearchStore(input.flags);
     let items: ReturnType<SearchStore["listAuditEvents"]>;
     try {
       registerCliSearchSources(store, input.flags);
       items = store.listAuditEvents({
-        limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+        limit: auditLimit,
         type: input.flags.type === "action" || input.flags.type === "sensitive_query" ? input.flags.type : undefined,
       });
     } finally {
@@ -739,4 +740,24 @@ function parseSearchJobsLimit(raw: string | undefined): number | undefined {
     });
   }
   return Math.min(1000, Math.floor(parsed));
+}
+
+function parseSearchAuditLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  if (!/^[0-9]+$/.test(raw)) {
+    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a safe positive decimal integer, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.search.audit.limit",
+      suggestion: "Pass a safe positive decimal integer such as --limit 20.",
+      safeNextStep: "Rerun search audit with a valid --limit value.",
+    });
+  }
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a safe positive decimal integer, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.search.audit.limit",
+      suggestion: "Pass a safe positive decimal integer such as --limit 20.",
+      safeNextStep: "Rerun search audit with a valid --limit value.",
+    });
+  }
+  return parsed;
 }
