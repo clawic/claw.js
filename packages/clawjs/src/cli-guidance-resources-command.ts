@@ -30,6 +30,7 @@ type GuidanceResourcesClaw = Awaited<ReturnType<typeof createCliClaw>> & {
 };
 
 const GUIDANCE_LIST_STATUSES = ["active", "archived"] as const;
+const GUIDANCE_SEVERITIES = ["info", "notice", "warning", "critical"] as const;
 const RESOURCE_LIST_STATUSES = ["active", "missing", "moved", "stale"] as const;
 
 export async function runGuidanceResourcesCli(input: {
@@ -114,8 +115,10 @@ function runGuidanceCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & {
       title: flags.title,
       capsule: flags.capsule,
       details: flags.details,
-      severity: flags.severity as "info" | "notice" | "warning" | "critical" | undefined,
-      ...(flags.priority ? { priority: Number(flags.priority) } : {}),
+      severity: flags.severity
+        ? parseAllowedFlag(flags.severity, GUIDANCE_SEVERITIES, "invalid_guidance_severity", "guidance create --severity", "cli.guidance.severity")
+        : undefined,
+      ...(flags.priority !== undefined ? { priority: parseGuidancePriorityFlag(flags.priority) } : {}),
       resourceIds: parseCsvFlag(flags.resource || flags.resources),
       commands: parseCsvFlag(flags.command || flags.commands),
       applyWhen: {
@@ -245,6 +248,16 @@ function parseNonNegativeIntegerFlag(value: string, label: string): number {
   if (!Number.isInteger(parsed) || parsed < 0) {
     throw new CliHandledError("invalid_guidance_limit", `${label} must be a non-negative integer.`, CLI_EXIT_USAGE, {
       location: "cli.guidance.limit",
+    });
+  }
+  return parsed;
+}
+
+function parseGuidancePriorityFlag(value: string): number {
+  const parsed = Number(value);
+  if (!value.trim() || !Number.isInteger(parsed)) {
+    throw new CliHandledError("invalid_guidance_priority", "guidance create --priority must be an integer.", CLI_EXIT_USAGE, {
+      location: "cli.guidance.priority",
     });
   }
   return parsed;
