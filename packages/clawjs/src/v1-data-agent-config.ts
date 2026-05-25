@@ -20,6 +20,9 @@ import {
 import type { V1DataCliInput } from "./v1-data-core.ts";
 import { scheduleProvidersRoutingSearchEvent, scheduleSnippetsLibrarySearchEvent } from "./cli-search-events.ts";
 
+const SNIPPET_KINDS = new Set(["prompt", "template", "slash"]);
+type SnippetKind = "prompt" | "template" | "slash";
+
 export function runProviderRoutingCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const area = input.positionals[1];
   if (area === "settings") {
@@ -199,7 +202,8 @@ function parseProviderJsonFlag(input: V1DataCliInput, flag: "policy" | "metadata
 export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "list") {
-    const kind = input.flags.kind;
+    const kind = parseSnippetKindFlag(input);
+    if (kind === null) return V1_DATA_EXIT_USAGE;
     const rows = kind
       ? store.sqlite.prepare("SELECT * FROM snippets WHERE kind = ? ORDER BY title").all(kind)
       : store.sqlite.prepare("SELECT * FROM snippets ORDER BY kind, title").all();
@@ -213,6 +217,8 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
     if (!slug || !title || !body) {
       return usageError(input, "Usage: claw snippets upsert SLUG --title TITLE --body TEXT [--kind prompt|template|slash]");
     }
+    const kind = parseSnippetKindFlag(input);
+    if (kind === null) return V1_DATA_EXIT_USAGE;
     const now = nowIso();
     const skillRefs = parseCsvOrJson(input.flags["skill-refs"] || input.flags["skill-ref"]) ?? [];
     const scopeJson = parseSnippetJsonFlag(input, "scope");
@@ -228,7 +234,7 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
     `).run(
       input.flags.id || `snippet-${slug}`,
       slug,
-      input.flags.kind || "prompt",
+      kind || "prompt",
       title,
       body,
       input.flags.shortcut || null,
@@ -247,7 +253,7 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
     writeSuccess(input, {
       slug,
       title,
-      kind: input.flags.kind || "prompt",
+      kind: kind || "prompt",
       shortcut: input.flags.shortcut || null,
       skillRefs,
       updatedAt: now,
@@ -272,6 +278,15 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "snippets"));
+}
+
+function parseSnippetKindFlag(input: V1DataCliInput): SnippetKind | undefined | null {
+  const value = input.flags.kind;
+  if (value === undefined) return undefined;
+  const kind = value.trim();
+  if (SNIPPET_KINDS.has(kind)) return kind as SnippetKind;
+  writeError(input, "invalid_snippet_kind", "Expected --kind to be one of: prompt, template, slash.", V1_DATA_EXIT_USAGE);
+  return null;
 }
 
 function parseSnippetJsonFlag(input: V1DataCliInput, flag: "scope" | "metadata"): string | null {

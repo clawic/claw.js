@@ -151,3 +151,76 @@ test("snippets reject invalid scope and metadata JSON before persistence", async
     }
   });
 });
+
+test("snippets reject invalid kind values before persistence", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-kind-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-kind-cwd-"));
+    const stdout = captureStream();
+    assert.equal(await runInternalV1Cli([
+      "snippets",
+      "upsert",
+      "bad-kind",
+      "--title",
+      "Bad Kind",
+      "--body",
+      "Body",
+      "--kind",
+      "nonsense",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+    const error = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(error.ok, false);
+    assert.equal(error.error.code, "invalid_snippet_kind");
+    assert.equal(error.error.status, "USAGE");
+
+    const listStdout = captureStream();
+    assert.equal(await runInternalV1Cli(["snippets", "list", "--kind", "nonsense", "--json"], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+    const listError = JSON.parse(listStdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(listError.error.code, "invalid_snippet_kind");
+    assert.equal(listError.error.status, "USAGE");
+
+    const sqlite = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: tempRoot } as NodeJS.ProcessEnv));
+    try {
+      const rows = sqlite.prepare("SELECT slug, kind FROM snippets ORDER BY slug").all();
+      assert.deepEqual(rows, []);
+    } finally {
+      sqlite.close();
+    }
+
+    const validStdout = captureStream();
+    assert.equal(await runInternalV1Cli([
+      "snippets",
+      "upsert",
+      "template-snippet",
+      "--title",
+      "Template Snippet",
+      "--body",
+      "Body",
+      "--kind",
+      "template",
+      "--json",
+    ], {
+      stdout: validStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const valid = JSON.parse(validStdout.getOutput()) as { ok: boolean; data: { kind: string } };
+    assert.equal(valid.ok, true);
+    assert.equal(valid.data.kind, "template");
+  });
+});
