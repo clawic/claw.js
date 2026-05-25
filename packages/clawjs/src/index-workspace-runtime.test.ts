@@ -982,6 +982,41 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     requiredDomains: string[];
     sessionActionContracts: Record<string, Array<{ action: string; status: string; writesRuntime: boolean; wouldWriteRuntime?: boolean; authority: string; requiredEvidence?: string[] }>>;
   };
+  const requiredHermesJsonPortalCommands: Array<{ label: string; args: string[]; exits?: number[] }> = [
+    { label: "runtime hermes summary", args: ["runtime", "hermes", "summary"] },
+    { label: "runtime hermes status", args: ["runtime", "hermes", "status"] },
+    { label: "runtime hermes commands", args: ["runtime", "hermes", "commands"], exits: [CLI_EXIT_OK] },
+    { label: "runtime hermes domains", args: ["runtime", "hermes", "domains"] },
+    { label: "runtime hermes support", args: ["runtime", "hermes", "support"] },
+    ...manifest.requiredDomains.map((domain) => ({ label: `runtime hermes domain ${domain}`, args: ["runtime", "hermes", "domain", domain] })),
+    ...manifest.requiredDomains.map((domain) => ({ label: `runtime hermes resources ${domain}`, args: ["runtime", "hermes", "resources", domain] })),
+    { label: "runtime hermes session", args: ["runtime", "hermes", "session"], exits: [CLI_EXIT_OK] },
+    { label: "runtime hermes workspace", args: ["runtime", "hermes", "workspace"], exits: [CLI_EXIT_OK] },
+    { label: "runtime hermes sessions list", args: ["runtime", "hermes", "sessions", "list"] },
+    { label: "runtime hermes sessions preview", args: ["runtime", "hermes", "sessions", "preview", "--session-key", "2026/05/21/runtime-session"] },
+    { label: "runtime hermes sessions resolve", args: ["runtime", "hermes", "sessions", "resolve", "--session-key", "2026/05/21/runtime-session"] },
+    { label: "runtime hermes sessions history", args: ["runtime", "hermes", "sessions", "history", "--session-key", "2026/05/21/runtime-session"] },
+    { label: "runtime hermes sessions send", args: ["runtime", "hermes", "sessions", "send", "--session-key", "2026/05/21/runtime-session", "--message", "hello", "--confirm-runtime-write"], exits: [CLI_EXIT_DEGRADED] },
+    { label: "runtime hermes sessions inject", args: ["runtime", "hermes", "sessions", "inject", "--session-key", "2026/05/21/runtime-session", "--message", "hello", "--confirm-runtime-write"], exits: [CLI_EXIT_DEGRADED] },
+    { label: "runtime hermes sessions abort", args: ["runtime", "hermes", "sessions", "abort", "--session-key", "2026/05/21/runtime-session", "--confirm-runtime-write"], exits: [CLI_EXIT_DEGRADED] },
+    { label: "runtime hermes sessions create", args: ["runtime", "hermes", "sessions", "create", "--title", "Native Draft", "--confirm-runtime-write"], exits: [CLI_EXIT_DEGRADED] },
+    { label: "runtime hermes sessions pin", args: ["runtime", "hermes", "sessions", "pin", "--session-key", "2026/05/21/runtime-session"], exits: [CLI_EXIT_OK] },
+    { label: "runtime hermes sessions unpin", args: ["runtime", "hermes", "sessions", "unpin", "--session-key", "2026/05/21/runtime-session"], exits: [CLI_EXIT_OK] },
+    { label: "runtime hermes sessions conflicts", args: ["runtime", "hermes", "sessions", "conflicts"], exits: [CLI_EXIT_OK] },
+  ];
+
+  for (const command of requiredHermesJsonPortalCommands) {
+    const stdout = captureStream();
+    const exitCode = await runCli([...command.args, "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal((command.exits ?? [CLI_EXIT_OK, CLI_EXIT_DEGRADED]).includes(exitCode), true, command.label);
+    assert.equal(stdout.getOutput().includes("TEST_SECRET_1234567890"), false, command.label);
+    const payload = JSON.parse(stdout.getOutput()) as { data?: { runtimeId?: string } };
+    assert.equal(payload.data?.runtimeId, "hermes", command.label);
+  }
 
   const adaptersStdout = captureStream();
   assert.equal(await runCli(["runtime", "adapters", "--json"], {
