@@ -545,6 +545,15 @@ test("report retention commands export, preview prune, and require delete confir
   assert.equal(prunePayload.data.candidates.some((candidate) => candidate.id === id), true);
 });
 
+test("report prune rejects explicit invalid older-than durations", async () => {
+  const workspace = tempWorkspace();
+  await runCliCapture(["report", "bug", "Retention bug", "--workspace", workspace, "--observed", "bad", "--expected", "good", "--repro", "run", "--json"], workspace);
+  const prune = await runCliCapture(["report", "prune", "--workspace", workspace, "--older-than", "yesterday", "--preview", "--json"], workspace);
+  const payload = JSON.parse(prune.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(prune.code, CLI_EXIT_USAGE);
+  assert.equal(payload.error.code, "invalid_report_prune_older_than");
+});
+
 test("report budgets limit noisy agents and allow audited override", async () => {
   const workspace = tempWorkspace();
   for (let index = 0; index < 20; index += 1) {

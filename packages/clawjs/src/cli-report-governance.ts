@@ -1,5 +1,7 @@
 import path from "node:path";
 
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+
 export type ReportLike = {
   id: string;
   kind: string;
@@ -309,10 +311,15 @@ export function exportReportPackage(report: ReportLike, includeAttachments: stri
 }
 
 function parseOlderThan(value: string | undefined): number | null {
-  if (!value) return null;
-  const match = value.match(/^(\d+)(d|h)$/);
-  if (!match) return null;
+  if (value === undefined) return null;
+  const match = value.trim().match(/^(\d+)(d|h)$/);
+  if (!match) {
+    throw new CliHandledError("invalid_report_prune_older_than", "--older-than must be a duration like 7d or 12h.", CLI_EXIT_USAGE);
+  }
   const amount = Number(match[1]);
+  if (!Number.isSafeInteger(amount)) {
+    throw new CliHandledError("invalid_report_prune_older_than", "--older-than must be a safe integer duration like 7d or 12h.", CLI_EXIT_USAGE);
+  }
   return amount * (match[2] === "d" ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000);
 }
 
