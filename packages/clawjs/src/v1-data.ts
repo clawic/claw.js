@@ -1324,13 +1324,18 @@ function runIotConfigCommand(input: V1DataCliInput, store: DatabaseServiceStore)
     const id = input.flags.id || input.positionals[3];
     const name = input.flags.name || id;
     if (!id || !name) return usageError(input, "Usage: claw iot config set ID --name NAME [--kind KIND] [--secret-ref REF]");
+    const enabled = input.flags.enabled === undefined ? true : parseIotEnabledFlag(input.flags.enabled);
+    if (enabled === null) {
+      writeError(input, "invalid_iot_enabled", "Expected --enabled to be true|false, 1|0, or yes|no.", V1_DATA_EXIT_USAGE);
+      return V1_DATA_EXIT_USAGE;
+    }
     const now = nowIso();
     store.sqlite.prepare(`
       INSERT INTO iot_config (id, kind, name, config_json, secret_ref, enabled, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, name = excluded.name, config_json = excluded.config_json,
         secret_ref = excluded.secret_ref, enabled = excluded.enabled, updated_at = excluded.updated_at
-    `).run(id, input.flags.kind || "device", name, input.flags.config ? JSON.stringify(parseMaybeJson(input.flags.config)) : "{}", input.flags["secret-ref"] || null, truthy(input.flags.enabled ?? "true") ? 1 : 0, now, now);
+    `).run(id, input.flags.kind || "device", name, input.flags.config ? JSON.stringify(parseMaybeJson(input.flags.config)) : "{}", input.flags["secret-ref"] || null, enabled ? 1 : 0, now, now);
     scheduleIotConfigSearchEvent({
       operation: "upsert",
       configId: id,
@@ -1361,6 +1366,13 @@ function runIotConfigCommand(input: V1DataCliInput, store: DatabaseServiceStore)
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return runRecordGetDelete({ ...input, positionals: ["iot", action, ...input.positionals.slice(3)] }, store, "iot_config", "iot config");
+}
+
+function parseIotEnabledFlag(value: string): boolean | null {
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) return true;
+  if (["false", "0", "no"].includes(normalized)) return false;
+  return null;
 }
 
 function runMarketplaceCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {

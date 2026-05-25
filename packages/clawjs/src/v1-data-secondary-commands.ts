@@ -9,6 +9,7 @@ import { scheduleAppsCatalogSearchEvent, scheduleConnectorCatalogSearchEvent, sc
 import {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
+  V1_DATA_EXIT_USAGE,
   expandHome,
   ftsPhrase,
   indexSessionRoots,
@@ -23,6 +24,7 @@ import {
   truthy,
   usage,
   usageError,
+  writeError,
   writeMcpServers,
   writeSuccess,
   writeUnredactedSuccess,
@@ -408,6 +410,17 @@ function stringFlag(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function parseAppsJsonFlag(input: V1DataCliInput, flag: "manifest" | "permissions"): unknown | undefined {
+  const value = input.flags[flag];
+  if (value === undefined) return {};
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    writeError(input, `invalid_app_${flag}_json`, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return undefined;
+  }
+}
+
 function slugifySheetId(value: string): string {
   const slug = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return slug || "sheet-1";
@@ -425,8 +438,11 @@ export function runAppsCommand(input: V1DataCliInput, store: DatabaseServiceStor
     const name = input.flags.name || slug;
     const rootPath = input.flags.path || input.flags.root || (slug ? path.join(resolveClawjsDataRoot(), "apps", slug) : "");
     if (!slug || !name || !rootPath) return usageError(input, "Usage: claw apps upsert SLUG --name NAME --path PATH");
+    const manifest = parseAppsJsonFlag(input, "manifest");
+    if (manifest === undefined) return V1_DATA_EXIT_USAGE;
+    const permissions = parseAppsJsonFlag(input, "permissions");
+    if (permissions === undefined) return V1_DATA_EXIT_USAGE;
     const now = nowIso();
-    const manifest = input.flags.manifest ? JSON.parse(input.flags.manifest) : {};
     store.sqlite.prepare(`
       INSERT INTO apps (id, slug, name, description, root_path, manifest_json, permissions_json, pinned, last_opened_at, created_by_chat_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -440,7 +456,7 @@ export function runAppsCommand(input: V1DataCliInput, store: DatabaseServiceStor
       input.flags.description || null,
       path.resolve(input.cwd, expandHome(rootPath)),
       JSON.stringify(manifest),
-      input.flags.permissions ? JSON.stringify(JSON.parse(input.flags.permissions)) : "{}",
+      JSON.stringify(permissions),
       truthy(input.flags.pinned) ? 1 : 0,
       input.flags["last-opened-at"] || null,
       input.flags["created-by-chat-id"] || null,
