@@ -26,6 +26,9 @@ async function createHermesTuiGatewayFixture() {
     await once(request, "end");
     const payload = JSON.parse(body);
     requests.push(payload);
+    const sessionId = payload.method === "session.create"
+      ? "created-tui-session"
+      : payload.params?.session_id;
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({
       jsonrpc: "2.0",
@@ -33,7 +36,7 @@ async function createHermesTuiGatewayFixture() {
       result: {
         accepted: true,
         method: payload.method,
-        session_id: payload.params?.session_id,
+        session_id: sessionId,
       },
     }));
   });
@@ -137,19 +140,37 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
     assert.equal(abort.payload.data.status, "ok");
     assert.equal(abort.payload.data.officialMethod, "session.interrupt");
 
+    const create = await runHermesAction([
+      "runtime", "hermes", "sessions", "create",
+      "--title", "Created Fixture Session",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(create.exitCode), true);
+    assert.equal(create.payload.data.status, "ok");
+    assert.equal(create.payload.data.officialMethod, "session.create");
+    assert.equal(create.payload.data.result.id, "created-tui-session");
+    assert.equal(create.payload.data.result.titleApplied, true);
+    assert.equal(create.payload.data.result.titleGatewayReceipt.method, "session.title");
+
     assert.deepEqual(gateway.requests.map((entry) => entry.method), [
       "prompt.submit",
       "session.steer",
       "session.interrupt",
+      "session.create",
+      "session.title",
     ]);
     assert.deepEqual(gateway.requests.map((entry) => entry.params?.session_id), [
       "tui-session",
       "tui-session",
       "tui-session",
+      undefined,
+      "created-tui-session",
     ]);
     assert.equal(gateway.requests[0]?.params?.text, "fixture hello");
     assert.equal(gateway.requests[1]?.params?.text, "steer this");
     assert.equal("text" in (gateway.requests[2]?.params ?? {}), false);
+    assert.equal(gateway.requests[3]?.params?.cols, 80);
+    assert.equal(gateway.requests[4]?.params?.title, "Created Fixture Session");
   } finally {
     await gateway.close();
   }

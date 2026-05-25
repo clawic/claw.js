@@ -1740,7 +1740,7 @@ function isLoopbackGatewayUrl(rawUrl: string): boolean {
   }
 }
 
-function hermesTuiGatewayRequest(action: string, sessionKey: string, message?: string) {
+function hermesTuiGatewayRequest(action: string, sessionKey: string | null, message?: string, extra: Record<string, unknown> = {}) {
   if (action === "send") {
     return {
       method: "prompt.submit",
@@ -1767,12 +1767,29 @@ function hermesTuiGatewayRequest(action: string, sessionKey: string, message?: s
       },
     };
   }
+  if (action === "create") {
+    return {
+      method: "session.create",
+      params: {
+        cols: Number(extra.cols ?? 80),
+      },
+    };
+  }
+  if (action === "title") {
+    return {
+      method: "session.title",
+      params: {
+        session_id: sessionKey,
+        title: extra.title,
+      },
+    };
+  }
   return null;
 }
 
-async function callHermesTuiGatewayJsonRpc(input, action: string, sessionKey: string, message?: string) {
+async function callHermesTuiGatewayJsonRpc(input, action: string, sessionKey: string | null, message?: string, extra: Record<string, unknown> = {}) {
   const endpoint = hermesTuiGatewayEndpoint(input);
-  const request = hermesTuiGatewayRequest(action, sessionKey, message);
+  const request = hermesTuiGatewayRequest(action, sessionKey, message, extra);
   if (!request) {
     return {
       ok: false,
@@ -2677,6 +2694,111 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   }
 
   if (action === "create") {
+    if (runtimeId === "hermes") {
+      const title = input.flags.title ?? input.flags.name ?? null;
+      if (!isTruthyFlag(input, "confirm-runtime-write")) {
+        const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
+        const officialContract = officialSessionActionContract(runtimeId, actionContract);
+        writePayload(input, {
+          runtimeId,
+          domain: "sessions",
+          action,
+          status: "confirmation_required",
+          authority: "runtime",
+          writesRuntime: false,
+          wouldWriteRuntime: true,
+          requiredFlag: "--confirm-runtime-write",
+          officialProtocol: officialContract.protocol,
+          officialMethod: officialContract.method,
+          officialContractSource: officialContract.source,
+          createPlan: sessionCreatePlan(runtimeId, input, supportContract),
+          supportContract,
+        }, { runtimeId, operation: "sessions", action });
+        return CLI_EXIT_DEGRADED;
+      }
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, null, undefined, { cols: input.flags.cols ?? 80 });
+      if (!gateway.ok) {
+        writePayload(input, blockedSessionAction(runtimeId, action, gateway.reason ?? "Hermes TUI gateway create failed.", supportContract, {
+          requiredFlag: gateway.requiredFlag,
+          requiredEndpoint: gateway.requiredEndpoint,
+          gatewayError: gateway.error,
+          gatewayStatusCode: gateway.statusCode,
+          gatewayRequest: gateway.request,
+          createPlan: sessionCreatePlan(runtimeId, input, supportContract),
+        }), { runtimeId, operation: "sessions", action });
+        return CLI_EXIT_DEGRADED;
+      }
+      const createdSessionId = gateway.result?.session_id ?? gateway.result?.sessionId ?? null;
+      let titleGateway = null;
+      if (title && createdSessionId) {
+        titleGateway = await callHermesTuiGatewayJsonRpc(input, "title", String(createdSessionId), undefined, { title });
+      }
+      if (titleGateway && !titleGateway.ok) {
+        writePayload(input, {
+          runtimeId,
+          domain: "sessions",
+          action,
+          status: "partial",
+          authority: "runtime",
+          writesRuntime: true,
+          officialProtocol: gateway.protocol,
+          officialMethod: gateway.method,
+          officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+          result: {
+            id: createdSessionId,
+            titleRequested: title,
+            titleApplied: false,
+            nativeIdentifier: { name: "session_id" },
+            gatewayReceipt: {
+              protocol: gateway.protocol,
+              transport: gateway.transport,
+              method: gateway.method,
+              requestId: gateway.request.id,
+              endpoint: gateway.endpoint,
+            },
+            titleError: titleGateway.reason,
+            gatewayResult: gateway.result,
+          },
+          supportContract,
+        }, { runtimeId, operation: "sessions", action });
+        return CLI_EXIT_DEGRADED;
+      }
+      writePayload(input, {
+        runtimeId,
+        domain: "sessions",
+        action,
+        status: "ok",
+        authority: "runtime",
+        writesRuntime: true,
+        officialProtocol: gateway.protocol,
+        officialMethod: gateway.method,
+        officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        result: {
+          id: createdSessionId,
+          titleRequested: title,
+          titleApplied: Boolean(titleGateway?.ok),
+          nativeIdentifier: { name: "session_id" },
+          gatewayReceipt: {
+            protocol: gateway.protocol,
+            transport: gateway.transport,
+            method: gateway.method,
+            requestId: gateway.request.id,
+            endpoint: gateway.endpoint,
+          },
+          titleGatewayReceipt: titleGateway?.ok ? {
+            protocol: titleGateway.protocol,
+            transport: titleGateway.transport,
+            method: titleGateway.method,
+            requestId: titleGateway.request.id,
+            endpoint: titleGateway.endpoint,
+          } : null,
+          gatewayResult: gateway.result,
+          titleGatewayResult: titleGateway?.result ?? null,
+        },
+        supportContract,
+      }, { runtimeId, operation: "sessions", action });
+      return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
     writePayload(input, blockedSessionAction(
       runtimeId,
       action,
