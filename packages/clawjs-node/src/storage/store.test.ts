@@ -218,6 +218,50 @@ test("local storage indexes blob reference cleanup lookups", (t) => {
   assert.equal(sharePlan.some((row) => row.detail.includes("SCAN storage_shares")), false);
 });
 
+test("local storage indexes active token authentication lookups", (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-token-indexes-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+  t.after(() => storage.close());
+
+  const issued = storage.issueOwnerToken({ label: "owner" });
+
+  const sqlite = new Database(path.join(workspaceDir, ".data", "drive.sqlite"));
+  t.after(() => sqlite.close());
+
+  const tokenIndexes = sqlite.prepare("PRAGMA index_list(storage_tokens)").all() as Array<{ name: string }>;
+  assert.equal(tokenIndexes.some((index) => index.name === "storage_tokens_token_hash_active_idx"), true);
+  assert.equal(tokenIndexes.some((index) => index.name === "storage_tokens_owner_active_created_idx"), true);
+
+  const tokenHash = sqlite
+    .prepare("SELECT token_hash FROM storage_tokens WHERE id = ?")
+    .get(issued.record.id) as { token_hash: string };
+  const authPlan = sqlite
+    .prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner
+      FROM storage_tokens
+      WHERE token_hash = ? AND revoked_at IS NULL
+      LIMIT 1
+    `)
+    .all(tokenHash.token_hash) as Array<{ detail: string }>;
+  assert.equal(authPlan.some((row) => row.detail.includes("storage_tokens_token_hash_active_idx")), true);
+  assert.equal(authPlan.some((row) => row.detail.includes("SCAN storage_tokens")), false);
+
+  const ownerPlan = sqlite
+    .prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT id, label, token_hash, grants_json, created_at, last_used_at, revoked_at, is_owner
+      FROM storage_tokens
+      WHERE is_owner = 1 AND revoked_at IS NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `)
+    .all() as Array<{ detail: string }>;
+  assert.equal(ownerPlan.some((row) => row.detail.includes("storage_tokens_owner_active_created_idx")), true);
+  assert.equal(ownerPlan.some((row) => row.detail.includes("USE TEMP B-TREE")), false);
+});
+
 test("local storage share ttlMs must be a positive safe integer", async (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-share-ttl-"));
   useIsolatedStorageDataDir(t, workspaceDir);
