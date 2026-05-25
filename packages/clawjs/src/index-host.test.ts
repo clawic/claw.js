@@ -70,6 +70,38 @@ test("host registry CLI fails clearly when no active host exists", async () => {
   assert.equal(payload.meta.subcommand, "status");
 });
 
+test("host registry CLI returns JSON usage errors for unknown host subcommands", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-unknown-json-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+
+  const result = await runCliCapture(["host", "definitely_missing", "--claw-home", clawHome, "--json"], workspaceRoot);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_host_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.host.subcommand");
+  assert.equal(payload.error.details.received, "definitely_missing");
+  assert.equal(payload.error.details.validSubcommands.includes("list"), true);
+  assert.equal(payload.error.details.validSubcommands.includes("domains"), true);
+  assert.match(payload.error.safeNextStep, /claw host list --json/);
+  assert.match(payload.error.safeNextStep, /claw help host --json/);
+  assert.equal(payload.meta.canonicalCommand, "host");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
+test("host registry CLI preserves text usage for unknown host subcommands", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-unknown-text-"));
+
+  const result = await runCliCapture(["host", "definitely_missing"], workspaceRoot);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "Usage: claw host list|register|use|status\n");
+});
+
 test("host registry CLI reports missing active host ids without internal errors", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-use-missing-"));
   const clawHome = path.join(workspaceRoot, "claw-home");

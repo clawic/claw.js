@@ -10,6 +10,19 @@ import { openMainDataStore } from "./v1-data-core.ts";
 import type { OpenSurface } from "./cli-open-surfaces.ts";
 import type { CliContext } from "./index.ts";
 
+const VALID_HOST_SUBCOMMANDS = [
+  "list",
+  "register",
+  "use",
+  "status",
+  "doctor",
+  "services",
+  "permissions",
+  "capabilities",
+  "domains",
+  "app-state",
+];
+
 export function hostRegistryOptions(flags: Record<string, string>): { clawHome?: string } {
   return flags["claw-home"] ? { clawHome: path.resolve(flags["claw-home"]) } : {};
 }
@@ -126,6 +139,23 @@ export async function runHostCli(input: {
     return ok ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
   }
 
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "host", new CliHandledError(
+      "unknown_host_subcommand",
+      `Unknown host subcommand: ${command}`,
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.host.subcommand",
+        suggestion: "Use one of error.details.validSubcommands for the host command.",
+        safeNextStep: `Run ${input.binName} host list --json to inspect registered hosts, or ${input.binName} help host --json for the host command surface.`,
+        details: {
+          received: command,
+          validSubcommands: [...VALID_HOST_SUBCOMMANDS],
+        },
+      },
+    ), { subcommand: command });
+    return CLI_EXIT_USAGE;
+  }
   input.context.stderr.write(`Usage: ${input.binName} host list|register|use|status\n`);
   return CLI_EXIT_USAGE;
 }
