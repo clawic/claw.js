@@ -96,3 +96,21 @@ test("acquireLock also blocks a separate process from taking the same lock", () 
   assert.equal(acquired.status, 0);
   assert.equal(acquired.stdout, "acquired");
 });
+
+test("withLockRetry only retries lock acquisition conflicts", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-lock-retry-"));
+  const host = new NodeFileSystemHost();
+  const lockPath = path.join(tempRoot, ".locks", "workspace.lock");
+  const error = Object.assign(new Error("operation target already exists"), { code: "EEXIST" });
+  let attempts = 0;
+
+  assert.throws(
+    () => host.withLockRetry(lockPath, () => {
+      attempts += 1;
+      throw error;
+    }, { timeoutMs: 25, retryDelayMs: 1 }),
+    error,
+  );
+  assert.equal(attempts, 1);
+  assert.equal(fs.existsSync(lockPath), false);
+});

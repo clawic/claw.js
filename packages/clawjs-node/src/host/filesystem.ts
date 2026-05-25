@@ -120,14 +120,21 @@ export class NodeFileSystemHost {
     const startedAt = Date.now();
 
     while (true) {
+      let lock: LockHandle;
       try {
-        return this.withLock(lockPath, fn);
+        lock = this.acquireLock(lockPath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException)?.code;
         if (code !== "EEXIST" || Date.now() - startedAt >= timeoutMs) {
           throw error;
         }
         sleepSync(retryDelayMs);
+        continue;
+      }
+      try {
+        return fn();
+      } finally {
+        lock.release();
       }
     }
   }
