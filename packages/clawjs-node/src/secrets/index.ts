@@ -195,8 +195,20 @@ function resolveSecretsConfig(env?: NodeJS.ProcessEnv): { baseUrl: string; token
   if (!baseUrl || !token || !tenantId) {
     throw new Error("CLAW_SECRETS_BASE_URL, CLAW_SECRETS_TOKEN, and CLAW_SECRETS_TENANT_ID are required for the secrets backend.");
   }
+  let parsedBaseUrl: URL;
+  try {
+    parsedBaseUrl = new URL(baseUrl);
+  } catch {
+    throw new Error("CLAW_SECRETS_BASE_URL must be a valid http(s) URL for the secrets backend.");
+  }
+  if (parsedBaseUrl.protocol !== "http:" && parsedBaseUrl.protocol !== "https:") {
+    throw new Error("CLAW_SECRETS_BASE_URL must use http: or https: for the secrets backend.");
+  }
+  if (parsedBaseUrl.username || parsedBaseUrl.password) {
+    throw new Error("CLAW_SECRETS_BASE_URL must not include embedded credentials for the secrets backend.");
+  }
   return {
-    baseUrl: baseUrl.replace(/\/+$/, ""),
+    baseUrl: parsedBaseUrl.href.replace(/\/+$/, ""),
     token,
     tenantId,
   };

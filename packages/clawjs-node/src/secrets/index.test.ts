@@ -306,6 +306,71 @@ test("secrets backend is used directly for list/types/capabilities/actions/lease
   }
 });
 
+test("secrets backend validates base URL before fetch", async () => {
+  const runner = new NodeProcessHost();
+  const originalFetch = globalThis.fetch;
+  const fetchUrls: string[] = [];
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+    fetchUrls.push(String(args[0]));
+    return new Response(JSON.stringify({ types: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  const baseEnv = {
+    ...process.env,
+    CLAW_SECRETS_TOKEN: "secrets-token",
+    CLAW_SECRETS_TENANT_ID: "demo-tenant",
+  };
+
+  try {
+    await listSecretTypes(runner, {
+      env: {
+        ...baseEnv,
+        CLAW_SECRETS_BASE_URL: "  https://secrets.example.test/api///  ",
+      },
+    });
+    assert.deepEqual(fetchUrls, ["https://secrets.example.test/api/v1/secret-types"]);
+
+    fetchUrls.length = 0;
+    await assert.rejects(
+      listSecretTypes(runner, {
+        env: {
+          ...baseEnv,
+          CLAW_SECRETS_BASE_URL: "not a url",
+        },
+      }),
+      /CLAW_SECRETS_BASE_URL must be a valid http\(s\) URL/,
+    );
+    assert.equal(fetchUrls.length, 0);
+
+    await assert.rejects(
+      listSecretTypes(runner, {
+        env: {
+          ...baseEnv,
+          CLAW_SECRETS_BASE_URL: "file:///tmp/secrets",
+        },
+      }),
+      /CLAW_SECRETS_BASE_URL must use http: or https:/,
+    );
+    assert.equal(fetchUrls.length, 0);
+
+    await assert.rejects(
+      listSecretTypes(runner, {
+        env: {
+          ...baseEnv,
+          CLAW_SECRETS_BASE_URL: "https://user:password@secrets.example.test",
+        },
+      }),
+      /CLAW_SECRETS_BASE_URL must not include embedded credentials/,
+    );
+    assert.equal(fetchUrls.length, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("secrets backend brokers generic HTTP and rejects typed action execution", async () => {
   const secrets = await createFakeSecretsServer();
   try {
