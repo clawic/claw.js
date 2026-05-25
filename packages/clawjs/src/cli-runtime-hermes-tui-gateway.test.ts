@@ -6,11 +6,14 @@ import path from "node:path";
 import type { AddressInfo } from "node:net";
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import BetterSqlite3 from "better-sqlite3";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, runCli } from "./index.ts";
 import { captureStream, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
-async function createHermesTuiGatewayFixture() {
+async function createHermesTuiGatewayFixture(options: {
+  stateDatabasePath?: string;
+} = {}) {
   const requests: Array<{ method?: string; params?: Record<string, unknown>; id?: string | number }> = [];
   const server = http.createServer(async (request, response) => {
     if (request.method !== "POST") {
@@ -29,6 +32,12 @@ async function createHermesTuiGatewayFixture() {
     const sessionId = payload.method === "session.create"
       ? "created-tui-session"
       : payload.params?.session_id;
+    if (payload.method === "session.create" && options.stateDatabasePath) {
+      insertHermesStateSession(options.stateDatabasePath, String(sessionId), null);
+    }
+    if (payload.method === "session.title" && options.stateDatabasePath && sessionId) {
+      updateHermesStateSessionTitle(options.stateDatabasePath, String(sessionId), String(payload.params?.title ?? ""));
+    }
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({
       jsonrpc: "2.0",
@@ -50,6 +59,67 @@ async function createHermesTuiGatewayFixture() {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     },
   };
+}
+
+function createHermesStateDatabase(databasePath: string) {
+  const db = new BetterSqlite3(databasePath);
+  try {
+    db.exec(`
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT,
+        source TEXT,
+        model TEXT,
+        parent_session_id TEXT,
+        started_at REAL,
+        ended_at REAL,
+        end_reason TEXT,
+        message_count INTEGER,
+        tool_call_count INTEGER,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        cache_read_tokens INTEGER,
+        cache_write_tokens INTEGER,
+        reasoning_tokens INTEGER,
+        billing_provider TEXT,
+        billing_mode TEXT,
+        estimated_cost_usd REAL,
+        actual_cost_usd REAL,
+        cost_status TEXT,
+        api_call_count INTEGER
+      );
+      CREATE TABLE messages (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        role TEXT,
+        content TEXT,
+        timestamp REAL
+      );
+    `);
+  } finally {
+    db.close();
+  }
+}
+
+function insertHermesStateSession(databasePath: string, sessionId: string, title: string | null) {
+  const db = new BetterSqlite3(databasePath);
+  try {
+    db.prepare(`
+      INSERT INTO sessions (id, title, source, model, parent_session_id, started_at, ended_at, end_reason, message_count, tool_call_count, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, reasoning_tokens, billing_provider, billing_mode, estimated_cost_usd, actual_cost_usd, cost_status, api_call_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(sessionId, title, "tui_gateway_fixture", "fixture/model", null, 1779746000, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, null, "fixture", 0);
+  } finally {
+    db.close();
+  }
+}
+
+function updateHermesStateSessionTitle(databasePath: string, sessionId: string, title: string) {
+  const db = new BetterSqlite3(databasePath);
+  try {
+    db.prepare("UPDATE sessions SET title = ? WHERE id = ?").run(title, sessionId);
+  } finally {
+    db.close();
+  }
 }
 
 function hermesWorkspace(t: any) {
@@ -248,6 +318,60 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
     assert.equal("text" in (gateway.requests[2]?.params ?? {}), false);
     assert.equal(gateway.requests[3]?.params?.cols, 80);
     assert.equal(gateway.requests[4]?.params?.title, "Created Fixture Session");
+  } finally {
+    await gateway.close();
+  }
+});
+
+test("Hermes TUI gateway create round-trips through the official SQLite session store fixture", async (t) => {
+  const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+  const stateDatabasePath = path.join(hermesHome, "state.db");
+  createHermesStateDatabase(stateDatabasePath);
+  const gateway = await createHermesTuiGatewayFixture({ stateDatabasePath });
+  try {
+    const create = await runHermesAction([
+      "runtime", "hermes", "sessions", "create",
+      "--title", "Round Trip Fixture Session",
+      "--gateway-url", gateway.url,
+      "--confirm-runtime-write",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(create.exitCode), true);
+    assert.equal(create.payload.data.status, "ok");
+    assert.equal(create.payload.data.result.id, "created-tui-session");
+    assert.equal(create.payload.data.result.titleApplied, true);
+    assert.deepEqual(gateway.requests.map((entry) => entry.method), [
+      "session.create",
+      "session.title",
+    ]);
+
+    const list = await runHermesAction([
+      "runtime", "hermes", "sessions", "list",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(list.exitCode), true);
+    assert.equal(list.payload.data.result.totalProjected, 1);
+    assert.equal(list.payload.data.result.sessions[0].id, "created-tui-session");
+    assert.equal(list.payload.data.result.sessions[0].title, "Round Trip Fixture Session");
+    assert.equal(list.payload.data.result.sessions[0].provenance.source, "runtime-session-sqlite");
+
+    const resolve = await runHermesAction([
+      "runtime", "hermes", "sessions", "resolve",
+      "--session-key", "Round Trip Fixture Session",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(resolve.exitCode), true);
+    assert.equal(resolve.payload.data.result.found, true);
+    assert.equal(resolve.payload.data.result.id, "created-tui-session");
+    assert.equal(resolve.payload.data.result.matchedBy, "sessionTitle");
+    assert.equal(resolve.payload.data.result.writesRuntime, false);
+    assert.equal(resolve.payload.data.result.provenance.source, "runtime-session-sqlite");
   } finally {
     await gateway.close();
   }
