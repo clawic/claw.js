@@ -704,10 +704,12 @@ function evaluateNetworkPolicy(
       message: `Network Control Plane profile ${evaluation.matchedRule.networkPolicyProfileId} does not match connector policy ${policy.id}.`,
     });
   }
-  if (request.requestedHost && networkProof.host && request.requestedHost !== networkProof.host) {
+  if (request.requestedHost && request.requestedHost !== networkProof.host) {
     reasons.push({
       code: "host_not_allowed",
-      message: `Network proof host ${networkProof.host} does not match requested host ${request.requestedHost}.`,
+      message: networkProof.host
+        ? `Network proof host ${networkProof.host} does not match requested host ${request.requestedHost}.`
+        : `Network proof must include requested host ${request.requestedHost}.`,
     });
   }
 }

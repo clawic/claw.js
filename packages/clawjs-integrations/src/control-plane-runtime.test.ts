@@ -170,6 +170,7 @@ describe("connector runtime control plane", () => {
         }],
         networkProof: {
           policyId: "paid-ai-egress",
+          host: "api.image.example",
           egressProfileId: "egress_paid_ai",
           vpnProfileId: "vpn_paid_ai",
           networkEvaluation: {

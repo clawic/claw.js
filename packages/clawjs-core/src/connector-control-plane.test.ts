@@ -209,6 +209,66 @@ test("connector network proof must derive from Network Control Plane evaluation"
   assert.equal(allowed.allowed, true);
 });
 
+test("connector network proof is bound to the requested host", () => {
+  const request: ConnectorExecutionRequest = {
+    ...baseRequest,
+    requestedHost: "api.github.com",
+    operation: {
+      ...baseRequest.operation,
+      credentialRequired: false,
+      networkPolicyId: "provider-network",
+    },
+  };
+  const networkPolicies = [{
+    id: "provider-network",
+    required: true,
+  }];
+  const networkEvaluation = evaluateNetworkPolicy({
+    subject: { kind: "connector", id: "github" },
+    endpoint: { kind: "provider_endpoint", value: "api.evil.example", protocol: "https" },
+    rules: [{
+      schemaVersion: 1,
+      id: "network.rule.other-host",
+      action: "allow",
+      subject: { kind: "connector", id: "github" },
+      endpoint: { kind: "provider_endpoint", value: "api.evil.example", protocol: "https" },
+      networkPolicyProfileId: "default",
+      priority: 100,
+      enabled: true,
+      lifetime: "permanent",
+      ruleSteward: { kind: "system", id: "claw.network" },
+      source: "system_default",
+      createdAt: "2026-05-21T00:00:00.000Z",
+      updatedAt: "2026-05-21T00:00:00.000Z",
+    }],
+  });
+
+  const missingHost = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+    networkPolicies,
+    networkProof: {
+      policyId: "provider-network",
+      networkEvaluation,
+    },
+  });
+  assert.equal(missingHost.allowed, false);
+  assert.equal(missingHost.reasons.some((reason) => reason.code === "host_not_allowed"), true);
+
+  const wrongHost = evaluateConnectorControlPlaneRequest({
+    request,
+    policy: basePolicy,
+    networkPolicies,
+    networkProof: {
+      policyId: "provider-network",
+      host: "api.evil.example",
+      networkEvaluation,
+    },
+  });
+  assert.equal(wrongHost.allowed, false);
+  assert.equal(wrongHost.reasons.some((reason) => reason.code === "host_not_allowed"), true);
+});
+
 test("connector capability ids expose domain action and facet", () => {
   assert.equal(isConnectorCapabilityId("media.image.edit"), true);
   assert.equal(isConnectorCapabilityId("media.image.edit.transparent-background"), false);
