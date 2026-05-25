@@ -91,4 +91,15 @@ describe("AgentStoreFS connection secrets", () => {
     );
     expect(fs.existsSync(outsidePath)).toBe(false);
   });
+
+  test("skips interrupted records whose yaml path is unreadable", () => {
+    const home = tempHome();
+    const store = new AgentStoreFS({ home });
+
+    const brokenAgentDir = path.join(home, "agents", "interrupted-agent");
+    fs.mkdirSync(path.join(brokenAgentDir, "agent.yaml"), { recursive: true });
+
+    expect(store.readAgent("interrupted-agent")).toBeNull();
+    expect(store.listAgents().map((agent) => agent.id)).not.toContain("interrupted-agent");
+  });
 });

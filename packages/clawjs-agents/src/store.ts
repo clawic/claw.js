@@ -207,7 +207,8 @@ export class AgentStoreFS {
     const folder = this.agentDir(id);
     const yamlPath = join(folder, "agent.yaml");
     if (!existsSync(yamlPath)) return null;
-    const yaml = parseSimpleYaml(readFileSync(yamlPath, "utf8"));
+    const yaml = this.safeReadYaml(yamlPath);
+    if (!yaml) return null;
     const instructions = this.safeReadText(join(folder, "instructions.md"));
     const personalityYaml = parseSimpleYaml(this.safeReadText(join(folder, "personalities.yaml")));
     const skillsYaml = parseSimpleYaml(this.safeReadText(join(folder, "skills.yaml")));
@@ -311,7 +312,8 @@ export class AgentStoreFS {
     const folder = this.personalityDir(id);
     const yamlPath = join(folder, "personality.yaml");
     if (!existsSync(yamlPath)) return null;
-    const yaml = parseSimpleYaml(readFileSync(yamlPath, "utf8"));
+    const yaml = this.safeReadYaml(yamlPath);
+    if (!yaml) return null;
     const prompt = this.safeReadText(join(folder, "prompt.md"));
     return {
       id: yamlString(yaml, "id", id),
@@ -347,7 +349,8 @@ export class AgentStoreFS {
     const folder = this.collectionDir(id);
     const yamlPath = join(folder, "collection.yaml");
     if (!existsSync(yamlPath)) return null;
-    const yaml = parseSimpleYaml(readFileSync(yamlPath, "utf8"));
+    const yaml = this.safeReadYaml(yamlPath);
+    if (!yaml) return null;
     return {
       id: yamlString(yaml, "id", id),
       name: yamlString(yaml, "name", "Unnamed collection"),
@@ -380,7 +383,8 @@ export class AgentStoreFS {
     const folder = this.connectionDir(id);
     const yamlPath = join(folder, "connection.yaml");
     if (!existsSync(yamlPath)) return null;
-    const yaml = parseSimpleYaml(readFileSync(yamlPath, "utf8"));
+    const yaml = this.safeReadYaml(yamlPath);
+    if (!yaml) return null;
     const lastSync = yamlString(yaml, "lastSyncAt");
     return {
       id: yamlString(yaml, "id", id),
@@ -481,6 +485,14 @@ export class AgentStoreFS {
       return readFileSync(path, "utf8");
     } catch {
       return "";
+    }
+  }
+
+  private safeReadYaml(path: string): ReturnType<typeof parseSimpleYaml> | null {
+    try {
+      return parseSimpleYaml(readFileSync(path, "utf8"));
+    } catch {
+      return null;
     }
   }
 
