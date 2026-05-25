@@ -684,6 +684,11 @@ test("dense data OS resolves direct CLI intent phrases without executing them", 
   assert.equal(labNotebookList.system?.id, "eln");
   assert.equal(labNotebookList.center?.collectionName, "lab_notebooks");
 
+  const utilityAccountList = resolveClawProfessionalRecordsIntent("claw utility-account list");
+  assert.equal(utilityAccountList.status, "workflow_gap");
+  assert.equal(utilityAccountList.system?.id, "energy_utilities");
+  assert.equal(utilityAccountList.center?.collectionName, undefined);
+
   const medicationAdd = resolveClawProfessionalRecordsIntent("claw medication add --patient p_123");
   assert.equal(medicationAdd.status, "partial");
   assert.equal(medicationAdd.system?.id, "health");

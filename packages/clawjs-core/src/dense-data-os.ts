@@ -1583,6 +1583,20 @@ export function resolveClawProfessionalRecordsIntent(phrase: string): ClawProfes
   if (centerMatch) {
     const action = tokens[1];
     if (action && clawProfessionalRecordsOsRegistry.standardCollectionActions.includes(action)) {
+      if (!centerMatch.center.collectionName && action !== "purge") {
+        return professionalRecordsIntentResolution(
+          phrase,
+          normalizedPhrase,
+          "workflow_gap",
+          [`Matched direct dense-data noun ${centerMatch.center.commandNoun}, but the center is not yet backed by a canonical collection.`],
+          ["Graduate this center to a collection, relation model, fixtures, and CLI smoke tests before treating it as executable."],
+          {
+            system: centerMatch.system,
+            center: centerMatch.center,
+            matchedRoute: `claw ${centerMatch.center.commandNoun} ${action}`,
+          },
+        );
+      }
       return professionalRecordsIntentResolution(phrase, normalizedPhrase, sensitivityStatusFor(centerMatch.system, tokens), [`Matched direct dense-data noun ${centerMatch.center.commandNoun}.`], nextStepsFor(centerMatch.system, tokens), {
         system: centerMatch.system,
         center: centerMatch.center,
