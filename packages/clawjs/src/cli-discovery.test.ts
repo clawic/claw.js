@@ -68,6 +68,18 @@ test("runCli rejects invalid discovery search limits", async () => {
   }
 });
 
+test("runCli rejects invalid codebase tests filters", async () => {
+  const result = await runCliCapture(["inspect", "codebase", "--summary", "--tests", "maybe", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; message: string }; meta: { canonicalCommand: string; subcommand: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_codebase_tests_filter");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /Expected --tests to be true or false/);
+  assert.equal(payload.meta.canonicalCommand, "inspect");
+  assert.equal(payload.meta.subcommand, "codebase");
+});
+
 test("dense data commands use persistent workspace data routes", () => {
   const commonSource = fs.readFileSync(new URL("./cli-dense-data-semantic-common.ts", import.meta.url), "utf8");
   const commandSource = fs.readFileSync(new URL("./cli-dense-data-command.ts", import.meta.url), "utf8");

@@ -22,6 +22,12 @@ interface CliContext {
 const CLI_EXIT_OK = 0;
 const CLI_EXIT_FAILURE = 1;
 const CLI_EXIT_USAGE = 64;
+const INSPECT_SUBCOMMANDS = [
+  "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "stable", "compat", "apis", "private-apis", "env", "packages", "native", "formats", "provider-mappings", "protocols", "events", "schemas", "ids", "cli", "surfaces", "surface-parity", "external", "render",
+] as const;
+function inspectUsage(binName: string): string {
+  return `Usage: ${binName} inspect ${INSPECT_SUBCOMMANDS.join("|")}`;
+}
 
 class InspectCliError extends Error {
   readonly code: string;
@@ -613,7 +619,7 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
   const pathPrefix = input.flags["path-prefix"];
   const symbol = input.flags.symbol;
   const language = input.flags.language;
-  const tests = input.flags.tests;
+  const tests = parseCodebaseManifestTestsFilter(input.flags.tests);
   const limit = parseCodebaseManifestLimit(input.flags.limit);
   const hasFilters = !!(pathPrefix || symbol || language || tests !== undefined || Number.isFinite(limit));
   if (!wantsSummary && !hasFilters) return manifest;
@@ -622,10 +628,7 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
   if (pathPrefix) filteredFiles = filteredFiles.filter((file) => typeof file.path === "string" && file.path.startsWith(pathPrefix));
   if (symbol) filteredFiles = filteredFiles.filter((file) => declarationMatchesSymbol(file, symbol));
   if (language) filteredFiles = filteredFiles.filter((file) => file.language === language);
-  if (tests !== undefined) {
-    const wantsTests = tests === "true";
-    filteredFiles = filteredFiles.filter((file) => file.test === wantsTests);
-  }
+  if (tests !== undefined) filteredFiles = filteredFiles.filter((file) => file.test === tests);
   const totalMatched = filteredFiles.length;
   if (Number.isFinite(limit)) filteredFiles = filteredFiles.slice(0, Math.max(0, limit!));
 
@@ -633,7 +636,7 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
     ...(pathPrefix ? { pathPrefix } : {}),
     ...(symbol ? { symbol } : {}),
     ...(language ? { language } : {}),
-    ...(tests !== undefined ? { tests: tests === "true" } : {}),
+    ...(tests !== undefined ? { tests } : {}),
     ...(Number.isFinite(limit) ? { limit } : {}),
     totalMatched,
     returned: wantsSummary ? 0 : filteredFiles.length,
@@ -655,6 +658,13 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
     ...base,
     files: filteredFiles,
   };
+}
+
+function parseCodebaseManifestTestsFilter(raw: string | undefined): boolean | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new InspectCliError("invalid_codebase_tests_filter", `Expected --tests to be true or false, got ${raw}.`, CLI_EXIT_USAGE);
 }
 
 function parseCodebaseManifestLimit(raw: string | undefined): number | undefined {
@@ -1013,9 +1023,7 @@ function inspectJsonMeta(subcommand: string, extra: CliJsonMeta = {}): CliJsonMe
 function inspectSubcommandWhyPayload(subcommand: string) {
   const inspectCommand = resolveClawCliCommand("inspect");
   if (!inspectCommand) return null;
-  const supported = new Set([
-    "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "apis", "protocols", "events", "schemas", "ids", "cli", "surfaces", "surface-parity", "external", "render",
-  ]);
+  const supported = new Set<string>(INSPECT_SUBCOMMANDS);
   if (!supported.has(subcommand)) return null;
   return {
     type: "inspectSubcommand",
@@ -1860,7 +1868,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     }
     throw new InspectCliError("usage_error", `Unsupported inspect render format: ${format}`, CLI_EXIT_USAGE);
   }
-  throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|protocols|events|schemas|ids|cli|surfaces|surface-parity|external|render`, CLI_EXIT_USAGE);
+  throw new InspectCliError("usage_error", inspectUsage(input.binName), CLI_EXIT_USAGE);
 }
 
 export async function runInspectCli(input: InspectCliInput): Promise<number> {

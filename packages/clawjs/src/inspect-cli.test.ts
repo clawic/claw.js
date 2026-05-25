@@ -290,6 +290,18 @@ test("runCli explains inspect subcommands through inspect why", async () => {
   assert.equal(payload.subcommand, "surface-parity");
   assert.equal(payload.source.file, "packages/clawjs/src/inspect-cli.ts");
   assert.equal(payload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
+
+  for (const subcommand of ["private-apis", "formats", "provider-mappings", "env", "native"]) {
+    const subcommandResult = await runCliCapture(["inspect", "why", subcommand, "--json"], process.cwd());
+    assert.equal(subcommandResult.code, CLI_EXIT_OK, subcommandResult.stderr || subcommandResult.stdout);
+    const subcommandEnvelope = parseCliJson<{
+      type: string;
+      subcommand: string;
+    }>(subcommandResult.stdout);
+    assert.equal(subcommandEnvelope.ok, true);
+    assert.equal(subcommandEnvelope.data.type, "inspectSubcommand");
+    assert.equal(subcommandEnvelope.data.subcommand, subcommand);
+  }
 });
 
 test("runCli exposes evolution policy through inspect", async () => {
