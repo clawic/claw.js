@@ -65,7 +65,7 @@ export function buildDetachedPtySpec(command: string, args: string[], platform =
 
   return {
     command: "script",
-    args: ["-qc", [command, ...args].join(" "), "/dev/null"],
+    args: ["-qc", [command, ...args].map(shellQuote).join(" "), "/dev/null"],
   };
 }
 

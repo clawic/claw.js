@@ -48,5 +48,16 @@ test("buildDetachedPtySpec wraps commands for the current platform", () => {
   }
 
   assert.equal(spec.command, "script");
-  assert.deepEqual(spec.args, ["-qc", "openclaw models status --json", "/dev/null"]);
+  assert.deepEqual(spec.args, ["-qc", "'openclaw' 'models' 'status' '--json'", "/dev/null"]);
+});
+
+test("buildDetachedPtySpec quotes linux pty arguments before handing them to shell", () => {
+  const spec = buildDetachedPtySpec("runtime-cli", ["run", "two words; touch /tmp/clawjs-nope", "quote'here"], "linux");
+
+  assert.equal(spec.command, "script");
+  assert.deepEqual(spec.args, [
+    "-qc",
+    "'runtime-cli' 'run' 'two words; touch /tmp/clawjs-nope' 'quote'\\''here'",
+    "/dev/null",
+  ]);
 });
