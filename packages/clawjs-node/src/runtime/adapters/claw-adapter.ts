@@ -108,6 +108,34 @@ function emitNoopProgress(plan: RuntimeProgressPlan, onProgress?: RuntimeProgres
   }
 }
 
+function readClawRuntimeConfigForWrite(configPath: string): Record<string, unknown> {
+  let text: string;
+  try {
+    text = fs.readFileSync(configPath, "utf8");
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? (error as { code?: unknown }).code
+      : undefined;
+    if (code === "ENOENT") {
+      return {};
+    }
+    throw error;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid Claw Runtime config JSON at ${configPath}: ${message}`);
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`Invalid Claw Runtime config at ${configPath}: expected a JSON object`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
 export const clawAdapter: RuntimeAdapter = {
   id: "claw",
   runtimeName: "Claw Runtime",
@@ -227,10 +255,8 @@ export const clawAdapter: RuntimeAdapter = {
   },
   async setDefaultModel(model, _runner, options) {
     const locations = resolveClawRuntimeLocations(options);
+    const current = readClawRuntimeConfigForWrite(locations.configPath);
     fs.mkdirSync(path.dirname(locations.configPath), { recursive: true });
-    const current = (() => {
-      try { return JSON.parse(fs.readFileSync(locations.configPath, "utf8")) as Record<string, unknown>; } catch { return {}; }
-    })();
     fs.writeFileSync(locations.configPath, `${JSON.stringify({ ...current, model }, null, 2)}\n`);
     return model;
   },

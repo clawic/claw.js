@@ -6,6 +6,7 @@ import path from "path";
 
 import type { CommandRunner } from "../contracts.ts";
 import { getRuntimeSessionDescriptor, getRuntimeResourceCatalogs, getRuntimeStatusReport } from "../engines.ts";
+import { clawAdapter } from "./claw-adapter.ts";
 import { codexAdapter } from "./codex-adapter.ts";
 import { hermesAdapter } from "./hermes-adapter.ts";
 import { nanobotAdapter } from "./nanobot-adapter.ts";
@@ -118,6 +119,19 @@ test("codex adapter treats Codex config as read-only", async () => {
     /Codex config is an external read-only source/
   );
   assert.equal(fs.readFileSync(configPath, "utf8"), 'model = "gpt-5.3-codex"\n');
+});
+
+test("claw adapter rejects corrupt config when setting default model", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-claw-corrupt-config-"));
+  const configPath = path.join(homeDir, "config.json");
+  fs.writeFileSync(configPath, "{bad", "utf8");
+  const runner = new FakeRunner({});
+
+  await assert.rejects(
+    () => clawAdapter.setDefaultModel("openai/gpt-5-mini", runner, { adapter: "claw", homeDir }),
+    /Invalid Claw Runtime config JSON/
+  );
+  assert.equal(fs.readFileSync(configPath, "utf8"), "{bad");
 });
 
 test("hermes adapter exposes structured capabilities, resources, and transport metadata", async () => {
