@@ -128,3 +128,46 @@ test("guidance match rejects invalid limits before matching", async (t) => {
   assert.equal(negativePayload.ok, false);
   assert.equal(negativePayload.error.code, "invalid_guidance_limit");
 });
+
+test("resources read rejects invalid max byte limits before reading", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-resources-max-bytes-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const resourcesDir = path.join(cwd, "resources");
+  const filePath = path.join(cwd, "notes.txt");
+  fs.writeFileSync(filePath, "abcdef\n", "utf8");
+
+  const registered = await runCliCapture([
+    "resources", "register", filePath,
+    "--kind", "file",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(registered.code, CLI_EXIT_OK);
+  const registeredPayload = JSON.parse(registered.stdout) as { data: { id: string } };
+
+  for (const value of ["nope", "-1", "0", "256001"]) {
+    const read = await runCliCapture([
+      "resources", "read", registeredPayload.data.id,
+      "--max-bytes", value,
+      "--resources-dir", resourcesDir,
+      "--json",
+    ], cwd);
+    assert.equal(read.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(read.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_resource_max_bytes");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.resources.max_bytes");
+  }
+
+  const boundedRead = await runCliCapture([
+    "resources", "read", registeredPayload.data.id,
+    "--max-bytes", "3",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(boundedRead.code, CLI_EXIT_OK);
+  const boundedPayload = JSON.parse(boundedRead.stdout) as { data: { content: string; truncated: boolean } };
+  assert.equal(boundedPayload.data.content, "abc");
+  assert.equal(boundedPayload.data.truncated, true);
+});

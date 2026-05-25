@@ -216,7 +216,7 @@ function runResourcesCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & 
     const id = subcommand || flags.id;
     if (!id) throw new CliHandledError("usage", `Usage: claw resources ${command} <res_id>`, CLI_EXIT_USAGE);
     const payload = command === "read"
-      ? resourcesFacade.read(id, { ...(flags["max-bytes"] ? { maxBytes: Number(flags["max-bytes"]) } : {}) })
+      ? resourcesFacade.read(id, { ...(flags["max-bytes"] !== undefined ? { maxBytes: parseResourceMaxBytesFlag(flags["max-bytes"]) } : {}) })
       : command === "status"
         ? resourcesFacade.status(id)
         : command === "resolve"
@@ -242,6 +242,16 @@ function parseNonNegativeIntegerFlag(value: string, label: string): number {
   if (!Number.isInteger(parsed) || parsed < 0) {
     throw new CliHandledError("invalid_guidance_limit", `${label} must be a non-negative integer.`, CLI_EXIT_USAGE, {
       location: "cli.guidance.limit",
+    });
+  }
+  return parsed;
+}
+
+function parseResourceMaxBytesFlag(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 256_000) {
+    throw new CliHandledError("invalid_resource_max_bytes", "resources read --max-bytes must be an integer between 1 and 256000.", CLI_EXIT_USAGE, {
+      location: "cli.resources.max_bytes",
     });
   }
   return parsed;
