@@ -88,6 +88,31 @@ test("verify enforces replay window when cache provided", () => {
   );
 });
 
+test("verify rejects nonce tampering before replay cache can be bypassed", () => {
+  const sender = generateSigningKeypair();
+  const cache = new EnvelopeReplayCache();
+  const env = signEnvelope({
+    senderId: "sender-1",
+    signingPrivateKey: sender.privateKey,
+    body: { v: 1 },
+  });
+  verifyEnvelope({
+    envelope: env,
+    signingPublicKey: sender.publicKey,
+    replayCache: cache,
+  });
+  const tampered = { ...env, nonce: `${env.nonce}A` };
+  assert.throws(
+    () =>
+      verifyEnvelope({
+        envelope: tampered,
+        signingPublicKey: sender.publicKey,
+        replayCache: cache,
+      }),
+    EnvelopeSignatureError,
+  );
+});
+
 test("replay cache rejects out-of-window timestamps", () => {
   const cache = new EnvelopeReplayCache(1000);
   assert.throws(
