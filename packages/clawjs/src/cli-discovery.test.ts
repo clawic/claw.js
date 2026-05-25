@@ -632,6 +632,22 @@ test("runCli searches the registered CLI discovery surface", async () => {
   assert.equal(collection.code, CLI_EXIT_OK);
   const collectionPayload = JSON.parse(collection.stdout) as { data: { results: Array<{ canonicalName?: string; source?: string }> } };
   assert.equal(collectionPayload.data.results.some((entry) => entry.canonicalName === "leads" && entry.source === "collection"), true);
+
+  const broadAgentQuery = await runCliCapture(["search", "agent onboarding cli inspectability", "--json"], process.cwd());
+  assert.equal(broadAgentQuery.code, CLI_EXIT_OK);
+  const broadAgentPayload = JSON.parse(broadAgentQuery.stdout) as { data: { results: Array<{ source?: string; canonicalName?: string }> } };
+  assert.equal(broadAgentPayload.data.results.slice(0, 5).some((entry) => entry.source === "collection"), false);
+
+  const cliHelpQuery = await runCliCapture(["search", "CLI help search", "--json"], process.cwd());
+  assert.equal(cliHelpQuery.code, CLI_EXIT_OK);
+  const cliHelpPayload = JSON.parse(cliHelpQuery.stdout) as { data: { results: Array<{ name?: string; source?: string; canonicalName?: string }> } };
+  const cliHelpTop = cliHelpPayload.data.results.slice(0, 5);
+  assert.equal(cliHelpTop.some((entry) => entry.name === "clipboard" || entry.name?.startsWith("clinic") || entry.source === "collection"), false);
+
+  const collectionAction = await runCliCapture(["search", "lead list", "--json"], process.cwd());
+  assert.equal(collectionAction.code, CLI_EXIT_OK);
+  const collectionActionPayload = JSON.parse(collectionAction.stdout) as { data: { results: Array<{ canonicalName?: string; source?: string }> } };
+  assert.equal(collectionActionPayload.data.results.some((entry) => entry.canonicalName === "leads" && entry.source === "collection"), true);
 });
 
 test("runCli returns open list JSON in the common envelope", async () => {

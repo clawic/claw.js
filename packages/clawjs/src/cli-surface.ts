@@ -178,7 +178,7 @@ export function searchCliDiscovery(query: string, options: { limit?: number } = 
     if (sourceScore > 0) results.push({ type: "source", name: entry.source.file, canonicalName: entry.name, score: sourceScore, summary: `Implementation source for ${entry.name}.`, command: entry, path: entry.source.file });
   }
   for (const [alias, canonicalName] of Object.entries(GENERATED_COLLECTION_ALIASES)) {
-    const aliasScore = Math.max(scoreText(query, alias), scoreText(query, canonicalName));
+    const aliasScore = scoreCollectionAlias(query, alias, canonicalName);
     if (aliasScore > 0) {
       results.push({
         type: "alias",
@@ -193,6 +193,20 @@ export function searchCliDiscovery(query: string, options: { limit?: number } = 
   return results
     .sort((a, b) => b.score - a.score || a.type.localeCompare(b.type) || a.name.localeCompare(b.name))
     .slice(0, options.limit ?? 10);
+}
+
+function scoreCollectionAlias(query: string, alias: string, canonicalName: string): number {
+  const collectionActionTerms = new Set(["list", "get", "create", "update", "delete", "schema", "query", "record", "records", "collection", "collections", "db", "database"]);
+  const parts = query.trim().toLowerCase().split(/[\s._/-]+/).filter(Boolean);
+  const nonActionParts = parts.filter((part) => !collectionActionTerms.has(part));
+  if (nonActionParts.length <= 1) return Math.max(scoreText(query, alias), scoreText(query, canonicalName));
+
+  const aliasParts = `${alias} ${canonicalName}`.toLowerCase().split(/[\s._/-]+/).filter(Boolean);
+  const matchedParts = nonActionParts.filter((part) =>
+    aliasParts.some((valuePart) => valuePart === part || (part.length >= 4 && valuePart.startsWith(part)))
+  );
+  if (matchedParts.length < Math.min(nonActionParts.length, 2)) return 0;
+  return Math.max(scoreText(query, alias), scoreText(query, canonicalName));
 }
 
 export function relatedCliMatches(query: string, options: { limit?: number } = {}): Array<{
@@ -235,7 +249,7 @@ function scoreText(query: string, text: string): number {
   if (firstQueryPart && firstValuePart) {
     const firstDistance = editDistance(firstQueryPart, firstValuePart);
     if (firstValuePart === firstQueryPart) tokenScore += 40;
-    else if (firstValuePart.startsWith(firstQueryPart)) tokenScore += 30;
+    else if (firstQueryPart.length >= 4 && firstValuePart.startsWith(firstQueryPart)) tokenScore += 30;
     else if (firstDistance <= 1 && Math.max(firstQueryPart.length, firstValuePart.length) >= 4) tokenScore += 35;
     else if (firstDistance <= 2 && Math.max(firstQueryPart.length, firstValuePart.length) >= 5) tokenScore += 28;
   }
@@ -244,7 +258,7 @@ function scoreText(query: string, text: string): number {
       tokenScore += 20;
       continue;
     }
-    if (valueParts.some((valuePart) => valuePart.startsWith(part))) {
+    if (part.length >= 4 && valueParts.some((valuePart) => valuePart.startsWith(part))) {
       tokenScore += 16;
       continue;
     }
