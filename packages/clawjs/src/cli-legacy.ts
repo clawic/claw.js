@@ -82,6 +82,7 @@ import { runCommandsCli } from "./cli-commands-command.ts";
 import { runDebtCli } from "./cli-debt-command.ts";
 import { runGovernanceCli } from "./cli-governance-command.ts";
 import { runEvolutionCli } from "./cli-evolution-command.ts";
+import { runMaturityCli } from "./cli-maturity-command.ts";
 import { runArchiveCli } from "./cli-archive-command.ts";
 import { runSafetyCli } from "./cli-safety-command.ts";
 import { enabledModuleIdsForConfig, hasModuleConfigForCli, readEffectiveModuleConfigForCli, requiredModuleForCliGroup, runModulesCli, runSetupCli } from "./cli-modules-command.ts";
@@ -430,9 +431,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   }
 
   if (group === "maturity") {
-    const passthroughTarget = command === "show" ? subcommand : command && !["list", "audit", "tier"].includes(command) ? command : undefined;
-    const delegatedPositionals = passthroughTarget ? ["inspect", "maturity", passthroughTarget] : ["inspect", "maturity"];
-    return await runInspectCli({ argv: delegatedPositionals, positionals: delegatedPositionals, flags, context, wantsJson, binName });
+    return await runMaturityCli({ positionals, flags, context, wantsJson, binName });
   }
 
   if (group === "domains") {

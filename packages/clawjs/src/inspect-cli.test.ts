@@ -87,9 +87,29 @@ test("runCli exposes the generated stable surface inspection CLI", async () => {
 
   const maturityCommand = await runCliCapture(["maturity", "show", "system.telemetry", "--json"], process.cwd());
   assert.equal(maturityCommand.code, CLI_EXIT_OK);
-  const maturityCommandPayload = parseCliJson<{ entries: Array<{ id: string; parentId?: string; maturity: string }> }>(maturityCommand.stdout).data;
+  const maturityCommandEnvelope = parseCliJson<{ entries: Array<{ id: string; parentId?: string; maturity: string }> }>(maturityCommand.stdout);
+  assert.equal(maturityCommandEnvelope.meta.canonicalCommand, "maturity");
+  assert.equal(maturityCommandEnvelope.meta.subcommand, "show");
+  const maturityCommandPayload = maturityCommandEnvelope.data;
   assert.equal(maturityCommandPayload.entries.some((entry) => entry.id === "system.telemetry" && entry.maturity === "experimental"), true);
   assert.equal(maturityCommandPayload.entries.some((entry) => entry.parentId === "system.telemetry"), true);
+
+  const maturityAudit = await runCliCapture(["maturity", "audit", "--json"], process.cwd());
+  assert.equal(maturityAudit.code, CLI_EXIT_OK);
+  const maturityAuditEnvelope = parseCliJson<{ ok: boolean; failures: string[]; checkedEntries: number }>(maturityAudit.stdout);
+  assert.equal(maturityAuditEnvelope.meta.canonicalCommand, "maturity");
+  assert.equal(maturityAuditEnvelope.meta.subcommand, "audit");
+  assert.equal(maturityAuditEnvelope.data.ok, true);
+  assert.equal(maturityAuditEnvelope.data.failures.length, 0);
+  assert.equal(maturityAuditEnvelope.data.checkedEntries > 0, true);
+
+  const maturityTier = await runCliCapture(["maturity", "tier", "--json"], process.cwd());
+  assert.equal(maturityTier.code, CLI_EXIT_OK);
+  const maturityTierEnvelope = parseCliJson<{ activationTierOrder: string[]; blockedCode: string }>(maturityTier.stdout);
+  assert.equal(maturityTierEnvelope.meta.canonicalCommand, "maturity");
+  assert.equal(maturityTierEnvelope.meta.subcommand, "tier");
+  assert.deepEqual(maturityTierEnvelope.data.activationTierOrder, ["stable", "beta", "experimental", "dev"]);
+  assert.equal(maturityTierEnvelope.data.blockedCode, "maturity_blocked");
 
   const show = await runCliCapture(["inspect", "show", "/database/core", "--json"], process.cwd());
   assert.equal(show.code, CLI_EXIT_OK);
