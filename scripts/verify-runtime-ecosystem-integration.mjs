@@ -304,6 +304,9 @@ function main() {
     }
     if (runtimeId === "hermes") {
       const hermesSurface = new Map((matrix.nativeSurface ?? []).map((row) => [row.domain, row.officialCommands ?? []]));
+      if (!snapshot.sources?.includes("https://hermes-agent.nousresearch.com/docs/user-guide/sessions")) {
+        errors.push("Hermes official snapshot must cite the Sessions guide before claiming session command inventory");
+      }
       const requiredHermesCommands = {
         sessions: ["hermes chat", "hermes -z <prompt>", "hermes sessions browse", "hermes sessions export <output> [--session-id ID]", "hermes sessions delete <session-id>", "hermes sessions prune", "hermes sessions stats"],
         skills: ["hermes skills browse", "hermes skills inspect", "hermes bundles list", "hermes curator run --dry-run"],
