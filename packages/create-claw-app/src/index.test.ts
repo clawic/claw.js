@@ -85,6 +85,45 @@ test("runCreateClawApp refuses non-empty target directories", async () => {
   assert.match(stderr.getOutput(), /not empty/);
 });
 
+test("runCreateClawApp rejects target paths outside the workspace", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-escape-"));
+  const outsideDir = path.join(path.dirname(tempRoot), `${path.basename(tempRoot)}-outside`);
+  fs.rmSync(outsideDir, { recursive: true, force: true });
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawApp(["../" + path.basename(outsideDir), "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_APP_EXIT_FAILURE);
+  assert.match(stderr.getOutput(), /inside the current workspace/);
+  assert.equal(fs.existsSync(outsideDir), false);
+});
+
+test("runCreateClawApp rejects symlinked target directories", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-symlink-"));
+  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-symlink-target-"));
+  const symlinkPath = path.join(tempRoot, "linked-app");
+  try {
+    fs.symlinkSync(outsideDir, symlinkPath, "dir");
+  } catch {
+    return;
+  }
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawApp(["linked-app", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_APP_EXIT_FAILURE);
+  assert.match(stderr.getOutput(), /inside the current workspace|symbolic link/);
+  assert.equal(fs.existsSync(path.join(outsideDir, "package.json")), false);
+});
+
 test("runCreateClawApp runs the selected package manager when installation is enabled", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-install-"));
   const commands: Array<{ command: string; args: string[]; cwd: string }> = [];

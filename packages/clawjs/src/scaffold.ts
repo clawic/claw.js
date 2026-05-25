@@ -61,6 +61,11 @@ function ensureTargetDirectory(targetPath: string): void {
     return;
   }
 
+  const linkStat = fs.lstatSync(targetPath);
+  if (linkStat.isSymbolicLink()) {
+    throw new Error(`Target path must not be a symbolic link: ${targetPath}`);
+  }
+
   const stat = fs.statSync(targetPath);
   if (!stat.isDirectory()) {
     throw new Error(`Target path already exists and is not a directory: ${targetPath}`);
@@ -69,6 +74,35 @@ function ensureTargetDirectory(targetPath: string): void {
   const existingEntries = fs.readdirSync(targetPath);
   if (existingEntries.length > 0) {
     throw new Error(`Target directory is not empty: ${targetPath}`);
+  }
+}
+
+function pathStaysInside(basePath: string, targetPath: string): boolean {
+  const relative = path.relative(basePath, targetPath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function nearestExistingAncestor(targetPath: string): string {
+  let current = path.resolve(targetPath);
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) return current;
+    current = parent;
+  }
+  return current;
+}
+
+function assertTargetPathInsideCwd(cwd: string, targetPath: string): void {
+  const basePath = path.resolve(cwd);
+  const resolvedTarget = path.resolve(targetPath);
+  if (!pathStaysInside(basePath, resolvedTarget)) {
+    throw new Error(`Target path must stay inside the current workspace: ${targetPath}`);
+  }
+
+  const realBase = fs.realpathSync(basePath);
+  const realAncestor = fs.realpathSync(nearestExistingAncestor(resolvedTarget));
+  if (!pathStaysInside(realBase, realAncestor)) {
+    throw new Error(`Target path must stay inside the current workspace: ${targetPath}`);
   }
 }
 
@@ -127,6 +161,7 @@ export async function scaffoldProject(options: ScaffoldProjectOptions): Promise<
   const git = options.git ?? false;
   const exec = options.context.runCommand ?? runCommand;
 
+  assertTargetPathInsideCwd(options.context.cwd, options.targetPath);
   ensureTargetDirectory(options.targetPath);
   await copyTemplateDirectory(options.templateDir, options.targetPath, options.replacements);
 
