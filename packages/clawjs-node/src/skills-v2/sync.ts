@@ -6,6 +6,8 @@ import type { SkillSpec, SkillSyncMode, SkillSyncReport, SkillSyncTarget } from 
 import { NodeFileSystemHost } from "../host/filesystem.ts";
 import type { SkillsStore } from "./store.ts";
 
+const MANAGED_COPY_MARKER = ".claw-skill-sync.json";
+
 export interface SyncEngineOptions {
   store: SkillsStore;
   filesystem?: NodeFileSystemHost;
@@ -81,10 +83,13 @@ export class SkillsSyncEngine {
         if (stat.isSymbolicLink()) {
           const linkTarget = fs.readlinkSync(entryPath);
           const resolved = path.isAbsolute(linkTarget) ? linkTarget : path.resolve(targetHome, linkTarget);
-          if (resolved.startsWith(this.store.skillsDir)) {
+          if (isPathInside(resolved, this.store.skillsDir)) {
             fs.unlinkSync(entryPath);
             report.removed.push({ slug: entryName, target: target.id });
           }
+        } else if (stat.isDirectory() && this.isManagedCopy(entryPath)) {
+          fs.rmSync(entryPath, { recursive: true, force: true });
+          report.removed.push({ slug: entryName, target: target.id });
         }
       } catch {
         // ignore
@@ -126,13 +131,15 @@ export class SkillsSyncEngine {
         const current = fs.readlinkSync(dest);
         const resolvedCurrent = path.isAbsolute(current) ? current : path.resolve(path.dirname(dest), current);
         if (resolvedCurrent === source) return;
+        if (!isPathInside(resolvedCurrent, this.store.skillsDir)) {
+          throw new Error(`refusing to replace unmanaged target ${dest}`);
+        }
         fs.unlinkSync(dest);
       } else {
-        // Existing dir/file in our path: replace with symlink only if it looks like our previous copy.
-        if (stat.isDirectory()) {
+        if (stat.isDirectory() && this.isManagedCopy(dest)) {
           fs.rmSync(dest, { recursive: true, force: true });
         } else {
-          fs.unlinkSync(dest);
+          throw new Error(`refusing to replace unmanaged target ${dest}`);
         }
       }
     } catch (err) {
@@ -146,14 +153,52 @@ export class SkillsSyncEngine {
   private ensureCopy(source: string, dest: string): void {
     try {
       const stat = fs.lstatSync(dest);
-      if (stat.isSymbolicLink()) fs.unlinkSync(dest);
-      else if (stat.isDirectory()) fs.rmSync(dest, { recursive: true, force: true });
+      if (stat.isSymbolicLink()) {
+        const current = fs.readlinkSync(dest);
+        const resolvedCurrent = path.isAbsolute(current) ? current : path.resolve(path.dirname(dest), current);
+        if (!isPathInside(resolvedCurrent, this.store.skillsDir)) {
+          throw new Error(`refusing to replace unmanaged target ${dest}`);
+        }
+        fs.unlinkSync(dest);
+      } else if (stat.isDirectory() && this.isManagedCopy(dest)) {
+        fs.rmSync(dest, { recursive: true, force: true });
+      } else {
+        throw new Error(`refusing to replace unmanaged target ${dest}`);
+      }
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code !== "ENOENT") throw err;
     }
     this.filesystem.ensureDir(dest);
     copyDirRecursive(source, dest);
+    this.writeManagedCopyMarker(dest, source);
+  }
+
+  private isManagedCopy(dest: string): boolean {
+    const marker = readManagedCopyMarker(dest);
+    return Boolean(marker?.sourceDir && isPathInside(marker.sourceDir, this.store.skillsDir));
+  }
+
+  private writeManagedCopyMarker(dest: string, source: string): void {
+    fs.writeFileSync(path.join(dest, MANAGED_COPY_MARKER), `${JSON.stringify({
+      schemaVersion: 1,
+      sourceDir: source,
+      managedBy: "clawjs.skills.sync",
+    }, null, 2)}\n`);
+  }
+}
+
+function isPathInside(candidate: string, root: string): boolean {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+function readManagedCopyMarker(dest: string): { sourceDir?: string } | null {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(dest, MANAGED_COPY_MARKER), "utf8")) as { sourceDir?: unknown };
+    return typeof parsed.sourceDir === "string" ? { sourceDir: parsed.sourceDir } : null;
+  } catch {
+    return null;
   }
 }
 

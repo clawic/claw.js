@@ -7,6 +7,7 @@ import { resolveClawGlobalDataDir } from "@clawjs/core";
 
 import { createSkillsStore, resolveSkillsHome } from "./store.ts";
 import { compileSkills } from "./compile.ts";
+import { SkillsSyncEngine } from "./sync.ts";
 
 test("skills-v2 home defaults through the shared global storage helper", () => {
   assert.equal(resolveSkillsHome({ env: {} }), resolveClawGlobalDataDir({ homeDir: os.homedir() }));
@@ -124,4 +125,30 @@ test("skills-v2: capsule rendering precedes full bodies, sorted by priority", ()
   const highBodyIdx = out.indexOf("high body");
   assert.ok(highCapIdx < lowCapIdx);
   assert.ok(lowCapIdx < highBodyIdx);
+});
+
+test("skills-v2 sync preserves unmanaged target directories with matching slugs", async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-skills-v2-sync-conflict-"));
+  const targetHome = path.join(home, "external-target");
+  const store = createSkillsStore({ homeDir: home });
+  store.create({
+    slug: "cold-email",
+    kind: "procedure",
+    description: "Write a cold email.",
+    body: "Central skill body.",
+    syncTo: ["external"],
+  });
+  store.registerSyncTarget({ id: "external", home: targetHome, mode: "symlink" });
+  assert.equal(store.syncTargets().some((target) => target.id === "external"), true);
+
+  const unmanagedDir = path.join(targetHome, "cold-email");
+  fs.mkdirSync(unmanagedDir, { recursive: true });
+  fs.writeFileSync(path.join(unmanagedDir, "SKILL.md"), "user owned skill\n");
+
+  const report = await new SkillsSyncEngine({ store }).sync({ targets: ["external"] });
+
+  assert.equal(fs.lstatSync(unmanagedDir).isDirectory(), true);
+  assert.equal(fs.readFileSync(path.join(unmanagedDir, "SKILL.md"), "utf8"), "user owned skill\n");
+  assert.equal(report.synced.some((entry) => entry.slug === "cold-email"), false);
+  assert.equal(report.warnings.some((warning) => warning.includes("refusing to replace unmanaged target")), true);
 });

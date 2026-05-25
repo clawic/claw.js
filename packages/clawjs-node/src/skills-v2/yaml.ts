@@ -98,7 +98,7 @@ function formatKeyValue(key: string, value: unknown, level: number, inline: bool
     if (value.every(isScalar)) {
       return `${prefix}${safeKey}: [${value.map(formatScalar).join(", ")}]\n`;
     }
-    return `${prefix}${safeKey}:\n${stringifyYaml(value, level)}`;
+    return `${prefix}${safeKey}:\n${stringifyYaml(value, level + 1)}`;
   }
   if (isPlainObject(value)) {
     const inner = stringifyYaml(value, level + 1);
