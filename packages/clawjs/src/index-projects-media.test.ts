@@ -371,7 +371,7 @@ test("runCli reports missing document source files as usage errors", async () =>
   }
 });
 
-test("runCli rejects invalid search numeric flags for sessions and documents", async () => {
+test("runCli rejects invalid numeric flags for sessions and documents", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-search-numeric-flags-"));
 
   const cases = [
@@ -386,6 +386,16 @@ test("runCli rejects invalid search numeric flags for sessions and documents", a
       location: "cli.sessions.min-score",
     },
     {
+      args: ["sessions", "stream", "--workspace", workspaceRoot, "--session-id", "missing", "--chunk-size", "nope", "--json"],
+      code: "invalid_chunk_size",
+      location: "cli.sessions.chunk-size",
+    },
+    {
+      args: ["sessions", "stream", "--workspace", workspaceRoot, "--session-id", "missing", "--gateway-retries", "-1", "--json"],
+      code: "invalid_gateway_retries",
+      location: "cli.sessions.gateway-retries",
+    },
+    {
       args: ["documents", "search", "--workspace", workspaceRoot, "--query", "alpha", "--limit", "0", "--json"],
       code: "invalid_limit",
       location: "cli.documents.limit",
@@ -393,7 +403,7 @@ test("runCli rejects invalid search numeric flags for sessions and documents", a
   ];
 
   for (const entry of cases) {
-    const result = await runCliCapture(entry.args, { cwd: process.cwd() });
+    const result = await runCliCapture(entry.args, process.cwd());
     const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string; location: string } };
 
     assert.equal(result.code, CLI_EXIT_USAGE);

@@ -84,18 +84,44 @@ function resolveDocumentDownloadOutputPath(outputPath: string, workspaceRoot: st
   return resolvedOutputPath;
 }
 
-function readPositiveIntegerFlag(flags: Record<string, string>, name: string, location: string): number | undefined {
+function readIntegerFlag(flags: Record<string, string>, name: string, options: {
+  errorCode: string;
+  min: number;
+  location: string;
+  message: string;
+  suggestion: string;
+}): number | undefined {
   const raw = flags[name];
   if (raw === undefined) return undefined;
   const value = Number(raw);
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new CliHandledError("invalid_limit", `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
-      location,
-      suggestion: `Use --${name} with a whole number greater than zero.`,
+  if (!Number.isSafeInteger(value) || value < options.min) {
+    throw new CliHandledError(options.errorCode, options.message, CLI_EXIT_USAGE, {
+      location: options.location,
+      suggestion: options.suggestion,
       safeNextStep: `Retry the command with a valid --${name} value.`,
     });
   }
   return value;
+}
+
+function readPositiveIntegerFlag(flags: Record<string, string>, name: string, location: string): number | undefined {
+  return readIntegerFlag(flags, name, {
+    errorCode: "invalid_limit",
+    min: 1,
+    location,
+    message: `--${name} must be a positive integer.`,
+    suggestion: `Use --${name} with a whole number greater than zero.`,
+  });
+}
+
+function readNonNegativeIntegerFlag(flags: Record<string, string>, name: string, location: string, errorCode: string): number | undefined {
+  return readIntegerFlag(flags, name, {
+    errorCode,
+    min: 0,
+    location,
+    message: `--${name} must be a non-negative integer.`,
+    suggestion: `Use --${name} with zero or a whole number greater than zero.`,
+  });
 }
 
 function readNonNegativeNumberFlag(flags: Record<string, string>, name: string, location: string): number | undefined {
@@ -328,16 +354,24 @@ if (group === "sessions" && command === "stream") {
     context.stderr.write("--session-id is required\n");
     return CLI_EXIT_USAGE;
   }
-  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const transport = (flags.transport as "auto" | "gateway" | "cli" | undefined) ?? "auto";
+  const chunkSize = readIntegerFlag(flags, "chunk-size", {
+    errorCode: "invalid_chunk_size",
+    min: 1,
+    location: "cli.sessions.chunk-size",
+    message: "--chunk-size must be a positive integer.",
+    suggestion: "Use --chunk-size with a whole number greater than zero.",
+  });
+  const gatewayRetries = readNonNegativeIntegerFlag(flags, "gateway-retries", "cli.sessions.gateway-retries", "invalid_gateway_retries");
+  const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const baseInput = {
     sessionId,
     systemPrompt: flags["system-prompt"],
     contextBlocks: parseContextBlock(flags.context),
     ruleHints: parseRuleHints(flags),
     transport,
-    ...(flags["chunk-size"] ? { chunkSize: Number(flags["chunk-size"]) } : {}),
-    ...(flags["gateway-retries"] ? { gatewayRetries: Number(flags["gateway-retries"]) } : {}),
+    ...(chunkSize !== undefined ? { chunkSize } : {}),
+    ...(gatewayRetries !== undefined ? { gatewayRetries } : {}),
   };
 
   if (argv.includes("--events")) {
