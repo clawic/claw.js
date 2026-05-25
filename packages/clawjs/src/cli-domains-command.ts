@@ -2,8 +2,8 @@ import fs from "fs";
 import http from "http";
 import path from "path";
 
-import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { writeCommandJsonError, writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
 import { currentCliEntryPath, repoRootFromCliPackage } from "./cli-open-state.ts";
 import { allOpenSurfaceHostnames, domainIndexHtml, parseClawHostSurface, type OpenSurface } from "./cli-open-surfaces.ts";
 import { portIsOpen } from "./cli-process-utils.ts";
@@ -25,6 +25,8 @@ import {
 } from "./cli-domains-config.ts";
 import { runPrivilegedScript } from "./cli-domains-privileges.ts";
 import type { CliContext } from "./index.ts";
+
+const DOMAINS_SUBCOMMANDS = ["install", "status", "uninstall", "serve"] as const;
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
@@ -166,6 +168,27 @@ export async function runDomainsCli(input: {
       process.once("SIGTERM", shutdown);
     });
     return CLI_EXIT_OK;
+  }
+
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "host", new CliHandledError(
+      "unknown_domains_subcommand",
+      command ? `Unknown domains subcommand: ${command}.` : "Missing domains subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.domains.subcommand",
+        suggestion: "Use one of the registered domains subcommands.",
+        safeNextStep: `Run ${input.binName} domains status --json to inspect domains state, or ${input.binName} help domains --json for the domains command surface.`,
+        details: {
+          received: command ?? null,
+          validSubcommands: [...DOMAINS_SUBCOMMANDS],
+        },
+      },
+    ), {
+      ...jsonMeta,
+      subcommand: command ?? null,
+    });
+    return CLI_EXIT_USAGE;
   }
 
   input.context.stderr.write(`Usage: ${input.binName} domains install|status|uninstall|serve\n`);

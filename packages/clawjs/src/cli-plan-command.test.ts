@@ -5,7 +5,59 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { parseCliJsonPayload, runCliCapture } from "./index-test-utils.ts";
+import { parseCliJsonPayload, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
+
+test("plan returns JSON usage errors for unknown subcommands without writing state", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-plan-unknown-"));
+  const dataRoot = path.join(cwd, "claw-data");
+
+  await withPatchedEnv({ CLAW_DATA_DIR: dataRoot }, async () => {
+    const result = await runCliCapture([
+      "plan",
+      "definitely_missing",
+      "--workspace",
+      cwd,
+      "--json",
+    ], cwd);
+
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    assert.equal(result.stderr, "");
+    const payload = JSON.parse(result.stdout) as {
+      ok: boolean;
+      error: {
+        code: string;
+        status: string;
+        location: string;
+        safeNextStep: string;
+        details: { received: string; validSubcommands: string[] };
+      };
+      meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "unknown_plan_subcommand");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.plan.subcommand");
+    assert.equal(payload.error.details.received, "definitely_missing");
+    assert.equal(payload.error.details.validSubcommands.includes("list"), true);
+    assert.equal(payload.error.details.validSubcommands.includes("policy"), true);
+    assert.match(payload.error.safeNextStep, /claw plan list --json/);
+    assert.match(payload.error.safeNextStep, /claw help plan --json/);
+    assert.equal(payload.meta.canonicalCommand, "plan");
+    assert.equal(payload.meta.invokedCommand, "plan");
+    assert.equal(payload.meta.subcommand, "definitely_missing");
+    assert.equal(fs.existsSync(path.join(cwd, ".claw")), false);
+    assert.equal(fs.existsSync(dataRoot), false);
+  });
+});
+
+test("plan preserves text usage for unknown subcommands", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-plan-unknown-text-"));
+  const result = await runCliCapture(["plan", "definitely_missing", "--workspace", cwd], cwd);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /^Usage: claw plan create\|list\|show\|run\|approve\|reject\|review\|complete\|fail\|cancel\|policy\n$/);
+});
 
 test("plan review rejects invalid decisions before approving", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-plan-review-decision-"));

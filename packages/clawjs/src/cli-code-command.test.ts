@@ -58,3 +58,46 @@ test("code projects discover rejects invalid max depth", async () => {
     ], "invalid_code_project_discover_max_depth");
   }
 });
+
+test("code returns JSON usage errors for unknown subcommands without writing state", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-unknown-"));
+  const codeHome = path.join(tempRoot, "code-home");
+  const workspace = path.join(tempRoot, "workspace");
+  fs.mkdirSync(workspace);
+
+  const result = await runCliCapture(["code", "definitely_missing", "--code-home", codeHome, "--json"], workspace);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const resultPayload = payload(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details: { received: string; validSubcommands: string[] };
+    };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(resultPayload.ok, false);
+  assert.equal(resultPayload.error.code, "unknown_code_subcommand");
+  assert.equal(resultPayload.error.status, "USAGE");
+  assert.equal(resultPayload.error.location, "cli.code.subcommand");
+  assert.equal(resultPayload.error.details.received, "definitely_missing");
+  assert.equal(resultPayload.error.details.validSubcommands.includes("status"), true);
+  assert.equal(resultPayload.error.details.validSubcommands.includes("projects list"), true);
+  assert.match(resultPayload.error.safeNextStep, /claw code status --json/);
+  assert.match(resultPayload.error.safeNextStep, /claw help code --json/);
+  assert.equal(resultPayload.meta.canonicalCommand, "code");
+  assert.equal(resultPayload.meta.subcommand, "definitely_missing");
+  assert.equal(fs.existsSync(codeHome), false);
+  assert.deepEqual(fs.readdirSync(workspace), []);
+});
+
+test("code preserves text usage for unknown subcommands without --json", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-text-usage-"));
+  const result = await runCliCapture(["code", "definitely_missing"], workspace);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /^Usage: claw code /);
+});

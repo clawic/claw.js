@@ -6,7 +6,7 @@ import { resolveClawPersistentSurfacePath, type MediaDirection, type MediaKind, 
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { requireCliExportReview, writeCliLegalSidecar } from "./cli-export-review.ts";
 import { scheduleGenerationArtifactSearchEvent, scheduleImageDerivedSearchEvent, scheduleMediaAssetSearchEvent } from "./cli-search-events.ts";
@@ -32,6 +32,9 @@ type CliMediaClaw = ClawInstance & {
     };
   };
 };
+
+const MEDIA_SUBCOMMANDS = ["list", "search", "read", "download", "share"] as const;
+const MEDIA_SHARE_SUBCOMMANDS = ["create", "list", "revoke", "resolve"] as const;
 
 function searchEventDataDir(workspaceRoot: string, flags: Record<string, string>): string {
   return path.resolve(flags["data-dir"] ?? resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot));
@@ -147,6 +150,32 @@ export async function runMediaGenerationCli(input: {
       subcommand: command ?? null,
       ...(subcommand ? { operation: subcommand } : {}),
     });
+  };
+  const writeMediaJsonError = (error: unknown) => {
+    const canonicalCommand = resolveMediaCanonicalCommand(group, mediaGroup);
+    writeCommandJsonError(context.stdout, canonicalCommand, error, {
+      invokedCommand: group ?? canonicalCommand,
+      subcommand: command ?? null,
+      ...(subcommand ? { operation: subcommand } : {}),
+    });
+  };
+  const mediaUsage = (
+    code: string,
+    message: string,
+    options: { location?: string; safeNextStep?: string; details?: Record<string, unknown> } = {},
+  ): number => {
+    const error = new CliHandledError(code, message, CLI_EXIT_USAGE, {
+      location: options.location ?? "cli.media.subcommand",
+      suggestion: `Use one of: ${MEDIA_SUBCOMMANDS.join(", ")}.`,
+      safeNextStep: options.safeNextStep ?? "Run claw media list --json or claw help media --json.",
+      details: {
+        validSubcommands: [...MEDIA_SUBCOMMANDS],
+        ...options.details,
+      },
+    });
+    if (wantsJson) writeMediaJsonError(error);
+    else context.stderr.write(`${error.message}\n`);
+    return error.exitCode;
   };
 async function getTypedGenerationFacade(kind: GenerationCliMediaKind) {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
@@ -309,6 +338,17 @@ if (group === "media" && command === "share" && subcommand === "resolve") {
     context.stdout.write(`${resolved?.items.map((entry) => `${entry.mediaId} ${entry.name}`).join("\n") ?? "missing"}\n`);
   }
   return resolved ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+}
+
+if (group === "media" && command === "share") {
+  return mediaUsage("unknown_media_share_subcommand", `Unknown media share subcommand: ${subcommand ?? ""}`, {
+    location: "cli.media.share.subcommand",
+    safeNextStep: "Run claw media share list --json or claw help media --json.",
+    details: {
+      received: subcommand ?? null,
+      validSubcommands: [...MEDIA_SHARE_SUBCOMMANDS],
+    },
+  });
 }
 
 if (group === "inference" && command === "generate-text") {
@@ -1023,6 +1063,12 @@ if (group === "generations" && command === "delete") {
     context.stdout.write(`${removed}\n`);
   }
   return removed ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
+}
+
+if (group === "media" && command) {
+  return mediaUsage("unknown_media_subcommand", `Unknown media subcommand: ${command}`, {
+    details: { received: command },
+  });
 }
   return null;
 }

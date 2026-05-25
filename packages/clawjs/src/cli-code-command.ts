@@ -8,6 +8,40 @@ import { formatCliTable, joinedPositionals, parseJsonFlag, readBooleanFlag } fro
 import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
 import { readJsonFile } from "./cli-runtime-utils.ts";
 
+const CODE_USAGE = "code init|projects|agents|policy|start|status|list|show|reserve|evidence add|check run|check record|commit|review approve|review reject|gate|queue|integrate|sync github|serve";
+const CODE_VALID_SUBCOMMANDS = [
+  "init",
+  "projects add",
+  "projects discover",
+  "projects list",
+  "projects show",
+  "projects remove",
+  "agents register",
+  "agents heartbeat",
+  "agents list",
+  "agents show",
+  "policy",
+  "policy show",
+  "policy validate",
+  "policy set",
+  "start",
+  "status",
+  "list",
+  "show",
+  "reserve",
+  "evidence add",
+  "check run",
+  "check record",
+  "commit",
+  "review approve",
+  "review reject",
+  "gate",
+  "queue",
+  "integrate",
+  "sync github",
+  "serve",
+] as const;
+
 function parseCodeListFlag(value: string | undefined): string[] {
   return value
     ? value.split(",").map((entry) => entry.trim()).filter(Boolean)
@@ -60,9 +94,6 @@ export async function runCodeCli(input: {
   binName: string;
 }): Promise<number> {
   const [, command, subcommand] = input.positionals;
-  const globalIndex = createCodeGlobalIndex({ rootDir: input.flags["code-home"] });
-  const localLedger = () => createCodeLedger({ cwd: input.flags.repo || input.flags.workspace || input.context.cwd });
-  const projectLedger = () => input.flags.project ? globalIndex.projectLedger(input.flags.project) : localLedger();
   const dryRun = readBooleanFlag(input.argv, input.flags, "dry-run", false);
   const wantsAll = readBooleanFlag(input.argv, input.flags, "all", false);
   const jsonMeta = () => ({
@@ -70,6 +101,33 @@ export async function runCodeCli(input: {
     subcommand: command ?? null,
     ...(subcommand ? { operation: subcommand } : {}),
   });
+
+  if (!isKnownCodeSubcommand(command, subcommand)) {
+    const usage = `Usage: ${input.binName} ${CODE_USAGE}\n`;
+    if (input.wantsJson) {
+      writeCommandJsonError(input.context.stdout, "code", new CliHandledError(
+        "unknown_code_subcommand",
+        command ? `Unknown code subcommand: ${[command, subcommand].filter(Boolean).join(" ")}.` : "Missing code subcommand.",
+        CLI_EXIT_USAGE,
+        {
+          location: "cli.code.subcommand",
+          suggestion: "Use one of error.details.validSubcommands for the code command.",
+          safeNextStep: `Run ${input.binName} code status --json or ${input.binName} help code --json.`,
+          details: {
+            received: [command, subcommand].filter(Boolean).join(" ") || null,
+            validSubcommands: [...CODE_VALID_SUBCOMMANDS],
+          },
+        },
+      ), jsonMeta());
+    } else {
+      input.context.stderr.write(usage);
+    }
+    return CLI_EXIT_USAGE;
+  }
+
+  const globalIndex = createCodeGlobalIndex({ rootDir: input.flags["code-home"] });
+  const localLedger = () => createCodeLedger({ cwd: input.flags.repo || input.flags.workspace || input.context.cwd });
+  const projectLedger = () => input.flags.project ? globalIndex.projectLedger(input.flags.project) : localLedger();
   const writeCodeJson = (data: unknown) => writeCommandJsonOk(input.context.stdout, "code", data, jsonMeta());
 
   try {
@@ -489,12 +547,45 @@ export async function runCodeCli(input: {
       return sync.status === "failed" ? CLI_EXIT_FAILURE : CLI_EXIT_OK;
     }
 
-    input.context.stderr.write(`Usage: ${input.binName} code init|projects|agents|policy|start|status|list|show|reserve|evidence add|check run|check record|commit|review approve|review reject|gate|queue|integrate|sync github|serve\n`);
+    input.context.stderr.write(`Usage: ${input.binName} ${CODE_USAGE}\n`);
     return CLI_EXIT_USAGE;
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
     if (input.wantsJson) writeCommandJsonError(input.context.stdout, "code", handled, jsonMeta());
     else input.context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
+  }
+}
+
+function isKnownCodeSubcommand(command: string | undefined, subcommand: string | undefined): boolean {
+  switch (command) {
+    case "projects":
+      return subcommand === "add" || subcommand === "discover" || subcommand === "list" || subcommand === "show" || subcommand === "remove";
+    case "agents":
+      return subcommand === "register" || subcommand === "heartbeat" || subcommand === "list" || subcommand === "show";
+    case "policy":
+      return subcommand === undefined || subcommand === "show" || subcommand === "validate" || subcommand === "set";
+    case "evidence":
+      return subcommand === "add";
+    case "check":
+      return subcommand === "run" || subcommand === "record";
+    case "review":
+      return subcommand === "approve" || subcommand === "reject";
+    case "sync":
+      return subcommand === "github";
+    case "init":
+    case "serve":
+    case "status":
+    case "list":
+    case "show":
+    case "start":
+    case "reserve":
+    case "commit":
+    case "gate":
+    case "queue":
+    case "integrate":
+      return subcommand === undefined;
+    default:
+      return false;
   }
 }

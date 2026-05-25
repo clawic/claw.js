@@ -8,6 +8,9 @@ import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseRuleReferences } from "./cli-rule-utils.ts";
 import { parseSkillParamsFlag, parseSkillScopeFlag, readAllStdin } from "./cli-value-utils.ts";
 
+const RULE_SUBCOMMANDS = ["status", "list", "get", "inspect", "propose", "approve", "archive", "scopes", "compile"] as const;
+const LIBRARY_SUBCOMMANDS = ["list", "inspect", "create", "update", "remove", "import-skill", "assign", "unassign", "resolve", "sync"] as const;
+
 export async function runRulesLibrarySkillsCli(input: {
   group: string | undefined;
   command: string | undefined;
@@ -43,6 +46,24 @@ export async function runRulesLibrarySkillsCli(input: {
 if (group === "rules") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
   const scopeId = flags.scope || flags["scope-id"];
+  const rulesUsage = (
+    code: string,
+    message: string,
+    options: { location?: string; safeNextStep?: string; details?: Record<string, unknown> } = {},
+  ): number => {
+    const error = new CliHandledError(code, message, CLI_EXIT_USAGE, {
+      location: options.location ?? "cli.rules.subcommand",
+      suggestion: `Use one of: ${RULE_SUBCOMMANDS.join(", ")}.`,
+      safeNextStep: options.safeNextStep ?? "Run claw rules list --json or claw help rules --json.",
+      details: {
+        validSubcommands: [...RULE_SUBCOMMANDS],
+        ...options.details,
+      },
+    });
+    if (wantsJson) writeSurfaceJsonError(error);
+    else context.stderr.write(`${error.message}\n`);
+    return error.exitCode;
+  };
 
   try {
     if (command === "status") {
@@ -74,6 +95,16 @@ if (group === "rules") {
     if (command === "scopes") {
       if (flags.name || flags.kind || flags.id) {
         if (!flags.name || !flags.kind) {
+          if (wantsJson) {
+            return rulesUsage("invalid_rules_scopes_usage", "rules scopes requires --kind and --name when creating or updating a scope.", {
+              location: "cli.rules.scopes",
+              safeNextStep: "Run claw rules scopes --id ID --kind KIND --name TEXT --json.",
+              details: {
+                received: { id: flags.id ?? null, kind: flags.kind ?? null, name: flags.name ?? null },
+                requiredFlags: ["--kind", "--name"],
+              },
+            });
+          }
           context.stderr.write("Usage: claw rules scopes --id ID --kind KIND --name TEXT [--parent ID] [--aliases a,b]\n");
           return CLI_EXIT_USAGE;
         }
@@ -96,6 +127,20 @@ if (group === "rules") {
 
     if (command === "propose") {
       if (!scopeId || !flags.title || !flags.content) {
+        if (wantsJson) {
+          return rulesUsage("invalid_rules_propose_usage", "rules propose requires --scope, --title, and --content.", {
+            location: "cli.rules.propose",
+            safeNextStep: "Run claw rules propose --scope ID --title TEXT --content TEXT --json.",
+            details: {
+              received: {
+                scope: scopeId ?? null,
+                title: flags.title ?? null,
+                content: flags.content ? "[provided]" : null,
+              },
+              requiredFlags: ["--scope", "--title", "--content"],
+            },
+          });
+        }
         context.stderr.write("Usage: claw rules propose --scope ID --title TEXT --content TEXT [--kind directive|default|resource]\n");
         return CLI_EXIT_USAGE;
       }
@@ -132,6 +177,13 @@ if (group === "rules") {
     if (command === "approve" || command === "archive") {
       const id = subcommand || flags.id;
       if (!id) {
+        if (wantsJson) {
+          return rulesUsage(`missing_rules_${command}_id`, `rules ${command} requires a rule id.`, {
+            location: `cli.rules.${command}`,
+            safeNextStep: `Run claw rules ${command} <id> --json.`,
+            details: { received: null, requiredArguments: ["id"] },
+          });
+        }
         context.stderr.write(`Usage: claw rules ${command} <id>\n`);
         return CLI_EXIT_USAGE;
       }
@@ -144,6 +196,13 @@ if (group === "rules") {
     if (command === "compile") {
       const prompt = subcommand || flags.prompt || flags.text || "";
       if (!prompt.trim()) {
+        if (wantsJson) {
+          return rulesUsage("missing_rules_compile_prompt", "rules compile requires a prompt.", {
+            location: "cli.rules.compile",
+            safeNextStep: "Run claw rules compile <prompt> --json.",
+            details: { received: prompt, requiredArguments: ["prompt"] },
+          });
+        }
         context.stderr.write("Usage: claw rules compile <prompt> [--brand BRAND] [--output-format website] [--json]\n");
         return CLI_EXIT_USAGE;
       }
@@ -174,11 +233,39 @@ if (group === "rules") {
     return handled.exitCode;
   }
 
+  if (wantsJson) {
+    return rulesUsage("unknown_rules_subcommand", `Unknown rules subcommand: ${command ?? ""}`, {
+      details: { received: command ?? null },
+    });
+  }
   context.stderr.write("Usage: claw rules status|list|get|propose|approve|archive|scopes|compile\n");
   return CLI_EXIT_USAGE;
 }
 
 if (group === "library") {
+  if (!isLibrarySubcommand(command)) {
+    if (wantsJson) {
+      const received = command ?? null;
+      writeSurfaceJsonError(new CliHandledError(
+        "unknown_library_subcommand",
+        received ? `Unknown library subcommand: ${received}.` : "Missing library subcommand.",
+        CLI_EXIT_USAGE,
+        {
+          location: "cli.library.subcommand",
+          suggestion: `Use one of: ${LIBRARY_SUBCOMMANDS.join(", ")}.`,
+          safeNextStep: `Run ${context.binName} library list --json to inspect library assets, or ${context.binName} help library --json for the library command surface.`,
+          details: {
+            received,
+            validSubcommands: [...LIBRARY_SUBCOMMANDS],
+          },
+        },
+      ));
+    } else {
+      context.stderr.write("Usage: claw library list|inspect|create|update|remove|import-skill|assign|unassign|resolve|sync\n");
+    }
+    return CLI_EXIT_USAGE;
+  }
+
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const targetAgentId = flags.agent || agentId;
   const targetWorkspaceId = flags.workspaceId || flags["workspace-id"] || workspaceId;
@@ -594,4 +681,8 @@ function parseIntegerFlag(value: string | undefined, name: string, code: string,
     });
   }
   return parsed;
+}
+
+function isLibrarySubcommand(command: string | undefined): command is typeof LIBRARY_SUBCOMMANDS[number] {
+  return typeof command === "string" && (LIBRARY_SUBCOMMANDS as readonly string[]).includes(command);
 }

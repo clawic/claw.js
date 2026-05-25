@@ -302,6 +302,71 @@ test("runCli rejects invalid rules compile limits before compiling", async () =>
   assert.equal(payload.meta.subcommand, "compile");
 });
 
+test("runCli returns JSON usage errors for invalid rules commands", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-usage-"));
+
+  for (const scenario of [
+    {
+      args: ["rules", "definitely_missing", "--workspace", workspaceRoot, "--json"],
+      code: "unknown_rules_subcommand",
+      location: "cli.rules.subcommand",
+      received: "definitely_missing",
+    },
+    {
+      args: ["rules", "propose", "--scope", "scope-1", "--workspace", workspaceRoot, "--json"],
+      code: "invalid_rules_propose_usage",
+      location: "cli.rules.propose",
+      received: { scope: "scope-1", title: null, content: null },
+    },
+    {
+      args: ["rules", "approve", "--workspace", workspaceRoot, "--json"],
+      code: "missing_rules_approve_id",
+      location: "cli.rules.approve",
+      received: null,
+    },
+  ]) {
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const exitCode = await runCli(scenario.args, {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_USAGE);
+    assert.equal(stderr.getOutput(), "");
+    const payload = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: {
+        code: string;
+        status: string;
+        location: string;
+        safeNextStep: string;
+        details?: { received?: unknown; validSubcommands?: string[] };
+      };
+      meta: { canonicalCommand: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, scenario.code);
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, scenario.location);
+    assert.deepEqual(payload.error.details?.received, scenario.received);
+    assert.deepEqual(payload.error.details?.validSubcommands, [
+      "status",
+      "list",
+      "get",
+      "inspect",
+      "propose",
+      "approve",
+      "archive",
+      "scopes",
+      "compile",
+    ]);
+    assert.match(payload.error.safeNextStep, /claw rules/);
+    assert.equal(payload.meta.canonicalCommand, "rules");
+  }
+});
+
 test("runCli rejects invalid rules and library priority flags before persistence", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-library-priority-"));
   const rulesDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-priority-"));

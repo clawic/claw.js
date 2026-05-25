@@ -107,6 +107,7 @@ const RULE_OPERATORS = new Set<SystemTelemetryRuleDefinition["operator"]>(["gt",
 const RULE_SEVERITIES = new Set<SystemTelemetryRuleDefinition["severity"]>(["info", "warning", "critical"]);
 const WIDGET_PRESENTATIONS = new Set<SystemTelemetryWidgetDefinition["presentation"]>(["text", "icon", "gauge", "sparkline", "threshold", "dropdown"]);
 const WIDGET_PLACEMENTS = new Set<SystemTelemetryWidgetDefinition["placement"]>(["menubar", "combined_panel", "both"]);
+const SYSTEM_SUBCOMMANDS = ["snapshot", "metrics", "history", "watch", "rules", "widgets", "providers", "controls", "capabilities"] as const;
 const MONITOR_SOURCE_ID = "system.telemetry.local";
 const MONITOR_ROLLUP_BUCKET_MS = 60_000;
 const MONITOR_METRIC_SCHEMA_SQL = String.raw`
@@ -1386,6 +1387,26 @@ function writeHuman(context: CliContext, value: unknown): void {
   context.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function unknownSystemSubcommandError(input: {
+  command: string;
+  binName: string;
+}): CliHandledError {
+  return new CliHandledError(
+    "unknown_system_subcommand",
+    `Unknown system subcommand: ${input.command}`,
+    CLI_EXIT_USAGE,
+    {
+      location: "cli.system.subcommand",
+      suggestion: "Use one of error.details.validSubcommands for the system command.",
+      safeNextStep: `Run ${input.binName} help system --json for the system command surface.`,
+      details: {
+        received: input.command,
+        validSubcommands: [...SYSTEM_SUBCOMMANDS],
+      },
+    },
+  );
+}
+
 export async function runSystemCli(input: {
   argv: string[];
   positionals: string[];
@@ -1616,5 +1637,6 @@ export async function runSystemCli(input: {
     throw new CliHandledError("usage_error", `Usage: ${input.binName} system controls list|plan|execute`, CLI_EXIT_USAGE);
   }
 
+  if (input.wantsJson) throw unknownSystemSubcommandError({ command, binName: input.binName });
   return CLI_EXIT_USAGE;
 }

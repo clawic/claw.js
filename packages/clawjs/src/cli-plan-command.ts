@@ -26,6 +26,9 @@ type CliContext = {
   cwd: string;
 };
 
+const PLAN_SUBCOMMANDS = ["create", "list", "show", "run", "approve", "reject", "review", "complete", "fail", "cancel", "policy"] as const;
+const PLAN_POLICY_SUBCOMMANDS = ["list", "add", "remove", "test"] as const;
+
 export async function runPlanCli(input: {
   positionals: string[];
   flags: Record<string, string>;
@@ -38,6 +41,8 @@ export async function runPlanCli(input: {
 }): Promise<number> {
   const { positionals, flags, argv, context, wantsJson, binName, workspaceRoot, agentId } = input;
   const [, command, subcommand] = positionals;
+  const usageExit = writePlanUsageIfInvalid({ command, subcommand, context, wantsJson, binName });
+  if (usageExit !== null) return usageExit;
   const state = readAgentPlanState(workspaceRoot);
   const save = () => writeAgentPlanState(workspaceRoot, state);
   const findPlan = (id: string | undefined): AgentPlanRecord => {
@@ -226,6 +231,38 @@ export async function runPlanCli(input: {
     return CLI_EXIT_OK;
   }
 
+  context.stderr.write(`Usage: ${binName} plan create|list|show|run|approve|reject|review|complete|fail|cancel|policy\n`);
+  return CLI_EXIT_USAGE;
+}
+
+function writePlanUsageIfInvalid(input: {
+  command: string | undefined;
+  subcommand: string | undefined;
+  context: CliContext;
+  wantsJson: boolean;
+  binName: string;
+}): number | null {
+  const { command, subcommand, context, wantsJson, binName } = input;
+  const isValidTopLevel = command !== undefined && (PLAN_SUBCOMMANDS as readonly string[]).includes(command);
+  const isValidPolicySubcommand = command !== "policy"
+    || (subcommand !== undefined && (PLAN_POLICY_SUBCOMMANDS as readonly string[]).includes(subcommand));
+  if (isValidTopLevel && isValidPolicySubcommand) return null;
+  if (wantsJson) {
+    throw new CliHandledError(
+      "unknown_plan_subcommand",
+      command ? `Unknown plan subcommand: ${[command, subcommand].filter(Boolean).join(" ")}.` : "Missing plan subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.plan.subcommand",
+        suggestion: "Use one of the registered plan subcommands.",
+        safeNextStep: `Run ${binName} plan list --json to inspect plans, or ${binName} help plan --json for the plan command surface.`,
+        details: {
+          received: command ? [command, subcommand].filter(Boolean).join(" ") : null,
+          validSubcommands: [...PLAN_SUBCOMMANDS],
+        },
+      },
+    );
+  }
   context.stderr.write(`Usage: ${binName} plan create|list|show|run|approve|reject|review|complete|fail|cancel|policy\n`);
   return CLI_EXIT_USAGE;
 }

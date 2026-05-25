@@ -104,6 +104,63 @@ test("media generation config commands reject invalid numeric flags", async () =
   }
 });
 
+test("media commands reject unknown JSON subcommands before routing to portals", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-media-unknown-subcommand-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    for (const scenario of [
+      {
+        args: ["media", "definitely_missing"],
+        code: "unknown_media_subcommand",
+        location: "cli.media.subcommand",
+        received: "definitely_missing",
+      },
+      {
+        args: ["media", "share", "definitely_missing"],
+        code: "unknown_media_share_subcommand",
+        location: "cli.media.share.subcommand",
+        received: "definitely_missing",
+      },
+    ]) {
+      const result = await runCliCapture([
+        ...scenario.args,
+        "--workspace",
+        workspaceRoot,
+        "--json",
+      ], workspaceRoot);
+      assert.equal(result.code, CLI_EXIT_USAGE, result.stdout || result.stderr);
+      assert.equal(result.stderr, "");
+      const payload = JSON.parse(result.stdout) as {
+        ok: false;
+        error: {
+          code: string;
+          status: string;
+          location: string;
+          safeNextStep: string;
+          details?: { received?: unknown; validSubcommands?: string[] };
+        };
+      };
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, scenario.code);
+      assert.equal(payload.error.status, "USAGE");
+      assert.equal(payload.error.location, scenario.location);
+      assert.equal(payload.error.details?.received, scenario.received);
+      assert.ok(payload.error.details?.validSubcommands?.length);
+      assert.match(payload.error.safeNextStep, /claw media/);
+    }
+  });
+
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw")), false);
+  assert.equal(fs.existsSync(dataRoot), false);
+});
+
 test("image commands reject invalid enum flags before writing records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-image-invalid-enums-"));
   const dataRoot = path.join(workspaceRoot, "data");

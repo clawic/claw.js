@@ -20,6 +20,9 @@ import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk } from "
 import { createCliClaw } from "./cli-claw-factory.ts";
 import { parseSoulModulesFromSetFlags, parseUserFactValue, parseUserFieldsFromSetFlags } from "./cli-value-utils.ts";
 
+const SOUL_SUBCOMMANDS = ["init", "validate", "preview", "compile", "assign", "inspect"] as const;
+const SOUL_SUBCOMMAND_SET = new Set<string>(SOUL_SUBCOMMANDS);
+
 function readUserConfidenceFlag(value: string): number {
   const trimmed = value.trim();
   const parsed = trimmed.length ? Number(trimmed) : Number.NaN;
@@ -113,6 +116,23 @@ export async function runUserKnowledgeCli(input: {
     });
   };
 if (group === "soul") {
+  if (!command || !SOUL_SUBCOMMAND_SET.has(command)) {
+    if (wantsJson) {
+      writeSurfaceJsonError(new CliHandledError("unknown_soul_subcommand", `Unknown soul subcommand: ${command ?? "(missing)"}.`, CLI_EXIT_USAGE, {
+        location: "cli.soul.subcommand",
+        suggestion: "Use one of the registered soul subcommands.",
+        safeNextStep: `Run ${context.binName ?? "claw"} soul validate --json to validate the current soul, or ${context.binName ?? "claw"} help soul --json for the soul command surface.`,
+        details: {
+          received: command ?? null,
+          validSubcommands: [...SOUL_SUBCOMMANDS],
+        },
+      }));
+    } else {
+      context.stderr.write("Usage: claw soul init|validate|preview|compile|assign|inspect ...\n");
+    }
+    return CLI_EXIT_USAGE;
+  }
+
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
   const targetSoulId = subcommand || flags.id;
   const targetAgentId = flags.agent || flags["agent-id"] || agentId;
