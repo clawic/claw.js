@@ -259,11 +259,23 @@ function writeCommandIntentLedger(workspaceRoot: string, ledger: CommandIntentLe
 }
 
 function normalizeCommandIntentLedger(value: unknown): CommandIntentLedger {
-  const state = value && typeof value === "object" ? value as Partial<CommandIntentLedger> : {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid_command_intent_ledger_shape");
+  }
+  const state = value as Partial<CommandIntentLedger>;
+  if (state.schemaVersion !== 1) {
+    throw new Error("invalid_command_intent_ledger_schema_version");
+  }
+  if (!Array.isArray(state.intents)) {
+    throw new Error("invalid_command_intent_ledger_intents");
+  }
+  if (typeof state.updatedAt !== "string" || Number.isNaN(Date.parse(state.updatedAt))) {
+    throw new Error("invalid_command_intent_ledger_updated_at");
+  }
   return {
     schemaVersion: 1,
-    intents: Array.isArray(state.intents) ? state.intents.map((entry) => normalizeCommandIntentEntry(entry, "ledger")) : [],
-    updatedAt: typeof state.updatedAt === "string" ? state.updatedAt : new Date().toISOString(),
+    intents: state.intents.map((entry) => normalizeCommandIntentEntry(entry, "ledger")),
+    updatedAt: state.updatedAt,
   };
 }
 

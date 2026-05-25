@@ -184,6 +184,29 @@ test("commands list reports corrupt workspace ledgers as stable command errors",
   assert.match(payload.error.safeNextStep, /\.claw\/command-intents\/command-intents\.json/);
 });
 
+test("commands list rejects malformed workspace ledger shapes before treating them as empty", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-command-intents-shape-"));
+  const ledgerDir = path.join(workspaceRoot, ".claw", "command-intents");
+  fs.mkdirSync(ledgerDir, { recursive: true });
+  fs.writeFileSync(path.join(ledgerDir, "command-intents.json"), `${JSON.stringify({
+    schemaVersion: 1,
+    intents: "not-an-array",
+    updatedAt: "2026-05-25T00:00:00.000Z",
+  })}\n`);
+
+  const result = await runCliCapture(["commands", "list", "--source", "ledger", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(result.code, 1);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string; safeNextStep: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_command_intent_ledger");
+  assert.equal(payload.error.status, "FAIL");
+  assert.equal(payload.error.location, "claw.workspace.command_intents.ledger");
+  assert.match(payload.error.safeNextStep, /\.claw\/command-intents\/command-intents\.json/);
+});
+
 test("commands opportunities and promote produce review packets", async () => {
   const opportunities = await runCliCapture(["commands", "opportunities", "--status", "future", "--json"], process.cwd());
   assert.equal(opportunities.code, CLI_EXIT_OK);
