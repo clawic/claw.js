@@ -20,6 +20,7 @@ import {
   type RuntimeAdapterOptions,
 } from "@clawjs/claw";
 import { requireMacCareRoutePathPattern } from "@clawjs/core";
+import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface ChatCliContext {
@@ -81,6 +82,7 @@ const DEFAULT_PROVIDER = "deepseek";
 const DEFAULT_MODEL = "deepseek-v4-pro";
 const DEFAULT_DEEPSEEK_SECRET_REF = "claw_deepseek_api_key";
 const DEEPSEEK_HOST = "api.deepseek.com";
+const SAFE_SESSION_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -164,13 +166,58 @@ function sessionsDir(flags: Record<string, string>): string {
   return path.join(chatHome(flags), "chat", "sessions");
 }
 
+function isCanonicalSessionId(sessionId: string): boolean {
+  return !!sessionId
+    && sessionId !== "."
+    && sessionId !== ".."
+    && !path.isAbsolute(sessionId)
+    && !sessionId.includes("/")
+    && !sessionId.includes("\\")
+    && SAFE_SESSION_ID_PATTERN.test(sessionId);
+}
+
+function assertCanonicalSessionId(sessionId: string): void {
+  if (isCanonicalSessionId(sessionId)) return;
+  throw new CliHandledError(
+    "invalid_chat_session_id",
+    "Chat session IDs must contain only letters, numbers, dots, underscores, or hyphens and must not be paths.",
+    CHAT_EXIT_USAGE,
+    {
+      location: "chat.sessionId",
+      suggestion: "Use an ID returned by `claw chat list`, such as chat_<id>.",
+      safeNextStep: "Run claw chat list --json and retry with one of the returned session IDs.",
+      details: { sessionId },
+    },
+  );
+}
+
 function sessionPath(flags: Record<string, string>, sessionId: string): string {
-  return path.join(sessionsDir(flags), `${sessionId}.json`);
+  assertCanonicalSessionId(sessionId);
+  const dir = path.resolve(sessionsDir(flags));
+  const target = path.resolve(dir, `${sessionId}.json`);
+  const relative = path.relative(dir, target);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new CliHandledError(
+      "invalid_chat_session_path",
+      "Chat session path resolved outside the sessions directory.",
+      CHAT_EXIT_USAGE,
+      {
+        location: "chat.sessionId",
+        suggestion: "Use an ID returned by `claw chat list`, such as chat_<id>.",
+        safeNextStep: "Run claw chat list --json and retry with one of the returned session IDs.",
+        details: { sessionId },
+      },
+    );
+  }
+  return target;
 }
 
 function readSession(flags: Record<string, string>, sessionId: string): ChatSessionRecord | null {
+  const target = sessionPath(flags, sessionId);
   try {
-    return JSON.parse(fs.readFileSync(sessionPath(flags, sessionId), "utf8")) as ChatSessionRecord;
+    const session = JSON.parse(fs.readFileSync(target, "utf8")) as ChatSessionRecord;
+    if (!isCanonicalSessionId(session.id) || session.id !== sessionId) return null;
+    return session;
   } catch {
     return null;
   }
@@ -187,7 +234,9 @@ function listSessions(flags: Record<string, string>): ChatSessionRecord[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir)
     .filter((entry) => entry.endsWith(".json"))
-    .map((entry) => readSession(flags, entry.replace(/\.json$/, "")))
+    .map((entry) => entry.replace(/\.json$/, ""))
+    .filter(isCanonicalSessionId)
+    .map((sessionId) => readSession(flags, sessionId))
     .filter((entry): entry is ChatSessionRecord => !!entry)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }

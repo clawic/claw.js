@@ -740,6 +740,35 @@ test("runCli returns chat and provider JSON in the common envelope", async () =>
   assert.equal(providerPayload.data.models.length > 0, true);
 });
 
+test("runCli rejects chat resume traversal IDs without reading outside sessions", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-chat-traversal-"));
+  const outsideSessionPath = path.join(homeDir, "chat", "outside.json");
+  const outsideSession = `${JSON.stringify({
+    id: "outside",
+    title: "outside traversal sentinel",
+    createdAt: "2026-05-25T00:00:00.000Z",
+    updatedAt: "2026-05-25T00:00:00.000Z",
+    cwd: "outside traversal cwd",
+    provider: "deepseek",
+    model: "deepseek-v4-pro",
+    wire: "responses",
+    sandbox: "read-only",
+    showReasoning: false,
+    messages: [],
+  }, null, 2)}\n`;
+  fs.mkdirSync(path.dirname(outsideSessionPath), { recursive: true });
+  fs.writeFileSync(outsideSessionPath, outsideSession);
+
+  const result = await runCliCapture(["chat", "resume", "../outside", "--home-dir", homeDir, "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_chat_session_id");
+  assert.equal(fs.readFileSync(outsideSessionPath, "utf8"), outsideSession);
+  assert.equal(result.stdout.includes("outside traversal sentinel"), false);
+  assert.equal(result.stderr.includes("outside traversal sentinel"), false);
+});
+
 test("runCli returns code JSON in the common envelope", async () => {
   const codeHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-code-json-"));
   const result = await runCliCapture(["code", "projects", "list", "--code-home", codeHome, "--json"], process.cwd());
