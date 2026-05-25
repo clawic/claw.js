@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 
 import { isMacCareFilesystemNoiseDirectoryName } from "@clawjs/core";
 import { LOCAL_TEXT_EMBEDDING_MODEL, createLocalTextEmbedding, type SearchDocumentInput, type SearchStore } from "@clawjs/search";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 
 export function resolveCodeSearchRoot(flags: Record<string, string>, cwd: string): string {
   return path.resolve(flags["code-root"] ?? flags.workspace ?? cwd);
@@ -219,9 +220,21 @@ export function isIgnoredCodeSearchDirectory(name: string): boolean {
 }
 
 function boundedNumberFlag(value: string | undefined, fallback: number, min: number, max: number): number {
-  const number = value ? Number(value) : fallback;
-  if (!Number.isFinite(number)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(number)));
+  if (value === undefined) return fallback;
+  const raw = value.trim();
+  if (!/^\d+$/.test(raw)) throw invalidCodeSymbolLimit(value, min, max);
+  const number = Number(raw);
+  if (!Number.isSafeInteger(number) || number < min || number > max) throw invalidCodeSymbolLimit(value, min, max);
+  return number;
+}
+
+function invalidCodeSymbolLimit(value: string, min: number, max: number): CliHandledError {
+  return new CliHandledError("invalid_code_symbol_limit", `--code-max-bytes must be a decimal integer between ${min} and ${max}, got ${value}.`, CLI_EXIT_USAGE, {
+    location: "cli.search.codeSymbols.maxBytes",
+    suggestion: `Pass a whole decimal byte limit such as --code-max-bytes ${Math.min(Math.max(256 * 1024, min), max)}.`,
+    safeNextStep: "Rerun the Search code symbols indexing command with a valid --code-max-bytes value.",
+    details: { flag: "code-max-bytes", value, min, max },
+  });
 }
 
 function extractCodeSearchSymbols(content: string, language: string): CodeSearchSymbol[] {

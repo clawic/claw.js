@@ -246,6 +246,60 @@ test("code.symbols event jobs refresh and tombstone individual files", async () 
     assert.deepEqual(afterDeletePayload.data.results, []);
   });
 });
+test("code.symbols event jobs reject invalid explicit code byte limits", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-limit-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const sourceRoot = path.join(workspaceRoot, "project");
+  const filePath = path.join(sourceRoot, "src", "byte-limit-refresh.ts");
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, [
+    "export function byteLimitNeedle() {",
+    "  return \"code-symbol-byte-limit-ready\";",
+    "}",
+    "",
+  ].join("\n"));
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    for (const invalidLimit of ["1.5", "1e6", "0x10", "NaN"]) {
+      const scheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "code.symbols", "--root", sourceRoot, "--path", filePath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+      assert.equal(scheduled.code, CLI_EXIT_OK, scheduled.stderr || scheduled.stdout);
+      const invalidRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1", "--code-max-bytes", invalidLimit], workspaceRoot);
+      assert.equal(invalidRun.code, CLI_EXIT_OK, invalidRun.stderr || invalidRun.stdout);
+      const invalidPayload = JSON.parse(invalidRun.stdout) as {
+        data: { worker?: { items: Array<{ source: string; operation: string; status: string; error?: string }> } };
+      };
+      const invalidItem = invalidPayload.data.worker?.items.find((entry) => entry.source === "code.symbols");
+      assert.deepEqual({ source: invalidItem?.source, operation: invalidItem?.operation, status: invalidItem?.status }, { source: "code.symbols", operation: "upsert", status: "failed" });
+      assert.equal(invalidItem?.error?.includes("invalid_code_symbol_limit"), true);
+      assert.equal(invalidItem?.error?.includes("--code-max-bytes"), true);
+      assert.equal(invalidItem?.error?.includes(invalidLimit), true);
+    }
+    const queryBeforeValidLimit = await runCliCapture(["search", "query", "byteLimitNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(queryBeforeValidLimit.code, CLI_EXIT_DEGRADED);
+    const queryBeforePayload = JSON.parse(queryBeforeValidLimit.stdout) as { data: { results: unknown[] } };
+    assert.deepEqual(queryBeforePayload.data.results, []);
+    const rescheduled = await runCliCapture(["search", "changes", "schedule", "upsert", "--source", "code.symbols", "--root", sourceRoot, "--path", filePath, "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(rescheduled.code, CLI_EXIT_OK, rescheduled.stderr || rescheduled.stdout);
+    const validRun = await runCliCapture(["search", "service", "run-once", "--source", "code.symbols", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "1", "--code-max-bytes", "1024"], workspaceRoot);
+    assert.equal(validRun.code, CLI_EXIT_OK, validRun.stderr || validRun.stdout);
+    const validPayload = JSON.parse(validRun.stdout) as {
+      data: { worker?: { items: Array<{ source: string; operation: string; status: string; indexed?: number }> } };
+    };
+    const validItem = validPayload.data.worker?.items.find((entry) => entry.source === "code.symbols");
+    assert.deepEqual({ source: validItem?.source, operation: validItem?.operation, status: validItem?.status, indexed: validItem?.indexed }, { source: "code.symbols", operation: "upsert", status: "done", indexed: 1 });
+    const query = await runCliCapture(["search", "query", "byteLimitNeedle", "--domains", "code", "--data-dir", dataRoot, "--code-root", sourceRoot, "--json", "--limit", "5"], workspaceRoot);
+    assert.equal(query.code, CLI_EXIT_OK);
+    const queryPayload = JSON.parse(query.stdout) as { data: { results: Array<{ source: string; resourceId?: string; fragments?: Array<{ title?: string }> }> } };
+    const result = queryPayload.data.results.find((entry) => entry.resourceId === "src/byte-limit-refresh.ts");
+    assert.equal(result?.source, "code.symbols");
+    assert.equal(result?.fragments?.some((fragment) => fragment.title === "function byteLimitNeedle"), true);
+  });
+});
 test("search changes schedule enqueues typed code.symbols refresh jobs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-code-changes-"));
   const dataRoot = path.join(workspaceRoot, "data");
