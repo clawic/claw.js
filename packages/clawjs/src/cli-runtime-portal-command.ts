@@ -290,16 +290,19 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         command: `runtime ${runtimeId} sessions send --session-key <id> --message <text> --confirm-runtime-write`,
         delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.send" : "blocked until native send contract",
         writesRuntime: runtimeId === "openclaw",
+        wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
         command: `runtime ${runtimeId} sessions inject --session-key <id> --message <text> --confirm-runtime-write`,
         delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.inject" : "blocked until native inject contract",
         writesRuntime: runtimeId === "openclaw",
+        wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
         command: `runtime ${runtimeId} sessions abort --session-key <id> --confirm-runtime-write`,
         delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.abort" : "blocked until native abort contract",
         writesRuntime: runtimeId === "openclaw",
+        wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
         command: `runtime ${runtimeId} sessions create --title <title>`,
@@ -311,16 +314,19 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         command: `runtime ${runtimeId} sessions pin --session-key <id>`,
         delegatesTo: "ClawJS app-state local overlay",
         writesRuntime: false,
+        writesLocalOverlay: true,
       },
       {
         command: `runtime ${runtimeId} sessions unpin --session-key <id>`,
         delegatesTo: "ClawJS app-state local overlay",
         writesRuntime: false,
+        writesLocalOverlay: true,
       },
       {
         command: `runtime ${runtimeId} sessions conflicts`,
         delegatesTo: "ClawJS app-state local overlay reconciliation report",
         writesRuntime: false,
+        writesLocalOverlay: false,
       },
       {
         command: `runtime ${runtimeId} install --dry-run`,
@@ -1363,13 +1369,44 @@ function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) 
 }
 
 function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reason: string, supportContract, extra = {}) {
+  const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
+  const requiredEvidence = extra.requiredEvidence ?? actionContract.requiredEvidence ?? [
+    "official_runtime_cli_or_api",
+    "non_destructive_fixture",
+    "round_trip_native_visibility",
+  ];
+  const wouldWriteRuntime = extra.wouldWriteRuntime ?? ["send", "inject", "abort", "create"].includes(action);
   return {
     runtimeId,
     domain: "sessions",
     action,
     status: "blocked",
+    authority: actionContract.authority ?? "runtime",
     writesRuntime: false,
+    wouldWriteRuntime,
+    writesLocalOverlay: false,
     reason,
+    blockerClass: "direct_blocker",
+    officialContractRequired: true,
+    fixtureRequired: true,
+    requiredEvidence,
+    riskControls: [
+      "no_silent_runtime_write",
+      "no_direct_runtime_store_mutation",
+      "local_overlay_only_until_contract_exists",
+    ],
+    writeBackStatus: `blocked_until_official_runtime_${action}_contract`,
+    fallbackPolicy: "do_not_synthesize_native_runtime_action",
+    supportResolution: "explicitly_product_blocked_not_a_silent_gap",
+    productDecision: "native_session_action_unsupported_until_official_runtime_contract",
+    userVisibleContract: "non_executable_action_plan_only_until_runtime_contract_exists",
+    claimEffect: "blocks_recommended_production_native_parity",
+    promotionGate: "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
+    safeDefault: "keep_unpromoted_and_do_not_synthesize_runtime_state",
+    commandShape: `runtime ${runtimeId} sessions ${action} --json`,
+    evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
+    evidenceReentryStatus: "blocked_until_upstream_contract",
+    actionContract,
     supportContract,
     ...extra,
   };

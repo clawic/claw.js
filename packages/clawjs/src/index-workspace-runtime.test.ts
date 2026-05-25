@@ -1834,6 +1834,64 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSummaryPayload.data.domains?.length, manifest.requiredDomains.length);
   assert.equal(hermesSummaryPayload.data.supportAudit?.allDomainsAccountedFor, true);
 
+  const hermesCommandsStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "commands", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesCommandsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesCommandsPayload = JSON.parse(hermesCommandsStdout.getOutput()) as {
+    data: {
+      runtimeId: string;
+      authority?: string;
+      executableByClawCli?: Array<{ command?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean; writesLocalOverlay?: boolean }>;
+      resourceDomains?: string[];
+    };
+  };
+  const hermesCommandByName = new Map((hermesCommandsPayload.data.executableByClawCli ?? []).map((entry) => [entry.command, entry]));
+  assert.equal(hermesCommandsPayload.data.runtimeId, "hermes");
+  assert.equal(hermesCommandsPayload.data.authority, "runtime_adapter");
+  assert.equal(hermesCommandsPayload.data.executableByClawCli?.length, 20);
+  assert.equal(hermesCommandsPayload.data.resourceDomains?.length, manifest.requiredDomains.length);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.writesRuntime, false);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.wouldWriteRuntime, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title>")?.wouldWriteRuntime, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.writesLocalOverlay, true);
+
+  const hermesDomainSessionsStdout = captureStream();
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "domain", "sessions", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesDomainSessionsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  })), true);
+  const hermesDomainSessionsPayload = JSON.parse(hermesDomainSessionsStdout.getOutput()) as {
+    data: {
+      runtimeId: string;
+      domain: string;
+      data: {
+        totalProjected?: number;
+        supportContract?: { writeBackAllowed?: boolean; evidenceRequirements?: Array<{ id?: string; blockerClass?: string; safeDefault?: string }> };
+        actionPolicy?: Array<{ action?: string; status?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean; authority?: string; guard?: string }>;
+        overlayState?: { overlayAuthority?: string; writesRuntime?: boolean; writeBackStatus?: string; conflictPolicy?: string };
+      };
+    };
+  };
+  const hermesActionByName = new Map((hermesDomainSessionsPayload.data.data.actionPolicy ?? []).map((entry) => [entry.action, entry]));
+  assert.equal(hermesDomainSessionsPayload.data.runtimeId, "hermes");
+  assert.equal(hermesDomainSessionsPayload.data.domain, "sessions");
+  assert.equal(hermesDomainSessionsPayload.data.data.totalProjected, 1);
+  assert.equal(hermesDomainSessionsPayload.data.data.supportContract?.writeBackAllowed, false);
+  assert.equal(hermesDomainSessionsPayload.data.data.supportContract?.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.write_back_contract" && entry.blockerClass === "direct_blocker"), true);
+  assert.equal(hermesActionByName.get("preview")?.status, "implemented");
+  assert.equal(hermesActionByName.get("send")?.status, "blocked");
+  assert.equal(hermesActionByName.get("send")?.writesRuntime, false);
+  assert.equal(hermesActionByName.get("create")?.wouldWriteRuntime, true);
+  assert.equal(hermesActionByName.get("pin")?.authority, "clawix_local_overlay");
+  assert.equal(hermesDomainSessionsPayload.data.data.overlayState?.overlayAuthority, "clawix_local_overlay");
+  assert.equal(hermesDomainSessionsPayload.data.data.overlayState?.writesRuntime, false);
+  assert.equal(hermesDomainSessionsPayload.data.data.overlayState?.writeBackStatus, "blocked_until_official_runtime_pin_api");
+  assert.equal(hermesDomainSessionsPayload.data.data.overlayState?.conflictPolicy, "no_silent_overwrite");
+
   const hermesStatusStdout = captureStream();
   assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "status", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesStatusStdout.stream,
@@ -1889,11 +1947,25 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       stderr: captureStream().stream,
       cwd: process.cwd(),
     }), CLI_EXIT_DEGRADED);
-    const blockedPayload = JSON.parse(blockedStdout.getOutput()) as { data: { runtimeId: string; action: string; status: string; writesRuntime: boolean; reason?: string } };
+    const blockedPayload = JSON.parse(blockedStdout.getOutput()) as { data: { runtimeId: string; action: string; status: string; authority?: string; writesRuntime: boolean; wouldWriteRuntime?: boolean; writesLocalOverlay?: boolean; reason?: string; blockerClass?: string; officialContractRequired?: boolean; fixtureRequired?: boolean; requiredEvidence?: string[]; safeDefault?: string; userVisibleContract?: string; claimEffect?: string; supportResolution?: string; evidenceRequirementId?: string; evidenceReentryStatus?: string; actionContract?: { guard?: string } } };
     assert.equal(blockedPayload.data.runtimeId, "hermes");
     assert.equal(blockedPayload.data.action, blockedAction);
     assert.equal(blockedPayload.data.status, "blocked");
+    assert.equal(blockedPayload.data.authority, "runtime");
     assert.equal(blockedPayload.data.writesRuntime, false);
+    assert.equal(blockedPayload.data.wouldWriteRuntime, true);
+    assert.equal(blockedPayload.data.writesLocalOverlay, false);
+    assert.equal(blockedPayload.data.blockerClass, "direct_blocker");
+    assert.equal(blockedPayload.data.officialContractRequired, true);
+    assert.equal(blockedPayload.data.fixtureRequired, true);
+    assert.equal(blockedPayload.data.requiredEvidence?.includes("official_runtime_cli_or_api"), true);
+    assert.equal(blockedPayload.data.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
+    assert.equal(blockedPayload.data.userVisibleContract, "non_executable_action_plan_only_until_runtime_contract_exists");
+    assert.equal(blockedPayload.data.claimEffect, "blocks_recommended_production_native_parity");
+    assert.equal(blockedPayload.data.supportResolution, "explicitly_product_blocked_not_a_silent_gap");
+    assert.equal(blockedPayload.data.evidenceRequirementId, `hermes.sessions.${blockedAction}.action_contract`);
+    assert.equal(blockedPayload.data.evidenceReentryStatus, "blocked_until_upstream_contract");
+    assert.equal(blockedPayload.data.actionContract?.guard, `blocked_until_${blockedAction}_contract`);
     assert.match(blockedPayload.data.reason ?? "", /fixture-backed official/);
   }
 
@@ -1903,10 +1975,14 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_DEGRADED);
-  const hermesAbortPayload = JSON.parse(hermesAbortStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; reason?: string } };
+  const hermesAbortPayload = JSON.parse(hermesAbortStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; wouldWriteRuntime?: boolean; blockerClass?: string; safeDefault?: string; evidenceRequirementId?: string; reason?: string } };
   assert.equal(hermesAbortPayload.data.action, "abort");
   assert.equal(hermesAbortPayload.data.status, "blocked");
   assert.equal(hermesAbortPayload.data.writesRuntime, false);
+  assert.equal(hermesAbortPayload.data.wouldWriteRuntime, true);
+  assert.equal(hermesAbortPayload.data.blockerClass, "direct_blocker");
+  assert.equal(hermesAbortPayload.data.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
+  assert.equal(hermesAbortPayload.data.evidenceRequirementId, "hermes.sessions.abort.action_contract");
   assert.match(hermesAbortPayload.data.reason ?? "", /fixture-backed official abort contract/);
 
   const hermesCreateStdout = captureStream();
@@ -1915,12 +1991,22 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_DEGRADED);
-  const hermesCreatePayload = JSON.parse(hermesCreateStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; wouldWriteRuntime: boolean; createPlan?: { requested?: { title?: string }; rejectedFallbacks?: string[] } } };
+  const hermesCreatePayload = JSON.parse(hermesCreateStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; wouldWriteRuntime: boolean; blockerClass?: string; officialContractRequired?: boolean; fixtureRequired?: boolean; safeDefault?: string; userVisibleContract?: string; claimEffect?: string; evidenceRequirementId?: string; createPlan?: { requested?: { title?: string }; rejectedFallbacks?: string[]; requiredEvidence?: string[]; writeBackStatus?: string; nextContract?: { fixtureRequirement?: string } } } };
   assert.equal(hermesCreatePayload.data.action, "create");
   assert.equal(hermesCreatePayload.data.status, "blocked");
   assert.equal(hermesCreatePayload.data.writesRuntime, false);
   assert.equal(hermesCreatePayload.data.wouldWriteRuntime, true);
+  assert.equal(hermesCreatePayload.data.blockerClass, "direct_blocker");
+  assert.equal(hermesCreatePayload.data.officialContractRequired, true);
+  assert.equal(hermesCreatePayload.data.fixtureRequired, true);
+  assert.equal(hermesCreatePayload.data.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
+  assert.equal(hermesCreatePayload.data.userVisibleContract, "non_executable_action_plan_only_until_runtime_contract_exists");
+  assert.equal(hermesCreatePayload.data.claimEffect, "blocks_recommended_production_native_parity");
+  assert.equal(hermesCreatePayload.data.evidenceRequirementId, "hermes.sessions.create.action_contract");
   assert.equal(hermesCreatePayload.data.createPlan?.requested?.title, "Native Draft");
+  assert.equal(hermesCreatePayload.data.createPlan?.writeBackStatus, "blocked_until_official_runtime_create_contract");
+  assert.equal(hermesCreatePayload.data.createPlan?.requiredEvidence?.includes("support_claim_guard_update"), true);
+  assert.match(hermesCreatePayload.data.createPlan?.nextContract?.fixtureRequirement ?? "", /hermetic runtime fixture/);
   assert.equal(hermesCreatePayload.data.createPlan?.rejectedFallbacks?.includes("do_not_write_directly_to_runtime_store"), true);
 
   const hermesPinStdout = captureStream();
