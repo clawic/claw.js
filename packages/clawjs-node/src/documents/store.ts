@@ -87,6 +87,11 @@ export interface DocumentStore {
   search(input: DocumentSearchInput): DocumentSearchResult[];
 }
 
+function normalizeSearchLimit(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return 20;
+  return Math.max(1, Math.floor(value));
+}
+
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -622,7 +627,7 @@ export function createDocumentStore(
           (right?.score ?? 0) - (left?.score ?? 0)
           || (right?.createdAt ?? 0) - (left?.createdAt ?? 0)
         ))
-        .slice(0, Math.max(1, input.limit ?? 20)) as DocumentSearchResult[];
+        .slice(0, normalizeSearchLimit(input.limit)) as DocumentSearchResult[];
     },
   };
 }

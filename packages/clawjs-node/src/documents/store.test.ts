@@ -38,6 +38,20 @@ test("upload indexes text documents and deduplicates canonical blob storage by h
   assert.equal(hits.some((document) => document.documentId === first.documentId), true);
 });
 
+test("document search falls back for non-finite limits", () => {
+  const { store } = createStore();
+  store.upload({
+    name: "budget.txt",
+    mimeType: "text/plain",
+    data: Buffer.from("budget alpha", "utf8").toString("base64"),
+    sessionId: "session-limit",
+  });
+
+  assert.equal(store.search({ query: "budget", limit: Number.NaN }).length, 1);
+  assert.equal(store.search({ query: "budget", limit: Number.POSITIVE_INFINITY }).length, 1);
+  assert.equal(store.search({ query: "budget", limit: 1.8 }).length, 1);
+});
+
 test("registerPath preserves stable workspace files without copying blobs", () => {
   const { workspaceDir, store } = createStore();
   const sourcePath = path.join(workspaceDir, "reports", "plan.txt");
