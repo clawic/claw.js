@@ -340,6 +340,12 @@ test("runCli exposes the evolution operator surface", async () => {
   assert.equal(payload.checks.includes("public_surface_baseline_covered"), true);
   assert.equal(payload.checks.includes("migration_lab_foundation_fixture_passed"), true);
 
+  const verifyFromOutsideRepo = await runCliCapture(["evolution", "verify", "--root", process.cwd(), "--json"], os.tmpdir());
+  assert.equal(verifyFromOutsideRepo.code, CLI_EXIT_OK);
+  const outsideRepoPayload = parseCliJsonPayload<{ status: string; policy: { sourceOfTruth: string } }>(verifyFromOutsideRepo.stdout);
+  assert.equal(outsideRepoPayload.status, "ok");
+  assert.equal(outsideRepoPayload.policy.sourceOfTruth, "clawjs");
+
   const diff = await runCliCapture(["evolution", "diff", "--json"], process.cwd());
   assert.equal(diff.code, CLI_EXIT_OK);
   const diffPayload = parseCliJsonPayload<{ status: string; requiredRecord: boolean; summary: { changed: number; uncovered: number } }>(diff.stdout);

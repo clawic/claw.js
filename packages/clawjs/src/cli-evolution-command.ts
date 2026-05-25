@@ -23,7 +23,7 @@ interface EvolutionCliInput {
 
 export async function runEvolutionCli(input: EvolutionCliInput): Promise<number> {
   const action = input.positionals[1] || "list";
-  const root = findEvolutionRoot(input.context.cwd);
+  const root = findEvolutionRoot(input.flags.root || input.context.cwd);
   const ledgerPath = path.join(root, clawEvolutionPolicy.ledger.baseline);
   const publicSurfaceBaselinePath = path.join(root, clawEvolutionPolicy.ledger.publicSurfaceBaseline);
   const fixtureDirectory = path.join(root, clawEvolutionPolicy.ledger.directory, "fixtures");
@@ -175,7 +175,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
 }
 
 function writeEvolutionUsage(input: EvolutionCliInput): number {
-  input.context.stderr.write(`Usage: ${input.binName} evolution list|show|diff|plan|dry-run|apply|verify|doctor|repair|rollback|backup|receipt|report [--json]\n`);
+  input.context.stderr.write(`Usage: ${input.binName} evolution list|show|diff|plan|dry-run|apply|verify|doctor|repair|rollback|backup|receipt|report [--root PATH] [--json]\n`);
   return CLI_EXIT_USAGE;
 }
 
