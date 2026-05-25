@@ -56,10 +56,7 @@ export function createPascalCase(value: string, fallback: string): string {
 }
 
 function ensureTargetDirectory(targetPath: string): void {
-  if (!fs.existsSync(targetPath)) {
-    fs.mkdirSync(targetPath, { recursive: true });
-    return;
-  }
+  if (!fs.existsSync(targetPath)) return;
 
   const linkStat = fs.lstatSync(targetPath);
   if (linkStat.isSymbolicLink()) {
@@ -75,6 +72,13 @@ function ensureTargetDirectory(targetPath: string): void {
   if (existingEntries.length > 0) {
     throw new Error(`Target directory is not empty: ${targetPath}`);
   }
+}
+
+function temporaryScaffoldPath(targetPath: string): string {
+  return path.join(
+    path.dirname(targetPath),
+    `.${path.basename(targetPath)}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  );
 }
 
 function pathStaysInside(basePath: string, targetPath: string): boolean {
@@ -163,7 +167,20 @@ export async function scaffoldProject(options: ScaffoldProjectOptions): Promise<
 
   assertTargetPathInsideCwd(options.context.cwd, options.targetPath);
   ensureTargetDirectory(options.targetPath);
-  await copyTemplateDirectory(options.templateDir, options.targetPath, options.replacements);
+  fs.mkdirSync(path.dirname(options.targetPath), { recursive: true });
+  const tempPath = temporaryScaffoldPath(options.targetPath);
+  try {
+    await fsp.mkdir(tempPath, { recursive: true });
+    await copyTemplateDirectory(options.templateDir, tempPath, options.replacements);
+    if (fs.existsSync(options.targetPath)) {
+      ensureTargetDirectory(options.targetPath);
+      fs.rmdirSync(options.targetPath);
+    }
+    await fsp.rename(tempPath, options.targetPath);
+  } catch (error) {
+    await fsp.rm(tempPath, { recursive: true, force: true });
+    throw error;
+  }
 
   if (install) {
     options.context.stdout.write(`Installing dependencies with ${options.packageManager}...\n`);
