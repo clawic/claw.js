@@ -5,8 +5,8 @@ import { spawnSync } from "node:child_process";
 
 import { requireMacCareRoutePathPattern } from "@clawjs/core";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import type { CliContext } from "./index.ts";
 
 export interface VerifyCliInput {
@@ -176,14 +176,24 @@ function writeResult(input: VerifyCliInput, operation: "release" | "plugin", res
   return ok ? CLI_EXIT_OK : CLI_EXIT_FAILURE;
 }
 
+function writeUsageError(input: VerifyCliInput, code: string, message: string, usage: string, operation: "release" | "plugin" | null): number {
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "verify", new CliHandledError(code, message, CLI_EXIT_USAGE), {
+      operation,
+    });
+  } else {
+    input.context.stderr.write(`${usage}\n`);
+  }
+  return CLI_EXIT_USAGE;
+}
+
 export async function runVerifyCli(input: VerifyCliInput): Promise<number> {
   const positionals = input.argv.filter((arg) => !arg.startsWith("--"));
   const operation = positionals[1];
   if (operation === "release") {
     const manifest = flagValue(input.argv, "--manifest");
     if (!manifest) {
-      input.context.stderr.write("Usage: claw verify release --manifest <file> [--json]\n");
-      return CLI_EXIT_USAGE;
+      return writeUsageError(input, "missing_verify_release_manifest", "Usage: claw verify release --manifest <file> [--json]", "Usage: claw verify release --manifest <file> [--json]", "release");
     }
     const result = validateReleaseManifest(manifest);
     return writeResult(input, "release", { manifest: path.resolve(manifest), artifactCount: result.artifacts.length, issues: result.issues }, result.ok);
@@ -191,14 +201,18 @@ export async function runVerifyCli(input: VerifyCliInput): Promise<number> {
   if (operation === "plugin") {
     const target = positionals[2];
     if (!target) {
-      input.context.stderr.write("Usage: claw verify plugin <dir|tgz> [--json]\n");
-      return CLI_EXIT_USAGE;
+      return writeUsageError(input, "missing_verify_plugin_target", "Usage: claw verify plugin <dir|tgz> [--json]", "Usage: claw verify plugin <dir|tgz> [--json]", "plugin");
     }
     const result = validatePlugin(target);
     return writeResult(input, "plugin", { target: path.resolve(target), packageName: result.packageName, issues: result.issues }, result.ok);
   }
-  input.context.stderr.write("Usage: claw verify release --manifest <file> [--json]\n       claw verify plugin <dir|tgz> [--json]\n");
-  return CLI_EXIT_USAGE;
+  return writeUsageError(
+    input,
+    "unknown_verify_operation",
+    "Usage: claw verify release --manifest <file> [--json]\n       claw verify plugin <dir|tgz> [--json]",
+    "Usage: claw verify release --manifest <file> [--json]\n       claw verify plugin <dir|tgz> [--json]",
+    null,
+  );
 }
 
 export const __verifyCliTest = {

@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
+import { CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { __verifyCliTest } from "./cli-verify-command.ts";
+import { runCliCapture } from "./index-test-utils.ts";
 
 function tempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "claw-verify-test-"));
@@ -93,4 +95,30 @@ test("verify plugin rejects lifecycle scripts without accepted metadata", () => 
   assert.equal(result.ok, false);
   assert(result.issues.some((issue) => issue.code === "lifecycle_script_review_required"));
   assert(result.issues.some((issue) => issue.code === "supply_chain_metadata_missing"));
+});
+
+test("verify usage errors keep the JSON contract", async () => {
+  const release = await runCliCapture(["verify", "release", "--json"], process.cwd());
+  assert.equal(release.code, CLI_EXIT_USAGE);
+  assert.equal(release.stderr, "");
+  const releasePayload = JSON.parse(release.stdout) as {
+    ok: boolean;
+    error: { code: string; message: string };
+    meta: { canonicalCommand: string; operation: string };
+  };
+  assert.equal(releasePayload.ok, false);
+  assert.equal(releasePayload.error.code, "missing_verify_release_manifest");
+  assert.equal(releasePayload.meta.canonicalCommand, "verify");
+  assert.equal(releasePayload.meta.operation, "release");
+
+  const plugin = await runCliCapture(["verify", "plugin", "--json"], process.cwd());
+  assert.equal(plugin.code, CLI_EXIT_USAGE);
+  const pluginPayload = JSON.parse(plugin.stdout) as {
+    ok: boolean;
+    error: { code: string };
+    meta: { operation: string };
+  };
+  assert.equal(pluginPayload.ok, false);
+  assert.equal(pluginPayload.error.code, "missing_verify_plugin_target");
+  assert.equal(pluginPayload.meta.operation, "plugin");
 });
