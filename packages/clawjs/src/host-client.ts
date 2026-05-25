@@ -143,5 +143,15 @@ function parseHostResponse(raw: string): ClawCommandResponse {
   const trimmed = raw.trim();
   if (!trimmed) throw new HostClientError("host_invalid_response", "Host returned an empty response.");
   const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? trimmed;
-  return clawCommandResponseSchema.parse(JSON.parse(firstLine));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(firstLine);
+  } catch {
+    throw new HostClientError("host_invalid_response", "Host returned invalid JSON.");
+  }
+  try {
+    return clawCommandResponseSchema.parse(parsed);
+  } catch {
+    throw new HostClientError("host_invalid_response", "Host response did not match the command protocol.");
+  }
 }
