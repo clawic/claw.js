@@ -367,6 +367,40 @@ test("runCli knowledge memories JSON errors are parseable and db memory search i
   }), CLI_EXIT_USAGE);
   assert.equal((JSON.parse(invalidStdout.getOutput()) as { ok: boolean; error: { code: string } }).error.code, "usage_error");
 
+  for (const testCase of [
+    { flag: "--confidence", value: "nope", code: "invalid_memory_confidence" },
+    { flag: "--importance", value: "1.5", code: "invalid_memory_importance" },
+  ]) {
+    const invalidNumberStdout = captureStream();
+    assert.equal(await runCli([
+      "knowledge",
+      "memories",
+      "save",
+      "Invalid numeric memory should not persist",
+      "--workspace",
+      workspaceRoot,
+      testCase.flag,
+      testCase.value,
+      "--json",
+    ], {
+      stdout: invalidNumberStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_USAGE);
+    const payload = JSON.parse(invalidNumberStdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, testCase.code);
+    assert.equal(payload.error.status, "USAGE");
+  }
+
+  const afterInvalidMemoryStdout = captureStream();
+  assert.equal(await runCli(["knowledge", "memories", "list", "--workspace", workspaceRoot, "--json"], {
+    stdout: afterInvalidMemoryStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  assert.equal((JSON.parse(afterInvalidMemoryStdout.getOutput()) as { data: { count: number } }).data.count, 0);
+
   const dbSearchStdout = captureStream();
   assert.equal(await runCli(["db", "memory", "search", "anything", "--workspace", workspaceRoot, "--json"], {
     stdout: dbSearchStdout.stream,

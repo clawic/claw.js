@@ -164,6 +164,10 @@ export async function runMemoryCli(input: MemoryCliInput): Promise<number> {
         return usageError(input, `Unsupported memory command: ${command}`);
     }
   } catch (error) {
+    if (error instanceof CliHandledError) {
+      writeError(input, error.code, error.message, error.exitCode);
+      return error.exitCode;
+    }
     const message = error instanceof Error ? error.message : String(error);
     writeError(input, "internal_error", message, MEMORY_EXIT_FAILURE);
     return MEMORY_EXIT_FAILURE;
@@ -262,8 +266,8 @@ function saveMemory(input: MemoryCliInput): number {
     scopeUser: input.flags["scope-user"],
     scopeAgent: input.flags["scope-agent"],
     scopeProject: input.flags["scope-project"],
-    confidence: readNumber(input.flags.confidence, 1),
-    importance: readNumber(input.flags.importance, 0.5),
+    confidence: readUnitNumber(input.flags.confidence, 1, "--confidence", "invalid_memory_confidence"),
+    importance: readUnitNumber(input.flags.importance, 0.5, "--importance", "invalid_memory_importance"),
     validFrom: input.flags["valid-from"],
     validTo: input.flags["valid-to"],
     supersedes: parseCsv(input.flags.supersedes),
@@ -322,8 +326,8 @@ function updateMemory(input: MemoryCliInput): number {
     scopeUser: input.flags["scope-user"] ?? currentMemory.scopeUser,
     scopeAgent: input.flags["scope-agent"] ?? currentMemory.scopeAgent,
     scopeProject: input.flags["scope-project"] ?? currentMemory.scopeProject,
-    confidence: readNumber(input.flags.confidence, currentMemory.confidence),
-    importance: readNumber(input.flags.importance, currentMemory.importance),
+    confidence: readUnitNumber(input.flags.confidence, currentMemory.confidence, "--confidence", "invalid_memory_confidence"),
+    importance: readUnitNumber(input.flags.importance, currentMemory.importance, "--importance", "invalid_memory_importance"),
     validFrom: input.flags["valid-from"] ?? currentMemory.validFrom,
     validTo: input.flags["valid-to"] ?? currentMemory.validTo,
     supersedes: input.flags.supersedes ? parseCsv(input.flags.supersedes) : currentMemory.supersedes,
@@ -707,10 +711,17 @@ function parseJsonObject(value: string | undefined): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-function readNumber(value: string | undefined, fallback: number): number {
+function readUnitNumber(value: string | undefined, fallback: number, flagName: string, code: string): number {
   if (value === undefined) return fallback;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new Error(`Invalid number: ${value}`);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw new CliHandledError(code, `${flagName} must be a number between 0 and 1.`, MEMORY_EXIT_USAGE, {
+      location: "cli.knowledge.memories",
+      suggestion: `Pass ${flagName} with a value such as 0.5, or omit it to use the default.`,
+      safeNextStep: `Rerun the knowledge memories command with a valid ${flagName} value.`,
+      details: { flag: flagName, value },
+    });
+  }
   return parsed;
 }
 
