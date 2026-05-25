@@ -27,3 +27,18 @@ test("resource registry path locators use shared home expansion", () => {
   assert.equal(resource.kind, "directory");
   assert.equal(store.read(resource.id).error, `Resource ${resource.id} is a directory.`);
 });
+
+test("resource registry read falls back for non-finite byte limits", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-resource-store-limit-"));
+  const filePath = path.join(rootDir, "notes.txt");
+  fs.writeFileSync(filePath, "alpha beta\n");
+  const store = createLocalResourceRegistryStore({ rootDir: path.join(rootDir, "registry"), env: {} });
+  const resource = store.register({
+    kind: "file",
+    locator: { kind: "path", value: filePath },
+  });
+
+  assert.equal(store.read(resource.id, { maxBytes: Number.NaN }).content, "alpha beta\n");
+  assert.equal(store.read(resource.id, { maxBytes: Number.POSITIVE_INFINITY }).content, "alpha beta\n");
+  assert.equal(store.read(resource.id, { maxBytes: 4.9 }).content, "alph");
+});

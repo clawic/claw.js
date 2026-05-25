@@ -136,7 +136,7 @@ export class LocalResourceRegistryStore {
     if (resource.kind === "directory") {
       return { resource, error: `Resource ${id} is a directory.` };
     }
-    const maxBytes = Math.max(1, options.maxBytes ?? 64_000);
+    const maxBytes = normalizeResourceReadMaxBytes(options.maxBytes);
     const buffer = fs.readFileSync(expandHome(resource.locator.value));
     return {
       resource,
@@ -166,6 +166,12 @@ export function createLocalResourceRegistryStore(options: ResourceRegistryStoreO
 
 function createResourceId(): string {
   return `res_${crypto.randomBytes(12).toString("base64url").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 18)}`;
+}
+
+function normalizeResourceReadMaxBytes(value: number | undefined): number {
+  if (value === undefined) return 64_000;
+  if (!Number.isFinite(value)) return 64_000;
+  return Math.max(1, Math.floor(value));
 }
 
 function inferResourceKind(locatorKind: ResourceRegisterInput["locator"]["kind"], value: string): ResourceKind {
