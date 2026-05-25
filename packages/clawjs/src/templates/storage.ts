@@ -5,7 +5,7 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { parseTemplateMd, serializeTemplateMd } from "./serializer.ts";
 import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
-import { isTemplateCategory, type TemplateCategory, type TemplateManifest } from "./schema.ts";
+import { isTemplateCategory, TEMPLATE_CATEGORIES, type TemplateCategory, type TemplateManifest } from "./schema.ts";
 
 function templatesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.templates", workspaceRoot);
@@ -96,6 +96,16 @@ export function listTemplates(workspaceRoot: string, filter: { category?: string
 }
 
 export function templateCategoryOrThrow(value: string): TemplateCategory {
-  if (!isTemplateCategory(value)) throw new Error(`Unknown template category: ${value}`);
+  if (!isTemplateCategory(value)) {
+    throw new CliHandledError("invalid_template_category", `Invalid template category: ${value}`, CLI_EXIT_USAGE, {
+      location: "template.category",
+      suggestion: `Use one of: ${TEMPLATE_CATEGORIES.join(", ")}.`,
+      safeNextStep: "Retry the template command with --category set to a supported template category.",
+      details: {
+        category: value,
+        allowedCategories: TEMPLATE_CATEGORIES,
+      },
+    });
+  }
   return value;
 }

@@ -1,6 +1,6 @@
 export const TEMPLATE_SCHEMA_VERSION = 1;
 
-const TEMPLATE_CATEGORIES = [
+export const TEMPLATE_CATEGORIES = [
   "presentation",
   "card",
   "poster",
