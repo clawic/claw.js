@@ -243,8 +243,9 @@ describe("MCP connector control plane", () => {
           params: { name: "system.provider_plan", arguments: { providerId: "context.weather.live", credentialRef: "secret://weather/local", reason: "unsafe-credential-test" } },
         },
       });
-      assert.equal(providerPlanWithUnsafeCredential.statusCode, 200);
-      assert.equal(providerPlanWithUnsafeCredential.json().result.content.error, "unsafe_credential_ref");
+      assert.equal(providerPlanWithUnsafeCredential.statusCode, 400);
+      assert.equal(providerPlanWithUnsafeCredential.json().error.message, "invalid_tool_arguments");
+      assert.equal(JSON.stringify(providerPlanWithUnsafeCredential.json()).includes("secret://weather/local"), false);
 
       const controls = await app.inject({
         method: "POST",
@@ -615,6 +616,34 @@ describe("MCP connector control plane", () => {
     }
   });
 
+  it("blocks invalid MCP tool arguments before protocol invocation", async () => {
+    let toolCalled = false;
+    const { app, config } = buildFixtureApp(() => {
+      toolCalled = true;
+    });
+    try {
+      await registerAndRefreshFixtureServer(app, config.sharedSecret);
+      const response = await app.inject({
+        method: "POST",
+        url: registeredPublicApiRoute("claw.api.mcp.toolsCall"),
+        headers: { authorization: `Bearer ${config.sharedSecret}` },
+        payload: {
+          prefixedName: "mcp_fixture_echo",
+          args: {},
+          controlPlane: fixtureApprovedControlPlane(),
+          agentPolicy: fixtureAgentPolicy(),
+        },
+      });
+
+      assert.equal(response.statusCode, 400);
+      assert.match(response.body, /invalid_tool_arguments/);
+      assert.match(response.body, /missing required property: text/);
+      assert.equal(toolCalled, false);
+    } finally {
+      await app.close();
+    }
+  });
+
   it("blocks regulated MCP tool calls before protocol invocation", async () => {
     let toolCalled = false;
     const { app, config } = buildFixtureApp(() => {
@@ -721,7 +750,7 @@ function buildFixtureApp(onToolCall?: () => void, macSignedHostBridge?: MacSigne
             tools: [{
               name: "echo",
               description: "Echo text.",
-              inputSchema: { type: "object", properties: { text: { type: "string" } } },
+              inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: false },
             }],
           },
         });

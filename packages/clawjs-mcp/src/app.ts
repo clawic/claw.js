@@ -27,6 +27,7 @@ import {
   mcpSystemTelemetryWidgetsPayload,
   readMcpSystemTelemetryHistory,
 } from "./system-telemetry.ts";
+import { validateMCPToolArguments } from "./tool-schema-validation.ts";
 import type {
   MCPExposedTool,
   MCPToolCallInput,
@@ -317,13 +318,18 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
     if (!tool) return await reply.code(404).send({ error: "tool_not_found" });
     const server = store.getServer(tool.serverId);
     if (!server) return await reply.code(404).send({ error: "server_not_found" });
+    const args = body.args ?? {};
+    const argsValidation = validateMCPToolArguments(tool.inputSchema, args);
+    if (!argsValidation.ok) {
+      return await reply.code(400).send({ error: "invalid_tool_arguments", details: argsValidation.errors });
+    }
     try {
       assertMCPToolControlPlane({ server, tool, controlPlane: body.controlPlane, agentPolicy: body.agentPolicy });
     } catch (error) {
       return await reply.code(403).send({ error: error instanceof Error ? error.message : String(error) });
     }
     const protocol = new MCPProtocolClient({ server, fetchImpl: options.protocolFetch });
-    return await protocol.callTool(tool.toolName, body.args ?? {});
+    return await protocol.callTool(tool.toolName, args as Record<string, unknown>);
   });
 
   app.get(clawApiPath("mcp/expose/tools"), async (request, reply) => {
@@ -357,8 +363,17 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
       if (!tool) {
         return await reply.code(404).send({ jsonrpc: "2.0", id: body.id ?? null, error: { code: -32601, message: `tool_not_found:${params.name}` } });
       }
+      const args = params.arguments ?? {};
+      const argsValidation = validateMCPToolArguments(tool.inputSchema, args);
+      if (!argsValidation.ok) {
+        return await reply.code(400).send({
+          jsonrpc: "2.0",
+          id: body.id ?? null,
+          error: { code: -32602, message: "invalid_tool_arguments", data: { details: argsValidation.errors } },
+        });
+      }
       try {
-        const content = await tool.handler(params.arguments ?? {});
+        const content = await tool.handler(args as Record<string, unknown>);
         return { jsonrpc: "2.0", id: body.id ?? null, result: { content } };
       } catch (error) {
         return await reply.code(500).send({ jsonrpc: "2.0", id: body.id ?? null, error: { code: -32000, message: error instanceof Error ? error.message : String(error) } });
