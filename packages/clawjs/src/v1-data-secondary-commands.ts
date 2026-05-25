@@ -565,13 +565,17 @@ export function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     const now = nowIso();
     const body = input.flags.file ? fs.readFileSync(path.resolve(input.cwd, expandHome(input.flags.file)), "utf8") : (input.flags.body || "");
     const secretRefs = parseCsvOrJson(input.flags["secret-refs"] || input.flags["secret-ref"]) ?? [];
+    const scopeJson = parseSkillJsonFlag(input, "scope");
+    if (scopeJson === undefined) return V1_DATA_EXIT_USAGE;
+    const metadataJson = parseSkillJsonFlag(input, "metadata");
+    if (metadataJson === undefined) return V1_DATA_EXIT_USAGE;
     store.sqlite.prepare(`
       INSERT INTO skills (id, slug, kind, name, body, scope_json, secret_refs_json, metadata_json, export_path, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(slug) DO UPDATE SET kind = excluded.kind, name = excluded.name, body = excluded.body,
         scope_json = excluded.scope_json, secret_refs_json = excluded.secret_refs_json, metadata_json = excluded.metadata_json,
         export_path = excluded.export_path, updated_at = excluded.updated_at
-    `).run(input.flags.id || `skill-${slug}`, slug, input.flags.kind || "skill", name, body, input.flags.scope ? JSON.stringify(JSON.parse(input.flags.scope)) : "{}", JSON.stringify(secretRefs), input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}", input.flags["export-path"] || null, now, now);
+    `).run(input.flags.id || `skill-${slug}`, slug, input.flags.kind || "skill", name, body, scopeJson, JSON.stringify(secretRefs), metadataJson, input.flags["export-path"] || null, now, now);
     scheduleSkillsRegistrySearchEvent({
       operation: "upsert",
       slug,
@@ -597,6 +601,17 @@ export function runSkillsCommand(input: V1DataCliInput, store: DatabaseServiceSt
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "skills"));
+}
+
+function parseSkillJsonFlag(input: V1DataCliInput, flag: "scope" | "metadata"): string | undefined {
+  const value = input.flags[flag];
+  if (value === undefined) return "{}";
+  try {
+    return JSON.stringify(JSON.parse(value));
+  } catch {
+    writeError(input, `invalid_skill_${flag}_json`, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return undefined;
+  }
 }
 
 export async function runSessionsIndexCommand(input: V1DataCliInput, store: DatabaseServiceStore): Promise<number | null> {
