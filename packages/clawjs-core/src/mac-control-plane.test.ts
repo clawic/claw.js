@@ -651,6 +651,52 @@ test("Mac action broker blocks unsafe plans and emits redacted receipts before h
   assert.deepEqual(receipt.secretRefs, ["secret_lease_wifi"]);
 });
 
+test("Mac action broker returns dry-run receipts before approval or host execution", () => {
+  const host = {
+    hostId: "host.local",
+    bundleId: "com.example.Claw",
+    signingIdentity: "Developer ID Application: Example",
+    appVariant: "standalone",
+    appVersion: "1.0.0",
+  };
+  const actor = { kind: "agent" as const, id: "agent.codex", assignmentId: "assignment.mac", runId: "run.dry" };
+  const request = macActionRequestSchema.parse({
+    schemaVersion: clawContractVersionV1,
+    requestId: "req.mac.broker.dry_run.1",
+    capabilityId: "mac.text.inject",
+    actor,
+    host,
+    target: { kind: "app", name: "Notes", selector: { bundleId: "com.apple.Notes", windowTitle: "Scratch" } },
+    arguments: { text: "do not persist this payload", secretRef: "secret_lease_text" },
+    dryRun: true,
+    reason: "Preview text injection without native mutation",
+  });
+  const plan = buildMacActionPlan({ request });
+
+  assert.equal(plan.risk, "high");
+  assert.equal(plan.willMutate, true);
+  assert.equal(plan.requiredApprovals.length, 1);
+
+  const decision = evaluateMacActionBroker({
+    request,
+    plan,
+    now: "2026-05-17T10:03:00.000Z",
+  });
+
+  assert.equal(decision.decision, "dry_run");
+  assert.deepEqual(decision.reasons, ["dry_run"]);
+  assert.equal(decision.receipt?.result, "planned");
+  assert.equal(decision.auditEvent?.result, "planned");
+  assert.deepEqual(decision.auditEvent?.metadata, { reasons: ["dry_run"] });
+  assert.equal(decision.receipt?.redaction.level, "high");
+  assert.equal(decision.receipt?.redaction.fields.includes("arguments"), true);
+  assert.equal(decision.receipt?.redaction.fields.includes("target.selector"), true);
+  assert.equal(decision.receipt?.redaction.fields.includes("secretRefs"), true);
+  assert.deepEqual(decision.receipt?.secretRefs, ["secret_lease_text"]);
+  assert.equal(JSON.stringify(decision.receipt).includes("do not persist this payload"), false);
+  assert.equal(JSON.stringify(decision.auditEvent).includes("do not persist this payload"), false);
+});
+
 test("Mac action broker records blocked permission decisions without executing native code", () => {
   const host = {
     hostId: "host.local",
