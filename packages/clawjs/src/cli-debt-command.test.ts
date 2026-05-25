@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 function writeFixtureFile(root: string, relativePath: string, content: string): void {
@@ -183,4 +183,50 @@ test("debt audit --strict exits non-zero when debt control cannot reduce debt", 
   const payload = JSON.parse(audit.stdout) as { data: { strict: boolean; audit: { strictFailures: Array<{ id: string; reason: string }> } } };
   assert.equal(payload.data.strict, true);
   assert.equal(payload.data.audit.strictFailures.some((failure) => failure.id === "flat-budget-control" && failure.reason.includes("nextMaxAllowed")), true);
+});
+
+test("debt audit honors explicit false strict flags and rejects ambiguous values", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-debt-strict-flag-"));
+  writeFixtureFile(root, "docs/code-hygiene-baseline.json", JSON.stringify({
+    schemaVersion: 1,
+    entries: [{
+      id: "flat-budget-control",
+      ownerArea: "runtime",
+      reason: "Runtime debt has a non-decreasing budget.",
+      findingTypes: ["runtime"],
+      expiresAt: "2099-01-01",
+      debtControl: {
+        ownerArea: "runtime",
+        expiresAt: "2099-01-01",
+        severity: "P1",
+        budget: {
+          metric: "runtime_debt",
+          unit: "item",
+          current: 1,
+          maxAllowed: 1,
+          nextMaxAllowed: 1,
+          target: 0,
+          cadence: "release",
+        },
+        releaseEffect: {
+          mode: "report_only",
+          targets: [],
+          gate: "node scripts/runtime-check.mjs",
+          reason: "This fixture intentionally violates strict mode.",
+        },
+      },
+    }],
+  }));
+
+  const explicitFalse = await runCliCapture(["debt", "audit", "--root", root, "--strict", "false", "--json"], process.cwd());
+  assert.equal(explicitFalse.code, CLI_EXIT_OK);
+  const falsePayload = JSON.parse(explicitFalse.stdout) as { data: { strict: boolean; audit: { strictFailures: unknown[] } } };
+  assert.equal(falsePayload.data.strict, false);
+  assert.equal(falsePayload.data.audit.strictFailures.length > 0, true);
+
+  const ambiguous = await runCliCapture(["debt", "audit", "--root", root, "--strict", "sometimes", "--json"], process.cwd());
+  assert.equal(ambiguous.code, CLI_EXIT_USAGE);
+  const ambiguousPayload = JSON.parse(ambiguous.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(ambiguousPayload.ok, false);
+  assert.equal(ambiguousPayload.error.code, "invalid_debt_strict");
 });

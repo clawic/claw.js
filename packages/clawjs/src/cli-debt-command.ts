@@ -197,7 +197,12 @@ function parseReleaseEffect(value: string | undefined): ClawDebtControlReleaseEf
 }
 
 function strictFlag(flags: Record<string, string>, argv: string[]): boolean {
-  return flags.strict === "true" || flags.strict === "1" || argv.includes("--strict");
+  const value = flags.strict;
+  if (value === undefined) return argv.includes("--strict");
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) return true;
+  if (["false", "0", "no"].includes(normalized)) return false;
+  throw new CliHandledError("invalid_debt_strict", "Use --strict as a bare flag or with true|false, 1|0, yes|no.", CLI_EXIT_USAGE);
 }
 
 function isEntryListPayload(value: unknown): value is { entries: ClawDebtLedgerEntry[] } {
