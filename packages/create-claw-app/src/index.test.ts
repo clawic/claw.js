@@ -117,3 +117,33 @@ test("runCreateClawApp returns usage errors for conflicting positional arguments
   assert.equal(exitCode, CREATE_CLAW_APP_EXIT_USAGE);
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_APP_USAGE);
 });
+
+test("runCreateClawApp rejects unsupported template values", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-template-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawApp(["demo-app", "--template=vite", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_APP_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template: vite/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "demo-app")), false);
+});
+
+test("runCreateClawApp rejects template flags without a value", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-template-missing-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawApp(["demo-app", "--template", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_APP_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template:/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "demo-app")), false);
+});

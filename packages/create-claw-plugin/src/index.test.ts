@@ -124,3 +124,33 @@ test("runCreateClawPlugin returns usage errors for conflicting positional argume
   assert.equal(exitCode, CREATE_CLAW_PLUGIN_EXIT_USAGE);
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_PLUGIN_USAGE);
 });
+
+test("runCreateClawPlugin rejects unsupported template values", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-plugin-template-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawPlugin(["jira-integration", "--template=browser", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_PLUGIN_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template: browser/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "jira-integration")), false);
+});
+
+test("runCreateClawPlugin rejects template flags without a value", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-plugin-template-missing-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawPlugin(["jira-integration", "--template", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_PLUGIN_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template:/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "jira-integration")), false);
+});

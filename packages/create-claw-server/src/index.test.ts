@@ -119,3 +119,33 @@ test("runCreateClawServer returns usage errors for conflicting positional argume
   assert.equal(exitCode, CREATE_CLAW_SERVER_EXIT_USAGE);
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_SERVER_USAGE);
 });
+
+test("runCreateClawServer rejects unsupported template values", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-server-template-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawServer(["demo-server", "--template=express", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_SERVER_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template: express/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "demo-server")), false);
+});
+
+test("runCreateClawServer rejects template flags without a value", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-server-template-missing-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawServer(["demo-server", "--template", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_SERVER_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template:/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "demo-server")), false);
+});

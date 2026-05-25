@@ -21,7 +21,7 @@ interface ParsedArgs {
   targetDir: string | null;
   install: boolean;
   packageManager: SupportedPackageManager;
-  template: "next";
+  template: string;
   wantsHelp: boolean;
 }
 
@@ -29,7 +29,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let targetDir: string | null = null;
   let install = true;
   let packageManager: SupportedPackageManager = detectPackageManager();
-  let template: "next" = "next";
+  let template = "next";
   let wantsHelp = false;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -58,16 +58,18 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (token === "--template") {
       const value = argv[index + 1];
-      if (value === "next") {
+      if (value && !value.startsWith("--")) {
         template = value;
         index += 1;
+      } else {
+        template = "";
       }
       continue;
     }
 
     if (token.startsWith("--template=")) {
       const value = token.slice("--template=".length);
-      if (value === "next") template = value;
+      template = value;
       continue;
     }
 

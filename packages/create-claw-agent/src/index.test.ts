@@ -132,3 +132,33 @@ test("runCreateClawAgent returns usage errors for conflicting positional argumen
   assert.equal(exitCode, CREATE_CLAW_AGENT_EXIT_USAGE);
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_AGENT_USAGE);
 });
+
+test("runCreateClawAgent rejects unsupported template values", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-agent-template-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawAgent(["support-agent", "--template=python", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_AGENT_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template: python/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "support-agent")), false);
+});
+
+test("runCreateClawAgent rejects template flags without a value", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-agent-template-missing-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawAgent(["support-agent", "--template", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_AGENT_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unsupported template:/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "support-agent")), false);
+});
