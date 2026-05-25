@@ -118,6 +118,26 @@ test("local: env vars are passed through and respected by /usr/bin/env", async (
   }
 });
 
+test("local: process env is not inherited unless explicitly granted", async () => {
+  const ctx = await spinUp();
+  const envKey = "CLAW_SANDBOX_LEAK_CANARY";
+  const previous = process.env[envKey];
+  process.env[envKey] = "should-not-leak";
+  try {
+    const result = await ctx.client.run({
+      backend: "local",
+      command: "node",
+      args: ["-e", `process.stdout.write(process.env.${envKey} || "")`],
+    });
+    assert.equal(result.status, "completed");
+    assert.equal(result.stdout, "");
+  } finally {
+    if (previous === undefined) delete process.env[envKey];
+    else process.env[envKey] = previous;
+    await ctx.close();
+  }
+});
+
 test("local: non-zero exit code records status=failed with exitCode", async () => {
   const ctx = await spinUp();
   try {

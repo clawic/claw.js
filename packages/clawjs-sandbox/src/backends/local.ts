@@ -3,6 +3,9 @@ import { spawn } from "node:child_process";
 import type { BackendAdapter, RunRequest } from "../types.ts";
 
 const STREAM_LIMIT_BYTES = 4 * 1024 * 1024;
+const INHERITED_ENV_KEYS = process.platform === "win32"
+  ? ["PATH", "Path", "PATHEXT", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "ComSpec"]
+  : ["PATH"];
 
 function clip(buffer: Buffer, limit: number): { text: string; truncated: boolean } {
   if (buffer.byteLength <= limit) return { text: buffer.toString("utf8"), truncated: false };
@@ -12,13 +15,22 @@ function clip(buffer: Buffer, limit: number): { text: string; truncated: boolean
   };
 }
 
+function buildProcessEnv(requestEnv: Record<string, string> | null | undefined): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of INHERITED_ENV_KEYS) {
+    const value = process.env[key];
+    if (value !== undefined) env[key] = value;
+  }
+  return { ...env, ...(requestEnv ?? {}) };
+}
+
 export const localBackend: BackendAdapter = {
   kind: "local",
   async run(request: RunRequest) {
     return await new Promise((resolve) => {
       const child = spawn(request.command, request.args ?? [], {
         cwd: request.cwd ?? undefined,
-        env: { ...process.env, ...(request.env ?? {}) },
+        env: buildProcessEnv(request.env),
         stdio: ["pipe", "pipe", "pipe"],
       });
 
