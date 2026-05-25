@@ -222,15 +222,39 @@ function normalizeStringArray(value: unknown): string[] {
     : [];
 }
 
+function describePolicyValue(value: unknown): string {
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return JSON.stringify(value);
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  return Array.isArray(value) ? "array" : typeof value;
+}
+
+function normalizeSafeIntegerPolicyValue(input: {
+  source: Record<string, unknown>;
+  key: string;
+  path: string;
+  defaultValue: number;
+  minimum: number;
+}): number {
+  if (!Object.prototype.hasOwnProperty.call(input.source, input.key)) return input.defaultValue;
+  const value = input.source[input.key];
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < input.minimum) {
+    const range = input.minimum === 0 ? "a safe non-negative integer" : "a safe positive integer";
+    throw new Error(`Invalid code policy ${input.path}: expected ${range}, got ${describePolicyValue(value)}.`);
+  }
+  return value;
+}
+
 function normalizeMinimumByKind(value: unknown): Record<CodeChangeKind, number> {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   return {
-    fix: Math.max(0, Number(source.fix ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.fix) || 0),
-    feat: Math.max(0, Number(source.feat ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.feat) || 0),
-    refactor: Math.max(0, Number(source.refactor ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.refactor) || 0),
-    docs: Math.max(0, Number(source.docs ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.docs) || 0),
-    test: Math.max(0, Number(source.test ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.test) || 0),
-    chore: Math.max(0, Number(source.chore ?? DEFAULT_CODE_POLICY.evidence.minimumByKind.chore) || 0),
+    fix: normalizeSafeIntegerPolicyValue({ source, key: "fix", path: "evidence.minimumByKind.fix", defaultValue: DEFAULT_CODE_POLICY.evidence.minimumByKind.fix, minimum: 0 }),
+    feat: normalizeSafeIntegerPolicyValue({ source, key: "feat", path: "evidence.minimumByKind.feat", defaultValue: DEFAULT_CODE_POLICY.evidence.minimumByKind.feat, minimum: 0 }),
+    refactor: normalizeSafeIntegerPolicyValue({ source, key: "refactor", path: "evidence.minimumByKind.refactor", defaultValue: DEFAULT_CODE_POLICY.evidence.minimumByKind.refactor, minimum: 0 }),
+    docs: normalizeSafeIntegerPolicyValue({ source, key: "docs", path: "evidence.minimumByKind.docs", defaultValue: DEFAULT_CODE_POLICY.evidence.minimumByKind.docs, minimum: 0 }),
+    test: normalizeSafeIntegerPolicyValue({ source, key: "test", path: "evidence.minimumByKind.test", defaultValue: DEFAULT_CODE_POLICY.evidence.minimumByKind.test, minimum: 0 }),
+    chore: normalizeSafeIntegerPolicyValue({ source, key: "chore", path: "evidence.minimumByKind.chore", defaultValue: DEFAULT_CODE_POLICY.evidence.minimumByKind.chore, minimum: 0 }),
   };
 }
 
@@ -255,10 +279,10 @@ function normalizePolicy(raw: unknown): CodeIntegrationPolicy {
     },
     evidence: {
       minimumByKind: normalizeMinimumByKind(evidence.minimumByKind),
-      highRiskMinimum: Math.max(0, Number(evidence.highRiskMinimum ?? DEFAULT_CODE_POLICY.evidence.highRiskMinimum) || 0),
+      highRiskMinimum: normalizeSafeIntegerPolicyValue({ source: evidence, key: "highRiskMinimum", path: "evidence.highRiskMinimum", defaultValue: DEFAULT_CODE_POLICY.evidence.highRiskMinimum, minimum: 0 }),
     },
     risk: {
-      largeDiffThreshold: Math.max(1, Number(risk.largeDiffThreshold ?? DEFAULT_CODE_POLICY.risk.largeDiffThreshold) || DEFAULT_CODE_POLICY.risk.largeDiffThreshold),
+      largeDiffThreshold: normalizeSafeIntegerPolicyValue({ source: risk, key: "largeDiffThreshold", path: "risk.largeDiffThreshold", defaultValue: DEFAULT_CODE_POLICY.risk.largeDiffThreshold, minimum: 1 }),
       criticalPaths: normalizeStringArray(risk.criticalPaths).length > 0 ? normalizeStringArray(risk.criticalPaths) : DEFAULT_CODE_POLICY.risk.criticalPaths,
       requireHumanReviewForHighRisk: typeof risk.requireHumanReviewForHighRisk === "boolean" ? risk.requireHumanReviewForHighRisk : DEFAULT_CODE_POLICY.risk.requireHumanReviewForHighRisk,
     },
