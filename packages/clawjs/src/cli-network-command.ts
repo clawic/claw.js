@@ -170,8 +170,11 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
 
 function parseNonNegativeInteger(value: string | undefined, fallback: number, flagName: string): number {
   if (value === undefined) return fallback;
+  if (!/^[0-9]+$/.test(value)) {
+    throw new CliHandledError("invalid_network_event_bytes", `${flagName} must be a non-negative integer.`, CLI_EXIT_USAGE);
+  }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+  if (!Number.isSafeInteger(parsed)) {
     throw new CliHandledError("invalid_network_event_bytes", `${flagName} must be a non-negative integer.`, CLI_EXIT_USAGE);
   }
   return parsed;
@@ -179,8 +182,11 @@ function parseNonNegativeInteger(value: string | undefined, fallback: number, fl
 
 function parseNetworkLimit(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
+  if (!/^[0-9]+$/.test(value)) {
+    throw new CliHandledError("invalid_network_limit", "--limit must be a non-negative integer.", CLI_EXIT_USAGE);
+  }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+  if (!Number.isSafeInteger(parsed)) {
     throw new CliHandledError("invalid_network_limit", "--limit must be a non-negative integer.", CLI_EXIT_USAGE);
   }
   return parsed;
@@ -188,6 +194,9 @@ function parseNetworkLimit(value: string | undefined, fallback: number): number 
 
 function parseNetworkPriority(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
+  if (!/^-?[0-9]+$/.test(value)) {
+    throw new CliHandledError("invalid_network_rule_priority", "--priority must be an integer.", CLI_EXIT_USAGE);
+  }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed)) {
     throw new CliHandledError("invalid_network_rule_priority", "--priority must be an integer.", CLI_EXIT_USAGE);
@@ -197,6 +206,9 @@ function parseNetworkPriority(value: string | undefined, fallback: number): numb
 
 function parseNetworkPort(value: string | undefined, fallback: number | undefined): number | undefined {
   if (value === undefined) return fallback;
+  if (!/^[0-9]+$/.test(value)) {
+    throw new CliHandledError("invalid_network_rule_port", "--port must be an integer TCP port between 1 and 65535.", CLI_EXIT_USAGE);
+  }
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) {
     throw new CliHandledError("invalid_network_rule_port", "--port must be an integer TCP port between 1 and 65535.", CLI_EXIT_USAGE);

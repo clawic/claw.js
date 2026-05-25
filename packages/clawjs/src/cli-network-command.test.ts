@@ -139,6 +139,26 @@ test("network CLI rejects invalid event byte counters before recording", async (
   assert.equal(negativePayload.error.code, "invalid_network_event_bytes");
   assert.equal(negativePayload.error.status, "USAGE");
   assert.equal(fs.existsSync(monitorDb), false);
+
+  for (const bytesIn of ["1e3", "0x10", "+10"]) {
+    const result = await runCliCapture([
+      "network",
+      "events",
+      "record",
+      "--workspace",
+      workspace,
+      "--monitor-db",
+      monitorDb,
+      "--bytes-in",
+      bytesIn,
+      "--json",
+    ], workspace);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { error: { code: string; status: string } };
+    assert.equal(payload.error.code, "invalid_network_event_bytes");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(fs.existsSync(monitorDb), false);
+  }
 });
 
 test("network CLI rejects invalid history limits before opening Monitor storage", async () => {
@@ -182,6 +202,25 @@ test("network CLI rejects invalid history limits before opening Monitor storage"
   assert.equal(suggestionsPayload.error.code, "invalid_network_limit");
   assert.equal(suggestionsPayload.error.status, "USAGE");
   assert.equal(fs.existsSync(monitorDb), false);
+
+  for (const limit of ["1e3", "0x10", "+10"]) {
+    const result = await runCliCapture([
+      "network",
+      "events",
+      "--workspace",
+      workspace,
+      "--monitor-db",
+      monitorDb,
+      "--limit",
+      limit,
+      "--json",
+    ], workspace);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { error: { code: string; status: string } };
+    assert.equal(payload.error.code, "invalid_network_limit");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(fs.existsSync(monitorDb), false);
+  }
 });
 
 test("network CLI rejects invalid rule numeric flags before writing control state", async () => {
@@ -241,6 +280,60 @@ test("network CLI rejects invalid rule numeric flags before writing control stat
   assert.equal(invalidPortPayload.error.code, "invalid_network_rule_port");
   assert.equal(invalidPortPayload.error.status, "USAGE");
   assert.equal(fs.existsSync(statePath), false);
+
+  for (const priority of ["1e3", "0x10", "+10"]) {
+    const result = await runCliCapture([
+      "network",
+      "rules",
+      "upsert",
+      `network.rule.invalid.priority.${priority.replace(/[^a-z0-9]/gi, "_")}`,
+      "--workspace",
+      workspace,
+      "--action",
+      "deny",
+      "--subject-kind",
+      "gateway",
+      "--endpoint-kind",
+      "gateway_route",
+      "--endpoint",
+      "remote.searchGateway",
+      "--priority",
+      priority,
+      "--json",
+    ], workspace);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { error: { code: string; status: string } };
+    assert.equal(payload.error.code, "invalid_network_rule_priority");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(fs.existsSync(statePath), false);
+  }
+
+  for (const port of ["1e3", "0x10", "+10"]) {
+    const result = await runCliCapture([
+      "network",
+      "rules",
+      "upsert",
+      `network.rule.invalid.port.${port.replace(/[^a-z0-9]/gi, "_")}`,
+      "--workspace",
+      workspace,
+      "--action",
+      "deny",
+      "--subject-kind",
+      "gateway",
+      "--endpoint-kind",
+      "gateway_route",
+      "--endpoint",
+      "remote.searchGateway",
+      "--port",
+      port,
+      "--json",
+    ], workspace);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { error: { code: string; status: string } };
+    assert.equal(payload.error.code, "invalid_network_rule_port");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(fs.existsSync(statePath), false);
+  }
 });
 
 test("network CLI applies rules to Gateway route explanations and suggestions never auto-apply", async () => {
