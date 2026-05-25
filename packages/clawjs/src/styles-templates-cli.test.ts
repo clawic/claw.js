@@ -75,3 +75,44 @@ test("template get reports invalid TEMPLATE.md manifests as usage errors", async
   assert.equal(payload.meta.canonicalCommand, "templates");
   assert.equal(payload.meta.subcommand, "get");
 });
+
+test("reference get reports malformed REFERENCE.md frontmatter as a json usage error", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-reference-frontmatter-"));
+  writeFile(root, ".claw/references/bad-reference/REFERENCE.md", "---json\n{bad\n---\n# Bad reference\n");
+
+  const result = await runCliCapture(["ref", "get", "bad-reference", "--workspace", root, "--json"], root);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_reference_frontmatter_json");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "reference.frontmatter");
+  assert.equal(payload.meta.canonicalCommand, "references");
+  assert.equal(payload.meta.subcommand, "get");
+});
+
+test("reference get reports invalid REFERENCE.md manifests as usage errors", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-reference-manifest-"));
+  writeFile(root, ".claw/references/bad-reference/REFERENCE.md", "---json\n{\"id\":\"bad-reference\",\"type\":\"unknown\",\"name\":\"Bad reference\"}\n---\n# Bad reference\n");
+
+  const result = await runCliCapture(["ref", "get", "bad-reference", "--workspace", root, "--json"], root);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string; message: string };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_reference_manifest");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "reference.manifest");
+  assert.match(payload.error.message, /type/);
+  assert.equal(payload.meta.canonicalCommand, "references");
+  assert.equal(payload.meta.subcommand, "get");
+});

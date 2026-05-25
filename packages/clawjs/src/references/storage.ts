@@ -3,6 +3,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
+import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 import { REFERENCE_SCHEMA_VERSION, isReferenceType, type ReferenceManifest, type ReferenceType } from "./schema.ts";
 
 const FRONTMATTER_OPEN = "---json";
@@ -48,29 +49,88 @@ function parseReferenceMd(content: string): ReferenceManifest {
   const closeIndex = fromBody.indexOf(`\n${FRONTMATTER_CLOSE}`);
   if (closeIndex < 0) throw new Error(`REFERENCE.md frontmatter missing closing '${FRONTMATTER_CLOSE}'`);
   const head = fromBody.slice(0, closeIndex);
-  const parsed = JSON.parse(head) as Partial<ReferenceManifest>;
+  const parsed = parseReferenceFrontmatterJson(head);
   return normalizeReferenceManifest(parsed);
 }
 
+function parseReferenceFrontmatterJson(head: string): Partial<ReferenceManifest> {
+  try {
+    return JSON.parse(head) as Partial<ReferenceManifest>;
+  } catch (error) {
+    throw new CliHandledError(
+      "invalid_reference_frontmatter_json",
+      `REFERENCE.md frontmatter must be valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      CLI_EXIT_USAGE,
+      {
+        location: "reference.frontmatter",
+        suggestion: "Fix the JSON block between the ---json and --- fences before reading the reference.",
+        safeNextStep: "Validate REFERENCE.md as JSON frontmatter, then rerun claw ref get --json.",
+      },
+    );
+  }
+}
+
 export function normalizeReferenceManifest(input: Partial<ReferenceManifest>): ReferenceManifest {
-  if (!input || typeof input !== "object") throw new Error("Reference manifest must be an object");
-  if (!input.id) throw new Error("Reference manifest missing 'id'");
-  if (!input.type || !isReferenceType(input.type)) throw new Error(`Reference manifest invalid type: ${String(input.type)}`);
-  if (!input.name) throw new Error("Reference manifest missing 'name'");
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw referenceManifestUsageError("Reference manifest must be an object");
+  }
+  const id = requiredReferenceString(input.id, "id");
+  const type = requiredReferenceString(input.type, "type");
+  if (!isReferenceType(type)) throw referenceManifestUsageError(`Reference manifest invalid type: ${type}`);
+  const name = requiredReferenceString(input.name, "name");
   return {
     schemaVersion: REFERENCE_SCHEMA_VERSION,
-    id: input.id,
-    type: input.type,
-    name: input.name,
-    source: input.source,
-    asset: input.asset,
-    tags: input.tags ?? [],
-    description: input.description,
-    styleIds: input.styleIds ?? [],
-    extractedStyle: input.extractedStyle,
-    createdAt: input.createdAt ?? new Date().toISOString(),
-    updatedAt: input.updatedAt ?? new Date().toISOString(),
+    id,
+    type,
+    name,
+    source: optionalReferenceString(input.source, "source"),
+    asset: optionalReferenceString(input.asset, "asset"),
+    tags: optionalReferenceStringArray(input.tags, "tags") ?? [],
+    description: optionalReferenceString(input.description, "description"),
+    styleIds: optionalReferenceStringArray(input.styleIds, "styleIds") ?? [],
+    extractedStyle: optionalReferenceObject(input.extractedStyle, "extractedStyle"),
+    createdAt: optionalReferenceString(input.createdAt, "createdAt") ?? new Date().toISOString(),
+    updatedAt: optionalReferenceString(input.updatedAt, "updatedAt") ?? new Date().toISOString(),
   };
+}
+
+function referenceManifestUsageError(message: string): CliHandledError {
+  return new CliHandledError("invalid_reference_manifest", message, CLI_EXIT_USAGE, {
+    location: "reference.manifest",
+    suggestion: "Fix the REFERENCE.md JSON manifest fields before reading or linking the reference.",
+    safeNextStep: "Run the reference command again after correcting the manifest field named in the error.",
+  });
+}
+
+function requiredReferenceString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw referenceManifestUsageError(`Reference manifest missing or invalid '${field}'`);
+  }
+  return value;
+}
+
+function optionalReferenceString(value: unknown, field: string): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") {
+    throw referenceManifestUsageError(`Reference manifest field '${field}' must be a string`);
+  }
+  return value;
+}
+
+function optionalReferenceStringArray(value: unknown, field: string): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw referenceManifestUsageError(`Reference manifest field '${field}' must be an array of strings`);
+  }
+  return value;
+}
+
+function optionalReferenceObject<TValue extends object>(value: TValue | undefined, field: string): TValue | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw referenceManifestUsageError(`Reference manifest field '${field}' must be an object`);
+  }
+  return value;
 }
 
 export function readReference(workspaceRoot: string, referenceId: string): ReferenceManifest {
