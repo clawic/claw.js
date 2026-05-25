@@ -743,19 +743,38 @@ export class RelayDatabase {
       connector_id: string | null;
       agent_id: string;
     } | undefined;
-    this.sqlite.prepare("UPDATE connector_sessions SET status = 'offline', last_seen_at = ? WHERE id = ?").run(now(), sessionId);
+    const timestamp = now();
+    this.sqlite.prepare("UPDATE connector_sessions SET status = 'offline', last_seen_at = ? WHERE id = ?").run(timestamp, sessionId);
     if (row) {
+      const connectorId = row.connector_id ?? row.agent_id;
+      const active = this.sqlite.prepare(`
+        SELECT COUNT(*) as count
+        FROM connector_sessions
+        WHERE tenant_id = ?
+          AND COALESCE(connector_id, agent_id) = ?
+          AND status = 'online'
+      `).get(row.tenant_id, connectorId) as { count: number };
+      if ((active.count ?? 0) > 0) {
+        this.appendActivity({
+          tenantId: row.tenant_id,
+          agentId: row.agent_id,
+          capability: "connector",
+          status: "info",
+          detail: `Connector ${connectorId} session offline for ${row.agent_id}; active replacement remains online`,
+        });
+        return;
+      }
       this.sqlite.prepare(`
         UPDATE connectors
         SET status = 'offline', updated_at = ?, last_seen_at = ?
         WHERE tenant_id = ? AND id = ?
-      `).run(now(), now(), row.tenant_id, row.connector_id ?? row.agent_id);
+      `).run(timestamp, timestamp, row.tenant_id, connectorId);
       this.appendActivity({
         tenantId: row.tenant_id,
         agentId: row.agent_id,
         capability: "connector",
         status: "info",
-        detail: `Connector ${row.connector_id ?? row.agent_id} offline for ${row.agent_id}`,
+        detail: `Connector ${connectorId} offline for ${row.agent_id}`,
       });
     }
   }
