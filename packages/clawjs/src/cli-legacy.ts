@@ -2,7 +2,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { spawn, spawnSync } from "child_process"; import { fileURLToPath } from "url"; import { buildCodexCommand, buildSetDefaultModelCommand, createClaw, createLocalLibraryStore, createCodeLedger, createCodeGlobalIndex, startCodeServer, discoverWorkspaces, getRuntimeAdapter, normalizeLibraryId } from "@clawjs/claw"; import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw"; import { createWorkspaceClaw } from "@clawjs/workspace"; import type { WorkspaceClawInstance } from "@clawjs/workspace"; import { resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
+import { spawn, spawnSync } from "child_process"; import { fileURLToPath } from "url"; import { buildCodexCommand, buildSetDefaultModelCommand, createClaw, createLocalLibraryStore, createCodeLedger, createCodeGlobalIndex, startCodeServer, discoverWorkspaces, getRuntimeAdapter, normalizeLibraryId, resolveManifestPath } from "@clawjs/claw"; import type { ClawInstance, TelegramSendMediaInput, TelegramSendMessageInput, VoiceNoteStatus } from "@clawjs/claw"; import { createWorkspaceClaw } from "@clawjs/workspace"; import type { WorkspaceClawInstance } from "@clawjs/workspace"; import { resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import { clawProfessionalRecordsOsRegistry, resolveBuiltinCollectionName } from "@clawjs/core/catalogs";
 import type { ClawDomain, CommitmentKind, CommitmentStatus, ContextPackPurpose, ContextPackStatus, JudgmentImpact, JudgmentStatus, LearningEvidenceSentiment, LearningKind, LearningPromotionTarget, LearningStatus, LearningTarget, MediaDirection, MediaKind, MediaListInput, MediaOrigin, OutcomeResult, OutcomeStatus, RuntimeAdapterId, SemanticPlan, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
 import { runMagicDbCli } from "./database-magic.ts";
@@ -1541,15 +1541,15 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "workspace" && command === "init") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     await claw.workspace.init();
-    const inspected = await claw.workspace.inspect();
+    const manifestPath = resolveManifestPath(workspaceRoot);
     if (wantsJson) {
       writeRootJson({
-        manifestPath: inspected.manifestPath,
+        manifestPath,
         runtimeAdapter: runtimeAdapterId,
         canonicalPaths: claw.workspace.canonicalPaths(),
       });
     } else {
-      context.stdout.write(`${inspected.manifestPath}\n`);
+      context.stdout.write(`${manifestPath}\n`);
     }
     return CLI_EXIT_OK;
   }

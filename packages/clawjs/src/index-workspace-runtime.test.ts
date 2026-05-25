@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { createClaw, saveAuthStore } from "@clawjs/claw";
+import { createClaw, resolveObservedDomainPath, saveAuthStore } from "@clawjs/claw";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
@@ -60,6 +60,55 @@ test("runCli can initialize a workspace in json mode", async () => {
 
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.match(stdout.getOutput(), /manifestPath/);
+});
+
+test("workspace init does not read observed snapshots only to report manifest path", async () => {
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-workspace-observed-init-"));
+  const runtimePath = resolveObservedDomainPath(workspaceRoot, "runtime");
+  const modelsPath = resolveObservedDomainPath(workspaceRoot, "models");
+  fs.mkdirSync(path.dirname(runtimePath), { recursive: true });
+  fs.writeFileSync(runtimePath, JSON.stringify({
+    schemaVersion: 1,
+    updatedAt: new Date(0).toISOString(),
+    runtime: {
+      adapter: "demo",
+      runtimeName: "Demo",
+      version: "1",
+      cliAvailable: true,
+      gatewayAvailable: true,
+      capabilities: { runtime: true },
+      capabilityMap: {},
+      diagnostics: {},
+    },
+  }));
+  fs.writeFileSync(modelsPath, JSON.stringify({
+    schemaVersion: 1,
+    updatedAt: new Date(0).toISOString(),
+    catalog: { models: [], defaultModel: null },
+    defaultModel: null,
+  }));
+
+  const originalReadFileSync = fs.readFileSync;
+  const observedSnapshotReads: string[] = [];
+  fs.readFileSync = function patchedReadFileSync(filePath, ...args) {
+    if (String(filePath) === runtimePath || String(filePath) === modelsPath) observedSnapshotReads.push(String(filePath));
+    return originalReadFileSync.call(this, filePath, ...args);
+  } as typeof fs.readFileSync;
+  try {
+    const exitCode = await runCli(["workspace", "init", "--workspace", workspaceRoot, "--json"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_OK);
+    assert.match(stdout.getOutput(), /manifestPath/);
+    assert.deepEqual(observedSnapshotReads, []);
+  } finally {
+    fs.readFileSync = originalReadFileSync;
+  }
 });
 
 test("runCli reports invalid semantic plan files as usage errors", async () => {
