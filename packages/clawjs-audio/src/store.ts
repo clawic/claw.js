@@ -149,6 +149,9 @@ export class AudioServiceStore {
     const id = input.id ?? randomUUID();
     const existing = this.db.prepare("SELECT * FROM audio_assets WHERE id = ?").get(id) as AssetRow | undefined;
     if (existing) {
+      if (existing.app_id !== input.appId) {
+        throw new Error("register: audio id already exists for a different app");
+      }
       return this.getByIdInternal(id) ?? { asset: rowToAsset(existing), transcripts: [] };
     }
 
