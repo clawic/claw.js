@@ -56,11 +56,20 @@ export async function runPlanCli(input: {
     const tags = parseCsvFlag(flags.tags);
     const fromFile = flags["from-file"];
     const parsedFile = fromFile ? readJsonFile<unknown>(path.resolve(context.cwd, fromFile), "--from-file") : null;
-    const semanticPlan = semanticPlanSchema.parse(
+    const semanticPlanInput = (
       parsedFile && typeof parsedFile === "object" && !Array.isArray(parsedFile) && "semanticPlan" in parsedFile
         ? (parsedFile as { semanticPlan: unknown }).semanticPlan
-        : parsedFile ?? buildFallbackSemanticPlan(objective, creatorAgentId, tags),
+        : parsedFile ?? buildFallbackSemanticPlan(objective, creatorAgentId, tags)
     );
+    const parsedSemanticPlan = semanticPlanSchema.safeParse(semanticPlanInput);
+    if (!parsedSemanticPlan.success) {
+      throw new CliHandledError("invalid_semantic_plan", `--from-file must contain a valid semantic plan: ${parsedSemanticPlan.error.issues.map((issue) => issue.path.join(".") || issue.code).join(", ")}`, CLI_EXIT_USAGE, {
+        location: "cli.plan.from_file",
+        suggestion: "Pass a JSON semantic plan with schemaVersion 1 and a valid intent object.",
+        safeNextStep: "Fix the plan file and rerun plan create with --from-file.",
+      });
+    }
+    const semanticPlan = parsedSemanticPlan.data;
     const timestamp = nowIso();
     const policy = evaluatePlanPolicy(state.policies, semanticPlan, { creatorAgentId, tags });
     const plan: AgentPlanRecord = {

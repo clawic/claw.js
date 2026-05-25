@@ -62,6 +62,39 @@ test("runCli can initialize a workspace in json mode", async () => {
   assert.match(stdout.getOutput(), /manifestPath/);
 });
 
+test("runCli reports invalid semantic plan files as usage errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-invalid-plan-file-"));
+  const planPath = path.join(workspaceRoot, "bad-plan.json");
+  fs.writeFileSync(planPath, JSON.stringify({ id: "bad-plan" }));
+
+  const stdout = captureStream();
+  const exitCode = await runCli([
+    "plan",
+    "create",
+    "Bad plan",
+    "--workspace",
+    workspaceRoot,
+    "--from-file",
+    planPath,
+    "--json",
+  ], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(exitCode, CLI_EXIT_USAGE);
+  const payload = JSON.parse(stdout.getOutput()) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string; message: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_semantic_plan");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.plan.from_file");
+  assert.match(payload.error.message, /schemaVersion/);
+});
+
 test("runCli accepts explicit non-interactive mode", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-non-interactive-"));
   const stdout = captureStream();
