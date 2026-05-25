@@ -727,6 +727,36 @@ test("runCli indexes external Codex session artifacts without owning their raw b
   });
 });
 
+test("runCli rejects invalid v1 sessions limits before querying sqlite", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-limit-"));
+  await withPatchedEnv({
+    CLAW_DATA_DIR: path.join(tempRoot, "data"),
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v1-sessions-limit-cwd-"));
+    const cases = [
+      ["sessions", "list", "--limit", "nope", "--json"],
+      ["sessions", "search", "--query", "large rollout", "--limit", "1.5", "--json"],
+    ];
+
+    for (const args of cases) {
+      const stdout = captureStream();
+      assert.equal(await runCli(args, {
+        stdout: stdout.stream,
+        stderr: captureStream().stream,
+        cwd,
+      }), CLI_EXIT_USAGE);
+      const payload = parseCliJsonError(stdout.getOutput());
+      assert.equal(payload.error.code, "invalid_sessions_limit");
+      assert.equal(payload.error.status, "USAGE");
+      assert.equal(payload.meta.canonicalCommand, "sessions");
+      assert.equal(payload.meta.subcommand, args[1]);
+    }
+  });
+});
+
 test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime, search, and backup reset", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecars-"));
   await withPatchedEnv({

@@ -640,7 +640,8 @@ export async function runSessionsIndexCommand(input: V1DataCliInput, store: Data
     return V1_DATA_EXIT_OK;
   }
   if (command === "list") {
-    const limit = Math.max(1, Number(input.flags.limit ?? 100));
+    const limit = positiveIntegerFlag(input, "limit", 100, "invalid_sessions_limit");
+    if (limit === undefined) return V1_DATA_EXIT_USAGE;
     const source = input.flags.source;
     const rows = source
       ? store.sqlite.prepare("SELECT * FROM session_index WHERE source = ? ORDER BY updated_at DESC LIMIT ?").all(source, limit)
@@ -658,7 +659,8 @@ export async function runSessionsIndexCommand(input: V1DataCliInput, store: Data
   if (command === "search") {
     const query = input.flags.query || input.flags.q || input.positionals.slice(2).join(" ");
     if (!query) return usageError(input, "Usage: claw sessions search --query TEXT [--json]");
-    const limit = Math.max(1, Number(input.flags.limit ?? 50));
+    const limit = positiveIntegerFlag(input, "limit", 50, "invalid_sessions_limit");
+    if (limit === undefined) return V1_DATA_EXIT_USAGE;
     const rows = store.sqlite.prepare(`
       SELECT session_index.*
       FROM session_index_fts
@@ -967,4 +969,15 @@ function optionalNumberFlag(value: unknown): number | undefined {
   if (value === undefined) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function positiveIntegerFlag(input: V1DataCliInput, flag: string, fallback: number, errorCode: string): number | undefined {
+  const value = input.flags[flag];
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    writeError(input, errorCode, `Expected --${flag} to be a positive integer.`, V1_DATA_EXIT_USAGE);
+    return undefined;
+  }
+  return parsed;
 }
