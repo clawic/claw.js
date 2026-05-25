@@ -284,9 +284,29 @@ function main() {
       }
     }
     const runtimePolicy = portalPolicies?.[runtimeId] ?? {};
+    const nativeRowsByDomain = new Map((matrix.nativeSurface ?? []).map((row) => [row.domain, row]));
+    const clawRowsByDomain = new Map((matrix.clawDomainSurface ?? []).map((row) => [row.domain, row]));
+    const linkRowsByDomain = new Map((matrix.linkMatrix ?? []).map((row) => [row.domain, row]));
     for (const domain of requiredDomains) {
       if (!runtimePolicy[domain]) errors.push(`runtime portal policy table missing ${runtimeId}.${domain}`);
-      const nativeRow = (matrix.nativeSurface ?? []).find((row) => row.domain === domain);
+      const nativeRow = nativeRowsByDomain.get(domain);
+      const clawRow = clawRowsByDomain.get(domain);
+      const linkRow = linkRowsByDomain.get(domain);
+      const expectedPortalPolicy = {
+        claim: nativeRow?.claim,
+        nativeAuthority: nativeRow?.authority,
+        canonicalAuthority: clawRow?.canonicalAuthority,
+        persistence: clawRow?.persistence,
+        relation: linkRow?.relation,
+        lossPolicy: linkRow?.lossPolicy,
+        writeBackPolicy: linkRow?.writeBackPolicy,
+        validation: linkRow?.validation,
+      };
+      for (const [field, expectedValue] of Object.entries(expectedPortalPolicy)) {
+        if (runtimePolicy[domain] && runtimePolicy[domain][field] !== expectedValue) {
+          errors.push(`runtime portal policy ${field} must match manifest for ${runtimeId}.${domain}`);
+        }
+      }
       const manifestCommands = JSON.stringify(nativeRow?.officialCommands ?? []);
       const portalCommands = JSON.stringify(runtimePolicy[domain]?.officialCommands ?? []);
       if (runtimePolicy[domain] && manifestCommands !== portalCommands) {
