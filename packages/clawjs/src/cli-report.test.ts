@@ -324,6 +324,55 @@ test("report rejects unsupported repository flags before writing governance stat
   assert.deepEqual(statusPayload.data.reports, []);
 });
 
+test("report rejects unsupported taxonomy flags before writing governance state", async () => {
+  const workspace = tempWorkspace();
+  const kind = await runCliCapture([
+    "report",
+    "draft",
+    "Wrong kind",
+    "--workspace",
+    workspace,
+    "--kind",
+    "incident",
+    "--observed",
+    "agent typo was accepted",
+    "--expected",
+    "invalid kind is rejected",
+    "--repro",
+    "run report draft with invalid --kind",
+    "--json",
+  ], workspace);
+  assert.equal(kind.code, CLI_EXIT_USAGE);
+  const kindPayload = JSON.parse(kind.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(kindPayload.ok, false);
+  assert.equal(kindPayload.error.code, "invalid_report_kind");
+  assert.equal(kindPayload.error.status, "USAGE");
+
+  const destination = await runCliCapture([
+    "report",
+    "draft",
+    "Wrong destination",
+    "--workspace",
+    workspace,
+    "--destination",
+    "github_discussion",
+    "--observed",
+    "agent typo was accepted",
+    "--expected",
+    "invalid destination is rejected",
+    "--repro",
+    "run report draft with invalid --destination",
+    "--json",
+  ], workspace);
+  assert.equal(destination.code, CLI_EXIT_USAGE);
+  const destinationPayload = JSON.parse(destination.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(destinationPayload.ok, false);
+  assert.equal(destinationPayload.error.code, "invalid_report_destination");
+  assert.equal(destinationPayload.error.status, "USAGE");
+
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.reports.governance_state", workspace)), false);
+});
+
 test("report rejects corrupt governance state JSON as usage", async () => {
   const workspace = tempWorkspace();
   const statePath = resolveClawPersistentSurfacePath("claw.workspace.reports.governance_state", workspace);

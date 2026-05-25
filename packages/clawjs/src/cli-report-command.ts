@@ -97,6 +97,10 @@ type ReportGovernanceState = {
   budgetOverrides: ReportBudgetOverride[];
 };
 
+const REPORT_KINDS: readonly ReportKind[] = ["bug", "crash", "regression", "feature", "translation", "docs", "performance", "ux_feedback", "security"];
+const REPORT_DESTINATIONS: readonly ReportDestination[] = ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "private_security_advisory", "local_draft", "canonical_comment", "pr_proposal"];
+const REPORT_STATUSES: readonly ReportStatus[] = ["draft", "blocked", "ready_for_review", "approved", "submitted", "external_pending"];
+
 const REPORT_LABELS = {
   source: ["source:agent", "source:human-reviewed"],
   type: ["type:bug", "type:crash", "type:regression", "type:feature", "type:translation", "type:docs", "type:performance", "type:ux-feedback", "type:security"],
@@ -132,6 +136,8 @@ export async function runReportCli(input: {
     }
 
     validateReportRepositoryFlag(flags.repo);
+    validateReportKindFlag(flags.kind);
+    validateReportDestinationFlag(flags.destination);
     const state = readReportState(workspaceRoot);
     const save = () => writeReportState(workspaceRoot, state);
     const findReport = (id: string | undefined): ReportRecord => {
@@ -142,8 +148,8 @@ export async function runReportCli(input: {
 
     if (command === "templates") {
       return writeReportResult(context, wantsJson, command, {
-        kinds: ["bug", "crash", "regression", "feature", "translation", "docs", "performance", "ux_feedback", "security"],
-        destinations: ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "private_security_advisory", "canonical_comment", "pr_proposal"],
+        kinds: REPORT_KINDS,
+        destinations: REPORT_DESTINATIONS,
         discussionCategories: REPORT_DISCUSSION_CATEGORIES,
         labels: REPORT_LABELS,
         requiredApproval: "preview_then_human_confirm",
@@ -490,14 +496,14 @@ function inferKind(command: string, flags: Record<string, string>): ReportKind {
   if (command === "translation") return "translation";
   if (command === "security") return "security";
   const raw = flags.kind ?? "bug";
-  return ["bug", "crash", "regression", "feature", "translation", "docs", "performance", "ux_feedback", "security"].includes(raw)
+  return isReportKind(raw)
     ? raw as ReportKind
     : "bug";
 }
 
 function inferDestination(kind: ReportKind, flags: Record<string, string>, title = "", observed?: string): ReportDestination {
   if (kind === "security") return "private_security_advisory";
-  if (flags.destination && ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "canonical_comment", "pr_proposal", "local_draft"].includes(flags.destination)) {
+  if (flags.destination && isReportDestination(flags.destination)) {
     return flags.destination as ReportDestination;
   }
   const fine = inferFineReportDestination(kind, flags, title, observed);
@@ -1157,20 +1163,30 @@ function normalizeReportRecord(value: unknown): ReportRecord {
 }
 
 function isReportKind(value: unknown): value is ReportKind {
-  return typeof value === "string" && ["bug", "crash", "regression", "feature", "translation", "docs", "performance", "ux_feedback", "security"].includes(value);
+  return typeof value === "string" && REPORT_KINDS.includes(value as ReportKind);
 }
 
 function isReportStatus(value: unknown): value is ReportStatus {
-  return typeof value === "string" && ["draft", "blocked", "ready_for_review", "approved", "submitted", "external_pending"].includes(value);
+  return typeof value === "string" && REPORT_STATUSES.includes(value as ReportStatus);
 }
 
 function isReportDestination(value: unknown): value is ReportDestination {
-  return typeof value === "string" && ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "private_security_advisory", "local_draft", "canonical_comment", "pr_proposal"].includes(value);
+  return typeof value === "string" && REPORT_DESTINATIONS.includes(value as ReportDestination);
 }
 
 function validateReportRepositoryFlag(value: string | undefined): void {
   if (!value || value === "clawjs" || value === "clawix") return;
   throw new CliHandledError("invalid_report_repo", `Invalid report repository: ${value}. Expected clawjs or clawix.`, CLI_EXIT_USAGE);
+}
+
+function validateReportKindFlag(value: string | undefined): void {
+  if (!value || isReportKind(value)) return;
+  throw new CliHandledError("invalid_report_kind", `Invalid report kind: ${value}. Expected one of: ${REPORT_KINDS.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function validateReportDestinationFlag(value: string | undefined): void {
+  if (!value || isReportDestination(value)) return;
+  throw new CliHandledError("invalid_report_destination", `Invalid report destination: ${value}. Expected one of: ${REPORT_DESTINATIONS.join(", ")}.`, CLI_EXIT_USAGE);
 }
 
 function writeUsage(context: CliContext, binName: string): void {
