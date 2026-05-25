@@ -80,6 +80,85 @@ test("media shares require explicit approval and persistent legal labels", async
   assert.equal(galleryShare.approvalId, "approval_media_gallery");
 });
 
+test("media share ttlMs must be a positive safe integer", async (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-share-ttl-"));
+  useIsolatedDataDir(t, workspaceDir);
+  const dataStore = createWorkspaceStorage(workspaceDir);
+  const storage = createLocalStorageStore({
+    workspaceDir,
+    agentId: "agent-a",
+    grants: [{
+      bucket: "workspace",
+      prefix: "agents/agent-a/",
+      operations: ["shares:create", "shares:revoke"],
+    }],
+    shareAdapter: {
+      async create(object) {
+        return { url: `https://share.local/${object.sha256}` };
+      },
+      async revoke() {},
+    },
+  });
+  const media = createMediaStore({
+    dataStore,
+    storage,
+    workspaceId: "workspace-a",
+    agentId: "agent-a",
+  });
+  const record = media.register({
+    name: "ttl.txt",
+    mimeType: "text/plain",
+    data: Buffer.from("ttl"),
+  });
+  const invalidTtls = [1.5, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1];
+
+  for (const ttlMs of invalidTtls) {
+    assert.throws(
+      () => media.createGalleryShare({
+        label: "Gallery",
+        legalLabel: "Exported gallery - human reviewed",
+        approvalId: "approval_media_gallery_ttl",
+        ttlMs,
+      }),
+      /Media share ttlMs must be a positive safe integer\./,
+    );
+    await assert.rejects(
+      () => media.createObjectShare({
+        mediaId: record.mediaId,
+        label: "Object",
+        legalLabel: "Exported media - human reviewed",
+        approvalId: "approval_media_object_ttl",
+        ttlMs,
+      }),
+      /Media share ttlMs must be a positive safe integer\./,
+    );
+  }
+
+  const ttlMs = 60_000;
+  const before = Date.now();
+  const galleryShare = media.createGalleryShare({
+    label: "Gallery",
+    legalLabel: "Exported gallery - human reviewed",
+    approvalId: "approval_media_gallery_ttl_valid",
+    ttlMs,
+  });
+  const objectShare = await media.createObjectShare({
+    mediaId: record.mediaId,
+    label: "Object",
+    legalLabel: "Exported media - human reviewed",
+    approvalId: "approval_media_object_ttl_valid",
+    ttlMs,
+  });
+  const after = Date.now();
+
+  assert.ok(galleryShare.expiresAt);
+  assert.ok(objectShare.expiresAt);
+  assert.ok(Date.parse(galleryShare.expiresAt) >= before + ttlMs);
+  assert.ok(Date.parse(galleryShare.expiresAt) <= after + ttlMs);
+  assert.ok(Date.parse(objectShare.expiresAt) >= before + ttlMs);
+  assert.ok(Date.parse(objectShare.expiresAt) <= after + ttlMs);
+});
+
 test("media gallery shares resolve the reviewed item snapshot", (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-gallery-share-"));
   useIsolatedDataDir(t, workspaceDir);

@@ -208,7 +208,7 @@ function normalizeExpiresAt(input: { expiresAt?: string | null; ttlMs?: number }
     return parsed.toISOString();
   }
   if (input.ttlMs !== undefined) {
-    if (!Number.isFinite(input.ttlMs) || input.ttlMs <= 0) throw new Error("Media share ttlMs must be positive.");
+    if (!Number.isSafeInteger(input.ttlMs) || input.ttlMs <= 0) throw new Error("Media share ttlMs must be a positive safe integer.");
     return new Date(Date.now() + input.ttlMs).toISOString();
   }
   return null;
@@ -400,14 +400,14 @@ export function createMediaStore(options: {
       const legal = requireMediaShareReview(input);
       const media = this.get(input.mediaId);
       if (!media?.storage) throw new Error(`Media has no stored object: ${input.mediaId}`);
+      const expiresAt = normalizeExpiresAt(input);
       const share = await options.storage.createShare({
         bucket: media.storage.bucket,
         key: media.storage.key,
         label: input.label ?? media.name,
         legalLabel: legal.legalLabel,
         approvalId: legal.approvalId,
-        expiresAt: input.expiresAt,
-        ttlMs: input.ttlMs,
+        expiresAt,
       });
       put({
         ...media,
