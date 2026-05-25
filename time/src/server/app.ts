@@ -37,6 +37,13 @@ function jsonBody(body: unknown): Record<string, unknown> {
   return (body ?? {}) as Record<string, unknown>;
 }
 
+function parsePositiveSafeDecimalInteger(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !/^[1-9][0-9]*$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
 export function buildTimeApp(options: BuildTimeAppOptions = {}) {
   const config = loadTimeConfig(options.config);
   fs.mkdirSync(config.dataDir, { recursive: true });
@@ -160,9 +167,12 @@ export function buildTimeApp(options: BuildTimeAppOptions = {}) {
     return await engine.listExecutions(query.itemId);
   });
 
-  app.get(clawApiPath("run-log"), async (request) => {
+  app.get(clawApiPath("run-log"), async (request, reply) => {
     const query = request.query as Record<string, string | undefined>;
-    const limit = query.limit ? Number(query.limit) : undefined;
+    const limit = parsePositiveSafeDecimalInteger(query.limit);
+    if (query.limit !== undefined && limit === undefined) {
+      return await reply.code(400).send({ error: "limit must be a positive safe decimal integer" });
+    }
     return await engine.listRunLog(query.itemId, limit);
   });
 

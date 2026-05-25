@@ -51,6 +51,38 @@ test("TimeClient can create items, read v1 views, and cancel follow-ups", async 
   }
 });
 
+test("time run-log rejects invalid limit query values", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-run-log-limit-"));
+  const built = buildTimeApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir: path.join(tmpDir, "data"),
+      dbPath: path.join(tmpDir, "data", "core.sqlite"),
+      defaultTimeZone: "UTC",
+      schedulerIntervalMs: 50,
+    },
+  });
+
+  try {
+    for (const limit of ["NaN", "1.5", "0", "1e3", "9007199254740992", "01", ""]) {
+      const response = await built.app.inject({
+        method: "GET",
+        url: `/v1/run-log?limit=${encodeURIComponent(limit)}`,
+      });
+      assert.equal(response.statusCode, 400, `limit=${limit}`);
+      assert.match(response.body, /positive safe decimal integer/);
+    }
+
+    const accepted = await built.app.inject({ method: "GET", url: "/v1/run-log?limit=1" });
+    assert.equal(accepted.statusCode, 200);
+    const payload = JSON.parse(accepted.body) as { entries: unknown[] };
+    assert.equal(Array.isArray(payload.entries), true);
+  } finally {
+    await built.app.close();
+  }
+});
+
 test("heartbeat routines enforce runtime safety, budgets, targets, and compact run log", async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-time-runtime-"));
   let matches = [{ source: "workspace.tasks", id: "task-1", title: "Ready task", updatedAt: "2026-04-09T08:00:00.000Z" }];
