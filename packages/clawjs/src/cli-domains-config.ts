@@ -267,6 +267,14 @@ export function surfaceTargetPort(surface: OpenSurface, flags: Record<string, st
   return parseSurfacePortOverrides(flags["surface-port"])[surface.id] ?? surface.port;
 }
 
+export function parseDomainsProxyPort(value: string | undefined): number {
+  const port = Number(value || "80");
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+    throw new CliHandledError("invalid_port", `Invalid port: ${value}`, CLI_EXIT_USAGE);
+  }
+  return port;
+}
+
 export interface ClawDomainsStatus {
   installed: boolean;
   hostsConfigured: boolean;
@@ -281,20 +289,22 @@ export interface ClawDomainsStatus {
 export function domainsInstallPlan(flags: Record<string, string>) {
   const hostsFile = domainsHostsFile(flags);
   const plistFile = domainsPlistPath(flags);
+  const port = parseDomainsProxyPort(flags.port);
   return {
     hostsFile,
     plistFile,
     hosts: allOpenSurfaceHostnames(),
-    proxyUrl: `http://${flags.host || "127.0.0.1"}:${flags.port || "80"}`,
+    proxyUrl: `http://${flags.host || "127.0.0.1"}:${port}`,
     serviceLabel: CLAW_DOMAINS_LABEL,
   };
 }
 
 export function buildDomainsServiceConfig(flags: Record<string, string>, cwd: string, runtime: { repoRoot: string; cliEntryPath: string; nodePath: string; uid?: number }): string {
   const user = os.userInfo();
+  const port = parseDomainsProxyPort(flags.port);
   return `${JSON.stringify({
     host: flags.host || "127.0.0.1",
-    port: Number(flags.port || "80"),
+    port,
     workspace: path.resolve(cwd, flags.workspace ?? "."),
     repoRoot: runtime.repoRoot,
     cliEntryPath: runtime.cliEntryPath,
@@ -322,7 +332,7 @@ export async function readDomainsStatus(flags: Record<string, string>, portIsOpe
     hostsConfigured = false;
   }
   const proxyConfigured = fs.existsSync(plan.plistFile);
-  const proxyReachable = await portIsOpen(flags.host || "127.0.0.1", Number(flags.port || "80"));
+  const proxyReachable = await portIsOpen(flags.host || "127.0.0.1", parseDomainsProxyPort(flags.port));
   return {
     installed: hostsConfigured && proxyConfigured,
     hostsConfigured,

@@ -2,7 +2,7 @@ import fs from "fs";
 import http from "http";
 import path from "path";
 
-import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk, writeCommandJsonOkLine } from "./cli-json.ts";
 import { currentCliEntryPath, repoRootFromCliPackage } from "./cli-open-state.ts";
 import { allOpenSurfaceHostnames, domainIndexHtml, parseClawHostSurface, type OpenSurface } from "./cli-open-surfaces.ts";
@@ -21,6 +21,7 @@ import {
   domainsTempPath,
   readDomainsStatus,
   replaceDomainHostsBlock,
+  parseDomainsProxyPort,
 } from "./cli-domains-config.ts";
 import { runPrivilegedScript } from "./cli-domains-privileges.ts";
 import type { CliContext } from "./index.ts";
@@ -136,10 +137,7 @@ export async function runDomainsCli(input: {
 
   if (command === "serve") {
     const host = input.flags.host || "127.0.0.1";
-    const port = Number(input.flags.port || "80");
-    if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
-      throw new CliHandledError("invalid_port", `Invalid port: ${input.flags.port}`, CLI_EXIT_USAGE);
-    }
+    const port = parseDomainsProxyPort(input.flags.port);
     const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
     const server = http.createServer((request, response) => {
       void (async () => {

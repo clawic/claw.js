@@ -2,7 +2,14 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { buildDomainsPlist, buildDomainsProxyScript, domainsInstallPlan, domainsServiceDir, domainsTempPath } from "./cli-domains-config.ts";
+import {
+  buildDomainsPlist,
+  buildDomainsProxyScript,
+  buildDomainsServiceConfig,
+  domainsInstallPlan,
+  domainsServiceDir,
+  domainsTempPath,
+} from "./cli-domains-config.ts";
 
 test("domains config defaults resolve system paths through the Mac Care route atlas", () => {
   assert.equal(domainsServiceDir({}), "/Library/Application Support/Claw/domains");
@@ -34,6 +41,25 @@ test("domains config explicit path flags still override Mac Care route defaults"
   assert.equal(domainsInstallPlan(flags).plistFile, "/tmp/com.claw.domains.plist");
   assert.equal(domainsInstallPlan({ ...flags, "hosts-file": "/tmp/hosts" }).hostsFile, "/tmp/hosts");
   assert.match(buildDomainsPlist(flags), /<string>\/tmp\/claw-domains-service<\/string>/);
+});
+
+test("domains config rejects invalid proxy ports before generating service config", () => {
+  assert.throws(
+    () => domainsInstallPlan({ port: "nope" }),
+    /Invalid port: nope/,
+  );
+  assert.throws(
+    () => domainsInstallPlan({ port: "0" }),
+    /Invalid port: 0/,
+  );
+  assert.throws(
+    () => buildDomainsServiceConfig({ port: "65536" }, "/tmp/workspace", {
+      repoRoot: "/tmp/repo",
+      cliEntryPath: "/tmp/repo/packages/clawjs/bin/claw.mjs",
+      nodePath: "/usr/bin/node",
+    }),
+    /Invalid port: 65536/,
+  );
 });
 
 test("domains config defaults require Mac Care route atlas entries", () => {
