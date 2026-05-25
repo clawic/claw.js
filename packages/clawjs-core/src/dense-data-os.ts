@@ -551,13 +551,14 @@ export const clawProfessionalRecordsOsRegistry: ClawProfessionalRecordsOsRegistr
       ],
       operations: [
         operation("patient.encounter.add", "Add or link patient clinical encounter", ["claw patient <id> encounter add", "claw encounter add --patient <id>"], ["patient_profile", "encounter", "evidence_source", "quality_gap"]),
+        operation("patient.medications.list", "Read patient medications", ["claw patient <id> medications list"], ["patient_profile", "medication", "medication_order_or_dose", "evidence_source"]),
         operation("patient.medication.add", "Add or link patient medication", ["claw patient <id> medication add", "claw medication add --patient <id>"], ["patient_profile", "medication", "medication_order_or_dose"]),
         operation("patient.lab.add", "Add patient lab evidence or value", ["claw patient <id> lab add", "claw lab add --patient <id>"], ["lab_result", "lab_value", "evidence_source", "quality_gap"]),
         operation("patient.timeline", "Read patient timeline", ["claw patient <id> timeline"], ["timeline_view"]),
       ],
       semanticViews: [
         view("patient.timeline", "Patient timeline", "claw patient <id> timeline", "patient.timeline", ["patient_id"], "ordered clinical/research/evidence events with provenance and gaps"),
-        view("patient.medications", "Patient medications", "claw patient <id> medications list", "patient.medication.add", ["patient_id"], "active and historical medication relations"),
+        view("patient.medications", "Patient medications", "claw patient <id> medications list", "patient.medications.list", ["patient_id"], "active and historical medication relations"),
       ],
       standards: ["FHIR", "openEHR", "SNOMED CT", "LOINC", "ICD", "RxNorm"],
       notes: "Clinical decisions are out of scope; Claw structures, queries, links, and surfaces gaps.",
@@ -640,12 +641,13 @@ export const clawProfessionalRecordsOsRegistry: ClawProfessionalRecordsOsRegistr
       ],
       commandPatterns: ["claw case list|get|create|update|delete|query|schema", "claw case <id> evidence list|add", "claw case <id> clients list|add", "claw legal-client list|get|create|update|delete|query|schema", "claw legal-client add --case <id>", "claw case <id> timeline", "claw legal overview|gaps|intents"],
       operations: [
+        operation("case.evidence.list", "Read case evidence", ["claw case <id> evidence list"], ["case", "evidence_source", "provenance_event"]),
         operation("case.evidence.add", "Add case evidence", ["claw case <id> evidence add"], ["case", "evidence_source", "provenance_event"]),
         operation("case.client.add", "Add or link case legal client", ["claw case <id> client add", "claw legal-client add --case <id>"], ["case", "legal_client_profile", "domain_profile", "quality_gap"]),
         operation("case.timeline", "Read case timeline", ["claw case <id> timeline"], ["case", "deadline", "document", "evidence_source"]),
       ],
       semanticViews: [
-        view("case.evidence", "Case evidence", "claw case <id> evidence list", "case.evidence.add", ["case_id"], "case evidence with source, custody, confidence, and gaps"),
+        view("case.evidence", "Case evidence", "claw case <id> evidence list", "case.evidence.list", ["case_id"], "case evidence with source, custody, confidence, and gaps"),
         view("case.timeline", "Case timeline", "claw case <id> timeline", "case.timeline", ["case_id"], "case events, evidence, documents, provenance, deadlines, and gaps"),
       ],
       standards: ["Akoma Ntoso", "LegalRuleML"],
@@ -1732,7 +1734,11 @@ export function assertClawProfessionalRecordsOsRegistryComplete(): void {
     }
     const operationIds = new Set(system.operations.map((operation) => operation.id));
     for (const viewEntry of system.semanticViews) {
+      const operationEntry = system.operations.find((operation) => operation.id === viewEntry.operationId);
       if (!operationIds.has(viewEntry.operationId)) failures.push(`${system.id}.${viewEntry.id}: view references missing operation ${viewEntry.operationId}`);
+      if (operationEntry && !operationEntry.routes.includes(viewEntry.commandPattern)) {
+        failures.push(`${system.id}.${viewEntry.id}: view command ${viewEntry.commandPattern} is not materialized by operation ${viewEntry.operationId}`);
+      }
       if (!viewEntry.commandPattern.startsWith("claw ")) failures.push(`${system.id}.${viewEntry.id}: view command must be a claw route`);
       if (viewEntry.requiredInputs.length === 0) failures.push(`${system.id}.${viewEntry.id}: view must declare required inputs`);
     }

@@ -539,6 +539,24 @@ test("dense data OS resolves alternate operation routes to the same canonical op
   assert.ok(multiRouteOperations >= 20, "dense registry must prove alternate-route convergence across many operations");
 });
 
+test("dense data OS materializes every semantic view command on its referenced operation", () => {
+  for (const system of clawProfessionalRecordsOsRegistry.systems) {
+    for (const semanticView of system.semanticViews) {
+      const operation = system.operations.find((entry) => entry.id === semanticView.operationId);
+      assert.ok(operation, `${system.id}.${semanticView.id} must reference an operation`);
+      assert.ok(
+        operation.routes.includes(semanticView.commandPattern),
+        `${system.id}.${semanticView.id} must materialize ${semanticView.commandPattern}`,
+      );
+
+      const phrase = semanticView.commandPattern.replace(/<[^>]+>/g, "fixture_id");
+      const resolution = resolveClawProfessionalRecordsIntent(phrase);
+      assert.equal(resolution.system?.id, system.id, `${phrase} must resolve to ${system.id}`);
+      assert.equal(resolution.operation?.id, semanticView.operationId, `${phrase} must resolve to ${semanticView.operationId}`);
+    }
+  }
+});
+
 test("dense data OS resolves direct CLI intent phrases without executing them", () => {
   const patientList = resolveClawProfessionalRecordsIntent("claw patient list");
   assert.equal(patientList.execute, false);
