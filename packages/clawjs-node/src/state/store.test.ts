@@ -116,3 +116,28 @@ test("observed store round-trips capability, workspace, provider, and telegram s
   assert.equal(fs.existsSync(resolveTelegramStatePath(workspaceDir)), true);
   assert.equal(resolveTelegramStatePath(workspaceDir), resolveChannelsStatePath(workspaceDir));
 });
+
+test("telegram writer fails closed when channels state contains invalid JSON", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-state-"));
+  const channelsPath = resolveChannelsStatePath(workspaceDir);
+  const corruptChannels = "{not-json";
+  fs.mkdirSync(path.dirname(channelsPath), { recursive: true });
+  fs.writeFileSync(channelsPath, corruptChannels, "utf8");
+
+  assert.throws(
+    () => writeTelegramStateSnapshot(workspaceDir, {
+      schemaVersion: 1,
+      updatedAt: "2026-03-21T00:00:00.000Z",
+      connected: true,
+      apiBaseUrl: "https://api.telegram.org",
+      secretName: "telegram_support_bot_token",
+      maskedCredential: "secrets:******oken",
+      recentErrors: [],
+      knownChats: [],
+    }),
+    (error) => error instanceof Error
+      && error.message.includes("Invalid JSON file")
+      && error.message.includes(channelsPath),
+  );
+  assert.equal(fs.readFileSync(channelsPath, "utf8"), corruptChannels);
+});

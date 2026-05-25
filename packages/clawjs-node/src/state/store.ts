@@ -72,13 +72,34 @@ function writeJsonFile(filePath: string, payload: unknown, filesystem = new Node
   });
 }
 
-function readJsonFile<T>(filePath: string, schema: { safeParse(value: unknown): { success: boolean; data?: unknown } }, filesystem = new NodeFileSystemHost()): T | null {
-  try {
-    const parsed = schema.safeParse(JSON.parse(filesystem.readText(filePath)));
-    return parsed.success && parsed.data !== undefined ? parsed.data as T : null;
-  } catch {
+function readJsonFile<T>(filePath: string, schema: { safeParse(value: unknown): { success: boolean; data?: unknown; error?: { message?: string } } }, filesystem = new NodeFileSystemHost()): T | null {
+  if (!filesystem.exists(filePath)) {
     return null;
   }
+
+  let contents: string;
+  try {
+    contents = filesystem.readText(filePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to read JSON file at ${filePath}: ${message}`);
+  }
+
+  let value: unknown;
+  try {
+    value = JSON.parse(contents);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid JSON file at ${filePath}: ${message}`);
+  }
+
+  const parsed = schema.safeParse(value);
+  if (!parsed.success || parsed.data === undefined) {
+    const message = parsed.error?.message ? `: ${parsed.error.message}` : "";
+    throw new Error(`Invalid JSON schema for file at ${filePath}${message}`);
+  }
+
+  return parsed.data as T;
 }
 
 export function writeCapabilityReport(workspaceDir: string, report: CapabilityReport, filesystem = new NodeFileSystemHost()): CapabilityReport {
