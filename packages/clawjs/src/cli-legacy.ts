@@ -1509,9 +1509,16 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
 
   if (group === "workspace" && command === "discover") {
     const roots = flags.root ? [flags.root] : [workspaceRoot];
+    const maxDepth = flags["max-depth"] ? Number(flags["max-depth"]) : undefined;
+    if (maxDepth !== undefined && (!Number.isSafeInteger(maxDepth) || maxDepth < 0)) {
+      const error = new CliHandledError("invalid_workspace_max_depth", "--max-depth must be a non-negative integer.", CLI_EXIT_USAGE);
+      if (wantsJson) writeRootJsonError(error, "workspace");
+      else context.stderr.write(`${error.message}\n`);
+      return CLI_EXIT_USAGE;
+    }
     const discovered = discoverWorkspaces({
       roots,
-      ...(flags["max-depth"] ? { maxDepth: Number(flags["max-depth"]) } : {}),
+      ...(maxDepth !== undefined ? { maxDepth } : {}),
     });
     if (wantsJson) {
       writeRootJson(discovered);

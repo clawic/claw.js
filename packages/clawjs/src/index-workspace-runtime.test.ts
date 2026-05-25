@@ -122,6 +122,21 @@ test("runCli can discover workspaces under an explicit root", async () => {
   assert.match(stdout.getOutput(), /"workspaceId": "b"/);
 });
 
+test("runCli rejects invalid workspace discover max depth", async () => {
+  const stdout = captureStream();
+  const exitCode = await runCli(["workspace", "discover", "--max-depth", "nope", "--json"], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(exitCode, CLI_EXIT_USAGE);
+  const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_workspace_max_depth");
+  assert.equal(payload.error.status, "USAGE");
+});
+
 test("runCli manages agent-native plans, policies, reviews, and delegation runs", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-plans-"));
   const planPath = path.join(workspaceRoot, "low-risk-plan.json");
