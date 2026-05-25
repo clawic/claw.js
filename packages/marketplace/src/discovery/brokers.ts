@@ -58,7 +58,17 @@ export class InProcessBroker {
     };
     bucket.set(idHex, entry);
     this.byId.set(idHex, entry);
-    for (const sub of this.subscribers) sub({ kind: "publish", intent });
+    const failedSubscribers = new Set<(event: { kind: "publish"; intent: Intent }) => void>();
+    for (const sub of [...this.subscribers]) {
+      try {
+        sub({ kind: "publish", intent });
+      } catch {
+        failedSubscribers.add(sub);
+      }
+    }
+    if (failedSubscribers.size > 0) {
+      this.subscribers = this.subscribers.filter((sub) => !failedSubscribers.has(sub));
+    }
   }
 
   query(input: {

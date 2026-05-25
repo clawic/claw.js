@@ -124,3 +124,28 @@ test("InMemoryDht supports local intent publish/query", async () => {
   const back = await dht.query({ vertical: "item/v1", geoZone: "u4pr", tag: "bikes", priceBand: 2 });
   assert.equal(back.length, 1);
 });
+
+test("InProcessBroker isolates failed publish subscribers", () => {
+  const broker = new InProcessBroker();
+  const { intent } = makeIntent();
+  let failedPeerCalls = 0;
+  let healthyPeerCalls = 0;
+  broker.subscribe(() => {
+    failedPeerCalls += 1;
+    throw new Error("peer closed");
+  });
+  broker.subscribe(() => {
+    healthyPeerCalls += 1;
+  });
+
+  assert.doesNotThrow(() => publishIntent(broker, intent));
+  assert.equal(broker.size(), 1);
+  assert.equal(failedPeerCalls, 1);
+  assert.equal(healthyPeerCalls, 1);
+
+  const { intent: nextIntent } = makeIntent();
+  assert.doesNotThrow(() => publishIntent(broker, nextIntent));
+  assert.equal(broker.size(), 2);
+  assert.equal(failedPeerCalls, 1);
+  assert.equal(healthyPeerCalls, 2);
+});

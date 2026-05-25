@@ -57,6 +57,8 @@ function evaluateAutoAcceptInterest(rule: AutoAcceptInterestRule | undefined, ct
 
 function evaluateAutoLowerPrice(rule: AutoLowerPriceRule | undefined, ctx: EvaluationContext, now: number): EvaluationResult {
   if (!rule?.allowed) return deny("auto_lower_price", ["rule disabled"]);
+  if (!isValidPercent(rule.capPercent)) return deny("auto_lower_price", ["invalid capPercent"]);
+  if (!isPositiveFiniteNumber(rule.frequencyDays)) return deny("auto_lower_price", ["invalid frequencyDays"]);
   const last = ctx.recentActions
     .filter((a) => a.action === "auto_lower_price" && bytesEqual(a.blockId, ctx.block.blockId))
     .sort((a, b) => b.decidedAt - a.decidedAt)[0];
@@ -68,7 +70,12 @@ function evaluateAutoLowerPrice(rule: AutoLowerPriceRule | undefined, ctx: Evalu
 
 function lastActionFor(action: AutonomousAction, ctx: EvaluationContext, peer: Uint8Array): AuditEntry | undefined {
   return ctx.recentActions
-    .filter((a) => a.action === action && a.peerRootPubkey && bytesEqual(a.peerRootPubkey, peer))
+    .filter((a) => (
+      a.action === action
+      && bytesEqual(a.blockId, ctx.block.blockId)
+      && a.peerRootPubkey
+      && bytesEqual(a.peerRootPubkey, peer)
+    ))
     .sort((a, b) => b.decidedAt - a.decidedAt)[0];
 }
 
@@ -100,6 +107,14 @@ function matches(value: CborValue | undefined, c: PolicyCondition): boolean {
     case "in": return Array.isArray(c.value) && c.value.includes(value as never);
     default: return false;
   }
+}
+
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function isValidPercent(value: unknown): value is number {
+  return isPositiveFiniteNumber(value) && value <= 100;
 }
 
 function allow(action: AutonomousAction): EvaluationResult { return { action, allowed: true, reasons: [] }; }

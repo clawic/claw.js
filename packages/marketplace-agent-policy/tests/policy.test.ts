@@ -6,6 +6,7 @@ import { rootFromMnemonic, generateMnemonic } from "@clawjs/marketplace/recovery
 import { newBlock, createGroup, addMember } from "@clawjs/profile";
 
 import { evaluate, InMemoryAuditStorage, recordDecision } from "../src/index.ts";
+import type { AgentPolicySpec } from "../src/index.ts";
 
 function makeNode(name: string) {
   const root = rootFromMnemonic(generateMnemonic(32));
@@ -67,6 +68,40 @@ test("auto_respond: respects cooldown per peer", () => {
   assert.match(res.reasons.join(""), /cooldown/);
 });
 
+test("auto_respond: cooldown is scoped to the same peer and block", () => {
+  const owner = makeNode("owner");
+  const peer = makeNode("peer");
+  const first = newBlock({
+    archetype: "standalone",
+    vertical: "item/v1",
+    audience: { groups: ["public"] },
+    fieldsPerLevel: { title: ["public"] },
+    content: { title: "Bike" },
+    rolePubkey: owner.role.publicKey,
+    roleCertificate: owner.roleCert,
+  }).block;
+  const second = newBlock({
+    archetype: "standalone",
+    vertical: "item/v1",
+    audience: { groups: ["public"] },
+    fieldsPerLevel: { title: ["public"] },
+    content: { title: "Helmet" },
+    rolePubkey: owner.role.publicKey,
+    roleCertificate: owner.roleCert,
+  }).block;
+  const now = 1_700_000_000;
+  const recent = [{
+    id: "x", action: "auto_respond" as const, blockId: first.blockId,
+    peerRootPubkey: peer.root.publicKey, decidedAt: now - 60, result: "allowed" as const, reasons: [],
+  }];
+  const res = evaluate(
+    { scope: "block", autoRespond: { allowed: true, cooldownMinutes: 5 } },
+    "auto_respond",
+    { block: second, groups: [], recentActions: recent, peerRootPubkey: peer.root.publicKey, now },
+  );
+  assert.equal(res.allowed, true);
+});
+
 test("auto_accept_interest: requireSharedGroup gates non-friends", () => {
   const owner = makeNode("owner");
   const stranger = makeNode("stranger");
@@ -115,6 +150,44 @@ test("auto_lower_price: respects frequency window", () => {
     { block, groups: [], recentActions: recent, now },
   );
   assert.equal(res.allowed, false);
+});
+
+test("auto_lower_price: rejects partial safety bounds", () => {
+  const owner = makeNode("owner");
+  const { block } = newBlock({
+    archetype: "standalone",
+    vertical: "item/v1",
+    audience: { groups: ["public"] },
+    fieldsPerLevel: { price_hint_eur: ["public"] },
+    content: { price_hint_eur: 500 },
+    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+  });
+  const partialPolicy = {
+    scope: "block",
+    autoLowerPrice: { allowed: true, capPercent: 10 },
+  } as unknown as AgentPolicySpec;
+  const uncappedPolicy = {
+    scope: "block",
+    autoLowerPrice: { allowed: true, frequencyDays: 7 },
+  } as unknown as AgentPolicySpec;
+
+  const res = evaluate(
+    partialPolicy,
+    "auto_lower_price",
+    { block, groups: [], recentActions: [], now: 1_700_000_000 },
+  );
+
+  assert.equal(res.allowed, false);
+  assert.match(res.reasons.join("|"), /invalid frequencyDays/);
+
+  const uncapped = evaluate(
+    uncappedPolicy,
+    "auto_lower_price",
+    { block, groups: [], recentActions: [], now: 1_700_000_000 },
+  );
+
+  assert.equal(uncapped.allowed, false);
+  assert.match(uncapped.reasons.join("|"), /invalid capPercent/);
 });
 
 test("audit storage records decisions and exposes per-block history", () => {
