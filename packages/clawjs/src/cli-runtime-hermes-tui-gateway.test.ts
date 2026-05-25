@@ -273,3 +273,29 @@ test("Hermes confirmed TUI gateway writes stay blocked without an explicit endpo
   assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "none");
   assert.equal(payload.data.transportPolicy?.safeDefault, "fixture_only_no_production_transport_contact");
 });
+
+test("Hermes confirmed TUI gateway writes reject non-HTTP and credentialed loopback endpoints", async (t) => {
+  for (const gatewayUrl of [
+    "ws://127.0.0.1:31337",
+    "http://user:pass@127.0.0.1:31337",
+  ]) {
+    const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+    const { exitCode, payload } = await runHermesAction([
+      "runtime", "hermes", "sessions", "send",
+      "--session-key", "tui-session",
+      "--message", "fixture hello",
+      "--gateway-url", gatewayUrl,
+      "--confirm-runtime-write",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+
+    assert.equal(exitCode, CLI_EXIT_DEGRADED);
+    assert.equal(payload.data.status, "blocked");
+    assert.equal(payload.data.requiredEndpoint, "loopback_http_json_rpc");
+    assert.equal(payload.data.officialMethod, "prompt.submit");
+    assert.equal(payload.data.writesRuntime, false);
+    assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "non_loopback_endpoint_rejected");
+  }
+});

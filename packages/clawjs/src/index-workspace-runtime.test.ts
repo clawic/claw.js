@@ -1838,6 +1838,68 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     }
   }
 
+  const emptyHermesHomeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-runtime-portal-empty-hermes-"));
+  const emptyHermesHome = path.join(emptyHermesHomeRoot, ".hermes");
+  fs.mkdirSync(emptyHermesHome, { recursive: true });
+  const hermesFallbackDomainsStdout = captureStream();
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "domains", "--workspace", workspaceRoot, "--home-dir", emptyHermesHome, "--json"], {
+    stdout: hermesFallbackDomainsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  })), true);
+  const hermesFallbackDomainsPayload = JSON.parse(hermesFallbackDomainsStdout.getOutput()) as {
+    data: {
+      domains: Array<{ domain: string; count?: number }>;
+      domainData: {
+        skills?: { skills?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        memory?: { memory?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        models?: { models?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        scheduler?: { schedulers?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        plugins?: { plugins?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+      };
+    };
+  };
+  const fallbackDomainRows = new Map(hermesFallbackDomainsPayload.data.domains.map((entry) => [entry.domain, entry]));
+  assert.equal(fallbackDomainRows.get("skills")?.count, 1);
+  assert.equal(fallbackDomainRows.get("memory")?.count, 1);
+  assert.equal(fallbackDomainRows.get("models")?.count, 1);
+  assert.equal(fallbackDomainRows.get("scheduler")?.count, 1);
+  assert.equal(fallbackDomainRows.get("plugins")?.count, 1);
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.skills?.skills?.[0]?.id, "hermes-skills-inventory-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.memory?.memory?.[0]?.id, "hermes-memory-sensitive-projection-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.models?.models?.[0]?.id, "hermes-model-catalog-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.scheduler?.schedulers?.[0]?.id, "hermes-scheduler-inventory-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.plugins?.plugins?.[0]?.id, "hermes-plugins-tools-mcp-policy");
+
+  for (const fallbackSpec of [
+    { domain: "skills", key: "skills", id: "hermes-skills-inventory-policy", attribute: "promotion path: explicit_claw_skill_promotion_only" },
+    { domain: "memory", key: "memory", id: "hermes-memory-sensitive-projection-policy", attribute: "content access: metadata_default_explicit_content_only" },
+    { domain: "models", key: "models", id: "hermes-model-catalog-policy", attribute: "default model write-back: blocked_until_fixture_coverage" },
+    { domain: "scheduler", key: "schedulers", id: "hermes-scheduler-inventory-policy", attribute: "mutation policy: no_silent_scheduler_change" },
+    { domain: "plugins", key: "plugins", id: "hermes-plugins-tools-mcp-policy", attribute: "enable policy: no_auto_enable" },
+  ]) {
+    const fallbackResourceStdout = captureStream();
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "resources", fallbackSpec.domain, "--workspace", workspaceRoot, "--home-dir", emptyHermesHome, "--json"], {
+      stdout: fallbackResourceStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    })), true);
+    const fallbackResourcePayload = JSON.parse(fallbackResourceStdout.getOutput()) as {
+      data: {
+        domain: string;
+        data: Record<string, Array<{ id?: string; status?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> | unknown>;
+      };
+    };
+    const resourceRows = fallbackResourcePayload.data.data[fallbackSpec.key] as Array<{ id?: string; status?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> | undefined;
+    assert.equal(fallbackResourcePayload.data.domain, fallbackSpec.domain);
+    assert.equal(resourceRows?.[0]?.id, fallbackSpec.id);
+    assert.equal(resourceRows?.[0]?.status, "degraded");
+    assert.equal(resourceRows?.[0]?.attributes?.includes(fallbackSpec.attribute), true);
+    assert.equal(resourceRows?.[0]?.provenance?.source, "runtime-ecosystem-manifest");
+    assert.equal(resourceRows?.[0]?.provenance?.runtimeId, "hermes");
+    assert.equal(resourceRows?.[0]?.provenance?.domain, fallbackSpec.domain);
+  }
+
   const hermesSupportStdout = captureStream();
   const hermesSupportExit = await runCli(["runtime", "hermes", "support", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesSupportStdout.stream,
