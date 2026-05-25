@@ -371,6 +371,100 @@ test("runCli rejects invalid Telegram polling limit before starting", async () =
   assert.deepEqual(payload.error.details, { flag: "--limit", value: "nope" });
 });
 
+test("runCli rejects invalid channel message numeric flags before access", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-message-numbers-"));
+
+  const readStdout = captureStream();
+  const readExitCode = await runCli([
+    "channels",
+    "messages",
+    "read",
+    "--workspace",
+    workspaceRoot,
+    "--limit",
+    "0",
+    "--json",
+  ], {
+    stdout: readStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const syncLimitStdout = captureStream();
+  const syncLimitExitCode = await runCli([
+    "channels",
+    "messages",
+    "sync",
+    "--workspace",
+    workspaceRoot,
+    "--limit",
+    "nope",
+    "--json",
+  ], {
+    stdout: syncLimitStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const syncTimeoutStdout = captureStream();
+  const syncTimeoutExitCode = await runCli([
+    "channels",
+    "messages",
+    "sync",
+    "--workspace",
+    workspaceRoot,
+    "--timeout",
+    "NaN",
+    "--json",
+  ], {
+    stdout: syncTimeoutStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const readPayload = JSON.parse(readStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  const syncLimitPayload = JSON.parse(syncLimitStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  const syncTimeoutPayload = JSON.parse(syncTimeoutStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  assert.equal(readExitCode, CLI_EXIT_USAGE);
+  assert.equal(readPayload.ok, false);
+  assert.equal(readPayload.error.code, "invalid_channel_messages_limit");
+  assert.deepEqual(readPayload.error.details, { flag: "--limit", value: "0" });
+  assert.equal(syncLimitExitCode, CLI_EXIT_USAGE);
+  assert.equal(syncLimitPayload.ok, false);
+  assert.equal(syncLimitPayload.error.code, "invalid_channel_messages_limit");
+  assert.deepEqual(syncLimitPayload.error.details, { flag: "--limit", value: "nope" });
+  assert.equal(syncTimeoutExitCode, CLI_EXIT_USAGE);
+  assert.equal(syncTimeoutPayload.ok, false);
+  assert.equal(syncTimeoutPayload.error.code, "invalid_channel_messages_timeout");
+  assert.deepEqual(syncTimeoutPayload.error.details, { flag: "--timeout", value: "NaN" });
+});
+
+test("runCli rejects invalid channel log lines before reading logs", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-log-lines-"));
+
+  const logsStdout = captureStream();
+  const logsExitCode = await runCli([
+    "channels",
+    "listen",
+    "logs",
+    "--workspace",
+    workspaceRoot,
+    "--lines",
+    "nope",
+    "--json",
+  ], {
+    stdout: logsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(logsStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  assert.equal(logsExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_channel_log_lines");
+  assert.deepEqual(payload.error.details, { flag: "--lines", value: "nope" });
+});
+
 test("runCli connects Telegram through channels and runs a processor listener once", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channels-listener-"));
   const processorPath = path.join(workspaceRoot, "processor.cjs");

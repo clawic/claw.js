@@ -62,6 +62,21 @@ function parsePositiveIntegerFlag(flags: Record<string, string>, name: string, c
   return value;
 }
 
+function parseChannelPositiveIntegerFlag(flags: Record<string, string>, name: string, code: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw.trim());
+  if (!raw.trim() || !Number.isSafeInteger(value) || value <= 0) {
+    throw new CliHandledError(code, `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location: `channels.flags.${name}`,
+      suggestion: `Pass --${name} with a whole number greater than zero, or omit it to use the default.`,
+      safeNextStep: `Rerun the channel command with a valid --${name} value before changing channel state.`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
+
 const CHANNEL_PERMISSION_VALUES = new Set(["read", "write", "ingest", "admin"]);
 
 function parseChannelPermissions(flags: Record<string, string>): Array<"read" | "write" | "ingest" | "admin"> {
@@ -478,7 +493,7 @@ if (group === "channels" && command === "telegram" && subcommand === "codex") {
 
   if (codexCommand === "logs") {
     const paths = channelListenerPaths(workspaceRoot, provider, account);
-    const lines = flags.lines ? Number(flags.lines) : 80;
+    const lines = parseChannelPositiveIntegerFlag(flags, "lines", "invalid_channel_log_lines") ?? 80;
     const output = readTail(paths.logPath, lines);
     if (wantsJson) writeChannelJson({ log: output, logPath: paths.logPath });
     else context.stdout.write(output ? `${output}\n` : "");
@@ -732,7 +747,7 @@ if (group === "channels" && command === "listen") {
   }
 
   if (subcommand === "logs") {
-    const lines = flags.lines ? Number(flags.lines) : 80;
+    const lines = parseChannelPositiveIntegerFlag(flags, "lines", "invalid_channel_log_lines") ?? 80;
     const output = readTail(paths.logPath, lines);
     if (wantsJson) writeChannelJson({ log: output });
     else context.stdout.write(output ? `${output}\n` : "");
@@ -998,12 +1013,14 @@ if (group === "channels" && command === "messages" && subcommand === "send") {
 }
 
 if (group === "channels" && command === "messages" && subcommand === "sync") {
+  const limit = parseChannelPositiveIntegerFlag(flags, "limit", "invalid_channel_messages_limit");
+  const timeoutSeconds = parseNonNegativeNumberFlag(flags, "timeout", "invalid_channel_messages_timeout");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const messages = await claw.channels.messages.sync({
     provider: flags.provider || flags.channel || "telegram",
     accountId: flags.account,
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
-    ...(flags.timeout ? { timeoutSeconds: Number(flags.timeout) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+    ...(timeoutSeconds !== undefined ? { timeoutSeconds } : {}),
   });
   if (wantsJson) {
     writeChannelJson(messages);
@@ -1014,13 +1031,14 @@ if (group === "channels" && command === "messages" && subcommand === "sync") {
 }
 
 if (group === "channels" && command === "messages" && subcommand === "read") {
+  const limit = parseChannelPositiveIntegerFlag(flags, "limit", "invalid_channel_messages_limit");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const messages = claw.channels.messages.read({
     provider: flags.provider || flags.channel,
     accountId: flags.account,
     targetId: flags["target-id"] || flags.target || flags["chat-id"],
     agentId: flags.agent,
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
   });
   if (wantsJson) {
     writeChannelJson(messages);
