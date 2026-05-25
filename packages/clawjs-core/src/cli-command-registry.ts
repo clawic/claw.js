@@ -349,7 +349,33 @@ function scoreText(query: string, text: string): number {
   if (distance <= 1) return 45;
   if (distance <= 2 && Math.max(q.length, value.length) >= 5) return 35;
   const parts = q.split(/[\s._/-]+/).filter(Boolean);
-  return parts.reduce((score, part) => score + (value.includes(part) ? 10 : 0), 0);
+  const valueParts = value.split(/[\s._/-]+/).filter(Boolean);
+  let tokenScore = 0;
+  const firstQueryPart = parts[0];
+  const firstValuePart = valueParts[0];
+  if (firstQueryPart && firstValuePart) {
+    const firstDistance = editDistance(firstQueryPart, firstValuePart);
+    if (firstValuePart === firstQueryPart) tokenScore += 40;
+    else if (firstValuePart.startsWith(firstQueryPart)) tokenScore += 30;
+    else if (firstDistance <= 1 && Math.max(firstQueryPart.length, firstValuePart.length) >= 4) tokenScore += 35;
+    else if (firstDistance <= 2 && Math.max(firstQueryPart.length, firstValuePart.length) >= 5) tokenScore += 28;
+  }
+  for (const part of parts) {
+    if (valueParts.includes(part)) {
+      tokenScore += 20;
+      continue;
+    }
+    if (valueParts.some((valuePart) => valuePart.startsWith(part))) {
+      tokenScore += 16;
+      continue;
+    }
+    if (valueParts.some((valuePart) => editDistance(part, valuePart) <= 1 && Math.max(part.length, valuePart.length) >= 4)) {
+      tokenScore += 18;
+      continue;
+    }
+    if (value.includes(part)) tokenScore += 10;
+  }
+  return tokenScore;
 }
 
 function editDistance(left: string, right: string): number {

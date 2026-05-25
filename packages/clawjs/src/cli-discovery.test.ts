@@ -26,11 +26,12 @@ function writeFixtureFile(root: string, relativePath: string, content: string): 
 }
 
 test("runCli returns structured related matches for unknown JSON commands", async () => {
-  const result = await runCliCapture(["peopel", "--json"], process.cwd());
+  const result = await runCliCapture(["peopel", "list", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_USAGE);
   const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string }; meta: { related: Array<{ canonicalCommand?: string }>; commandIntent: { status: string; execute: boolean; intent: { mappedCommand?: string } } } };
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "unknown_command");
+  assert.equal(payload.meta.related[0]?.canonicalCommand, "people");
   assert.equal(payload.meta.related.some((entry) => entry.canonicalCommand === "people"), true);
   assert.equal(payload.meta.commandIntent.status, "candidate_alias");
   assert.equal(payload.meta.commandIntent.execute, false);
@@ -47,6 +48,22 @@ test("runCli returns command-intent metadata for future unknown JSON phrases", a
   assert.equal(payload.meta.commandIntent.execute, false);
   assert.equal(payload.meta.commandIntent.intent.id, "cmd_intent_house_buy");
   assert.equal(payload.meta.commandIntent.intent.reportTarget, "github_discussions_ideas");
+});
+
+test("runCli rejects invalid discovery search limits", async () => {
+  const textLimit = await runCliCapture(["search", "routing", "--limit", "nope", "--json"], process.cwd());
+  assert.equal(textLimit.code, CLI_EXIT_USAGE);
+  const textPayload = JSON.parse(textLimit.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string } };
+  assert.equal(textPayload.ok, false);
+  assert.equal(textPayload.error.code, "invalid_search_limit");
+  assert.match(textPayload.error.message, /positive number/);
+  assert.equal(textPayload.meta.canonicalCommand, "search");
+
+  const negativeLimit = await runCliCapture(["search", "routing", "--limit", "-1", "--json"], process.cwd());
+  assert.equal(negativeLimit.code, CLI_EXIT_USAGE);
+  const negativePayload = JSON.parse(negativeLimit.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(negativePayload.ok, false);
+  assert.equal(negativePayload.error.code, "invalid_search_limit");
 });
 
 test("dense data commands use persistent workspace data routes", () => {

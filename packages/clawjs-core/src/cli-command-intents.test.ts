@@ -39,6 +39,11 @@ test("CLI command intent resolution is deterministic and non-executing", () => {
   const typo = resolveClawCliCommandIntent({ phrase: "peopel" });
   assert.equal(typo.status, "candidate_alias");
   assert.equal(typo.related.some((entry) => entry.canonicalName === "people"), true);
+
+  const typoWithAction = resolveClawCliCommandIntent({ phrase: "peopel list" });
+  assert.equal(typoWithAction.status, "candidate_alias");
+  assert.equal(typoWithAction.related[0]?.canonicalName, "people");
+  assert.equal(typoWithAction.intent.mappedCommand, "people");
 });
 
 test("CLI command intent resolution treats routed command aliases as covered", () => {
