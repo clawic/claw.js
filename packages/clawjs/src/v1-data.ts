@@ -273,7 +273,11 @@ function runDataMaintenanceCommand(input: V1DataCliInput, store: DatabaseService
 function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
   if (command === "snapshot" || command === "projection") {
-    const projection = readAppStateProjection(store.sqlite, { sidebarLimit: Number(input.flags.limit ?? 200), receiptLimit: Number(input.flags["receipt-limit"] ?? 20) });
+    const sidebarLimit = parseV1PositiveDecimalIntegerFlag(input, input.flags.limit, "limit", "invalid_app_state_projection_limit", 200);
+    if (sidebarLimit === null) return V1_DATA_EXIT_USAGE;
+    const receiptLimit = parseV1PositiveDecimalIntegerFlag(input, input.flags["receipt-limit"], "receipt-limit", "invalid_app_state_projection_receipt_limit", 20);
+    if (receiptLimit === null) return V1_DATA_EXIT_USAGE;
+    const projection = readAppStateProjection(store.sqlite, { sidebarLimit, receiptLimit });
     writeSuccess(input, command === "snapshot" ? snapshotPayload(projection) : projection);
     return V1_DATA_EXIT_OK;
   }
@@ -298,6 +302,20 @@ function runAppStateCommand(input: V1DataCliInput, store: DatabaseServiceStore):
   const result = applyAppStateTransaction(store.sqlite, appStateRequestFromOperations([operation], { requestId: input.flags["request-id"], hostId: input.flags["host-id"] ?? "legacy-app-state" }));
   writeSuccess(input, legacyAppStatePayload(operation, result.projection, result.receipt));
   return V1_DATA_EXIT_OK;
+}
+
+function parseV1PositiveDecimalIntegerFlag(input: V1DataCliInput, raw: string | undefined, flagName: string, code: string, defaultValue: number): number | null {
+  if (raw === undefined) return defaultValue;
+  if (!/^[1-9][0-9]*$/.test(raw)) {
+    writeError(input, code, `Expected --${flagName} to be a positive decimal integer, got ${raw}.`, V1_DATA_EXIT_USAGE);
+    return null;
+  }
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value)) {
+    writeError(input, code, `Expected --${flagName} to be a safe positive decimal integer, got ${raw}.`, V1_DATA_EXIT_USAGE);
+    return null;
+  }
+  return value;
 }
 
 function legacyAppStateListPayload(input: V1DataCliInput, store: DatabaseServiceStore): unknown | null {

@@ -1093,6 +1093,49 @@ test("host app-state projection rejects unsafe decimal limits before opening sto
   }
 });
 
+test("V1 app-state projection rejects non-decimal unsafe limits before querying projection", async () => {
+  const cases = [
+    { flag: "limit", value: "NaN", code: "invalid_app_state_projection_limit" },
+    { flag: "limit", value: "Infinity", code: "invalid_app_state_projection_limit" },
+    { flag: "limit", value: "1.5", code: "invalid_app_state_projection_limit" },
+    { flag: "limit", value: "1e2", code: "invalid_app_state_projection_limit" },
+    { flag: "limit", value: "0x10", code: "invalid_app_state_projection_limit" },
+    { flag: "limit", value: "9007199254740992", code: "invalid_app_state_projection_limit" },
+    { flag: "receipt-limit", value: "NaN", code: "invalid_app_state_projection_receipt_limit" },
+    { flag: "receipt-limit", value: "Infinity", code: "invalid_app_state_projection_receipt_limit" },
+    { flag: "receipt-limit", value: "1.5", code: "invalid_app_state_projection_receipt_limit" },
+    { flag: "receipt-limit", value: "1e2", code: "invalid_app_state_projection_receipt_limit" },
+    { flag: "receipt-limit", value: "0x10", code: "invalid_app_state_projection_receipt_limit" },
+    { flag: "receipt-limit", value: "9007199254740992", code: "invalid_app_state_projection_receipt_limit" },
+  ];
+
+  for (const { flag, value, code } of cases) {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-v1-app-state-invalid-limit-"));
+    await withPatchedEnv({
+      CLAW_DATA_DIR: path.join(tempRoot, "data"),
+      CLAW_DB_PATH: undefined,
+      DATABASE_DB_PATH: undefined,
+      DATABASE_FILES_DIR: undefined,
+    }, async () => {
+      const stdout = captureStream();
+      assert.equal(await runInternalV1Cli(["app-state", "projection", `--${flag}`, value, "--json"], {
+        stdout: stdout.stream,
+        stderr: captureStream().stream,
+        cwd: fs.mkdtempSync(path.join(tempRoot, "cwd-")),
+      }), CLI_EXIT_USAGE);
+
+      const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; message: string; status: string }; meta: { canonicalCommand: string } };
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, code);
+      assert.equal(payload.error.status, "USAGE");
+      assert.match(payload.error.message, new RegExp(`--${flag}`));
+      assert.match(payload.error.message, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      assert.equal(payload.meta.canonicalCommand, "app-state");
+    });
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("V2 main schema upgrades app project resource ids before indexing them", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-schema-upgrade-"));
   await withPatchedEnv({ CLAW_DATA_DIR: tempRoot }, async () => {
