@@ -530,7 +530,15 @@ function nodeTrustDecisionFromFlags(input: RemoteSyncCliInput) {
 }
 
 function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve" | "project") {
-  const deploymentKind = input.flags["deployment-kind"] === "hosted" || input.flags.hosted === "true" || operation === "project" ? "hosted" : "self_hosted";
+  const deploymentKindFlag = input.flags["deployment-kind"];
+  if (deploymentKindFlag && deploymentKindFlag !== "hosted" && deploymentKindFlag !== "self_hosted") {
+    throw new CliHandledError(
+      "invalid_gateway_deployment_kind",
+      "--deployment-kind must be hosted or self_hosted.",
+      CLI_EXIT_USAGE,
+    );
+  }
+  const deploymentKind = deploymentKindFlag ?? (input.flags.hosted === "true" || operation === "project" ? "hosted" : "self_hosted");
   return createGatewayDeploymentManifest({
     deploymentKind,
     gatewayNodeId: input.flags["gateway-node"] ?? input.flags["owner-node"] ?? "gateway.local",

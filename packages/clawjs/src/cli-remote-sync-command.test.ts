@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,6 +7,15 @@ import { test } from "vitest";
 
 import { CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./inspect-cli-test-support.ts";
+
+function coordinatorSigningFlags(workspace: string): string[] {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("ed25519");
+  const privateKeyFile = path.join(workspace, "coordinator-private.pem");
+  const publicKeyFile = path.join(workspace, "coordinator-public.pem");
+  fs.writeFileSync(privateKeyFile, privateKey.export({ type: "pkcs8", format: "pem" }), "utf8");
+  fs.writeFileSync(publicKeyFile, publicKey.export({ type: "spki", format: "pem" }), "utf8");
+  return ["--coordinator-private-key-file", privateKeyFile, "--coordinator-public-key-file", publicKeyFile, "--coordinator-key-id", "coordinator.test"];
+}
 
 test("nodes returns JSON usage errors for unknown subcommands", async () => {
   const result = await runCliCapture(["nodes", "definitely_missing", "--json"], process.cwd());
@@ -165,6 +175,34 @@ test("gateway agent-service rejects invalid cost flags before persistence", asyn
     assert.match(payload.error.message, new RegExp(flag));
   }
 
+  assert.equal(fs.existsSync(path.join(stateDir, "remote-sync-state.json")), false);
+});
+
+test("gateway deployment rejects invalid deployment kind before persistence", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-gateway-deployment-kind-"));
+  const stateDir = path.join(workspace, "state");
+  const result = await runCliCapture([
+    "gateway",
+    "serve",
+    "--state-dir",
+    stateDir,
+    "--record",
+    "true",
+    "--deployment-kind",
+    "nonsense",
+    ...coordinatorSigningFlags(workspace),
+    "--json",
+  ], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_gateway_deployment_kind");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /--deployment-kind/);
   assert.equal(fs.existsSync(path.join(stateDir, "remote-sync-state.json")), false);
 });
 
