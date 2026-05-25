@@ -48,11 +48,30 @@ function writeJsonFile(filePath: string, payload: unknown, filesystem = new Node
 }
 
 function readJsonFile<T>(filePath: string, filesystem = new NodeFileSystemHost()): T | null {
+  let raw: string;
   try {
-    return JSON.parse(filesystem.readText(filePath)) as T;
-  } catch {
-    return null;
+    raw = filesystem.readText(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      return null;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to read observed JSON at ${filePath}: ${message}`);
   }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid observed JSON at ${filePath}: ${message}`);
+  }
+
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`Invalid observed JSON at ${filePath}: expected an object`);
+  }
+
+  return parsed as T;
 }
 
 export function resolveObservedDir(workspaceDir: string): string {

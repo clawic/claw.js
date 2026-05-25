@@ -51,3 +51,26 @@ test("observed store round-trips runtime and models snapshots", () => {
   assert.equal(fs.existsSync(resolveObservedDomainPath(workspaceDir, "runtime")), true);
   assert.deepEqual(Object.keys(readAllObservedDomains(workspaceDir)).sort(), ["models", "runtime"]);
 });
+
+test("observed store surfaces corrupt domain JSON without deleting it", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-observed-store-"));
+  const runtimePath = resolveObservedDomainPath(workspaceDir, "runtime");
+  const corruptJson = "{ not valid json";
+
+  fs.mkdirSync(path.dirname(runtimePath), { recursive: true });
+  fs.writeFileSync(runtimePath, corruptJson, "utf8");
+
+  assert.throws(
+    () => readObservedDomain(workspaceDir, "runtime"),
+    new RegExp(`Invalid observed JSON at ${runtimePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+  );
+  assert.equal(fs.existsSync(runtimePath), true);
+  assert.equal(fs.readFileSync(runtimePath, "utf8"), corruptJson);
+
+  assert.throws(
+    () => readAllObservedDomains(workspaceDir),
+    new RegExp(`Invalid observed JSON at ${runtimePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+  );
+  assert.equal(fs.existsSync(runtimePath), true);
+  assert.equal(fs.readFileSync(runtimePath, "utf8"), corruptJson);
+});
