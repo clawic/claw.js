@@ -1,6 +1,6 @@
 {
   "method": "DELETE",
-  "url": "https://api.github.com/repos/octocat/Hello-World/git/refs/heads%2Ffeature",
+  "url": "https://api.github.com/repos/octocat/Hello-World/git/refs/heads/feature",
   "headers": {
     "accept": "application/vnd.github+json",
     "authorization": "Bearer offline-githubToken-secret",

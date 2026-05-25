@@ -154,11 +154,11 @@ export const GITHUB_EXTRA_ACTION_SPECS = [
   spec("search-code", "GET", "search/code", [stringField("q", { default: "addClass in:file language:js repo:octocat/Hello-World" }), stringField("sort", { optional: true, default: "indexed" }), stringField("order", { optional: true, default: "desc" }), ...PAGING_FIELDS], { query: ["q", "sort", "order", "per_page", "page"], requiredPaths: ["total_count", "items"] }),
   spec("search-users", "GET", "search/users", [stringField("q", { default: "octocat in:login" }), stringField("sort", { optional: true, default: "repositories" }), stringField("order", { optional: true, default: "desc" }), ...PAGING_FIELDS], { query: ["q", "sort", "order", "per_page", "page"], requiredPaths: ["total_count", "items"] }),
   spec("search-commits", "GET", "search/commits", [stringField("q", { default: "repo:octocat/Hello-World fix" }), stringField("sort", { optional: true, default: "author-date" }), stringField("order", { optional: true, default: "desc" }), ...PAGING_FIELDS], { query: ["q", "sort", "order", "per_page", "page"], requiredPaths: ["total_count", "items"] }),
-  spec("list-matching-refs", "GET", (values) => `${repoPath(values)}/git/matching-refs/${pathSegment(requiredString(values.ref, "ref"))}`, [...REPO_FIELDS, stringField("ref", { default: "heads" })], { responseType: "array" }),
-  spec("get-reference", "GET", (values) => `${repoPath(values)}/git/ref/${pathSegment(requiredString(values.ref, "ref"))}`, [...REPO_FIELDS, stringField("ref", { default: "heads/main" })], { requiredPaths: ["ref", "object"] }),
+  spec("list-matching-refs", "GET", (values) => `${repoPath(values)}/git/matching-refs/${pathSubpath(requiredString(values.ref, "ref"), "ref")}`, [...REPO_FIELDS, stringField("ref", { default: "heads" })], { responseType: "array" }),
+  spec("get-reference", "GET", (values) => `${repoPath(values)}/git/ref/${pathSubpath(requiredString(values.ref, "ref"), "ref")}`, [...REPO_FIELDS, stringField("ref", { default: "heads/main" })], { requiredPaths: ["ref", "object"] }),
   spec("create-reference", "POST", (values) => `${repoPath(values)}/git/refs`, [...REPO_FIELDS, stringField("ref", { default: "refs/heads/feature" }), SHA_FIELD], { body: ["ref", "sha"], requiredPaths: ["ref", "object"] }),
-  spec("update-reference", "PATCH", (values) => `${repoPath(values)}/git/refs/${pathSegment(requiredString(values.ref, "ref"))}`, [...REPO_FIELDS, stringField("ref", { default: "heads/feature" }), SHA_FIELD, booleanField("force", { optional: true, default: false })], { body: ["sha", "force"], requiredPaths: ["ref", "object"] }),
-  spec("delete-reference", "DELETE", (values) => `${repoPath(values)}/git/refs/${pathSegment(requiredString(values.ref, "ref"))}`, [...REPO_FIELDS, stringField("ref", { default: "heads/feature" })]),
+  spec("update-reference", "PATCH", (values) => `${repoPath(values)}/git/refs/${pathSubpath(requiredString(values.ref, "ref"), "ref")}`, [...REPO_FIELDS, stringField("ref", { default: "heads/feature" }), SHA_FIELD, booleanField("force", { optional: true, default: false })], { body: ["sha", "force"], requiredPaths: ["ref", "object"] }),
+  spec("delete-reference", "DELETE", (values) => `${repoPath(values)}/git/refs/${pathSubpath(requiredString(values.ref, "ref"), "ref")}`, [...REPO_FIELDS, stringField("ref", { default: "heads/feature" })]),
 ] as const satisfies readonly GitHubGenericOperationSpec[];
 
 export const GITHUB_ACTION_SLUGS = [
@@ -244,11 +244,11 @@ export function buildGitHubOperationRequest(
     case "get-branch":
       return getPlan(`${repoPath(values)}/branches/${pathSegment(requiredString(firstValue(values.branch, values.branchName), "branch"))}`, auth, headers, {}, ["name", "commit"]);
     case "get-repository-content":
-      return getPlan(`${repoPath(values)}/contents/${pathSegment(requiredString(values.path, "path"))}`, auth, headers, {
+      return getPlan(`${repoPath(values)}/contents/${pathSubpath(requiredString(values.path, "path"), "path")}`, auth, headers, {
         ref: values.ref,
       }, ["name", "path", "sha"]);
     case "create-or-update-file":
-      return putPlan(`${repoPath(values)}/contents/${pathSegment(requiredString(values.path, "path"))}`, auth, headers, removeEmptyValues({
+      return putPlan(`${repoPath(values)}/contents/${pathSubpath(requiredString(values.path, "path"), "path")}`, auth, headers, removeEmptyValues({
         message: requiredString(values.message, "message"),
         content: requiredString(values.content, "content"),
         sha: values.sha,
@@ -257,7 +257,7 @@ export function buildGitHubOperationRequest(
         author: values.author,
       }), ["content", "commit"]);
     case "delete-file":
-      return deletePlan(`${repoPath(values)}/contents/${pathSegment(requiredString(values.path, "path"))}`, auth, headers, {
+      return deletePlan(`${repoPath(values)}/contents/${pathSubpath(requiredString(values.path, "path"), "path")}`, auth, headers, {
         message: requiredString(values.message, "message"),
         sha: requiredString(values.sha, "sha"),
         branch: values.branch,
@@ -774,6 +774,14 @@ function requiredJson(value: IntegrationJson | undefined, name: string): Integra
 
 function pathSegment(value: string): string {
   return encodeURIComponent(value);
+}
+
+function pathSubpath(value: string, name: string): string {
+  const parts = value.split("/");
+  if (parts.some((part) => part.trim() === "")) {
+    throw new Error(`GitHub ${name} cannot contain empty path segments`);
+  }
+  return parts.map((part) => pathSegment(part)).join("/");
 }
 
 function numberValue(value: IntegrationJson | undefined): number | undefined {

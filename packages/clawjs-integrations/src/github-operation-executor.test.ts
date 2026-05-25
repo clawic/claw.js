@@ -267,6 +267,43 @@ describe("github operation runtime", () => {
       },
     });
 
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.get-repository-content"), {
+      owner: "octocat",
+      repo: "Hello-World",
+      path: "docs/setup guide.md",
+      ref: "main",
+    }), {
+      method: "GET",
+      endpoint: "repos/octocat/Hello-World/contents/docs/setup%20guide.md",
+      auth,
+      headers,
+      query: {
+        ref: "main",
+      },
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["name", "path", "sha"],
+      },
+    });
+
+    assert.deepEqual(buildGitHubOperationRequest(operation("github.action.get-reference"), {
+      owner: "octocat",
+      repo: "Hello-World",
+      ref: "heads/feature branch",
+    }), {
+      method: "GET",
+      endpoint: "repos/octocat/Hello-World/git/ref/heads/feature%20branch",
+      auth,
+      headers,
+      query: {},
+      body: {},
+      responseSchema: {
+        type: "object",
+        requiredPaths: ["ref", "object"],
+      },
+    });
+
     assert.deepEqual(buildGitHubOperationRequest(operation("github.action.list-commits"), {
       owner: "octocat",
       repo: "Hello-World",
