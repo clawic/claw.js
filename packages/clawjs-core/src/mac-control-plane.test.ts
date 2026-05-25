@@ -629,6 +629,15 @@ test("Mac action broker blocks unsafe plans and emits redacted receipts before h
   assert.equal(allowed.receipt, undefined);
   assert.equal(allowed.auditEvent, undefined);
 
+  const viewerApproved = macApprovalRequestSchema.parse({
+    ...approved,
+    id: "macapproval_viewer",
+    decidedBy: { kind: "user_ui", id: "viewer.local", role: "viewer" },
+  });
+  const viewerDecision = evaluateMacActionBroker({ request, plan, approvals: [viewerApproved] });
+  assert.equal(viewerDecision.decision, "approval_required");
+  assert.deepEqual(viewerDecision.reasons, ["approval_required"]);
+
   const receipt = buildMacActionReceipt({
     request,
     plan,

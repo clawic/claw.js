@@ -1262,10 +1262,13 @@ export function buildMacActionAuditEvent(input: BuildMacActionAuditEventInput): 
 }
 
 function macApprovalSatisfiesPlan(approval: MacApprovalRequest, request: MacActionRequest, plan: MacActionPlan): boolean {
+  const approverRole = approval.decidedBy?.role;
   return approval.status === "approved" &&
     approval.actionRequest.requestId === request.requestId &&
     approval.plan.planId === plan.planId &&
-    approval.plan.capabilityId === plan.capabilityId;
+    approval.plan.capabilityId === plan.capabilityId &&
+    approverRole !== undefined &&
+    plan.requiredApprovals.some((requiredApproval) => requiredApproval.approverRoles.includes(approverRole));
 }
 
 export function evaluateMacActionBroker(input: EvaluateMacActionBrokerInput): MacActionBrokerEvaluation {
