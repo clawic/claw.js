@@ -52,6 +52,31 @@ test("resolves cron, rrule, and relative schedules", () => {
   assert.equal(relativeItem.nextRunAt, "2026-04-10T08:00:00.000Z");
 });
 
+test("does not keep expired one-off schedules runnable", () => {
+  const now = new Date("2026-04-09T09:00:00.000Z");
+  const expired = normalizeTemporalItem({
+    kind: "reminder",
+    title: "expired",
+    schedule: {
+      mode: "one_off",
+      timezone: "UTC",
+      startsAt: "2026-04-09T08:00:00.000Z",
+    },
+  }, "UTC", now);
+  assert.equal(expired.nextRunAt, undefined);
+
+  const upcoming = normalizeTemporalItem({
+    kind: "reminder",
+    title: "upcoming",
+    schedule: {
+      mode: "one_off",
+      timezone: "UTC",
+      startsAt: "2026-04-09T10:00:00.000Z",
+    },
+  }, "UTC", now);
+  assert.equal(upcoming.nextRunAt, "2026-04-09T10:00:00.000Z");
+});
+
 test("handles timezone conversion and dst transitions", () => {
   const ny = zonedDateTimeToUtc({
     year: 2026,

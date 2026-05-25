@@ -470,7 +470,11 @@ export function computeNextRunAt(item: Pick<TemporalItem, "kind" | "startsAt" | 
   if (item.status !== "active") return undefined;
   const schedule = item.schedule;
   if (schedule.mode === "one_off") {
-    return schedule.startsAt ?? item.startsAt ?? item.dueAt;
+    const next = schedule.startsAt ?? item.startsAt ?? item.dueAt;
+    if (!next) return undefined;
+    const nextMs = new Date(next).getTime();
+    if (!Number.isFinite(nextMs) || nextMs <= from.getTime()) return undefined;
+    return new Date(nextMs).toISOString();
   }
   if (schedule.mode === "relative") {
     if (!schedule.relative) return undefined;
