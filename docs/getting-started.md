@@ -100,7 +100,7 @@ claw --runtime openclaw runtime setup-workspace --workspace .
 claw --runtime openclaw doctor --workspace . --json
 ```
 
-Use [Support Matrix](/support-matrix) before selecting any adapter for
+Use [Support Matrix](./support-matrix.md) before selecting any adapter for
 production. dev-only adapters are useful for adapter development and
 exploration, but should not be presented as the default production path.
 

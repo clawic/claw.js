@@ -14,7 +14,10 @@ This workspace-first starter keeps the repository minimal while still wiring in 
 2. Run `npm run claw:init`.
 3. Add skills, channels, providers, or plugins with `claw generate` and `claw add`.
 
-The starter uses the `demo` adapter by default so the workspace can be initialized immediately.
+The starter uses the `demo` adapter by default so the workspace can be
+initialized immediately. When switching to a real runtime, update both the
+`package.json` scripts and `runtime.adapter` in `claw.project.json` before
+running `npm run claw:init` again.
 
 ## Safety and legal
 

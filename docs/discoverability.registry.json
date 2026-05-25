@@ -2398,11 +2398,17 @@
       ],
       "discoveryTerms": [
         "need-coverage-auditor",
-        "Evaluate Need Route Lab routes against CLI, framework, storage, UI, docs, tests, validation, permission, and data coverage."
+        "Evaluate Need Route Lab routes against CLI, framework, storage, UI, docs, tests, validation, permission, and data coverage.",
+        "Need Route Lab coverage auditor",
+        "need route coverage"
       ],
       "searchQueries": [
         {
           "query": "need-coverage-auditor",
+          "expectPath": "skills/need-coverage-auditor/SKILL.md"
+        },
+        {
+          "query": "need route coverage",
           "expectPath": "skills/need-coverage-auditor/SKILL.md"
         }
       ],
@@ -2422,11 +2428,17 @@
       ],
       "discoveryTerms": [
         "need-opportunity-triager",
-        "Dedupe, score, relate, and prioritize Need Route Lab opportunities before backlog or report promotion."
+        "Dedupe, score, relate, and prioritize Need Route Lab opportunities before backlog or report promotion.",
+        "Need Route Lab opportunity triage",
+        "need opportunity triage"
       ],
       "searchQueries": [
         {
           "query": "need-opportunity-triager",
+          "expectPath": "skills/need-opportunity-triager/SKILL.md"
+        },
+        {
+          "query": "need opportunity triage",
           "expectPath": "skills/need-opportunity-triager/SKILL.md"
         }
       ],
@@ -2446,11 +2458,17 @@
       ],
       "discoveryTerms": [
         "need-publication-preparer",
-        "Prepare approval-gated Need Route Lab opportunities for docs, report, backlog, or issue promotion without publishing directly."
+        "Prepare approval-gated Need Route Lab opportunities for docs, report, backlog, or issue promotion without publishing directly.",
+        "Need Route Lab publication",
+        "need publication preparation"
       ],
       "searchQueries": [
         {
           "query": "need-publication-preparer",
+          "expectPath": "skills/need-publication-preparer/SKILL.md"
+        },
+        {
+          "query": "need publication preparation",
           "expectPath": "skills/need-publication-preparer/SKILL.md"
         }
       ],
@@ -2470,11 +2488,22 @@
       ],
       "discoveryTerms": [
         "need-scenario-generator",
-        "Generate composable Need Route Lab scenarios from human needs, domains, target surfaces, autonomy preferences, and validation constraints."
+        "Generate composable Need Route Lab scenarios from human needs, domains, target surfaces, autonomy preferences, and validation constraints.",
+        "Need Route Lab scenario generator",
+        "need scenario",
+        "need route scenario"
       ],
       "searchQueries": [
         {
           "query": "need-scenario-generator",
+          "expectPath": "skills/need-scenario-generator/SKILL.md"
+        },
+        {
+          "query": "need scenario",
+          "expectPath": "skills/need-scenario-generator/SKILL.md"
+        },
+        {
+          "query": "need route scenario",
           "expectPath": "skills/need-scenario-generator/SKILL.md"
         }
       ],
@@ -4831,6 +4860,31 @@
         }
       ],
       "guard": "packages/clawjs-sessions/src/realistic-fixtures.test.ts",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
+      "id": "guard-scripts-package-surface-guard-test",
+      "kind": "test-harness",
+      "steward": "claw",
+      "canonicalSource": "scripts/package-surface-guard.test.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "package-surface-guard.test",
+        "Package Surface Guard.Test"
+      ],
+      "searchQueries": [
+        {
+          "query": "package-surface-guard.test",
+          "expectPath": "scripts/package-surface-guard.test.mjs"
+        }
+      ],
+      "guard": "scripts/package-surface-guard.test.mjs",
       "status": "enforced",
       "reviewDate": "2026-08-18"
     },

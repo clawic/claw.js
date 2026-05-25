@@ -86,20 +86,20 @@ persistent work or collect telemetry.
 
 ## Surface Parity
 
-- **Human surface**: `docs/decision-map.md`, this ADR, Clawix mirror
+- **Human surface**: `docs/decision-map.md`, this ADR, sibling Clawix mirror
   `docs/adr/0023-capability-maturity-activation-governance-mirror.md`, and
   maturity entries in source decision or goal audits explain the policy.
 - **Programmatic surface**: `packages/clawjs-core/src/capability-maturity.ts`,
   `claw inspect maturity`, `claw maturity`, `scripts/capability-maturity-guard.mjs`,
-  Clawix `scripts/interface_surface_guard.mjs`, and the Clawix app overlay
-  enforce classification and activation.
+  sibling Clawix `scripts/interface_surface_guard.mjs`, and the Clawix app
+  overlay enforce classification and activation.
 - **Persistence**: capability registries, Clawix interface/app capability
   registries, decision-map routing, discoverability records, and ADR
   operational coverage carry the durable contract.
 - **Gaps**: complete historical backfill, a Clawix Settings audit UI, and live
   provider or physical-device evidence remain outside this ADR slice.
 - **Validation**: `npm run test:capability-maturity`, ClawJS release
-  `version-governance-check --release-gate`, Clawix
+  `version-governance-check --release-gate`, sibling Clawix
   `scripts/interface_surface_guard.mjs`, Clawix fast/release scripts, and
   focused Swift bridge/route/service tests protect the initial enforcement.
 

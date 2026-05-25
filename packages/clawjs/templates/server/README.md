@@ -45,7 +45,8 @@ The starter uses the `demo` adapter so it works immediately. When you want a rea
 
 1. Change `demo` to `openclaw` in `package.json` scripts.
 2. Change `demo` to `openclaw` in `src/claw.ts`.
-3. Run `npm run claw:init` again if you want the workspace files regenerated for that adapter.
+3. Change `runtime.adapter` from `demo` to `openclaw` in `claw.project.json`.
+4. Run `npm run claw:init` again if you want the workspace files regenerated for that adapter.
 
 ## Safety and legal
 

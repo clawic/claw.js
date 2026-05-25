@@ -12,6 +12,7 @@
   },
   "files": [
     "dist",
+    "src/contract.ts",
     "skill.json",
     "README.md"
   ],

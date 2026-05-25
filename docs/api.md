@@ -7,9 +7,9 @@ description: Runtime-facing instance namespaces, options, and public methods in 
 
 This page documents the runtime-facing `@clawjs/claw` surface you use in
 application code. The exhaustive export inventory for `@clawjs/claw`,
-`@clawjs/core`, and `@clawjs/database` lives in [Public Surface](/surface).
+`@clawjs/core`, and `@clawjs/database` lives in [Public Surface](./surface.md).
 For the side-by-side SDK, CLI, and Relay comparison, use
-[Interface Matrix](/interface-matrix).
+[Interface Matrix](./interface-matrix.md).
 
 ## Factories
 
@@ -138,12 +138,10 @@ Visibility markers used elsewhere in the docs:
 const status = await claw.runtime.status();
 const context = claw.runtime.context();
 
-await claw.runtime.install("npm");
-await claw.runtime.setupWorkspace();
+const installPlan = await claw.runtime.installPlan("npm");
+const setupPlan = await claw.runtime.setupWorkspacePlan();
 
 const gateway = await claw.runtime.gateway.status();
-await claw.runtime.gateway.start();
-await claw.runtime.gateway.waitUntilReady({ timeoutMs: 15_000 });
 ```
 `claw.runtime` also exposes command builders and plan builders for
 install, uninstall, repair, and workspace setup:
@@ -167,14 +165,13 @@ managed bridge workflow for the ClawJS plugin packages:
 
 ```ts
 const pluginStatus = await claw.runtime.plugins.status();
-await claw.runtime.plugins.ensure();
-await claw.runtime.plugins.install("all");
-await claw.runtime.plugins.enable("all");
 const clawjsStatus = await claw.runtime.plugins.clawjs.status();
 ```
 
-Use this namespace when you want to manage the OpenClaw bridge from app
-code without shelling out yourself.
+Use this namespace when you want to inspect or, with explicit operator
+approval, manage the OpenClaw bridge from app code without shelling out
+yourself. Mutating calls such as `install`, `enable`, `setupWorkspace`, and
+`gateway.start` should sit behind an approval path, not in default diagnostics.
 
 ## Mac Control Plane
 

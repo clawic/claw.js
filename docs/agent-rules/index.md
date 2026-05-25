@@ -81,6 +81,8 @@ Use `skills/<id>/SKILL.md` instead of loading long procedures into prompts.
   `source-file-boundary-refactor`, `progressive-modularity-review`.
 - Data and storage: `canonical-catalog-expansion`,
   `data-storage-boundary-review`.
+- Need Route Lab: `need-scenario-generator`, `need-coverage-auditor`,
+  `need-opportunity-triager`, `need-publication-preparer`.
 - Host, security, and validation: `host-boundary-review`,
   `mac-control-plane-work`, `secrets-boundary-review`, `integration-qa-lab`,
   `host-dependent-validation`, `performance-investigation`.

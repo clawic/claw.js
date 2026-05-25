@@ -54,8 +54,8 @@ This ADR makes no adoption or canonicity promotion claim.
 
 ## Source Decision Audit
 
-Conversation-derived 2026-05-21 resource-governance hardening. Clawix ADR
-`docs/adr/0026-ui-state-invalidation-boundary.md` is the first concrete app
+Conversation-derived 2026-05-21 resource-governance hardening. Sibling Clawix
+`docs/adr/0036-ui-state-invalidation-boundary.md` is the first concrete app
 slice.
 
 ## Surface Parity

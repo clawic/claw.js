@@ -103,6 +103,23 @@ test("runCreateClawAgent refuses non-empty target directories", async () => {
   assert.match(stderr.getOutput(), /not empty/);
 });
 
+test("runCreateClawAgent refuses target paths outside the current workspace", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-agent-workspace-"));
+  const workspaceDir = path.join(tempRoot, "workspace");
+  fs.mkdirSync(workspaceDir);
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawAgent(["../escape-agent", "--skip-install"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: workspaceDir,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_AGENT_EXIT_FAILURE);
+  assert.match(stderr.getOutput(), /must stay inside the current workspace/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "escape-agent")), false);
+});
+
 test("runCreateClawAgent runs the selected package manager when installation is enabled", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-agent-install-"));
   const commands: Array<{ command: string; args: string[]; cwd: string }> = [];

@@ -150,6 +150,9 @@ labs/pharma, construction, and IoT use the optional
 Default collection/catalog lists show active safe areas only. Use explicit
 available discovery, such as `claw collections list --available`, to inspect
 the full catalog without making niche domains part of the active experience.
+For JSON output, `knownCollectionCount` is the full registered catalog,
+`visibleCollectionCount` is the catalog after the active/available visibility
+filter, and `returnedCollectionCount` is the number returned after `--limit`.
 
 ## Governance Doctor
 
@@ -1541,13 +1544,16 @@ does not send prompts or mutate the source conversation files.
 `runtime` is limited to adapters and setup.
 
 ```bash
-claw runtime status
-claw runtime install
-claw runtime uninstall
-claw runtime repair
-claw runtime setup-workspace
-claw workspace repair
+claw runtime status --json
+claw runtime install --dry-run --json
+claw runtime repair --dry-run --json
+claw runtime setup-workspace --dry-run --json
+claw workspace repair --dry-run --json
 ```
+
+Real runtime installation, uninstallation, repair, or workspace setup mutates
+local tools or workspace files. Run those forms only after an explicit operator
+approval for the target runtime and workspace.
 
 ## Search And Diagnostics
 

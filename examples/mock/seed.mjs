@@ -22,9 +22,10 @@ import zlib from "zlib";
 
 const DATA_DIR = process.env.MOCK_DATA_DIR || "/tmp/clawjs-mock/data";
 const WORKSPACE_DIR = process.env.MOCK_WORKSPACE_DIR || "/tmp/clawjs-mock/workspace";
-const CONVERSATIONS_DIR = path.join(WORKSPACE_DIR, ".claw", "conversations");
+const CONVERSATIONS_DIR = path.join(WORKSPACE_DIR, ".claw", "sessions");
 const CONFIG_DIR = process.env.MOCK_CONFIG_DIR || "/tmp/clawjs-mock/config";
 const LOCAL_SETTINGS_DIR = process.env.MOCK_LOCAL_SETTINGS_DIR || WORKSPACE_DIR;
+const ALLOW_EXTERNAL_IMAGES = process.env.CLAW_MOCK_ALLOW_EXTERNAL_IMAGES === "1";
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -70,7 +71,7 @@ function randomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// ── Image download (Lorem Picsum / Unsplash) ─────────────────────────────────
+// ── Image fixtures ───────────────────────────────────────────────────────────
 
 /**
  * Download an image from a URL following redirects. Returns a Buffer.
@@ -319,7 +320,7 @@ const QUICK_CONVERSATIONS = [
   { title: "Fix typo in landing page", ex: [["There's a typo on the landing page, 'recieve' should be 'receive'", "Fixed! I've corrected the typo in `src/app/landing/hero.tsx` line 42. Changed \"recieve\" to \"receive\". The change is ready for review."]] },
   { title: "Update dependencies", ex: [["Which packages have major updates available?", "Here are packages with major version updates:\n\n- `next` 15.2 → **16.1** (breaking: new App Router defaults)\n- `react` 18.3 → **19.2** (breaking: concurrent features default)\n- `tailwindcss` 3.4 → **4.0** (breaking: new config format)\n- `typescript` 5.4 → **5.9** (non-breaking, safe to update)\n\nI'd recommend updating TypeScript first (safe), then Tailwind (medium effort), then React+Next together (largest effort). Want a migration plan?"]] },
   { title: "Create a cron job for backups", ex: [["Set up a daily backup routine at 2am", "Done! I've created a routine:\n\n- **Label:** Daily database backup\n- **Schedule:** `0 2 * * *` (daily at 2:00 AM)\n- **Action:** Export SQLite databases, compress, and store in workspace backup directory\n- **Retention:** Keep last 7 days\n\nThe routine is active and will run tonight."]] },
-  { title: "Explain the workspace architecture", ex: [["How does the workspace system work in ClawJS?", "The ClawJS workspace architecture follows a local-first pattern:\n\n**Directory Structure:**\n```\n~/.openclaw/\n├── openclaw.json          # Global config\n├── workspaces/\n│   └── clawjs-demo/       # Your workspace\n│       ├── .claw/\n│       │   └── conversations/  # Chat sessions (JSONL)\n│       ├── settings.json   # Workspace settings\n│       └── data/           # Notes, tasks, etc.\n└── agents/\n    └── clawjs-demo/\n        ├── agent/          # Agent config\n        └── sessions/       # Legacy session storage\n```\n\n**Key concepts:**\n- **Workspace** = isolated environment with its own data\n- **Agent** = AI identity with specific capabilities\n- **Sessions** = chat conversations stored as JSONL\n- **Data** = JSON collections for notes, tasks, etc.\n\nEverything runs locally — no cloud dependency."]] },
+  { title: "Explain the workspace architecture", ex: [["How does the workspace system work in ClawJS?", "The ClawJS workspace architecture follows a local-first pattern:\n\n**Directory Structure:**\n```\n~/.openclaw/\n├── openclaw.json          # Global config\n├── workspaces/\n│   └── clawjs-demo/       # Your workspace\n│       ├── .claw/\n│       │   └── sessions/       # Chat sessions (JSONL)\n│       ├── settings.json   # Workspace settings\n│       └── data/           # Notes, tasks, etc.\n└── agents/\n    └── clawjs-demo/\n        ├── agent/          # Agent config\n        └── sessions/       # Legacy session storage\n```\n\n**Key concepts:**\n- **Workspace** = isolated environment with its own data\n- **Agent** = AI identity with specific capabilities\n- **Sessions** = chat conversations stored as JSONL\n- **Data** = JSON collections for notes, tasks, etc.\n\nEverything runs locally — no cloud dependency."]] },
   { title: "Add dark mode to charts", ex: [["The charts don't look right in dark mode", "I see the issue — the chart components are using hardcoded colors instead of theme tokens. Here's what needs to change:\n\n1. Replace `stroke=\"#1f2937\"` with `stroke=\"hsl(var(--foreground))\"`\n2. Replace `fill=\"#f3f4f6\"` with `fill=\"hsl(var(--muted))\"`\n3. Grid lines: use `hsl(var(--border))` instead of `#e5e7eb`\n4. Tooltips: add `className=\"bg-popover text-popover-foreground border\"`\n\nThis affects 3 components: `UsageChart`, `ActivityChart`, and `DashboardStats`. Want me to make the changes?"]] },
   { title: "Research vector databases", ex: [["What vector database should I use for a RAG system with 1M documents?", "For 1M documents, here's my comparison:\n\n| DB | Speed | Cost | Ease | Best For |\n|----|-------|------|------|----------|\n| **Pinecone** | Fast | $$$ | Easy | Managed, no-ops teams |\n| **Qdrant** | Very Fast | $ (self-host) | Medium | Performance-critical |\n| **Chroma** | Good | Free | Very Easy | Prototyping, small scale |\n| **pgvector** | Good | $ | Easy | Already using Postgres |\n| **Weaviate** | Fast | $$ | Medium | Multi-modal search |\n\n**My recommendation:** Start with **pgvector** if you already have Postgres — it handles 1M vectors well and eliminates operational overhead. Migrate to Qdrant if you need sub-10ms queries at scale.\n\nFor your RAG pipeline: embed with `text-embedding-3-small` ($0.02/1M tokens), chunk at 512 tokens with 50-token overlap, and use HNSW indexing."]] },
   { title: "Quick note about meeting", ex: [["Save a note: meeting with Lisa moved to Thursday 3pm, she wants to discuss the partnership agreement", "Saved to notes:\n\n**Meeting with Lisa — Rescheduled**\n📅 Thursday 3pm\n📋 Topic: Partnership agreement discussion\n\nI've also updated your calendar event. Want me to prepare any materials for the meeting?"]] },
@@ -860,7 +861,7 @@ const DEMO_IMAGE_DEFS = [
 const POOL_PICSUM_IDS = [85, 88, 89, 90, 91, 96, 100, 101, 102, 103, 104, 106, 109, 110, 111];
 
 function generateE2EImages(imageFiles) {
-  // imageFiles: Map<index, { file, size }>  — only indices that were successfully downloaded
+  // imageFiles: Map<index, { file, size }> for generated or downloaded gallery fixtures
   const records = [];
   for (let i = 0; i < DEMO_IMAGE_DEFS.length; i++) {
     const def = DEMO_IMAGE_DEFS[i];
@@ -918,7 +919,7 @@ function generateLocalSettings() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MAIN (async — downloads images from picsum.photos)
+// MAIN
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function main() {
@@ -994,8 +995,10 @@ const plugins = generatePlugins();
 writeCollection("plugins", plugins);
 console.log(`    ✓ ${plugins.length} plugins`);
 
-// ── Download images from picsum.photos (Unsplash) ───────────────────────────
-console.log("  → Downloading demo images from picsum.photos...");
+// ── Generate demo image fixtures ─────────────────────────────────────────────
+console.log(ALLOW_EXTERNAL_IMAGES
+  ? "  → Downloading demo images from picsum.photos..."
+  : "  → Generating hermetic demo image fixtures...");
 const imgDir = path.join(WORKSPACE_DIR, "images");
 const poolDir = path.join(WORKSPACE_DIR, "images", "_pool");
 ensureDir(imgDir);
@@ -1005,9 +1008,8 @@ ensureDir(poolDir);
 const galleryUrls = DEMO_IMAGE_DEFS.map((d) => `https://picsum.photos/id/${d.picsumId}/640/480`);
 const poolUrls = POOL_PICSUM_IDS.map((id) => `https://picsum.photos/id/${id}/640/480`);
 
-// Download all in parallel (gallery + pool)
 const allUrls = [...galleryUrls, ...poolUrls];
-const downloaded = await downloadBatch(allUrls, 10);
+const downloaded = ALLOW_EXTERNAL_IMAGES ? await downloadBatch(allUrls, 10) : new Map();
 
 // Save gallery images
 const imageFiles = new Map(); // index -> { file, size }
@@ -1038,7 +1040,7 @@ for (let i = 0; i < POOL_PICSUM_IDS.length; i++) {
   fs.writeFileSync(path.join(poolDir, file), buf);
   poolCount++;
 }
-console.log(`    ✓ ${galleryCount} gallery images + ${poolCount} pool images downloaded`);
+console.log(`    ✓ ${galleryCount} gallery images + ${poolCount} pool images`);
 
 // Generate documents
 console.log("  → Generating documents...");

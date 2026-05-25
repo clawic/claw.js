@@ -15,7 +15,7 @@ you swap the engine underneath.
 | Surface | Best for | Example |
 | --- | --- | --- |
 | SDK | local Node.js application code | `claw.sessions.listSessions()` |
-| CLI | operator and automation workflows | `claw sessions list --json` |
+| CLI | operator and automation workflows | `claw inspect commands --json` |
 | Relay API | remote browser, mobile, or server clients | `GET /v1/.../sessions` |
 
 Full comparison: [docs/interface-matrix.md](docs/interface-matrix.md)
@@ -41,7 +41,7 @@ flowchart LR
 
 Build once, expose everything through the SDK, the CLI, the API, or the
 relay. Naming and stability rules live in
-[ADR 0001](docs/adr/0048-naming-and-stability-surfaces.md).
+[ADR 0048](docs/adr/0048-naming-and-stability-surfaces.md).
 Long-lived architecture, storage, validation, release, privacy, and naming
 decisions are indexed in [docs/decision-map.md](docs/decision-map.md).
 Official trust and compatibility labels are explained in
@@ -117,6 +117,11 @@ Install the CLI globally:
 npm install -g @clawjs/cli
 claw --help
 ```
+
+The published base CLI intentionally starts thin. Safe base commands such as
+`claw inspect commands --json` and `claw modules list --available --json` work
+without optional runtime packs; session, runtime, and adapter-heavy workflows
+require a generated project or explicit package installation.
 
 Or run the latest CLI without a global install:
 

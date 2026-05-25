@@ -51,6 +51,6 @@ surprises, or persistent background state.
 ## Validation
 
 - `scripts/zero-accidental-work-guard.mjs`
-- Clawix mirror guard: `scripts/zero_accidental_work_check.mjs`
+- Sibling Clawix mirror guard: `scripts/zero_accidental_work_check.mjs`
 - CLI base import guard: `scripts/verify-cli-base-imports.mjs`
 - Progressive modularity guard: `scripts/progressive-modularity-guard.mjs`
