@@ -218,6 +218,59 @@ test("hermes adapter honors an explicit binary path for runtime probes", async (
   assert.equal(runner.calls.every((call) => call === "custom-hermes --version" || call.startsWith("custom-hermes ")), true);
 });
 
+test("hermes adapter honors explicit config, auth store, and workspace paths", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-overrides-"));
+  const runtimeHome = path.join(homeDir, ".hermes");
+  const configPath = path.join(homeDir, "profiles", "project-hermes.yaml");
+  const authStorePath = path.join(homeDir, "secrets", "hermes-auth.json");
+  const workspacePath = path.join(homeDir, "workspaces", "project-a");
+  fs.mkdirSync(runtimeHome, { recursive: true });
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.mkdirSync(path.dirname(authStorePath), { recursive: true });
+  fs.mkdirSync(workspacePath, { recursive: true });
+  fs.writeFileSync(path.join(runtimeHome, "config.yaml"), [
+    "model: anthropic/wrong-default",
+    "channels:",
+    "  slack:",
+    "    enabled: true",
+  ].join("\n"));
+  fs.writeFileSync(configPath, [
+    "model: openai/project-model",
+    "provider: openai",
+    "channels:",
+    "  whatsapp:",
+    "    enabled: true",
+  ].join("\n"));
+  fs.writeFileSync(authStorePath, JSON.stringify({
+    providers: {
+      openai: { apiKey: "sk-project-secret-value" },
+    },
+  }, null, 2));
+
+  const options = {
+    adapter: "hermes" as const,
+    homeDir,
+    configPath,
+    authStorePath,
+    workspacePath,
+    env: {},
+  };
+  const locations = hermesAdapter.resolveLocations(options);
+  assert.equal(locations.homeDir, runtimeHome);
+  assert.equal(locations.configPath, configPath);
+  assert.equal(locations.authStorePath, authStorePath);
+  assert.equal(locations.workspacePath, workspacePath);
+
+  const resources = await getRuntimeResourceCatalogs(hermesAdapter, new FakeRunner({}), options);
+  assert.equal(resources.models.defaultModel?.modelId, "openai/project-model");
+  assert.equal(resources.models.models.some((entry) => entry.id === "anthropic/wrong-default"), false);
+  assert.equal(resources.auth.providers.openai?.hasAuth, true);
+  assert.equal(resources.auth.providers.openai?.source, "runtime");
+  assert.equal(resources.auth.providers.openai?.maskedCredential?.includes("sk-project-secret-value"), false);
+  assert.equal(resources.channels.channels.some((entry) => entry.id === "whatsapp" && entry.status === "configured"), true);
+  assert.equal(resources.channels.channels.some((entry) => entry.id === "slack"), false);
+});
+
 test("hermes adapter does not duplicate an already resolved runtime home", async () => {
   const parentHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-home-"));
   const hermesHome = path.join(parentHome, ".hermes");
