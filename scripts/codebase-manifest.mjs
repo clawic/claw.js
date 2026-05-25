@@ -296,6 +296,13 @@ function manifestDiagnostic(failure) {
       safeNextStep: "Regenerate with node scripts/codebase-manifest.mjs --write, then rerun --check.",
     });
   }
+  if (failure === "manifest file is missing" || failure === "manifest file is stale") {
+    return createDiagnostic("codebase_manifest_stale", failure, {
+      location: manifestRelativePath,
+      suggestion: "Keep the checked-in codebase manifest synchronized with the current source inventory.",
+      safeNextStep: "Run node scripts/codebase-manifest.mjs --write, review docs/codebase-manifest.json, then rerun --check.",
+    });
+  }
   if (failure.includes("file record") || failure.includes("source extension") || failure.includes("language") || failure.includes("line count") || failure.includes("must be an array")) {
     return createDiagnostic("codebase_manifest_file_record_invalid", failure, {
       location: manifestRelativePath,
@@ -318,6 +325,12 @@ function printFailures(failures, options = {}) {
   });
 }
 
+function checkManifestSnapshot(generated, existing) {
+  if (existing === null) return ["manifest file is missing"];
+  if (existing !== generated) return ["manifest file is stale"];
+  return [];
+}
+
 function runSelfTest() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-codebase-manifest-"));
   try {
@@ -334,11 +347,21 @@ function runSelfTest() {
     if (!manifest.files.some((file) => file.path === "src/View.swift" && file.exports.includes("ViewModel"))) {
       throw new Error("expected Swift declaration inventory");
     }
+    if (checkManifestSnapshot("expected\n", "expected\n").length !== 0) {
+      throw new Error("expected matching manifest snapshot to pass");
+    }
+    if (checkManifestSnapshot("expected\n", "stale\n").join("\n") !== "manifest file is stale") {
+      throw new Error("expected stale manifest snapshot failure");
+    }
+    if (checkManifestSnapshot("expected\n", null).join("\n") !== "manifest file is missing") {
+      throw new Error("expected missing manifest snapshot failure");
+    }
     const chunks = [];
     printFailures([
       "unknown argument --bad-token-sk-test-secret-123456",
       "summary.files does not match files length",
       "files are not sorted near /Users/example/private/src/index.ts",
+      "manifest file is stale",
       "src/index.ts imports must be an array",
       "schemaVersion must be 1",
     ], { stream: { write: (chunk) => chunks.push(chunk) } });
@@ -346,6 +369,7 @@ function runSelfTest() {
     if (!output.includes("code: codebase_manifest_usage_error")) throw new Error("self-test missing usage code");
     if (!output.includes("code: codebase_manifest_summary_mismatch")) throw new Error("self-test missing summary code");
     if (!output.includes("code: codebase_manifest_order_invalid")) throw new Error("self-test missing order code");
+    if (!output.includes("code: codebase_manifest_stale")) throw new Error("self-test missing stale code");
     if (!output.includes("code: codebase_manifest_file_record_invalid")) throw new Error("self-test missing record code");
     if (!output.includes("code: codebase_manifest_schema_invalid")) throw new Error("self-test missing schema code");
     if (!output.includes("suggestion: Regenerate the manifest")) throw new Error("self-test missing actionable suggestion");
@@ -378,7 +402,11 @@ if (args.has("--write")) {
 }
 
 if (args.has("--check")) {
-  const failures = validateManifest(manifest);
+  const existing = fs.existsSync(manifestPath) ? fs.readFileSync(manifestPath, "utf8") : null;
+  const failures = [
+    ...validateManifest(manifest),
+    ...checkManifestSnapshot(generated, existing),
+  ];
   if (failures.length) {
     printFailures(failures);
     process.exit(1);
