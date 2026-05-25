@@ -704,9 +704,24 @@ function parseCsv(value: string | undefined): string[] {
 
 function parseJsonObject(value: string | undefined): Record<string, unknown> {
   if (!value?.trim()) return {};
-  const parsed = JSON.parse(value) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value) as unknown;
+  } catch {
+    throw new CliHandledError("invalid_memory_metadata_json", "--metadata must be a valid JSON object.", MEMORY_EXIT_USAGE, {
+      location: "cli.knowledge.memories",
+      suggestion: "Pass --metadata as a JSON object such as '{\"source\":\"note\"}'.",
+      safeNextStep: "Rerun the knowledge memories command with valid JSON metadata.",
+      details: { flag: "--metadata", value },
+    });
+  }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("--metadata must be a JSON object");
+    throw new CliHandledError("invalid_memory_metadata_json", "--metadata must be a JSON object.", MEMORY_EXIT_USAGE, {
+      location: "cli.knowledge.memories",
+      suggestion: "Pass --metadata as a JSON object such as '{\"source\":\"note\"}'.",
+      safeNextStep: "Rerun the knowledge memories command with valid JSON metadata.",
+      details: { flag: "--metadata", value },
+    });
   }
   return parsed as Record<string, unknown>;
 }

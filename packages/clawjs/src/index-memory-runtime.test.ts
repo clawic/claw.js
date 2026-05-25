@@ -370,6 +370,7 @@ test("runCli knowledge memories JSON errors are parseable and db memory search i
   for (const testCase of [
     { flag: "--confidence", value: "nope", code: "invalid_memory_confidence" },
     { flag: "--importance", value: "1.5", code: "invalid_memory_importance" },
+    { flag: "--metadata", value: "{nope", code: "invalid_memory_metadata_json" },
   ]) {
     const invalidNumberStdout = captureStream();
     assert.equal(await runCli([
