@@ -31,14 +31,14 @@ export function detectPackageManager(): SupportedPackageManager {
 }
 
 export function createPackageName(value: string, fallback: string): string {
-  const normalized = value
+  const normalize = (candidate: string): string => candidate
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9._/-]+/g, "-")
-    .replace(/[./]+/g, "-")
+    .replace(/[._/-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-  return normalized || fallback;
+  return normalize(value) || normalize(fallback) || "claw-project";
 }
 
 export function createTitle(value: string, fallback: string): string {
