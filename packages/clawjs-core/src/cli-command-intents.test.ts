@@ -1,11 +1,13 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   CLAW_CLI_COMMAND_INTENT_STATUSES,
   commandIntentToNeedOpportunity,
   listClawCliCommandIntentRegistry,
   resolveClawCliCommandIntent,
+  searchClawCliRegistry,
 } from "./catalogs.ts";
 
 test("CLI command intents expose the compact V1 status model", () => {
@@ -44,6 +46,14 @@ test("CLI command intent resolution is deterministic and non-executing", () => {
   assert.equal(typoWithAction.status, "candidate_alias");
   assert.equal(typoWithAction.related[0]?.canonicalName, "people");
   assert.equal(typoWithAction.intent.mappedCommand, "people");
+});
+
+test("CLI command search keeps bounded fuzzy matching for typo resolution", () => {
+  assert.equal(searchClawCliRegistry("inspct").some((entry) => entry.canonicalName === "inspect"), true);
+  assert.match(
+    fs.readFileSync(new URL("./cli-command-registry.ts", import.meta.url), "utf8"),
+    /Math\.abs\(left\.length - right\.length\) > maxDistance/,
+  );
 });
 
 test("CLI command intent resolution treats routed command aliases as covered", () => {

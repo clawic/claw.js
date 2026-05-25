@@ -7,6 +7,20 @@ import assert from "node:assert/strict";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
+test("commands route stays on the direct startup path before generated legacy routing", () => {
+  const indexSource = fs.readFileSync(new URL("./index.ts", import.meta.url), "utf8");
+  const fastPathOffset = indexSource.indexOf('if (group === "commands")');
+  const fastPathEndOffset = indexSource.indexOf("\n  const v1DataExit", fastPathOffset);
+  const generatedRouteOffset = indexSource.indexOf("const routeGroup = routeGroupForCommand(group)");
+  assert.notEqual(fastPathOffset, -1);
+  assert.notEqual(fastPathEndOffset, -1);
+  assert.notEqual(generatedRouteOffset, -1);
+  assert.equal(fastPathOffset < generatedRouteOffset, true);
+  const fastPathBlock = indexSource.slice(fastPathOffset, fastPathEndOffset);
+  assert.match(fastPathBlock, /runCommandsCli/);
+  assert.doesNotMatch(fastPathBlock, /runGeneratedCliRoute/);
+});
+
 test("commands resolve returns the canonical future fixture without execution", async () => {
   const result = await runCliCapture(["commands", "resolve", "house", "buy", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK);

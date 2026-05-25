@@ -172,6 +172,19 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runEvolutionCli({ positionals, flags, context, wantsJson, binName });
   }
 
+  if (group === "commands") {
+    const { runCommandsCli } = await import("./cli-commands-command.ts");
+    return await runCommandsCli({
+      positionals,
+      flags,
+      argv,
+      context,
+      wantsJson,
+      binName,
+      workspaceRoot: flags.workspace || context.cwd,
+    });
+  }
+
   const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
   if (v1DataExit !== null) return v1DataExit;
 

@@ -345,7 +345,7 @@ function scoreText(query: string, text: string): number {
   if (value === q) return 100;
   if (value.startsWith(q)) return 80;
   if (value.includes(q)) return 50;
-  const distance = editDistance(q, value);
+  const distance = editDistanceWithin(q, value, 2);
   if (distance <= 1) return 45;
   if (distance <= 2 && Math.max(q.length, value.length) >= 5) return 35;
   const parts = q.split(/[\s._/-]+/).filter(Boolean);
@@ -354,7 +354,7 @@ function scoreText(query: string, text: string): number {
   const firstQueryPart = parts[0];
   const firstValuePart = valueParts[0];
   if (firstQueryPart && firstValuePart) {
-    const firstDistance = editDistance(firstQueryPart, firstValuePart);
+    const firstDistance = editDistanceWithin(firstQueryPart, firstValuePart, 2);
     if (firstValuePart === firstQueryPart) tokenScore += 40;
     else if (firstValuePart.startsWith(firstQueryPart)) tokenScore += 30;
     else if (firstDistance <= 1 && Math.max(firstQueryPart.length, firstValuePart.length) >= 4) tokenScore += 35;
@@ -369,7 +369,7 @@ function scoreText(query: string, text: string): number {
       tokenScore += 16;
       continue;
     }
-    if (valueParts.some((valuePart) => editDistance(part, valuePart) <= 1 && Math.max(part.length, valuePart.length) >= 4)) {
+    if (valueParts.some((valuePart) => editDistanceWithin(part, valuePart, 1) <= 1 && Math.max(part.length, valuePart.length) >= 4)) {
       tokenScore += 18;
       continue;
     }
@@ -378,21 +378,25 @@ function scoreText(query: string, text: string): number {
   return tokenScore;
 }
 
-function editDistance(left: string, right: string): number {
+function editDistanceWithin(left: string, right: string, maxDistance: number): number {
   if (left === right) return 0;
   if (!left) return right.length;
   if (!right) return left.length;
+  if (Math.abs(left.length - right.length) > maxDistance) return maxDistance + 1;
   const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
   const current = new Array<number>(right.length + 1);
   for (let i = 1; i <= left.length; i += 1) {
     current[0] = i;
+    let rowMinimum = current[0];
     for (let j = 1; j <= right.length; j += 1) {
       current[j] = Math.min(
         previous[j] + 1,
         current[j - 1] + 1,
         previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1),
       );
+      rowMinimum = Math.min(rowMinimum, current[j]);
     }
+    if (rowMinimum > maxDistance) return maxDistance + 1;
     previous.splice(0, previous.length, ...current);
   }
   return previous[right.length] ?? Number.POSITIVE_INFINITY;
