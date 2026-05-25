@@ -546,6 +546,58 @@ test("SearchStore materializes fragments, actions and interactions without N+1 q
   }
 });
 
+test("SearchStore materializes only final ranked results after candidate ranking", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-materialization-finalists-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "finalist.items",
+      domain: "finalists",
+      name: "Finalist items",
+      resultTypes: ["finalist-item"],
+    }));
+    store.upsertDocuments(Array.from({ length: 120 }, (_value, index) => ({
+      id: `finalist.items:${index}`,
+      source: "finalist.items",
+      domain: "finalists",
+      type: "finalist-item",
+      title: `Finalist materialization result ${index} finalistneedle`,
+      body: `Search final materialization regression body finalistneedle ${index}`,
+      updatedAt: new Date(1_800_001_000_000 + index).toISOString(),
+      fragments: Array.from({ length: 5 }, (_fragment, fragmentIndex) => ({
+        id: `finalist.items:${index}:fragment:${fragmentIndex}`,
+        title: `Fragment ${fragmentIndex}`,
+        body: `Fragment body finalistneedle ${index} ${fragmentIndex}`,
+      })),
+      actions: [{ id: "open", kind: "open", label: "Open finalist item" }],
+    })));
+
+    const instrumentedStore = store as unknown as {
+      materializeResults: (rows: unknown[], input: unknown, options?: unknown) => unknown[];
+    };
+    const originalMaterializeResults = instrumentedStore.materializeResults.bind(store);
+    let materializedRows = 0;
+    instrumentedStore.materializeResults = (rows, input, options) => {
+      materializedRows += rows.length;
+      return originalMaterializeResults(rows, input, options);
+    };
+
+    const output = store.query({
+      query: "finalistneedle",
+      domains: ["finalists"],
+      limit: 10,
+    });
+
+    assert.equal(output.results.length, 10);
+    assert.equal(materializedRows, 10);
+    assert.equal(output.results[0]?.actions?.[0]?.id, "open");
+    assert.equal(output.results.every((result) => (result.fragments?.length ?? 0) <= 5), true);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore keeps shard-scoped ranking cache through unrelated cold backfill", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cache-scopes-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

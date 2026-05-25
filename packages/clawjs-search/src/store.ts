@@ -594,15 +594,18 @@ export class SearchStore {
         rows.set(row.id, existing ? mergeSearchRows(existing, row) : row);
       }
     }
-    const materializedResults = this.materializeResults(
+    const rankedCandidates = this.rankCandidateRows(
       [...rows.values()].filter((row) => searchAclAllows(row.permissions_json, plannedQueryInput)),
       plannedQueryInput,
       { lexicalMatches, ftsDocumentIds },
     );
-    const results = materializedResults
-      .sort((left, right) => right.score - left.score || (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
-      .filter(agentBudgetResultFilter(plannedQueryInput.agentBudget))
-      .slice(0, outputLimit);
+    const budgetFilter = agentBudgetResultFilter(plannedQueryInput.agentBudget);
+    const finalRows = rankedCandidates
+      .sort((left, right) => right.result.score - left.result.score || (right.result.updatedAt ?? "").localeCompare(left.result.updatedAt ?? ""))
+      .filter((candidate) => budgetFilter(candidate.result))
+      .slice(0, outputLimit)
+      .map((candidate) => candidate.row);
+    const results = this.materializeResults(finalRows, plannedQueryInput, { lexicalMatches, ftsDocumentIds });
     const output: SearchQueryOutput = {
       query: queryInput.query,
       sourceSet,
@@ -1712,6 +1715,30 @@ export class SearchStore {
         return value !== undefined && value !== null && value !== "";
       }),
     );
+  }
+
+  private rankCandidateRows(rows: SearchDocumentRow[], input: SearchQueryInput, options: SearchMaterializationOptions): Array<{ row: SearchDocumentRow; result: SearchResult }> {
+    if (!rows.length) return [];
+    const interactionsByDocument = this.interactionsByDocument(rows.map((row) => row.id));
+    return rows.map((row) => {
+      const lexical = options.lexicalMatches?.get(row.id) ?? this.lexicalMatchForRow(row, input, options.ftsDocumentIds?.has(row.id) === true);
+      const rankingHints = parseJson<Record<string, number>>(row.ranking_json);
+      const metadata = parseJson(row.metadata_json);
+      const localFrecency = this.localFrecencyFromInteractions(interactionsByDocument.get(row.id) ?? [], input);
+      const score = centralSearchScore({ lexicalScore: lexical.score, semanticScore: row.semantic_score ?? 0, rowRank: this.normalizedRowRank(row.rank), rankingHints, metadata, input, localFrecency });
+      return {
+        row,
+        result: {
+          id: row.id,
+          source: row.source,
+          domain: row.domain,
+          type: row.type,
+          title: row.title,
+          score: score.total,
+          updatedAt: row.updated_at,
+        },
+      };
+    });
   }
 
   private materializeResults(rows: SearchDocumentRow[], input: SearchQueryInput, options: SearchMaterializationOptions = {}): SearchResult[] {
