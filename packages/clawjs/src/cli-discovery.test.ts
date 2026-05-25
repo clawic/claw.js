@@ -917,8 +917,10 @@ test("runCli exposes the local collection catalog for agents", async () => {
     ok: boolean;
     data: {
       collections: Array<{ name: string; aliases: string[]; family: string; fieldCount: number; commands: { schema: string; list: string; query: string } }>;
-      total: number;
-      returned: number;
+      knownCollectionCount: number;
+      visibleCollectionCount: number;
+      returnedCollectionCount: number;
+      counts: { known: number; visible: number; returned: number; limit: number | null };
     };
     meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
   };
@@ -926,7 +928,14 @@ test("runCli exposes the local collection catalog for agents", async () => {
   assert.equal(payload.meta.canonicalCommand, "database");
   assert.equal(payload.meta.invokedCommand, "collections");
   assert.equal(payload.meta.subcommand, "list");
-  assert.equal(payload.data.total >= payload.data.returned, true);
+  assert.equal(payload.data.knownCollectionCount >= payload.data.visibleCollectionCount, true);
+  assert.equal(payload.data.visibleCollectionCount, payload.data.returnedCollectionCount);
+  assert.deepEqual(payload.data.counts, {
+    known: payload.data.knownCollectionCount,
+    visible: payload.data.visibleCollectionCount,
+    returned: payload.data.returnedCollectionCount,
+    limit: null,
+  });
   const tasks = payload.data.collections.find((collection) => collection.name === "tasks");
   assert.ok(tasks);
   assert.equal(tasks.aliases.includes("task"), true);

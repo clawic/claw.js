@@ -257,6 +257,36 @@ test("collections list rejects invalid limits before returning a misleading subs
   assert.equal(payload.meta.canonicalCommand, "collections");
 });
 
+test("collections list names catalog counts by scope", async () => {
+  const result = await runCliCapture(["collections", "list", "--limit", "3", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const payload = JSON.parse(result.stdout) as {
+    data: {
+      collections: Array<{ name: string }>;
+      knownCollectionCount: number;
+      visibleCollectionCount: number;
+      returnedCollectionCount: number;
+      limit: number | null;
+      counts: { known: number; visible: number; returned: number; limit: number | null };
+      total: number;
+      returned: number;
+    };
+  };
+  assert.equal(payload.data.collections.length, 3);
+  assert.equal(payload.data.returnedCollectionCount, 3);
+  assert.equal(payload.data.visibleCollectionCount >= payload.data.returnedCollectionCount, true);
+  assert.equal(payload.data.knownCollectionCount >= payload.data.visibleCollectionCount, true);
+  assert.equal(payload.data.limit, 3);
+  assert.deepEqual(payload.data.counts, {
+    known: payload.data.knownCollectionCount,
+    visible: payload.data.visibleCollectionCount,
+    returned: payload.data.returnedCollectionCount,
+    limit: 3,
+  });
+  assert.equal(payload.data.total, payload.data.knownCollectionCount);
+  assert.equal(payload.data.returned, payload.data.returnedCollectionCount);
+});
+
 test("niche domain commands require explicit module enablement", async () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-gated-"));
   await runCliCapture(["setup", "advanced", "--apply", "--claw-home", tempHome, "--json"], process.cwd());

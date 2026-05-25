@@ -157,10 +157,17 @@ function baseUsage() {
   return [
     "Usage: claw <command> [options]",
     "",
+    "Minimal startup help: only safe base commands are shown here.",
+    "",
     "Safe base commands:",
     "  claw modules list|status|install <module-id>",
     "  claw setup [minimal|normal|advanced] [--details]",
     "  claw inspect commands --json",
+    "",
+    "Discover more:",
+    "  claw --help --all              show the full public command surface",
+    "  claw help <command>            show command-specific help",
+    "  claw inspect commands --json   list commands for agents and tools",
   ].join("\n");
 }
 

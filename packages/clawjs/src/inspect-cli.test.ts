@@ -452,7 +452,7 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
 
   const routes = await runCliCapture(["inspect", "routes", "--json"], process.cwd());
   assert.equal(routes.code, CLI_EXIT_OK);
-  const routeList = parseCliJson<Array<{ id: string; steps: Array<{ edgeType: string; fromId: string; toId: string }> }>>(routes.stdout).data;
+  const routeList = parseCliJson<Array<{ id: string; steps: Array<{ edgeType: string; fromId: string; toId: string; stepIndex: number; relationToPrevious: string; continuesFromPrevious: boolean | null; previousToId?: string }> }>>(routes.stdout).data;
   assert.deepEqual(routeList.map((route) => route.id).sort(), [
     "agents.externalSupportAssignment",
     "agents.internalMacAssignment",
@@ -485,6 +485,10 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
   ]);
   assert.equal(routeList.find((route) => route.id === "chat.localDesktop")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps.some((step) => step.toId === "claw.support.inbox"), true);
+  const externalSupportSteps = routeList.find((route) => route.id === "agents.externalSupportAssignment")?.steps ?? [];
+  assert.deepEqual(externalSupportSteps.map((step) => step.stepIndex), [1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(externalSupportSteps[0]?.relationToPrevious, "entry");
+  assert.equal(externalSupportSteps.some((step) => step.relationToPrevious === "nonlinear" && step.continuesFromPrevious === false && Boolean(step.previousToId)), true);
   assert.equal(routeList.find((route) => route.id === "cli.commandIntentResolution")?.steps.every((step) => ["owns", "consumes", "exposes", "brokers"].includes(step.edgeType)), true);
   assert.equal(routeList.find((route) => route.id === "mac.directCliAction")?.steps.some((step) => step.toId === "claw.mac.actionBroker"), true);
   assert.equal(routeList.find((route) => route.id === "system.telemetryAgentContext")?.steps.some((step) => step.toId === "claw.database.monitor"), true);
@@ -492,8 +496,10 @@ test("runCli exposes surface graph routes and neighbors through inspect", async 
 
   const route = await runCliCapture(["inspect", "route", "chat.remoteRelay", "--json"], process.cwd());
   assert.equal(route.code, CLI_EXIT_OK);
-  const remoteRoute = parseCliJson<{ id: string; edges: Array<{ id: string; type: string }>; tests: string[] }>(route.stdout).data;
+  const remoteRoute = parseCliJson<{ id: string; edges: Array<{ id: string; type: string }>; steps: Array<{ stepIndex: number; relationToPrevious: string }>; tests: string[] }>(route.stdout).data;
   assert.equal(remoteRoute.id, "chat.remoteRelay");
+  assert.equal(remoteRoute.steps[0]?.stepIndex, 1);
+  assert.equal(remoteRoute.steps[0]?.relationToPrevious, "entry");
   assert.equal(remoteRoute.edges.some((edge) => edge.id === "claw.edge.relay.brokers.connector" && edge.type === "brokers"), true);
   assert.equal(remoteRoute.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
 
@@ -823,6 +829,48 @@ test("inspect filtered collections fail when a target has no matches", async () 
     assert.equal(envelope.meta.canonicalCommand, "inspect");
     assert.equal(envelope.meta.subcommand, subcommand);
   }
+});
+
+test("inspect route explains when a surface id was passed instead of a route id", async () => {
+  const result = await runCliCapture(["inspect", "route", "clawix.ui.chat", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const envelope = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      message: string;
+      suggestion: string;
+      safeNextStep: string;
+      details?: {
+        received?: string;
+        expected?: string;
+        matchedSurface?: string;
+        relatedRouteIds?: string[];
+      };
+    };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(envelope.ok, false);
+  assert.equal(envelope.error.code, "inspect_route_target_is_surface");
+  assert.match(envelope.error.message, /clawix\.ui\.chat is a surface id, not a route id/);
+  assert.equal(envelope.error.details?.received, "clawix.ui.chat");
+  assert.equal(envelope.error.details?.expected, "routeId");
+  assert.equal(envelope.error.details?.matchedSurface, "clawix.ui.chat");
+  assert.deepEqual(envelope.error.details?.relatedRouteIds, ["chat.localDesktop", "agents.internalMacAssignment"]);
+  assert.match(envelope.error.suggestion, /plural routes inspector/);
+  assert.match(envelope.error.safeNextStep, /inspect routes clawix\.ui\.chat --json/);
+  assert.match(envelope.error.safeNextStep, /inspect route chat\.localDesktop --json/);
+  assert.equal(envelope.meta.canonicalCommand, "inspect");
+  assert.equal(envelope.meta.subcommand, "route");
+});
+
+test("inspect route still returns a single route when passed a route id", async () => {
+  const result = await runCliCapture(["inspect", "route", "chat.localDesktop", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_OK);
+  const envelope = JSON.parse(result.stdout) as { ok: boolean; data: { id: string }; meta: { routeId?: string } };
+  assert.equal(envelope.ok, true);
+  assert.equal(envelope.data.id, "chat.localDesktop");
+  assert.equal(envelope.meta.routeId, "chat.localDesktop");
 });
 
 test("runCli exposes remote, sync, nodes, and gateway baseline commands", async () => {

@@ -11,7 +11,7 @@ import type { Agent } from "@clawjs/agents";
 import { v1MainSchemaSurfaceNodes } from "./v1-data-surface.ts";
 import { normalizeDbRow, resolveClawjsMainDbPath, type JsonRecord } from "./v1-data-core.ts";
 import { writeJsonError, writeJsonOk, type CliJsonMeta } from "./cli-json.ts";
-import { CliHandledError } from "./cli-errors.ts";
+import { CliHandledError, type CliHandledErrorOptions } from "./cli-errors.ts";
 
 interface CliContext {
   stdout: NodeJS.WritableStream;
@@ -26,11 +26,13 @@ const CLI_EXIT_USAGE = 64;
 class InspectCliError extends Error {
   readonly code: string;
   readonly exitCode: number;
+  readonly options: CliHandledErrorOptions;
 
-  constructor(code: string, message: string, exitCode = CLI_EXIT_FAILURE) {
+  constructor(code: string, message: string, exitCode = CLI_EXIT_FAILURE, options: CliHandledErrorOptions = {}) {
     super(message);
     this.code = code;
     this.exitCode = exitCode;
+    this.options = options;
   }
 }
 
@@ -154,6 +156,40 @@ function inspectRegistry(input: InspectCliInput): ClawPersistentSurfaceRegistry 
     edges,
     routes,
   };
+}
+
+type InspectRouteStepRelation = "entry" | "continues" | "nonlinear";
+
+function withRouteStepContinuity(route: ClawSurfaceRoute): ClawSurfaceRoute {
+  return {
+    ...route,
+    steps: route.steps.map((step, index) => {
+      if (index === 0) {
+        return {
+          ...step,
+          stepIndex: index + 1,
+          relationToPrevious: "entry" satisfies InspectRouteStepRelation,
+          continuesFromPrevious: null,
+        };
+      }
+      const previous = route.steps[index - 1];
+      const continuesFromPrevious = step.fromId === previous.toId;
+      return {
+        ...step,
+        stepIndex: index + 1,
+        relationToPrevious: (continuesFromPrevious ? "continues" : "nonlinear") satisfies InspectRouteStepRelation,
+        continuesFromPrevious,
+        ...(continuesFromPrevious ? {} : { previousToId: previous.toId }),
+      };
+    }),
+  };
+}
+
+function routeTouchesTarget(route: ClawSurfaceRoute, target: string): boolean {
+  return route.id === target
+    || route.fromId === target
+    || route.toId === target
+    || route.steps.some((step) => step.fromId === target || step.toId === target);
 }
 
 async function buildAgentInspectFiche(input: InspectCliInput, agentId: string, routes: ClawSurfaceRoute[]): Promise<AgentInspectFiche> {
@@ -1143,6 +1179,13 @@ function requireInspectMatches<TEntry>(target: string | undefined, entries: TEnt
   return entries;
 }
 
+function routeTouchesTarget(route: ClawSurfaceRoute, target: string): boolean {
+  return route.id === target
+    || route.fromId === target
+    || route.toId === target
+    || route.steps.some((step) => step.fromId === target || step.toId === target);
+}
+
 function inspectCustomAppSdkPayload() {
   return {
     cliRole: "inspection_validation_fallback_json",
@@ -1156,7 +1199,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   const registry = inspectRegistry(input);
   const nodes = withSurfaceChildren(registry.nodes);
   const edges = registry.edges ?? [];
-  const routes = registry.routes ?? [];
+  const routes = (registry.routes ?? []).map(withRouteStepContinuity);
   const edgesForNode = (nodeId: string) => ({
     incomingEdges: edges.filter((edge) => edge.toId === nodeId),
     outgoingEdges: edges.filter((edge) => edge.fromId === nodeId),
@@ -1205,7 +1248,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   if (command === "routes") {
     const selected = requireInspectMatches(
       target,
-      target ? routes.filter((route) => route.id === target || route.fromId === target || route.toId === target || route.steps.some((step) => step.fromId === target || step.toId === target)) : routes,
+      target ? routes.filter((route) => routeTouchesTarget(route, target)) : routes,
       "surface route",
     );
     if (input.wantsJson) writeJsonOk(input.context.stdout, selected, inspectJsonMeta(command));
@@ -1268,7 +1311,28 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
   if (command === "route") {
     if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect route <route-id> [--json]`, CLI_EXIT_USAGE);
     const route = routes.find((candidate) => candidate.id === target);
-    if (!route) throw new InspectCliError("inspect_not_found", `No surface route found for ${target}.`, CLI_EXIT_USAGE);
+    if (!route) {
+      const relatedRoutes = routes.filter((candidate) => routeTouchesTarget(candidate, target));
+      if (relatedRoutes.length > 0) {
+        const relatedRouteIds = relatedRoutes.map((candidate) => candidate.id);
+        throw new InspectCliError(
+          "inspect_route_target_is_surface",
+          `${target} is a surface id, not a route id. ${relatedRoutes.length} related route${relatedRoutes.length === 1 ? "" : "s"} touch it: ${relatedRouteIds.join(", ")}.`,
+          CLI_EXIT_USAGE,
+          {
+            suggestion: "Use the plural routes inspector for a surface, or pass one listed route id to the singular route inspector.",
+            safeNextStep: `Run ${input.binName} inspect routes ${target} --json, or ${input.binName} inspect route ${relatedRouteIds[0]} --json.`,
+            details: {
+              received: target,
+              expected: "routeId",
+              matchedSurface: target,
+              relatedRouteIds,
+            },
+          },
+        );
+      }
+      throw new InspectCliError("inspect_not_found", `No surface route found for ${target}.`, CLI_EXIT_USAGE);
+    }
     const routeEdges = route.steps.map((step) => step.edgeId ? edges.find((edge) => edge.id === step.edgeId) : undefined).filter((edge): edge is ClawSurfaceEdge => Boolean(edge));
     const payload = { ...route, edges: routeEdges };
     if (input.wantsJson) writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command, { routeId: route.id }));
@@ -1742,7 +1806,7 @@ export async function runInspectCli(input: InspectCliInput): Promise<number> {
     return await runInspectCliUnsafe(input);
   } catch (error) {
     const handled = cliErrorFromUnknown(error);
-    if (input.wantsJson) writeJsonError(input.context.stdout, new CliHandledError(handled.code, handled.message, handled.exitCode), inspectJsonMeta(input.positionals[1] ?? "tree"));
+    if (input.wantsJson) writeJsonError(input.context.stdout, new CliHandledError(handled.code, handled.message, handled.exitCode, handled.options), inspectJsonMeta(input.positionals[1] ?? "tree"));
     else input.context.stderr.write(`${handled.message}\n`);
     return handled.exitCode;
   }

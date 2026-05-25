@@ -22,6 +22,18 @@ function runClawBin(args: string[]): { status: number | null; stdout: string; st
   };
 }
 
+test("package bin root help explains the minimal startup view and discovery paths", () => {
+  const help = runClawBin(["--help"]);
+  assert.equal(help.status, 0, help.stderr);
+  assert.match(help.stdout, /Usage: claw <command> \[options\]/);
+  assert.match(help.stdout, /Minimal startup help: only safe base commands are shown here\./);
+  assert.match(help.stdout, /claw --help --all\s+show the full public command surface/);
+  assert.match(help.stdout, /claw help <command>\s+show command-specific help/);
+  assert.match(help.stdout, /claw inspect commands --json\s+list commands for agents and tools/);
+  assert.doesNotMatch(help.stdout, /Primary commands and portals:/);
+  assert.doesNotMatch(help.stdout, /Advanced commands:/);
+});
+
 test("package bin exposes router-backed version and full help", () => {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as { version: string };
 

@@ -50,9 +50,10 @@ export async function runCollectionsCli(input: {
     fieldCount: collection.fields?.length ?? 0,
   }));
   const byName = new Map([...productivityCollections, ...builtinCollections].map((collection) => [collection.name, collection]));
-  const collections = [...byName.values()]
+  const visibleCollections = [...byName.values()]
     .filter((collection) => includeAvailable || collection.state === "enabled")
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const collections = visibleCollections
     .slice(0, Number.isFinite(limit) ? limit : undefined)
     .map((collection) => ({
       name: collection.name,
@@ -70,6 +71,17 @@ export async function runCollectionsCli(input: {
     }));
   const payload = {
     collections,
+    knownCollectionCount: byName.size,
+    visibleCollectionCount: visibleCollections.length,
+    returnedCollectionCount: collections.length,
+    limit: Number.isFinite(limit) ? limit : null,
+    counts: {
+      known: byName.size,
+      visible: visibleCollections.length,
+      returned: collections.length,
+      limit: Number.isFinite(limit) ? limit : null,
+    },
+    // Compatibility aliases. New consumers should use the explicit count names above.
     total: byName.size,
     returned: collections.length,
     visibility: includeAvailable ? "available" : "active",
