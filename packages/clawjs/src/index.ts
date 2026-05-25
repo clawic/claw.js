@@ -1,6 +1,7 @@
 import os from "node:os";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError, formatCliErrorText } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { resolveCliPackageVersion } from "./cli-legacy-open.ts";
 import { extractPositionals, parseFlags } from "./cli-flag-parsers.ts";
 import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeCommandJsonOk, writeJsonError } from "./cli-json.ts";
 import {
@@ -61,6 +62,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   const usage = buildCliUsage(binName, { all: argv.includes("--all") });
   const wantsHelp = argv.includes("--help") || argv.includes("-h");
   const canonicalCommand = canonicalCommandFor(group);
+
+  if (!group && argv.length === 1 && (argv[0] === "--version" || argv[0] === "-v")) {
+    context.stdout.write(`${resolveCliPackageVersion() ?? "unknown"}\n`);
+    return CLI_EXIT_OK;
+  }
 
   const removedMessage = group ? removedPublicCommandMessage(group, binName) : null;
   if (removedMessage) {
