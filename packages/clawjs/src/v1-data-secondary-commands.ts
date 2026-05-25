@@ -34,6 +34,7 @@ import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
 const connectorRuntimeKinds = ["api", "sdk", "mcp", "cli", "webhook", "oauth", "browser"] as const;
 const connectorSupportStates = ["supported", "unsupported", "external_pending"] as const;
 const connectorRiskTiers = ["read", "write", "destructive", "cost", "system"] as const;
+const SAFE_WORKBOOK_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 export function runMcpCommand(input: V1DataCliInput): number {
   const command = input.positionals[1];
@@ -60,6 +61,10 @@ export function runMcpCommand(input: V1DataCliInput): number {
   if (command === "upsert") {
     const id = input.flags.id || input.positionals[2];
     if (!id) return usageError(input, "Usage: claw mcp upsert SERVER_ID (--command CMD|--url URL) [--json]");
+    if (!input.flags.command && !input.flags.url) {
+      writeError(input, "missing_mcp_server_transport", "Usage: claw mcp upsert SERVER_ID (--command CMD|--url URL) [--json]", V1_DATA_EXIT_USAGE);
+      return V1_DATA_EXIT_USAGE;
+    }
     const current = readMcpServers(configPath);
     const existing = current.find((server) => server.id === id) ?? { id, source: "codex-config" };
     const next: JsonRecord & { id: string } = {
@@ -289,6 +294,7 @@ export function runSheetsCommand(input: V1DataCliInput): number {
   if (command === "get") {
     const workbookId = input.flags.id || input.flags.workbook || input.positionals[3];
     if (!workbookId) return usageError(input, "Usage: claw sheets workbook get WORKBOOK_ID [--json]");
+    if (!isSafeWorkbookId(workbookId)) return invalidWorkbookId(input);
     const filePath = path.join(root, `${workbookId}.json`);
     const manifest = fs.existsSync(filePath) ? normalizeWorkbookManifest(readWorkbookManifest(filePath), workbookId) : null;
     writeSuccess(input, manifest);
@@ -297,9 +303,11 @@ export function runSheetsCommand(input: V1DataCliInput): number {
   if (command === "upsert" || command === "create" || command === "edit") {
     const workbookId = input.flags.id || input.flags.workbook || input.positionals[3];
     if (!workbookId) return usageError(input, "Usage: claw sheets workbook upsert WORKBOOK_ID [--title TITLE] [--sheet NAME] [--json]");
+    if (!isSafeWorkbookId(workbookId)) return invalidWorkbookId(input);
     const filePath = path.join(root, `${workbookId}.json`);
     const existing = fs.existsSync(filePath) ? normalizeWorkbookManifest(readWorkbookManifest(filePath), workbookId) : {};
     const base = workbookManifestFromInput(input);
+    if (base === undefined) return V1_DATA_EXIT_USAGE;
     const now = nowIso();
     const manifest = normalizeWorkbookManifest({
       ...existing,
@@ -328,6 +336,7 @@ export function runSheetsCommand(input: V1DataCliInput): number {
   if (command === "delete") {
     const workbookId = input.flags.id || input.flags.workbook || input.positionals[3];
     if (!workbookId) return usageError(input, "Usage: claw sheets workbook delete WORKBOOK_ID [--json]");
+    if (!isSafeWorkbookId(workbookId)) return invalidWorkbookId(input);
     const filePath = path.join(root, `${workbookId}.json`);
     const existed = fs.existsSync(filePath);
     if (existed) {
@@ -353,13 +362,38 @@ function resolveSheetsWorkbooksCliRoot(input: V1DataCliInput): string {
   return resolveClawPersistentSurfacePath("claw.workspace.sheets", workspaceRoot, "workbooks");
 }
 
-function workbookManifestFromInput(input: V1DataCliInput): Record<string, unknown> {
-  if (input.flags.file) return readWorkbookManifest(path.resolve(input.cwd, expandHome(input.flags.file)));
+function workbookManifestFromInput(input: V1DataCliInput): Record<string, unknown> | undefined {
+  if (input.flags.file) return readWorkbookManifestInput(input, path.resolve(input.cwd, expandHome(input.flags.file)));
   if (input.flags.manifest) {
-    const parsed = parseMaybeJson(input.flags.manifest);
+    const parsed = parseWorkbookJsonInput(input, input.flags.manifest, "manifest", "invalid_sheets_workbook_manifest_json");
+    if (parsed === undefined) return undefined;
     return isRecord(parsed) ? parsed : {};
   }
   return {};
+}
+
+function isSafeWorkbookId(value: string): boolean {
+  return SAFE_WORKBOOK_ID_PATTERN.test(value) && value !== "." && value !== "..";
+}
+
+function invalidWorkbookId(input: V1DataCliInput): number {
+  writeError(input, "invalid_sheets_workbook_id", "Sheets workbook id must be a safe local identifier, not a path.", V1_DATA_EXIT_USAGE);
+  return V1_DATA_EXIT_USAGE;
+}
+
+function readWorkbookManifestInput(input: V1DataCliInput, filePath: string): Record<string, unknown> | undefined {
+  const parsed = parseWorkbookJsonInput(input, fs.readFileSync(filePath, "utf8"), "file", "invalid_sheets_workbook_file_json");
+  if (parsed === undefined) return undefined;
+  return isRecord(parsed) ? parsed : {};
+}
+
+function parseWorkbookJsonInput(input: V1DataCliInput, value: string, flag: "file" | "manifest", code: string): unknown | undefined {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    writeError(input, code, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return undefined;
+  }
 }
 
 function readWorkbookManifest(filePath: string): Record<string, unknown> {
