@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { clawCliCommandRegistry, listClawCliAliases } from "../packages/clawjs-core/src/cli-command-registry.ts";
+import { resolveClawCliCommandIntent } from "../packages/clawjs-core/src/cli-command-intents.ts";
 import { CLI_EXIT_OK, runCli } from "../packages/clawjs/src/index.ts";
 import {
   GENERATED_CLI_COMMANDS,
@@ -133,6 +134,13 @@ function cliParityDiagnostic(failure) {
       safeNextStep: "Fix the command help path, then rerun this parity check.",
     });
   }
+  if (failure.includes("command intent resolution for routed alias")) {
+    return createDiagnostic("cli_command_intent_router_alias_mismatch", failure, {
+      location: "packages/clawjs-core/src/cli-command-intents.ts",
+      suggestion: "Make command-intent resolution recognize router-backed command aliases as covered routes.",
+      safeNextStep: "Fix the alias resolution path, then rerun node --import tsx scripts/verify-cli-registry-router-parity.mjs.",
+    });
+  }
   return createDiagnostic("cli_registry_router_parity_failed", failure, {
     location: "scripts/verify-cli-registry-router-parity.mjs",
     suggestion: "Inspect the CLI registry/router invariant and restore command parity.",
@@ -160,6 +168,7 @@ function runSelfTest() {
     "inspect: missing doc ref /Users/example/private.md",
     "inspect: missing source file <none>",
     "inspect: help exited with 1; stderr=token sk-test-secret-123456",
+    "templates: command intent resolution for routed alias template returned candidate_alias mapped to network",
   ], { stream: { write: (chunk) => chunks.push(chunk) } });
   const output = chunks.join("");
   for (const code of [
@@ -172,6 +181,7 @@ function runSelfTest() {
     "cli_registry_reference_missing",
     "cli_registry_source_missing",
     "cli_help_parity_failed",
+    "cli_command_intent_router_alias_mismatch",
   ]) {
     if (!output.includes(`code: ${code}`)) throw new Error(`self-test missing ${code}`);
   }
@@ -261,6 +271,19 @@ function checkAliasRecords(failures) {
   }
 }
 
+function checkCommandIntentRouterAliases(failures) {
+  for (const entry of clawCliCommandRegistry.commands) {
+    const routedAliases = new Set((entry.aliases ?? []).filter((alias) => alias && !alias.includes(" ") && !alias.includes("/")));
+    for (const alias of routedAliases) {
+      if (!(alias in GENERATED_CLI_ROUTE_GROUPS)) continue;
+      const resolution = resolveClawCliCommandIntent({ phrase: `${alias} list`, limit: 5 });
+      if (resolution.status !== "covered" || resolution.intent.mappedCommand !== entry.name) {
+        failures.push(`${entry.name}: command intent resolution for routed alias ${alias} returned ${resolution.status} mapped to ${resolution.intent.mappedCommand ?? "<none>"}`);
+      }
+    }
+  }
+}
+
 function checkReferences(failures) {
   for (const entry of clawCliCommandRegistry.commands) {
     for (const doc of entry.docs ?? []) {
@@ -321,6 +344,7 @@ const failures = [];
 checkRegistryShape(failures);
 checkGeneratedRouter(failures);
 checkAliasRecords(failures);
+checkCommandIntentRouterAliases(failures);
 checkReferences(failures);
 await checkHelpParity(failures);
 

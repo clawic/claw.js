@@ -41,6 +41,28 @@ test("CLI command intent resolution is deterministic and non-executing", () => {
   assert.equal(typo.related.some((entry) => entry.canonicalName === "people"), true);
 });
 
+test("CLI command intent resolution treats routed command aliases as covered", () => {
+  const template = resolveClawCliCommandIntent({ phrase: "template list" });
+  assert.equal(template.status, "covered");
+  assert.equal(template.execute, false);
+  assert.equal(template.intent.mappedCommand, "templates");
+  assert.equal(template.intent.relatedCommands.includes("template"), true);
+  assert.equal(template.intent.evidence.some((entry) => entry.includes("registered command alias `template`")), true);
+
+  const style = resolveClawCliCommandIntent({ phrase: "style list" });
+  assert.equal(style.status, "covered");
+  assert.equal(style.intent.mappedCommand, "styles");
+
+  const ref = resolveClawCliCommandIntent({ phrase: "ref list" });
+  assert.equal(ref.status, "covered");
+  assert.equal(ref.intent.mappedCommand, "references");
+
+  const image = resolveClawCliCommandIntent({ phrase: "image list" });
+  assert.equal(image.status, "covered");
+  assert.equal(image.intent.mappedCommand, "images");
+  assert.equal(image.intent.risk.includes("cost"), true);
+});
+
 test("CLI command intent resolution covers runtime ecosystem portal actions", () => {
   const portal = resolveClawCliCommandIntent({ phrase: "runtime ecosystem portal" });
   assert.equal(portal.status, "covered");

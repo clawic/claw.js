@@ -1,5 +1,5 @@
-import { resolveClawCliCommand, searchClawCliRegistry } from "./cli-command-registry.ts";
-import type { ClawCliCommandRegistryEntry, ClawCliSearchResult } from "./cli-command-registry.ts";
+import { listClawCliAliases, resolveClawCliCommand, searchClawCliRegistry } from "./cli-command-registry.ts";
+import type { ClawCliCommandRegistryEntry, ClawCliSearchResult, ClawCliSecurityPolicy } from "./cli-command-registry.ts";
 import { resolveBuiltinCollectionName } from "./builtins/index.ts";
 import { resolveClawProfessionalRecordsIntent } from "./dense-data-os.ts";
 import type { ClawProfessionalRecordsIntentResolution, ClawProfessionalRecordsIntentStatus } from "./dense-data-os.ts";
@@ -363,6 +363,8 @@ export function resolveClawCliCommandIntent(input: {
   const firstToken = normalizedPhrase.split(" ")[0] ?? "";
   const command = firstToken ? resolveClawCliCommand(firstToken) : undefined;
   if (command) return resolutionFromCommand(input.phrase, normalizedPhrase, command, related);
+  const commandAlias = firstToken ? resolveClawCliCommandAlias(firstToken) : undefined;
+  if (commandAlias) return resolutionFromCommandAlias(input.phrase, normalizedPhrase, commandAlias.alias, commandAlias.command, related);
   const collectionResolution = resolutionFromCollectionAlias(input.phrase, normalizedPhrase, related);
   const professionalRecordsIntent = resolveClawProfessionalRecordsIntent(input.phrase);
   if (collectionResolution && (professionalRecordsIntent.status === "data_gap" || professionalRecordsIntent.status === "external_pending")) return collectionResolution;
@@ -414,6 +416,25 @@ function resolutionFromCommand(query: string, normalizedPhrase: string, command:
     nextSteps: command.kind === "alias"
       ? [`Use canonical command \`claw ${canonical} --help\`; this phrase is not promoted as a new alias by resolution alone.`]
       : [`Run \`claw ${canonical} --help\` for the supported command surface.`],
+    reportTarget: "none",
+  });
+  return { schemaVersion: 1, query, normalizedPhrase, status: entry.status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
+}
+
+function resolveClawCliCommandAlias(token: string): { alias: string; command: ClawCliCommandRegistryEntry } | undefined {
+  const alias = listClawCliAliases().find((record) => record.source === "command" && record.alias === token && !record.alias.includes(" "));
+  if (!alias) return undefined;
+  const command = resolveClawCliCommand(alias.canonicalName);
+  return command ? { alias: alias.alias, command } : undefined;
+}
+
+function resolutionFromCommandAlias(query: string, normalizedPhrase: string, alias: string, command: ClawCliCommandRegistryEntry, related: ClawCliSearchResult[]): ClawCliCommandIntentResolution {
+  const entry = intent(`cmd_intent_dynamic_${normalizedPhrase.replace(/[^a-z0-9]+/g, "_")}`, query, `Resolve to registered CLI command ${command.name}.`, "covered", {
+    mappedCommand: command.name,
+    relatedCommands: [alias, command.name],
+    risk: riskForCommandPolicy(command.securityPolicy),
+    evidence: [`First token matches registered command alias \`${alias}\` for \`${command.name}\`.`],
+    nextSteps: [`Run \`claw ${command.name} --help\` for the canonical command surface, or use \`claw ${alias} --help\` for the routed alias.`],
     reportTarget: "none",
   });
   return { schemaVersion: 1, query, normalizedPhrase, status: entry.status, intent: entry, related, nextSteps: entry.nextSteps, execute: false };
@@ -484,6 +505,15 @@ function cliStatusForProfessionalRecordsStatus(status: ClawProfessionalRecordsIn
   if (status === "external_pending") return "external_pending";
   if (status === "blocked") return "blocked";
   return "gap";
+}
+
+function riskForCommandPolicy(policy: ClawCliSecurityPolicy): ClawCliCommandIntentRisk[] {
+  if (policy === "local_write") return ["local_read", "local_write"];
+  if (policy === "signed_host_broker") return ["local_read", "native_permission"];
+  if (policy === "auth_required") return ["local_read", "secret", "external_service"];
+  if (policy === "external_cost_risk") return ["local_read", "cost", "external_service"];
+  if (policy === "unsupported") return ["local_read"];
+  return ["local_read"];
 }
 
 function statusOrder(status: ClawCliCommandIntentStatus): number {
