@@ -62,8 +62,16 @@ function shortHash(value: string): string {
   return createHash("sha256").update(value).digest("hex").slice(0, 12);
 }
 
-function clamp01(value: number): number {
+function clampComputedUnitScore(value: number, label: string): number {
+  if (!Number.isFinite(value)) throw new Error(`${label} must be a finite number.`);
   return Math.max(0, Math.min(1, Number(value.toFixed(2))));
+}
+
+function requireExplicitUnitNumber(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${label} must be a finite number between 0 and 1.`);
+  }
+  return value;
 }
 
 function emptyContext(): JudgmentContextRefs {
@@ -174,7 +182,7 @@ function scoreOption(
 
   return {
     option,
-    score: clamp01(score),
+    score: clampComputedUnitScore(score, "Judgment option score"),
     evidence: unique(evidence),
   };
 }
@@ -302,7 +310,7 @@ export class JudgmentStore {
     const best = optionScores[0];
     const second = optionScores[1];
     const hasContradiction = Boolean(best && second && best.score > 0 && second.score > 0 && best.score - second.score < 0.15);
-    const confidence = clamp01(best ? 0.35 + best.score * 0.65 - (hasContradiction ? 0.2 : 0) : 0.25);
+    const confidence = clampComputedUnitScore(best ? 0.35 + best.score * 0.65 - (hasContradiction ? 0.2 : 0) : 0.25, "Judgment confidence");
     const recommendation = recommendationFor({ impact, confidence, hasContradiction, hasOptions: options.length > 0 });
     const recommendedOption = recommendation === "act" || recommendation === "delegate" ? best?.option : best && confidence >= 0.55 ? best.option : undefined;
     const refs = contextRefs(input, context, optionScores);
@@ -344,7 +352,7 @@ export class JudgmentStore {
       status: "decided",
       chosenOption: normalizeText(input.chosen),
       rationale: normalizeText(input.rationale),
-      ...(input.confidence !== undefined ? { confidence: clamp01(input.confidence) } : {}),
+      ...(input.confidence !== undefined ? { confidence: requireExplicitUnitNumber(input.confidence, "Judgment confidence") } : {}),
       ...(input.outcome ? { outcome: normalizeText(input.outcome) } : {}),
       decidedAt: timestamp,
       updatedAt: timestamp,
