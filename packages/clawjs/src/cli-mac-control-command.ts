@@ -413,8 +413,11 @@ function isTruthy(value: string | undefined): boolean {
 }
 
 function hasConfirm(input: { argv?: string[]; flags: Record<string, string> }): boolean {
-  return isTruthy(input.flags.confirm) ||
-    isTruthy(input.flags.approved) ||
-    input.argv?.includes("--confirm") === true ||
-    input.argv?.includes("--approved") === true;
+  return hasTruthyFlag(input, "confirm") || hasTruthyFlag(input, "approved");
+}
+
+function hasTruthyFlag(input: { argv?: string[]; flags: Record<string, string> }, name: string): boolean {
+  const value = input.flags[name];
+  if (value !== undefined) return isTruthy(value);
+  return input.argv?.includes(`--${name}`) === true;
 }

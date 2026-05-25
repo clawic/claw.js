@@ -128,6 +128,20 @@ test("Mac direct roots and permission requests hand off to configured signed hos
   });
 });
 
+test("Mac signed host actions do not treat explicit false confirmation flags as approval", async () => {
+  const hostCommand = createFakeMacSignedHostCommand();
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: hostCommand }, async () => {
+    const revert = await runCliCapture(["mac", "revert", "macact_123", "--confirm", "false", "--json"], process.cwd());
+    assert.equal(revert.code, CLI_EXIT_OK);
+    const revertPayload = JSON.parse(revert.stdout) as {
+      data: { response: { data: { status: string; receiptId: string; confirmed: boolean } } };
+    };
+    assert.equal(revertPayload.data.response.data.status, "confirmation_required");
+    assert.equal(revertPayload.data.response.data.receiptId, "macact_123");
+    assert.equal(revertPayload.data.response.data.confirmed, false);
+  });
+});
+
 test("Mac signed host bridge failures return actionable JSON errors", async () => {
   const failingHostCommand = createFailingMacSignedHostCommand();
   await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: failingHostCommand }, async () => {
