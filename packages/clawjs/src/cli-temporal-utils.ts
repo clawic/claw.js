@@ -112,7 +112,7 @@ function parseHeartbeatGate(pathValue: string | undefined): NonNullable<Temporal
   if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
     throw new CliHandledError("invalid_heartbeat_gate_json", `Invalid JSON for --gate ${gatePath}: expected an object.`, CLI_EXIT_USAGE);
   }
-  return { path: gatePath, policy };
+  return { path: gatePath, policy: policy as Record<string, unknown> };
 }
 
 export function buildRoutineHeartbeat(argv: string[], flags: Record<string, string>): Partial<NonNullable<TemporalItem["heartbeat"]>> | undefined {

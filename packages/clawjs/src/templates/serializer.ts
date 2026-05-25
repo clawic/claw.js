@@ -1,4 +1,4 @@
-import { isTemplateCategory, TEMPLATE_SCHEMA_VERSION, type TemplateAspect, type TemplateManifest, type TemplateOutputFormat } from "./schema.ts";
+import { isTemplateCategory, TEMPLATE_SCHEMA_VERSION, type TemplateAspect, type TemplateManifest, type TemplateOutputFormat, type TemplateSlot, type TemplateVariant } from "./schema.ts";
 import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 
 const FRONTMATTER_OPEN = "---json";
@@ -82,8 +82,8 @@ export function normalizeTemplateManifest(input: Partial<TemplateManifest>): Tem
   }
   const aspect = normalizeTemplateAspect(input.aspect);
   const tags = optionalTemplateStringArray(input.tags, "tags") ?? [];
-  const slots = optionalTemplateObjectArray(input.slots, "slots") ?? [];
-  const variants = optionalTemplateObjectArray(input.variants, "variants") ?? [{ id: "default", label: "Default" }];
+  const slots = optionalTemplateObjectArray<TemplateSlot>(input.slots, "slots") ?? [];
+  const variants = optionalTemplateObjectArray<TemplateVariant>(input.variants, "variants") ?? [{ id: "default", label: "Default" }];
   const outputs = normalizeTemplateOutputs(input.outputs);
   return {
     schemaVersion: TEMPLATE_SCHEMA_VERSION,
