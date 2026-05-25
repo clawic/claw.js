@@ -94,6 +94,48 @@ test("sync manifest rejects invalid driver as usage", async () => {
   assert.equal(payload.error.details?.validDrivers?.includes("skills"), true);
 });
 
+test("sync plan reports invalid snapshot JSON as structured usage", async () => {
+  const invalid = await runCliCapture(["sync", "plan", "--local-snapshot-json", "{bad", "--json"], process.cwd());
+
+  assert.equal(invalid.code, CLI_EXIT_USAGE);
+  assert.equal(invalid.stderr, "");
+  const payload = JSON.parse(invalid.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      message: string;
+      location: string;
+      safeNextStep: string;
+      details?: { flag?: string; expected?: string };
+    };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_sync_snapshot_json");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.sync.local_snapshot_json");
+  assert.match(payload.error.message, /--local-snapshot-json/);
+  assert.equal(payload.error.message.includes("SyntaxError"), false);
+  assert.match(payload.error.safeNextStep, /sync plan --json/);
+  assert.equal(payload.error.details?.flag, "--local-snapshot-json");
+  assert.equal(payload.error.details?.expected?.includes("SyncObjectSnapshot"), true);
+
+  const validSnapshot = {
+    resourceId: "skills:default",
+    objectRef: "skill.review",
+    nodeId: "local",
+    contentHash: "hash-valid",
+    updatedAt: "2026-05-17T09:00:00.000Z",
+    deleted: false,
+  };
+  const valid = await runCliCapture(["sync", "plan", "--local-snapshot-json", JSON.stringify(validSnapshot), "--json"], process.cwd());
+  assert.equal(valid.code, 0);
+  const validPayload = JSON.parse(valid.stdout) as { ok: boolean; data: { mode: string; writes: boolean } };
+  assert.equal(validPayload.ok, true);
+  assert.equal(validPayload.data.mode, "plan");
+  assert.equal(validPayload.data.writes, false);
+});
+
 test("remote returns JSON usage errors for unknown subcommands", async () => {
   const result = await runCliCapture(["remote", "definitely_missing", "--json"], process.cwd());
 

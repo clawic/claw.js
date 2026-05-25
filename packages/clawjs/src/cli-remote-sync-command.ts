@@ -298,9 +298,27 @@ function parseOfflineReason(value: string | undefined): "connector_offline" | "n
   throw new Error(`Invalid offline reason: ${value}`);
 }
 
-function parseSnapshots(value: string | undefined, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
+function parseSnapshots(flagName: "--local-snapshot-json" | "--peer-snapshot-json", value: string | undefined, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
   if (!value) return fallback;
-  const parsed = JSON.parse(value) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value) as unknown;
+  } catch {
+    throw new CliHandledError(
+      "invalid_sync_snapshot_json",
+      `${flagName} must be valid JSON containing a sync object snapshot or an array of sync object snapshots.`,
+      CLI_EXIT_USAGE,
+      {
+        location: `cli.sync.${flagName.slice(2).replaceAll("-", "_")}`,
+        suggestion: "Pass a JSON object or JSON array matching the sync object snapshot shape.",
+        safeNextStep: `Fix ${flagName}, then rerun claw sync plan --json.`,
+        details: {
+          flag: flagName,
+          expected: "SyncObjectSnapshot JSON object or SyncObjectSnapshot[] JSON array",
+        },
+      },
+    );
+  }
   const entries = Array.isArray(parsed) ? parsed : [parsed];
   return entries.map((entry) => syncObjectSnapshotSchema.parse(entry));
 }
@@ -321,7 +339,7 @@ function planFromFlags(input: RemoteSyncCliInput) {
   const now = input.flags.now ?? "2026-05-17T10:00:00.000Z";
   const localNodeId = input.flags["owner-node"] ?? "local";
   const peerNodeId = input.flags["peer-node"] ?? "peer";
-  const localSnapshots = parseSnapshots(input.flags["local-snapshot-json"], [{
+  const localSnapshots = parseSnapshots("--local-snapshot-json", input.flags["local-snapshot-json"], [{
     resourceId: manifest.resourceId,
     objectRef: input.flags["object-ref"] ?? "skill.review",
     nodeId: localNodeId,
@@ -329,7 +347,7 @@ function planFromFlags(input: RemoteSyncCliInput) {
     updatedAt: input.flags["local-updated-at"] ?? "2026-05-17T09:00:00.000Z",
     deleted: false,
   }]);
-  const peerSnapshots = parseSnapshots(input.flags["peer-snapshot-json"], [{
+  const peerSnapshots = parseSnapshots("--peer-snapshot-json", input.flags["peer-snapshot-json"], [{
     resourceId: manifest.resourceId,
     objectRef: input.flags["object-ref"] ?? "skill.review",
     nodeId: peerNodeId,
