@@ -59,9 +59,10 @@ function createContextEngine(api) {
     },
     async assemble({ messages = [] }) {
       state.assembleCount += 1;
+      const safeMessages = Array.isArray(messages) ? messages : [];
       return {
-        messages,
-        estimatedTokens: Array.isArray(messages) ? messages.length * 64 : 0,
+        messages: safeMessages,
+        estimatedTokens: safeMessages.length * 64,
         systemPromptAddition: typeof pluginConfig.systemPromptAddition === "string"
           ? pluginConfig.systemPromptAddition
           : undefined,

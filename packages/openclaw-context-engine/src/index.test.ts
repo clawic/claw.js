@@ -46,3 +46,20 @@ test("register exposes the context engine factory", async () => {
   assert.equal(compacted.ok, true);
   assert.equal(compacted.compacted, false);
 });
+
+test("context engine assemble tolerates invalid message payloads", async () => {
+  resetClawJsContextEngineStateForTests();
+  let factory = null;
+
+  plugin.register({
+    registerContextEngine(_id, value) {
+      factory = value;
+    },
+  });
+
+  const engine = await factory();
+  const assembled = await engine.assemble({ messages: "interrupted-payload" });
+
+  assert.deepEqual(assembled.messages, []);
+  assert.equal(assembled.estimatedTokens, 0);
+});
