@@ -801,6 +801,25 @@ test("runCli returns primary productivity JSON in the common envelope", { concur
   assert.equal(Array.isArray(payload.data), true);
 });
 
+test("runCli returns work import JSON parse errors as usage errors", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-work-import-json-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+  const sourcePath = path.join(workspaceRoot, "broken-work.json");
+  fs.writeFileSync(sourcePath, "{bad", "utf8");
+
+  const result = await runCliCapture(["work", "import", sourcePath, "--workspace", workspaceRoot, "--runtime", "demo", "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; message: string }; meta: { canonicalCommand: string; invokedCommand: string; subcommand: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_work_import_json");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /broken-work\.json/);
+  assert.equal(payload.meta.canonicalCommand, "work");
+  assert.equal(payload.meta.invokedCommand, "work");
+  assert.equal(payload.meta.subcommand, "import");
+});
+
 test("runCli returns productivity database JSON in the common envelope", { concurrency: false }, async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-db-json-"));
   useIsolatedClawDataRoot(t, workspaceRoot);

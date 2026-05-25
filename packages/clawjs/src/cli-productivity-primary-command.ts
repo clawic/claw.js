@@ -5,7 +5,7 @@ import type { RuntimeAdapterId } from "@clawjs/core";
 
 import type { CliContext } from "./index.ts";
 import { createCliWorkspaceClaw } from "./cli-claw-factory.ts";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { timelineRange } from "./cli-runtime-utils.ts";
@@ -78,7 +78,7 @@ export async function runPrimaryProductivityCli(input: {
         return CLI_EXIT_USAGE;
       }
       const absolutePath = path.resolve(context.cwd, sourcePath);
-      const payload = JSON.parse(fs.readFileSync(absolutePath, "utf8")) as Record<string, unknown>;
+      const payload = readWorkImportSnapshot(absolutePath);
       const claw = await getClaw();
       const imported = await claw.productivity.importSnapshot(payload, {
         replace: readBooleanFlag(argv, flags, "replace", false),
@@ -766,4 +766,15 @@ export async function runPrimaryProductivityCli(input: {
   }
 
   return null;
+}
+
+function readWorkImportSnapshot(absolutePath: string): Record<string, unknown> {
+  try {
+    return JSON.parse(fs.readFileSync(absolutePath, "utf8")) as Record<string, unknown>;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new CliHandledError("invalid_work_import_json", `Work import file must contain valid JSON: ${absolutePath}`, CLI_EXIT_USAGE);
+    }
+    throw error;
+  }
 }
