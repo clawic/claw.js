@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 function writeCoordinationManifest(repo: string): void {
@@ -64,4 +64,42 @@ test("test plan rejects lanes not declared by a coordination manifest", async ()
   assert.equal(payload.error.code, "unknown_test_lane");
   assert.equal(payload.error.status, "USAGE");
   assert.deepEqual(payload.error.details?.availableLanes, ["changed"]);
+});
+
+test("test commands reject invalid pid before acquiring resources", async () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "claw-test-invalid-pid-"));
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-test-invalid-pid-state-"));
+  writeCoordinationManifest(repo);
+
+  const result = await runCliCapture([
+    "test",
+    "require",
+    "--repo",
+    repo,
+    "--state-dir",
+    stateDir,
+    "--checks",
+    "changed",
+    "--pid",
+    "123abc",
+    "--json",
+  ], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string; details?: Record<string, unknown> };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_test_pid");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.test.pid");
+  assert.deepEqual(payload.error.details, { flag: "--pid", value: "123abc" });
+
+  const status = await runCliCapture(["test", "status", "--state-dir", stateDir, "--json"], process.cwd());
+  assert.equal(status.code, CLI_EXIT_OK, status.stderr || status.stdout);
+  const statusPayload = JSON.parse(status.stdout) as { data: { activeLeases: unknown[]; pendingDemands: unknown[] } };
+  assert.deepEqual(statusPayload.data.activeLeases, []);
+  assert.deepEqual(statusPayload.data.pendingDemands, []);
 });

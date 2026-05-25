@@ -101,6 +101,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
   const lane = input.flags.lane || input.positionals[2] || "changed";
   const manifest = loadChecks(repo);
   const checks = manifest.checks;
+  if (input.flags.pid !== undefined) parsePidFlag(input.flags.pid);
 
   if (command === "plan") {
     const selected = checks.filter((check) => check.lane === lane || lane === "all");
@@ -488,7 +489,7 @@ function resourceRequestsForCheck(
   input: TestCliInput,
   reason: string,
 ): AgentCoordinationAcquireInput[] {
-  const pid = input.flags.pid ? parsePositiveInteger(input.flags.pid, process.pid) : undefined;
+  const pid = input.flags.pid !== undefined ? parsePidFlag(input.flags.pid) : undefined;
   const primary: AgentCoordinationAcquireInput = {
     resourceId: testResourceId(repo, check),
     mode: "exclusive",
@@ -791,9 +792,14 @@ function resolveMaybePath(value: string, cwd: string): string {
   return path.isAbsolute(value) ? path.normalize(value) : path.resolve(cwd, value);
 }
 
-function parsePositiveInteger(value: string, fallback: number): number {
+function parsePidFlag(value: string): number {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (!/^\d+$/.test(value.trim()) || !Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_test_pid", "--pid must be a positive integer process id.", CLI_EXIT_USAGE, {
+      location: "cli.test.pid",
+      details: { flag: "--pid", value },
+    });
+  }
   return parsed;
 }
 
