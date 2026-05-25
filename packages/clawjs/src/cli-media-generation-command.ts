@@ -121,6 +121,28 @@ function parsePositiveIntegerFlag(raw: string | undefined, flagName: string): nu
   return value;
 }
 
+function parseMediaConfigNumberFlag(raw: string | undefined, flagName: string): number | undefined {
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (raw.trim() === "" || !Number.isFinite(value)) {
+    throw new CliHandledError("invalid_media_config_number", `--${flagName} must be a finite number.`, CLI_EXIT_USAGE, {
+      location: `cli.media.config.${flagName}`,
+    });
+  }
+  return value;
+}
+
+function parseMediaConfigPositiveIntegerFlag(raw: string | undefined, flagName: string): number | undefined {
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (raw.trim() === "" || !Number.isInteger(value) || value < 1) {
+    throw new CliHandledError("invalid_media_config_number", `--${flagName} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location: `cli.media.config.${flagName}`,
+    });
+  }
+  return value;
+}
+
 function validateImageSharedFlags(flags: Record<string, string>): void {
   parseImageType(flags.type);
 }
@@ -367,9 +389,9 @@ if (group === "tts" && command === "set-config") {
     ...(flags["api-key"] ? { apiKey: flags["api-key"] } : {}),
     ...(flags.voice ? { voice: flags.voice } : {}),
     ...(flags.model ? { model: flags.model } : {}),
-    ...(flags.speed ? { speed: Number(flags.speed) } : {}),
-    ...(flags.stability ? { stability: Number(flags.stability) } : {}),
-    ...(flags["similarity-boost"] ? { similarityBoost: Number(flags["similarity-boost"]) } : {}),
+    ...(flags.speed ? { speed: parseMediaConfigNumberFlag(flags.speed, "speed") } : {}),
+    ...(flags.stability ? { stability: parseMediaConfigNumberFlag(flags.stability, "stability") } : {}),
+    ...(flags["similarity-boost"] ? { similarityBoost: parseMediaConfigNumberFlag(flags["similarity-boost"], "similarity-boost") } : {}),
   };
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const next = claw.tts.setConfig(config);
@@ -395,9 +417,9 @@ if (group === "tts" && command === "synthesize") {
     ...(flags["api-key"] ? { apiKey: flags["api-key"] } : {}),
     ...(flags.voice ? { voice: flags.voice } : {}),
     ...(flags.model ? { model: flags.model } : {}),
-    ...(flags.speed ? { speed: Number(flags.speed) } : {}),
-    ...(flags.stability ? { stability: Number(flags.stability) } : {}),
-    ...(flags["similarity-boost"] ? { similarityBoost: Number(flags["similarity-boost"]) } : {}),
+    ...(flags.speed ? { speed: parseMediaConfigNumberFlag(flags.speed, "speed") } : {}),
+    ...(flags.stability ? { stability: parseMediaConfigNumberFlag(flags.stability, "stability") } : {}),
+    ...(flags["similarity-boost"] ? { similarityBoost: parseMediaConfigNumberFlag(flags["similarity-boost"], "similarity-boost") } : {}),
   });
   const outputPath = path.resolve(
     context.cwd,
@@ -448,7 +470,7 @@ if (group === "stt" && command === "set-config") {
     ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
     ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
     ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
-    ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+    ...(flags.threads ? { threads: parseMediaConfigPositiveIntegerFlag(flags.threads, "threads") } : {}),
   };
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const next = claw.stt.setConfig(config);
@@ -475,7 +497,7 @@ if (group === "stt" && command === "transcribe") {
     ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
     ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
     ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
-    ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+    ...(flags.threads ? { threads: parseMediaConfigPositiveIntegerFlag(flags.threads, "threads") } : {}),
   });
   if (wantsJson) {
     writeMediaJson(result);
@@ -574,7 +596,7 @@ if (group === "voice-notes" && command === "transcribe") {
       ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
       ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
       ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
-      ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+      ...(flags.threads ? { threads: parseMediaConfigPositiveIntegerFlag(flags.threads, "threads") } : {}),
     })
     : await (async () => {
       const created = claw.voiceNotes.registerPath({
@@ -589,7 +611,7 @@ if (group === "voice-notes" && command === "transcribe") {
         ...(flags["model-path"] ? { modelPath: flags["model-path"] } : {}),
         ...(flags.language || flags.lang ? { language: flags.language ?? flags.lang } : {}),
         ...(flags.translate !== undefined || argv.includes("--translate") ? { translate: readBooleanFlag(argv, flags, "translate", false) } : {}),
-        ...(flags.threads ? { threads: Number(flags.threads) } : {}),
+        ...(flags.threads ? { threads: parseMediaConfigPositiveIntegerFlag(flags.threads, "threads") } : {}),
       });
     })();
   if (wantsJson) {

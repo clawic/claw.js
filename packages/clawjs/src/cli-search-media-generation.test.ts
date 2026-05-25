@@ -55,6 +55,27 @@ test("media generation list commands reject invalid limits", async () => {
   }
 });
 
+test("media generation config commands reject invalid numeric flags", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-media-invalid-config-numbers-"));
+
+  for (const args of [
+    ["tts", "set-config", "--speed", "nope"],
+    ["stt", "set-config", "--threads", "nope"],
+  ]) {
+    const result = await runCliCapture([
+      ...args,
+      "--workspace",
+      workspaceRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(result.code, CLI_EXIT_USAGE, result.stdout || result.stderr);
+    const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_media_config_number");
+    assert.equal(payload.error.status, "USAGE");
+  }
+});
+
 test("image commands reject invalid enum flags before writing records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-image-invalid-enums-"));
   const dataRoot = path.join(workspaceRoot, "data");
