@@ -3,8 +3,9 @@ export type BrokerDeclaredField = { secretName: string; fieldName: string; place
 export function inferBrokerDeclaredFields(input: { url: string; headers?: Record<string, string>; body?: string }): BrokerDeclaredField[] {
   const template = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g;
   const declared = new Map<string, BrokerDeclaredField>();
+  const queryText = querySecretPlaceholderSource(input.url, template);
   const sources: Array<[string | undefined, BrokerDeclaredField["placement"]]> = [
-    [input.url, "query"],
+    [queryText, "query"],
     [input.body, "body"],
     ...Object.values(input.headers ?? {}).map((value): [string, BrokerDeclaredField["placement"]] => [value, "header"]),
   ];
@@ -20,4 +21,16 @@ export function inferBrokerDeclaredFields(input: { url: string; headers?: Record
     }
   }
   return [...declared.values()];
+}
+
+function querySecretPlaceholderSource(url: string, template: RegExp): string | undefined {
+  const queryStart = url.indexOf("?");
+  const hashStart = url.indexOf("#");
+  const queryEnd = hashStart === -1 ? url.length : hashStart;
+  for (const match of url.matchAll(template)) {
+    const index = match.index ?? -1;
+    if (queryStart >= 0 && index > queryStart && index < queryEnd) continue;
+    throw new Error(`Secret placeholder ${match[0]} is only supported in URL query parameters, headers, or body fields`);
+  }
+  return queryStart >= 0 ? url.slice(queryStart + 1, queryEnd) : undefined;
 }

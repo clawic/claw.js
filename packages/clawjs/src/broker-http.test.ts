@@ -23,3 +23,20 @@ test("inferBrokerDeclaredFields rejects whole-secret placeholders", () => {
     /must include an explicit field/,
   );
 });
+
+test("inferBrokerDeclaredFields rejects URL path and fragment secret placeholders", () => {
+  assert.throws(
+    () => inferBrokerDeclaredFields({ url: "https://api.example.com/{{service_token.token}}/users" }),
+    /only supported in URL query parameters/,
+  );
+  assert.throws(
+    () => inferBrokerDeclaredFields({ url: "https://api.example.com/users#token={{service_token.token}}" }),
+    /only supported in URL query parameters/,
+  );
+
+  assert.deepEqual(inferBrokerDeclaredFields({
+    url: "https://api.example.com/users?token={{service_token.token}}#ignored",
+  }), [
+    { secretName: "service_token", fieldName: "token", placement: "query" },
+  ]);
+});
