@@ -3,6 +3,9 @@ import path from "path";
 
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError, type CliHandledErrorOptions } from "../cli-errors.ts";
+import { writeCommandJsonError } from "../cli-json.ts";
+import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 import { isReferenceType, type ReferenceType } from "./schema.ts";
 import {
   copyAssetIntoReference,
@@ -13,7 +16,6 @@ import {
   referenceDir,
   writeReference,
 } from "./storage.ts";
-import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 
 interface ReferenceCliContext {
   stdout: NodeJS.WritableStream;
@@ -31,17 +33,19 @@ export interface ReferenceCliOptions {
   context: ReferenceCliContext;
 }
 
-const R_OK = 0;
-const R_FAILURE = 1;
-const R_USAGE = 64;
+const REFERENCE_SUBCOMMANDS = ["list", "get", "add", "delete", "link"] as const;
+const REFERENCE_TYPES = ["web", "pdf", "image", "video", "screenshot", "snippet"] as const;
 
 export async function runReferenceCli(options: ReferenceCliOptions): Promise<number> {
   const [, command, target] = options.positionals;
   const { context, flags, workspaceRoot } = options;
 
   if (!command || command === "help") {
+    if (!command && options.wantsJson) {
+      return writeUsageError(options, missingReferenceSubcommandError());
+    }
     writeUsage(context);
-    return command ? R_OK : R_USAGE;
+    return command ? CLI_EXIT_OK : CLI_EXIT_USAGE;
   }
 
   if (command === "list") {
@@ -49,31 +53,28 @@ export async function runReferenceCli(options: ReferenceCliOptions): Promise<num
     if (flags.tag) filter.tag = flags.tag;
     if (flags.type) {
       if (!isReferenceType(flags.type)) {
-        context.stderr.write(`Unknown reference type: ${flags.type}\n`);
-        return R_USAGE;
+        return writeUsageError(options, invalidReferenceTypeError(flags.type, "list"));
       }
       filter.type = flags.type;
     }
     const refs = listReferences(workspaceRoot, filter);
     writeOutput(options, { references: refs }, refs.map((r) => `${r.id}\t${r.type}\t${r.name}`).join("\n"));
-    return R_OK;
+    return CLI_EXIT_OK;
   }
 
   if (command === "get") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} ref get <id>\n`);
-      return R_USAGE;
+      return writeUsageError(options, missingReferenceIdError("get"));
     }
     const manifest = readReference(workspaceRoot, target);
     writeOutput(options, manifest, `${manifest.id}\t${manifest.type}\t${manifest.name}`);
-    return R_OK;
+    return CLI_EXIT_OK;
   }
 
   if (command === "add") {
     const type = flags.type;
     if (!type || !isReferenceType(type)) {
-      context.stderr.write(`Usage: ${context.binName} ref add --type <web|pdf|image|video|screenshot|snippet> [--source URL|PATH] [--name NAME] [--tag a,b]\n`);
-      return R_USAGE;
+      return writeUsageError(options, invalidReferenceTypeError(type, "add"));
     }
     const source = flags.source;
     const name = flags.name ?? (source ? path.basename(source) : type);
@@ -101,29 +102,27 @@ export async function runReferenceCli(options: ReferenceCliOptions): Promise<num
     const { path: filePath } = writeReference(workspaceRoot, manifest, flags.notes ?? "");
     scheduleReferenceSearchEvent(options, "upsert", manifest.id);
     writeOutput(options, { reference: manifest, path: filePath }, filePath);
-    return R_OK;
+    return CLI_EXIT_OK;
   }
 
   if (command === "delete") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} ref delete <id>\n`);
-      return R_USAGE;
+      return writeUsageError(options, missingReferenceIdError("delete"));
     }
     const dir = referenceDir(workspaceRoot, target);
     if (!fs.existsSync(dir)) {
       context.stderr.write(`Reference not found: ${target}\n`);
-      return R_FAILURE;
+      return CLI_EXIT_FAILURE;
     }
     fs.rmSync(dir, { recursive: true, force: true });
     scheduleReferenceSearchEvent(options, "delete", target);
     writeOutput(options, { deleted: target }, `Deleted ${target}`);
-    return R_OK;
+    return CLI_EXIT_OK;
   }
 
   if (command === "link") {
     if (!target || !flags.style) {
-      context.stderr.write(`Usage: ${context.binName} ref link <refId> --style <styleId>\n`);
-      return R_USAGE;
+      return writeUsageError(options, missingReferenceLinkInputError(target, flags.style));
     }
     const manifest = readReference(workspaceRoot, target);
     const set = new Set(manifest.styleIds ?? []);
@@ -133,12 +132,15 @@ export async function runReferenceCli(options: ReferenceCliOptions): Promise<num
     writeReference(workspaceRoot, manifest);
     scheduleReferenceSearchEvent(options, "upsert", manifest.id);
     writeOutput(options, manifest, `linked ${target} -> ${flags.style}`);
-    return R_OK;
+    return CLI_EXIT_OK;
   }
 
+  if (options.wantsJson) {
+    return writeUsageError(options, unknownReferenceSubcommandError(command));
+  }
   context.stderr.write(`Unknown ref command: ${command}\n`);
   writeUsage(context);
-  return R_USAGE;
+  return CLI_EXIT_USAGE;
 }
 
 function writeOutput(options: ReferenceCliOptions, payload: unknown, text: string): void {
@@ -161,6 +163,75 @@ function scheduleReferenceSearchEvent(options: ReferenceCliOptions, operation: "
 
 function searchEventDataDir(options: ReferenceCliOptions): string {
   return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.workspace.data", options.workspaceRoot);
+}
+
+function writeUsageError(options: ReferenceCliOptions, error: CliHandledError): number {
+  if (options.wantsJson) {
+    writeCommandJsonError(options.context.stdout, "references", error, {
+      invokedCommand: options.positionals[0] ?? "references",
+      subcommand: options.positionals[1] ?? null,
+    });
+  } else {
+    options.context.stderr.write(`${error.message}\n`);
+  }
+  return error.exitCode;
+}
+
+function missingReferenceSubcommandError(): CliHandledError {
+  return new CliHandledError(
+    "missing_reference_subcommand",
+    "Missing reference subcommand.",
+    referenceUsageErrorOptions("cli.references.subcommand", { received: null }),
+  );
+}
+
+function unknownReferenceSubcommandError(command: string): CliHandledError {
+  return new CliHandledError(
+    "unknown_reference_subcommand",
+    `Unknown reference subcommand: ${command}`,
+    referenceUsageErrorOptions("cli.references.subcommand", { received: command }),
+  );
+}
+
+function invalidReferenceTypeError(type: string | undefined, subcommand: string): CliHandledError {
+  return new CliHandledError(
+    type ? "invalid_reference_type" : "missing_reference_type",
+    type ? `Unknown reference type: ${type}` : "Missing required reference type.",
+    referenceUsageErrorOptions(`cli.references.${subcommand}.type`, {
+      received: type ?? null,
+      validTypes: [...REFERENCE_TYPES],
+    }),
+  );
+}
+
+function missingReferenceIdError(subcommand: "get" | "delete"): CliHandledError {
+  return new CliHandledError(
+    "missing_reference_id",
+    `Missing reference id for ${subcommand}.`,
+    referenceUsageErrorOptions(`cli.references.${subcommand}.id`, { received: null }),
+  );
+}
+
+function missingReferenceLinkInputError(target: string | undefined, styleId: string | undefined): CliHandledError {
+  return new CliHandledError(
+    "missing_reference_link_input",
+    "Reference link requires a reference id and --style <styleId>.",
+    referenceUsageErrorOptions("cli.references.link", {
+      received: { referenceId: target ?? null, styleId: styleId ?? null },
+    }),
+  );
+}
+
+function referenceUsageErrorOptions(location: string, details: Record<string, unknown>): CliHandledErrorOptions {
+  return {
+    exitCode: CLI_EXIT_USAGE,
+    location,
+    safeNextStep: "Run claw references list --json to inspect saved references, or claw help references --json for the references command surface.",
+    details: {
+      ...details,
+      validSubcommands: [...REFERENCE_SUBCOMMANDS],
+    },
+  };
 }
 
 function writeUsage(context: ReferenceCliContext): void {

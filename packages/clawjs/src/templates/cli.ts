@@ -19,6 +19,7 @@ import { readStyle } from "../styles/storage.ts";
 import { renderTemplate } from "./render/adapters.ts";
 import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 import { CliHandledError } from "../cli-errors.ts";
+import { writeCommandJsonError } from "../cli-json.ts";
 
 interface TemplateCliContext {
   stdout: NodeJS.WritableStream;
@@ -39,12 +40,22 @@ export interface TemplateCliOptions {
 const T_OK = 0;
 const T_FAILURE = 1;
 const T_USAGE = 64;
+const VALID_TEMPLATE_SUBCOMMANDS = ["list", "get", "create", "delete", "render", "install-builtins", "builtins"];
 
 export async function runTemplateCli(options: TemplateCliOptions): Promise<number> {
   const [, command, target] = options.positionals;
   const { context, flags, workspaceRoot } = options;
 
   if (!command || command === "help") {
+    if (!command && options.wantsJson) {
+      return writeTemplateUsageError(options, {
+        code: "missing_template_subcommand",
+        message: "Missing template subcommand.",
+        location: "cli.templates.subcommand",
+        safeNextStep: `Run ${context.binName} templates list --json or ${context.binName} help templates --json.`,
+        details: { validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
+    }
     writeUsage(context);
     return command ? T_OK : T_USAGE;
   }
@@ -59,8 +70,14 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
 
   if (command === "get") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} template get <id>\n`);
-      return T_USAGE;
+      return writeTemplateUsageError(options, {
+        code: "missing_template_id",
+        message: "Missing template id for template get.",
+        textUsage: `Usage: ${context.binName} template get <id>`,
+        location: "template.get.id",
+        safeNextStep: `Run ${context.binName} templates list --json to find ids, then rerun ${context.binName} template get <id> --json.`,
+        details: { subcommand: command, requiredArguments: ["id"], validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
     }
     const manifest = readTemplate(workspaceRoot, target);
     writeOutput(options, manifest, `${manifest.id}\t${manifest.name}\t${manifest.slots.length} slots\t${manifest.variants.length} variants`);
@@ -70,8 +87,14 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
   if (command === "create") {
     const name = joinedPositionals(options.positionals, 2) || flags.name;
     if (!name || !flags.category) {
-      context.stderr.write(`Usage: ${context.binName} template create <name> --category <cat> [--aspect 16:9|1:1|9:16|...] [--from <templateId>]\n`);
-      return T_USAGE;
+      return writeTemplateUsageError(options, {
+        code: "invalid_template_create_usage",
+        message: "template create requires a name and --category.",
+        textUsage: `Usage: ${context.binName} template create <name> --category <cat> [--aspect 16:9|1:1|9:16|...] [--from <templateId>]`,
+        location: "template.create",
+        safeNextStep: `Run ${context.binName} template create <name> --category report --json.`,
+        details: { subcommand: command, requiredArguments: ["name"], requiredFlags: ["category"], validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
     }
     const category = templateCategoryOrThrow(flags.category);
     const fromId = flags.from;
@@ -102,8 +125,14 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
 
   if (command === "delete") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} template delete <id>\n`);
-      return T_USAGE;
+      return writeTemplateUsageError(options, {
+        code: "missing_template_id",
+        message: "Missing template id for template delete.",
+        textUsage: `Usage: ${context.binName} template delete <id>`,
+        location: "template.delete.id",
+        safeNextStep: `Run ${context.binName} templates list --json to find ids, then rerun ${context.binName} template delete <id> --json.`,
+        details: { subcommand: command, requiredArguments: ["id"], validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
     }
     const dir = templateDir(workspaceRoot, target);
     if (!fs.existsSync(dir)) {
@@ -123,12 +152,24 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
 
   if (command === "render") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} template render <templateId> --style <styleId> [--data <file.json>] [--variant <id>] [--out <path>] [--format html]\n`);
-      return T_USAGE;
+      return writeTemplateUsageError(options, {
+        code: "missing_template_id",
+        message: "Missing template id for template render.",
+        textUsage: `Usage: ${context.binName} template render <templateId> --style <styleId> [--data <file.json>] [--variant <id>] [--out <path>] [--format html]`,
+        location: "template.render.id",
+        safeNextStep: `Run ${context.binName} templates list --json to find ids, then rerun ${context.binName} template render <templateId> --style <styleId> --json.`,
+        details: { subcommand: command, requiredArguments: ["templateId"], validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
     }
     if (!flags.style) {
-      context.stderr.write(`Missing --style <styleId>\n`);
-      return T_USAGE;
+      return writeTemplateUsageError(options, {
+        code: "missing_template_render_style",
+        message: "template render requires --style <styleId>.",
+        textUsage: "Missing --style <styleId>",
+        location: "template.render.style",
+        safeNextStep: `Run ${context.binName} style list --json to find style ids, then rerun ${context.binName} template render ${target} --style <styleId> --json.`,
+        details: { subcommand: command, requiredFlags: ["style"], validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
     }
     const data = flags.data ? readJson(path.resolve(context.cwd, flags.data)) : {};
     const template = readTemplate(workspaceRoot, target);
@@ -137,8 +178,14 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
     const rawFormats = formatFlag.split(",").map((f) => f.trim()).filter(Boolean);
     const ALLOWED = new Set<TemplateOutputFormat>(["html", "pdf", "png", "svg", "pptx"]);
     for (const f of rawFormats) if (!ALLOWED.has(f as TemplateOutputFormat)) {
-      context.stderr.write(`Unsupported render format: ${f}\n`);
-      return T_USAGE;
+      return writeTemplateUsageError(options, {
+        code: "unsupported_template_render_format",
+        message: `Unsupported template render format: ${f}`,
+        textUsage: `Unsupported render format: ${f}`,
+        location: "template.render.format",
+        safeNextStep: `Run ${context.binName} template render ${target} --style ${flags.style} --format html --json.`,
+        details: { subcommand: command, received: f, validFormats: [...ALLOWED], validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+      });
     }
     const formats = rawFormats as TemplateOutputFormat[];
     const results: Array<{ format: string; outputPath: string; renderer: string; width: number; height: number }> = [];
@@ -210,9 +257,15 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
     return T_OK;
   }
 
-  context.stderr.write(`Unknown template command: ${command}\n`);
-  writeUsage(context);
-  return T_USAGE;
+  return writeTemplateUsageError(options, {
+    code: "unknown_template_subcommand",
+    message: `Unknown template subcommand: ${command}`,
+    textUsage: `Unknown template command: ${command}`,
+    location: "cli.templates.subcommand",
+    safeNextStep: `Run ${context.binName} templates list --json or ${context.binName} help templates --json.`,
+    details: { received: command, validSubcommands: VALID_TEMPLATE_SUBCOMMANDS },
+    includeFullUsage: true,
+  });
 }
 
 function joinedPositionals(positionals: string[], from: number): string {
@@ -239,6 +292,37 @@ function scheduleTemplateSearchEvent(options: TemplateCliOptions, operation: "up
 
 function searchEventDataDir(options: TemplateCliOptions): string {
   return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.workspace.data", options.workspaceRoot);
+}
+
+function writeTemplateUsageError(options: TemplateCliOptions, input: {
+  code: string;
+  message: string;
+  textUsage?: string;
+  location: string;
+  safeNextStep: string;
+  details: Record<string, unknown>;
+  includeFullUsage?: boolean;
+}): number {
+  if (options.wantsJson) {
+    writeCommandJsonError(
+      options.context.stdout,
+      "templates",
+      new CliHandledError(input.code, input.message, T_USAGE, {
+        location: input.location,
+        suggestion: "Use one of the supported template subcommands and include required arguments before retrying.",
+        safeNextStep: input.safeNextStep,
+        details: input.details,
+      }),
+      {
+        invokedCommand: options.positionals[0] ?? "template",
+        subcommand: options.positionals[1] ?? null,
+      },
+    );
+  } else {
+    options.context.stderr.write(`${input.textUsage ?? input.message}\n`);
+    if (input.includeFullUsage) writeUsage(options.context);
+  }
+  return T_USAGE;
 }
 
 function readJson(filePath: string): Record<string, unknown> {

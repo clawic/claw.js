@@ -16,6 +16,8 @@ import {
 } from "./storage.ts";
 import { normalizeStyleManifest } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
+import { CliHandledError } from "../cli-errors.ts";
+import { writeCommandJsonError } from "../cli-json.ts";
 import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
 
 interface StyleCliContext {
@@ -37,14 +39,21 @@ export interface StyleCliOptions {
 const STYLE_OK = 0;
 const STYLE_FAILURE = 1;
 const STYLE_USAGE = 64;
+const STYLE_SUBCOMMANDS = ["list", "get", "create", "delete", "export", "import", "install-builtins", "builtins"] as const;
 
 export async function runStyleCli(options: StyleCliOptions): Promise<number> {
   const [, command, target] = options.positionals;
   const { context, flags, workspaceRoot, wantsJson } = options;
 
-  if (!command || command === "help") {
+  if (!command) {
+    return writeStyleUsageError(options, "missing_style_subcommand", `Usage: ${context.binName} style <command>`, {
+      safeNextStep: `Run ${context.binName} style list --json to inspect installed styles, or ${context.binName} help styles --json for the styles command surface.`,
+    });
+  }
+
+  if (command === "help") {
     writeUsage(context);
-    return command ? STYLE_OK : STYLE_USAGE;
+    return STYLE_OK;
   }
 
   if (command === "list") {
@@ -55,8 +64,9 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
 
   if (command === "get") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} style get <id>\n`);
-      return STYLE_USAGE;
+      return writeStyleUsageError(options, "missing_style_id", `Usage: ${context.binName} style get <id>`, {
+        safeNextStep: `Run ${context.binName} style list --json to choose a style id, then rerun ${context.binName} style get <id> --json.`,
+      });
     }
     const manifest = readStyle(workspaceRoot, target);
     writeOutput(options, manifest, `${manifest.id}\t${manifest.name}\n${manifest.description ?? ""}`);
@@ -66,8 +76,9 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
   if (command === "create") {
     const name = joinedPositionals(options.positionals, 2) || flags.name;
     if (!name) {
-      context.stderr.write(`Usage: ${context.binName} style create <name> [--from <styleId>] [--description TEXT]\n`);
-      return STYLE_USAGE;
+      return writeStyleUsageError(options, "missing_style_name", `Usage: ${context.binName} style create <name> [--from <styleId>] [--description TEXT]`, {
+        safeNextStep: `Rerun ${context.binName} style create <name> --json with a human-readable style name.`,
+      });
     }
     const fromId = flags.from;
     const seed = fromId
@@ -95,8 +106,9 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
 
   if (command === "delete") {
     if (!target) {
-      context.stderr.write(`Usage: ${context.binName} style delete <id>\n`);
-      return STYLE_USAGE;
+      return writeStyleUsageError(options, "missing_style_id", `Usage: ${context.binName} style delete <id>`, {
+        safeNextStep: `Run ${context.binName} style list --json to choose a style id, then rerun ${context.binName} style delete <id> --json.`,
+      });
     }
     const dir = styleDir(workspaceRoot, target);
     if (!fs.existsSync(dir)) {
@@ -116,8 +128,9 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
 
   if (command === "export") {
     if (!target || !flags.out) {
-      context.stderr.write(`Usage: ${context.binName} style export <id> --out <dir>\n`);
-      return STYLE_USAGE;
+      return writeStyleUsageError(options, "invalid_style_export_usage", `Usage: ${context.binName} style export <id> --out <dir>`, {
+        safeNextStep: `Run ${context.binName} style list --json to choose a style id, then rerun ${context.binName} style export <id> --out <dir> --json.`,
+      });
     }
     const { path: out } = exportStyle(workspaceRoot, target, path.resolve(context.cwd, flags.out));
     writeOutput(options, { exported: out }, out);
@@ -127,8 +140,9 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
   if (command === "import") {
     const source = target || flags.from;
     if (!source) {
-      context.stderr.write(`Usage: ${context.binName} style import <dir> [--overwrite]\n`);
-      return STYLE_USAGE;
+      return writeStyleUsageError(options, "missing_style_import_source", `Usage: ${context.binName} style import <dir> [--overwrite]`, {
+        safeNextStep: `Rerun ${context.binName} style import <dir> --json with the style directory to import.`,
+      });
     }
     const overwrite = flags.overwrite === "true" || options.argv.includes("--overwrite");
     const result = importStyle(workspaceRoot, path.resolve(context.cwd, source), { overwrite });
@@ -165,9 +179,9 @@ export async function runStyleCli(options: StyleCliOptions): Promise<number> {
     return STYLE_OK;
   }
 
-  context.stderr.write(`Unknown style command: ${command}\n`);
-  writeUsage(context);
-  return STYLE_USAGE;
+  return writeStyleUsageError(options, "unknown_style_subcommand", `Unknown style subcommand: ${command}.`, {
+    safeNextStep: `Run ${context.binName} style list --json to inspect installed styles, or ${context.binName} help styles --json for the styles command surface.`,
+  });
 }
 
 function joinedPositionals(positionals: string[], from: number): string {
@@ -180,6 +194,35 @@ function writeOutput(options: StyleCliOptions, payload: unknown, text: string): 
   } else {
     options.context.stdout.write(text.endsWith("\n") ? text : `${text}\n`);
   }
+}
+
+function writeStyleUsageError(
+  options: StyleCliOptions,
+  code: string,
+  message: string,
+  extra: { safeNextStep: string },
+): number {
+  if (options.wantsJson) {
+    const subcommand = options.positionals[1] ?? null;
+    writeCommandJsonError(options.context.stdout, "styles", new CliHandledError(code, message, STYLE_USAGE, {
+      location: "cli.styles.subcommand",
+      suggestion: "Use one of the registered style subcommands and provide its required arguments.",
+      safeNextStep: extra.safeNextStep,
+      details: {
+        received: subcommand,
+        validSubcommands: [...STYLE_SUBCOMMANDS],
+      },
+    }), {
+      invokedCommand: options.argv[0] ?? options.positionals[0] ?? "style",
+      subcommand,
+      ...(options.positionals[2] ? { operation: options.positionals[2] } : {}),
+    });
+    return STYLE_USAGE;
+  }
+
+  options.context.stderr.write(`${message}\n`);
+  if (code === "unknown_style_subcommand") writeUsage(options.context);
+  return STYLE_USAGE;
 }
 
 function scheduleStyleSearchEvent(options: StyleCliOptions, operation: "upsert" | "delete", styleId: string): void {
