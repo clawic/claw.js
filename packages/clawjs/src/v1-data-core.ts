@@ -4,11 +4,12 @@ import os from "os";
 import path from "path";
 import { randomUUID } from "crypto";  import BetterSqlite3 from "better-sqlite3"; import type Database from "better-sqlite3"; import { DatabaseServiceStore } from "@clawjs/database"; import type { FieldDefinition, IndexDefinition } from "@clawjs/database"; import { redactSecrets } from "@clawjs/claw"; import { V1_MAIN_SCHEMA_SQL, V1_SIDECAR_SCHEMA_SQL_BY_FILE } from "./v1-data-surface.ts"; import { MAC_CARE_SIDECAR_FILENAME, assertCodexReadOnlyPath, resolveClawGlobalDataStorageDir, resolveCodexArchivedSessionsDir, resolveCodexSessionsDir } from "@clawjs/core";
 import { resolveClawCliCommand } from "@clawjs/core/catalogs";
+import { CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 export const V1_DATA_EXIT_OK = 0;
 export const V1_DATA_EXIT_FAILURE = 1;
-const V1_DATA_EXIT_USAGE = 64;
+export const V1_DATA_EXIT_USAGE = 64;
 
 type Writable = NodeJS.WritableStream;
 
@@ -1801,8 +1802,8 @@ export function writeUnredactedSuccess(input: V1DataCliInput, payload: unknown):
   input.stdout.write(`${typeof payload === "string" ? payload : JSON.stringify(payload, null, 2)}\n`);
 }
 
-export function writeError(input: V1DataCliInput, code: string, message: string): void {
-  if (input.wantsJson) writeCommandJsonError(input.stdout, input.positionals[0] || "data", { code, message }, v1JsonMeta(input));
+export function writeError(input: V1DataCliInput, code: string, message: string, exitCode = V1_DATA_EXIT_FAILURE): void {
+  if (input.wantsJson) writeCommandJsonError(input.stdout, input.positionals[0] || "data", new CliHandledError(code, message, exitCode), v1JsonMeta(input));
   else input.stderr.write(`${message}\n`);
 }
 
@@ -1813,7 +1814,7 @@ function v1JsonMeta(input: V1DataCliInput): Record<string, unknown> {
 }
 
 export function usageError(input: V1DataCliInput, message: string): number {
-  writeError(input, "usage", message);
+  writeError(input, "usage", message, V1_DATA_EXIT_USAGE);
   return V1_DATA_EXIT_USAGE;
 }
 

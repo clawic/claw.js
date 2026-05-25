@@ -20,6 +20,7 @@ export {
 import {
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
+  V1_DATA_EXIT_USAGE,
   backupDataStore,
   doctorPayload,
   ensureSignalsVariable,
@@ -699,6 +700,11 @@ function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore)
     const id = input.flags.id || `fact-${randomUUID()}`;
     const predicate = input.flags.predicate || input.flags.key || input.positionals[2];
     if (!predicate) return usageError(input, "Usage: claw knowledge fact --predicate KEY --value JSON|TEXT [--subject ID]");
+    const confidence = parseKnowledgeConfidence(input.flags.confidence);
+    if (confidence === undefined) {
+      writeError(input, "invalid_knowledge_confidence", "Expected --confidence to be a number between 0 and 1.", V1_DATA_EXIT_USAGE);
+      return V1_DATA_EXIT_USAGE;
+    }
     const objectValue = input.flags.json ? JSON.parse(input.flags.json) : parseMaybeJson(input.flags.value ?? input.positionals.slice(3).join(" "));
     const now = nowIso();
     store.sqlite.prepare(`
@@ -715,7 +721,7 @@ function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore)
       predicate,
       input.flags["object-kind"] || "literal",
       JSON.stringify(objectValue),
-      input.flags.confidence ? Number(input.flags.confidence) : null,
+      confidence,
       input.flags.scope ? JSON.stringify(parseMaybeJson(input.flags.scope)) : "{}",
       input.flags.sensitivity || "normal",
       input.flags.source || (command === "promote" ? "promotion" : "manual"),
@@ -773,6 +779,15 @@ function runKnowledgeCommand(input: V1DataCliInput, store: DatabaseServiceStore)
     return V1_DATA_EXIT_OK;
   }
   return usageError(input, usage(input.binName, "knowledge"));
+}
+
+function parseKnowledgeConfidence(raw: string | undefined): number | null | undefined {
+  if (raw === undefined) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0 || value > 1) return undefined;
+  return value;
 }
 
 function runNotesCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {

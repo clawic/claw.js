@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 
 import { clawStorageFiles, resolveClawPersistentSurfacePath } from "@clawjs/core";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, openMainDataStore, writeMcpServers } from "./v1-data-core.ts";
 import { captureStream, runInternalV1Cli, useIsolatedClawDataRoot, withPatchedEnv } from "./index-test-utils.ts";
@@ -18,6 +18,16 @@ function parseCliJsonPayload<T>(output: string): T {
   assert.equal(typeof parsed.meta?.canonicalCommand, "string");
   assert.equal(parsed.meta?.schemaVersion, 1);
   return parsed.data as T;
+}
+
+function parseCliJsonError(output: string): { error: { code: string; message: string; status?: string }; meta: Record<string, unknown> } {
+  const parsed = JSON.parse(output) as { ok?: boolean; error?: { code?: string; message?: string; status?: string }; meta?: Record<string, unknown> };
+  assert.equal(parsed.ok, false);
+  assert.equal(typeof parsed.error?.code, "string");
+  assert.equal(typeof parsed.error?.message, "string");
+  assert.equal(typeof parsed.meta?.canonicalCommand, "string");
+  assert.equal(parsed.meta?.schemaVersion, 1);
+  return parsed as { error: { code: string; message: string; status?: string }; meta: Record<string, unknown> };
 }
 
 test("runCli manages V2 knowledge, notes, profile, business, and search domains in the main sqlite", async () => {
@@ -875,6 +885,48 @@ test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime
       cwd,
     }), CLI_EXIT_OK);
     assert.equal((parseCliJsonPayload(restoredOpsStdout.getOutput()) as { items: unknown[] }).items.length, 1);
+  });
+});
+
+test("runCli rejects invalid knowledge fact confidence before persistence", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-knowledge-confidence-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-knowledge-confidence-cwd-"));
+    for (const rawConfidence of ["nope", "-0.1", "1.1"]) {
+      const stdout = captureStream();
+      assert.equal(await runCli([
+        "knowledge",
+        "fact",
+        "--predicate",
+        "prefers_response_style",
+        "--value",
+        "direct",
+        "--confidence",
+        rawConfidence,
+        "--json",
+      ], {
+        stdout: stdout.stream,
+        stderr: captureStream().stream,
+        cwd,
+      }), CLI_EXIT_USAGE);
+      const payload = parseCliJsonError(stdout.getOutput());
+      assert.equal(payload.error.code, "invalid_knowledge_confidence");
+      assert.equal(payload.error.status, "USAGE");
+    }
+
+    const sqlite = openMainDataStore().sqlite;
+    try {
+      const count = sqlite.prepare("SELECT COUNT(*) AS count FROM knowledge_facts").get() as { count: number };
+      assert.equal(count.count, 0);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 
