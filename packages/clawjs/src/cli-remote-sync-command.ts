@@ -289,13 +289,39 @@ function parseAuthority(value: string | undefined): SyncAuthority | undefined {
     || value === "mirror"
     || value === "joint"
   ) return value;
-  throw new Error(`Invalid authority value for sync: ${value}`);
+  throw new CliHandledError(
+    "invalid_sync_authority",
+    `--requested-authority must be one of: primary, replica, cache, mirror, joint. Received: ${value}.`,
+    CLI_EXIT_USAGE,
+    {
+      location: "cli.sync.requested_authority",
+      suggestion: "Use a supported sync authority value for handoff receipts.",
+      safeNextStep: "Rerun sync handoff with --requested-authority primary, replica, cache, mirror, or joint.",
+      details: {
+        received: value,
+        validAuthorities: ["primary", "replica", "cache", "mirror", "joint"],
+      },
+    },
+  );
 }
 
 function parseOfflineReason(value: string | undefined): "connector_offline" | "node_unreachable" | "transport_unavailable" | undefined {
   if (!value) return undefined;
   if (value === "connector_offline" || value === "node_unreachable" || value === "transport_unavailable") return value;
-  throw new Error(`Invalid offline reason: ${value}`);
+  throw new CliHandledError(
+    "invalid_remote_offline_reason",
+    `--reason must be one of: connector_offline, node_unreachable, transport_unavailable. Received: ${value}.`,
+    CLI_EXIT_USAGE,
+    {
+      location: "cli.remote.offline_reason",
+      suggestion: "Use a registered fail-fast offline reason.",
+      safeNextStep: "Rerun remote offline-command with --reason connector_offline, node_unreachable, or transport_unavailable.",
+      details: {
+        received: value,
+        validReasons: ["connector_offline", "node_unreachable", "transport_unavailable"],
+      },
+    },
+  );
 }
 
 function parseSnapshots(flagName: "--local-snapshot-json" | "--peer-snapshot-json", value: string | undefined, fallback: SyncObjectSnapshot[]): SyncObjectSnapshot[] {
@@ -379,20 +405,36 @@ function listFlag(value: string | undefined, fallback: string[]): string[] {
 }
 
 function readJsonFlagValue(value: string | undefined, filePath: string | undefined, cwd: string): string | undefined {
-  return value ?? (filePath ? fs.readFileSync(path.resolve(cwd, filePath), "utf8") : undefined);
+  if (value !== undefined) return value;
+  if (!filePath) return undefined;
+  const absolutePath = path.resolve(cwd, filePath);
+  if (!fs.existsSync(absolutePath)) {
+    throw new CliHandledError(
+      "remote_evidence_file_missing",
+      `Remote validation evidence file is missing: ${filePath}`,
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.remote.evidence_file",
+        suggestion: "Pass an existing JSON evidence file.",
+        safeNextStep: "Create the evidence file or rerun with --evidence-json.",
+        details: { path: absolutePath },
+      },
+    );
+  }
+  return fs.readFileSync(absolutePath, "utf8");
 }
 
 function parseExternalValidationEvidence(value: string | undefined, filePath: string | undefined, cwd: string): RemoteExternalValidationEvidence[] {
   const raw = readJsonFlagValue(value, filePath, cwd);
   if (!raw) return [];
-  const parsed = JSON.parse(raw) as unknown;
+  const parsed = parseRemoteJsonInput(raw, filePath ? "file" : "json", "invalid_remote_evidence_json");
   return parseRemoteExternalValidationEvidenceInput(parsed);
 }
 
 function parseExternalValidationEvidenceArtifact(value: string | undefined, filePath: string | undefined, cwd: string): unknown | undefined {
   const raw = readJsonFlagValue(value, filePath, cwd);
   if (!raw) return undefined;
-  const parsed = JSON.parse(raw) as unknown;
+  const parsed = parseRemoteJsonInput(raw, filePath ? "file" : "json", "invalid_remote_evidence_json");
   if (
     parsed
     && typeof parsed === "object"
@@ -424,8 +466,25 @@ function parseSourceQaIds(value: string | undefined): string[] | undefined {
 function parseSourceQaReviews(value: string | undefined, filePath: string | undefined, cwd: string): RemoteSourceQaReviewItem[] {
   const raw = readJsonFlagValue(value, filePath, cwd);
   if (!raw) return [];
-  const parsed = JSON.parse(raw) as unknown;
+  const parsed = parseRemoteJsonInput(raw, filePath ? "file" : "json", "invalid_remote_source_qa_json");
   return parseRemoteSourceQaReviewInput(parsed);
+}
+
+function parseRemoteJsonInput(raw: string, source: "json" | "file", code: string): unknown {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new CliHandledError(
+      code,
+      `Remote validation ${source === "file" ? "file" : "JSON"} input must be valid JSON: ${error instanceof Error ? error.message : "parse error"}`,
+      CLI_EXIT_USAGE,
+      {
+        location: source === "file" ? "cli.remote.evidence_file" : "cli.remote.evidence_json",
+        suggestion: "Pass valid JSON for remote validation evidence or source QA input.",
+        safeNextStep: "Fix the JSON input, then rerun the remote validation command with --json.",
+      },
+    );
+  }
 }
 
 function meshActionFlags(value: string | undefined, fallback: MeshShareAction[]): MeshShareAction[] {
@@ -576,6 +635,18 @@ function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve
 function numberFlag(value: string | undefined, fallback: number): number {
   if (value && Number.isFinite(Number(value))) return Number(value);
   return fallback;
+}
+
+function positiveNumberFlag(value: string | undefined, fallback: number, flagName: string, code: string): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  throw new CliHandledError(code, `${flagName} must be a positive number.`, CLI_EXIT_USAGE, {
+    location: `cli.sync.${flagName.slice(2).replaceAll("-", "_")}`,
+    suggestion: "Use a positive numeric value.",
+    safeNextStep: `Rerun sync cache with ${flagName} set to a positive number of seconds.`,
+    details: { flag: flagName, received: value },
+  });
 }
 
 function positiveIntegerFlag(value: string | undefined, fallback: number, flagName: string): number {
@@ -939,7 +1010,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
       clientId: input.flags["client-id"] ?? "mobile.local",
       contentHash: input.flags["content-hash"] ?? input.flags.hash ?? "hash-cache",
       cachedAt: input.flags.now,
-      ttlSeconds: numberFlag(input.flags["ttl-seconds"], manifest.cachePolicy.ttlSeconds),
+      ttlSeconds: positiveNumberFlag(input.flags["ttl-seconds"], manifest.cachePolicy.ttlSeconds, "--ttl-seconds", "invalid_sync_cache_ttl"),
       physicalClientStorageVerified: approvedValidationFlag(input, "physical-client", "physical_client_storage"),
     });
     const store = stateStoreFromFlags(input);
