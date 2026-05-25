@@ -48,3 +48,20 @@ test("test commands reject checks not declared by a coordination manifest", asyn
     assert.equal(payload.error.status, "USAGE");
   }
 });
+
+test("test plan rejects lanes not declared by a coordination manifest", async () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "claw-test-unknown-lane-"));
+  writeCoordinationManifest(repo);
+
+  const result = await runCliCapture(["test", "plan", "--repo", repo, "--lane", "definitely_missing_lane", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; details?: { availableLanes?: string[] } };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_test_lane");
+  assert.equal(payload.error.status, "USAGE");
+  assert.deepEqual(payload.error.details?.availableLanes, ["changed"]);
+});

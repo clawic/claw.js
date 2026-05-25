@@ -95,6 +95,23 @@ async function importCliRouter() {
   }
 }
 
+async function importGeneratedCliRouter() {
+  const sourceEntry = new URL("../src/cli-router.generated.ts", import.meta.url);
+  try {
+    return await import(sourceEntry);
+  } catch (error) {
+    const code = error?.code;
+    if (code !== "ERR_MODULE_NOT_FOUND" && code !== "MODULE_NOT_FOUND" && code !== "ERR_UNKNOWN_FILE_EXTENSION") throw error;
+  }
+  const distEntry = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dist/cli-router.generated.js");
+  try {
+    return await import(distEntry);
+  } catch (error) {
+    if (!isMissingImport(error, distEntry)) throw error;
+    return import(new URL("../src/cli-router.generated.ts", import.meta.url));
+  }
+}
+
 function missingPack(canonicalCommand, moduleId, optionalPack) {
   const message = `This command needs optional pack ${optionalPack}. Review it with \`claw modules install ${moduleId}\` and install the pack explicitly before using this capability.`;
   if (wantsJson()) writeJsonError(canonicalCommand, "optional_pack_missing", message, { requiredModule: moduleId, optionalPack });
@@ -180,10 +197,16 @@ if (rootHelp && !args.includes("--all")) {
   console.log(baseUsage());
   process.exit(0);
 }
+if (first === "inspect" && (second === "commands" || second === "cli")) {
+  const { GENERATED_CLI_ROUTE_GROUPS } = await importGeneratedCliRouter();
+  const commands = Object.keys(GENERATED_CLI_ROUTE_GROUPS).map((command) => ({ id: `claw.cli.command.${command}`, value: command }));
+  if (wantsJson()) writeJsonOk("inspect", commands, { subcommand: second });
+  else console.log(commands.map((entry) => entry.value).join("\n"));
+  process.exit(0);
+}
 if (
   first === "setup" ||
   first === "modules" ||
-  (first === "inspect" && (second === "commands" || second === "cli")) ||
   (first === "collections" && (!second || second === "list"))
 ) {
   if (await runCliRouterAndExit()) {
@@ -239,12 +262,6 @@ if (first === "setup") {
   const modules = moduleDefinitions();
   if (wantsJson()) writeJsonOk("setup", { applied: false, mode, scope: "global", detail: { capability: modules.filter((module) => module.kind === "capability"), area: modules.filter((module) => module.kind === "area") }, modules }, { subcommand: "preview" });
   else console.log(`Mode preview: ${mode}\n\nRequires explicit action:\n${modules.map((module) => `  ${module.id.padEnd(18)} ${module.optionalPack ?? "manual"}`).join("\n")}`);
-  process.exit(0);
-}
-if (first === "inspect" && (second === "commands" || second === "cli")) {
-  const commands = ["help", "setup", "modules", "inspect", "collections", "db", "tasks", "search", "chat", "code", "agent-resource", "test"];
-  if (wantsJson()) writeJsonOk("inspect", commands.map((command) => ({ id: `claw.cli.command.${command}`, value: command })), { subcommand: second });
-  else console.log(commands.join("\n"));
   process.exit(0);
 }
 if (first === "collections" && (!second || second === "list")) {

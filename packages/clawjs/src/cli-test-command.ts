@@ -104,6 +104,9 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
 
   if (command === "plan") {
     const selected = checks.filter((check) => check.lane === lane || lane === "all");
+    if (lane !== "all" && selected.length === 0) {
+      throw unknownTestLaneError(lane, checks, manifest.manifestPath);
+    }
     return ok(input, { repo, lane, checks: selected }, { subcommand: command, lane });
   }
 
@@ -426,6 +429,27 @@ function findCheck(checks: CoordinationCheck[], repo: string, id: string, lane: 
     throw new CliHandledError("unknown_test_check", `Test check "${id}" is not declared in ${manifestPath}.`, CLI_EXIT_USAGE);
   }
   return defaultCheck(repo, id, lane);
+}
+
+function unknownTestLaneError(lane: string, checks: CoordinationCheck[], manifestPath: string | null): CliHandledError {
+  const availableLanes = Array.from(new Set(checks.map((check) => check.lane))).sort();
+  return new CliHandledError(
+    "unknown_test_lane",
+    manifestPath
+      ? `Test lane "${lane}" is not declared in ${manifestPath}.`
+      : `Test lane "${lane}" is not one of the default lanes.`,
+    CLI_EXIT_USAGE,
+    {
+      location: "cli.test.lane",
+      suggestion: "Choose a lane declared by the coordination manifest.",
+      safeNextStep: `Run claw test plan --lane ${availableLanes[0] ?? "changed"} --json or claw test plan --lane all --json.`,
+      details: {
+        requestedLane: lane,
+        availableLanes,
+        manifestPath,
+      },
+    },
+  );
 }
 
 function testResourceId(repo: string, check: CoordinationCheck): string {

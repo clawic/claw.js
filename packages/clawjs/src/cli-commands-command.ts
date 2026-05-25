@@ -5,7 +5,7 @@ import type { ClawCliCommandIntentEntry, ClawCliCommandIntentSource, ClawCliComm
 
 import { CliHandledError, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface CommandsCliInput {
   positionals: string[];
@@ -104,6 +104,7 @@ export async function runCommandsCli(input: CommandsCliInput): Promise<number> {
 }
 
 function writeCommandsUsage(input: CommandsCliInput): number {
+  const validSubcommands = ["resolve", "record", "list", "opportunities", "promote"];
   const usage = [
     `Usage: ${input.binName} commands resolve|record|list|opportunities|promote [options]`,
     "",
@@ -114,6 +115,23 @@ function writeCommandsUsage(input: CommandsCliInput): number {
     "  commands opportunities [--status gap] --json",
     "  commands promote <id> --to report --json",
   ].join("\n");
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "commands", new CliHandledError(
+      "unknown_commands_subcommand",
+      usage,
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.commands.subcommand",
+        suggestion: "Use a registered commands subcommand.",
+        safeNextStep: `Run ${input.binName} commands resolve <phrase> --json or ${input.binName} commands list --json.`,
+        details: {
+          received: input.positionals[1] ?? null,
+          validSubcommands,
+        },
+      },
+    ), { subcommand: input.positionals[1] ?? null });
+    return CLI_EXIT_USAGE;
+  }
   input.context.stderr.write(`${usage}\n`);
   return CLI_EXIT_USAGE;
 }

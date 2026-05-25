@@ -40,6 +40,24 @@ test("commands resolve reports audited collection aliases as covered top-level d
   assert.equal(payload.data.resolution.intent.evidence.some((entry) => entry.includes("built-in collection alias")), true);
 });
 
+test("commands returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["commands", "definitely_missing_command", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; safeNextStep: string; details?: { validSubcommands?: string[] } };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_commands_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.safeNextStep.includes("commands resolve <phrase> --json"), true);
+  assert.equal(payload.error.details?.validSubcommands?.includes("resolve"), true);
+  assert.equal(payload.meta.canonicalCommand, "commands");
+  assert.equal(payload.meta.subcommand, "definitely_missing_command");
+});
+
 test("commands resolve and list expose the runtime ecosystem portal", async () => {
   const resolved = await runCliCapture(["commands", "resolve", "runtime", "sessions", "send", "--json"], process.cwd());
   assert.equal(resolved.code, CLI_EXIT_OK);
