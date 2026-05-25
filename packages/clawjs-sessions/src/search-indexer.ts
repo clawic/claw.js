@@ -173,7 +173,13 @@ function eventSearchDocument(session: SessionRecord, event: SessionStructuredEve
   const status = typeof payload.status === "string" && payload.status ? payload.status : null;
   const hasFailedTool = event.eventKind === "tool_output" && looksLikeFailedTool(event, status);
   const title = [event.eventKind, event.eventType].filter(Boolean).join(" ");
-  const body = [event.renderedSummary, event.searchableText].filter(Boolean).join("\n");
+  const rawSnippet = event.renderedSummary ?? event.searchableText ?? "";
+  const snippet = rawSnippet ? redactSearchableText(rawSnippet) : undefined;
+  const rawBody = [event.renderedSummary, event.searchableText].filter(Boolean).join("\n");
+  const body = redactSearchableText(rawBody);
+  const redacted = indexedTextWasRedacted(rawBody, body)
+    || redactedProjectionTextWasAlreadyStored(event.renderedSummary)
+    || redactedProjectionTextWasAlreadyStored(event.searchableText);
   return {
     id: `${SESSIONS_EVENTS_SEARCH_SOURCE}:${event.id}`,
     source: SESSIONS_EVENTS_SEARCH_SOURCE,
@@ -183,7 +189,7 @@ function eventSearchDocument(session: SessionRecord, event: SessionStructuredEve
     resourceId: session.id,
     title: title || "session event",
     subtitle: session.title,
-    snippet: event.renderedSummary ?? event.searchableText ?? undefined,
+    snippet,
     body,
     path: `session:${session.id}`,
     updatedAt: new Date(event.timestamp).toISOString(),
@@ -207,7 +213,7 @@ function eventSearchDocument(session: SessionRecord, event: SessionStructuredEve
       hasCompaction: event.eventKind === "compaction",
       hasGoal: event.eventKind === "goal",
     },
-    permissions: { canOpen: true, canPreview: true, redacted: false },
+    permissions: { canOpen: true, canPreview: true, redacted },
     rankingHints: hasFailedTool ? { importance: 2 } : undefined,
   };
 }
@@ -277,6 +283,10 @@ function looksLikeFailedTool(event: SessionStructuredEventRecord, status: string
   if (typeof payload.error === "string" && payload.error.trim()) return true;
   const text = `${event.renderedSummary ?? ""}\n${event.searchableText ?? ""}`.toLowerCase();
   return /\b(exit code|code)\s+([1-9]\d*)\b/.test(text) || /\b(error|failed|failure|traceback)\b/.test(text);
+}
+
+function redactedProjectionTextWasAlreadyStored(text: string | null | undefined): boolean {
+  return typeof text === "string" && text.includes("[REDACTED]");
 }
 
 function clampBatchSize(value: unknown): number {

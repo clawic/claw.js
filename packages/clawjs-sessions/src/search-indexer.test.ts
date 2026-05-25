@@ -133,3 +133,67 @@ test("indexSessionsForSearch indexes messages and structured events with session
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
 });
+
+test("indexSessionsForSearch keeps redacted structured event previews hidden", () => {
+  const rootDir = tempRoot("clawjs-session-search-event-redaction-");
+  const sessionsStore = new SessionsServiceStore(path.join(rootDir, "sessions.sqlite"));
+  const searchStore = new SearchStore(path.join(rootDir, "search.sqlite"));
+  try {
+    for (const manifest of createBuiltinSearchSourceManifests()) searchStore.registerSource(manifest);
+    sessionsStore.createSession({
+      id: "session-redacted-event",
+      agent: "codex",
+      runtime: "codex-cli",
+      title: "Redacted event search",
+    });
+    sessionsStore.appendSessionEvent({
+      sessionId: "session-redacted-event",
+      turnId: "turn-redacted-event",
+      callId: "call-redacted-event",
+      eventKind: "tool_output",
+      eventType: "response_item.function_call_output",
+      timestamp: 10,
+      sourceNativeId: "rollout::redacted-event",
+      payloadJson: { name: "exec_command", status: "success" },
+      renderedSummary: "tool result needle authorization: Bearer eventsecret",
+      searchableText: "tool result needle token=eventtoken",
+    });
+
+    const result = indexSessionsForSearch({
+      sessionsStore,
+      searchStore,
+      includeChats: false,
+      includeTurns: false,
+    });
+
+    assert.deepEqual(result, {
+      sessionsIndexed: 1,
+      messagesIndexed: 0,
+      eventsIndexed: 1,
+      turnsIndexed: 0,
+      documentsIndexed: 1,
+    });
+
+    const secretSearch = searchStore.query({
+      query: "eventsecret eventtoken",
+      sources: ["sessions.events"],
+    });
+    assert.equal(secretSearch.results.length, 0);
+
+    const visibleSearch = searchStore.query({
+      query: "needle",
+      sources: ["sessions.events"],
+      filters: { sessionId: "session-redacted-event", eventKind: "tool_output" },
+    });
+    assert.equal(visibleSearch.results.length, 1);
+    assert.equal(visibleSearch.results[0]?.snippet, "[redacted]");
+    assert.equal(visibleSearch.results[0]?.permissions?.canPreview, false);
+    assert.equal(visibleSearch.results[0]?.permissions?.redacted, true);
+    assert.equal(JSON.stringify(visibleSearch.results[0]).includes("eventsecret"), false);
+    assert.equal(JSON.stringify(visibleSearch.results[0]).includes("eventtoken"), false);
+  } finally {
+    sessionsStore.close();
+    searchStore.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});

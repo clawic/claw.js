@@ -55,7 +55,7 @@ import {
   centralSearchScore,
   cosineSimilarity,
   effectiveResultLimit,
-  existingSearchDocumentIds,
+  existingSearchDocumentIngestFingerprints,
   existingSearchDocumentShardRows,
   ftsPartitionTableName,
   ftsQuery,
@@ -79,6 +79,7 @@ import {
   searchShardFromRow,
   searchVectorFromRow,
   shouldRunFuzzyFallback,
+  stableJson,
   stableJobIdPart,
   truncateUtf8,
 } from "./store-helpers.ts";
@@ -122,6 +123,35 @@ const SEARCH_RANKING_CACHE_LIMITS = {
   maxTotalBytes: 16 * 1024 * 1024,
   maxEntryBytes: 256 * 1024,
 } as const;
+
+function searchDocumentIngestFingerprint(input: {
+  id: string;
+  source: string;
+  shard: string;
+  domain: string;
+  type: string;
+  resourceId: string | null;
+  title: string;
+  subtitle: string | null;
+  snippet: string | null;
+  body: string;
+  path: string | null;
+  explicitUpdatedAt: string | null;
+  metadata: Record<string, unknown>;
+  permissions: unknown;
+  rankingHints: Record<string, number>;
+  fragments: Array<{
+    id: string;
+    title: string;
+    body: string;
+    snippet: string | null;
+    sortOrder: number;
+    metadata: Record<string, unknown>;
+  }>;
+  actions: SearchAction[];
+}): string {
+  return createHash("sha256").update(stableJson(input)).digest("hex");
+}
 
 type SearchLexicalMatch = ReturnType<typeof scoreLexicalMatch>;
 type SearchResultFragment = NonNullable<SearchResult["fragments"]>[number];
@@ -343,9 +373,9 @@ export class SearchStore {
     const upsertDocument = this.db.prepare(`
       INSERT INTO search_documents (
         id, source, shard, domain, type, resource_id, title, subtitle, snippet, body, path,
-        updated_at, metadata_json, permissions_json, ranking_json, deleted_at
+        updated_at, metadata_json, permissions_json, ranking_json, ingest_fingerprint, deleted_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
       ON CONFLICT(id) DO UPDATE SET
         source = excluded.source,
         shard = excluded.shard,
@@ -361,6 +391,7 @@ export class SearchStore {
         metadata_json = excluded.metadata_json,
         permissions_json = excluded.permissions_json,
         ranking_json = excluded.ranking_json,
+        ingest_fingerprint = excluded.ingest_fingerprint,
         deleted_at = NULL
     `);
     const deleteFragments = this.db.prepare("DELETE FROM search_fragments WHERE document_id = ?");
@@ -383,7 +414,7 @@ export class SearchStore {
     const tx = this.db.transaction((documents: SearchDocumentInput[]) => {
       const touchedSources = new Map<string, string>();
       const limitsBySource = new Map<string, SearchSourceIndexingLimits>();
-      const existingDocumentIds = existingSearchDocumentIds(this.db, documents.map((document) => document.id));
+      const existingDocumentFingerprints = existingSearchDocumentIngestFingerprints(this.db, documents.map((document) => document.id));
       const previousDocumentShards = existingSearchDocumentShardRows(this.db, documents.map((document) => document.id));
       const touchedCacheScopes: SearchTouchedCacheScopes = { sources: new Set(), domains: new Set(), shards: new Set() };
       const touchedShards = new Map<string, { source: string; shard: string; domain: string; updatedAt: string }>();
@@ -399,6 +430,39 @@ export class SearchStore {
           body: fragment.body ? truncateUtf8(fragment.body, limits.maxFragmentBytes) : undefined,
           snippet: fragment.snippet ? truncateUtf8(fragment.snippet, limits.maxFragmentBytes) : undefined,
         }));
+        const metadata = input.metadata ?? {};
+        const permissions = input.permissions ?? {};
+        const rankingHints = input.rankingHints ?? {};
+        const normalizedFragments = fragments.map((fragment, index) => ({
+          id: fragment.id,
+          title: fragment.title ?? "",
+          body: fragment.body ?? "",
+          snippet: fragment.snippet ?? null,
+          sortOrder: fragment.sortOrder ?? index,
+          metadata: fragment.metadata ?? {},
+        }));
+        const ingestFingerprint = searchDocumentIngestFingerprint({
+          id: input.id,
+          source: input.source,
+          shard,
+          domain: input.domain,
+          type: input.type,
+          resourceId: input.resourceId ?? null,
+          title: input.title,
+          subtitle: input.subtitle ?? null,
+          snippet: input.snippet ?? null,
+          body,
+          path: input.path ?? null,
+          explicitUpdatedAt: input.updatedAt ?? null,
+          metadata,
+          permissions,
+          rankingHints,
+          fragments: normalizedFragments,
+          actions: input.actions ?? [],
+        });
+        if (existingDocumentFingerprints.get(input.id) === ingestFingerprint) {
+          continue;
+        }
         upsertDocument.run(
           input.id,
           input.source,
@@ -412,11 +476,12 @@ export class SearchStore {
           body,
           input.path ?? null,
           updatedAt,
-          JSON.stringify(input.metadata ?? {}),
-          JSON.stringify(input.permissions ?? {}),
-          JSON.stringify(input.rankingHints ?? {}),
+          JSON.stringify(metadata),
+          JSON.stringify(permissions),
+          JSON.stringify(rankingHints),
+          ingestFingerprint,
         );
-        if (existingDocumentIds.has(input.id)) {
+        if (existingDocumentFingerprints.has(input.id)) {
           deleteFragments.run(input.id);
           deleteActions.run(input.id);
           deleteFts.run(input.id);
@@ -426,7 +491,7 @@ export class SearchStore {
         this.deleteDocumentFromFtsPartition(input.source, shard, input.id);
         insertDocumentFts.run(input.id, input.source, shard, input.domain, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
         this.insertFtsPartitionRow(partitionTable, input.id, null, input.type, input.title, [input.subtitle, input.snippet, body].filter(Boolean).join("\n"), input.path ?? "");
-        for (const [index, fragment] of fragments.entries()) {
+        for (const fragment of normalizedFragments) {
           insertFragment.run(
             fragment.id,
             input.id,
@@ -436,8 +501,8 @@ export class SearchStore {
             fragment.title ?? "",
             fragment.body ?? "",
             fragment.snippet ?? null,
-            fragment.sortOrder ?? index,
-            JSON.stringify(fragment.metadata ?? {}),
+            fragment.sortOrder,
+            JSON.stringify(fragment.metadata),
           );
           insertFragmentFts.run(input.id, fragment.id, input.source, shard, input.domain, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
           this.insertFtsPartitionRow(partitionTable, input.id, fragment.id, input.type, fragment.title ?? "", [fragment.snippet, fragment.body].filter(Boolean).join("\n"), input.path ?? "");
@@ -1198,6 +1263,9 @@ export class SearchStore {
   private ensureSchema(): void {
     try {
       this.db.exec(SEARCH_SCHEMA_SQL);
+      if (!this.tableHasColumn("search_documents", "ingest_fingerprint")) {
+        this.db.exec("ALTER TABLE search_documents ADD COLUMN ingest_fingerprint TEXT");
+      }
       if (
         !this.tableHasColumn("search_cursors", "shard")
         || !this.tableHasColumn("search_cursors", "watermark")

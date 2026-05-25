@@ -379,6 +379,59 @@ test("SearchStore bulk upserts documents in one cache-invalidating transaction",
   }
 });
 
+test("SearchStore skips FTS rewrites for duplicate identical bulk upserts", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-duplicate-upsert-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "duplicate.items",
+      domain: "duplicate",
+      name: "Duplicate items",
+      resultTypes: ["item"],
+    }));
+    const documents = Array.from({ length: 80 }, (_, index) => ({
+      id: `duplicate.items:${index}`,
+      source: "duplicate.items",
+      shard: index % 2 === 0 ? "hot" : "cold",
+      domain: "duplicate",
+      type: "item",
+      title: `Duplicate item ${index}`,
+      body: `duplicate ingest needle ${index % 10}`,
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      metadata: { group: index % 5 },
+      rankingHints: { frecency: index % 3 },
+      fragments: Array.from({ length: 3 }, (_fragment, fragmentIndex) => ({
+        id: `duplicate.items:${index}:fragment:${fragmentIndex}`,
+        title: `Fragment ${fragmentIndex}`,
+        body: `fragment duplicate needle ${index % 10}`,
+        sortOrder: fragmentIndex,
+      })),
+      actions: [{ id: "open", kind: "open" as const, label: "Open duplicate item" }],
+    }));
+
+    const sqliteChanges = () => (store.db.prepare("SELECT total_changes() AS value").get() as { value: number }).value;
+
+    const beforeFirst = sqliteChanges();
+    assert.equal(store.upsertDocuments(documents), documents.length);
+    const firstDelta = sqliteChanges() - beforeFirst;
+    const firstQuery = store.query({ query: "duplicate needle 3", domains: ["duplicate"], limit: 20 });
+    const sourceStatus = store.sourceStatus().find((source) => source.source === "duplicate.items");
+
+    const beforeSecond = sqliteChanges();
+    assert.equal(store.upsertDocuments(documents), documents.length);
+    const secondDelta = sqliteChanges() - beforeSecond;
+    const secondQuery = store.query({ query: "duplicate needle 3", domains: ["duplicate"], limit: 20 });
+
+    assert.equal(secondDelta, 0);
+    assert.equal(firstDelta > documents.length, true);
+    assert.deepEqual(secondQuery.results.map((result) => result.id), firstQuery.results.map((result) => result.id));
+    assert.equal(store.sourceStatus().find((source) => source.source === "duplicate.items")?.lastIndexedAt, sourceStatus?.lastIndexedAt);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore keeps hot shard and Root Search first-batch latency within budgets", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-latency-gate-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

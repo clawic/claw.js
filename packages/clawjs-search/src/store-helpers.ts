@@ -272,6 +272,19 @@ export function existingSearchDocumentIds(db: Database.Database, ids: string[]):
   return existing;
 }
 
+export function existingSearchDocumentIngestFingerprints(db: Database.Database, ids: string[]): Map<string, string | null> {
+  const uniqueIds = [...new Set(ids)];
+  const existing = new Map<string, string | null>();
+  for (let index = 0; index < uniqueIds.length; index += 900) {
+    const chunk = uniqueIds.slice(index, index + 900);
+    if (!chunk.length) continue;
+    const placeholders = chunk.map(() => "?").join(",");
+    const rows = db.prepare(`SELECT id, ingest_fingerprint FROM search_documents WHERE id IN (${placeholders})`).all(...chunk) as Array<{ id: string; ingest_fingerprint: string | null }>;
+    for (const row of rows) existing.set(row.id, row.ingest_fingerprint);
+  }
+  return existing;
+}
+
 export function existingSearchDocumentShardRows(db: Database.Database, ids: string[]): Map<string, { source: string; shard: string; domain: string }> {
   const uniqueIds = [...new Set(ids)];
   const existing = new Map<string, { source: string; shard: string; domain: string }>();
@@ -967,6 +980,7 @@ CREATE TABLE IF NOT EXISTS search_documents (
   metadata_json TEXT NOT NULL DEFAULT '{}',
   permissions_json TEXT NOT NULL DEFAULT '{}',
   ranking_json TEXT NOT NULL DEFAULT '{}',
+  ingest_fingerprint TEXT,
   deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS search_documents_source_idx ON search_documents(source, updated_at DESC);
