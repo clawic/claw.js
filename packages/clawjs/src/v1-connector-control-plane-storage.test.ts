@@ -119,6 +119,52 @@ test("connector control plane storage is durable, brokered, and resettable", () 
   }
 });
 
+test("connector context hot-path indexes avoid table scans and temp sorting", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-connector-indexes-"));
+  const previousDataDir = process.env.CLAW_DATA_DIR;
+  process.env.CLAW_DATA_DIR = tempRoot;
+
+  const sqlite = new Database(resolveClawjsMainDbPath());
+  try {
+    ensureV1MainSchema(sqlite);
+
+    const contextIndexes = sqlite.prepare("PRAGMA index_list(connector_context_records)").all() as Array<{ name: string }>;
+    assert.equal(
+      contextIndexes.some((index) => index.name === "connector_context_records_resource_id_idx"),
+      true,
+    );
+    assert.equal(
+      contextIndexes.some((index) => index.name === "connector_context_records_provider_display_idx"),
+      true,
+    );
+
+    const auditIndexes = sqlite.prepare("PRAGMA index_list(connector_context_audit_events)").all() as Array<{ name: string }>;
+    assert.equal(
+      auditIndexes.some((index) => index.name === "connector_context_audit_events_created_idx"),
+      true,
+    );
+
+    const resourcePlan = sqlite
+      .prepare("EXPLAIN QUERY PLAN SELECT * FROM connector_context_records WHERE resource_id = ?")
+      .all("resource-1") as Array<{ detail: string }>;
+    const resourcePlanDetails = resourcePlan.map((row) => row.detail);
+    assert.equal(resourcePlanDetails.some((detail) => detail.includes("connector_context_records_resource_id_idx")), true);
+    assert.equal(resourcePlanDetails.some((detail) => detail.includes("SCAN connector_context_records")), false);
+
+    const auditPlan = sqlite
+      .prepare("EXPLAIN QUERY PLAN SELECT * FROM connector_context_audit_events ORDER BY created_at DESC LIMIT ?")
+      .all(50) as Array<{ detail: string }>;
+    const auditPlanDetails = auditPlan.map((row) => row.detail);
+    assert.equal(auditPlanDetails.some((detail) => detail.includes("connector_context_audit_events_created_idx")), true);
+    assert.equal(auditPlanDetails.some((detail) => detail.includes("USE TEMP B-TREE")), false);
+  } finally {
+    sqlite.close();
+    if (previousDataDir === undefined) delete process.env.CLAW_DATA_DIR;
+    else process.env.CLAW_DATA_DIR = previousDataDir;
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("connectors operation upsert rejects unsupported catalog enums before persistence", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-connector-operation-cli-"));
   const cwd = path.join(tempRoot, "workspace");
