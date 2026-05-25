@@ -3,7 +3,7 @@ import { BUILTIN_COLLECTIONS } from "@clawjs/core/catalogs";
 
 import type { CliContext } from "./index.ts";
 import { CORE_PRODUCTIVITY_DB_COLLECTIONS } from "./cli-constants.ts";
-import { CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { activeCollectionFilterForModules, readEffectiveModuleConfigForCli } from "./cli-modules-command.ts";
@@ -24,7 +24,7 @@ export async function runCollectionsCli(input: {
     return await input.runCli(["db", ...input.argv.slice(1)], input.context);
   }
 
-  const limit = input.flags.limit ? Math.max(0, Number(input.flags.limit)) : undefined;
+  const limit = parseCollectionsLimit(input.flags.limit);
   const includeAvailable = input.argv.includes("--available") || input.flags.available === "true";
   const moduleConfig = readEffectiveModuleConfigForCli(input.flags, input.context.cwd);
   const activeFilter = activeCollectionFilterForModules(moduleConfig);
@@ -88,4 +88,17 @@ export async function runCollectionsCli(input: {
     })))}\n`);
   }
   return CLI_EXIT_OK;
+}
+
+function parseCollectionsLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const limit = Number(raw);
+  if (!Number.isFinite(limit) || limit < 0) {
+    throw new CliHandledError("invalid_collections_limit", `Expected --limit to be a non-negative number, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.collections.limit",
+      suggestion: "Pass a non-negative limit such as --limit 20.",
+      safeNextStep: "Rerun claw collections list with a non-negative --limit value.",
+    });
+  }
+  return Math.floor(limit);
 }

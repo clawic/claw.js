@@ -11,7 +11,7 @@ import {
   resolveClawWorkspaceModulesConfigPath,
 } from "@clawjs/core";
 
-import { CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCli } from "./index.ts";
 import { captureStream, runCliCapture } from "./index-test-utils.ts";
 
@@ -219,6 +219,16 @@ test("collections list shows active safe catalog by default and full catalog onl
   assert.equal(availablePayload.data.visibility, "available");
   assert.equal(availablePayload.data.collections.some((collection) => collection.name === "patients" && collection.state === "available"), true);
   assert.equal(availablePayload.data.collections.some((collection) => collection.family === "legal" && collection.state === "available"), true);
+});
+
+test("collections list rejects invalid limits before returning a misleading subset", async () => {
+  const result = await runCliCapture(["collections", "list", "--limit", "nope", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_collections_limit");
+  assert.match(payload.error.message, /non-negative number/);
+  assert.equal(payload.meta.canonicalCommand, "collections");
 });
 
 test("niche domain commands require explicit module enablement", async () => {
