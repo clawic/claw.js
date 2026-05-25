@@ -3,7 +3,7 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import fs from "fs";
 import path from "path";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeJsonOk } from "./cli-json.ts";
 import type { ProfessionalRecordsCliInput } from "./cli-dense-data-semantic-common.ts";
@@ -195,7 +195,7 @@ function writeEmptyDenseListIfStoreMissing(input: ProfessionalRecordsCliInput, c
 async function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: string): Promise<number | null> {
   if (action !== "seed") return null;
   const { openMainDataStore } = await import("./v1-data.ts");
-  const namespaceId = input.flags.namespace ?? "main";
+  const namespaceId = denseFixtureNamespace(input.flags.namespace);
   const dataDir = resolveClawPersistentSurfacePath("claw.workspace.data", input.workspaceRoot);
   fs.mkdirSync(dataDir, { recursive: true });
   const store = openMainDataStore({
@@ -243,6 +243,20 @@ async function runDenseFixtureCli(input: ProfessionalRecordsCliInput, action: st
     })))}\n`);
   }
   return CLI_EXIT_OK;
+}
+
+function denseFixtureNamespace(value: string | undefined): string {
+  if (value === undefined) return "main";
+  const namespaceId = value.trim();
+  if (!/^[a-z0-9][a-z0-9-_]*$/.test(namespaceId)) {
+    throw new CliHandledError(
+      "invalid_dense_fixture_namespace",
+      "Dense fixture --namespace must contain only lowercase letters, numbers, dashes, and underscores.",
+      CLI_EXIT_USAGE,
+      { details: { flag: "namespace" } },
+    );
+  }
+  return namespaceId;
 }
 
 function semanticViewForIntent(intent: ReturnType<typeof resolveClawProfessionalRecordsIntent>) {

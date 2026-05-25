@@ -77,6 +77,18 @@ test("dense data commands use persistent workspace data routes", () => {
   assert.equal(commandSource.includes('path.join(input.workspaceRoot, ".claw", "data"'), false);
 });
 
+test("dense fixtures reject invalid namespaces before opening the workspace database", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-dense-fixture-namespace-"));
+  const result = await runCliCapture(["dense-fixtures", "seed", "--namespace", "Bad/Name", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string }; meta: { canonicalCommand: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_dense_fixture_namespace");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.meta.canonicalCommand, "dense-fixtures");
+  assert.equal(fs.existsSync(resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "core.sqlite")), false);
+});
+
 test("provider secrets app hint uses the Mac Care user applications route", () => {
   const chatSource = fs.readFileSync(new URL("./chat.ts", import.meta.url), "utf8");
   assert.equal(requireMacCareRoutePathPattern("mac_care.route.user_applications", { homeDir: "/Users/demo" }), "/Users/demo/Applications");
