@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { test } from "vitest";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 
 function captureStream() {
   let output = "";
@@ -143,6 +143,16 @@ test("governance doctor federates public repos from a Clawix overlay cwd", async
   assert.equal(payload.data.scope.repositories.some((repo) => repo.repo === "clawix" && repo.detectedBy === "nested"), true);
   assert.equal(payload.data.scope.repositories.some((repo) => repo.detectedBy === "fallback"), false);
   assert.equal(payload.data.checks.some((check) => check.cwd === fixture.overlayRoot), false);
+});
+
+test("governance doctor rejects invalid --now timestamps", async () => {
+  const fixture = createGovernanceFixture();
+  const result = await runCliCapture(["governance", "doctor", "--root", fixture.clawjsRoot, "--json", "--now", "not-a-date"], fixture.clawjsRoot);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_governance_now");
+  assert.equal(payload.error.status, "USAGE");
 });
 
 test("governance command is discoverable through help, inspect, and search", async () => {

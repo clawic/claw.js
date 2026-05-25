@@ -72,6 +72,7 @@ export async function runGovernanceCli(input: GovernanceDoctorInput): Promise<nu
 }
 
 function runGovernanceDoctor(input: GovernanceDoctorInput): number {
+  validateGovernanceNowFlag(input.flags.now);
   const repositories = detectGovernanceRepositories(input.flags.root || input.context.cwd);
   const ledger = buildClawDebtLedger({
     rootDir: repositories[0]?.rootDir ?? input.context.cwd,
@@ -117,6 +118,13 @@ function runGovernanceDoctor(input: GovernanceDoctorInput): number {
     { section: "staleDocs", count: String(payload.staleDocs.length) },
   ])}\n`);
   return CLI_EXIT_OK;
+}
+
+function validateGovernanceNowFlag(value: string | undefined): void {
+  if (value === undefined) return;
+  if (value.trim().length === 0 || Number.isNaN(Date.parse(value))) {
+    throw new CliHandledError("invalid_governance_now", "--now must be a valid date or timestamp.", CLI_EXIT_USAGE);
+  }
 }
 
 function writeGovernanceUsage(input: GovernanceDoctorInput): number {
