@@ -46,6 +46,10 @@ function parseTaskRankFlag(flags: Record<string, string>): number | undefined {
   return parseProductivityNumberFlag(flags.rank, "rank", { code: "invalid_task_rank" });
 }
 
+function parseProjectRankFlag(flags: Record<string, string>): number | undefined {
+  return parseProductivityNumberFlag(flags.rank, "rank", { code: "invalid_project_rank" });
+}
+
 function parseTaskEstimateMinutesFlag(flags: Record<string, string>): number | undefined {
   return parseProductivityNumberFlag(flags["estimate-minutes"], "estimate-minutes", { code: "invalid_task_estimate_minutes", min: 0, integer: true });
 }
@@ -712,7 +716,7 @@ export async function runPrimaryProductivityCli(input: {
         portfolioItemId: flags["portfolio-item-id"],
         color: flags.color,
         kind: flags.kind as "delivery" | "growth" | "ops" | "research" | "migration" | "other" | undefined,
-        ...(flags.rank ? { rank: Number(flags.rank) } : {}),
+        ...(flags.rank ? { rank: parseProjectRankFlag(flags) } : {}),
         statusCategory: flags["status-category"] as "active" | "someday" | "planned" | "done" | "archived" | undefined,
         healthStatus: flags["health-status"] as "green" | "yellow" | "red" | "unknown" | undefined,
         startAt: flags["start-at"],
@@ -750,7 +754,7 @@ export async function runPrimaryProductivityCli(input: {
         portfolioItemId: flags["portfolio-item-id"],
         color: flags.color,
         kind: flags.kind as "delivery" | "growth" | "ops" | "research" | "migration" | "other" | undefined,
-        ...(flags.rank ? { rank: Number(flags.rank) } : {}),
+        ...(flags.rank ? { rank: parseProjectRankFlag(flags) } : {}),
         statusCategory: flags["status-category"] as "active" | "someday" | "planned" | "done" | "archived" | undefined,
         healthStatus: flags["health-status"] as "green" | "yellow" | "red" | "unknown" | undefined,
         startAt: flags["start-at"],

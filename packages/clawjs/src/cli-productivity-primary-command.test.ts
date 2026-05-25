@@ -162,3 +162,28 @@ test("tasks reject invalid numeric planning flags before creating records", asyn
   const listPayload = parseCliJsonPayload<Array<{ id: string }>>(listStdout.getOutput());
   assert.deepEqual(listPayload, []);
 });
+
+test("projects reject invalid rank before creating records", async (t) => {
+  const cwd = useWorkTestRoot(t, "clawjs-project-invalid-rank-");
+
+  const stdout = captureStream();
+  assert.equal(await runCli(["projects", "create", "Bad rank", "--rank", "nope", "--json"], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+
+  const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_project_rank");
+  assert.equal(payload.error.status, "USAGE");
+
+  const listStdout = captureStream();
+  assert.equal(await runCli(["projects", "list", "--json"], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const listPayload = parseCliJsonPayload<Array<{ id: string }>>(listStdout.getOutput());
+  assert.deepEqual(listPayload, []);
+});
