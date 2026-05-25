@@ -4,6 +4,8 @@ import { randomBytes } from "crypto";
 import { resolveClawPersistentSurfacePath, semanticPlanSchema } from "@clawjs/core";
 import type { SemanticPlan } from "@clawjs/core";
 
+import { CLI_EXIT_FAILURE, CliHandledError } from "./cli-errors.ts";
+
 export type AgentPlanStatus = "draft" | "pending" | "approved" | "rejected" | "blocked" | "running" | "succeeded" | "failed" | "cancelled";
 export type AgentPlanDecision = "auto_run" | "require_approval" | "assign_reviewer" | "block" | "pending";
 
@@ -57,16 +59,36 @@ function planStatePath(workspaceRoot: string): string {
 
 export function readAgentPlanState(workspaceRoot: string): AgentPlanState {
   const filePath = planStatePath(workspaceRoot);
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<AgentPlanState>;
-    return {
-      schemaVersion: 1,
-      plans: Array.isArray(parsed.plans) ? parsed.plans as AgentPlanRecord[] : [],
-      policies: Array.isArray(parsed.policies) ? parsed.policies as AgentPlanPolicyRule[] : [],
-    };
-  } catch {
+  if (!fs.existsSync(filePath)) {
     return { schemaVersion: 1, plans: [], policies: [] };
   }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+  } catch (error) {
+    throw invalidAgentPlanState(filePath, `Agent plan state is not valid JSON: ${(error as Error).message}`);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw invalidAgentPlanState(filePath, "Agent plan state must be an object.");
+  }
+  const state = parsed as Partial<AgentPlanState>;
+  if (!Array.isArray(state.plans) || !Array.isArray(state.policies)) {
+    throw invalidAgentPlanState(filePath, "Agent plan state must include plans and policies arrays.");
+  }
+  return {
+    schemaVersion: 1,
+    plans: state.plans as AgentPlanRecord[],
+    policies: state.policies as AgentPlanPolicyRule[],
+  };
+}
+
+function invalidAgentPlanState(filePath: string, message: string): CliHandledError {
+  return new CliHandledError("invalid_agent_plan_state", message, CLI_EXIT_FAILURE, {
+    location: "claw.workspace.data.agent_plans",
+    suggestion: "Repair or remove the workspace agent plan state before creating, listing, reviewing, or running plans.",
+    safeNextStep: `Inspect ${filePath}, restore valid JSON, then rerun the plan command.`,
+    details: { path: filePath },
+  });
 }
 
 export function writeAgentPlanState(workspaceRoot: string, state: AgentPlanState): void {
