@@ -301,3 +301,55 @@ test("search rebuild can enqueue background shard rebuilds for the service worke
     }
   });
 });
+
+test("search rebuild rejects invalid queued job priority", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-invalid-priority-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    for (const priority of ["nope", "-1", "101"]) {
+      const result = await runCliCapture([
+        "search",
+        "rebuild",
+        "--source",
+        "images.derived",
+        "--enqueue",
+        "--priority",
+        priority,
+        "--workspace",
+        workspaceRoot,
+        "--data-dir",
+        dataRoot,
+        "--json",
+      ], workspaceRoot);
+      assert.equal(result.code, CLI_EXIT_USAGE);
+      const payload = JSON.parse(result.stdout) as {
+        ok: boolean;
+        error: { code: string; status: string };
+      };
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, "invalid_search_job_priority");
+      assert.equal(payload.error.status, "USAGE");
+    }
+
+    const jobs = await runCliCapture([
+      "search",
+      "jobs",
+      "--source",
+      "images.derived",
+      "--workspace",
+      workspaceRoot,
+      "--data-dir",
+      dataRoot,
+      "--json",
+    ], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_OK);
+    const jobsPayload = JSON.parse(jobs.stdout) as { data: { items: unknown[] } };
+    assert.deepEqual(jobsPayload.data.items, []);
+  });
+});

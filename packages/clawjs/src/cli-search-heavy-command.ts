@@ -258,6 +258,7 @@ export async function runSearchRebuildCli(input: {
       const jobSources = (selectedSources ?? BUILTIN_SEARCH_SOURCES.map((source) => source.id)).filter((source) => importedSourceCanIndex(store, source));
       const jobShards = selectedShards ?? ["default"];
       const hasMultipleJobs = jobSources.length * jobShards.length > 1;
+      const priority = parseSearchRebuildJobPriority(input.flags.priority);
       const jobs = jobSources.flatMap((source) => jobShards.map((shard) => store.enqueueIndexJob({
         id: input.flags.id ? (hasMultipleJobs ? `${input.flags.id}:${source}:${shard}` : input.flags.id) : `rebuild:${source}:${shard}`,
         source,
@@ -269,7 +270,7 @@ export async function runSearchRebuildCli(input: {
           sourceSet: input.flags["source-set"] === "full" ? "full" : "framework",
           ...(selectedShards ? { shardScoped: true } : {}),
         },
-        priority: input.flags.priority ? Number(input.flags.priority) : 50,
+        priority,
         scheduledAt: input.flags["scheduled-at"],
       })));
       const data = {
@@ -448,6 +449,19 @@ export async function runSearchRebuildCli(input: {
   } finally {
     store.close();
   }
+}
+
+function parseSearchRebuildJobPriority(raw: string | undefined): number {
+  if (raw === undefined) return 50;
+  const priority = Number(raw);
+  if (!Number.isFinite(priority) || priority < 0 || priority > 100) {
+    throw new CliHandledError("invalid_search_job_priority", `Expected --priority to be a number between 0 and 100, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.search.rebuild.priority",
+      suggestion: "Pass a bounded priority such as --priority 50.",
+      safeNextStep: "Rerun search rebuild with a numeric --priority from 0 to 100.",
+    });
+  }
+  return Math.floor(priority);
 }
 
 export function runSearchServiceAction(action: string, input: {
