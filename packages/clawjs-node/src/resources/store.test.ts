@@ -69,6 +69,32 @@ test("resource registry read limits filesystem reads before truncating output", 
   }
 });
 
+test("resource registry list returns stored inventory without refreshing every path", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-resource-store-list-inventory-"));
+  const resourcePath = path.join(rootDir, "missing.txt");
+  const store = createLocalResourceRegistryStore({ rootDir: path.join(rootDir, "registry"), env: {} });
+  const resource = store.register({
+    kind: "file",
+    locator: { kind: "path", value: resourcePath },
+  });
+
+  const originalExistsSync = fs.existsSync;
+  let existsCalls = 0;
+  fs.existsSync = function patchedExistsSync(targetPath) {
+    if (String(targetPath) === resourcePath) existsCalls += 1;
+    return originalExistsSync.call(this, targetPath);
+  };
+  try {
+    assert.equal(store.list()[0]?.id, resource.id);
+    assert.equal(existsCalls, 0);
+
+    store.list({ refreshStatus: true });
+    assert.equal(existsCalls, 1);
+  } finally {
+    fs.existsSync = originalExistsSync;
+  }
+});
+
 test("resource registry fails closed and preserves corrupt state", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-resource-store-corrupt-"));
   const store = createLocalResourceRegistryStore({ rootDir, env: {} });

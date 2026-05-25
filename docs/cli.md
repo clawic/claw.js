@@ -1107,6 +1107,8 @@ claw guidance show deployment-runbook
 claw guidance create --title "Deployment runbook" --capsule "Read the runbook before deploys" --command "host services" --resource res_abc123
 claw guidance archive deployment-runbook
 
+claw resources list
+claw resources list --refresh
 claw resources register ~/Projects/example --kind project
 claw resources show res_abc123
 claw resources resolve res_abc123
@@ -1117,7 +1119,8 @@ claw resources status res_abc123
 `guidance` is not `rules`: rules compile into prompt context, while guidance
 returns compact hints about instructions that may be expanded on demand.
 `resources` stores only explicitly registered resources with opaque `res_*`
-ids and mutable locators.
+ids and mutable locators. `resources list` returns the stored inventory by
+default; add `--refresh` when the caller needs current filesystem status.
 
 ## Host And Database
 

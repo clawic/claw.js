@@ -88,9 +88,9 @@ export class LocalResourceRegistryStore {
     return next;
   }
 
-  list(options: { status?: ResourceStatus; kind?: ResourceKind } = {}): ResourceRecord[] {
+  list(options: { status?: ResourceStatus; kind?: ResourceKind; refreshStatus?: boolean } = {}): ResourceRecord[] {
     return this.readState().resources
-      .map((resource) => this.refreshStatus(resource))
+      .map((resource) => options.refreshStatus ? this.refreshStatus(resource) : resource)
       .filter((resource) => !options.status || resource.status === options.status)
       .filter((resource) => !options.kind || resource.kind === options.kind);
   }

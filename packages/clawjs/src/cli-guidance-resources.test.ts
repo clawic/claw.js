@@ -179,6 +179,42 @@ test("guidance and resources list reject invalid status filters", async (t) => {
   assert.equal(resourcesPayload.error.location, "cli.resources.status");
 });
 
+test("resources list refreshes filesystem status only when requested", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-resources-refresh-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const resourcesDir = path.join(cwd, "resources");
+  const filePath = path.join(cwd, "instructions.md");
+  fs.writeFileSync(filePath, "Keep this short.\n", "utf8");
+
+  const registered = await runCliCapture([
+    "resources", "register", filePath,
+    "--kind", "instruction",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(registered.code, CLI_EXIT_OK);
+  fs.unlinkSync(filePath);
+
+  const listedDefault = await runCliCapture([
+    "resources", "list",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(listedDefault.code, CLI_EXIT_OK);
+  const listedDefaultPayload = JSON.parse(listedDefault.stdout) as { data: { resources: Array<{ status: string }> } };
+  assert.equal(listedDefaultPayload.data.resources[0]?.status, "active");
+
+  const listedRefresh = await runCliCapture([
+    "resources", "list",
+    "--refresh",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(listedRefresh.code, CLI_EXIT_OK);
+  const listedRefreshPayload = JSON.parse(listedRefresh.stdout) as { data: { resources: Array<{ status: string }> } };
+  assert.equal(listedRefreshPayload.data.resources[0]?.status, "missing");
+});
+
 test("guidance returns JSON usage errors for unknown subcommands", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-unknown-"));
   useIsolatedClawDataRoot(t, cwd);

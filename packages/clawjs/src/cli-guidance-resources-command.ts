@@ -2,7 +2,7 @@ import { actorKindSchema, guidanceRiskClassSchema, resourceKindSchema, type Reso
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { parseCsvFlag } from "./cli-flag-parsers.ts";
+import { parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
 
@@ -16,7 +16,7 @@ type GuidanceCliFacade = {
 };
 
 type ResourcesCliFacade = {
-    list: (input?: { status?: "active" | "missing" | "moved" | "stale"; kind?: string }) => Array<{ id: string; kind: string; status: string; label?: string }>;
+    list: (input?: { status?: "active" | "missing" | "moved" | "stale"; kind?: string; refreshStatus?: boolean }) => Array<{ id: string; kind: string; status: string; label?: string }>;
     register: (input: unknown) => { id: string };
     show: (id: string) => unknown | null;
     resolve: (id: string) => unknown;
@@ -221,6 +221,7 @@ function runResourcesCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & 
     const resources = resourcesFacade.list({
       ...(flags.status ? { status: parseAllowedFlag(flags.status, RESOURCE_LIST_STATUSES, "invalid_resource_status", "resources list --status", "cli.resources.status") } : {}),
       ...(flags.kind ? { kind: flags.kind } : {}),
+      ...(readBooleanFlag(input.argv ?? [], flags, "refresh", false) ? { refreshStatus: true } : {}),
     });
     if (wantsJson) write({ resources });
     else context.stdout.write(`${resources.map((resource) => `${resource.status} ${resource.kind} ${resource.id} ${resource.label ?? ""}`.trim()).join("\n")}\n`);
