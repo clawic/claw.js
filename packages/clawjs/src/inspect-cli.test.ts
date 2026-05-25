@@ -270,7 +270,11 @@ test("runCli explains discoverability artifacts through inspect why", async () =
 });
 
 test("runCli explains inspect subcommands through inspect why", async () => {
-  const result = await runCliCapture(["inspect", "why", "surface-parity", "--json"], process.cwd());
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-why-lazy-"));
+  const manifestPath = path.join(tempRoot, "invalid-manifest.json");
+  fs.writeFileSync(manifestPath, "{");
+  const result = await runCliCapture(["inspect", "why", "surface-parity", "--manifest", manifestPath, "--json"], process.cwd());
+  fs.rmSync(tempRoot, { recursive: true, force: true });
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
   const payload = parseCliJson<{
     type: string;
