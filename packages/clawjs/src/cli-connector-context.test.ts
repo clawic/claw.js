@@ -248,28 +248,30 @@ test("accounts defaults reject invalid priority before persistence", async () =>
     ], cwd);
     assert.equal(upsert.code, CLI_EXIT_OK, upsert.stderr || upsert.stdout);
 
-    const invalid = await runCliCapture([
-      "connectors",
-      "ctx",
-      "defaults",
-      "set",
-      "--context",
-      "revenuecat_api_v2",
-      "--provider",
-      "revenuecat",
-      "--scope",
-      "provider:revenuecat",
-      "--priority",
-      "nope",
-      "--json",
-    ], cwd);
-    assert.equal(invalid.code, CLI_EXIT_USAGE);
-    const payload = JSON.parse(invalid.stdout) as { ok: boolean; error: { code: string; status: string; location: string; details?: Record<string, unknown> } };
-    assert.equal(payload.ok, false);
-    assert.equal(payload.error.code, "invalid_context_default_priority");
-    assert.equal(payload.error.status, "USAGE");
-    assert.equal(payload.error.location, "cli.accounts.defaults.priority");
-    assert.deepEqual(payload.error.details, { flag: "--priority", value: "nope" });
+    for (const priority of ["nope", "1e3", "0x10", "1.5", "9007199254740992"]) {
+      const invalid = await runCliCapture([
+        "connectors",
+        "ctx",
+        "defaults",
+        "set",
+        "--context",
+        "revenuecat_api_v2",
+        "--provider",
+        "revenuecat",
+        "--scope",
+        "provider:revenuecat",
+        "--priority",
+        priority,
+        "--json",
+      ], cwd);
+      assert.equal(invalid.code, CLI_EXIT_USAGE);
+      const payload = JSON.parse(invalid.stdout) as { ok: boolean; error: { code: string; status: string; location: string; details?: Record<string, unknown> } };
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, "invalid_context_default_priority");
+      assert.equal(payload.error.status, "USAGE");
+      assert.equal(payload.error.location, "cli.accounts.defaults.priority");
+      assert.deepEqual(payload.error.details, { flag: "--priority", value: priority });
+    }
 
     const sqlite = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: dataRoot } as NodeJS.ProcessEnv), { readonly: true });
     try {
@@ -428,16 +430,20 @@ test("accounts export private envelope includes private context but never plaint
 });
 
 test("accounts audit rejects invalid limits with a usage error", async () => {
-  const result = await withTempConnectorContext((cwd) => runCliCapture(["accounts", "audit", "--limit", "nope", "--json"], cwd));
-  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
-  const payload = JSON.parse(result.stdout) as {
-    ok: boolean;
-    error: { code: string; status: string };
-  };
+  await withTempConnectorContext(async (cwd) => {
+    for (const limit of ["nope", "1e3", "0x10", "1.5", "9007199254740992"]) {
+      const result = await runCliCapture(["accounts", "audit", "--limit", limit, "--json"], cwd);
+      assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+      const payload = JSON.parse(result.stdout) as {
+        ok: boolean;
+        error: { code: string; status: string };
+      };
 
-  assert.equal(payload.ok, false);
-  assert.equal(payload.error.code, "invalid_limit");
-  assert.equal(payload.error.status, "USAGE");
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, "invalid_limit");
+      assert.equal(payload.error.status, "USAGE");
+    }
+  });
 });
 
 test("accounts preserve desired observed and verification metadata across edits", async () => {

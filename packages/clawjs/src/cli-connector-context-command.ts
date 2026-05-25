@@ -547,8 +547,8 @@ function parseExportMode(value: string | undefined): "redacted" | "private-envel
 
 function parseNonNegativeIntegerFlag(value: string | undefined, name: string): number {
   if (value === undefined) return 50;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  const parsed = parseStrictDecimalIntegerFlag(value, { allowNegative: false });
+  if (parsed === undefined) {
     throw new CliHandledError(`invalid_${name}`, `--${name} must be a non-negative integer.`, CLI_EXIT_USAGE);
   }
   return parsed;
@@ -556,12 +556,20 @@ function parseNonNegativeIntegerFlag(value: string | undefined, name: string): n
 
 function parseDefaultPriorityFlag(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
-  const parsed = Number(value);
-  if (!value.trim() || !Number.isSafeInteger(parsed)) {
+  const parsed = parseStrictDecimalIntegerFlag(value, { allowNegative: true });
+  if (parsed === undefined) {
     throw new CliHandledError("invalid_context_default_priority", "--priority must be an integer.", CLI_EXIT_USAGE, {
       location: "cli.accounts.defaults.priority",
       details: { flag: "--priority", value },
     });
   }
+  return parsed;
+}
+
+function parseStrictDecimalIntegerFlag(value: string, options: { allowNegative: boolean }): number | undefined {
+  const decimalIntegerPattern = options.allowNegative ? /^-?[0-9]+$/ : /^[0-9]+$/;
+  if (!decimalIntegerPattern.test(value)) return undefined;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) return undefined;
   return parsed;
 }
