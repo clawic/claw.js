@@ -152,11 +152,25 @@ export class LocalResourceRegistryStore {
       return { resource, error: `Resource ${id} is a directory.` };
     }
     const maxBytes = normalizeResourceReadMaxBytes(options.maxBytes);
-    const buffer = fs.readFileSync(expandHome(resource.locator.value));
+    const filePath = expandHome(resource.locator.value);
+    const stat = fs.statSync(filePath);
+    const readBytes = Math.min(maxBytes, stat.size);
+    const buffer = Buffer.alloc(readBytes);
+    const fd = fs.openSync(filePath, "r");
+    let bytesRead = 0;
+    try {
+      while (bytesRead < readBytes) {
+        const current = fs.readSync(fd, buffer, bytesRead, readBytes - bytesRead, bytesRead);
+        if (current === 0) break;
+        bytesRead += current;
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
     return {
       resource,
-      content: buffer.subarray(0, maxBytes).toString("utf8"),
-      truncated: buffer.length > maxBytes,
+      content: buffer.subarray(0, bytesRead).toString("utf8"),
+      truncated: stat.size > maxBytes,
     };
   }
 

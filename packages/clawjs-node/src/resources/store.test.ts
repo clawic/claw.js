@@ -43,6 +43,32 @@ test("resource registry read falls back for non-finite byte limits", () => {
   assert.equal(store.read(resource.id, { maxBytes: 4.9 }).content, "alph");
 });
 
+test("resource registry read limits filesystem reads before truncating output", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-resource-store-bounded-read-"));
+  const filePath = path.join(rootDir, "large-notes.txt");
+  fs.writeFileSync(filePath, Buffer.alloc(1024 * 1024, "a"));
+  const store = createLocalResourceRegistryStore({ rootDir: path.join(rootDir, "registry"), env: {} });
+  const resource = store.register({
+    kind: "file",
+    locator: { kind: "path", value: filePath },
+  });
+
+  const originalReadSync = fs.readSync;
+  let requestedBytes = 0;
+  fs.readSync = function patchedReadSync(fd, buffer, offset, length, position) {
+    requestedBytes += length;
+    return originalReadSync.call(this, fd, buffer, offset, length, position);
+  } as typeof fs.readSync;
+  try {
+    const result = store.read(resource.id, { maxBytes: 1 });
+    assert.equal(result.content, "a");
+    assert.equal(result.truncated, true);
+    assert.equal(requestedBytes, 1);
+  } finally {
+    fs.readSync = originalReadSync;
+  }
+});
+
 test("resource registry fails closed and preserves corrupt state", () => {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-resource-store-corrupt-"));
   const store = createLocalResourceRegistryStore({ rootDir, env: {} });
