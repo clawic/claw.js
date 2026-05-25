@@ -8,6 +8,7 @@ import { maskCredential } from "@clawjs/core";
 import {
   buildOpenClawAuthLoginCommand,
   cleanupOpenClawAuthLoginState,
+  collectPidsFromCommand,
   filterOpenClawProviderAuthByIntent,
   getOpenClawOAuthProviderSummary,
   hasConfirmedOpenClawOAuthSubscription,
@@ -235,6 +236,16 @@ test("cleanupOpenClawAuthLoginState kills tracked and discovered login processes
   assert.deepEqual(killed.sort((left, right) => left - right), [123, 456, 789, 789, 999]);
   assert.equal(commands.some((entry) => entry.includes("lsof -ti :1455")), true);
   assert.equal(commands.some((entry) => entry.includes("pgrep -f \"openclaw models --agent clawjs-demo auth login\"")), true);
+});
+
+test("collectPidsFromCommand accepts only complete positive safe decimal integers", () => {
+  const command = [
+    JSON.stringify(process.execPath),
+    "-e",
+    JSON.stringify("process.stdout.write('123abc\\n1.5\\n0x10\\n0\\n   \\n 456 \\n9007199254740992\\n789\\n')"),
+  ].join(" ");
+
+  assert.deepEqual(collectPidsFromCommand(command), [456, 789]);
 });
 
 test("removeAuthProfilesForProvider deletes provider auth entries from the current agent dir", () => {

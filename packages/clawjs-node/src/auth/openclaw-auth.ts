@@ -147,14 +147,15 @@ const EXPLICIT_ENABLE_REQUIRED_PROVIDERS = new Set([
 
 const DEFAULT_OPENCLAW_CALLBACK_PORT = 1455;
 
-function collectPidsFromCommand(command: string): number[] {
+export function collectPidsFromCommand(command: string): number[] {
   try {
-    const stdout = execSync(command, { timeout: 3_000, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-    if (!stdout) return [];
+    const stdout = execSync(command, { timeout: 3_000, stdio: ["ignore", "pipe", "ignore"] }).toString();
     return stdout
       .split(/\r?\n/)
-      .map((value) => Number.parseInt(value.trim(), 10))
-      .filter((value) => Number.isInteger(value) && value > 0);
+      .map((value) => value.trim())
+      .filter((value) => /^[0-9]+$/.test(value))
+      .map((value) => Number(value))
+      .filter((value) => Number.isSafeInteger(value) && value > 0);
   } catch {
     return [];
   }
