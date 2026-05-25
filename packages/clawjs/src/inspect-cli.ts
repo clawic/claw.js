@@ -1588,8 +1588,8 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
     return CLI_EXIT_OK;
   }
   if (command === "why") {
-    if (!target) throw new InspectCliError("usage_error", `Usage: ${input.binName} inspect why <command-or-id> [--json]`, CLI_EXIT_USAGE);
-    const cliCommand = resolveClawCliCommand(target);
+    const whyTarget = target ?? "inspect";
+    const cliCommand = resolveClawCliCommand(whyTarget);
     if (cliCommand) {
       const payload = {
         type: "cliCommand",
@@ -1618,7 +1618,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
       }
       return CLI_EXIT_OK;
     }
-    const node = inspectFind(target, nodes);
+    const node = inspectFind(whyTarget, nodes);
     if (node) {
       const payload = {
         type: "surfaceNode",
@@ -1634,7 +1634,7 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
       else input.context.stdout.write(`${node.id}\t${node.kind}\t${node.source?.file ?? "source-unregistered"}\n${node.notes ?? ""}\n`);
       return CLI_EXIT_OK;
     }
-    const artifactMatch = readDiscoverabilityArtifacts(input.context.cwd, target)[0];
+    const artifactMatch = readDiscoverabilityArtifacts(input.context.cwd, whyTarget)[0];
     if (artifactMatch) {
       const payload = {
         type: "discoverabilityArtifact",
