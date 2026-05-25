@@ -8,6 +8,8 @@ import path from "path";
 import { createClaw } from "@clawjs/claw";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
+import { extractPositionals, parseFlags } from "./cli-flag-parsers.ts";
+import { runUserKnowledgeCli } from "./cli-user-knowledge-command.ts";
 import {
   captureStream,
   createFakeOpenClawToolchain,
@@ -429,6 +431,69 @@ test("runCli knowledge memories JSON errors are parseable and db memory search i
       action: "list",
     },
   });
+});
+
+test("runUserKnowledgeCli rejects invalid confidence before user proposal persistence", async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-user-confidence-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+  const argv = [
+    "user",
+    "propose",
+    "--path", "identity.name",
+    "--value", "Ada",
+    "--confidence", "nope",
+    "--workspace", workspaceRoot,
+    "--json",
+  ];
+  const positionals = extractPositionals(argv);
+  const stdout = captureStream();
+
+  assert.equal(await runUserKnowledgeCli({
+    group: "user",
+    command: "propose",
+    subcommand: undefined,
+    positionals,
+    flags: parseFlags(argv),
+    argv,
+    context: {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    },
+    wantsJson: true,
+    workspaceRoot,
+    appId: "demo",
+    workspaceId: "demo-user-confidence",
+    agentId: "demo-user-confidence",
+    runtimeAdapterId: "demo",
+  }), CLI_EXIT_USAGE);
+
+  const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_user_confidence");
+  assert.equal(payload.error.status, "USAGE");
+
+  const listStdout = captureStream();
+  assert.equal(await runUserKnowledgeCli({
+    group: "user",
+    command: "review",
+    subcommand: "list",
+    positionals: ["user", "review", "list"],
+    flags: parseFlags(["user", "review", "list", "--workspace", workspaceRoot, "--json"]),
+    argv: ["user", "review", "list", "--workspace", workspaceRoot, "--json"],
+    context: {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    },
+    wantsJson: true,
+    workspaceRoot,
+    appId: "demo",
+    workspaceId: "demo-user-confidence",
+    agentId: "demo-user-confidence",
+    runtimeAdapterId: "demo",
+  }), CLI_EXIT_OK);
+  assert.equal((JSON.parse(listStdout.getOutput()) as { data: { proposals: unknown[] } }).data.proposals.length, 0);
 });
 
 test("runCli runtime knowledge memories search returns ok for empty results when explicitly requested", async (t) => {

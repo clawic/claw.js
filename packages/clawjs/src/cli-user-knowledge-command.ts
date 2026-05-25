@@ -1,11 +1,34 @@
 import type { RuntimeAdapterId, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
 
 import type { CliContext } from "./index.ts";
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { joinedPositionals, parseCsvFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { cliErrorFromUnknown, writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
-import { parseSoulModulesFromSetFlags, parseUserFactValue, parseUserFieldsFromSetFlags, parseUserMetadataFlags } from "./cli-value-utils.ts";
+import { parseSoulModulesFromSetFlags, parseUserFactValue, parseUserFieldsFromSetFlags } from "./cli-value-utils.ts";
+
+function readUserConfidenceFlag(value: string): number {
+  const trimmed = value.trim();
+  const parsed = trimmed.length ? Number(trimmed) : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw new CliHandledError("invalid_user_confidence", "--confidence must be a number between 0 and 1.", CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
+function parseUserMetadataFlags(flags: Record<string, string>) {
+  return {
+    ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
+    ...(flags.supersedes ? { supersedes: flags.supersedes } : {}),
+    ...(flags.source ? { source: flags.source } : {}),
+    ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
+    ...(flags.confidence !== undefined ? { confidence: readUserConfidenceFlag(flags.confidence) } : {}),
+    ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
+    ...(flags["valid-to"] ? { validTo: flags["valid-to"] } : {}),
+    ...(flags.notes ? { notes: flags.notes } : {}),
+    ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+  };
+}
 
 export async function runUserKnowledgeCli(input: {
   group: string | undefined;
@@ -126,9 +149,9 @@ if (group === "user") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId, argv);
   const targetUserId = flags.user || flags["user-id"];
   const targetAgentId = flags.agent || flags["agent-id"] || agentId;
-  const metadata = parseUserMetadataFlags(flags);
 
   try {
+    const metadata = () => parseUserMetadataFlags(flags);
     if (command === "init") {
       const user = claw.user.init({
         id: subcommand || targetUserId || "user",
@@ -217,7 +240,7 @@ if (group === "user") {
         domain,
         title,
         fields: parseUserFieldsFromSetFlags(argv),
-        ...metadata,
+        ...metadata(),
       });
       if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`proposed ${proposal.id}\n`);
@@ -258,7 +281,7 @@ if (group === "user") {
           type,
           title,
           fields: parseUserFieldsFromSetFlags(argv),
-          ...metadata,
+          ...metadata(),
         });
         if (wantsJson) writeSurfaceJson(entity);
         else context.stdout.write(`added ${entity.type} ${entity.id}\n`);
@@ -281,7 +304,7 @@ if (group === "user") {
         from,
         relation,
         to,
-        ...metadata,
+        ...metadata(),
       });
       if (wantsJson) writeSurfaceJson(link);
       else context.stdout.write(`linked ${link.id}\n`);
@@ -354,7 +377,7 @@ if (group === "user") {
           ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
           ...(flags.source ? { source: flags.source } : {}),
           ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
-          ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
+          ...(flags.confidence !== undefined ? { confidence: readUserConfidenceFlag(flags.confidence) } : {}),
           ...(flags.notes ? { notes: flags.notes } : {}),
           ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
           ...(argv.includes("--set") ? { fields: parseUserFieldsFromSetFlags(argv) } : {}),
@@ -434,7 +457,7 @@ if (group === "user") {
         userId: targetUserId,
         path: factPath,
         value,
-        ...metadata,
+        ...metadata(),
       });
       if (wantsJson) writeSurfaceJson(fact);
       else context.stdout.write(`set ${factPath}\n`);
@@ -453,7 +476,7 @@ if (group === "user") {
         type,
         title,
         fields: parseUserFieldsFromSetFlags(argv),
-        ...metadata,
+        ...metadata(),
       });
       if (wantsJson) writeSurfaceJson(record);
       else context.stdout.write(`added ${record.type} ${record.id}\n`);
@@ -491,7 +514,7 @@ if (group === "user") {
         ...(recordType ? { recordType: recordType as UserRecordType } : {}),
         ...(flags.title ? { title: flags.title } : {}),
         fields: parseUserFieldsFromSetFlags(argv),
-        ...metadata,
+        ...metadata(),
       });
       if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`proposed ${proposal.id}\n`);
