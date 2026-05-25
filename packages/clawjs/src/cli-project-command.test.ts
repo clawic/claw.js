@@ -5,7 +5,7 @@ import path from "path";
 import { test } from "vitest";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
-import { captureStream, parseCliJsonPayload } from "./index-test-utils.ts";
+import { captureStream, parseCliJsonPayload, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 
 test("claw project attach previews then writes portable manifest and handoff shims", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-manifest-"));
@@ -119,6 +119,58 @@ test("claw project attach honors explicit false accept flags", async () => {
   assert.equal(invalid.error.code, "invalid_boolean_flag");
   assert.equal(invalid.error.status, "USAGE");
   assert.equal(fs.existsSync(path.join(folder, "claw.project.json")), false);
+});
+
+test("claw project returns JSON usage errors for unknown subcommands without writing state", { concurrency: false }, async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-unknown-"));
+  const dataRoot = useIsolatedClawDataRoot(t, cwd);
+  const folder = path.join(cwd, "project");
+  fs.mkdirSync(folder, { recursive: true });
+
+  const stdout = captureStream();
+  const stderr = captureStream();
+  assert.equal(await runCli(["project", "definitely_missing", folder, "--json"], {
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+  assert.equal(stderr.getOutput(), "");
+
+  const payload = JSON.parse(stdout.getOutput()) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details: {
+        received: string;
+        validSubcommands: string[];
+      };
+    };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_project_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.project.subcommand");
+  assert.equal(payload.error.details.received, "definitely_missing");
+  assert.deepEqual(payload.error.details.validSubcommands, ["inspect", "attach", "detach", "export", "import", "sync-handoff"]);
+  assert.match(payload.error.safeNextStep, /claw project inspect --json/);
+  assert.match(payload.error.safeNextStep, /claw help project --json/);
+  assert.equal(fs.existsSync(path.join(folder, "claw.project.json")), false);
+  assert.equal(fs.existsSync(path.join(folder, "AGENTS.md")), false);
+  assert.equal(fs.existsSync(path.join(folder, "CLAUDE.md")), false);
+  assert.equal(fs.existsSync(dataRoot), false);
+
+  const textStdout = captureStream();
+  const textStderr = captureStream();
+  assert.equal(await runCli(["project", "definitely_missing", folder], {
+    stdout: textStdout.stream,
+    stderr: textStderr.stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+  assert.equal(textStdout.getOutput(), "");
+  assert.match(textStderr.getOutput(), /Usage: claw project inspect\|attach\|detach\|export\|import\|sync-handoff \[folder\] \[--json\]/);
 });
 
 test("claw project detach and export keep folder data while producing safe handoff", async () => {

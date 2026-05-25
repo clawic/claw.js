@@ -4,7 +4,7 @@ import type { CliContext } from "./index.ts";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { requireCliExportReview } from "./cli-export-review.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import {
   attachProjectFolder,
   detachProjectFolder,
@@ -13,6 +13,8 @@ import {
   inspectProjectFolder,
   syncProjectHandoff,
 } from "./project.ts";
+
+const PROJECT_SUBCOMMANDS = ["inspect", "attach", "detach", "export", "import", "sync-handoff"] as const;
 
 function resolveProjectExportOutputPath(outputPath: string, workspaceRoot: string): string {
   const requested = outputPath.trim();
@@ -135,6 +137,26 @@ export async function runProjectManifestCli(input: {
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "project", { projectRoot, output: outputPath ?? null, handoff }, meta);
     else input.context.stdout.write(`${outputPath ?? JSON.stringify(handoff)}\n`);
     return CLI_EXIT_OK;
+  }
+
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "project", new CliHandledError(
+      "unknown_project_subcommand",
+      `Unknown project subcommand: ${action}.`,
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.project.subcommand",
+        suggestion: "Use one of the registered project subcommands.",
+        safeNextStep: `Run ${input.binName} project inspect --json to inspect a project folder, or ${input.binName} help project --json for the project command surface.`,
+        details: {
+          received: action,
+          validSubcommands: [...PROJECT_SUBCOMMANDS],
+        },
+      },
+    ), {
+      subcommand: action,
+    });
+    return CLI_EXIT_USAGE;
   }
 
   input.context.stderr.write(`Usage: ${input.binName} project inspect|attach|detach|export|import|sync-handoff [folder] [--json]\n`);
