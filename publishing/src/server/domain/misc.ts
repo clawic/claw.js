@@ -378,11 +378,28 @@ export class ApprovalsService {
     return { id };
   }
   recordDecision(approvalId: string, stageIndex: number, reviewerUserId: string, decision: "approve" | "reject" | "request_changes", comment?: string) {
+    const approval = this.db.prepare(`SELECT * FROM post_approval WHERE id = ?`).get(approvalId) as Record<string, unknown> | undefined;
+    if (!approval) throw new Error("approval not found");
+    if (approval.state !== "pending") throw new Error("approval is not pending");
+
+    const currentStageIndex = Number(approval.current_stage_index);
+    if (stageIndex !== currentStageIndex) throw new Error("approval decision stage is not active");
+
+    const wf = this.db.prepare(`SELECT stages FROM approval_workflow WHERE id = ?`).get(approval.workflow_id) as { stages: string } | undefined;
+    if (!wf) throw new Error("approval workflow not found");
+
+    const stages = jsonParse<Array<{ all_required?: boolean; required_user_ids?: unknown }>>(wf.stages, []);
+    const stage = stages[currentStageIndex] ?? {};
+    const requiredUserIds = Array.isArray(stage.required_user_ids)
+      ? stage.required_user_ids.filter((id): id is string => typeof id === "string" && id.length > 0)
+      : [];
+    if (requiredUserIds.length > 0 && !requiredUserIds.includes(reviewerUserId)) {
+      throw new Error("reviewer is not required for this approval stage");
+    }
+
     const id = prefixedId("apd");
     this.db.prepare(`INSERT INTO post_approval_decision (id, approval_id, stage_index, reviewer_user_id, decision, comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`).run(id, approvalId, stageIndex, reviewerUserId, decision, comment ?? null, now());
-    const approval = this.db.prepare(`SELECT * FROM post_approval WHERE id = ?`).get(approvalId) as Record<string, unknown>;
-    const wf = this.db.prepare(`SELECT stages FROM approval_workflow WHERE id = ?`).get(approval.workflow_id) as { stages: string };
-    const stages = jsonParse<Array<{ all_required?: boolean }>>(wf.stages, []);
+
     if (decision === "reject") {
       this.db.prepare(`UPDATE post_approval SET state = 'rejected', finalized_at = ? WHERE id = ?`).run(now(), approvalId);
       return { id, finalState: "rejected" };
@@ -390,7 +407,21 @@ export class ApprovalsService {
     if (decision === "request_changes") {
       return { id, finalState: "pending" };
     }
-    const nextStage = Number(approval.current_stage_index) + 1;
+
+    if (stage.all_required && requiredUserIds.length > 0) {
+      const approvedRows = this.db
+        .prepare(
+          `SELECT reviewer_user_id FROM post_approval_decision
+           WHERE approval_id = ? AND stage_index = ? AND decision = 'approve'`,
+        )
+        .all(approvalId, stageIndex) as Array<{ reviewer_user_id: string }>;
+      const approvedReviewerIds = new Set(approvedRows.map((row) => row.reviewer_user_id));
+      if (!requiredUserIds.every((requiredUserId) => approvedReviewerIds.has(requiredUserId))) {
+        return { id, finalState: "pending" };
+      }
+    }
+
+    const nextStage = currentStageIndex + 1;
     if (nextStage >= stages.length) {
       this.db.prepare(`UPDATE post_approval SET state = 'approved', finalized_at = ? WHERE id = ?`).run(now(), approvalId);
       return { id, finalState: "approved" };
