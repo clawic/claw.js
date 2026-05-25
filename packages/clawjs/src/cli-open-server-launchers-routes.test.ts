@@ -4,6 +4,7 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { parseOpenServerPort } from "./cli-open-server.ts";
 import { openStateDir } from "./cli-open-state.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
@@ -39,6 +40,19 @@ test("open internal server rejects invalid ports before writing state", async ()
   assert.equal(payload.error.status, "USAGE");
   assert.equal(payload.meta.canonicalCommand, "__open-server");
   assert.equal(fs.existsSync(staleTokenPath), false);
+});
+
+test("open internal server port parser rejects non-decimal or out-of-range values", () => {
+  assert.equal(parseOpenServerPort(undefined, 24_140), 24_140);
+  assert.equal(parseOpenServerPort("65535", 24_140), 65_535);
+
+  for (const rawPort of ["", " ", "NaN", "Infinity", "1.5", "1e3", "0x50", "0", "65536"]) {
+    assert.throws(
+      () => parseOpenServerPort(rawPort, 24_140),
+      (error) => error instanceof Error && error.message === `Invalid port: ${rawPort}`,
+      rawPort,
+    );
+  }
 });
 
 test("open internal server rejects unsafe hosts before writing state", async () => {

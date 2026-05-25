@@ -11,7 +11,10 @@ import { openStateDir, repoRootFromCliPackage } from "./cli-open-state.ts";
 import { resolveOpenSurface } from "./cli-open-surfaces.ts";
 import type { CliContext } from "./index.ts";
 
-function parseOpenServerPort(raw: string | undefined, fallback: number): number {
+export function parseOpenServerPort(raw: string | undefined, fallback: number): number {
+  if (raw !== undefined && !/^[0-9]+$/.test(raw)) {
+    throw new CliHandledError("invalid_port", `Invalid port: ${raw}`, CLI_EXIT_USAGE);
+  }
   const port = raw === undefined ? fallback : Number(raw);
   if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
     throw new CliHandledError("invalid_port", `Invalid port: ${raw ?? fallback}`, CLI_EXIT_USAGE);
