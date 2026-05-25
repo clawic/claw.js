@@ -111,6 +111,55 @@ test("slides add rejects invalid table rows JSON as usage", async () => {
   assert.match(payload.error.message, /--rows-json/);
 });
 
+test("slides render rejects external deck ids that escape the output root", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-slides-safe-id-workspace-"));
+  const externalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-slides-safe-id-external-"));
+  const manifestPath = path.join(externalRoot, "external-deck.json");
+  fs.writeFileSync(manifestPath, `${JSON.stringify({
+    schemaVersion: 1,
+    id: "../outside",
+    title: "External traversal deck",
+    theme: "executive",
+    author: {},
+    slides: [
+      {
+        id: "slide-1",
+        layout: "title",
+        title: "External deck",
+      },
+    ],
+    metadata: {},
+    outputs: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }, null, 2)}\n`, "utf8");
+
+  const rendered = await runCliCapture([
+    "slides",
+    "render",
+    manifestPath,
+    "--workspace",
+    workspaceRoot,
+    "--format",
+    "pdf",
+    "--json",
+  ], externalRoot);
+  assert.equal(rendered.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(rendered.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_slide_deck_id");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /safe local identifier/);
+
+  const slidesRoot = path.join(workspaceRoot, ".claw", "slides");
+  const outputRoot = path.join(slidesRoot, "outputs");
+  assert.equal(fs.existsSync(outputRoot), false);
+  assert.deepEqual(fs.existsSync(slidesRoot) ? fs.readdirSync(slidesRoot) : [], []);
+});
+
 test("runCli supports non-mutating database collection discovery aliases", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-db-readonly-"));
   useIsolatedClawDataRoot(t, workspaceRoot);

@@ -143,6 +143,7 @@ const SLIDE_W = 1280;
 const SLIDE_H = 720;
 const PPTX_W = 12192000;
 const PPTX_H = 6858000;
+const SAFE_DECK_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 type SlideThemeStyle = {
   bg: string;
@@ -1269,7 +1270,7 @@ function readDeckByRef(workspaceRoot: string, cwd: string, ref: string): { path:
 function normalizeDeck(deck: SlideDeckManifest): SlideDeckManifest {
   return {
     schemaVersion: 1,
-    id: deck.id || `deck-${randomBytes(3).toString("hex")}`,
+    id: normalizeDeckId(deck.id),
     title: deck.title || "Untitled deck",
     theme: parseTheme(deck.theme) ?? "editorial",
     author: deck.author ?? {},
@@ -1283,6 +1284,22 @@ function normalizeDeck(deck: SlideDeckManifest): SlideDeckManifest {
     createdAt: deck.createdAt || nowIso(),
     updatedAt: deck.updatedAt || nowIso(),
   };
+}
+
+function normalizeDeckId(value: unknown): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    return `deck-${randomBytes(3).toString("hex")}`;
+  }
+  const id = value.trim();
+  if (!SAFE_DECK_ID_PATTERN.test(id) || id === "." || id === "..") {
+    throw new CliHandledError(
+      "invalid_slide_deck_id",
+      "Slide deck id must be a safe local identifier, not a path.",
+      CLI_EXIT_USAGE,
+      { details: { field: "id" } },
+    );
+  }
+  return id;
 }
 
 function parseLayout(value: string | undefined): SlideLayout | null {
