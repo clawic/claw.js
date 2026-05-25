@@ -1917,6 +1917,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   const fallbackDomainRows = new Map(hermesFallbackDomainsPayload.data.domains.map((entry) => [entry.domain, entry]));
   assert.equal(fallbackDomainRows.get("skills")?.count, 1);
   assert.equal(fallbackDomainRows.get("memory")?.count, 1);
+  assert.equal(fallbackDomainRows.get("channels")?.count, 1);
   assert.equal(fallbackDomainRows.get("models")?.count, 1);
   assert.equal(fallbackDomainRows.get("scheduler")?.count, 1);
   assert.equal(fallbackDomainRows.get("plugins")?.count, 1);

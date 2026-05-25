@@ -802,12 +802,13 @@ function withHermesFallbackResources(domain: string, status, resources: unknown[
 }
 
 async function readResources(claw, domain: string, status, adapter?, runtimeOptions?) {
+  const runner = new NodeProcessHost();
   async function readPluginResources() {
     if (status.adapter === "openclaw") {
       return { plugins: await claw.runtime.plugins.status() };
     }
     const pluginCatalog = adapter?.resources?.getPluginCatalog
-      ? await adapter.resources.getPluginCatalog(new NodeProcessHost(), runtimeOptions)
+      ? await adapter.resources.getPluginCatalog(runner, runtimeOptions)
       : { plugins: [] };
     return {
       plugins: pluginCatalog.plugins ?? [],
@@ -825,18 +826,49 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
     case "configuration":
       return { configurationResources: buildHermesFallbackResources(domain, status) };
     case "providers":
+      if (status.adapter === "hermes" && adapter?.resources?.getProviderCatalog) {
+        const providerCatalog = await adapter.resources.getProviderCatalog(runner, runtimeOptions);
+        return { providers: [...buildHermesFallbackResources(domain, status), ...(providerCatalog.providers ?? [])] };
+      }
       return { providers: [...buildHermesFallbackResources(domain, status), ...(await claw.providers.list())] };
     case "models":
+      if (status.adapter === "hermes" && adapter?.resources?.getModelCatalog) {
+        const modelCatalog = await adapter.resources.getModelCatalog(runner, runtimeOptions);
+        return {
+          models: withHermesFallbackResources(domain, status, modelCatalog.models ?? []),
+          defaultModel: modelCatalog.defaultModel ?? null,
+        };
+      }
       return { models: withHermesFallbackResources(domain, status, await claw.models.list()), defaultModel: await claw.models.getDefault() };
     case "auth":
+      if (status.adapter === "hermes" && adapter?.resources?.getAuthState) {
+        const authState = await adapter.resources.getAuthState(runner, runtimeOptions);
+        return {
+          auth: authState.providers ?? {},
+          authState,
+          authResources: buildHermesFallbackResources(domain, status),
+        };
+      }
       return { auth: await claw.auth.status(), authResources: buildHermesFallbackResources(domain, status) };
     case "scheduler":
+      if (status.adapter === "hermes" && adapter?.resources?.listSchedulers) {
+        return { schedulers: withHermesFallbackResources(domain, status, await adapter.resources.listSchedulers(runner, runtimeOptions)) };
+      }
       return { schedulers: withHermesFallbackResources(domain, status, await claw.scheduler.list()) };
     case "memory":
+      if (status.adapter === "hermes" && adapter?.resources?.listMemory) {
+        return { memory: withHermesFallbackResources(domain, status, await adapter.resources.listMemory(runner, runtimeOptions)) };
+      }
       return { memory: withHermesFallbackResources(domain, status, await claw.memory.list()) };
     case "skills":
+      if (status.adapter === "hermes" && adapter?.resources?.listSkills) {
+        return { skills: withHermesFallbackResources(domain, status, await adapter.resources.listSkills(runner, runtimeOptions)) };
+      }
       return { skills: withHermesFallbackResources(domain, status, await claw.skills.list()) };
     case "channels":
+      if (status.adapter === "hermes" && adapter?.resources?.listChannels) {
+        return { channels: [...buildHermesFallbackResources(domain, status), ...(await adapter.resources.listChannels(runner, runtimeOptions))] };
+      }
       return { channels: [...buildHermesFallbackResources(domain, status), ...(await claw.channels.list())] };
     case "plugins": {
       const pluginResources = await readPluginResources();
@@ -847,21 +879,25 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
     }
     default:
       const pluginResources = await readPluginResources();
-      const models = await claw.models.list();
-      const schedulers = await claw.scheduler.list();
-      const memory = await claw.memory.list();
-      const skills = await claw.skills.list();
+      const providerResources = await readResources(claw, "providers", status, adapter, runtimeOptions);
+      const modelResources = await readResources(claw, "models", status, adapter, runtimeOptions);
+      const authResources = await readResources(claw, "auth", status, adapter, runtimeOptions);
+      const schedulerResources = await readResources(claw, "scheduler", status, adapter, runtimeOptions);
+      const memoryResources = await readResources(claw, "memory", status, adapter, runtimeOptions);
+      const skillResources = await readResources(claw, "skills", status, adapter, runtimeOptions);
+      const channelResources = await readResources(claw, "channels", status, adapter, runtimeOptions);
       return {
         sessionResources: buildHermesFallbackResources("sessions", status),
-        providers: [...buildHermesFallbackResources("providers", status), ...(await claw.providers.list())],
-        models: withHermesFallbackResources("models", status, models),
-        defaultModel: await claw.models.getDefault(),
-        auth: await claw.auth.status(),
-        authResources: buildHermesFallbackResources("auth", status),
-        schedulers: withHermesFallbackResources("scheduler", status, schedulers),
-        memory: withHermesFallbackResources("memory", status, memory),
-        skills: withHermesFallbackResources("skills", status, skills),
-        channels: [...buildHermesFallbackResources("channels", status), ...(await claw.channels.list())],
+        providers: providerResources.providers ?? [],
+        models: modelResources.models ?? [],
+        defaultModel: modelResources.defaultModel ?? null,
+        auth: authResources.auth ?? {},
+        authState: authResources.authState,
+        authResources: authResources.authResources ?? [],
+        schedulers: schedulerResources.schedulers ?? [],
+        memory: memoryResources.memory ?? [],
+        skills: skillResources.skills ?? [],
+        channels: channelResources.channels ?? [],
         configurationResources: buildHermesFallbackResources("configuration", status),
         plugins: withHermesFallbackResources("plugins", status, pluginResources.plugins ?? []),
         status: pluginResources.status,
@@ -1927,7 +1963,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
     memory: { memory: resources.memory ?? [], supportContract: buildSupportContract(runtimeId, status, "memory") },
     channels: { channels: resources.channels ?? [], supportContract: buildSupportContract(runtimeId, status, "channels") },
     providers: { providers: resources.providers ?? [], supportContract: buildSupportContract(runtimeId, status, "providers") },
-    auth: { auth: resources.auth ?? null, resources: resources.authResources ?? [], supportContract: buildSupportContract(runtimeId, status, "auth") },
+    auth: { auth: resources.auth ?? null, authState: resources.authState ?? null, resources: resources.authResources ?? [], supportContract: buildSupportContract(runtimeId, status, "auth") },
     models: { models: resources.models ?? [], defaultModel: resources.defaultModel ?? null, supportContract: buildSupportContract(runtimeId, status, "models") },
     scheduler: { schedulers: resources.schedulers ?? [], supportContract: buildSupportContract(runtimeId, status, "scheduler") },
     plugins: { plugins: resources.plugins ?? [], status: resources.status ?? status.capabilityMap?.plugins ?? null, supportContract: buildSupportContract(runtimeId, status, "plugins") },
