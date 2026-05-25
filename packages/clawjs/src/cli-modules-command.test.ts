@@ -75,6 +75,32 @@ test("setup previews progressive mode without writing until apply", async () => 
   assert.equal(fs.existsSync(applyPayload.data.configPath), true);
 });
 
+test("setup and modules boolean flags respect explicit false values", async () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-bool-flags-"));
+
+  const noApply = await runCliCapture(["setup", "normal", "--apply", "false", "--details", "false", "--interactive", "false", "--claw-home", tempHome, "--json"], process.cwd());
+  assert.equal(noApply.code, CLI_EXIT_OK);
+  const noApplyPayload = JSON.parse(noApply.stdout) as { data: { applied: boolean; detail?: unknown; interactive?: boolean; configPath: string } };
+  assert.equal(noApplyPayload.data.applied, false);
+  assert.equal("detail" in noApplyPayload.data, false);
+  assert.equal("interactive" in noApplyPayload.data, false);
+  assert.equal(fs.existsSync(noApplyPayload.data.configPath), false);
+
+  await runCliCapture(["setup", "advanced", "--apply", "--claw-home", tempHome, "--json"], process.cwd());
+  const activeOnly = await runCliCapture(["modules", "list", "--available", "false", "--claw-home", tempHome, "--json"], process.cwd());
+  assert.equal(activeOnly.code, CLI_EXIT_OK);
+  const activeOnlyPayload = JSON.parse(activeOnly.stdout) as { data: { modules: Array<{ id: string; state: string }> } };
+  assert.equal(activeOnlyPayload.data.modules.some((module) => module.id === "dev-diagnostics" && module.state === "enabled"), true);
+  assert.equal(activeOnlyPayload.data.modules.some((module) => module.id === "erp"), false);
+
+  const invalid = await runCliCapture(["modules", "list", "--available", "nope", "--claw-home", tempHome, "--json"], process.cwd());
+  assert.equal(invalid.code, CLI_EXIT_USAGE);
+  const invalidPayload = JSON.parse(invalid.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(invalidPayload.ok, false);
+  assert.equal(invalidPayload.error.code, "invalid_boolean_flag");
+  assert.match(invalidPayload.error.message, /--available must be true or false/);
+});
+
 test("modules list hides available niche modules by default", async () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-list-"));
   await runCliCapture(["setup", "advanced", "--apply", "--claw-home", tempHome, "--json"], process.cwd());

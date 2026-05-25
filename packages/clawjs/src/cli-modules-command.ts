@@ -9,7 +9,7 @@ import {
 } from "@clawjs/core";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
-import { formatCliTable } from "./cli-flag-parsers.ts";
+import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 type ModuleKind = "capability" | "area";
@@ -510,7 +510,7 @@ async function runInteractiveSetupCli(input: {
     const preview = applySetupAdjustments(setupPreview(mode, input.current), adjustments);
     const modules = effectiveModuleStates(preview, { includeAvailable: true });
     input.context.stdout.write(`\n${renderSetupText(preview, { details: true })}\n\n`);
-    const shouldApply = input.argv.includes("--yes") || yes(await ask(`Apply ${input.scope} module config? [y/N]: `));
+    const shouldApply = readBooleanFlag(input.argv, input.flags, "yes") || yes(await ask(`Apply ${input.scope} module config? [y/N]: `));
     if (shouldApply) writeConfig(input.pathToWrite, preview);
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "setup", {
@@ -554,9 +554,9 @@ export async function runSetupCli(input: {
   const adjustments = setupAdjustments(input.flags);
   const preview = applySetupAdjustments(setupPreview(mode, current), adjustments);
   const modules = effectiveModuleStates(preview, { includeAvailable: true });
-  const apply = input.argv.includes("--apply") || input.argv.includes("--yes");
-  const details = input.argv.includes("--details") || input.argv.includes("--detail") || input.flags.details === "true" || input.flags.detail === "true";
-  const interactive = input.argv.includes("--interactive") || input.flags.interactive === "true";
+  const apply = readBooleanFlag(input.argv, input.flags, "apply") || readBooleanFlag(input.argv, input.flags, "yes");
+  const details = readBooleanFlag(input.argv, input.flags, "details") || readBooleanFlag(input.argv, input.flags, "detail");
+  const interactive = readBooleanFlag(input.argv, input.flags, "interactive");
 
   if (interactive) {
     return await runInteractiveSetupCli({ mode, scope, pathToWrite, current, flags: input.flags, argv: input.argv, context: input.context, wantsJson: input.wantsJson });
@@ -600,7 +600,7 @@ export async function runModulesCli(input: {
   const writable = readConfig(writePath) ?? defaultConfig(effective.mode);
 
   if (command === "list" || command === "status") {
-    const includeAvailable = input.argv.includes("--available") || input.flags.available === "true" || command === "status";
+    const includeAvailable = readBooleanFlag(input.argv, input.flags, "available") || command === "status";
     const modules = effectiveModuleStates(effective, { includeAvailable });
     if (input.wantsJson) {
       writeCommandJsonOk(input.context.stdout, "modules", {
