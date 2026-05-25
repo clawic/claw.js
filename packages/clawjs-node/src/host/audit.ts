@@ -19,6 +19,15 @@ export interface AuditQueryInput {
   limit?: number;
 }
 
+function parseAuditBound(value: string | undefined, field: "since" | "until"): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    throw new RangeError(`invalid_audit_${field}`);
+  }
+  return parsed;
+}
+
 export class WorkspaceAuditLog {
   private readonly filesystem: NodeFileSystemHost;
 
@@ -55,8 +64,8 @@ export class WorkspaceAuditLog {
   }
 
   query(workspaceDir: string, input: AuditQueryInput = {}): AuditRecord[] {
-    const since = input.since ? Date.parse(input.since) : null;
-    const until = input.until ? Date.parse(input.until) : null;
+    const since = parseAuditBound(input.since, "since");
+    const until = parseAuditBound(input.until, "until");
 
     return this.list(workspaceDir)
       .filter((record) => {

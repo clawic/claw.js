@@ -131,3 +131,23 @@ test("audit log excludes malformed timestamps from bounded queries", () => {
 
   assert.deepEqual(records.map((record) => record.detail?.taskId), ["task-good"]);
 });
+
+test("audit log rejects invalid query bounds", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-audit-invalid-bounds-"));
+  const audit = new WorkspaceAuditLog();
+
+  audit.append(workspaceDir, {
+    timestamp: "2026-03-22T10:00:00.000Z",
+    event: clawWorkspaceAuditEvents.tasksCreated,
+    capability: "tasks",
+  });
+
+  assert.throws(
+    () => audit.query(workspaceDir, { since: "not-a-date" }),
+    /invalid_audit_since/,
+  );
+  assert.throws(
+    () => audit.query(workspaceDir, { until: "not-a-date" }),
+    /invalid_audit_until/,
+  );
+});
