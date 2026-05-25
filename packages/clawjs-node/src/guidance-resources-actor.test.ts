@@ -85,5 +85,15 @@ test("actor assertions verify signatures, expiry, scope and untrusted hints", ()
   assert.equal(verifyActorAssertion({ assertion, trustedKeys, now: new Date("2026-05-14T12:11:00.000Z") }).reason, "expired_assertion");
   assert.equal(verifyActorAssertion({ assertion: { ...assertion, signature: "bad" }, trustedKeys, now }).reason, "invalid_signature");
   assert.equal(verifyActorAssertion({ assertion, trustedKeys: [], now }).reason, "unknown_trusted_key");
+  assert.equal(verifyActorAssertion({
+    assertion,
+    trustedKeys: [{ ...trustedKeys[0]!, publicKeyPem: "not a pem" }],
+    now,
+  }).reason, "invalid_trusted_key");
+  assert.equal(verifyActorAssertion({
+    assertion,
+    trustedKeys: [{ ...trustedKeys[0]!, publicKeyPem: "not a pem" }, ...trustedKeys],
+    now,
+  }).ok, true);
   assert.equal(untrustedActor({ actorKind: "human", actorId: "u1" }).trustSource, "untrusted");
 });

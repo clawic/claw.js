@@ -80,19 +80,35 @@ export function verifyActorAssertion(options: VerifyActorAssertionOptions = {}):
     return { ok: false, actor: unknownActor("scope_mismatch"), reason: "scope_mismatch" };
   }
 
-  const trustedKey = options.trustedKeys?.find((key) =>
+  const trustedKeys = options.trustedKeys?.filter((key) =>
     key.keyId === assertion.keyId
     && key.trustSource === assertion.trustSource
     && (!key.issuer || key.issuer === assertion.issuer)
   );
-  if (!trustedKey) return { ok: false, actor: unknownActor("unknown_trusted_key"), reason: "unknown_trusted_key" };
+  if (!trustedKeys?.length) return { ok: false, actor: unknownActor("unknown_trusted_key"), reason: "unknown_trusted_key" };
 
-  const verified = crypto.verify(
-    null,
-    Buffer.from(canonicalActorAssertionPayload(assertion)),
-    trustedKey.publicKeyPem,
-    decodeBase64Url(assertion.signature),
-  );
+  const signature = decodeBase64Url(assertion.signature);
+  if (!signature) return { ok: false, actor: unknownActor("invalid_signature"), reason: "invalid_signature" };
+
+  const payload = Buffer.from(canonicalActorAssertionPayload(assertion));
+  let sawUsableTrustedKey = false;
+  let sawMalformedTrustedKey = false;
+  let verified = false;
+  for (const trustedKey of trustedKeys) {
+    try {
+      if (crypto.verify(null, payload, trustedKey.publicKeyPem, signature)) {
+        sawUsableTrustedKey = true;
+        verified = true;
+        break;
+      }
+      sawUsableTrustedKey = true;
+    } catch {
+      sawMalformedTrustedKey = true;
+    }
+  }
+  if (!sawUsableTrustedKey && sawMalformedTrustedKey) {
+    return { ok: false, actor: unknownActor("invalid_trusted_key"), reason: "invalid_trusted_key" };
+  }
   if (!verified) return { ok: false, actor: unknownActor("invalid_signature"), reason: "invalid_signature" };
 
   const actor: ActorContext = {
@@ -154,8 +170,10 @@ function parseActorKind(value: string | undefined): ActorKind {
   return value === "human" || value === "agent" || value === "automation" ? value : "unknown";
 }
 
-function decodeBase64Url(value: string): Buffer {
-  return Buffer.from(value, "base64url");
+function decodeBase64Url(value: string): Buffer | null {
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(value) || value.length % 4 === 1) return null;
+  const decoded = Buffer.from(value, "base64url");
+  return decoded.length > 0 ? decoded : null;
 }
 
 function encodeBase64Url(value: Buffer): string {
