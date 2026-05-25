@@ -147,8 +147,8 @@ const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
   "codex": [
     {"action":"list","status":"degraded","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"metadata_only","delegatesTo":"runtime session path metadata projection","guard":"bounded_scan_without_transcript_reads"},
     {"action":"preview","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_local_session_preview","delegatesTo":"blocked until native preview contract","delegatesToWhenSessionPath":"runtime session path bounded preview","guard":"blocked_until_preview_contract_and_content_policy","guardWhenSessionPath":"metadata_default_include_content_required"},
-    {"action":"resolve","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native resolve contract","guard":"blocked_until_resolve_contract"},
-    {"action":"history","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native history contract","guard":"blocked_until_history_contract_and_content_policy"},
+    {"action":"resolve","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_local_session_resolve","delegatesTo":"blocked until native resolve contract","delegatesToWhenSessionPath":"runtime session path bounded resolve","guard":"blocked_until_resolve_contract","guardWhenSessionPath":"metadata_default_no_content"},
+    {"action":"history","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_redacted_local_session_history","delegatesTo":"blocked until native history contract","delegatesToWhenSessionPath":"runtime session path bounded history","guard":"blocked_until_history_contract_and_content_policy","guardWhenSessionPath":"metadata_default_include_content_required"},
     {"action":"send","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native send contract","guard":"blocked_until_send_contract"},
     {"action":"inject","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native inject contract","guard":"blocked_until_inject_contract"},
     {"action":"abort","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native abort contract","guard":"blocked_until_abort_contract"},
@@ -160,8 +160,8 @@ const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
   "hermes": [
     {"action":"list","status":"degraded","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"metadata_only","delegatesTo":"runtime session path metadata projection","guard":"bounded_scan_without_transcript_reads"},
     {"action":"preview","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_local_session_preview","delegatesTo":"blocked until native preview contract","delegatesToWhenSessionPath":"runtime session path bounded preview","guard":"blocked_until_preview_contract_and_content_policy","guardWhenSessionPath":"metadata_default_include_content_required"},
-    {"action":"resolve","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native resolve contract","guard":"blocked_until_resolve_contract"},
-    {"action":"history","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native history contract","guard":"blocked_until_history_contract_and_content_policy"},
+    {"action":"resolve","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_local_session_resolve","delegatesTo":"blocked until native resolve contract","delegatesToWhenSessionPath":"runtime session path bounded resolve","guard":"blocked_until_resolve_contract","guardWhenSessionPath":"metadata_default_no_content"},
+    {"action":"history","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_redacted_local_session_history","delegatesTo":"blocked until native history contract","delegatesToWhenSessionPath":"runtime session path bounded history","guard":"blocked_until_history_contract_and_content_policy","guardWhenSessionPath":"metadata_default_include_content_required"},
     {"action":"send","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native send contract","guard":"blocked_until_send_contract"},
     {"action":"inject","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native inject contract","guard":"blocked_until_inject_contract"},
     {"action":"abort","status":"blocked","authority":"runtime","writesRuntime":false,"persistence":"none","delegatesTo":"blocked until native abort contract","guard":"blocked_until_abort_contract"},
@@ -271,17 +271,17 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       },
       {
         command: `runtime ${runtimeId} sessions preview --session-key <id>`,
-        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.sessions.preview" : "blocked until native preview contract",
+        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.sessions.preview" : "runtime session path bounded preview when configured; otherwise blocked until native preview contract",
         writesRuntime: false,
       },
       {
         command: `runtime ${runtimeId} sessions resolve --session-key <id>`,
-        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.sessions.resolve" : "blocked until native resolve contract",
+        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.sessions.resolve" : "runtime session path bounded resolve when configured; otherwise blocked until native resolve contract",
         writesRuntime: false,
       },
       {
         command: `runtime ${runtimeId} sessions history --session-key <id>`,
-        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.history" : "blocked until native history contract",
+        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.history" : "runtime session path bounded history when configured; otherwise blocked until native history contract",
         writesRuntime: false,
       },
       {
@@ -1524,9 +1524,48 @@ function normalizeOpenClawAbortResult(result, requestedId: string) {
   };
 }
 
-function previewNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string, includeContent: boolean) {
+function nativeSessionLookupKeys(sessionPath: string | undefined, candidate) {
+  const keys = new Set([String(candidate.id), String(candidate.label)]);
+  if (sessionPath && candidate.path) {
+    const relativePath = path.relative(sessionPath, candidate.path).replaceAll(path.sep, "/");
+    keys.add(relativePath);
+    keys.add(relativePath.replace(/\.[^.]+$/, ""));
+  }
+  return keys;
+}
+
+function findNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string) {
   const sessions = listNativeSessions(runtimeId, session.sessionPath, 240);
-  const candidate = sessions.find((entry) => entry.id === sessionId || entry.label === sessionId);
+  const candidate = sessions.find((entry) => nativeSessionLookupKeys(session.sessionPath, entry).has(sessionId));
+  return { sessions, candidate };
+}
+
+function redactRuntimeSessionText(value: string): string {
+  return value
+    .replace(/\b(sk-[A-Za-z0-9_-]{8,})\b/g, "sk-<redacted>")
+    .replace(/\b(api[_-]?key|token|secret|password)\s*[:=]\s*["']?[^"',\s}]+/gi, "$1=<redacted>");
+}
+
+function readBoundedRuntimeSessionFile(filePath: string, maxBytes: number) {
+  const file = fs.openSync(filePath, "r");
+  try {
+    const stat = fs.fstatSync(file);
+    const bytesToRead = Math.min(stat.size, maxBytes);
+    const buffer = Buffer.alloc(bytesToRead);
+    const bytesRead = fs.readSync(file, buffer, 0, bytesToRead, 0);
+    return {
+      text: buffer.subarray(0, bytesRead).toString("utf8"),
+      sizeBytes: stat.size,
+      truncated: stat.size > bytesRead,
+      limitBytes: maxBytes,
+    };
+  } finally {
+    fs.closeSync(file);
+  }
+}
+
+function previewNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string, includeContent: boolean) {
+  const { candidate } = findNativeSessionFromPath(runtimeId, session, sessionId);
   if (!candidate) {
     return {
       id: sessionId,
@@ -1549,13 +1588,12 @@ function previewNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
   if (!includeContent) return preview;
   try {
     const maxBytes = 4096;
-    const buffer = fs.readFileSync(candidate.path);
-    const slice = buffer.subarray(0, maxBytes).toString("utf8");
+    const bounded = readBoundedRuntimeSessionFile(candidate.path, maxBytes);
     return {
       ...preview,
       contentIncluded: true,
-      contentPreview: slice,
-      contentTruncated: buffer.length > maxBytes,
+      contentPreview: redactRuntimeSessionText(bounded.text),
+      contentTruncated: bounded.truncated,
       contentLimitBytes: maxBytes,
     };
   } catch (error) {
@@ -1563,6 +1601,118 @@ function previewNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
       ...preview,
       contentIncluded: false,
       readError: error instanceof Error ? error.message : "Unable to read session preview.",
+    };
+  }
+}
+
+function resolveNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string) {
+  const { candidate } = findNativeSessionFromPath(runtimeId, session, sessionId);
+  if (!candidate) {
+    return {
+      id: sessionId,
+      found: false,
+      writesRuntime: false,
+      contentIncluded: false,
+      nativeIdentifier: { name: "sessionPathId" },
+    };
+  }
+  return {
+    id: candidate.id,
+    found: true,
+    label: candidate.label,
+    kind: candidate.kind,
+    path: candidate.path,
+    updatedAt: candidate.updatedAt,
+    sizeBytes: candidate.sizeBytes,
+    writesRuntime: false,
+    contentIncluded: false,
+    matchedBy: nativeSessionLookupKeys(session.sessionPath, candidate).has(sessionId) ? "sessionPathId" : "unknown",
+    nativeIdentifier: { name: "sessionPathId" },
+    support: "bounded_runtime_session_store_mapping",
+    provenance: candidate.provenance,
+  };
+}
+
+function parseRuntimeSessionHistoryLine(rawLine: string, index: number, includeContent: boolean) {
+  const trimmed = rawLine.trim();
+  if (!trimmed) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    parsed = { type: "text", content: trimmed };
+  }
+  const rawContent = typeof parsed.content === "string"
+    ? parsed.content
+    : typeof parsed.message === "string"
+      ? parsed.message
+      : typeof parsed.text === "string"
+        ? parsed.text
+        : "";
+  const entry = {
+    index,
+    role: parsed.role ?? parsed.author ?? null,
+    type: parsed.type ?? parsed.kind ?? "event",
+    createdAt: parsed.createdAt ?? parsed.timestamp ?? parsed.time ?? null,
+    contentIncluded: false,
+    contentLength: rawContent.length,
+  };
+  if (!includeContent) return entry;
+  const redacted = redactRuntimeSessionText(rawContent);
+  return {
+    ...entry,
+    contentIncluded: true,
+    contentPreview: redacted.slice(0, 280),
+    contentTruncated: redacted.length > 280,
+  };
+}
+
+function historyNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string, includeContent: boolean, limit: number) {
+  const resolved = resolveNativeSessionFromPath(runtimeId, session, sessionId);
+  if (!resolved.found) {
+    return {
+      id: sessionId,
+      found: false,
+      writesRuntime: false,
+      contentIncluded: false,
+      messages: [],
+      totalProjected: 0,
+      nativeIdentifier: { name: "sessionPathId" },
+    };
+  }
+  try {
+    const maxBytes = 65536;
+    const bounded = readBoundedRuntimeSessionFile(resolved.path, maxBytes);
+    const lines = bounded.text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    const messages = lines
+      .slice(0, limit)
+      .map((line, index) => parseRuntimeSessionHistoryLine(line, index, includeContent))
+      .filter(Boolean);
+    return {
+      id: resolved.id,
+      found: true,
+      resolved,
+      writesRuntime: false,
+      contentIncluded: includeContent,
+      contentPolicy: includeContent ? "explicit_include_content_bounded_redacted" : "metadata_default_include_content_required",
+      contentLimitBytes: maxBytes,
+      contentTruncated: bounded.truncated || lines.length > messages.length,
+      messages,
+      totalProjected: messages.length,
+      totalAvailableInBoundedRead: lines.length,
+      nativeIdentifier: { name: "sessionPathId" },
+    };
+  } catch (error) {
+    return {
+      id: resolved.id,
+      found: true,
+      resolved,
+      writesRuntime: false,
+      contentIncluded: false,
+      messages: [],
+      totalProjected: 0,
+      readError: error instanceof Error ? error.message : "Unable to read session history.",
+      nativeIdentifier: { name: "sessionPathId" },
     };
   }
 }
@@ -1664,6 +1814,20 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
+    if (payload.domainData.sessions.session?.sessionPath) {
+      const result = resolveNativeSessionFromPath(runtimeId, payload.domainData.sessions.session, sessionKey);
+      writePayload(input, {
+        runtimeId,
+        domain: "sessions",
+        action,
+        status: result.found ? "ok" : "not_found",
+        authority: "runtime",
+        writesRuntime: false,
+        result,
+        supportContract,
+      }, { runtimeId, operation: "sessions", action });
+      return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
     writePayload(input, blockedSessionAction(runtimeId, action, "Native resolve is blocked until the runtime exposes a fixture-backed official resolve contract.", supportContract), { runtimeId, operation: "sessions", action });
     return CLI_EXIT_DEGRADED;
   }
@@ -1688,6 +1852,21 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (payload.domainData.sessions.session?.sessionPath) {
+      const limit = Math.max(1, Number(input.flags.limit ?? 20));
+      const result = historyNativeSessionFromPath(runtimeId, payload.domainData.sessions.session, sessionKey, isTruthyFlag(input, "include-content"), limit);
+      writePayload(input, {
+        runtimeId,
+        domain: "sessions",
+        action,
+        status: result.found ? "ok" : "not_found",
+        authority: "runtime",
+        writesRuntime: false,
+        result,
+        supportContract,
+      }, { runtimeId, operation: "sessions", action });
+      return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
     writePayload(input, blockedSessionAction(runtimeId, action, "Native history is blocked until the runtime exposes a fixture-backed official history contract and content policy.", supportContract), { runtimeId, operation: "sessions", action });
     return CLI_EXIT_DEGRADED;

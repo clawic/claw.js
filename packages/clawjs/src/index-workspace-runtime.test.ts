@@ -920,7 +920,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   fs.mkdirSync(hermesSessions, { recursive: true });
   fs.mkdirSync(path.join(hermesHome, "plugins", "memory-provider"), { recursive: true });
   fs.mkdirSync(path.join(hermesHome, "mcp"), { recursive: true });
-  fs.writeFileSync(path.join(hermesSessions, "runtime-session.jsonl"), "{\"type\":\"metadata\",\"content\":\"hermes native preview\"}\n");
+  fs.writeFileSync(path.join(hermesSessions, "runtime-session.jsonl"), [
+    "{\"type\":\"metadata\",\"content\":\"hermes native preview\"}",
+    "{\"role\":\"assistant\",\"content\":\"Hermes reply with api_key=TEST_SECRET_1234567890\"}",
+    "{\"role\":\"user\",\"content\":\"follow up\"}",
+    "",
+  ].join("\n"));
   fs.writeFileSync(path.join(hermesHome, "mcp", "github.json"), "{}\n");
   const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "docs/runtime-ecosystem-integration.manifest.json"), "utf8")) as {
     requiredDomains: string[];
@@ -948,7 +953,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  const commandsPayload = JSON.parse(commandsStdout.getOutput()) as { data: { runtimeId: string; executableByClawCli: Array<{ command: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean }>; resourceDomains: string[] } };
+  const commandsPayload = JSON.parse(commandsStdout.getOutput()) as { data: { runtimeId: string; executableByClawCli: Array<{ command: string; delegatesTo?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean }>; resourceDomains: string[] } };
   assert.equal(commandsPayload.data.runtimeId, "codex");
   assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex status"), true);
   assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex support"), true);
@@ -1406,7 +1411,13 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.authority, "clawix_local_overlay");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "list")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "preview")?.status, "implemented");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "resolve")?.status, "implemented");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "history")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "create")?.writesRuntime, false);
+  assert.match(
+    hermesPayload.data.commands?.executableByClawCli?.find((entry) => entry.command === "runtime hermes sessions resolve --session-key <id>")?.delegatesTo ?? "",
+    /bounded resolve/,
+  );
   assert.equal(hermesPayload.data.domainData.plugins?.plugins?.some((entry) => entry.id === "memory-provider" && entry.metadata?.kind === "plugin"), true);
   assert.equal(hermesPayload.data.domainData.plugins?.plugins?.some((entry) => entry.id === "mcp-github" && entry.metadata?.kind === "mcp_server"), true);
   const hermesChannels = hermesPayload.data.domains.find((entry) => entry.domain === "channels");
@@ -1646,6 +1657,57 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPreviewPayload.data.result.found, true);
   assert.equal(hermesPreviewPayload.data.result.contentIncluded, true);
   assert.match(hermesPreviewPayload.data.result.contentPreview ?? "", /hermes native preview/);
+  assert.equal(hermesPreviewPayload.data.result.contentPreview?.includes("TEST_SECRET_1234567890"), false);
+
+  const hermesResolveStdout = captureStream();
+  const hermesResolveExit = await runCli(["runtime", "hermes", "sessions", "resolve", "--session-key", "2026/05/21/runtime-session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesResolveStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesResolveExit), true);
+  const hermesResolvePayload = JSON.parse(hermesResolveStdout.getOutput()) as {
+    data: { writesRuntime: boolean; result: { id: string; found: boolean; contentIncluded: boolean; writesRuntime: boolean; nativeIdentifier?: { name?: string } } };
+  };
+  assert.equal(hermesResolvePayload.data.writesRuntime, false);
+  assert.equal(hermesResolvePayload.data.result.id, "2026/05/21/runtime-session");
+  assert.equal(hermesResolvePayload.data.result.found, true);
+  assert.equal(hermesResolvePayload.data.result.contentIncluded, false);
+  assert.equal(hermesResolvePayload.data.result.writesRuntime, false);
+  assert.equal(hermesResolvePayload.data.result.nativeIdentifier?.name, "sessionPathId");
+
+  const hermesHistoryMetadataStdout = captureStream();
+  const hermesHistoryMetadataExit = await runCli(["runtime", "hermes", "sessions", "history", "--session-key", "2026/05/21/runtime-session", "--limit", "2", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesHistoryMetadataStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesHistoryMetadataExit), true);
+  const hermesHistoryMetadataPayload = JSON.parse(hermesHistoryMetadataStdout.getOutput()) as {
+    data: { writesRuntime: boolean; result: { found: boolean; contentIncluded: boolean; contentPolicy?: string; messages?: Array<{ contentIncluded?: boolean; contentPreview?: string }>; totalProjected?: number; contentTruncated?: boolean } };
+  };
+  assert.equal(hermesHistoryMetadataPayload.data.writesRuntime, false);
+  assert.equal(hermesHistoryMetadataPayload.data.result.found, true);
+  assert.equal(hermesHistoryMetadataPayload.data.result.contentIncluded, false);
+  assert.equal(hermesHistoryMetadataPayload.data.result.contentPolicy, "metadata_default_include_content_required");
+  assert.equal(hermesHistoryMetadataPayload.data.result.totalProjected, 2);
+  assert.equal(hermesHistoryMetadataPayload.data.result.contentTruncated, true);
+  assert.equal(hermesHistoryMetadataPayload.data.result.messages?.some((entry) => entry.contentPreview), false);
+
+  const hermesHistoryContentStdout = captureStream();
+  const hermesHistoryContentExit = await runCli(["runtime", "hermes", "sessions", "history", "--session-key", "2026/05/21/runtime-session", "--include-content", "--limit", "3", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesHistoryContentStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesHistoryContentExit), true);
+  const hermesHistoryContentPayload = JSON.parse(hermesHistoryContentStdout.getOutput()) as {
+    data: { result: { contentIncluded: boolean; messages?: Array<{ contentIncluded?: boolean; contentPreview?: string }>; totalProjected?: number } };
+  };
+  assert.equal(hermesHistoryContentPayload.data.result.contentIncluded, true);
+  assert.equal(hermesHistoryContentPayload.data.result.totalProjected, 3);
+  assert.equal(hermesHistoryContentPayload.data.result.messages?.some((entry) => entry.contentPreview?.includes("Hermes reply")), true);
+  assert.equal(hermesHistoryContentPayload.data.result.messages?.some((entry) => entry.contentPreview?.includes("TEST_SECRET_1234567890")), false);
 
   const openclawSessionStdout = captureStream();
   assert.equal(await runCli(["runtime", "openclaw", "session", "--workspace", workspaceRoot, "--json"], {
