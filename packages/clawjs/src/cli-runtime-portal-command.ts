@@ -569,6 +569,157 @@ function buildSandboxOperationalResources(runtimeId: RuntimeAdapterId, status, r
   ];
 }
 
+function existingPathStatus(filePath: string | undefined, fallback = "degraded") {
+  return filePath && fs.existsSync(filePath) ? "projected" : fallback;
+}
+
+function hermesHomeLocation(status): string | undefined {
+  const locations = runtimeLocationDiagnostics(status);
+  return locations.homeDir;
+}
+
+function hermesPath(status, ...parts: string[]): string | undefined {
+  const homeDir = hermesHomeLocation(status);
+  return homeDir ? path.join(homeDir, ...parts) : undefined;
+}
+
+function hermesPolicyResource(domain: string, status, input: {
+  id: string;
+  label: string;
+  kind: string;
+  path?: string;
+  summary: string;
+  status?: string;
+  attributes?: string[];
+  limitations?: string[];
+  enabled?: boolean;
+}) {
+  const policy = domainPolicy("hermes", domain);
+  const capability = domainCapability(status, domain);
+  const officialCommands = policy.officialCommands ?? [];
+  return {
+    id: input.id,
+    label: input.label,
+    status: input.status ?? (String(policy.writeBackPolicy ?? "").startsWith("blocked") ? "blocked" : capability?.status ?? "degraded"),
+    kind: input.kind,
+    path: input.path,
+    enabled: input.enabled ?? Boolean(capability?.supported),
+    summary: input.summary,
+    limitations: input.limitations ?? [
+      `write back: ${policy.writeBackPolicy}`,
+      `validation: ${policy.validation}`,
+    ],
+    attributes: [
+      `relation: ${policy.relation}`,
+      `native authority: ${policy.nativeAuthority}`,
+      `canonical authority: ${policy.canonicalAuthority}`,
+      `loss policy: ${policy.lossPolicy}`,
+      `official commands: ${officialCommands.length}`,
+      ...officialCommands.slice(0, 4).map((command) => `command: ${command}`),
+      ...(input.attributes ?? []),
+    ],
+    provenance: {
+      source: "runtime-ecosystem-manifest",
+      runtimeId: "hermes",
+      domain,
+      path: input.path,
+    },
+  };
+}
+
+function buildHermesFallbackResources(domain: string, status) {
+  const locations = runtimeLocationDiagnostics(status);
+  if (domain === "skills") {
+    const skillsPath = hermesPath(status, "skills");
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-skills-inventory-policy",
+      label: "Hermes skills inventory",
+      status: existingPathStatus(skillsPath),
+      kind: "native_skill_inventory",
+      path: skillsPath,
+      summary: "Native Hermes skills are inventoried read-only; installation and enablement require fixture-backed official commands.",
+      attributes: [
+        "enabled state: projected_from_native_inventory_when_available",
+        "scope: runtime_skill_bundle",
+        "promotion path: explicit_claw_skill_promotion_only",
+        "metadata keys: name, source, scope, enabled",
+      ],
+    })];
+  }
+  if (domain === "memory") {
+    const memoryPath = hermesPath(status, "MEMORY.md");
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-memory-sensitive-projection-policy",
+      label: "Hermes memory sensitive projection",
+      status: existingPathStatus(memoryPath),
+      kind: "sensitive_memory_projection",
+      path: memoryPath ?? hermesHomeLocation(status),
+      summary: "Hermes memory is projected as metadata by default; content access stays bounded and explicit.",
+      attributes: [
+        "content access: metadata_default_explicit_content_only",
+        "sensitive policy: no_plaintext_secret_or_private_transcript_copy",
+        "preservation: preserve_native_memory_until_explicit_promotion",
+        "search/index support: blocked_until_fixture_coverage",
+      ],
+    })];
+  }
+  if (domain === "models") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-model-catalog-policy",
+      label: "Hermes model catalog",
+      status: status.cliAvailable ? "projected" : "degraded",
+      kind: "model_catalog_projection",
+      path: locations.configPath,
+      summary: "Hermes model/default-provider projection is read-only until fixture-backed official model commands are available.",
+      attributes: [
+        "default model: projected_when_native_config_available",
+        "provider mapping: preserved_from_native_names",
+        "aliases/fallbacks: preserved_when_native_runtime_exposes_them",
+        "default model write-back: blocked_until_fixture_coverage",
+      ],
+    })];
+  }
+  if (domain === "scheduler") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-scheduler-inventory-policy",
+      label: "Hermes scheduler inventory",
+      status: status.cliAvailable ? "projected" : "degraded",
+      kind: "scheduler_projection",
+      path: hermesPath(status, "cron"),
+      summary: "Hermes cron/background jobs are inventoried read-only; enable/disable/write-back requires fixture coverage.",
+      attributes: [
+        "task state: projected_when_native_inventory_available",
+        "enable policy: blocked_until_fixture_coverage",
+        "disable policy: blocked_until_fixture_coverage",
+        "mutation policy: no_silent_scheduler_change",
+      ],
+    })];
+  }
+  if (domain === "plugins") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-plugins-tools-mcp-policy",
+      label: "Hermes plugins, tools, and MCP inventory",
+      status: status.cliAvailable ? "projected" : "degraded",
+      kind: "plugin_tool_mcp_inventory",
+      path: hermesPath(status, "plugins"),
+      summary: "Hermes plugins, tools, toolsets, MCP, ACP, hooks, and Computer Use are inventoried read-only without auto-enable.",
+      attributes: [
+        "enabled state: projected_when_native_inventory_available",
+        "capability status: degraded_until_fixture_coverage",
+        "install policy: blocked_until_fixture_coverage",
+        "enable policy: no_auto_enable",
+      ],
+    })];
+  }
+  return [];
+}
+
+function withHermesFallbackResources(domain: string, status, resources: unknown[]) {
+  if (status.adapter !== "hermes") return resources;
+  if (Array.isArray(resources) && resources.length > 0) return resources;
+  return buildHermesFallbackResources(domain, status);
+}
+
 async function readResources(claw, domain: string, status, adapter?, runtimeOptions?) {
   async function readPluginResources() {
     if (status.adapter === "openclaw") {
@@ -593,31 +744,40 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
     case "providers":
       return { providers: await claw.providers.list() };
     case "models":
-      return { models: await claw.models.list(), defaultModel: await claw.models.getDefault() };
+      return { models: withHermesFallbackResources(domain, status, await claw.models.list()), defaultModel: await claw.models.getDefault() };
     case "auth":
       return { auth: await claw.auth.status() };
     case "scheduler":
-      return { schedulers: await claw.scheduler.list() };
+      return { schedulers: withHermesFallbackResources(domain, status, await claw.scheduler.list()) };
     case "memory":
-      return { memory: await claw.memory.list() };
+      return { memory: withHermesFallbackResources(domain, status, await claw.memory.list()) };
     case "skills":
-      return { skills: await claw.skills.list() };
+      return { skills: withHermesFallbackResources(domain, status, await claw.skills.list()) };
     case "channels":
       return { channels: await claw.channels.list() };
-    case "plugins":
-      return readPluginResources();
-    default:
+    case "plugins": {
       const pluginResources = await readPluginResources();
       return {
+        ...pluginResources,
+        plugins: withHermesFallbackResources(domain, status, pluginResources.plugins ?? []),
+      };
+    }
+    default:
+      const pluginResources = await readPluginResources();
+      const models = await claw.models.list();
+      const schedulers = await claw.scheduler.list();
+      const memory = await claw.memory.list();
+      const skills = await claw.skills.list();
+      return {
         providers: await claw.providers.list(),
-        models: await claw.models.list(),
+        models: withHermesFallbackResources("models", status, models),
         defaultModel: await claw.models.getDefault(),
         auth: await claw.auth.status(),
-        schedulers: await claw.scheduler.list(),
-        memory: await claw.memory.list(),
-        skills: await claw.skills.list(),
+        schedulers: withHermesFallbackResources("scheduler", status, schedulers),
+        memory: withHermesFallbackResources("memory", status, memory),
+        skills: withHermesFallbackResources("skills", status, skills),
         channels: await claw.channels.list(),
-        plugins: pluginResources.plugins,
+        plugins: withHermesFallbackResources("plugins", status, pluginResources.plugins ?? []),
         status: pluginResources.status,
       };
   }
@@ -1873,7 +2033,10 @@ function hermesTuiGatewayEndpoint(input): string | null {
 function isLoopbackGatewayUrl(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl);
-    return ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
+    const loopbackHost = ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
+    const allowedProtocol = url.protocol === "http:" || url.protocol === "https:";
+    const hasCredentials = url.username.length > 0 || url.password.length > 0;
+    return loopbackHost && allowedProtocol && !hasCredentials;
   } catch {
     return false;
   }
