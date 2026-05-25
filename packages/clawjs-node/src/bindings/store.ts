@@ -64,12 +64,47 @@ export function resolveSettingsValuesPath(workspaceDir: string): string {
   return resolveClawWorkspaceSurfacePath("claw.workspace.intents", workspaceDir, "files.json");
 }
 
-export function readBindingStore(workspaceDir: string, filesystem = new NodeFileSystemHost()): BindingStoreRecord {
+function readRecord<T>(
+  filePath: string,
+  fallback: T,
+  schema: z.ZodType<T>,
+  invalidJsonMessage: string,
+  invalidRecordMessage: string,
+  filesystem: NodeFileSystemHost,
+): T {
+  if (!filesystem.exists(filePath)) return fallback;
+
+  let raw: string;
   try {
-    return bindingRecordSchema.parse(JSON.parse(filesystem.readText(resolveBindingsPath(workspaceDir))));
-  } catch {
-    return { schemaVersion: 1, bindings: [] };
+    raw = filesystem.readText(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return fallback;
+    throw error;
   }
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(raw);
+  } catch {
+    throw new Error(invalidJsonMessage);
+  }
+
+  const parsed = schema.safeParse(decoded);
+  if (!parsed.success) {
+    throw new Error(invalidRecordMessage);
+  }
+  return parsed.data;
+}
+
+export function readBindingStore(workspaceDir: string, filesystem = new NodeFileSystemHost()): BindingStoreRecord {
+  return readRecord(
+    resolveBindingsPath(workspaceDir),
+    { schemaVersion: 1, bindings: [] },
+    bindingRecordSchema,
+    "invalid_binding_store_json",
+    "invalid_binding_store_record",
+    filesystem,
+  );
 }
 
 export function writeBindingStore(workspaceDir: string, bindings: BindingDefinition[], filesystem = new NodeFileSystemHost()): BindingStoreRecord {
@@ -83,11 +118,14 @@ export function writeBindingStore(workspaceDir: string, bindings: BindingDefinit
 }
 
 export function readSettingsSchemaRecord(workspaceDir: string, filesystem = new NodeFileSystemHost()): SettingsSchemaRecord {
-  try {
-    return settingsSchemaRecordSchema.parse(JSON.parse(filesystem.readText(resolveSettingsSchemaPath(workspaceDir))));
-  } catch {
-    return { schemaVersion: 1, settingsSchema: {} };
-  }
+  return readRecord(
+    resolveSettingsSchemaPath(workspaceDir),
+    { schemaVersion: 1, settingsSchema: {} },
+    settingsSchemaRecordSchema,
+    "invalid_settings_schema_json",
+    "invalid_settings_schema_record",
+    filesystem,
+  );
 }
 
 export function writeSettingsSchemaRecord(workspaceDir: string, settingsSchema: Record<string, unknown>, filesystem = new NodeFileSystemHost()): SettingsSchemaRecord {
@@ -101,11 +139,14 @@ export function writeSettingsSchemaRecord(workspaceDir: string, settingsSchema: 
 }
 
 export function readSettingsValuesRecord(workspaceDir: string, filesystem = new NodeFileSystemHost()): SettingsValuesRecord {
-  try {
-    return settingsValuesRecordSchema.parse(JSON.parse(filesystem.readText(resolveSettingsValuesPath(workspaceDir))));
-  } catch {
-    return { schemaVersion: 1, values: {} };
-  }
+  return readRecord(
+    resolveSettingsValuesPath(workspaceDir),
+    { schemaVersion: 1, values: {} },
+    settingsValuesRecordSchema,
+    "invalid_settings_values_json",
+    "invalid_settings_values_record",
+    filesystem,
+  );
 }
 
 export function writeSettingsValuesRecord(workspaceDir: string, values: Record<string, unknown>, filesystem = new NodeFileSystemHost()): SettingsValuesRecord {

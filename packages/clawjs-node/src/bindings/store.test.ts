@@ -47,6 +47,29 @@ test("binding projections and file intents round-trip in .claw/projections and .
   assert.equal((readSettingsValuesRecord(workspaceDir).values.nested as { enabled: boolean }).enabled, true);
 });
 
+test("binding stores fail closed when persisted records are malformed", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-bindings-corrupt-"));
+
+  assert.deepEqual(readBindingStore(workspaceDir), { schemaVersion: 1, bindings: [] });
+  assert.deepEqual(readSettingsSchemaRecord(workspaceDir), { schemaVersion: 1, settingsSchema: {} });
+  assert.deepEqual(readSettingsValuesRecord(workspaceDir), { schemaVersion: 1, values: {} });
+
+  fs.mkdirSync(path.dirname(resolveSettingsSchemaPath(workspaceDir)), { recursive: true });
+  fs.writeFileSync(resolveSettingsSchemaPath(workspaceDir), "{bad", "utf8");
+  assert.throws(() => readSettingsSchemaRecord(workspaceDir), /invalid_settings_schema_json/);
+
+  fs.writeFileSync(resolveSettingsSchemaPath(workspaceDir), JSON.stringify({ schemaVersion: 1, settingsSchema: [] }), "utf8");
+  assert.throws(() => readSettingsSchemaRecord(workspaceDir), /invalid_settings_schema_record/);
+
+  fs.mkdirSync(path.dirname(resolveSettingsValuesPath(workspaceDir)), { recursive: true });
+  fs.writeFileSync(resolveSettingsValuesPath(workspaceDir), JSON.stringify({ schemaVersion: 1, values: [] }), "utf8");
+  assert.throws(() => readSettingsValuesRecord(workspaceDir), /invalid_settings_values_record/);
+
+  fs.mkdirSync(path.dirname(resolveBindingsPath(workspaceDir)), { recursive: true });
+  fs.writeFileSync(resolveBindingsPath(workspaceDir), JSON.stringify({ schemaVersion: 1, bindings: [{ id: "" }] }), "utf8");
+  assert.throws(() => readBindingStore(workspaceDir), /invalid_binding_store_record/);
+});
+
 test("validateSettingsUpdate reports invalid values", () => {
   const issues = validateSettingsUpdate({
     tone: { type: "string" },
