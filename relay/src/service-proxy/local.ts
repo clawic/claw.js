@@ -1,5 +1,6 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
+import { Transform } from "node:stream";
 
 import WebSocket, { WebSocketServer } from "ws";
 
@@ -12,6 +13,7 @@ export interface RelayServiceProxyOptions {
   host?: string;
   port?: number;
   uiUrl?: string;
+  maxBodyBytes?: number;
 }
 
 export interface RelayServiceProxyServer {
@@ -19,22 +21,60 @@ export interface RelayServiceProxyServer {
   close: () => Promise<void>;
 }
 
-async function readBody(request: IncomingMessage): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+const DEFAULT_MAX_BODY_BYTES = 25 * 1024 * 1024;
+
+class RelayServiceProxyHttpError extends Error {
+  readonly statusCode: number;
+  readonly code: string;
+
+  constructor(statusCode: number, code: string, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
   }
-  return Buffer.concat(chunks);
+}
+
+function limitedRequestBody(request: IncomingMessage, maxBodyBytes: number): Transform {
+  const contentLength = Number(request.headers["content-length"]);
+  if (Number.isFinite(contentLength) && contentLength > maxBodyBytes) {
+    throw new RelayServiceProxyHttpError(413, "request_body_too_large", `Request body exceeds ${maxBodyBytes} bytes.`);
+  }
+  let bytes = 0;
+  const limit = new Transform({
+    transform(chunk, _encoding, callback) {
+      bytes += Buffer.byteLength(chunk);
+      if (bytes > maxBodyBytes) {
+        callback(new RelayServiceProxyHttpError(413, "request_body_too_large", `Request body exceeds ${maxBodyBytes} bytes.`));
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+  return request.pipe(limit);
 }
 
 function copyHeaders(input: IncomingMessage): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const [key, value] of Object.entries(input.headers)) {
-    if (!value || key.toLowerCase() === "host" || key.toLowerCase() === "content-length") continue;
+    const normalizedKey = key.toLowerCase();
+    if (!value || HOP_BY_HOP_HEADERS.has(normalizedKey)) continue;
     headers[key] = Array.isArray(value) ? value.join(", ") : value;
   }
   return headers;
 }
+
+const HOP_BY_HOP_HEADERS = new Set([
+  "connection",
+  "content-length",
+  "host",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+]);
 
 function shouldProxyToService(pathname: string): boolean {
   return pathname === "/v1"
@@ -51,6 +91,7 @@ export async function startRelayServiceProxy(options: RelayServiceProxyOptions):
 
   const relayBase = options.relayUrl.replace(/\/$/, "");
   const uiBase = options.uiUrl?.replace(/\/$/, "");
+  const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
 
   const relayToken = async (): Promise<string> => {
     if (accessToken && accessTokenExpiresAt > Date.now() + 30_000) return accessToken;
@@ -67,13 +108,15 @@ export async function startRelayServiceProxy(options: RelayServiceProxyOptions):
   };
 
   const forwardHttp = async (request: IncomingMessage, response: ServerResponse, targetBase: string, headers: Record<string, string>) => {
-    const body = await readBody(request);
+    const method = request.method ?? "GET";
+    const hasBody = !["GET", "HEAD"].includes(method);
     const upstream = await fetch(`${targetBase}${request.url ?? "/"}`, {
-      method: request.method ?? "GET",
+      method,
       headers,
-      body: ["GET", "HEAD"].includes(request.method ?? "GET") ? undefined : body,
+      body: hasBody ? limitedRequestBody(request, maxBodyBytes) : undefined,
+      ...(hasBody ? { duplex: "half" } : {}),
       redirect: "manual",
-    });
+    } as RequestInit & { duplex?: "half" });
     response.statusCode = upstream.status;
     upstream.headers.forEach((value, key) => {
       if (key.toLowerCase() === "content-encoding") return;
@@ -106,9 +149,10 @@ export async function startRelayServiceProxy(options: RelayServiceProxyOptions):
       }
       await forwardHttp(request, response, uiBase, copyHeaders(request));
     } catch (error) {
-      response.statusCode = 502;
+      const proxyError = error instanceof RelayServiceProxyHttpError ? error : null;
+      response.statusCode = proxyError?.statusCode ?? 502;
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify({ error: "relay_service_proxy_error", message: error instanceof Error ? error.message : String(error) }));
+      response.end(JSON.stringify({ error: proxyError?.code ?? "relay_service_proxy_error", message: error instanceof Error ? error.message : String(error) }));
     }
   });
 
