@@ -10,8 +10,15 @@ function stylesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.styles", workspaceRoot);
 }
 
+function validateStyleId(styleId: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(styleId) || styleId === "." || styleId === "..") {
+    throw new Error(`Invalid style id: ${styleId}`);
+  }
+  return styleId;
+}
+
 export function styleDir(workspaceRoot: string, styleId: string): string {
-  return path.join(stylesRootDir(workspaceRoot), styleId);
+  return path.join(stylesRootDir(workspaceRoot), validateStyleId(styleId));
 }
 
 export function styleManifestPath(workspaceRoot: string, styleId: string): string {

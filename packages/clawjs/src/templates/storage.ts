@@ -4,14 +4,26 @@ import { randomBytes } from "crypto";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { parseTemplateMd, serializeTemplateMd } from "./serializer.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 import { isTemplateCategory, type TemplateCategory, type TemplateManifest } from "./schema.ts";
 
 function templatesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.templates", workspaceRoot);
 }
 
+function validateTemplateId(templateId: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(templateId) || templateId === "." || templateId === "..") {
+    throw new CliHandledError("invalid_template_id", `Invalid template id: ${templateId}`, CLI_EXIT_USAGE, {
+      location: "template.id",
+      suggestion: "Use a template id made of letters, numbers, dots, underscores, or dashes.",
+      safeNextStep: "Retry with an id like report.foo-1234.",
+    });
+  }
+  return templateId;
+}
+
 export function templateDir(workspaceRoot: string, templateId: string): string {
-  return path.join(templatesRootDir(workspaceRoot), templateId);
+  return path.join(templatesRootDir(workspaceRoot), validateTemplateId(templateId));
 }
 
 export function templateManifestPath(workspaceRoot: string, templateId: string): string {
