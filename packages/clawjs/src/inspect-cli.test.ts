@@ -1353,6 +1353,17 @@ test("runCli exposes remote, sync, nodes, and gateway baseline commands", async 
   assert.equal(secretLeasePayload.lease.actor.assignmentId, "assignment.service");
   assert.equal(secretLeasePayload.coordinatorSignature.verified, true);
 
+  const invalidSecretLeaseTtl = await runCliCapture(["gateway", "secret-lease", "--state-dir", stateDir, "--secret-ref", "vault://agents/support", "--resource-id", "skills:default", "--ttl-seconds", "-1", ...coordinatorSigningFlags, "--json"], process.cwd());
+  assert.equal(invalidSecretLeaseTtl.code, CLI_EXIT_USAGE);
+  const invalidSecretLeaseTtlPayload = JSON.parse(invalidSecretLeaseTtl.stdout) as {
+    ok: boolean;
+    error: { code: string; message: string; status: string };
+  };
+  assert.equal(invalidSecretLeaseTtlPayload.ok, false);
+  assert.equal(invalidSecretLeaseTtlPayload.error.code, "invalid_positive_integer");
+  assert.match(invalidSecretLeaseTtlPayload.error.message, /--ttl-seconds/);
+  assert.equal(invalidSecretLeaseTtlPayload.error.status, "USAGE");
+
   const secretProvider = await runCliCapture(["gateway", "secret-provider", "--state-dir", stateDir, "--secret-ref", "vault://agents/support", "--resource-id", "skills:default", "--provider-id", "provider.1password", "--credential-binding-id", "credential.support", "--agent-id", "agent.support", "--assignment-id", "assignment.service", ...coordinatorSigningFlags, "--json"], process.cwd());
   assert.equal(secretProvider.code, CLI_EXIT_OK);
   const secretProviderPayload = parseCliJson<{

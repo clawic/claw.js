@@ -3,7 +3,7 @@ import { buildRemoteDecisionReview, buildRemoteExternalValidationEvidenceArtifac
 import fs from "fs";
 import path from "path";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CliHandledError, CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { RemoteSyncStateStore, type RemoteSyncCoordinatorSigner } from "./remote-sync-state-store.ts";
 
@@ -409,6 +409,13 @@ function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve
 function numberFlag(value: string | undefined, fallback: number): number {
   if (value && Number.isFinite(Number(value))) return Number(value);
   return fallback;
+}
+
+function positiveIntegerFlag(value: string | undefined, fallback: number, flagName: string): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  throw new CliHandledError("invalid_positive_integer", `${flagName} must be a positive integer.`, CLI_EXIT_USAGE);
 }
 
 function agentServiceAssignmentFromFlags(input: RemoteSyncCliInput) {
@@ -994,7 +1001,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     const secretRef = input.flags["secret-ref"] ?? input.flags.secret;
     const resourceId = input.flags["resource-id"];
     if (!secretRef || !resourceId) return missing(input, usage);
-    const ttlSeconds = numberFlag(input.flags["ttl-seconds"], 900);
+    const ttlSeconds = positiveIntegerFlag(input.flags["ttl-seconds"], 900, "--ttl-seconds");
     const now = input.flags.now ?? new Date().toISOString();
     const expiresAt = input.flags["expires-at"] ?? new Date(Date.parse(now) + ttlSeconds * 1000).toISOString();
     const state = store.issueSecretLease({
