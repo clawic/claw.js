@@ -1239,9 +1239,8 @@ export async function runMagicDbCli(input: {
   }
 
   if (!collection && action === "list") {
-    if (wantsJson) writeDbJson(stdout, [], dbJsonMeta(input, collectionName, action));
-    else stdout.write(`Collection ${collectionName} does not exist.\n${buildExplicitCollectionHint(collectionName, binName)}\n`);
-    return DB_EXIT_OK;
+    writeDbError(input, "not_found", `Collection ${collectionName} does not exist. ${buildExplicitCollectionHint(collectionName, binName)}`, DB_EXIT_FAILURE, dbJsonMeta(input, collectionName, action));
+    return DB_EXIT_FAILURE;
   }
 
   if (!collection) {

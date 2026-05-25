@@ -53,3 +53,24 @@ test("db refuses to create unknown custom collections implicitly", { concurrency
   assert.equal(schemaPayload.collection.name, "prospects");
   assert.equal(schemaPayload.collection.builtin, false);
 });
+
+test("db list reports missing custom collections instead of returning an empty success", { concurrency: false }, async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-db-custom-list-missing-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+
+  const result = await runCliCapture([
+    "db",
+    "prospects",
+    "list",
+    "--workspace",
+    workspaceRoot,
+    "--json",
+  ], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_FAILURE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "not_found");
+  assert.match(payload.error.message, /Collection prospects does not exist/);
+  assert.match(payload.error.message, /database collection create/);
+});
