@@ -16,12 +16,16 @@ export interface ClawGlobalDataStorageInput extends ClawStorageRootsInput {
 }
 
 function normalizePath(value: string): string {
-  return value.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/, "");
+  const forwardSlashes = value.replace(/\\/g, "/");
+  const hasUncRoot = forwardSlashes.startsWith("//") && !forwardSlashes.startsWith("///");
+  const normalized = forwardSlashes.replace(/\/+/g, "/").replace(/\/$/, "");
+  return hasUncRoot && normalized.startsWith("/") ? `/${normalized}` : normalized;
 }
 
 function resolvePathLike(value: string): string {
   const normalized = normalizePath(value);
   const absolute = normalized.startsWith("/");
+  const hasUncRoot = normalized.startsWith("//");
   const parts: string[] = [];
   for (const part of normalized.split("/")) {
     if (!part || part === ".") continue;
@@ -35,7 +39,8 @@ function resolvePathLike(value: string): string {
     }
     parts.push(part);
   }
-  return `${absolute ? "/" : ""}${parts.join("/")}` || (absolute ? "/" : ".");
+  const prefix = hasUncRoot ? "//" : absolute ? "/" : "";
+  return `${prefix}${parts.join("/")}` || (absolute ? "/" : ".");
 }
 
 function joinPath(...parts: string[]): string {
