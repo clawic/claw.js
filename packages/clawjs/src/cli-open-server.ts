@@ -11,6 +11,14 @@ import { openStateDir, repoRootFromCliPackage } from "./cli-open-state.ts";
 import { resolveOpenSurface } from "./cli-open-surfaces.ts";
 import type { CliContext } from "./index.ts";
 
+function parseOpenServerPort(raw: string | undefined, fallback: number): number {
+  const port = raw === undefined ? fallback : Number(raw);
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+    throw new CliHandledError("invalid_port", `Invalid port: ${raw ?? fallback}`, CLI_EXIT_USAGE);
+  }
+  return port;
+}
+
 function sendStaticFile(response: http.ServerResponse, filePath: string): void {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = ext === ".html" ? "text/html; charset=utf-8"
@@ -26,7 +34,7 @@ export async function runOpenServerCommand(input: { positionals: string[]; flags
   const surface = resolveOpenSurface(input.positionals[1]);
   if (!surface) throw new CliHandledError("unknown_dashboard", `Unknown dashboard: ${input.positionals[1]}`, CLI_EXIT_USAGE);
   const host = input.flags.host ?? "127.0.0.1";
-  const port = input.flags.port ? Number(input.flags.port) : surface.port;
+  const port = parseOpenServerPort(input.flags.port, surface.port);
   const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
 
   if (surface.kind === "internal-database") {
