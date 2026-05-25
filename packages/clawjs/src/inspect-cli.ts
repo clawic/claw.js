@@ -913,6 +913,28 @@ function inspectJsonMeta(subcommand: string, extra: CliJsonMeta = {}): CliJsonMe
   };
 }
 
+function inspectSubcommandWhyPayload(subcommand: string) {
+  const inspectCommand = resolveClawCliCommand("inspect");
+  if (!inspectCommand) return null;
+  const supported = new Set([
+    "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "apis", "protocols", "events", "schemas", "ids", "cli", "surfaces", "external", "render",
+  ]);
+  if (!supported.has(subcommand)) return null;
+  return {
+    type: "inspectSubcommand",
+    name: `inspect ${subcommand}`,
+    canonicalName: "inspect",
+    subcommand,
+    summary: `Read-only stable surface inspection subcommand: ${subcommand}.`,
+    support: inspectCommand.support,
+    securityPolicy: inspectCommand.securityPolicy,
+    docs: inspectCommand.docs,
+    adrs: inspectCommand.adrs,
+    tests: inspectCommand.tests,
+    source: inspectCommand.source,
+  };
+}
+
 function readAdoptionCanonicityManifest(input: InspectCliInput): unknown {
   const candidates = [
     path.join(input.context.cwd, "docs/governance/adoption-canonicity.manifest.json"),
@@ -1633,6 +1655,20 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
           `adrs\t${payload.adrs.join(", ")}`,
           `tests\t${payload.tests.join(", ")}`,
           `source\t${payload.source.file}${payload.source.symbol ? `#${payload.source.symbol}` : ""}`,
+        ].join("\n") + "\n");
+      }
+      return CLI_EXIT_OK;
+    }
+    const inspectSubcommand = inspectSubcommandWhyPayload(whyTarget);
+    if (inspectSubcommand) {
+      if (input.wantsJson) writeJsonOk(input.context.stdout, inspectSubcommand, inspectJsonMeta(command, { canonicalName: inspectSubcommand.canonicalName, subcommand: inspectSubcommand.subcommand }));
+      else {
+        input.context.stdout.write([
+          `${inspectSubcommand.name}\t${inspectSubcommand.securityPolicy}`,
+          `docs\t${inspectSubcommand.docs.join(", ")}`,
+          `adrs\t${inspectSubcommand.adrs.join(", ")}`,
+          `tests\t${inspectSubcommand.tests.join(", ")}`,
+          `source\t${inspectSubcommand.source.file}${inspectSubcommand.source.symbol ? `#${inspectSubcommand.source.symbol}` : ""}`,
         ].join("\n") + "\n");
       }
       return CLI_EXIT_OK;
