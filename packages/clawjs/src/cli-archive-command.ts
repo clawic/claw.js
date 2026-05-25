@@ -7,6 +7,7 @@ import {
   createPortableArchiveRestoreReport,
   portableArchiveVerificationReportSchema,
   verifyPortableArchiveManifest,
+  type PortableArchiveImportPreview,
   type PortableArchiveManifestV1,
   type PortableArchiveVerificationReport,
 } from "@clawjs/core";
@@ -45,8 +46,10 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
   const checkedAt = input.flags["checked-at"] ?? "2026-05-21T00:00:00.000Z";
   const archivePath = input.flags.archive ?? input.flags.input;
   const outputPath = input.flags.output;
-  const manifest = archivePath
-    ? readManifestFromLocalArchive(resolvePath(input.context.cwd, archivePath), checkedAt)
+  const resolvedArchivePath = archivePath ? resolvePath(input.context.cwd, archivePath) : undefined;
+  const archiveFormatVerification = resolvedArchivePath ? verifyArchiveContainerFormat(resolvedArchivePath, checkedAt) : null;
+  const readManifest = () => resolvedArchivePath
+    ? readManifestFromLocalArchive(resolvedArchivePath, checkedAt)
     : createPortableArchiveManifestFixture({ sourceRoot, includeSecrets, requestedAt: checkedAt });
 
   if (action === "plan") {
@@ -102,35 +105,35 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
     });
   }
   if (action === "verify") {
-    const verification = archivePath
-      ? verifyLocalArchive(resolvePath(input.context.cwd, archivePath), manifest, checkedAt)
+    if (archiveFormatVerification) return writeArchiveResult(input, action, archiveFormatVerification);
+    const manifest = readManifest();
+    const verification = resolvedArchivePath
+      ? verifyLocalArchive(resolvedArchivePath, manifest, checkedAt)
       : verifyPortableArchiveManifest(manifest, checkedAt);
     return writeArchiveResult(input, action, verification);
   }
   if (action === "inspect") {
-    const verification = archivePath
-      ? verifyLocalArchive(resolvePath(input.context.cwd, archivePath), manifest, checkedAt)
+    if (archiveFormatVerification) {
+      return writeArchiveResult(input, action, { status: "verification_failed", manifest: null, verification: archiveFormatVerification });
+    }
+    const manifest = readManifest();
+    const verification = resolvedArchivePath
+      ? verifyLocalArchive(resolvedArchivePath, manifest, checkedAt)
       : verifyPortableArchiveManifest(manifest, checkedAt);
     return writeArchiveResult(input, action, { status: verification.status === "ok" ? "ready" : "verification_failed", manifest, verification });
   }
   if (action === "import") {
+    if (archiveFormatVerification) {
+      return writeArchiveResult(input, action, failedArchiveImportPreview(targetRoot, archiveFormatVerification));
+    }
+    const manifest = readManifest();
     if (!isPortableArchiveManifest(manifest)) {
       const verification = verifyPortableArchiveManifest(manifest, checkedAt);
-      return writeArchiveResult(input, action, {
-        schemaVersion: 1,
-        schemaId: "claw.portableArchive.importPreview.v1",
-        status: "verification_failed",
-        targetRoot,
-        canRestore: false,
-        requiresSignedHost: false,
-        blockedReasons: ["verification_failed"],
-        mappedCounts: { records: 0, files: 0, grants: 0, policies: 0, secretsEnvelopes: 0 },
-        verification,
-      });
+      return writeArchiveResult(input, action, failedArchiveImportPreview(targetRoot, verification));
     }
     const preview = createPortableArchiveImportPreview({ manifest, targetRoot, signedHostAvailable, checkedAt });
-    if (!archivePath) return writeArchiveResult(input, action, preview);
-    const verification = verifyLocalArchive(resolvePath(input.context.cwd, archivePath), manifest, checkedAt);
+    if (!resolvedArchivePath) return writeArchiveResult(input, action, preview);
+    const verification = verifyLocalArchive(resolvedArchivePath, manifest, checkedAt);
     return writeArchiveResult(input, action, verification.status === "ok" ? preview : {
       ...preview,
       status: "verification_failed",
@@ -140,30 +143,32 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
     });
   }
   if (action === "restore") {
+    if (archiveFormatVerification) {
+      return writeArchiveResult(input, action, {
+        mutates: false,
+        dryRun: true,
+        report: createPortableArchiveRestoreReport({
+          preview: failedArchiveImportPreview(targetRoot, archiveFormatVerification),
+          approved: false,
+          appliedAt: checkedAt,
+        }),
+      });
+    }
+    const manifest = readManifest();
     if (!isPortableArchiveManifest(manifest)) {
       const verification = verifyPortableArchiveManifest(manifest, checkedAt);
       return writeArchiveResult(input, action, {
         mutates: false,
         dryRun: true,
         report: createPortableArchiveRestoreReport({
-          preview: {
-            schemaVersion: 1,
-            schemaId: "claw.portableArchive.importPreview.v1",
-            status: "verification_failed",
-            targetRoot,
-            canRestore: false,
-            requiresSignedHost: false,
-            blockedReasons: ["verification_failed"],
-            mappedCounts: { records: 0, files: 0, grants: 0, policies: 0, secretsEnvelopes: 0 },
-            verification,
-          },
+          preview: failedArchiveImportPreview(targetRoot, verification),
           approved: false,
           appliedAt: checkedAt,
         }),
       });
     }
     const basePreview = createPortableArchiveImportPreview({ manifest, targetRoot, signedHostAvailable, checkedAt });
-    const verification = archivePath ? verifyLocalArchive(resolvePath(input.context.cwd, archivePath), manifest, checkedAt) : basePreview.verification;
+    const verification = resolvedArchivePath ? verifyLocalArchive(resolvedArchivePath, manifest, checkedAt) : basePreview.verification;
     const preview = verification.status === "ok" ? basePreview : {
       ...basePreview,
       status: "verification_failed" as const,
@@ -236,8 +241,40 @@ function readManifestFromLocalArchive(archivePath: string, checkedAt: string): u
   }
 }
 
+function verifyArchiveContainerFormat(archivePath: string, checkedAt: string): PortableArchiveVerificationReport | null {
+  if (archivePath.endsWith(PORTABLE_ARCHIVE_BACKUP_EXTENSION)) return null;
+  return portableArchiveVerificationReportSchema.parse({
+    schemaVersion: 1,
+    schemaId: "claw.portableArchive.verificationReport.v1",
+    status: "failed",
+    manifestId: "unreadable",
+    checkedAt,
+    counts: { entries: 0, missingHashes: 0, plaintextSecretFindings: 0, externalCopyViolations: 0 },
+    issues: [{
+      code: "invalid_archive_format",
+      severity: "error",
+      message: `Archive path must point to a ${PORTABLE_ARCHIVE_BACKUP_EXTENSION} directory.`,
+      path: archivePath,
+    }],
+  });
+}
+
+function failedArchiveImportPreview(targetRoot: string, verification: PortableArchiveVerificationReport): PortableArchiveImportPreview {
+  return {
+    schemaVersion: 1,
+    schemaId: "claw.portableArchive.importPreview.v1",
+    status: "verification_failed",
+    targetRoot,
+    canRestore: false,
+    requiresSignedHost: false,
+    blockedReasons: ["verification_failed"],
+    mappedCounts: { records: 0, files: 0, grants: 0, policies: 0, secretsEnvelopes: 0 },
+    verification,
+  };
+}
+
 function localManifestPath(archivePath: string): string {
-  return archivePath.endsWith(".json") ? archivePath : path.join(archivePath, PORTABLE_ARCHIVE_MANIFEST_PATH);
+  return path.join(archivePath, PORTABLE_ARCHIVE_MANIFEST_PATH);
 }
 
 function isPortableArchiveManifest(value: unknown): value is PortableArchiveManifestV1 {

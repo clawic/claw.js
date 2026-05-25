@@ -6,6 +6,7 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
+import { createPortableArchiveManifestFixture } from "@clawjs/core";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 import {
@@ -226,6 +227,44 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   assert.equal(missingConfirmation.dryRun, true);
   assert.equal(missingConfirmation.report.status, "requires_approval");
   assert.ok(missingConfirmation.report.blockedReasons.includes("restore_confirmation_required"));
+});
+
+test("runCli rejects standalone portable archive manifests before import or restore", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-archive-standalone-"));
+  const archiveManifestPath = path.join(cwd, "standalone.json");
+  const targetRoot = path.join(cwd, "restore-target");
+  const manifest = createPortableArchiveManifestFixture({ includeSecrets: false, requestedAt: "2026-05-21T00:00:00.000Z" });
+  fs.writeFileSync(archiveManifestPath, `${JSON.stringify({
+    ...manifest,
+    counts: { inventoryEntries: 0, canonicalEntries: 0, externalReferences: 0, rebuildableExcluded: 0, secretsEnvelopes: 0 },
+    inventory: [],
+    restoreGraph: [],
+    externalSources: [],
+    secrets: { mode: "none", requiresIndependentPassphrase: false, requiresSignedHost: false, forbiddenPlaintext: [] },
+    receipts: { redaction: "redacted", entries: [] },
+  }, null, 2)}\n`, "utf8");
+
+  const importStdout = captureStream();
+  assert.equal(await runCli(["archive", "import", "--archive", archiveManifestPath, "--target", targetRoot, "--json"], {
+    stdout: importStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const preview = parseCliJsonPayload<{ status: string; canRestore: boolean; verification: { issues: Array<{ code: string }> } }>(importStdout.getOutput());
+  assert.equal(preview.status, "verification_failed");
+  assert.equal(preview.canRestore, false);
+  assert.equal(preview.verification.issues.some((issue) => issue.code === "invalid_archive_format"), true);
+
+  const restoreStdout = captureStream();
+  assert.equal(await runCli(["archive", "restore", "--archive", archiveManifestPath, "--target", targetRoot, "--approve", "--confirm-restore", targetRoot, "--json"], {
+    stdout: restoreStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const restore = parseCliJsonPayload<{ dryRun: boolean; report: { status: string; blockedReasons: string[] } }>(restoreStdout.getOutput());
+  assert.equal(restore.dryRun, true);
+  assert.equal(restore.report.status, "verification_failed");
+  assert.ok(restore.report.blockedReasons.includes("verification_failed"));
 });
 
 test("runCli exposes Search source registry, profiles, status and explain admin commands", async () => {
