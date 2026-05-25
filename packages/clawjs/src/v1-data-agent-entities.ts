@@ -60,11 +60,11 @@ import {
 import type { DatabaseServiceStore } from "@clawjs/database";
 
 import {
+  V1_DATA_EXIT_USAGE,
   V1_DATA_EXIT_FAILURE,
   V1_DATA_EXIT_OK,
   nowIso,
   parseCsvOrJson,
-  parseMaybeJson,
   resolveClawjsDataRoot,
   truthy,
   usage,
@@ -74,6 +74,11 @@ import {
 } from "./v1-data-core.ts";
 import type { JsonRecord, V1DataCliInput } from "./v1-data-core.ts";
 import { scheduleAgentsCatalogSearchEvent } from "./cli-search-events.ts";
+import { CliHandledError, formatCliErrorText } from "./cli-errors.ts";
+import { writeCommandJsonError } from "./cli-json.ts";
+
+const INVALID_RECORD = Symbol("invalidRecord");
+type RecordFlagValue<T> = T | null | typeof INVALID_RECORD;
 
 export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
   const command = input.positionals[1];
@@ -93,6 +98,7 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
   }
   if (command === "upsert") {
     const agent = agentFromInput(input, agentStore);
+    if (agent === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!agent) return usageError(input, "Usage: claw agents upsert ID --name NAME [--record JSON] [--json]");
     agentStore.writeAgent(agent);
     syncAgentProjection(store, agent);
@@ -135,160 +141,187 @@ export function runAgentsCommand(input: V1DataCliInput, store: DatabaseServiceSt
   }
   if (command === "evaluate-access") {
     const record = recordFlag<AgentEffectiveAccessInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents evaluate-access --record JSON [--json]");
     writeSuccess(input, evaluateAgentEffectiveAccess(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "delegation-check") {
     const record = recordFlag<AgentDelegationAccessInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents delegation-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentDelegationAccess(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "supervisor-check") {
     const record = recordFlag<AgentSupervisorAuthorityInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents supervisor-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentSupervisorAuthority(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "route-check") {
     const record = recordFlag<AgentAssignmentRouteRequest>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents route-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentAssignmentRoute(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "resolve-external-identity") {
     const record = recordFlag<AgentExternalIdentityProfile & { privacyPolicy?: "off" | "hashed" | "raw_with_retention" }>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents resolve-external-identity --record JSON [--json]");
     writeSuccess(input, resolveAgentExternalIdentity(record, record.privacyPolicy));
     return V1_DATA_EXIT_OK;
   }
   if (command === "project-support-inbox") {
     const record = recordFlag<AgentSupportInboxProjectionInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents project-support-inbox --record JSON [--json]");
     writeSuccess(input, createAgentSupportInboxProjection(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "memory-check") {
     const record = recordFlag<{ policy: AgentMemoryPolicy; request: AgentMemoryAccessRequest }>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents memory-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentMemoryAccess(record.policy, record.request));
     return V1_DATA_EXIT_OK;
   }
   if (command === "budget-check") {
     const record = recordFlag<{ policy: AgentBudgetPolicy; request: AgentBudgetRequest }>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents budget-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentBudget(record.policy, record.request));
     return V1_DATA_EXIT_OK;
   }
   if (command === "action-severity") {
     const record = recordFlag<AgentActionSeverityRequest>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents action-severity --record JSON [--json]");
     writeSuccess(input, evaluateAgentActionSeverity(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "autonomy-check") {
     const record = recordFlag<AgentAutonomyPolicyInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents autonomy-check --record JSON [--json]");
     writeSuccess(input, evaluateAgentAutonomyPolicy(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "dispatch-plan") {
     const record = recordFlag<AgentDispatchPlanInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents dispatch-plan --record JSON [--json]");
     writeSuccess(input, createAgentDispatchPlan(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "context-pack") {
     const record = recordFlag<AgentContextPackInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents context-pack --record JSON [--json]");
     writeSuccess(input, createAgentContextPack(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "tool-catalog") {
     const record = recordFlag<AgentToolCatalogProjectionInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents tool-catalog --record JSON [--json]");
     writeSuccess(input, createAgentToolCatalogProjection(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "creation-review") {
     const record = recordFlag<AgentCreationReviewInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents creation-review --record JSON [--json]");
     writeSuccess(input, createAgentCreationReview(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "storage-audit") {
     const record = recordFlag<AgentStorageAuditInput>(input) ?? {};
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     writeSuccess(input, createAgentStorageAudit(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "audit-coverage") {
     const record = recordFlag<AgentAuditCoverageInput>(input) ?? {};
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     writeSuccess(input, createAgentAuditCoverageReport(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "operational-snapshot") {
     const record = recordFlag<AgentOperationalSnapshotInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents operational-snapshot --record JSON [--json]");
     writeSuccess(input, createAgentOperationalSnapshot(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "control-panel") {
     const record = recordFlag<AgentControlPanelInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents control-panel --record JSON [--json]");
     writeSuccess(input, createAgentControlPanel(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "privacy-plan") {
     const record = recordFlag<AgentPrivacyLifecycleInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents privacy-plan --record JSON [--json]");
     writeSuccess(input, createAgentPrivacyLifecyclePlan(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "paperclip-import") {
     const record = recordFlag<AgentPaperclipImportInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents paperclip-import --record JSON [--json]");
     writeSuccess(input, createAgentPaperclipImportPlan(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "surface-projection") {
     const record = recordFlag<AgentSafeSurfaceProjectionInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents surface-projection --record JSON [--json]");
     writeSuccess(input, createAgentSafeSurfaceProjection(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "config-revision") {
     const record = recordFlag<AgentConfigRevisionInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents config-revision --record JSON [--json]");
     writeSuccess(input, createAgentConfigRevision(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "incident") {
     const record = recordFlag<AgentIncidentInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents incident --record JSON [--json]");
     writeSuccess(input, createAgentIncident(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "activity-feed") {
     const record = recordFlag<AgentActivityFeedInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents activity-feed --record JSON [--json]");
     writeSuccess(input, createAgentActivityFeed(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "blueprint") {
     const record = recordFlag<AgentBlueprintInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents blueprint --record JSON [--json]");
     writeSuccess(input, createAgentBlueprint(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "evaluation") {
     const record = recordFlag<AgentEvaluationInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents evaluation --record JSON [--json]");
     writeSuccess(input, createAgentEvaluation(record));
     return V1_DATA_EXIT_OK;
   }
   if (command === "retirement-plan") {
     const record = recordFlag<AgentRetirementInput>(input);
+    if (record === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!record) return usageError(input, "Usage: claw agents retirement-plan --record JSON [--json]");
     writeSuccess(input, createAgentRetirementPlan(record));
     return V1_DATA_EXIT_OK;
@@ -314,6 +347,7 @@ export function runPersonalitiesCommand(input: V1DataCliInput, store: DatabaseSe
   }
   if (command === "upsert") {
     const personality = personalityFromInput(input);
+    if (personality === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!personality) return usageError(input, "Usage: claw personalities upsert ID --name NAME [--prompt TEXT] [--json]");
     agentStore.writePersonality(personality);
     syncPersonalityProjection(store, personality);
@@ -351,6 +385,7 @@ export function runSkillCollectionsCommand(input: V1DataCliInput, store: Databas
   }
   if (command === "upsert") {
     const collection = collectionFromInput(input);
+    if (collection === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!collection) return usageError(input, "Usage: claw skill-collections upsert ID --name NAME [--tags a,b] [--json]");
     agentStore.writeCollection(collection);
     syncCollectionProjection(store, collection);
@@ -388,6 +423,7 @@ export function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServ
   }
   if (command === "upsert") {
     const connection = connectionFromInput(input);
+    if (connection === INVALID_RECORD) return V1_DATA_EXIT_USAGE;
     if (!connection) return usageError(input, "Usage: claw connections upsert ID --provider PROVIDER --label LABEL --secret-ref REF [--json]");
     agentStore.writeConnection(connection);
     syncConnectionProjection(store, connection);
@@ -407,10 +443,50 @@ export function runConnectionsCommand(input: V1DataCliInput, store: DatabaseServ
   return usageError(input, usage(input.binName, "connections"));
 }
 
-function recordFlag<T>(input: V1DataCliInput): T | null {
-  const raw = input.flags.record || input.flags.jsonRecord || input.flags["json-record"];
-  if (!raw) return null;
-  return parseMaybeJson(raw) as T;
+function recordFlag<T>(input: V1DataCliInput): RecordFlagValue<T> {
+  const raw = input.flags.record ?? input.flags.jsonRecord ?? input.flags["json-record"];
+  if (raw === undefined) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    writeInvalidRecordJsonError(input, error);
+    return INVALID_RECORD;
+  }
+}
+
+function writeInvalidRecordJsonError(input: V1DataCliInput, parseError: unknown): void {
+  const group = input.positionals[0] || "agents";
+  const command = input.positionals[1] || "record";
+  const error = new CliHandledError(
+    invalidRecordJsonCode(group),
+    `Expected --record to be valid JSON for ${group} ${command}.`,
+    {
+      exitCode: V1_DATA_EXIT_USAGE,
+      location: `cli.${group}.${command}.record`,
+      safeNextStep: `Pass a valid JSON object to --record before retrying ${group} ${command}.`,
+      details: {
+        flag: "--record",
+        parseError: parseError instanceof Error ? parseError.message : String(parseError),
+      },
+    },
+  );
+  if (input.wantsJson) {
+    writeCommandJsonError(input.stdout, group, error, {
+      schemaVersion: 1,
+      canonicalCommand: group,
+      invokedCommand: group,
+      subcommand: command,
+    });
+    return;
+  }
+  input.stderr.write(`${formatCliErrorText(error)}\n`);
+}
+
+function invalidRecordJsonCode(group: string): string {
+  if (group === "personalities") return "invalid_personality_record_json";
+  if (group === "connections") return "invalid_connection_record_json";
+  if (group === "skill-collections") return "invalid_skill_collection_record_json";
+  return "invalid_agent_record_json";
 }
 
 function writeAgentEntitySuccess(input: V1DataCliInput, payload: unknown): void {
@@ -421,8 +497,9 @@ function writeAgentEntitySuccess(input: V1DataCliInput, payload: unknown): void 
   writeSuccess(input, payload);
 }
 
-function agentFromInput(input: V1DataCliInput, agentStore: AgentStoreFS): Agent | null {
+function agentFromInput(input: V1DataCliInput, agentStore: AgentStoreFS): Agent | null | typeof INVALID_RECORD {
   const record = recordFlag<Agent>(input);
+  if (record === INVALID_RECORD) return INVALID_RECORD;
   if (record) return { ...record, updatedAt: nowIso() };
   const id = input.flags.id || input.positionals[2];
   const existing = id ? agentStore.readAgent(id) : null;
@@ -446,8 +523,9 @@ function agentFromInput(input: V1DataCliInput, agentStore: AgentStoreFS): Agent 
   });
 }
 
-function personalityFromInput(input: V1DataCliInput): Personality | null {
+function personalityFromInput(input: V1DataCliInput): Personality | null | typeof INVALID_RECORD {
   const record = recordFlag<Personality>(input);
+  if (record === INVALID_RECORD) return INVALID_RECORD;
   if (record) return { ...record, updatedAt: nowIso() };
   const id = input.flags.id || input.positionals[2];
   const name = input.flags.name || input.positionals.slice(3).join(" ") || id;
@@ -473,8 +551,9 @@ function parsePersonalityVersionFlag(value: string | undefined): number | null {
   return parsed;
 }
 
-function collectionFromInput(input: V1DataCliInput): SkillCollection | null {
+function collectionFromInput(input: V1DataCliInput): SkillCollection | null | typeof INVALID_RECORD {
   const record = recordFlag<SkillCollection>(input);
+  if (record === INVALID_RECORD) return INVALID_RECORD;
   if (record) return { ...record, updatedAt: nowIso() };
   const id = input.flags.id || input.positionals[2];
   const name = input.flags.name || input.positionals.slice(3).join(" ") || id;
@@ -490,8 +569,9 @@ function collectionFromInput(input: V1DataCliInput): SkillCollection | null {
   };
 }
 
-function connectionFromInput(input: V1DataCliInput): Connection | null {
+function connectionFromInput(input: V1DataCliInput): Connection | null | typeof INVALID_RECORD {
   const record = recordFlag<Connection>(input);
+  if (record === INVALID_RECORD) return INVALID_RECORD;
   if (record) return { ...record, updatedAt: nowIso() };
   const id = input.flags.id || input.positionals[2];
   const provider = input.flags.provider || input.flags.service || input.positionals[3];
