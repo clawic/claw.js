@@ -35,6 +35,7 @@ const LOCAL_DATA_LEGACY_GROUPS = new Set([
 const RUNTIME_GROUPS = new Set(["chat", "provider", "code", "runtime", "workspace"]);
 const DENSE_GROUP_MODULES = new Map([["patient", "health"], ["patients", "health"], ["health", "health"], ["legal", "legal"], ["erp", "erp"], ["iot", "iot"], ["construction", "construction"], ["labs", "labs-pharma"], ["lab", "labs-pharma"], ["pharma", "labs-pharma"]]);
 const DIRECT_ROUTER_GROUPS = new Set(["agent-resource", "test"]);
+const DATABASE_ACTIONS = new Set(["list", "get", "create", "update", "delete", "schema", "query"]);
 
 function wantsJson() {
   return args.includes("--json");
@@ -278,7 +279,9 @@ if (first && !DIRECT_ROUTER_GROUPS.has(first) && !DENSE_GROUP_MODULES.has(first)
   if (canonical) {
     const verb = args[1] ?? "list";
     const rest = args.slice(2);
-    args.splice(0, args.length, "db", canonical, verb, ...rest);
+    if (DATABASE_ACTIONS.has(verb)) {
+      args.splice(0, args.length, "db", canonical, verb, ...rest);
+    }
   }
   }
 }

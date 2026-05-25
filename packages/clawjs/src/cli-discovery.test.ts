@@ -978,6 +978,17 @@ test("runCli routes audited built-in collection aliases as top-level database co
   assert.equal(transportPayload.meta.collection, "transports_booked");
   assert.equal(transportPayload.meta.action, "list");
   assert.deepEqual(transportPayload.data, []);
+
+  const unsupportedAction = await runCliCapture(["lead", "merge", "--workspace", workspaceRoot, "--json"], process.cwd());
+  assert.equal(unsupportedAction.code, CLI_EXIT_USAGE);
+  const unsupportedPayload = JSON.parse(unsupportedAction.stdout) as { ok: boolean; error: { code: string; message: string }; meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string } };
+  assert.equal(unsupportedPayload.ok, false);
+  assert.equal(unsupportedPayload.error.code, "unsupported_database_action");
+  assert.match(unsupportedPayload.error.message, /Supported actions/);
+  assert.equal(unsupportedPayload.meta.canonicalCommand, "database");
+  assert.equal(unsupportedPayload.meta.invokedCommand, "lead");
+  assert.equal(unsupportedPayload.meta.collection, "leads");
+  assert.equal(unsupportedPayload.meta.action, "merge");
 });
 
 test("runCli exposes help-only portals through JSON", async () => {

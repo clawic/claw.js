@@ -1208,12 +1208,20 @@ export async function runMagicDbCli(input: {
     return DB_EXIT_USAGE;
   }
 
+  const collectionName = resolveCollectionName(rawCollection);
+  const invokedCommand = positionals[0];
+  const isTopLevelCollectionAlias = Boolean(invokedCommand && invokedCommand !== "db" && invokedCommand !== "database" && resolveCollectionName(invokedCommand) === collectionName);
+  if (rawAction && !isKnownDbAction(rawAction) && isTopLevelCollectionAlias) {
+    const supportedActions = [...DB_ACTIONS].join(", ");
+    writeDbError(input, "unsupported_database_action", `Unsupported database action "${rawAction}" for ${collectionName}. Supported actions: ${supportedActions}.`, DB_EXIT_USAGE, dbJsonMeta(input, collectionName, rawAction));
+    return DB_EXIT_USAGE;
+  }
+
   if (!isKnownDbAction(rawAction)) {
     positionals = [positionals[0], positionals[1], "create", ...positionals.slice(2)];
   }
 
   const namespaceId = flags.namespace ?? "main";
-  const collectionName = resolveCollectionName(rawCollection);
   const { runtime, mode, baseUrl } = await createRuntime(workspaceRoot, flags, namespaceId);
   await runtime.ensureNamespace(namespaceId);
   writeHumanAdvisory(stderr, wantsJson, mode === "remote"

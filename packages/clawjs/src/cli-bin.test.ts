@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
@@ -78,4 +80,22 @@ test("package bin delegates inspect and collection discovery to the canonical ro
   assert.ok(tasks);
   assert.equal(tasks.fieldCount > 0, true);
   assert.equal(collectionsPayload.meta.canonicalCommand, "database");
+});
+
+test("package bin rejects unsupported collection alias actions before database writes", () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-bin-collection-alias-"));
+  const result = runClawBin(["lead", "merge", "--workspace", workspaceRoot, "--json"]);
+  assert.equal(result.status, 64, result.stderr || result.stdout);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; message: string };
+    meta: { canonicalCommand: string; invokedCommand: string; collection: string; action: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unsupported_database_action");
+  assert.match(payload.error.message, /Supported actions/);
+  assert.equal(payload.meta.canonicalCommand, "database");
+  assert.equal(payload.meta.invokedCommand, "lead");
+  assert.equal(payload.meta.collection, "leads");
+  assert.equal(payload.meta.action, "merge");
 });
