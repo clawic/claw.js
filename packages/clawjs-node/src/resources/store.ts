@@ -51,13 +51,28 @@ export class LocalResourceRegistryStore {
   }
 
   readState(): ResourceRegistryState {
+    let raw: string;
     try {
-      const parsed = resourceRegistryStateSchema.safeParse(JSON.parse(this.filesystem.readText(this.statePath())));
-      if (parsed.success) return parsed.data as ResourceRegistryState;
-    } catch {
-      // Empty state.
+      raw = this.filesystem.readText(this.statePath());
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+        return { schemaVersion: 1, resources: [], updatedAt: nowIso() };
+      }
+      throw error;
     }
-    return { schemaVersion: 1, resources: [], updatedAt: nowIso() };
+
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch (error) {
+      throw new Error(`Invalid resource registry state at ${this.statePath()}: ${error instanceof Error ? error.message : "invalid JSON"}`);
+    }
+
+    const parsed = resourceRegistryStateSchema.safeParse(json);
+    if (!parsed.success) {
+      throw new Error(`Invalid resource registry state at ${this.statePath()}: ${parsed.error.issues.map((issue) => `${issue.path.join(".") || "<root>"} ${issue.message}`).join("; ")}`);
+    }
+    return parsed.data as ResourceRegistryState;
   }
 
   writeState(state: ResourceRegistryState): ResourceRegistryState {

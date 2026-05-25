@@ -42,3 +42,17 @@ test("resource registry read falls back for non-finite byte limits", () => {
   assert.equal(store.read(resource.id, { maxBytes: Number.POSITIVE_INFINITY }).content, "alpha beta\n");
   assert.equal(store.read(resource.id, { maxBytes: 4.9 }).content, "alph");
 });
+
+test("resource registry fails closed and preserves corrupt state", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-resource-store-corrupt-"));
+  const store = createLocalResourceRegistryStore({ rootDir, env: {} });
+  const statePath = store.statePath();
+  fs.mkdirSync(rootDir, { recursive: true });
+  fs.writeFileSync(statePath, "{ invalid json", "utf8");
+
+  assert.throws(
+    () => store.register({ kind: "file", locator: { kind: "path", value: path.join(rootDir, "notes.txt") } }),
+    /Invalid resource registry state/,
+  );
+  assert.equal(fs.readFileSync(statePath, "utf8"), "{ invalid json");
+});
