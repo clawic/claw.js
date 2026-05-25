@@ -214,6 +214,37 @@ test("report preview omits non opted-in attachment paths", async () => {
   assert.equal(payload.data.markdown.includes("private.png"), false);
 });
 
+test("report submit blocks private security attachments without explicit opt-in", async () => {
+  const workspace = tempWorkspace();
+  const privateAttachmentPath = ["/Users", "alice", "Desktop", "security.log"].join("/");
+  const draft = await runCliCapture([
+    "report",
+    "security",
+    "Private advisory attachment",
+    "--workspace",
+    workspace,
+    "--observed",
+    "secret appears in trace",
+    "--impact",
+    "critical credential exposure",
+    "--attachment",
+    privateAttachmentPath,
+    "--json",
+  ], workspace);
+  const created = parsePayload<{ report: { id: string; destination: string; quality: { ok: boolean; blockers: string[] }; privacy: { attachmentOptInRequired: boolean } } }>(draft.stdout);
+  assert.equal(created.data.report.destination, "private_security_advisory");
+  assert.equal(created.data.report.privacy.attachmentOptInRequired, true);
+  assert.equal(created.data.report.quality.ok, false);
+  assert.equal(created.data.report.quality.blockers.includes("PRIVACY_BLOCKED"), true);
+
+  const submit = await runCliCapture(["report", "submit", created.data.report.id, "--workspace", workspace, "--confirm", "--dry-run", "--json"], workspace);
+  assert.equal(submit.code, CLI_EXIT_FAILURE);
+  const failed = JSON.parse(submit.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(failed.ok, false);
+  assert.equal(failed.error.code, "privacy_blocked");
+  assert.equal(failed.error.message.includes("attachment_opt_in_required"), true);
+});
+
 test("report templates expose the closed taxonomy and Discussion categories", async () => {
   const workspace = tempWorkspace();
   const result = await runCliCapture(["report", "templates", "--workspace", workspace, "--json"], workspace);

@@ -307,19 +307,20 @@ export async function runReportCli(input: {
         save();
         throw new CliHandledError("global_dedupe_review_required", "Global dedupe found medium-confidence canonical candidates; review before publishing.", CLI_EXIT_FAILURE);
       }
+      const privacyBlockers = publicationPrivacyBlockers(report);
+      if (privacyBlockers.length > 0) {
+        report.status = "blocked";
+        report.updatedAt = nowIso();
+        state.updatedAt = report.updatedAt;
+        save();
+        throw new CliHandledError("privacy_blocked", `Report publication blocked: ${privacyBlockers.join(", ")}`, CLI_EXIT_FAILURE);
+      }
       if (!report.quality.ok) {
         report.status = "blocked";
         report.updatedAt = nowIso();
         state.updatedAt = report.updatedAt;
         save();
         throw new CliHandledError("not_enough_info", `NOT_ENOUGH_INFO: ${report.quality.missing.join(", ")}`, CLI_EXIT_FAILURE);
-      }
-      if (report.privacy.blockedPublic && report.destination !== "private_security_advisory") {
-        report.status = "blocked";
-        report.updatedAt = nowIso();
-        state.updatedAt = report.updatedAt;
-        save();
-        throw new CliHandledError("privacy_blocked", `Public submission blocked: ${report.privacy.blockedReasons.join(", ")}`, CLI_EXIT_FAILURE);
       }
       if (!confirmed) {
         report.status = "ready_for_review";
@@ -564,7 +565,8 @@ function evaluateQuality(report: ReportRecord): ReportRecord["quality"] {
   if (report.reproductionSteps.length > 0) signals.push("reproduction_steps");
   if (report.duplicateCandidates.length > 0) signals.push("dedupe_candidates");
   const blockers = missing.length > 0 ? ["NOT_ENOUGH_INFO"] : [];
-  if (report.privacy.blockedPublic && report.destination !== "private_security_advisory") blockers.push("PRIVACY_BLOCKED");
+  const privacyBlockers = publicationPrivacyBlockers(report);
+  if (privacyBlockers.length > 0) blockers.push("PRIVACY_BLOCKED");
   const score = Math.max(0, 100 - missing.length * 20 - blockers.length * 20);
   return { ok: blockers.length === 0, score, missing, blockers, signals };
 }
@@ -590,6 +592,15 @@ function reviewPrivacy(input: {
     blockedReasons,
     attachmentOptInRequired,
   };
+}
+
+function publicationPrivacyBlockers(report: Pick<ReportRecord, "destination" | "privacy">): string[] {
+  const blockers = new Set<string>();
+  if (report.privacy.attachmentOptInRequired) blockers.add("attachment_opt_in_required");
+  if (report.privacy.blockedPublic && report.destination !== "private_security_advisory") {
+    for (const reason of report.privacy.blockedReasons) blockers.add(reason);
+  }
+  return [...blockers];
 }
 
 function buildLabels(report: ReportRecord): string[] {
