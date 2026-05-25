@@ -1938,6 +1938,22 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
     }
   }
 
+  if (operation === "domain") {
+    const rawDomain = input.positionals[3] ?? input.flags.domain;
+    const selectedDomain = normalizeDomain(rawDomain);
+    if (!rawDomain || !isRuntimePortalDomain(selectedDomain)) {
+      writePortalUsageError(
+        input,
+        rawDomain ? "unknown_runtime_domain" : "missing_runtime_domain",
+        rawDomain
+          ? `Unknown runtime domain: ${rawDomain}.`
+          : `Usage: ${input.binName} runtime ${runtimeId} domain <domain> --json`,
+        { runtimeId, operation, ...(rawDomain ? { domain: rawDomain } : {}) },
+      );
+      return CLI_EXIT_USAGE;
+    }
+  }
+
   const scopedFlags = { ...input.flags, runtime: runtimeId };
   const claw = await input.createCliClaw(runtimeId, scopedFlags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId);
 
