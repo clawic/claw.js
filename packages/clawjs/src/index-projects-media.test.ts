@@ -299,6 +299,54 @@ test("runCli can upload, search, read, and download documents", async () => {
   assert.equal(downloadLegal.legalLabel, "Document download - human reviewed");
 });
 
+test("runCli keeps document download outputs inside the workspace", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-documents-output-boundary-"));
+  const sourceFile = path.join(workspaceRoot, "brief.txt");
+  fs.writeFileSync(sourceFile, "alpha notes for bounded document output");
+
+  const uploadStdout = captureStream();
+  const uploadExitCode = await runCli([
+    "documents",
+    "upload",
+    "--workspace", workspaceRoot,
+    "--file", sourceFile,
+    "--json",
+  ], {
+    stdout: uploadStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  });
+  assert.equal(uploadExitCode, CLI_EXIT_OK);
+  const uploaded = parseCliJsonPayload<{ documentId: string }>(uploadStdout.getOutput());
+
+  const escapedFileName = `${path.basename(workspaceRoot)}-escaped.txt`;
+  const escapedFile = path.resolve(workspaceRoot, "..", escapedFileName);
+  fs.rmSync(escapedFile, { force: true });
+  const downloadStdout = captureStream();
+  const downloadExitCode = await runCli([
+    "documents",
+    "download",
+    "--workspace", workspaceRoot,
+    "--document-id", uploaded.documentId,
+    "--out", `../${escapedFileName}`,
+    "--confirm",
+    "--approval-id", "approval_document_download_boundary",
+    "--legal-label", "Document download - human reviewed",
+    "--json",
+  ], {
+    stdout: downloadStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  });
+  const payload = JSON.parse(downloadStdout.getOutput()) as { ok: false; error: { code: string; status: string; location: string } };
+
+  assert.equal(downloadExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.error.code, "invalid_document_output_path");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.documents.out");
+  assert.equal(fs.existsSync(escapedFile), false);
+});
+
 test("runCli reports missing document source files as usage errors", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-documents-missing-source-"));
   const missingFile = path.join(workspaceRoot, "missing.txt");

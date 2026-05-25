@@ -59,6 +59,31 @@ function requireReadableDocumentSourcePath(sourceFile: string, cwd: string): str
   return filePath;
 }
 
+function resolveDocumentDownloadOutputPath(outputPath: string, workspaceRoot: string): string {
+  const requested = outputPath.trim();
+  if (!requested) {
+    throw new CliHandledError("invalid_document_output_path", "--out must not be empty.", CLI_EXIT_USAGE, {
+      location: "cli.documents.out",
+      suggestion: "Use a workspace-relative output path such as brief.md.",
+      safeNextStep: "Retry the documents download command with an output path inside the workspace.",
+    });
+  }
+  const workspacePath = path.resolve(workspaceRoot);
+  const resolvedOutputPath = path.isAbsolute(requested)
+    ? path.resolve(requested)
+    : path.resolve(workspacePath, requested);
+  const relativePath = path.relative(workspacePath, resolvedOutputPath);
+  if (relativePath === "" || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new CliHandledError("invalid_document_output_path", "--out must stay inside the workspace.", CLI_EXIT_USAGE, {
+      location: "cli.documents.out",
+      suggestion: "Use a workspace-relative output path such as exports/brief.md.",
+      safeNextStep: "Retry the documents download command with an output path inside the workspace.",
+      details: { outputPath },
+    });
+  }
+  return resolvedOutputPath;
+}
+
 export async function runFileSessionDocumentCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
@@ -435,10 +460,7 @@ if (group === "documents" && command === "download") {
     }
     return CLI_EXIT_FAILURE;
   }
-  const outputPath = path.resolve(
-    context.cwd,
-    flags.out || flags.output || download.document.name,
-  );
+  const outputPath = resolveDocumentDownloadOutputPath(flags.out || flags.output || download.document.name, workspaceRoot);
   const review = requireCliExportReview({ argv, flags, operation: "documents download" });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, download.buffer);
