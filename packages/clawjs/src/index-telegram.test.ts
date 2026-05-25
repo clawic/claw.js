@@ -5,7 +5,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, createFakeTelegramSecretsProxy, withPatchedEnv } from "./index-test-utils.ts";
 
 test("runCli can connect and inspect telegram state through the CLI", async () => {
@@ -161,6 +161,61 @@ test("runCli rejects invalid channel permission priority before granting", async
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "invalid_channel_priority");
   assert.deepEqual(payload.error.details, { flag: "--priority", value: "urgent" });
+});
+
+test("runCli rejects invalid channel permissions before granting", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-permission-"));
+
+  const grantStdout = captureStream();
+  const grantExitCode = await runCli([
+    "channels",
+    "permissions",
+    "grant",
+    "--workspace",
+    workspaceRoot,
+    "--agent",
+    "support-agent",
+    "--channel",
+    "telegram",
+    "--target-id",
+    "1001",
+    "--permissions",
+    "read,superadmin",
+    "--json",
+  ], {
+    stdout: grantStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const listStdout = captureStream();
+  const listExitCode = await runCli([
+    "channels",
+    "permissions",
+    "list",
+    "--workspace",
+    workspaceRoot,
+    "--agent",
+    "support-agent",
+    "--channel",
+    "telegram",
+    "--target-id",
+    "1001",
+    "--json",
+  ], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(grantStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  const listPayload = JSON.parse(listStdout.getOutput()) as { ok: boolean; data: unknown[] };
+  assert.equal(grantExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_channel_permission");
+  assert.deepEqual(payload.error.details, { flag: "--permissions", value: "superadmin" });
+  assert.equal(listExitCode, CLI_EXIT_DEGRADED);
+  assert.deepEqual(listPayload.data, []);
 });
 
 test("runCli connects Telegram through channels and runs a processor listener once", async () => {

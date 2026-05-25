@@ -32,6 +32,30 @@ function parseNonNegativeNumberFlag(flags: Record<string, string>, name: string,
   return value;
 }
 
+const CHANNEL_PERMISSION_VALUES = new Set(["read", "write", "ingest", "admin"]);
+
+function parseChannelPermissions(flags: Record<string, string>): Array<"read" | "write" | "ingest" | "admin"> {
+  const permissions = parseCsvFlag(flags.permissions || flags.permission);
+  if (permissions.length === 0) {
+    throw new CliHandledError("missing_channel_permissions", "--permissions is required", CLI_EXIT_USAGE, {
+      location: "channels.flags.permissions",
+      suggestion: "Pass --permissions with one or more of read, write, ingest, or admin.",
+      safeNextStep: "Rerun the command with valid channel permissions before changing channel bindings.",
+      details: { flag: "--permissions" },
+    });
+  }
+  const invalid = permissions.find((permission) => !CHANNEL_PERMISSION_VALUES.has(permission));
+  if (invalid) {
+    throw new CliHandledError("invalid_channel_permission", "--permissions must contain only read, write, ingest, or admin.", CLI_EXIT_USAGE, {
+      location: "channels.flags.permissions",
+      suggestion: "Use a comma-separated list containing only read, write, ingest, or admin.",
+      safeNextStep: "Rerun the command with valid channel permissions before changing channel bindings.",
+      details: { flag: "--permissions", value: invalid },
+    });
+  }
+  return permissions as Array<"read" | "write" | "ingest" | "admin">;
+}
+
 export async function runChannelTelegramCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; positionals: string[]; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; binName: string; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId;
 }): Promise<number | null> {
@@ -860,18 +884,14 @@ if (group === "channels" && command === "permissions" && subcommand === "grant")
     context.stderr.write("--agent is required\n");
     return CLI_EXIT_USAGE;
   }
-  const permissions = parseCsvFlag(flags.permissions || flags.permission);
-  if (permissions.length === 0) {
-    context.stderr.write("--permissions is required\n");
-    return CLI_EXIT_USAGE;
-  }
+  const permissions = parseChannelPermissions(flags);
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const binding = claw.channels.bindings.grant({
     agentId: flags.agent,
     provider: flags.provider || flags.channel,
     accountId: flags.account,
     targetId: flags["target-id"] || flags.target || flags["chat-id"],
-    permissions: permissions as Array<"read" | "write" | "ingest" | "admin">,
+    permissions,
     ...(flags.priority !== undefined ? { priority: parseNonNegativeNumberFlag(flags, "priority", "invalid_channel_priority") } : {}),
   });
   if (wantsJson) {
