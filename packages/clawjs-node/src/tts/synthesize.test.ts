@@ -73,3 +73,54 @@ test("normalizeTtsConfig applies provider defaults and strips unsupported settin
     },
   );
 });
+
+test("normalizeTtsConfig bounds numeric TTS settings to descriptor ranges", () => {
+  assert.deepEqual(
+    normalizeTtsConfig({
+      provider: "elevenlabs",
+      speed: 1.1,
+      stability: 0.4,
+      similarityBoost: 0.6,
+    }),
+    {
+      enabled: false,
+      autoRead: false,
+      provider: "elevenlabs",
+      voice: "21m00Tcm4TlvDq8ikWAM",
+      stability: 0.4,
+      similarityBoost: 0.6,
+      speed: 1.1,
+    },
+  );
+
+  assert.deepEqual(
+    normalizeTtsConfig({
+      provider: "elevenlabs",
+      speed: -1,
+      stability: 2,
+      similarityBoost: Number.POSITIVE_INFINITY,
+    }),
+    {
+      enabled: false,
+      autoRead: false,
+      provider: "elevenlabs",
+      voice: "21m00Tcm4TlvDq8ikWAM",
+      stability: 0.5,
+      similarityBoost: 0.75,
+      speed: 1,
+    },
+  );
+
+  assert.deepEqual(
+    normalizeTtsConfig({
+      provider: "local",
+      speed: Number.NaN,
+    }),
+    {
+      enabled: false,
+      autoRead: false,
+      provider: "local",
+      speed: 1,
+    },
+  );
+});

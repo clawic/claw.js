@@ -329,6 +329,54 @@ function getProviderDescriptor(provider?: TtsProvider | null): TtsProviderDescri
   return TTS_CATALOG.providers.find((candidate) => candidate.id === provider) ?? TTS_CATALOG.providers[0];
 }
 
+function getNumericFieldRange(field: TtsConfigFieldDescriptor): { min?: number; max?: number } {
+  const range = {
+    min: Number.isFinite(field.min) ? field.min : undefined,
+    max: Number.isFinite(field.max) ? field.max : undefined,
+  };
+
+  if (range.min !== undefined && range.max !== undefined) {
+    return range;
+  }
+
+  const optionValues = (field.options ?? [])
+    .map((option) => Number(option.value))
+    .filter((value) => Number.isFinite(value));
+  if (optionValues.length === 0) {
+    return range;
+  }
+
+  return {
+    min: range.min ?? Math.min(...optionValues),
+    max: range.max ?? Math.max(...optionValues),
+  };
+}
+
+function coerceNumericConfigValue(
+  field: TtsConfigFieldDescriptor,
+  rawValue: TtsProviderConfig[TtsConfigFieldKey],
+): number | undefined {
+  const defaultValue = typeof field.defaultValue === "number" ? field.defaultValue : undefined;
+  if (rawValue === undefined || rawValue === null) {
+    return defaultValue;
+  }
+
+  const value = typeof rawValue === "number" ? rawValue : Number(rawValue);
+  if (!Number.isFinite(value)) {
+    return defaultValue;
+  }
+
+  const range = getNumericFieldRange(field);
+  if (
+    (range.min !== undefined && value < range.min) ||
+    (range.max !== undefined && value > range.max)
+  ) {
+    return defaultValue;
+  }
+
+  return value;
+}
+
 function coerceConfigValue(
   field: TtsConfigFieldDescriptor,
   rawValue: TtsProviderConfig[TtsConfigFieldKey],
@@ -339,6 +387,10 @@ function coerceConfigValue(
 
   if (field.type === "toggle") {
     return typeof rawValue === "boolean" ? rawValue : field.defaultValue;
+  }
+
+  if (typeof field.defaultValue === "number" && (field.type === "select" || field.type === "number")) {
+    return coerceNumericConfigValue(field, rawValue);
   }
 
   if (field.type === "select") {
