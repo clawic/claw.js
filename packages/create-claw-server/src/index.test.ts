@@ -120,6 +120,21 @@ test("runCreateClawServer returns usage errors for conflicting positional argume
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_SERVER_USAGE);
 });
 
+test("runCreateClawServer rejects unknown options before scaffolding", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-server-unknown-option-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawServer(["demo-server", "--use-pnpn"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_SERVER_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unknown option: --use-pnpn/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "demo-server")), false);
+});
+
 test("runCreateClawServer rejects unsupported template values", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-server-template-"));
   const stderr = captureStream();

@@ -23,6 +23,7 @@ interface ParsedArgs {
   packageManager: SupportedPackageManager;
   template: string;
   wantsHelp: boolean;
+  unknownOption: string | null;
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -31,6 +32,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let packageManager: SupportedPackageManager = detectPackageManager();
   let template = "node";
   let wantsHelp = false;
+  let unknownOption: string | null = null;
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -67,7 +69,10 @@ function parseArgs(argv: string[]): ParsedArgs {
       template = value;
       continue;
     }
-    if (token.startsWith("--")) continue;
+    if (token.startsWith("--")) {
+      unknownOption ??= token;
+      continue;
+    }
     if (targetDir) {
       wantsHelp = true;
       continue;
@@ -75,15 +80,25 @@ function parseArgs(argv: string[]): ParsedArgs {
     targetDir = token;
   }
 
-  return { targetDir, install, packageManager, template, wantsHelp };
+  return { targetDir, install, packageManager, template, wantsHelp, unknownOption };
 }
 
 export async function runCreateClawServer(argv: string[], context: CreateClawServerContext): Promise<number> {
   const parsed = parseArgs(argv);
 
-  if (parsed.wantsHelp || !parsed.targetDir) {
+  if (parsed.wantsHelp) {
     context.stdout.write(`${CREATE_CLAW_SERVER_USAGE}\n`);
     return parsed.targetDir ? CREATE_CLAW_SERVER_EXIT_USAGE : CREATE_CLAW_SERVER_EXIT_OK;
+  }
+
+  if (parsed.unknownOption) {
+    context.stderr.write(`Unknown option: ${parsed.unknownOption}\n${CREATE_CLAW_SERVER_USAGE}\n`);
+    return CREATE_CLAW_SERVER_EXIT_USAGE;
+  }
+
+  if (!parsed.targetDir) {
+    context.stdout.write(`${CREATE_CLAW_SERVER_USAGE}\n`);
+    return CREATE_CLAW_SERVER_EXIT_OK;
   }
 
   if (parsed.template !== "node") {

@@ -125,6 +125,21 @@ test("runCreateClawPlugin returns usage errors for conflicting positional argume
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_PLUGIN_USAGE);
 });
 
+test("runCreateClawPlugin rejects unknown options before scaffolding", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-plugin-unknown-option-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawPlugin(["jira-integration", "--use-pnpn"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_PLUGIN_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unknown option: --use-pnpn/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "jira-integration")), false);
+});
+
 test("runCreateClawPlugin rejects unsupported template values", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-plugin-template-"));
   const stderr = captureStream();

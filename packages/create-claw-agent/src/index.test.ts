@@ -136,6 +136,21 @@ test("runCreateClawAgent returns usage errors for conflicting positional argumen
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_AGENT_USAGE);
 });
 
+test("runCreateClawAgent rejects unknown options before scaffolding", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-agent-unknown-option-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawAgent(["support-agent", "--use-pnpn"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_AGENT_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unknown option: --use-pnpn/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "support-agent")), false);
+});
+
 test("runCreateClawAgent rejects unsupported template values", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-agent-template-"));
   const stderr = captureStream();

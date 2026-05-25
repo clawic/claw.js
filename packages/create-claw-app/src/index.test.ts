@@ -118,6 +118,21 @@ test("runCreateClawApp returns usage errors for conflicting positional arguments
   assert.equal(stdout.getOutput().trim(), CREATE_CLAW_APP_USAGE);
 });
 
+test("runCreateClawApp rejects unknown options before scaffolding", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-unknown-option-"));
+  const stderr = captureStream();
+
+  const exitCode = await runCreateClawApp(["demo-app", "--use-pnpn"], {
+    stdout: captureStream().stream,
+    stderr: stderr.stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CREATE_CLAW_APP_EXIT_USAGE);
+  assert.match(stderr.getOutput(), /Unknown option: --use-pnpn/);
+  assert.equal(fs.existsSync(path.join(tempRoot, "demo-app")), false);
+});
+
 test("runCreateClawApp rejects unsupported template values", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-claw-app-template-"));
   const stderr = captureStream();
