@@ -161,4 +161,51 @@ test("runCli reads Hermes sessions from the official SQLite session store", asyn
   assert.match(previewPayload.data.result?.contentPreview ?? "", /hermes sqlite preview/);
   assert.equal(previewPayload.data.result?.contentPreview?.includes("TEST_SECRET_1234567890"), false);
   assert.equal(previewPayload.data.result?.nativeIdentifier?.name, "sessionId");
+
+  const pinStdout = captureStream();
+  const pinExit = await runCli(["runtime", "hermes", "sessions", "pin", "--session-key", "sqlite-native-session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: pinStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(pinExit, CLI_EXIT_OK);
+  const pinPayload = JSON.parse(pinStdout.getOutput()) as {
+    data: { authority?: string; writesRuntime?: boolean; writesLocalOverlay?: boolean; result?: { overlayThreadId?: string; pinned?: boolean; nativeIdentifier?: { name?: string } } };
+  };
+  assert.equal(pinPayload.data.authority, "clawix_local_overlay");
+  assert.equal(pinPayload.data.writesRuntime, false);
+  assert.equal(pinPayload.data.writesLocalOverlay, true);
+  assert.equal(pinPayload.data.result?.overlayThreadId, "runtime:hermes:sessions:sqlite-native-session");
+  assert.equal(pinPayload.data.result?.pinned, true);
+
+  const conflictsStdout = captureStream();
+  const conflictsExit = await runCli(["runtime", "hermes", "sessions", "conflicts", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: conflictsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(conflictsExit, CLI_EXIT_OK);
+  const conflictsPayload = JSON.parse(conflictsStdout.getOutput()) as {
+    data: { result?: { totalOverlays?: number; totalConflicts?: number; overlays?: Array<{ id?: string; nativeFound?: boolean; conflictStatus?: string; nativePinned?: boolean | null }> } };
+  };
+  assert.equal(conflictsPayload.data.result?.totalOverlays, 1);
+  assert.equal(conflictsPayload.data.result?.totalConflicts, 1);
+  assert.equal(conflictsPayload.data.result?.overlays?.[0]?.id, "sqlite-native-session");
+  assert.equal(conflictsPayload.data.result?.overlays?.[0]?.nativeFound, true);
+  assert.equal(conflictsPayload.data.result?.overlays?.[0]?.nativePinned, null);
+  assert.equal(conflictsPayload.data.result?.overlays?.[0]?.conflictStatus, "local_only");
+
+  const unpinStdout = captureStream();
+  const unpinExit = await runCli(["runtime", "hermes", "sessions", "unpin", "--session-key", "sqlite-native-session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: unpinStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(unpinExit, CLI_EXIT_OK);
+  const unpinPayload = JSON.parse(unpinStdout.getOutput()) as {
+    data: { writesRuntime?: boolean; writesLocalOverlay?: boolean; result?: { pinned?: boolean } };
+  };
+  assert.equal(unpinPayload.data.writesRuntime, false);
+  assert.equal(unpinPayload.data.writesLocalOverlay, true);
+  assert.equal(unpinPayload.data.result?.pinned, false);
 });
