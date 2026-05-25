@@ -4,6 +4,7 @@ import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag } from "./cli-flag-parsers.ts";
 
 export function parseRuleHints(flags: Record<string, string>): Omit<RulesCompileInput, "prompt"> | undefined {
+  const rulesLimit = parseRulesLimitFlag(flags["rules-limit"]);
   const hints: Omit<RulesCompileInput, "prompt"> = {
     ...(flags.user ? { user: flags.user } : {}),
     ...(flags.organization || flags.org ? { organization: flags.organization || flags.org } : {}),
@@ -16,7 +17,7 @@ export function parseRuleHints(flags: Record<string, string>): Omit<RulesCompile
     ...(flags["output-format"] || flags.output ? { outputFormat: flags["output-format"] || flags.output } : {}),
     ...(flags.agent ? { agent: flags.agent } : {}),
     ...(flags.channel ? { channel: flags.channel } : {}),
-    ...(flags["rules-limit"] ? { limit: Number(flags["rules-limit"]) } : {}),
+    ...(rulesLimit !== undefined ? { limit: rulesLimit } : {}),
   };
   return Object.keys(hints).length > 0 ? hints : undefined;
 }
@@ -33,4 +34,18 @@ export function parseRuleReferences(value: string | undefined): Array<{ kind: st
       ...(label ? { label } : {}),
     };
   });
+}
+
+function parseRulesLimitFlag(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  const parsed = Number(trimmed);
+  if (!trimmed || !Number.isInteger(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_rules_hint_limit", "--rules-limit must be a positive integer.", {
+      exitCode: CLI_EXIT_USAGE,
+      location: "cli.rules.rules-limit",
+      details: { flag: "--rules-limit", value },
+    });
+  }
+  return parsed;
 }
