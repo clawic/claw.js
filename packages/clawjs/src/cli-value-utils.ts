@@ -142,7 +142,7 @@ export function parseObjectFlag(value: string | undefined, label: string): Recor
   if (!value?.trim()) return {};
   const parsed = parseJsonFlag<unknown>(value, label);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new CliHandledError("invalid_json", `${label} must be a JSON object.`);
+    throw new CliHandledError("invalid_json", `${label} must be a JSON object.`, CLI_EXIT_USAGE);
   }
   return parsed as Record<string, unknown>;
 }
