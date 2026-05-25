@@ -520,6 +520,11 @@ function writeProtection(input: MacCareCliInput): number {
       }, { subcommand: "protection fixture-scan" });
       return CLI_EXIT_OK;
     } catch (error) {
+      if (error instanceof CliHandledError) {
+        if (input.wantsJson) writeCommandJsonError(input.context.stdout, "mac-care", error, { subcommand: "protection fixture-scan" });
+        else input.context.stderr.write(`${error.message}\n`);
+        return error.exitCode;
+      }
       const handled = new CliHandledError("mac_care_protection_fixture_scan_unavailable", error instanceof Error ? error.message : String(error), CLI_EXIT_USAGE);
       if (input.wantsJson) writeCommandJsonError(input.context.stdout, "mac-care", handled, { subcommand: "protection fixture-scan" });
       else input.context.stderr.write(`${handled.message}\n`);

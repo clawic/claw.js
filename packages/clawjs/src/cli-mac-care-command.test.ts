@@ -1076,6 +1076,39 @@ test("mac-care protection fixture-scan emits blocked quarantine plans for explic
   assert.equal(data.summary.agentQuarantineActions, 0);
 });
 
+test("mac-care protection fixture-scan preserves invalid flag errors", async () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-mac-care-protection-invalid-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+
+  assert.equal(await runCli([
+    "mac-care",
+    "protection",
+    "fixture-scan",
+    "--fixture-dir",
+    fixtureRoot,
+    "--max-entries",
+    "nope",
+    "--json",
+  ], {
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_USAGE);
+  assert.equal(stderr.getOutput(), "");
+
+  const parsed = JSON.parse(stdout.getOutput()) as {
+    ok: boolean;
+    error: { code: string; status: string };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.error.code, "invalid_mac_care_flag");
+  assert.equal(parsed.error.status, "USAGE");
+  assert.equal(parsed.meta.canonicalCommand, "mac-care");
+  assert.equal(parsed.meta.subcommand, "protection fixture-scan");
+});
+
 test("mac-care scans list is read-only when the sidecar does not exist", async () => {
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-mac-care-empty-history-"));
   await withPatchedEnv({ CLAW_DATA_DIR: dataRoot }, async () => {
