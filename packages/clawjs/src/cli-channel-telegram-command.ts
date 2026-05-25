@@ -1117,10 +1117,12 @@ if (group === "telegram" && command === "webhook" && subcommand === "clear") {
 }
 
 if (group === "telegram" && command === "polling" && subcommand === "start") {
+  const limit = parsePositiveIntegerFlag(flags, "limit", "invalid_telegram_polling_limit");
+  const timeoutSeconds = parsePositiveIntegerFlag(flags, "timeout", "invalid_telegram_polling_timeout");
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
   const status = await claw.telegram.startPolling({
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
-    ...(flags.timeout ? { timeoutSeconds: Number(flags.timeout) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+    ...(timeoutSeconds !== undefined ? { timeoutSeconds } : {}),
     ...(flags["allowed-updates"] ? { allowedUpdates: parseJsonFlag<string[]>(flags["allowed-updates"], "--allowed-updates") } : {}),
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
   });

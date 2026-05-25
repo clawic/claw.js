@@ -299,6 +299,32 @@ test("runCli rejects invalid Telegram webhook max connections before configuring
   assert.deepEqual(payload.error.details, { flag: "--max-connections", value: "nope" });
 });
 
+test("runCli rejects invalid Telegram polling limit before starting", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-polling-limit-"));
+
+  const pollingStdout = captureStream();
+  const pollingExitCode = await runCli([
+    "telegram",
+    "polling",
+    "start",
+    "--workspace",
+    workspaceRoot,
+    "--limit",
+    "nope",
+    "--json",
+  ], {
+    stdout: pollingStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(pollingStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  assert.equal(pollingExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_telegram_polling_limit");
+  assert.deepEqual(payload.error.details, { flag: "--limit", value: "nope" });
+});
+
 test("runCli connects Telegram through channels and runs a processor listener once", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channels-listener-"));
   const processorPath = path.join(workspaceRoot, "processor.cjs");
