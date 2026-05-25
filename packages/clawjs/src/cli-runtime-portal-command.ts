@@ -1814,6 +1814,18 @@ function findNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, session
   return { sessions, candidate };
 }
 
+function matchedNativeSessionKey(sessionPath: string | undefined, candidate, sessionId: string) {
+  if (String(candidate.id) === sessionId) return candidate.nativeIdentifier?.name ?? "sessionPathId";
+  if (candidate.title && String(candidate.title) === sessionId) return "sessionTitle";
+  if (candidate.label && String(candidate.label) === sessionId) return candidate.title ? "sessionTitle" : "sessionLabel";
+  if (sessionPath && candidate.path) {
+    const relativePath = path.relative(sessionPath, candidate.path).replaceAll(path.sep, "/");
+    if (relativePath === sessionId) return "sessionPath";
+    if (relativePath.replace(/\.[^.]+$/, "") === sessionId) return "sessionPathId";
+  }
+  return "unknown";
+}
+
 function redactRuntimeSessionText(value: string): string {
   return value
     .replace(/\b(sk-[A-Za-z0-9_-]{8,})\b/g, "sk-<redacted>")
@@ -1948,9 +1960,7 @@ function resolveNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
       nativeIdentifier: { name: "sessionPathId" },
     };
   }
-  const matchedBy = candidate.provenance?.source === "runtime-session-sqlite"
-    ? "sessionId"
-    : nativeSessionLookupKeys(session.sessionPath, candidate).has(sessionId) ? "sessionPathId" : "unknown";
+  const matchedBy = matchedNativeSessionKey(session.sessionPath, candidate, sessionId);
   return {
     id: candidate.id,
     found: true,

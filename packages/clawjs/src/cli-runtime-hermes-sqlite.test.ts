@@ -102,6 +102,21 @@ test("runCli reads Hermes sessions from the official SQLite session store", asyn
   assert.equal(resolvePayload.data.result?.nativeIdentifier?.name, "sessionId");
   assert.equal(resolvePayload.data.result?.writesRuntime, false);
 
+  const resolveTitleStdout = captureStream();
+  const resolveTitleExit = await runCli(["runtime", "hermes", "sessions", "resolve", "--session-key", "SQLite Native Session", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: resolveTitleStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(resolveTitleExit), true);
+  const resolveTitlePayload = JSON.parse(resolveTitleStdout.getOutput()) as {
+    data: { result?: { id?: string; found?: boolean; matchedBy?: string; nativeIdentifier?: { name?: string } } };
+  };
+  assert.equal(resolveTitlePayload.data.result?.id, "sqlite-native-session");
+  assert.equal(resolveTitlePayload.data.result?.found, true);
+  assert.equal(resolveTitlePayload.data.result?.matchedBy, "sessionTitle");
+  assert.equal(resolveTitlePayload.data.result?.nativeIdentifier?.name, "sessionId");
+
   const historyMetadataStdout = captureStream();
   const historyMetadataExit = await runCli(["runtime", "hermes", "sessions", "history", "--session-key", "sqlite-native-session", "--limit", "2", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: historyMetadataStdout.stream,
