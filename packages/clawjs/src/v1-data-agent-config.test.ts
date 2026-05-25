@@ -152,6 +152,85 @@ test("snippets reject invalid scope and metadata JSON before persistence", async
   });
 });
 
+test("snippets reject missing file before persistence and accept body or existing file", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-file-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-file-cwd-"));
+    const missingStdout = captureStream();
+    assert.equal(await runInternalV1Cli([
+      "snippets",
+      "upsert",
+      "missing-file",
+      "--title",
+      "Missing File",
+      "--file",
+      "missing.md",
+      "--json",
+    ], {
+      stdout: missingStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+    const missingError = JSON.parse(missingStdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(missingError.ok, false);
+    assert.equal(missingError.error.code, "snippet_file_missing");
+    assert.equal(missingError.error.status, "USAGE");
+
+    const sqlite = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: tempRoot } as NodeJS.ProcessEnv));
+    try {
+      assert.deepEqual(sqlite.prepare("SELECT slug FROM snippets ORDER BY slug").all(), []);
+
+      const bodyStdout = captureStream();
+      assert.equal(await runInternalV1Cli([
+        "snippets",
+        "upsert",
+        "body-snippet",
+        "--title",
+        "Body Snippet",
+        "--body",
+        "Body text",
+        "--json",
+      ], {
+        stdout: bodyStdout.stream,
+        stderr: captureStream().stream,
+        cwd,
+      }), CLI_EXIT_OK);
+
+      const snippetPath = path.join(cwd, "snippet.md");
+      fs.writeFileSync(snippetPath, "File text", "utf8");
+      const fileStdout = captureStream();
+      assert.equal(await runInternalV1Cli([
+        "snippets",
+        "upsert",
+        "file-snippet",
+        "--title",
+        "File Snippet",
+        "--file",
+        "snippet.md",
+        "--json",
+      ], {
+        stdout: fileStdout.stream,
+        stderr: captureStream().stream,
+        cwd,
+      }), CLI_EXIT_OK);
+
+      const rows = sqlite.prepare("SELECT slug, title, body FROM snippets ORDER BY slug").all();
+      assert.deepEqual(rows, [
+        { slug: "body-snippet", title: "Body Snippet", body: "Body text" },
+        { slug: "file-snippet", title: "File Snippet", body: "File text" },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
 test("snippets reject invalid kind values before persistence", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-kind-"));
   await withPatchedEnv({

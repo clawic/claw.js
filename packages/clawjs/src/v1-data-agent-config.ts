@@ -213,7 +213,8 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
   if (command === "upsert") {
     const slug = input.flags.slug || input.positionals[2];
     const title = input.flags.title || input.flags.name || slug;
-    const body = input.flags.file ? fs.readFileSync(path.resolve(input.cwd, expandHome(input.flags.file)), "utf8") : (input.flags.body || "");
+    const body = readSnippetBody(input);
+    if (body === null) return V1_DATA_EXIT_USAGE;
     if (!slug || !title || !body) {
       return usageError(input, "Usage: claw snippets upsert SLUG --title TITLE --body TEXT [--kind prompt|template|slash]");
     }
@@ -296,6 +297,23 @@ function parseSnippetJsonFlag(input: V1DataCliInput, flag: "scope" | "metadata")
     return JSON.stringify(JSON.parse(value));
   } catch {
     writeError(input, `invalid_snippet_${flag}_json`, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return null;
+  }
+}
+
+function readSnippetBody(input: V1DataCliInput): string | null {
+  const file = input.flags.file;
+  if (file === undefined) return input.flags.body || "";
+  const resolvedPath = path.resolve(input.cwd, expandHome(file));
+  try {
+    return fs.readFileSync(resolvedPath, "utf8");
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
+    if (code === "ENOENT") {
+      writeError(input, "snippet_file_missing", `Snippet file not found: ${file}.`, V1_DATA_EXIT_USAGE);
+      return null;
+    }
+    writeError(input, "invalid_snippet_file", `Unable to read snippet file: ${file}.`, V1_DATA_EXIT_USAGE);
     return null;
   }
 }
