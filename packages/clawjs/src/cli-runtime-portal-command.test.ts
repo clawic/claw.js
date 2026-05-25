@@ -48,3 +48,51 @@ test("runtime session metadata omits gateway credentials in JSON mode", async ()
   assert.equal(payload.data?.session?.fallbackGateway?.token, undefined);
   assert.equal(payload.data?.session?.fallbackGateway?.headers, undefined);
 });
+
+test("runtime session usage errors preserve JSON envelopes", async () => {
+  const missingKey = await runCliCapture(["runtime", "openclaw", "sessions", "preview", "--json"], process.cwd());
+  const missingKeyPayload = JSON.parse(missingKey.stdout) as {
+    ok: boolean;
+    error?: { code?: string; status?: string };
+    meta?: { canonicalCommand?: string; operation?: string; runtimeId?: string; action?: string };
+  };
+
+  assert.equal(missingKey.code, CLI_EXIT_USAGE);
+  assert.equal(missingKeyPayload.ok, false);
+  assert.equal(missingKeyPayload.error?.code, "missing_runtime_session_key");
+  assert.equal(missingKeyPayload.error?.status, "USAGE");
+  assert.equal(missingKeyPayload.meta?.canonicalCommand, "runtime");
+  assert.equal(missingKeyPayload.meta?.operation, "sessions");
+  assert.equal(missingKeyPayload.meta?.runtimeId, "openclaw");
+  assert.equal(missingKeyPayload.meta?.action, "preview");
+
+  const missingMessage = await runCliCapture(["runtime", "openclaw", "sessions", "send", "--session-key", "alpha", "--json"], process.cwd());
+  const missingMessagePayload = JSON.parse(missingMessage.stdout) as {
+    ok: boolean;
+    error?: { code?: string; status?: string };
+    meta?: { operation?: string; runtimeId?: string; action?: string };
+  };
+
+  assert.equal(missingMessage.code, CLI_EXIT_USAGE);
+  assert.equal(missingMessagePayload.ok, false);
+  assert.equal(missingMessagePayload.error?.code, "missing_runtime_session_message");
+  assert.equal(missingMessagePayload.error?.status, "USAGE");
+  assert.equal(missingMessagePayload.meta?.operation, "sessions");
+  assert.equal(missingMessagePayload.meta?.runtimeId, "openclaw");
+  assert.equal(missingMessagePayload.meta?.action, "send");
+
+  const unknownAction = await runCliCapture(["runtime", "hermes", "sessions", "teleport", "--json"], process.cwd());
+  const unknownActionPayload = JSON.parse(unknownAction.stdout) as {
+    ok: boolean;
+    error?: { code?: string; status?: string };
+    meta?: { operation?: string; runtimeId?: string; action?: string };
+  };
+
+  assert.equal(unknownAction.code, CLI_EXIT_USAGE);
+  assert.equal(unknownActionPayload.ok, false);
+  assert.equal(unknownActionPayload.error?.code, "unknown_runtime_session_action");
+  assert.equal(unknownActionPayload.error?.status, "USAGE");
+  assert.equal(unknownActionPayload.meta?.operation, "sessions");
+  assert.equal(unknownActionPayload.meta?.runtimeId, "hermes");
+  assert.equal(unknownActionPayload.meta?.action, "teleport");
+});

@@ -1723,6 +1723,15 @@ function isTruthyFlag(input, name: string) {
   return input.argv?.includes(`--${name}`) || input.flags[name] === "true";
 }
 
+function writeMissingRuntimeSessionKeyError(input, runtimeId: RuntimeAdapterId, action: string) {
+  writePortalUsageError(
+    input,
+    "missing_runtime_session_key",
+    `Usage: ${input.binName} runtime ${runtimeId} sessions ${action} --session-key <id> --json`,
+    { runtimeId, operation: "sessions", action },
+  );
+}
+
 async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payload, status) {
   const action = input.positionals[3] ?? input.flags.action ?? "list";
   const supportContract = payload.domainData.sessions.supportContract;
@@ -1761,7 +1770,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   if (action === "preview") {
     const sessionKey = input.flags["session-key"] ?? input.flags.id ?? input.positionals[4];
     if (!sessionKey) {
-      if (!input.wantsJson) input.context.stderr.write("--session-key is required\n");
+      writeMissingRuntimeSessionKeyError(input, runtimeId, action);
       return CLI_EXIT_USAGE;
     }
     if (runtimeId === "openclaw") {
@@ -1799,7 +1808,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   if (action === "resolve") {
     const sessionKey = input.flags["session-key"] ?? input.flags.id ?? input.positionals[4];
     if (!sessionKey) {
-      if (!input.wantsJson) input.context.stderr.write("--session-key is required\n");
+      writeMissingRuntimeSessionKeyError(input, runtimeId, action);
       return CLI_EXIT_USAGE;
     }
     if (runtimeId === "openclaw") {
@@ -1837,7 +1846,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   if (action === "history") {
     const sessionKey = input.flags["session-key"] ?? input.flags.id ?? input.positionals[4];
     if (!sessionKey) {
-      if (!input.wantsJson) input.context.stderr.write("--session-key is required\n");
+      writeMissingRuntimeSessionKeyError(input, runtimeId, action);
       return CLI_EXIT_USAGE;
     }
     if (runtimeId === "openclaw") {
@@ -1877,8 +1886,17 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   if (action === "send" || action === "inject") {
     const sessionKey = input.flags["session-key"] ?? input.flags.id ?? input.positionals[4];
     const message = input.flags.message ?? input.positionals.slice(5).join(" ").trim();
-    if (!sessionKey || !message) {
-      if (!input.wantsJson) input.context.stderr.write("--session-key and --message are required\n");
+    if (!sessionKey) {
+      writeMissingRuntimeSessionKeyError(input, runtimeId, action);
+      return CLI_EXIT_USAGE;
+    }
+    if (!message) {
+      writePortalUsageError(
+        input,
+        "missing_runtime_session_message",
+        `Usage: ${input.binName} runtime ${runtimeId} sessions ${action} --session-key <id> --message <text> --json`,
+        { runtimeId, operation: "sessions", action },
+      );
       return CLI_EXIT_USAGE;
     }
     if (runtimeId !== "openclaw") {
@@ -1923,7 +1941,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   if (action === "abort") {
     const sessionKey = input.flags["session-key"] ?? input.flags.id ?? input.positionals[4];
     if (!sessionKey) {
-      if (!input.wantsJson) input.context.stderr.write("--session-key is required\n");
+      writeMissingRuntimeSessionKeyError(input, runtimeId, action);
       return CLI_EXIT_USAGE;
     }
     if (runtimeId !== "openclaw") {
@@ -1996,14 +2014,14 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
   if (action === "pin" || action === "unpin") {
     const sessionKey = input.flags["session-key"] ?? input.flags.id ?? input.positionals[4];
     if (!sessionKey) {
-      if (!input.wantsJson) input.context.stderr.write("--session-key is required\n");
+      writeMissingRuntimeSessionKeyError(input, runtimeId, action);
       return CLI_EXIT_USAGE;
     }
     writePayload(input, applyRuntimeSessionPinOverlay(input, runtimeId, action, sessionKey, supportContract), { runtimeId, operation: "sessions", action });
     return CLI_EXIT_OK;
   }
 
-  if (!input.wantsJson) input.context.stderr.write(`Unknown runtime session action: ${action}\n`);
+  writePortalUsageError(input, "unknown_runtime_session_action", `Unknown runtime session action: ${action}`, { runtimeId, operation: "sessions", action });
   return CLI_EXIT_USAGE;
 }
 
