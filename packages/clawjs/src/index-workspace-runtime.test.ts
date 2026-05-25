@@ -1644,6 +1644,18 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.readProjectionStatus, "projected");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.implementedFacets?.includes("session_list_action"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.blockingFacets?.includes("native_action_contract"), true);
+  for (const projectedDomain of ["skills", "memory", "models", "scheduler"]) {
+    const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === projectedDomain);
+    const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === projectedDomain);
+    assert.equal(domainAudit?.implementedFacets?.includes("read_projection_contract"), true);
+    assert.equal(domainAudit?.blockingFacets?.includes("native_write_back_contract"), true);
+    assert.equal(checklistItem?.closureStatus, "product_blocked");
+    assert.equal(checklistItem?.projectionDisposition, "read_projection_available_write_back_blocked");
+  }
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "memory")?.readProjectionStatus, "projected");
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "skills")?.readProjectionStatus, "degraded_projection");
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "models")?.readProjectionStatus, "degraded_projection");
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "scheduler")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.closureChecklist?.length, manifest.requiredDomains.length);
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "channels")?.closureStatus, "external_pending");
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "channels")?.nextAction, "use_matching_evidenceReentryPacket_after_explicit_approval");
@@ -1654,8 +1666,14 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_lowered_claim_until_upstream_native_contract_exists");
   assert.equal(hermesSupportPayload.data.closureChecklistSummary?.external_pending, 1);
   assert.equal((hermesSupportPayload.data.closureChecklistSummary?.product_blocked ?? 0) > 0, true);
-  assert.equal((hermesSupportPayload.data.projectionSummary?.projectedDomainCount ?? 0) > 0, true);
-  assert.equal((hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount ?? 0) > 0, true);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.projectedDomainCount, manifest.requiredDomains.length);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.unsupportedDomainCount, 0);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.projected, 4);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.degraded_projection, 9);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount, 10);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.read_projection_contract, manifest.requiredDomains.length);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.ready_runtime_projection, 3);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.degraded_runtime_projection, 9);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.session_list_action, 1);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.native_action_contract, 1);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.totalRequirementCount, hermesSupportPayload.data.blockerSummary.evidenceRequirementCount);
