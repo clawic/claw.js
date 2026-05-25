@@ -47,6 +47,21 @@ function parseListenerNumberFlag(flags: Record<string, string>, name: string): n
   return value;
 }
 
+function parsePositiveIntegerFlag(flags: Record<string, string>, name: string, code: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw.trim());
+  if (!raw.trim() || !Number.isSafeInteger(value) || value <= 0) {
+    throw new CliHandledError(code, `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location: `telegram.flags.${name}`,
+      suggestion: `Pass --${name} with a whole number greater than zero, or omit it to use the default.`,
+      safeNextStep: `Rerun the Telegram command with a valid --${name} value before changing provider state.`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
+
 const CHANNEL_PERMISSION_VALUES = new Set(["read", "write", "ingest", "admin"]);
 
 function parseChannelPermissions(flags: Record<string, string>): Array<"read" | "write" | "ingest" | "admin"> {
@@ -1077,7 +1092,7 @@ if (group === "telegram" && command === "webhook" && subcommand === "set") {
     secretToken: flags["webhook-secret-token"],
     allowedUpdates: parseJsonFlag<string[]>(flags["allowed-updates"], "--allowed-updates"),
     ...(flags["drop-pending-updates"] !== undefined ? { dropPendingUpdates: readBooleanFlag(argv, flags, "drop-pending-updates", false) } : {}),
-    ...(flags["max-connections"] ? { maxConnections: Number(flags["max-connections"]) } : {}),
+    ...(flags["max-connections"] !== undefined ? { maxConnections: parsePositiveIntegerFlag(flags, "max-connections", "invalid_telegram_max_connections") } : {}),
     ...(flags["ip-address"] ? { ipAddress: flags["ip-address"] } : {}),
   });
   if (wantsJson) {

@@ -271,6 +271,34 @@ process.stdin.on("end", () => process.stdout.write(JSON.stringify({ actions: [] 
   assert.deepEqual(payload.error.details, { flag: "--interval-ms", value: "nope" });
 });
 
+test("runCli rejects invalid Telegram webhook max connections before configuring", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-webhook-max-"));
+
+  const webhookStdout = captureStream();
+  const webhookExitCode = await runCli([
+    "telegram",
+    "webhook",
+    "set",
+    "--workspace",
+    workspaceRoot,
+    "--url",
+    "https://example.com/telegram/webhook",
+    "--max-connections",
+    "nope",
+    "--json",
+  ], {
+    stdout: webhookStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(webhookStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  assert.equal(webhookExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_telegram_max_connections");
+  assert.deepEqual(payload.error.details, { flag: "--max-connections", value: "nope" });
+});
+
 test("runCli connects Telegram through channels and runs a processor listener once", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channels-listener-"));
   const processorPath = path.join(workspaceRoot, "processor.cjs");
