@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { runCli, CLI_EXIT_OK } from "./index.ts";
+import { runCli, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { startNotifyServer } from "../../../notify/tests/e2e/helpers.ts";
 
 function captureStream() {
@@ -21,6 +21,74 @@ function captureStream() {
     },
   };
 }
+
+test("runCli reports invalid notify JSON flags as usage errors", async () => {
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-notify-json-"));
+  try {
+    const exit = await runCli([
+      "notify",
+      "send",
+      "--runtime",
+      "demo",
+      "--context-json",
+      "{bad",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd,
+    });
+
+    assert.equal(exit, CLI_EXIT_USAGE);
+    assert.equal(stderr.getOutput(), "");
+    const payload = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; status: string; details?: { flag?: string } };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_notify_json");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.details?.flag, "context-json");
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test("runCli rejects non-object notify JSON flags", async () => {
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-notify-json-object-"));
+  try {
+    const exit = await runCli([
+      "notify",
+      "send",
+      "--runtime",
+      "demo",
+      "--delivery-json",
+      "[]",
+      "--json",
+    ], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd,
+    });
+
+    assert.equal(exit, CLI_EXIT_USAGE);
+    assert.equal(stderr.getOutput(), "");
+    const payload = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; status: string; details?: { flag?: string } };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_notify_json_object");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.details?.flag, "delivery-json");
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
 
 test("runCli supports notify send and subscription commands", async () => {
   const server = await startNotifyServer("notify-cli");

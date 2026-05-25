@@ -133,6 +133,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runVerifyCli({ argv, context, wantsJson });
   }
 
+  validateNotifyFlags({ group, command, flags });
+
   if (group === "agent-resource") {
     const { runAgentResourceCli } = await import("./cli-agent-resource-command.ts");
     return await runAgentResourceCli({ positionals, flags, context, wantsJson, binName });
@@ -267,6 +269,41 @@ function canonicalCommandFor(group: string | undefined): string {
           : group === "ref" ? "references"
             : group === "image" ? "images"
               : group ?? "claw";
+}
+
+function validateNotifyFlags(input: {
+  group: string | undefined;
+  command: string | undefined;
+  flags: Record<string, string>;
+}): void {
+  if (input.group !== "notify" || input.command !== "send") return;
+  for (const flag of ["audience-json", "context-json", "delivery-json", "receipt-policy-json"]) {
+    validateNotifyJsonObjectFlag(input.flags[flag], flag);
+  }
+}
+
+function validateNotifyJsonObjectFlag(value: string | undefined, flag: string): void {
+  const trimmed = value?.trim();
+  if (!trimmed) return;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch (error) {
+    throw new CliHandledError(
+      "invalid_notify_json",
+      `--${flag} must be valid JSON: ${error instanceof Error ? error.message : "parse error"}`,
+      CLI_EXIT_USAGE,
+      { details: { flag } },
+    );
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliHandledError(
+      "invalid_notify_json_object",
+      `--${flag} must be a JSON object.`,
+      CLI_EXIT_USAGE,
+      { details: { flag } },
+    );
+  }
 }
 
 function writeRemovedSubcommandIfNeeded(input: {
