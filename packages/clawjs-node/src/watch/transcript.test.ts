@@ -27,3 +27,12 @@ test("watchSessionTranscript observes transcript changes", async () => {
 
   assert.equal(event.filePath, transcriptPath);
 });
+
+test("watchSessionTranscript rejects session ids outside the sessions directory", () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-watch-transcript-"));
+
+  assert.throws(
+    () => watchSessionTranscript(workspaceDir, "../escaped-session", () => {}),
+    /file-safe id/,
+  );
+});

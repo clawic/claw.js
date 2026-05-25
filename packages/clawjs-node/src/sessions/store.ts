@@ -39,7 +39,15 @@ export function resolveSessionsDir(workspaceDir: string): string {
   return resolveClawWorkspaceSurfacePath("claw.workspace.sessions", workspaceDir);
 }
 
+export function assertSafeSessionId(sessionId: string): void {
+  const normalizedSessionId = sessionId.replace(/\\/g, "/");
+  if (!normalizedSessionId.trim() || normalizedSessionId.includes("/") || normalizedSessionId.includes("\0") || path.isAbsolute(sessionId)) {
+    throw new Error("Session id must be a file-safe id inside the workspace sessions directory.");
+  }
+}
+
 export function resolveSessionPath(workspaceDir: string, sessionId: string): string {
+  assertSafeSessionId(sessionId);
   return path.join(resolveSessionsDir(workspaceDir), `${sessionId}${SESSION_FILE_EXTENSION}`);
 }
 

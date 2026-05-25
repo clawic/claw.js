@@ -114,6 +114,21 @@ test("updateSessionTitle rewrites the transcript header", () => {
   assert.match(raw, /updated title/);
 });
 
+test("SessionStore rejects session ids that escape the sessions directory", () => {
+  const { store, workspaceDir } = createStore();
+  const escapedPath = path.join(workspaceDir, ".claw", "escaped-session.jsonl");
+
+  assert.throws(
+    () => store.appendMessage("../escaped-session", { role: "user", content: "escaped", createdAt: 1_000 }),
+    /file-safe id/,
+  );
+  assert.throws(
+    () => resolveSessionPath(workspaceDir, "nested/session"),
+    /file-safe id/,
+  );
+  assert.equal(fs.existsSync(escapedPath), false);
+});
+
 test("SessionStore instances share the same workspace transcript without leaking into other workspaces", () => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-sessions-b-"));
