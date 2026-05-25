@@ -103,6 +103,24 @@ test("debt list accepts needs-action filter", async () => {
   assert.equal(typeof payload.data.summary.aliasHits, "number");
 });
 
+test("debt list honors explicit false needs-action flags", async () => {
+  const all = await runCliCapture(["debt", "list", "--json"], process.cwd());
+  assert.equal(all.code, CLI_EXIT_OK);
+  const allPayload = JSON.parse(all.stdout) as { data: { entries: Array<{ id: string }> } };
+
+  const explicitFalse = await runCliCapture(["debt", "list", "--needs-action", "false", "--json"], process.cwd());
+  assert.equal(explicitFalse.code, CLI_EXIT_OK);
+  const falsePayload = JSON.parse(explicitFalse.stdout) as { data: { entries: Array<{ id: string }> } };
+  assert.deepEqual(falsePayload.data.entries.map((entry) => entry.id), allPayload.data.entries.map((entry) => entry.id));
+
+  const invalid = await runCliCapture(["debt", "list", "--needs-action", "sometimes", "--json"], process.cwd());
+  assert.equal(invalid.code, CLI_EXIT_USAGE);
+  const invalidPayload = JSON.parse(invalid.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(invalidPayload.ok, false);
+  assert.equal(invalidPayload.error.code, "invalid_boolean_flag");
+  assert.equal(invalidPayload.error.status, "USAGE");
+});
+
 test("debt list filters by strict debt control severity and release effect", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-debt-filter-"));
   writeFixtureFile(root, "docs/code-hygiene-baseline.json", JSON.stringify({

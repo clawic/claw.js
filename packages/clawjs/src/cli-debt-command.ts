@@ -1,7 +1,7 @@
 import { CLAW_DEBT_CONTROL_RELEASE_EFFECTS, CLAW_DEBT_CONTROL_SEVERITIES, CLAW_DEBT_LEDGER_CLASSIFICATIONS, CLAW_DEBT_LEDGER_SOURCE_TYPES, CLAW_DEBT_LEDGER_STATUSES, buildClawDebtLedger, type ClawDebtControlReleaseEffect, type ClawDebtControlSeverity, type ClawDebtLedger, type ClawDebtLedgerClassification, type ClawDebtLedgerEntry, type ClawDebtLedgerSourceType, type ClawDebtLedgerStatus } from "@clawjs/core/catalogs";
 
 import { CliHandledError, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { formatCliTable } from "./cli-flag-parsers.ts";
+import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface DebtCliInput {
@@ -149,7 +149,7 @@ function filterDebtEntries(entries: ClawDebtLedgerEntry[], flags: Record<string,
   const sourceType = parseSourceType(flags["source-type"] || flags.source);
   const severity = parseSeverity(flags.severity);
   const releaseEffect = parseReleaseEffect(flags["release-effect"] || flags.releaseEffect);
-  const needsAction = flags["needs-action"] === "true" || flags["needs-action"] === "1" || argv.includes("--needs-action");
+  const needsAction = readBooleanFlag(argv, flags, "needs-action", false);
   return entries.filter((entry) =>
     (!repo || entry.repo === repo)
     && (!classification || entry.classification === classification)
