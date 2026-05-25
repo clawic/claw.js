@@ -1,4 +1,4 @@
-import { CliHandledError } from "./cli-errors.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 
 export function parseJsonFlag<TValue>(value: string | undefined, label: string): TValue | undefined {
   const trimmed = value?.trim();
@@ -38,10 +38,16 @@ export function collectFlagValues(argv: string[], name: string): string[] {
 }
 
 export function readBooleanFlag(argv: string[], flags: Record<string, string>, name: string, fallback = false): boolean {
-  if (argv.includes(`--${name}`)) return true;
   const value = flags[name];
+  if (value !== undefined) {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off"].includes(normalized)) return false;
+    throw new CliHandledError("invalid_boolean_flag", `--${name} must be true or false.`, CLI_EXIT_USAGE);
+  }
+  if (argv.includes(`--${name}`)) return true;
   if (value === undefined) return fallback;
-  return value === "true";
+  return fallback;
 }
 
 export function joinedPositionals(positionals: string[], startIndex: number): string | undefined {

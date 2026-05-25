@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { test } from "vitest";
 
-import { CLI_EXIT_FAILURE, CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, parseCliJsonPayload } from "./index-test-utils.ts";
 
 test("claw project attach previews then writes portable manifest and handoff shims", async () => {
@@ -72,6 +72,53 @@ test("claw project attach previews then writes portable manifest and handoff shi
   assert.equal(inspected.manifest.projectId, "mobile-app");
   assert.equal(inspected.agentsManaged, true);
   assert.equal(inspected.claudeShim, true);
+});
+
+test("claw project attach honors explicit false accept flags", async () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-project-accept-false-"));
+  const folder = path.join(cwd, "project");
+  fs.mkdirSync(folder, { recursive: true });
+
+  const stdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "attach",
+    folder,
+    "--workspace-id",
+    "workspace-main",
+    "--project-id",
+    "preview-only",
+    "--accept",
+    "false",
+    "--json",
+  ], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const preview = parseCliJsonPayload<{ accepted: boolean }>(stdout.getOutput());
+  assert.equal(preview.accepted, false);
+  assert.equal(fs.existsSync(path.join(folder, "claw.project.json")), false);
+
+  const invalidStdout = captureStream();
+  assert.equal(await runCli([
+    "project",
+    "attach",
+    folder,
+    "--workspace-id",
+    "workspace-main",
+    "--accept",
+    "sometimes",
+    "--json",
+  ], {
+    stdout: invalidStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+  const invalid = JSON.parse(invalidStdout.getOutput()) as { error: { code: string; status: string } };
+  assert.equal(invalid.error.code, "invalid_boolean_flag");
+  assert.equal(invalid.error.status, "USAGE");
+  assert.equal(fs.existsSync(path.join(folder, "claw.project.json")), false);
 });
 
 test("claw project detach and export keep folder data while producing safe handoff", async () => {
