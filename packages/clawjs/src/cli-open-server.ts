@@ -19,6 +19,14 @@ function parseOpenServerPort(raw: string | undefined, fallback: number): number 
   return port;
 }
 
+function parseOpenServerHost(raw: string | undefined): string {
+  const host = raw ?? "127.0.0.1";
+  if (!host || host !== host.trim() || /[\x00-\x20/\\]/.test(host)) {
+    throw new CliHandledError("invalid_host", `Invalid host: ${raw ?? host}`, CLI_EXIT_USAGE);
+  }
+  return host;
+}
+
 function sendStaticFile(response: http.ServerResponse, filePath: string): void {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = ext === ".html" ? "text/html; charset=utf-8"
@@ -33,7 +41,7 @@ function sendStaticFile(response: http.ServerResponse, filePath: string): void {
 export async function runOpenServerCommand(input: { positionals: string[]; flags: Record<string, string>; context: CliContext }): Promise<number> {
   const surface = resolveOpenSurface(input.positionals[1]);
   if (!surface) throw new CliHandledError("unknown_dashboard", `Unknown dashboard: ${input.positionals[1]}`, CLI_EXIT_USAGE);
-  const host = input.flags.host ?? "127.0.0.1";
+  const host = parseOpenServerHost(input.flags.host);
   const port = parseOpenServerPort(input.flags.port, surface.port);
   const workspace = path.resolve(input.context.cwd, input.flags.workspace ?? ".");
 

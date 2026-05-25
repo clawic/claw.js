@@ -40,3 +40,17 @@ test("open internal server rejects invalid ports before writing state", async ()
   assert.equal(payload.meta.canonicalCommand, "__open-server");
   assert.equal(fs.existsSync(staleTokenPath), false);
 });
+
+test("open internal server rejects unsafe hosts before writing state", async () => {
+  const escapedTokenPath = path.join(openStateDir(), "storage-token-../bad-4242.txt");
+  fs.rmSync(path.dirname(escapedTokenPath), { recursive: true, force: true });
+
+  const result = await runCliCapture(["__open-server", "storage", "--host", "../bad", "--port", "4242", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string }; meta: { canonicalCommand: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_host");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.meta.canonicalCommand, "__open-server");
+  assert.equal(fs.existsSync(escapedTokenPath), false);
+});
