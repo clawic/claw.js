@@ -55,6 +55,54 @@ test("media generation list commands reject invalid limits", async () => {
   }
 });
 
+test("image commands reject invalid enum flags before writing records", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-image-invalid-enums-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  const sourcePath = path.join(workspaceRoot, "demo.png");
+  fs.writeFileSync(sourcePath, "fake-png");
+
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const invalidProvenance = await runCliCapture([
+      "image",
+      "import",
+      "--workspace",
+      workspaceRoot,
+      "--file",
+      sourcePath,
+      "--provenance",
+      "manual-ish",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(invalidProvenance.code, CLI_EXIT_USAGE, invalidProvenance.stdout || invalidProvenance.stderr);
+    const provenancePayload = JSON.parse(invalidProvenance.stdout) as { ok: false; error: { code: string; status: string } };
+    assert.equal(provenancePayload.ok, false);
+    assert.equal(provenancePayload.error.code, "invalid_image_provenance");
+    assert.equal(provenancePayload.error.status, "USAGE");
+    assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "data", "collections", "images")), false);
+
+    const invalidType = await runCliCapture([
+      "image",
+      "list",
+      "--workspace",
+      workspaceRoot,
+      "--type",
+      "poster",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(invalidType.code, CLI_EXIT_USAGE, invalidType.stdout || invalidType.stderr);
+    const typePayload = JSON.parse(invalidType.stdout) as { ok: false; error: { code: string; status: string } };
+    assert.equal(typePayload.ok, false);
+    assert.equal(typePayload.error.code, "invalid_image_type");
+    assert.equal(typePayload.error.status, "USAGE");
+  });
+});
+
 test("search rebuild indexes generations.artifacts from workspace generation records", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-generations-"));
   const dataRoot = path.join(workspaceRoot, "data");

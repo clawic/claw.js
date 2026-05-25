@@ -121,6 +121,10 @@ function parsePositiveIntegerFlag(raw: string | undefined, flagName: string): nu
   return value;
 }
 
+function validateImageSharedFlags(flags: Record<string, string>): void {
+  parseImageType(flags.type);
+}
+
 export async function runMediaGenerationCli(input: {
   group: string | undefined; command: string | undefined; subcommand: string | undefined; flags: Record<string, string>; argv: string[]; context: CliContext; wantsJson: boolean; workspaceRoot: string; appId: string; workspaceId: string; agentId: string; runtimeAdapterId: RuntimeAdapterId; mediaGroup: GenerationCliMediaKind | null;
 }): Promise<number | null> {
@@ -633,6 +637,7 @@ if (group === "image" && command === "create") {
     context.stderr.write("--prompt is required\n");
     return CLI_EXIT_USAGE;
   }
+  validateImageSharedFlags(flags);
   const { media } = await getImageGenerationFacade();
   const record = await media.generate({
     prompt,
@@ -662,6 +667,7 @@ if (group === "image" && command === "edit") {
     context.stderr.write("--id and --prompt are required\n");
     return CLI_EXIT_USAGE;
   }
+  validateImageSharedFlags(flags);
   const { media } = await getImageGenerationFacade();
   const record = await media.edit({
     parentId,
@@ -692,6 +698,8 @@ if (group === "image" && command === "import") {
     context.stderr.write("--file is required\n");
     return CLI_EXIT_USAGE;
   }
+  validateImageSharedFlags(flags);
+  const provenance = parseImageProvenance(flags.provenance) ?? "imported-manual";
   const { media } = await getImageGenerationFacade();
   const record = media.import({
     filePath,
@@ -701,7 +709,7 @@ if (group === "image" && command === "import") {
     requestId: flags["request-id"],
     parentId: flags["parent-id"],
     sourceImageIds: parseCsvFlag(flags["source-image-ids"]),
-    provenance: (flags.provenance as "generated-by-system" | "imported-codex" | "imported-chatgpt" | "imported-manual" | "command-backend" | "custom" | undefined) ?? "imported-manual",
+    provenance,
     externalGenerator: flags["external-generator"],
     backendId: flags.backend,
     backendLabel: flags["backend-label"],
@@ -738,6 +746,7 @@ if (mediaGroup && command === "generate") {
     return CLI_EXIT_USAGE;
   }
   if (mediaGroup === "image") {
+    validateImageSharedFlags(flags);
     const { media } = await getImageGenerationFacade();
     const record = await media.generate({
       prompt,
@@ -790,19 +799,22 @@ if (mediaGroup && command === "generate") {
 if (mediaGroup && command === "list") {
   const limit = parsePositiveIntegerFlag(flags.limit, "limit");
   if (mediaGroup === "image") {
+    const imageType = parseImageType(flags.type);
+    const provenance = parseImageProvenance(flags.provenance);
+    const operation = parseImageOperation(flags.operation);
     const { media } = await getImageGenerationFacade();
     const records = media.list({
       ...(flags.backend ? { backendId: flags.backend } : {}),
       ...(flags.status ? { status: flags.status as "succeeded" | "failed" } : {}),
       ...(limit !== undefined ? { limit } : {}),
       ...(flags.query ? { query: flags.query } : {}),
-      ...(parseImageType(flags.type) ? { imageType: parseImageType(flags.type) } : {}),
+      ...(imageType ? { imageType } : {}),
       ...(flags.project ? { project: flags.project } : {}),
       ...(flags.provider ? { provider: flags.provider } : {}),
       ...(flags.model ? { model: flags.model } : {}),
-      ...(parseImageProvenance(flags.provenance) ? { provenance: parseImageProvenance(flags.provenance) } : {}),
+      ...(provenance ? { provenance } : {}),
       ...(flags.tag ? { tag: flags.tag } : {}),
-      ...(parseImageOperation(flags.operation) ? { operation: parseImageOperation(flags.operation) } : {}),
+      ...(operation ? { operation } : {}),
     });
     if (wantsJson) {
       writeMediaJson(records);
