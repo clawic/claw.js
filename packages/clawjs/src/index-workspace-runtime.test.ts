@@ -1900,14 +1900,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     data: {
       domains: Array<{ domain: string; count?: number }>;
       domainData: {
+        sessions?: { resources?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
         skills?: { skills?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
         memory?: { memory?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        channels?: { channels?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        providers?: { providers?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        auth?: { resources?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
         models?: { models?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
         scheduler?: { schedulers?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
         plugins?: { plugins?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
+        configuration?: { resources?: Array<{ id?: string; kind?: string; status?: string; summary?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> };
       };
     };
   };
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.sessions?.resources?.[0]?.id, "hermes-session-inventory-policy");
   const fallbackDomainRows = new Map(hermesFallbackDomainsPayload.data.domains.map((entry) => [entry.domain, entry]));
   assert.equal(fallbackDomainRows.get("skills")?.count, 1);
   assert.equal(fallbackDomainRows.get("memory")?.count, 1);
@@ -1916,16 +1922,25 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(fallbackDomainRows.get("plugins")?.count, 1);
   assert.equal(hermesFallbackDomainsPayload.data.domainData.skills?.skills?.[0]?.id, "hermes-skills-inventory-policy");
   assert.equal(hermesFallbackDomainsPayload.data.domainData.memory?.memory?.[0]?.id, "hermes-memory-sensitive-projection-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.channels?.channels?.[0]?.id, "hermes-channel-gateway-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.providers?.providers?.[0]?.id, "hermes-provider-context-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.auth?.resources?.[0]?.id, "hermes-auth-secret-ref-policy");
   assert.equal(hermesFallbackDomainsPayload.data.domainData.models?.models?.[0]?.id, "hermes-model-catalog-policy");
   assert.equal(hermesFallbackDomainsPayload.data.domainData.scheduler?.schedulers?.[0]?.id, "hermes-scheduler-inventory-policy");
   assert.equal(hermesFallbackDomainsPayload.data.domainData.plugins?.plugins?.[0]?.id, "hermes-plugins-tools-mcp-policy");
+  assert.equal(hermesFallbackDomainsPayload.data.domainData.configuration?.resources?.[0]?.id, "hermes-configuration-redaction-policy");
 
   for (const fallbackSpec of [
-    { domain: "skills", key: "skills", id: "hermes-skills-inventory-policy", attribute: "promotion path: explicit_claw_skill_promotion_only" },
-    { domain: "memory", key: "memory", id: "hermes-memory-sensitive-projection-policy", attribute: "content access: metadata_default_explicit_content_only" },
-    { domain: "models", key: "models", id: "hermes-model-catalog-policy", attribute: "default model write-back: blocked_until_fixture_coverage" },
-    { domain: "scheduler", key: "schedulers", id: "hermes-scheduler-inventory-policy", attribute: "mutation policy: no_silent_scheduler_change" },
-    { domain: "plugins", key: "plugins", id: "hermes-plugins-tools-mcp-policy", attribute: "enable policy: no_auto_enable" },
+    { domain: "sessions", key: "resources", id: "hermes-session-inventory-policy", attribute: "write policy: no_synthetic_claw_session_as_native", status: "degraded" },
+    { domain: "skills", key: "skills", id: "hermes-skills-inventory-policy", attribute: "promotion path: explicit_claw_skill_promotion_only", status: "degraded" },
+    { domain: "memory", key: "memory", id: "hermes-memory-sensitive-projection-policy", attribute: "content access: metadata_default_explicit_content_only", status: "degraded" },
+    { domain: "channels", key: "channels", id: "hermes-channel-gateway-policy", attribute: "live account evidence: external_pending_until_approved", status: "degraded" },
+    { domain: "providers", key: "providers", id: "hermes-provider-context-policy", attribute: "credential handling: redacted_presence_only", status: "degraded" },
+    { domain: "auth", key: "resources", id: "hermes-auth-secret-ref-policy", attribute: "credential handling: no_plaintext_secret_output", status: "degraded" },
+    { domain: "models", key: "models", id: "hermes-model-catalog-policy", attribute: "default model write-back: blocked_until_fixture_coverage", status: "degraded" },
+    { domain: "scheduler", key: "schedulers", id: "hermes-scheduler-inventory-policy", attribute: "mutation policy: no_silent_scheduler_change", status: "degraded" },
+    { domain: "plugins", key: "plugins", id: "hermes-plugins-tools-mcp-policy", attribute: "enable policy: no_auto_enable", status: "degraded" },
+    { domain: "configuration", key: "resources", id: "hermes-configuration-redaction-policy", attribute: "secret handling: redact_values", status: "projected" },
   ]) {
     const fallbackResourceStdout = captureStream();
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "resources", fallbackSpec.domain, "--workspace", workspaceRoot, "--home-dir", emptyHermesHome, "--json"], {
@@ -1942,7 +1957,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     const resourceRows = fallbackResourcePayload.data.data[fallbackSpec.key] as Array<{ id?: string; status?: string; attributes?: string[]; provenance?: { source?: string; runtimeId?: string; domain?: string } }> | undefined;
     assert.equal(fallbackResourcePayload.data.domain, fallbackSpec.domain);
     assert.equal(resourceRows?.[0]?.id, fallbackSpec.id);
-    assert.equal(resourceRows?.[0]?.status, "degraded");
+    assert.equal(resourceRows?.[0]?.status, fallbackSpec.status);
     assert.equal(resourceRows?.[0]?.attributes?.includes(fallbackSpec.attribute), true);
     assert.equal(resourceRows?.[0]?.provenance?.source, "runtime-ecosystem-manifest");
     assert.equal(resourceRows?.[0]?.provenance?.runtimeId, "hermes");

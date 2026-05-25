@@ -628,7 +628,24 @@ function hermesPolicyResource(domain: string, status, input: {
 }
 
 function buildHermesFallbackResources(domain: string, status) {
+  if (status.adapter !== "hermes") return [];
   const locations = runtimeLocationDiagnostics(status);
+  if (domain === "sessions") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-session-inventory-policy",
+      label: "Hermes session inventory policy",
+      status: status.cliAvailable ? "projected" : "degraded",
+      kind: "native_session_inventory_policy",
+      path: hermesPath(status, "sessions"),
+      summary: "Hermes sessions are projected only from official session commands or bounded local session store metadata.",
+      attributes: [
+        "native list: official_cli_or_bounded_session_store_only",
+        "content access: metadata_default_include_content_required",
+        "write policy: no_synthetic_claw_session_as_native",
+        "round trip: required_before_native_parity_claim",
+      ],
+    })];
+  }
   if (domain === "skills") {
     const skillsPath = hermesPath(status, "skills");
     return [hermesPolicyResource(domain, status, {
@@ -660,6 +677,54 @@ function buildHermesFallbackResources(domain: string, status) {
         "sensitive policy: no_plaintext_secret_or_private_transcript_copy",
         "preservation: preserve_native_memory_until_explicit_promotion",
         "search/index support: blocked_until_fixture_coverage",
+      ],
+    })];
+  }
+  if (domain === "channels") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-channel-gateway-policy",
+      label: "Hermes channel gateway policy",
+      status: status.gatewayAvailable ? "projected" : "degraded",
+      kind: "channel_gateway_projection_policy",
+      path: locations.gatewayConfigPath ?? locations.configPath,
+      summary: "Hermes channel/account bindings stay read-only and secret-ref-only until approved redacted live evidence exists.",
+      attributes: [
+        "channel authority: hermes_gateway",
+        "secret handling: secret_refs_only_no_plaintext",
+        "live account evidence: external_pending_until_approved",
+        "mutation policy: no_provider_or_channel_mutation_without_explicit_approval",
+      ],
+    })];
+  }
+  if (domain === "providers") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-provider-context-policy",
+      label: "Hermes provider context policy",
+      status: status.cliAvailable ? "projected" : "degraded",
+      kind: "provider_context_projection_policy",
+      path: locations.configPath,
+      summary: "Hermes provider context is projected as redacted runtime metadata; credential write-back is blocked until fixture coverage.",
+      attributes: [
+        "provider authority: hermes_runtime_config",
+        "credential handling: redacted_presence_only",
+        "fallback chain: preserve_native_provider_names",
+        "write policy: blocked_until_fixture_coverage",
+      ],
+    })];
+  }
+  if (domain === "auth") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-auth-secret-ref-policy",
+      label: "Hermes auth secret-ref policy",
+      status: existingPathStatus(locations.authStorePath),
+      kind: "secret_ref_projection_policy",
+      path: locations.authStorePath,
+      summary: "Hermes auth is represented only by redacted presence and secret references; plaintext credentials are never emitted.",
+      attributes: [
+        "credential handling: no_plaintext_secret_output",
+        "auth store: presence_only",
+        "env handling: redacted_presence_only",
+        "write policy: blocked_until_fixture_coverage",
       ],
     })];
   }
@@ -711,6 +776,22 @@ function buildHermesFallbackResources(domain: string, status) {
       ],
     })];
   }
+  if (domain === "configuration") {
+    return [hermesPolicyResource(domain, status, {
+      id: "hermes-configuration-redaction-policy",
+      label: "Hermes configuration redaction policy",
+      status: locations.configPath ? "projected" : "degraded",
+      kind: "configuration_projection_policy",
+      path: locations.configPath ?? hermesHomeLocation(status),
+      summary: "Hermes configuration is surfaced as path and presence metadata; values that may contain secrets stay redacted.",
+      attributes: [
+        "config visibility: paths_and_presence_only",
+        "secret handling: redact_values",
+        "workspace override: preserve_runtime_workspace",
+        "write policy: blocked_until_fixture_coverage",
+      ],
+    })];
+  }
   return [];
 }
 
@@ -736,17 +817,19 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
 
   switch (domain) {
     case "sessions":
+      return { sessionResources: buildHermesFallbackResources(domain, status) };
     case "gateway":
     case "doctorCompat":
     case "sandboxPermissions":
-    case "configuration":
       return {};
+    case "configuration":
+      return { configurationResources: buildHermesFallbackResources(domain, status) };
     case "providers":
-      return { providers: await claw.providers.list() };
+      return { providers: [...buildHermesFallbackResources(domain, status), ...(await claw.providers.list())] };
     case "models":
       return { models: withHermesFallbackResources(domain, status, await claw.models.list()), defaultModel: await claw.models.getDefault() };
     case "auth":
-      return { auth: await claw.auth.status() };
+      return { auth: await claw.auth.status(), authResources: buildHermesFallbackResources(domain, status) };
     case "scheduler":
       return { schedulers: withHermesFallbackResources(domain, status, await claw.scheduler.list()) };
     case "memory":
@@ -754,7 +837,7 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
     case "skills":
       return { skills: withHermesFallbackResources(domain, status, await claw.skills.list()) };
     case "channels":
-      return { channels: await claw.channels.list() };
+      return { channels: [...buildHermesFallbackResources(domain, status), ...(await claw.channels.list())] };
     case "plugins": {
       const pluginResources = await readPluginResources();
       return {
@@ -769,14 +852,17 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
       const memory = await claw.memory.list();
       const skills = await claw.skills.list();
       return {
-        providers: await claw.providers.list(),
+        sessionResources: buildHermesFallbackResources("sessions", status),
+        providers: [...buildHermesFallbackResources("providers", status), ...(await claw.providers.list())],
         models: withHermesFallbackResources("models", status, models),
         defaultModel: await claw.models.getDefault(),
         auth: await claw.auth.status(),
+        authResources: buildHermesFallbackResources("auth", status),
         schedulers: withHermesFallbackResources("scheduler", status, schedulers),
         memory: withHermesFallbackResources("memory", status, memory),
         skills: withHermesFallbackResources("skills", status, skills),
-        channels: await claw.channels.list(),
+        channels: [...buildHermesFallbackResources("channels", status), ...(await claw.channels.list())],
+        configurationResources: buildHermesFallbackResources("configuration", status),
         plugins: withHermesFallbackResources("plugins", status, pluginResources.plugins ?? []),
         status: pluginResources.status,
       };
@@ -1830,6 +1916,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
     sessions: {
       session,
       sessions,
+      resources: resources.sessionResources ?? [],
       totalProjected: sessions.length,
       supportContract: sessionsSupportContract,
       actionContracts: sessionActionContracts(runtimeId),
@@ -1840,7 +1927,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
     memory: { memory: resources.memory ?? [], supportContract: buildSupportContract(runtimeId, status, "memory") },
     channels: { channels: resources.channels ?? [], supportContract: buildSupportContract(runtimeId, status, "channels") },
     providers: { providers: resources.providers ?? [], supportContract: buildSupportContract(runtimeId, status, "providers") },
-    auth: { auth: resources.auth ?? null, supportContract: buildSupportContract(runtimeId, status, "auth") },
+    auth: { auth: resources.auth ?? null, resources: resources.authResources ?? [], supportContract: buildSupportContract(runtimeId, status, "auth") },
     models: { models: resources.models ?? [], defaultModel: resources.defaultModel ?? null, supportContract: buildSupportContract(runtimeId, status, "models") },
     scheduler: { schedulers: resources.schedulers ?? [], supportContract: buildSupportContract(runtimeId, status, "scheduler") },
     plugins: { plugins: resources.plugins ?? [], status: resources.status ?? status.capabilityMap?.plugins ?? null, supportContract: buildSupportContract(runtimeId, status, "plugins") },
@@ -1869,6 +1956,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       managedFiles: workspace.managedFiles,
       diagnostics: status.diagnostics ?? {},
       runtimeLocations: runtimeLocationDiagnostics(status),
+      resources: resources.configurationResources ?? [],
       redactionPolicy: "redacted_paths_and_presence_only",
       capability: domainCapability(status, "configuration") ?? null,
       supportContract: buildSupportContract(runtimeId, status, "configuration"),
