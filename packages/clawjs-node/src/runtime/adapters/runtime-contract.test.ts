@@ -13,6 +13,7 @@ import { openclawAdapter } from "./openclaw-adapter.ts";
 
 class FakeRunner implements CommandRunner {
   private readonly handlers: Record<string, { stdout?: string; stderr?: string; fail?: boolean }>;
+  readonly calls: string[] = [];
 
   constructor(handlers: Record<string, { stdout?: string; stderr?: string; fail?: boolean }>) {
     this.handlers = handlers;
@@ -20,6 +21,7 @@ class FakeRunner implements CommandRunner {
 
   async exec(command: string, args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const key = `${command} ${args.join(" ")}`.trim();
+    this.calls.push(key);
     const handler = this.handlers[key];
     if (!handler) {
       throw new Error(`missing handler for ${key}`);
@@ -190,6 +192,30 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(conversation.fallbackTransport, "cli");
   assert.equal(conversation.sessionPersistence, "runtime");
   assert.equal(conversation.sessionPath?.endsWith(path.join(".hermes", "sessions")), true);
+});
+
+test("hermes adapter honors an explicit binary path for runtime probes", async () => {
+  const runner = new FakeRunner({
+    "custom-hermes --version": { stdout: "hermes 2.0.0\n" },
+    "custom-hermes auth": { fail: true, stderr: "interactive" },
+    "custom-hermes cron status": { stdout: "{}" },
+    "custom-hermes gateway status": { stdout: "{}" },
+    "custom-hermes skills list": { stdout: "[]" },
+    "custom-hermes memory status": { stdout: "{}" },
+    "custom-hermes plugins list": { stdout: "[]" },
+    "custom-hermes tools --summary": { stdout: "{}" },
+    "custom-hermes status --all": { stdout: "{}" },
+  });
+
+  const status = await getRuntimeStatusReport(hermesAdapter, runner, {
+    adapter: "hermes",
+    binaryPath: "custom-hermes",
+  });
+
+  assert.equal(status.cliAvailable, true);
+  assert.equal(status.version, "hermes 2.0.0");
+  assert.equal(runner.calls.includes("which hermes"), false);
+  assert.equal(runner.calls.every((call) => call === "custom-hermes --version" || call.startsWith("custom-hermes ")), true);
 });
 
 test("hermes adapter does not duplicate an already resolved runtime home", async () => {

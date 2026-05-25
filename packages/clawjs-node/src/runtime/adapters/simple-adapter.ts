@@ -107,6 +107,10 @@ function resolveLocations(spec: SimpleRuntimeAdapterSpec, options: RuntimeAdapte
   };
 }
 
+function runtimeBinary(spec: SimpleRuntimeAdapterSpec, options: RuntimeAdapterOptions): string {
+  return options.binaryPath?.trim() || spec.binary;
+}
+
 function readConfig(locations: RuntimeLocations): Record<string, unknown> {
   return readJsonFile<Record<string, unknown>>(locations.configPath ?? "") ?? {};
 }
@@ -297,9 +301,17 @@ async function probeSimpleRuntime(
     ...(spec.gatewaySupport ? { gateway: false } : {}),
     ...Object.fromEntries(Object.keys(spec.probeCommands ?? {}).map((key) => [key, false])),
   };
+  const binary = runtimeBinary(spec, options);
   let cliAvailable = false;
+  let version: string | null = null;
   try {
-    await runner?.exec("which", [spec.binary], { timeoutMs: 5_000 });
+    if (options.binaryPath?.trim()) {
+      const result = await runner?.exec(binary, spec.versionArgs ?? ["--version"], { timeoutMs: 8_000 });
+      version = result?.stdout.trim() || null;
+      capabilities.version = !!version;
+    } else {
+      await runner?.exec("which", [binary], { timeoutMs: 5_000 });
+    }
     cliAvailable = true;
   } catch {
     cliAvailable = false;
@@ -331,33 +343,34 @@ async function probeSimpleRuntime(
         channels: { ...declared.channels, supported: declared.channels.supported, status: declared.channels.supported ? "degraded" : "unsupported", strategy: declared.channels.strategy },
       }),
       diagnostics: {
-        lastError: `${spec.binary} CLI not found`,
+        lastError: `${binary} CLI not found`,
         locations,
       },
     };
   }
 
-  let version: string | null = null;
-  try {
-    const result = await runner!.exec(spec.binary, spec.versionArgs ?? ["--version"], { timeoutMs: 8_000 });
-    version = result.stdout.trim() || null;
-    capabilities.version = !!version;
-  } catch {}
+  if (!version) {
+    try {
+      const result = await runner!.exec(binary, spec.versionArgs ?? ["--version"], { timeoutMs: 8_000 });
+      version = result.stdout.trim() || null;
+      capabilities.version = !!version;
+    } catch {}
+  }
   if (spec.modelListCommand) {
     try {
-      await runner!.exec(spec.binary, spec.modelListCommand, { timeoutMs: 10_000 });
+      await runner!.exec(binary, spec.modelListCommand, { timeoutMs: 10_000 });
       capabilities.modelList = true;
     } catch {}
   }
   if (spec.loginArgs) {
     try {
-      await runner!.exec(spec.binary, spec.loginArgs("test-provider"), { timeoutMs: 5_000 });
+      await runner!.exec(binary, spec.loginArgs("test-provider"), { timeoutMs: 5_000 });
       capabilities.authLogin = true;
     } catch {}
   }
   for (const [key, args] of Object.entries(spec.probeCommands ?? {})) {
     try {
-      await runner!.exec(spec.binary, args, { timeoutMs: 8_000 });
+      await runner!.exec(binary, args, { timeoutMs: 8_000 });
       capabilities[key] = true;
     } catch {
       capabilities[key] = false;
@@ -551,7 +564,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
         }
         if (spec.modelListCommand) {
           try {
-            const result = await runner.exec(spec.binary, spec.modelListCommand, { timeoutMs: 20_000 });
+            const result = await runner.exec(runtimeBinary(spec, options), spec.modelListCommand, { timeoutMs: 20_000 });
             const parsed = JSON.parse(result.stdout) as Array<string | { id?: string; model?: string; provider?: string; name?: string }>;
             const mapped = parsed.map((entry): ModelDescriptor | null => {
               if (typeof entry === "string") {
@@ -605,7 +618,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
       async setDefaultModel(model, runner, options) {
         if (spec.setDefaultModelArgs) {
           try {
-            await runner.exec(spec.binary, spec.setDefaultModelArgs(model), { timeoutMs: 20_000 });
+            await runner.exec(runtimeBinary(spec, options), spec.setDefaultModelArgs(model), { timeoutMs: 20_000 });
           } catch {}
         }
         const locations = resolveLocations(spec, options);
@@ -897,7 +910,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
       }
       if (spec.modelListCommand) {
         try {
-          const result = await runner.exec(spec.binary, spec.modelListCommand, { timeoutMs: 20_000 });
+          const result = await runner.exec(runtimeBinary(spec, options), spec.modelListCommand, { timeoutMs: 20_000 });
           const parsed = JSON.parse(result.stdout) as Array<string | { id?: string; model?: string; provider?: string; name?: string }>;
           const mapped = parsed.map((entry): ModelDescriptor | null => {
             if (typeof entry === "string") {
@@ -951,7 +964,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
     async setDefaultModel(model, runner, options) {
       if (spec.setDefaultModelArgs) {
         try {
-          await runner.exec(spec.binary, spec.setDefaultModelArgs(model), { timeoutMs: 20_000 });
+          await runner.exec(runtimeBinary(spec, options), spec.setDefaultModelArgs(model), { timeoutMs: 20_000 });
         } catch {
           // config fallback below
         }
@@ -978,7 +991,7 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
     },
     async login(provider, launcher, options): Promise<AuthLoginResult> {
       const args = spec.loginArgs?.(provider) ?? ["auth", "login", "--provider", provider];
-      const spawned = launcher.spawnDetachedPty(spec.binary, args, {
+      const spawned = launcher.spawnDetachedPty(runtimeBinary(spec, options), args, {
         cwd: options.cwd,
         env: options.env,
       });
