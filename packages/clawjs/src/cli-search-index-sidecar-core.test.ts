@@ -641,7 +641,7 @@ test("search rebuild and query use the Search sidecar without workspace state", 
     assert.equal(monitorPayload.data.item.savedSearchId, "recent-system");
     assert.equal(monitorPayload.data.item.cadence, "hourly");
     assert.equal(monitorPayload.data.items.some((item) => item.id === "monitor-system" && item.enabled), true);
-    const monitorRun = await runCliCapture(["search", "monitors", "run", "monitor-system", "--data-dir", dataRoot, "--json", "--limit", "3"], workspaceRoot);
+    const monitorRun = await runCliCapture(["search", "monitors", "run", "monitor-system", "--data-dir", dataRoot, "--json", "--limit", "3.8"], workspaceRoot);
     assert.equal(monitorRun.code, CLI_EXIT_OK);
     const monitorRunPayload = JSON.parse(monitorRun.stdout) as {
       data: {

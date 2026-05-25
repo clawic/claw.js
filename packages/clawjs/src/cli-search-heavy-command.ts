@@ -1825,7 +1825,7 @@ export function runSearchMonitorEvaluations(
     return includeDisabled || monitor.enabled;
   });
   if (importedSourceCanIndex(store, "commands")) importedEnsureCommandSourceIndexed(store);
-  const limit = input.flags.limit ? Number(input.flags.limit) : undefined;
+  const limit = input.flags.limit ? SearchDocuments.boundedNumberFlag(input.flags.limit, 20, 1, 1000) : undefined;
   const evaluatedAt = new Date().toISOString();
   const items = monitors.map((monitor) => {
     const saved = savedSearches.get(monitor.savedSearchId);
