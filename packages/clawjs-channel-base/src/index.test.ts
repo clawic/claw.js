@@ -6,7 +6,7 @@ import { test } from "vitest";
 
 import { resolveClawGlobalDataStorageDir } from "@clawjs/core";
 
-import { loadChannelConfig } from "./index.ts";
+import { ChannelApiClient, loadChannelConfig } from "./index.ts";
 
 test("channel base global data fallback uses the central global data storage helper", () => {
   const source = fs.readFileSync(new URL("./index.ts", import.meta.url), "utf8");
@@ -48,6 +48,27 @@ test("channel base preserves channel-specific and shared global data override pr
     },
     () => {
       assert.equal(loadChannelConfig("telegram").dataDir, path.join(os.tmpdir(), "channel-home", "data"));
+    },
+  );
+});
+
+test("channel api client reports malformed success JSON with request context", async () => {
+  const client = new ChannelApiClient({
+    channel: "telegram",
+    baseUrl: "https://channel.example.invalid",
+    token: "secret",
+    fetchImpl: async () => new Response("{\"items\":", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+  });
+
+  await assert.rejects(
+    () => client.listAccounts(),
+    (error) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /telegram api GET \/v1\/telegram\/accounts -> malformed JSON response/);
+      return true;
     },
   );
 });

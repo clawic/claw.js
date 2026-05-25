@@ -89,6 +89,7 @@ class SessionEventClient implements SessionEventSubscription {
   private flushing = false;
   private waitingForDrain = false;
   private closed = false;
+  private drainListener: (() => void) | null = null;
 
   constructor(
     raw: SessionSseWritable,
@@ -157,6 +158,7 @@ class SessionEventClient implements SessionEventSubscription {
   close(): void {
     if (this.closed) return;
     this.closed = true;
+    this.removeDrainListener();
     this.queue.length = 0;
     this.coalesced.clear();
     this.onClose(this);
@@ -169,6 +171,7 @@ class SessionEventClient implements SessionEventSubscription {
     this.metrics.closedFailedClients += 1;
     this.metrics.writeFailureCount += 1;
     this.closed = true;
+    this.removeDrainListener();
     this.queue.length = 0;
     this.coalesced.clear();
     this.onClose(this);
@@ -188,6 +191,7 @@ class SessionEventClient implements SessionEventSubscription {
     this.metrics.overflowCount += 1;
     this.metrics.closedSlowClients += 1;
     this.closed = true;
+    this.removeDrainListener();
     this.queue.length = 0;
     this.coalesced.clear();
     this.onClose(this);
@@ -218,11 +222,28 @@ class SessionEventClient implements SessionEventSubscription {
     }
   }
 
+  private closeForTransportEnd(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.removeDrainListener();
+    this.queue.length = 0;
+    this.coalesced.clear();
+    this.onClose(this);
+  }
+
   private flush(): void {
     if (this.flushing || this.waitingForDrain || this.closed) return;
+    if (this.raw.destroyed || this.raw.writableEnded) {
+      this.closeForTransportEnd();
+      return;
+    }
     this.flushing = true;
     try {
       while (this.queue.length > 0 && !this.closed) {
+        if (this.raw.destroyed || this.raw.writableEnded) {
+          this.closeForTransportEnd();
+          return;
+        }
         const next = this.queue[0];
         let accepted: boolean;
         try {
@@ -237,8 +258,14 @@ class SessionEventClient implements SessionEventSubscription {
           this.waitingForDrain = true;
           const onDrain = () => {
             this.waitingForDrain = false;
+            this.drainListener = null;
+            if (this.raw.destroyed || this.raw.writableEnded) {
+              this.closeForTransportEnd();
+              return;
+            }
             this.flush();
           };
+          this.drainListener = onDrain;
           this.raw.once("drain", onDrain);
           return;
         }
@@ -246,6 +273,18 @@ class SessionEventClient implements SessionEventSubscription {
     } finally {
       this.flushing = false;
     }
+  }
+
+  private removeDrainListener(): void {
+    if (!this.drainListener) return;
+    const listener = this.drainListener;
+    this.drainListener = null;
+    this.waitingForDrain = false;
+    if (this.raw.off) {
+      this.raw.off("drain", listener);
+      return;
+    }
+    this.raw.removeListener?.("drain", listener);
   }
 
   private shiftWrittenEvent(): void {

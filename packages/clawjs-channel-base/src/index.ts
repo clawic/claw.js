@@ -359,6 +359,15 @@ function readQuery(request: FastifyRequest): Record<string, string> { return ((r
 function asString(value: unknown): string | undefined { return typeof value === "string" && value.length > 0 ? value : undefined; }
 function asNumber(value: unknown): number | undefined { if (value === undefined || value === null || value === "") return undefined; const n = Number(value); return Number.isFinite(n) ? n : undefined; }
 
+function parseChannelApiJson<T>(input: { channel: string; method: string; path: string; text: string }): T {
+  try {
+    return JSON.parse(input.text) as T;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`${input.channel} api ${input.method} ${input.path} -> malformed JSON response: ${reason}`);
+  }
+}
+
 export interface BuiltChannelApp {
   app: FastifyInstance;
   config: ChannelServiceConfig;
@@ -504,8 +513,9 @@ export class ChannelApiClient {
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method, headers, body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    if (!response.ok) { const text = await response.text(); throw new Error(`${this.channel} api ${method} ${path} -> ${response.status}: ${text}`); }
-    return (await response.json()) as T;
+    const text = await response.text();
+    if (!response.ok) throw new Error(`${this.channel} api ${method} ${path} -> ${response.status}: ${text}`);
+    return parseChannelApiJson<T>({ channel: this.channel, method, path, text });
   }
 
   health(): Promise<{ ok: boolean; service: string }> { return this.call("GET", clawApiPath("health")); }

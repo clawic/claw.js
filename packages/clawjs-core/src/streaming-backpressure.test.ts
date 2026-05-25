@@ -29,3 +29,13 @@ test("splitStreamingTextDelta preserves text while respecting UTF-8 frame limits
     assert.ok(estimateUtf8Bytes(frame) <= 8);
   }
 });
+
+test("splitStreamingTextDelta makes progress at the minimum UTF-8 frame size", () => {
+  const input = "😀😃😄😁";
+  const frames = splitStreamingTextDelta(input, 4);
+
+  assert.deepEqual(frames, ["😀", "😃", "😄", "😁"]);
+  assert.equal(frames.join(""), input);
+  assert.ok(frames.every((frame) => frame.length > 0));
+  assert.ok(frames.every((frame) => estimateUtf8Bytes(frame) === 4));
+});

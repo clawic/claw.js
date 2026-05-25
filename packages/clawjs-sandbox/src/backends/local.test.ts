@@ -40,6 +40,45 @@ test("local backend handles stdin EPIPE when a command exits before consuming in
   });
 });
 
+test("local backend fails closed when stdout exceeds the configured output limit", async () => {
+  const result = await runNode([
+    "--import",
+    "tsx",
+    "--input-type=module",
+    "-e",
+    `
+      import { localBackend } from "./packages/clawjs-sandbox/src/backends/local.ts";
+
+      const startedAt = Date.now();
+      const result = await localBackend.run({
+        backend: "local",
+        command: process.execPath,
+        args: ["-e", "const chunk = Buffer.alloc(1024 * 1024, 97); for (let i = 0; i < 256; i++) process.stdout.write(chunk);"],
+        timeoutMs: 10000,
+        maxOutputBytes: 64 * 1024,
+      });
+      console.log(JSON.stringify({
+        status: result.status,
+        stdoutBytes: Buffer.byteLength(result.stdout),
+        error: result.error ?? null,
+        elapsedMs: Date.now() - startedAt,
+      }));
+    `,
+  ]);
+
+  assert.equal(result.code, 0, result.stderr);
+  const payload = JSON.parse(result.stdout.trim()) as {
+    status: string;
+    stdoutBytes: number;
+    error: string | null;
+    elapsedMs: number;
+  };
+  assert.equal(payload.status, "failed");
+  assert.match(payload.error ?? "", /stdout exceeded maxOutputBytes/);
+  assert.equal(payload.stdoutBytes < 80 * 1024, true);
+  assert.equal(payload.elapsedMs < 3000, true);
+});
+
 function runNode(args: string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, {

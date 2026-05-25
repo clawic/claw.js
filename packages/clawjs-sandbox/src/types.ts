@@ -11,6 +11,7 @@ export interface RunRequest {
   env?: Record<string, string> | null;
   stdin?: string | null;
   timeoutMs?: number | null;
+  maxOutputBytes?: number | null;
   /** docker only: image to run */
   image?: string | null;
   /** docker only: pass --network mode */

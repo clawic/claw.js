@@ -21,12 +21,14 @@ import type { SessionEvent } from "./types.ts";
 class FakeSseRaw extends EventEmitter implements SessionSseWritable {
   chunks: string[] = [];
   ended = false;
+  destroyed = false;
+  writableEnded = false;
   writesBeforeBackpressure = Number.POSITIVE_INFINITY;
   failWrites = false;
   private writes = 0;
 
   write(chunk: string): boolean {
-    if (this.failWrites) throw new Error("socket closed");
+    if (this.failWrites || this.destroyed || this.writableEnded) throw new Error("socket closed");
     this.chunks.push(chunk);
     this.writes += 1;
     return this.writes <= this.writesBeforeBackpressure;
@@ -205,6 +207,43 @@ test("SessionEventBroadcaster drops a failed subscriber without blocking healthy
   assert.deepEqual(decoded(fast).map((item) => item.type), [
     clawSessionEvents.updated,
     clawSessionEvents.messageAppended,
+  ]);
+});
+
+test("SessionEventBroadcaster cleans up a disconnected slow subscriber without replaying queued events on drain", () => {
+  const broadcaster = new SessionEventBroadcaster();
+  const slow = new FakeSseRaw();
+  slow.writesBeforeBackpressure = 0;
+  const fast = new FakeSseRaw();
+  broadcaster.subscribe(slow);
+  broadcaster.subscribe(fast);
+
+  broadcaster.publish(event({ type: clawSessionEvents.updated, sessionId: "session-1" }));
+  broadcaster.publish(event({ type: clawSessionEvents.messageAppended, sessionId: "session-1", messageId: "message-1" }));
+
+  assert.deepEqual(decoded(slow).map((item) => item.type), [clawSessionEvents.updated]);
+  assert.equal(broadcaster.snapshotMetrics().queuedEvents, 1);
+
+  slow.writableEnded = true;
+  slow.emit("drain");
+
+  assert.deepEqual(decoded(slow).map((item) => item.type), [clawSessionEvents.updated]);
+  assert.deepEqual(decoded(fast).map((item) => item.type), [
+    clawSessionEvents.updated,
+    clawSessionEvents.messageAppended,
+  ]);
+  assert.equal(broadcaster.snapshotMetrics().subscribers, 1);
+  assert.equal(broadcaster.snapshotMetrics().queuedEvents, 0);
+  assert.equal(broadcaster.snapshotMetrics().closedFailedClients, 0);
+  assert.equal(broadcaster.snapshotMetrics().writeFailureCount, 0);
+
+  broadcaster.publish(event({ type: clawSessionEvents.turnFinished, sessionId: "session-1" }));
+
+  assert.deepEqual(decoded(slow).map((item) => item.type), [clawSessionEvents.updated]);
+  assert.deepEqual(decoded(fast).map((item) => item.type), [
+    clawSessionEvents.updated,
+    clawSessionEvents.messageAppended,
+    clawSessionEvents.turnFinished,
   ]);
 });
 
