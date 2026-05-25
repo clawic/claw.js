@@ -6,7 +6,7 @@ import os from "os";
 import path from "path";
 import Database from "better-sqlite3";
 import { createClaw, saveAuthStore } from "@clawjs/claw";
-import { createPortableArchiveManifestFixture } from "@clawjs/core";
+import { createPortableArchiveManifestFixture, resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { buildTimeApp } from "../../../time/src/server/app.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, CLI_USAGE, runCli } from "./index.ts";
 import {
@@ -1330,6 +1330,54 @@ test("runCli supports implicit db create, schema inspection, human output, and a
   assert.equal(taskSchema.collection.fields.some((field) => field.name === "priority" && field.options?.includes("urgent")), true);
   assert.equal(taskSchema.collection.fields.some((field) => field.name === "estimateMinutes" && field.type === "number"), true);
 
+});
+
+test("runCli magic db list and query honor explicit include-archived false", async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-magic-db-archived-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+
+  const createStdout = captureStream();
+  assert.equal(await runCli(["db", "leads", "create", "--set", "name=Archived lead", "--set", "companyId=company-archived", "--json"], {
+    stdout: createStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const created = parseCliJsonPayload<{ id: string }>(createStdout.getOutput());
+
+  const sqlite = new Database(resolveClawPersistentSurfacePath("claw.workspace.data", workspaceRoot, "core.sqlite"));
+  t.onTestFinished(() => sqlite.close());
+  const row = sqlite.prepare("SELECT data_json FROM records WHERE namespace_id = ? AND collection_name = ? AND id = ?")
+    .get("main", "leads", created.id) as { data_json: string };
+  sqlite.prepare("UPDATE records SET data_json = ? WHERE namespace_id = ? AND collection_name = ? AND id = ?").run(
+    JSON.stringify({ ...JSON.parse(row.data_json) as Record<string, unknown>, archivedAt: "2026-01-01T00:00:00.000Z" }),
+    "main",
+    "leads",
+    created.id,
+  );
+
+  const listFalseStdout = captureStream();
+  assert.equal(await runCli(["db", "leads", "list", "--include-archived", "false", "--json"], {
+    stdout: listFalseStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.equal(parseCliJsonPayload<Array<{ id: string }>>(listFalseStdout.getOutput()).some((item) => item.id === created.id), false);
+
+  const queryFalseStdout = captureStream();
+  assert.equal(await runCli(["db", "leads", "query", "Archived", "--include-archived", "false", "--json"], {
+    stdout: queryFalseStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_DEGRADED);
+  assert.equal(parseCliJsonPayload<Array<{ id: string }>>(queryFalseStdout.getOutput()).some((item) => item.id === created.id), false);
+
+  const listTrueStdout = captureStream();
+  assert.equal(await runCli(["db", "leads", "list", "--include-archived", "true", "--json"], {
+    stdout: listTrueStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.equal(parseCliJsonPayload<Array<{ id: string }>>(listTrueStdout.getOutput()).some((item) => item.id === created.id), true);
 });
 
 test("runCli can scaffold a workspace-first project with the new command surface", async () => {

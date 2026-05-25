@@ -4,6 +4,7 @@ import { BUILTIN_COLLECTIONS_BY_ALIAS, BUILTIN_COLLECTIONS_BY_NAME } from "@claw
 import fs from "fs";
 import path from "path";
 import { CliHandledError } from "./cli-errors.ts";
+import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { scheduleDatabaseRecordSearchEvent, scheduleDocumentBlocksSearchEvent, scheduleElnRecordsSearchEvent, scheduleFinanceRecordsSearchEvent, scheduleWorkItemsSearchEvent } from "./cli-search-events.ts";
 import { openMainDataStore } from "./v1-data.ts";
@@ -331,13 +332,6 @@ function writeWarnings(stream: Writable, warnings: string[]): void {
 function writeHumanAdvisory(stream: Writable, wantsJson: boolean, message: string): void {
   if (wantsJson) return;
   stream.write(`${message}\n`);
-}
-
-function readBooleanFlag(argv: string[], flags: Record<string, string>, name: string, fallback = false): boolean {
-  if (argv.includes(`--${name}`)) return true;
-  const value = flags[name];
-  if (value === undefined) return fallback;
-  return value === "true";
 }
 
 function parseSetFlags(argv: string[]): Record<string, unknown> {
