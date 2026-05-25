@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { __verifyCliTest } from "./cli-verify-command.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
@@ -58,6 +58,24 @@ test("verify release rejects missing provenance and checksum mismatch", () => {
   assert(result.issues.some((issue) => issue.code === "provenance_missing"));
 });
 
+test("verify release reports malformed manifest JSON as a verification issue", async () => {
+  const root = tempDir();
+  const manifestPath = path.join(root, "release.json");
+  fs.writeFileSync(manifestPath, "{bad-json", "utf8");
+
+  const result = await runCliCapture(["verify", "release", "--manifest", manifestPath, "--json"], root);
+
+  assert.equal(result.code, CLI_EXIT_FAILURE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    data: { verified: boolean; issues: Array<{ code: string; path?: string }> };
+  };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.verified, false);
+  assert.equal(payload.data.issues[0]?.code, "manifest_json_invalid");
+  assert.equal(payload.data.issues[0]?.path, manifestPath);
+});
+
 test("verify plugin requires supply-chain metadata and malware review", () => {
   const root = tempDir();
   fs.writeFileSync(path.join(root, "plugin.json"), JSON.stringify({ name: "sample" }));
@@ -95,6 +113,24 @@ test("verify plugin rejects lifecycle scripts without accepted metadata", () => 
   assert.equal(result.ok, false);
   assert(result.issues.some((issue) => issue.code === "lifecycle_script_review_required"));
   assert(result.issues.some((issue) => issue.code === "supply_chain_metadata_missing"));
+});
+
+test("verify plugin reports malformed package JSON as a verification issue", async () => {
+  const root = tempDir();
+  fs.writeFileSync(path.join(root, "plugin.json"), JSON.stringify({ name: "sample" }));
+  fs.writeFileSync(path.join(root, "package.json"), "{bad-json", "utf8");
+
+  const result = await runCliCapture(["verify", "plugin", root, "--json"], root);
+
+  assert.equal(result.code, CLI_EXIT_FAILURE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    data: { verified: boolean; issues: Array<{ code: string; path?: string }> };
+  };
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.verified, false);
+  assert.equal(payload.data.issues[0]?.code, "package_json_malformed");
+  assert.equal(payload.data.issues[0]?.path, path.join(root, "package.json"));
 });
 
 test("verify usage errors keep the JSON contract", async () => {

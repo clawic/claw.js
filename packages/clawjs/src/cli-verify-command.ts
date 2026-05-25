@@ -29,8 +29,19 @@ function flagValue(argv: string[], name: string): string | undefined {
   return undefined;
 }
 
-function readJson(filePath: string): unknown {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+function readJson(filePath: string, code: string, label: string): { ok: true; value: unknown } | { ok: false; issue: VerificationIssue } {
+  try {
+    return { ok: true, value: JSON.parse(fs.readFileSync(filePath, "utf8")) };
+  } catch (error) {
+    return {
+      ok: false,
+      issue: {
+        code,
+        message: `${label} must contain valid JSON: ${error instanceof Error ? error.message : "parse error"}`,
+        path: filePath,
+      },
+    };
+  }
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -68,7 +79,9 @@ function validateReleaseManifest(manifestPath: string): { ok: boolean; artifacts
   if (!fs.existsSync(absoluteManifest)) {
     return { ok: false, artifacts: [], issues: [{ code: "manifest_missing", message: `Release manifest is missing: ${manifestPath}` }] };
   }
-  const manifest = readJson(absoluteManifest);
+  const manifestJson = readJson(absoluteManifest, "manifest_json_invalid", "Release manifest");
+  if (!manifestJson.ok) return { ok: false, artifacts: [], issues: [manifestJson.issue] };
+  const manifest = manifestJson.value;
   if (!isObject(manifest)) {
     return { ok: false, artifacts: [], issues: [{ code: "manifest_invalid", message: "Release manifest must be a JSON object" }] };
   }
@@ -132,7 +145,9 @@ function validatePlugin(target: string): { ok: boolean; packageName: string | nu
   if (!fs.existsSync(packageJsonPath)) {
     return { ok: false, packageName: null, issues: [{ code: "package_json_missing", message: "Plugin package.json is required" }] };
   }
-  const packageJson = readJson(packageJsonPath);
+  const packageJsonResult = readJson(packageJsonPath, "package_json_malformed", "Plugin package.json");
+  if (!packageJsonResult.ok) return { ok: false, packageName: null, issues: [packageJsonResult.issue] };
+  const packageJson = packageJsonResult.value;
   if (!isObject(packageJson)) {
     return { ok: false, packageName: null, issues: [{ code: "package_json_invalid", message: "Plugin package.json must be an object" }] };
   }
