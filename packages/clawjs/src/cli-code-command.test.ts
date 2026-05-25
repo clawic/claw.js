@@ -29,3 +29,40 @@ test("code agents list rejects invalid offline thresholds", async () => {
   assert.equal(negativePayload.ok, false);
   assert.equal(negativePayload.error.code, "invalid_code_agent_offline_after_ms");
 });
+
+test("code projects discover rejects invalid max depth", async () => {
+  const codeHome = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-projects-depth-"));
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-projects-workspace-"));
+
+  const invalidText = await runCliCapture([
+    "code",
+    "projects",
+    "discover",
+    workspace,
+    "--code-home",
+    codeHome,
+    "--max-depth",
+    "nope",
+    "--json",
+  ], process.cwd());
+  assert.equal(invalidText.code, CLI_EXIT_USAGE, invalidText.stderr || invalidText.stdout);
+  const invalidTextPayload = payload(invalidText.stdout);
+  assert.equal(invalidTextPayload.ok, false);
+  assert.equal(invalidTextPayload.error.code, "invalid_code_project_discover_max_depth");
+  assert.equal(invalidTextPayload.error.status, "USAGE");
+
+  const negative = await runCliCapture([
+    "code",
+    "projects",
+    "discover",
+    workspace,
+    "--code-home",
+    codeHome,
+    "--max-depth",
+    "-1",
+    "--json",
+  ], process.cwd());
+  assert.equal(negative.code, CLI_EXIT_USAGE, negative.stderr || negative.stdout);
+  const negativePayload = payload(negative.stdout);
+  assert.equal(negativePayload.error.code, "invalid_code_project_discover_max_depth");
+});

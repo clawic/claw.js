@@ -68,7 +68,7 @@ export async function runCodeCli(input: {
 
     if (command === "projects" && subcommand === "discover") {
       const rootDir = input.positionals[3] ?? input.flags.path ?? input.context.cwd;
-      const maxDepth = input.flags["max-depth"] ? Number(input.flags["max-depth"]) : undefined;
+      const maxDepth = parseCodeNonNegativeIntegerFlag(input.flags["max-depth"], "max-depth", "invalid_code_project_discover_max_depth");
       const projects = globalIndex.discoverProjects({ rootDir, ...(maxDepth !== undefined ? { maxDepth } : {}) });
       if (input.wantsJson) writeCodeJson({ projects });
       else input.context.stdout.write(formatCliTable(projects.map((project: { id: string; status: string; name: string; rootDir: string }) => ({
