@@ -194,9 +194,12 @@ function parseLimit(input: NeedsCliInput): number | undefined {
   const raw = input.flags.limit;
   if (raw === undefined) return undefined;
   const trimmed = raw.trim();
+  if (!/^(?:0|[1-9]\d*)$/.test(trimmed)) {
+    throw new CliHandledError("invalid_limit", "Use --limit with a non-negative decimal integer.", CLI_EXIT_USAGE);
+  }
   const limit = Number(trimmed);
-  if (!trimmed || !Number.isInteger(limit) || limit < 0) {
-    throw new CliHandledError("invalid_limit", "Use --limit with a non-negative integer.", CLI_EXIT_USAGE);
+  if (!Number.isSafeInteger(limit)) {
+    throw new CliHandledError("invalid_limit", "Use --limit with a safe non-negative decimal integer.", CLI_EXIT_USAGE);
   }
   return limit;
 }

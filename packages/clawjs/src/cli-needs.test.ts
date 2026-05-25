@@ -55,7 +55,7 @@ test("runCli evaluates need routes in dry-run mode and saves a canonical workspa
 });
 
 test("runCli rejects invalid need route limits instead of expanding work", async () => {
-  for (const value of ["-1", ""]) {
+  for (const value of ["-1", "", "1.5", "1e2", "0x10", "NaN", "Infinity", "9007199254740992"]) {
     const result = await runCliCapture(["needs", "generate", `--limit=${value}`, "--json"], process.cwd());
     assert.equal(result.code, CLI_EXIT_USAGE);
     const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string } };
