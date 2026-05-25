@@ -1268,7 +1268,7 @@ function macApprovalSatisfiesPlan(approval: MacApprovalRequest, request: MacActi
     approval.plan.planId === plan.planId &&
     approval.plan.capabilityId === plan.capabilityId &&
     approverRole !== undefined &&
-    plan.requiredApprovals.some((requiredApproval) => requiredApproval.approverRoles.includes(approverRole));
+    plan.requiredApprovals.some((requiredApproval) => (requiredApproval.approverRoles as string[]).includes(approverRole));
 }
 
 export function evaluateMacActionBroker(input: EvaluateMacActionBrokerInput): MacActionBrokerEvaluation {
