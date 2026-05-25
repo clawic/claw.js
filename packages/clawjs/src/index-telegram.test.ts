@@ -7,6 +7,7 @@ import path from "path";
 
 import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { captureStream, createFakeTelegramSecretsProxy, withPatchedEnv } from "./index-test-utils.ts";
+import { readListenerPid } from "./cli-channel-listener.ts";
 
 test("runCli can connect and inspect telegram state through the CLI", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-telegram-"));
@@ -269,6 +270,19 @@ process.stdin.on("end", () => process.stdout.write(JSON.stringify({ actions: [] 
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "invalid_channel_listener_number");
   assert.deepEqual(payload.error.details, { flag: "--interval-ms", value: "nope" });
+});
+
+test("channel listener pid files accept only complete positive decimal integers", () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-listener-pid-"));
+  const pidPath = path.join(workspaceRoot, "listener.pid");
+
+  for (const value of ["123abc", "1.5", "0x10", "1e3", "0", "-1", "9007199254740992"]) {
+    fs.writeFileSync(pidPath, value, "utf8");
+    assert.equal(readListenerPid(pidPath), undefined);
+  }
+
+  fs.writeFileSync(pidPath, " 456 \n", "utf8");
+  assert.equal(readListenerPid(pidPath), 456);
 });
 
 test("runCli rejects invalid Telegram Codex listener timing flags before setup", async () => {

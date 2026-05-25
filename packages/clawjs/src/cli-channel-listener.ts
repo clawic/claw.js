@@ -29,7 +29,9 @@ export function isProcessRunning(pid: number | undefined): boolean {
 
 export function readListenerPid(pidPath: string): number | undefined {
   try {
-    const value = Number(fs.readFileSync(pidPath, "utf8").trim());
+    const raw = fs.readFileSync(pidPath, "utf8").trim();
+    if (!/^[1-9]\d*$/.test(raw)) return undefined;
+    const value = Number(raw);
     return Number.isSafeInteger(value) ? value : undefined;
   } catch {
     return undefined;
