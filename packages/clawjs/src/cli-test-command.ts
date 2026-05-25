@@ -66,6 +66,11 @@ interface CoordinationCheck {
   repairPolicy?: string;
 }
 
+interface CoordinationManifest {
+  checks: CoordinationCheck[];
+  manifestPath: string | null;
+}
+
 interface CommandRunResult {
   status: number | null;
   signal: NodeJS.Signals | null;
@@ -94,7 +99,8 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
   if (!command || command === "help") return writeHelp(input);
   const repo = resolveRepo(input);
   const lane = input.flags.lane || input.positionals[2] || "changed";
-  const checks = loadChecks(repo);
+  const manifest = loadChecks(repo);
+  const checks = manifest.checks;
 
   if (command === "plan") {
     const selected = checks.filter((check) => check.lane === lane || lane === "all");
@@ -122,7 +128,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
   if (command === "require") {
     const ids = parseCsvFlag(input.flags.checks);
     if (ids.length === 0) throw new CliHandledError("missing_test_checks", "claw test require needs --checks <id,id>", CLI_EXIT_USAGE);
-    const selected = ids.map((id) => findCheck(checks, repo, id, lane));
+    const selected = ids.map((id) => findCheck(checks, repo, id, lane, manifest.manifestPath));
     const store = await openAgentCoordinationStore(resolvePaths(input));
     const intent = store.createIntent({
       id: input.flags.intent,
@@ -210,7 +216,7 @@ export async function runTestCli(input: TestCliInput): Promise<number> {
   }
 
   if (command === "run") {
-    const check = findCheck(checks, repo, input.flags.check || lane, lane);
+    const check = findCheck(checks, repo, input.flags.check || lane, lane, manifest.manifestPath);
     const store = await openAgentCoordinationStore(resolvePaths(input));
     const intent = store.createIntent({
       id: input.flags.intent,
@@ -355,7 +361,7 @@ function writeHelp(input: TestCliInput): number {
   return CLI_EXIT_OK;
 }
 
-function loadChecks(repo: string): CoordinationCheck[] {
+function loadChecks(repo: string): CoordinationManifest {
   const manifestPath = path.join(repo, "qa", "agent-coordination.manifest.json");
   if (fs.existsSync(manifestPath)) {
     let parsed: { checks?: CoordinationCheck[] };
@@ -365,13 +371,19 @@ function loadChecks(repo: string): CoordinationCheck[] {
       throw new CliHandledError("malformed_test_manifest", `Could not parse ${manifestPath}: ${error instanceof Error ? error.message : String(error)}`, CLI_EXIT_USAGE);
     }
     if (!Array.isArray(parsed.checks)) throw new CliHandledError("malformed_test_manifest", `${manifestPath} must contain a checks array.`, CLI_EXIT_USAGE);
-    return parsed.checks.map((check, index) => validateCheck(check, index, manifestPath));
+    return {
+      checks: parsed.checks.map((check, index) => validateCheck(check, index, manifestPath)),
+      manifestPath,
+    };
   }
-  return [
-    defaultCheck(repo, "changed", "changed"),
-    defaultCheck(repo, "fast", "fast"),
-    defaultCheck(repo, "integration", "integration"),
-  ];
+  return {
+    checks: [
+      defaultCheck(repo, "changed", "changed"),
+      defaultCheck(repo, "fast", "fast"),
+      defaultCheck(repo, "integration", "integration"),
+    ],
+    manifestPath: null,
+  };
 }
 
 function validateCheck(check: CoordinationCheck, index: number, manifestPath: string): CoordinationCheck {
@@ -407,8 +419,13 @@ function validateCheck(check: CoordinationCheck, index: number, manifestPath: st
   return normalized;
 }
 
-function findCheck(checks: CoordinationCheck[], repo: string, id: string, lane: string): CoordinationCheck {
-  return checks.find((check) => check.id === id) ?? defaultCheck(repo, id, lane);
+function findCheck(checks: CoordinationCheck[], repo: string, id: string, lane: string, manifestPath: string | null): CoordinationCheck {
+  const check = checks.find((entry) => entry.id === id);
+  if (check) return check;
+  if (manifestPath) {
+    throw new CliHandledError("unknown_test_check", `Test check "${id}" is not declared in ${manifestPath}.`, CLI_EXIT_USAGE);
+  }
+  return defaultCheck(repo, id, lane);
 }
 
 function testResourceId(repo: string, check: CoordinationCheck): string {
