@@ -139,14 +139,6 @@ export async function runReportCli(input: {
     validateReportRepositoryFlag(flags.repo);
     validateReportKindFlag(flags.kind);
     validateReportDestinationFlag(flags.destination);
-    const state = readReportState(workspaceRoot);
-    const save = () => writeReportState(workspaceRoot, state);
-    const findReport = (id: string | undefined): ReportRecord => {
-      const report = state.reports.find((candidate) => candidate.id === id);
-      if (!report) throw new CliHandledError("not_found", `Report not found: ${id ?? ""}`, CLI_EXIT_FAILURE);
-      return report;
-    };
-
     if (command === "templates") {
       return writeReportResult(context, wantsJson, command, {
         kinds: REPORT_KINDS,
@@ -157,6 +149,14 @@ export async function runReportCli(input: {
         attachmentPolicy: "Each attachment must be explicitly opted in; full local paths are never persisted.",
       });
     }
+
+    const state = readReportState(workspaceRoot);
+    const save = () => writeReportState(workspaceRoot, state);
+    const findReport = (id: string | undefined): ReportRecord => {
+      const report = state.reports.find((candidate) => candidate.id === id);
+      if (!report) throw new CliHandledError("not_found", `Report not found: ${id ?? ""}`, CLI_EXIT_FAILURE);
+      return report;
+    };
 
     if (command === "github" && subcommand === "bootstrap") {
       return await runGitHubBootstrap({ state, flags, argv, context, wantsJson, save, reportLabels: REPORT_LABELS, nowIso });

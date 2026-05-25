@@ -314,7 +314,11 @@ test("report submit blocks private security attachments without explicit opt-in"
 
 test("report templates expose the closed taxonomy and Discussion categories", async () => {
   const workspace = tempWorkspace();
+  const statePath = resolveClawPersistentSurfacePath("claw.workspace.reports.governance_state", workspace);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, "{");
   const result = await runCliCapture(["report", "templates", "--workspace", workspace, "--json"], workspace);
+  assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);
   const payload = parsePayload<{ discussionCategories: string[]; labels: { routing: string[] } }>(result.stdout);
   assert.deepEqual(payload.data.discussionCategories, ["Ideas", "Feedback"]);
   assert.equal(payload.data.labels.routing.includes("route:security-advisory"), true);
