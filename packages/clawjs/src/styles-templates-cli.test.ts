@@ -35,6 +35,35 @@ test("style import reports malformed STYLE.md frontmatter as a json usage error"
   assert.equal(payload.meta.subcommand, "import");
 });
 
+test("style create reports invalid --id as a json usage error", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-style-invalid-cli-id-"));
+  const workspaceRoot = path.join(root, "workspace");
+
+  const result = await runCliCapture(["style", "create", "Bad", "--id", "../bad", "--workspace", workspaceRoot, "--json"], root);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      details?: { received?: string; validPattern?: string; disallowedValues?: string[] };
+    };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_style_id");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "style.id");
+  assert.equal(payload.error.details?.received, "../bad");
+  assert.equal(payload.error.details?.validPattern, "^[A-Za-z0-9][A-Za-z0-9._-]*$");
+  assert.deepEqual(payload.error.details?.disallowedValues, [".", ".."]);
+  assert.equal(payload.meta.canonicalCommand, "styles");
+  assert.equal(payload.meta.subcommand, "create");
+  assert.equal(fs.existsSync(path.join(workspaceRoot, ".claw", "styles")), false);
+});
+
 test("template get reports malformed TEMPLATE.md frontmatter as a json usage error", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-template-frontmatter-"));
   writeFile(root, ".claw/templates/bad-template/TEMPLATE.md", "---json\n{bad\n---\n# Bad template\n");

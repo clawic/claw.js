@@ -5,6 +5,7 @@ import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 
 import { parseStyleMd, serializeStyleMd } from "./serializer.ts";
 import type { StyleManifest } from "./schema.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 
 function stylesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.styles", workspaceRoot);
@@ -12,7 +13,16 @@ function stylesRootDir(workspaceRoot: string): string {
 
 function validateStyleId(styleId: string): string {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(styleId) || styleId === "." || styleId === "..") {
-    throw new Error(`Invalid style id: ${styleId}`);
+    throw new CliHandledError("invalid_style_id", `Invalid style id: ${styleId}`, CLI_EXIT_USAGE, {
+      location: "style.id",
+      suggestion: "Use a style id made of letters, numbers, dots, underscores, or dashes.",
+      safeNextStep: "Retry with an id like brand.foo-1234.",
+      details: {
+        received: styleId,
+        validPattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+        disallowedValues: [".", ".."],
+      },
+    });
   }
   return styleId;
 }
