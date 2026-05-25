@@ -261,21 +261,45 @@ function defaultConfig(mode: SetupModeId = "minimal"): ClawModulesConfig {
   };
 }
 
+function invalidModulesConfig(filePath: string, reason: string): CliHandledError {
+  return new CliHandledError("invalid_modules_config", `Module config is invalid at ${filePath}: ${reason}`, CLI_EXIT_USAGE, {
+    location: filePath,
+    suggestion: "Fix or remove the modules.json file before changing module setup.",
+    safeNextStep: "Inspect the reported modules.json file, restore valid JSON, then rerun the command.",
+    details: { configPath: filePath },
+  });
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
 function readConfig(filePath: string): ClawModulesConfig | null {
   if (!fs.existsSync(filePath)) return null;
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<ClawModulesConfig>;
-    if (parsed.schemaVersion !== 1 || !SETUP_MODE_IDS.has(parsed.mode ?? "")) return null;
-    return {
-      schemaVersion: 1,
-      mode: parsed.mode as SetupModeId,
-      enabledModules: Array.isArray(parsed.enabledModules) ? parsed.enabledModules.filter((entry): entry is string => typeof entry === "string") : [],
-      disabledModules: Array.isArray(parsed.disabledModules) ? parsed.disabledModules.filter((entry): entry is string => typeof entry === "string") : [],
-      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
-    };
+    parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch {
-    return null;
+    throw invalidModulesConfig(filePath, "file must contain valid JSON.");
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw invalidModulesConfig(filePath, "expected a JSON object.");
+  }
+  const config = parsed as Record<string, unknown>;
+  if (config.schemaVersion !== 1) throw invalidModulesConfig(filePath, "schemaVersion must be 1.");
+  if (typeof config.mode !== "string" || !SETUP_MODE_IDS.has(config.mode)) {
+    throw invalidModulesConfig(filePath, "mode must be minimal, normal, or advanced.");
+  }
+  if (config.enabledModules !== undefined && !isStringArray(config.enabledModules)) throw invalidModulesConfig(filePath, "enabledModules must be an array of strings.");
+  if (config.disabledModules !== undefined && !isStringArray(config.disabledModules)) throw invalidModulesConfig(filePath, "disabledModules must be an array of strings.");
+  if (config.updatedAt !== undefined && typeof config.updatedAt !== "string") throw invalidModulesConfig(filePath, "updatedAt must be a string.");
+  return {
+    schemaVersion: 1,
+    mode: config.mode as SetupModeId,
+    enabledModules: config.enabledModules ?? [],
+    disabledModules: config.disabledModules ?? [],
+    updatedAt: config.updatedAt ?? new Date().toISOString(),
+  };
 }
 
 function writeConfig(filePath: string, config: ClawModulesConfig): void {

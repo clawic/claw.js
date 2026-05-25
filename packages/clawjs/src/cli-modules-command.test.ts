@@ -75,6 +75,22 @@ test("setup previews progressive mode without writing until apply", async () => 
   assert.equal(fs.existsSync(applyPayload.data.configPath), true);
 });
 
+test("setup apply rejects corrupt modules config without overwriting it", async () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-corrupt-config-"));
+  const configPath = path.join(tempHome, "config", "modules.json");
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.writeFileSync(configPath, "{ not json\n");
+  const original = fs.readFileSync(configPath, "utf8");
+
+  const result = await runCliCapture(["setup", "normal", "--apply", "--claw-home", tempHome, "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; message: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_modules_config");
+  assert.match(payload.error.message, /valid JSON/);
+  assert.equal(fs.readFileSync(configPath, "utf8"), original);
+});
+
 test("setup and modules boolean flags respect explicit false values", async () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-modules-bool-flags-"));
 
