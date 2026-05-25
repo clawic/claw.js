@@ -18,6 +18,7 @@ import type { TemplateAspect, TemplateManifest, TemplateOutputFormat } from "./s
 import { readStyle } from "../styles/storage.ts";
 import { renderTemplate } from "./render/adapters.ts";
 import { scheduleDesignResourcesSearchEvent } from "../cli-search-events.ts";
+import { CliHandledError } from "../cli-errors.ts";
 
 interface TemplateCliContext {
   stdout: NodeJS.WritableStream;
@@ -129,9 +130,9 @@ export async function runTemplateCli(options: TemplateCliOptions): Promise<numbe
       context.stderr.write(`Missing --style <styleId>\n`);
       return T_USAGE;
     }
+    const data = flags.data ? readJson(path.resolve(context.cwd, flags.data)) : {};
     const template = readTemplate(workspaceRoot, target);
     const style = readStyle(workspaceRoot, flags.style);
-    const data = flags.data ? readJson(path.resolve(context.cwd, flags.data)) : {};
     const formatFlag = (flags.format ?? "html").toLowerCase();
     const rawFormats = formatFlag.split(",").map((f) => f.trim()).filter(Boolean);
     const ALLOWED = new Set<TemplateOutputFormat>(["html", "pdf", "png", "svg", "pptx"]);
@@ -240,6 +241,39 @@ function searchEventDataDir(options: TemplateCliOptions): string {
   return options.flags["data-dir"] ?? process.env.CLAW_DATA_DIR ?? resolveClawPersistentSurfacePath("claw.workspace.data", options.workspaceRoot);
 }
 
+function readJson(filePath: string): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (error) {
+    throw new CliHandledError(
+      "invalid_template_data_json",
+      `Template render data must be valid JSON: ${error instanceof Error ? error.message : "parse error"}`,
+      T_USAGE,
+      {
+        location: "template.render.data",
+        suggestion: "Pass a JSON object file to --data.",
+        safeNextStep: "Fix the JSON file, then rerun template render with --json.",
+        details: { path: filePath },
+      },
+    );
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliHandledError(
+      "invalid_template_data_json",
+      `Template render data must be a JSON object: ${filePath}`,
+      T_USAGE,
+      {
+        location: "template.render.data",
+        suggestion: "Use a top-level JSON object for template render data.",
+        safeNextStep: "Change the --data file to an object like {\"title\":\"Example\"}.",
+        details: { path: filePath },
+      },
+    );
+  }
+  return parsed as Record<string, unknown>;
+}
+
 function writeUsage(context: TemplateCliContext): void {
   context.stdout.write(
     [
@@ -257,13 +291,4 @@ function writeUsage(context: TemplateCliContext): void {
       "",
     ].join("\n"),
   );
-}
-
-function readJson(filePath: string): Record<string, unknown> {
-  const text = fs.readFileSync(filePath, "utf8");
-  const parsed = JSON.parse(text);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`Expected JSON object in ${filePath}`);
-  }
-  return parsed as Record<string, unknown>;
 }
