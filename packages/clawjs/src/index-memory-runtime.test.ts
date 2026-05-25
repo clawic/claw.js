@@ -524,7 +524,11 @@ test("runCli knowledge memories JSON errors are parseable and db memory search i
 
   for (const testCase of [
     { flag: "--confidence", value: "nope", code: "invalid_memory_confidence" },
+    { flag: "--confidence", value: "1e0", code: "invalid_memory_confidence" },
+    { flag: "--confidence", value: "NaN", code: "invalid_memory_confidence" },
+    { flag: "--confidence", value: "Infinity", code: "invalid_memory_confidence" },
     { flag: "--importance", value: "1.5", code: "invalid_memory_importance" },
+    { flag: "--importance", value: "0x1", code: "invalid_memory_importance" },
     { flag: "--metadata", value: "{nope", code: "invalid_memory_metadata_json" },
   ]) {
     const invalidNumberStdout = captureStream();
@@ -546,6 +550,39 @@ test("runCli knowledge memories JSON errors are parseable and db memory search i
     const payload = JSON.parse(invalidNumberStdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
     assert.equal(payload.ok, false);
     assert.equal(payload.error.code, testCase.code);
+    assert.equal(payload.error.status, "USAGE");
+  }
+
+  for (const testCase of [
+    { args: ["list"], value: "1.5" },
+    { args: ["list"], value: "1e2" },
+    { args: ["search", "memory"], value: "0x10" },
+    { args: ["search", "memory"], value: "2cats" },
+    { args: ["context", "memory"], value: "NaN" },
+    { args: ["context", "memory"], value: "Infinity" },
+  ]) {
+    const invalidLimitStdout = captureStream();
+    assert.equal(await runCli([
+      "knowledge",
+      "memories",
+      ...testCase.args,
+      "--workspace",
+      workspaceRoot,
+      "--limit",
+      testCase.value,
+      "--json",
+    ], {
+      stdout: invalidLimitStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_USAGE);
+    const payload = JSON.parse(invalidLimitStdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; message: string; status: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_memory_limit");
+    assert.match(payload.error.message, /positive decimal integer/);
     assert.equal(payload.error.status, "USAGE");
   }
 

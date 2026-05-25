@@ -78,6 +78,8 @@ interface MemorySearchResult extends MemoryRecord {
 const MEMORY_COLLECTION = "memory";
 const MEMORY_CANONICAL_COMMAND = "knowledge";
 const LOW_CONFIDENCE_THRESHOLD = 0.25;
+const CANONICAL_UNIT_NUMBER_PATTERN = /^(?:0(?:\.\d+)?|1(?:\.0+)?)$/;
+const CANONICAL_POSITIVE_INTEGER_PATTERN = /^[1-9]\d*$/;
 
 const MEMORY_FIELDS: FieldDefinition[] = [
   { name: "title", type: "text", required: true },
@@ -417,7 +419,7 @@ async function searchMemory(input: MemoryCliInput): Promise<number> {
 
   const source = readSource(input);
   const strategy = readStrategy(input.flags.strategy);
-  const limit = readPositiveInteger(input.flags.limit, 10);
+  const limit = readPositiveInteger(input.flags.limit, 10, "--limit", "invalid_memory_limit");
   let results: MemorySearchResult[] = [];
 
   if (source === "local" || source === "all") {
@@ -439,7 +441,7 @@ async function searchMemory(input: MemoryCliInput): Promise<number> {
 async function contextMemory(input: MemoryCliInput): Promise<number> {
   const query = readQuery(input, 2);
   if (!query) return usageError(input, `Usage: ${input.binName} knowledge memories context <query>`);
-  const limit = readPositiveInteger(input.flags.limit, 6);
+  const limit = readPositiveInteger(input.flags.limit, 6, "--limit", "invalid_memory_limit");
   const includeLowConfidence = input.argv.includes("--include-low-confidence");
   const strategy = readStrategy(input.flags.strategy);
   const memories = searchLocal(input, query, strategy, Math.max(limit * 2, limit))
@@ -484,7 +486,7 @@ function filterMemories(input: MemoryCliInput, memories: MemoryRecord[]): Memory
   const scopeUser = input.flags["scope-user"];
   const scopeAgent = input.flags["scope-agent"];
   const scopeProject = input.flags["scope-project"];
-  const limit = readPositiveInteger(input.flags.limit, 50);
+  const limit = readPositiveInteger(input.flags.limit, 50, "--limit", "invalid_memory_limit");
   return memories
     .filter((memory) => includeHistory || isCurrentMemory(memory))
     .filter((memory) => includeAllWorkspaces || memory.metadata.workspaceId === input.workspaceId)
@@ -728,9 +730,17 @@ function parseJsonObject(value: string | undefined): Record<string, unknown> {
 
 function readUnitNumber(value: string | undefined, fallback: number, flagName: string, code: string): number {
   if (value === undefined) return fallback;
+  if (!CANONICAL_UNIT_NUMBER_PATTERN.test(value)) {
+    throw new CliHandledError(code, `${flagName} must be a decimal number between 0 and 1.`, MEMORY_EXIT_USAGE, {
+      location: "cli.knowledge.memories",
+      suggestion: `Pass ${flagName} with a value such as 0.5, or omit it to use the default.`,
+      safeNextStep: `Rerun the knowledge memories command with a valid ${flagName} value.`,
+      details: { flag: flagName, value },
+    });
+  }
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
-    throw new CliHandledError(code, `${flagName} must be a number between 0 and 1.`, MEMORY_EXIT_USAGE, {
+    throw new CliHandledError(code, `${flagName} must be a decimal number between 0 and 1.`, MEMORY_EXIT_USAGE, {
       location: "cli.knowledge.memories",
       suggestion: `Pass ${flagName} with a value such as 0.5, or omit it to use the default.`,
       safeNextStep: `Rerun the knowledge memories command with a valid ${flagName} value.`,
@@ -740,10 +750,25 @@ function readUnitNumber(value: string | undefined, fallback: number, flagName: s
   return parsed;
 }
 
-function readPositiveInteger(value: string | undefined, fallback: number): number {
+function readPositiveInteger(value: string | undefined, fallback: number, flagName: string, code: string): number {
   if (value === undefined) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  if (!CANONICAL_POSITIVE_INTEGER_PATTERN.test(value)) {
+    throw invalidPositiveIntegerFlag(value, flagName, code);
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw invalidPositiveIntegerFlag(value, flagName, code);
+  }
+  return parsed;
+}
+
+function invalidPositiveIntegerFlag(value: string, flagName: string, code: string): CliHandledError {
+  return new CliHandledError(code, `${flagName} must be a positive decimal integer.`, MEMORY_EXIT_USAGE, {
+    location: "cli.knowledge.memories",
+    suggestion: `Pass ${flagName} with a value such as 10, or omit it to use the default.`,
+    safeNextStep: `Rerun the knowledge memories command with a valid ${flagName} value.`,
+    details: { flag: flagName, value },
+  });
 }
 
 function clamp01(value: number): number {
