@@ -163,10 +163,10 @@ const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
     {"action":"preview","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_local_session_preview","delegatesTo":"blocked until native preview contract","delegatesToWhenSessionPath":"runtime session path bounded preview","guard":"blocked_until_preview_contract_and_content_policy","guardWhenSessionPath":"metadata_default_include_content_required"},
     {"action":"resolve","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_local_session_resolve","delegatesTo":"blocked until native resolve contract","delegatesToWhenSessionPath":"runtime session path bounded resolve","guard":"blocked_until_resolve_contract","guardWhenSessionPath":"metadata_default_no_content"},
     {"action":"history","status":"blocked","statusWhenSessionPath":"implemented","authority":"runtime","writesRuntime":false,"persistence":"none","persistenceWhenSessionPath":"bounded_redacted_local_session_history","delegatesTo":"blocked until native history contract","delegatesToWhenSessionPath":"runtime session path bounded history","guard":"blocked_until_history_contract_and_content_policy","guardWhenSessionPath":"metadata_default_include_content_required"},
-    {"action":"send","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"blocked until native send contract","guard":"blocked_until_send_contract","requiredEvidence":["official_send_command_or_api","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_native_visibility"]},
-    {"action":"inject","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"blocked until native inject contract","guard":"blocked_until_inject_contract","requiredEvidence":["official_inject_command_or_api","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_native_visibility"]},
-    {"action":"abort","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"blocked until native abort contract","guard":"blocked_until_abort_contract","requiredEvidence":["official_abort_command_or_api","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_control_receipt"]},
-    {"action":"create","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"blocked until official runtime create contract and fixture","guard":"blocked_until_official_create_fixture","requiredEvidence":["official_create_command_or_api","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_native_list_evidence"]},
+    {"action":"send","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"tui_gateway.prompt.submit","guard":"blocked_until_tui_gateway_wrapper_fixture","officialProtocol":"tui_gateway_json_rpc","officialMethod":"prompt.submit","officialContractSource":"https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration","requiredEvidence":["tui_gateway_prompt_submit_fixture","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_native_visibility"]},
+    {"action":"inject","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"tui_gateway.session.steer","guard":"blocked_until_tui_gateway_wrapper_fixture","officialProtocol":"tui_gateway_json_rpc","officialMethod":"session.steer","officialContractSource":"https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration","requiredEvidence":["tui_gateway_session_steer_fixture","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_native_visibility"]},
+    {"action":"abort","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"tui_gateway.session.interrupt","guard":"blocked_until_tui_gateway_wrapper_fixture","officialProtocol":"tui_gateway_json_rpc","officialMethod":"session.interrupt","officialContractSource":"https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration","requiredEvidence":["tui_gateway_session_interrupt_fixture","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_control_receipt"]},
+    {"action":"create","status":"blocked","authority":"runtime","writesRuntime":false,"wouldWriteRuntime":true,"persistence":"none","delegatesTo":"tui_gateway.session.create","guard":"blocked_until_tui_gateway_wrapper_fixture","officialProtocol":"tui_gateway_json_rpc","officialMethod":"session.create","officialContractSource":"https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration","requiredEvidence":["tui_gateway_session_create_fixture","non_destructive_fixture","confirmation_or_dry_run_policy","round_trip_native_list_evidence"]},
     {"action":"pin","status":"local_overlay_only","authority":"clawix_local_overlay","writesRuntime":false,"persistence":"local_pin_overlay","delegatesTo":"ClawJS app-state local pin overlay","guard":"must_not_write_runtime_pin_without_official_api"},
     {"action":"unpin","status":"local_overlay_only","authority":"clawix_local_overlay","writesRuntime":false,"persistence":"local_pin_overlay","delegatesTo":"ClawJS app-state local pin overlay","guard":"must_not_write_runtime_pin_without_official_api"},
     {"action":"conflicts","status":"implemented","authority":"clawix_local_overlay","writesRuntime":false,"persistence":"local_pin_overlay_report","delegatesTo":"ClawJS app-state local overlay reconciliation report","guard":"no_silent_overwrite_or_runtime_write_back"}
@@ -289,25 +289,25 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       },
       {
         command: `runtime ${runtimeId} sessions send --session-key <id> --message <text> --confirm-runtime-write`,
-        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.send" : "blocked until native send contract",
+        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.send" : (runtimeId === "hermes" ? "tui_gateway.prompt.submit" : "blocked until native send contract"),
         writesRuntime: runtimeId === "openclaw",
         wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
         command: `runtime ${runtimeId} sessions inject --session-key <id> --message <text> --confirm-runtime-write`,
-        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.inject" : "blocked until native inject contract",
+        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.inject" : (runtimeId === "hermes" ? "tui_gateway.session.steer" : "blocked until native inject contract"),
         writesRuntime: runtimeId === "openclaw",
         wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
         command: `runtime ${runtimeId} sessions abort --session-key <id> --confirm-runtime-write`,
-        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.abort" : "blocked until native abort contract",
+        delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.abort" : (runtimeId === "hermes" ? "tui_gateway.session.interrupt" : "blocked until native abort contract"),
         writesRuntime: runtimeId === "openclaw",
         wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
         command: `runtime ${runtimeId} sessions create --title <title>`,
-        delegatesTo: "blocked until official runtime create contract and fixture",
+        delegatesTo: runtimeId === "hermes" ? "tui_gateway.session.create" : "blocked until official runtime create contract and fixture",
         writesRuntime: false,
         wouldWriteRuntime: true,
       },
@@ -920,18 +920,23 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       const status = String(action.status ?? "");
       const isBlocked = status === "blocked" || action.wouldWriteRuntime === true;
       const isLocalOverlayGap = status === "local_overlay_only" && String(action.guard ?? "").includes("official");
+      const hasOfficialGatewayContract = String(action.guard ?? "").includes("tui_gateway") || typeof action.officialMethod === "string";
       if (!isBlocked && !isLocalOverlayGap) return [];
       const evidenceKind = isLocalOverlayGap ? "native_write_back_contract" : "action_contract";
       const evidenceDisposition = isLocalOverlayGap
         ? "local_overlay_until_official_runtime_write_back_contract"
-        : "blocked_until_official_runtime_action_contract";
+        : hasOfficialGatewayContract
+          ? "blocked_until_tui_gateway_wrapper_fixture"
+          : "blocked_until_official_runtime_action_contract";
       return [{
         id: `${runtimeId}.sessions.${action.action}.${evidenceKind}`,
         blockerClass: "direct_blocker",
         approvalRequired: false,
         commandShape: isLocalOverlayGap
           ? `not_executable_until_official_runtime_${action.action}_api_exists`
-          : `not_executable_until_official_runtime_${action.action}_contract_exists`,
+          : hasOfficialGatewayContract
+            ? `not_executable_until_tui_gateway_${action.action}_wrapper_fixture_exists`
+            : `not_executable_until_official_runtime_${action.action}_contract_exists`,
         expectedEvidence: action.requiredEvidence ?? [
           "official_runtime_cli_or_api",
           "non_destructive_fixture",
@@ -952,15 +957,26 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         claimEffect: "blocks_recommended_production_native_parity",
         reentryCondition: isLocalOverlayGap
           ? "add_official_runtime_pin_write_back_contract_fixture_and_round_trip_evidence"
-          : "add_official_runtime_action_contract_fixture_and_round_trip_evidence",
+          : hasOfficialGatewayContract
+            ? "add_tui_gateway_json_rpc_wrapper_fixture_and_round_trip_evidence"
+            : "add_official_runtime_action_contract_fixture_and_round_trip_evidence",
         productDecision: isLocalOverlayGap
           ? "native_pin_write_back_unsupported_until_official_runtime_api"
-          : "native_session_action_unsupported_until_official_runtime_contract",
+          : hasOfficialGatewayContract
+            ? "native_session_action_unimplemented_until_tui_gateway_wrapper_fixture"
+            : "native_session_action_unsupported_until_official_runtime_contract",
         supportResolution: "explicitly_product_blocked_not_a_silent_gap",
         userVisibleContract: isLocalOverlayGap
           ? "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists"
-          : "non_executable_action_plan_only_until_runtime_contract_exists",
-        promotionGate: "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
+          : hasOfficialGatewayContract
+            ? "non_executable_until_tui_gateway_wrapper_fixture_exists"
+            : "non_executable_action_plan_only_until_runtime_contract_exists",
+        promotionGate: hasOfficialGatewayContract
+          ? "session_action_claim_remains_blocked_until_tui_gateway_wrapper_fixture_and_round_trip_evidence_exist"
+          : "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
+        officialProtocol: action.officialProtocol,
+        officialMethod: action.officialMethod,
+        officialContractSource: action.officialContractSource,
       }];
     });
   const evidenceRequirements = [...domainEvidenceRequirements, ...sessionActionRequirements];
@@ -1575,6 +1591,8 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
 function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) {
   const requestedTitle = input.flags.title ?? input.flags.name ?? null;
   const requestedWorkspace = input.flags["runtime-workspace"] ?? input.workspaceRoot ?? null;
+  const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === "create") ?? {};
+  const officialContract = officialSessionActionContract(runtimeId, actionContract);
   return {
     runtimeId,
     domain: "sessions",
@@ -1589,18 +1607,27 @@ function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) 
     writesRuntime: false,
     wouldWriteRuntime: true,
     writesLocalOverlay: false,
-    writeBackStatus: "blocked_until_official_runtime_create_contract",
+    writeBackStatus: officialContract.known ? "blocked_until_tui_gateway_wrapper_fixture" : "blocked_until_official_runtime_create_contract",
     conflictPolicy: "no_silent_native_object_creation",
-    requiredEvidence: [
-      "official_create_command_or_api",
-      "non_destructive_fixture",
-      "dry_run_or_confirmation_policy",
-      "round_trip_visible_in_native_list",
-      "support_claim_guard_update",
-    ],
+    requiredEvidence: officialContract.known
+      ? (actionContract.requiredEvidence ?? [
+        "tui_gateway_session_create_fixture",
+        "non_destructive_fixture",
+        "confirmation_or_dry_run_policy",
+        "round_trip_native_list_evidence",
+      ])
+      : [
+        "official_create_command_or_api",
+        "non_destructive_fixture",
+        "dry_run_or_confirmation_policy",
+        "round_trip_visible_in_native_list",
+        "support_claim_guard_update",
+      ],
     acceptedContracts: runtimeId === "openclaw"
       ? ["runtime.openclaw.sessions.create", "runtime.openclaw.chat.create", "documented OpenClaw CLI/API create command"]
-      : [`documented ${runtimeId} session create CLI/API contract`],
+      : officialContract.known
+        ? [officialContract.delegatesTo, officialContract.source].filter(Boolean)
+        : [`documented ${runtimeId} session create CLI/API contract`],
     rejectedFallbacks: [
       "do_not_create_claw_portable_session_and_label_it_native",
       "do_not_write_directly_to_runtime_store",
@@ -1609,14 +1636,41 @@ function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) 
     nextContract: {
       commandShape: `runtime ${runtimeId} sessions create --title <title> --confirm-runtime-write --json`,
       confirmationFlag: "--confirm-runtime-write",
-      fixtureRequirement: "A hermetic runtime fixture must prove create, list, preview/resolve, and cleanup or isolated non-destructive state.",
+      fixtureRequirement: officialContract.known
+        ? "A hermetic TUI gateway JSON-RPC fixture must prove session.create, list, preview/resolve, and cleanup or isolated non-destructive state."
+        : "A hermetic runtime fixture must prove create, list, preview/resolve, and cleanup or isolated non-destructive state.",
+      officialProtocol: officialContract.protocol,
+      officialMethod: officialContract.method,
     },
     supportContract,
   };
 }
 
+function officialSessionActionContract(runtimeId: RuntimeAdapterId, actionContract: any = {}): {
+  known: boolean;
+  protocol?: string;
+  method?: string;
+  source?: string;
+  delegatesTo?: string;
+  integrationStatus?: string;
+} {
+  const method = actionContract.officialMethod;
+  if (runtimeId !== "hermes" || typeof method !== "string" || method.length === 0) {
+    return { known: false };
+  }
+  return {
+    known: true,
+    protocol: actionContract.officialProtocol ?? "tui_gateway_json_rpc",
+    method,
+    source: actionContract.officialContractSource ?? "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+    delegatesTo: actionContract.delegatesTo ?? `tui_gateway.${method}`,
+    integrationStatus: "blocked_until_tui_gateway_wrapper_fixture",
+  };
+}
+
 function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reason: string, supportContract, extra = {}) {
   const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
+  const officialContract = officialSessionActionContract(runtimeId, actionContract);
   const requiredEvidence = extra.requiredEvidence ?? actionContract.requiredEvidence ?? runtimeWriteActionEvidence(action) ?? [
     "official_runtime_cli_or_api",
     "non_destructive_fixture",
@@ -1634,7 +1688,12 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
     writesLocalOverlay: false,
     reason,
     blockerClass: "direct_blocker",
-    officialContractRequired: true,
+    officialContractRequired: !officialContract.known,
+    officialContractKnown: officialContract.known,
+    officialProtocol: officialContract.protocol,
+    officialMethod: officialContract.method,
+    officialContractSource: officialContract.source,
+    integrationRequired: officialContract.known ? true : undefined,
     fixtureRequired: true,
     requiredEvidence,
     riskControls: [
@@ -1642,17 +1701,17 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
       "no_direct_runtime_store_mutation",
       "local_overlay_only_until_contract_exists",
     ],
-    writeBackStatus: `blocked_until_official_runtime_${action}_contract`,
+    writeBackStatus: officialContract.known ? officialContract.integrationStatus : `blocked_until_official_runtime_${action}_contract`,
     fallbackPolicy: "do_not_synthesize_native_runtime_action",
     supportResolution: "explicitly_product_blocked_not_a_silent_gap",
     productDecision: "native_session_action_unsupported_until_official_runtime_contract",
-    userVisibleContract: "non_executable_action_plan_only_until_runtime_contract_exists",
+    userVisibleContract: officialContract.known ? "non_executable_until_tui_gateway_wrapper_fixture_exists" : "non_executable_action_plan_only_until_runtime_contract_exists",
     claimEffect: "blocks_recommended_production_native_parity",
-    promotionGate: "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
+    promotionGate: officialContract.known ? "session_action_claim_remains_blocked_until_tui_gateway_wrapper_fixture_and_round_trip_evidence_exist" : "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
     safeDefault: "keep_unpromoted_and_do_not_synthesize_runtime_state",
     commandShape: `runtime ${runtimeId} sessions ${action} --json`,
     evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
-    evidenceReentryStatus: "blocked_until_upstream_contract",
+    evidenceReentryStatus: officialContract.known ? "blocked_until_tui_gateway_wrapper_fixture" : "blocked_until_upstream_contract",
     actionContract,
     supportContract,
     ...extra,

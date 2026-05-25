@@ -310,12 +310,36 @@ function main() {
       if (!snapshot.sources?.includes("https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md")) {
         errors.push("Hermes official snapshot must cite the Session Storage guide before claiming SQLite state.db session-store inventory");
       }
+      if (!snapshot.sources?.includes("https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration")) {
+        errors.push("Hermes official snapshot must cite Programmatic Integration before claiming TUI gateway session write/control contracts");
+      }
       if (runtimePortal.includes("runtime-session-sqlite")) {
         for (const snippet of ["query_only = ON", "sqlite_with_gateway_transcripts", "sessionDatabasePath", "sessions", "messages"]) {
           if (!runtimePortal.includes(snippet)) errors.push(`Hermes SQLite session projection guard missing ${snippet}`);
         }
         if (!snapshot.sources?.includes("https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md")) {
           errors.push("Hermes SQLite session projection requires the official Session Storage source");
+        }
+      }
+      const hermesTuiMethods = new Map([
+        ["send", "prompt.submit"],
+        ["inject", "session.steer"],
+        ["abort", "session.interrupt"],
+        ["create", "session.create"],
+      ]);
+      for (const [actionName, method] of hermesTuiMethods) {
+        const action = manifest.sessionActionContracts?.hermes?.find((entry) => entry.action === actionName);
+        if (action?.officialProtocol !== "tui_gateway_json_rpc") {
+          errors.push(`Hermes ${actionName} session action must declare TUI gateway JSON-RPC as the official protocol`);
+        }
+        if (action?.officialMethod !== method) {
+          errors.push(`Hermes ${actionName} session action must map to official TUI gateway method ${method}`);
+        }
+        if (action?.officialContractSource !== "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration") {
+          errors.push(`Hermes ${actionName} session action must cite the Programmatic Integration source`);
+        }
+        if (!String(action?.guard ?? "").includes("tui_gateway_wrapper_fixture")) {
+          errors.push(`Hermes ${actionName} session action must block on the TUI gateway wrapper fixture, not a missing official contract`);
         }
       }
       const requiredHermesCommands = {
@@ -373,7 +397,7 @@ function main() {
           errors.push(`${runtimeId}.${actionName} must remain an explicit confirmed runtime write`);
         }
       } else if (action?.writesRuntime !== false || action?.status !== "blocked") {
-        errors.push(`${runtimeId}.${actionName} must remain blocked until native contract evidence exists`);
+        errors.push(`${runtimeId}.${actionName} must remain blocked until native contract or integration evidence exists`);
       }
     }
   }
