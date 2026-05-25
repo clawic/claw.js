@@ -285,6 +285,7 @@ export interface ConnectorControlPlaneDecisionReason {
     | "unknown_cost_blocked"
     | "approval_required"
     | "approval_expired"
+    | "invalid_request_time"
     | "network_proof_required"
     | "network_proof_mismatch"
     | "host_not_allowed"
@@ -328,7 +329,7 @@ export function connectorApprovalGrantMatches(
   }
   const now = Date.parse(request.now ?? new Date().toISOString());
   const expiresAt = Date.parse(grant.expiresAt);
-  if (Number.isNaN(expiresAt) || expiresAt <= now) {
+  if (Number.isNaN(now) || Number.isNaN(expiresAt) || expiresAt <= now) {
     return false;
   }
   return matchesOptionalList(grant.providerIds, request.provider.id)
@@ -354,6 +355,13 @@ export function evaluateConnectorControlPlaneRequest(input: {
   const scopedGrant = input.scopedGrant ?? input.approvalGrant;
   const reasons: ConnectorControlPlaneDecisionReason[] = [];
   const matchingGrant = connectorApprovalGrantMatches(scopedGrant, request) ? scopedGrant : undefined;
+
+  if (request.now !== undefined && Number.isNaN(Date.parse(request.now))) {
+    reasons.push({
+      code: "invalid_request_time",
+      message: `Connector request time is invalid: ${request.now}.`,
+    });
+  }
 
   if (!policy.enabled) {
     reasons.push({

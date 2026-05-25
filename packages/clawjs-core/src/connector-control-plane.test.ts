@@ -373,6 +373,33 @@ test("unknown cost blocks unless a scoped connector grant allows it", () => {
   assert.equal(allowed.audit.approvalGrantId, "grant");
 });
 
+test("connector control plane rejects invalid request time before applying grants", () => {
+  const decision = evaluateConnectorControlPlaneRequest({
+    request: {
+      ...baseRequest,
+      now: "not-a-date",
+      operation: {
+        ...baseRequest.operation,
+        requiresApproval: true,
+      },
+    },
+    policy: basePolicy,
+    scopedGrant: {
+      id: "grant",
+      expiresAt: "2026-05-15T12:10:00.000Z",
+      providerIds: ["github"],
+      operationIds: ["github.issues.create"],
+      capabilityIds: ["issues.create.record"],
+      riskTiers: ["write"],
+    },
+  });
+
+  assert.equal(decision.allowed, false);
+  assert.equal(decision.reasons.some((reason) => reason.code === "invalid_request_time"), true);
+  assert.equal(decision.audit.scopedGrantId, undefined);
+  assert.equal(decision.audit.reasonCodes?.includes("invalid_request_time"), true);
+});
+
 test("connector control plane fails closed when governed context is required but not approved", () => {
   const operation: ConnectorExecutionRequest["operation"] = {
     ...baseRequest.operation,
