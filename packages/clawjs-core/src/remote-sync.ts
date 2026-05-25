@@ -576,6 +576,9 @@ export function buildSyncPlan(input: {
   const manifest = syncResourceManifestSchema.parse(input.manifest);
   const actor = remoteActorContextSchema.parse(input.actor);
   const now = input.now ?? new Date().toISOString();
+  if (manifest.allowedPeerNodeIds.length > 0 && !manifest.allowedPeerNodeIds.includes(input.peerNodeId)) {
+    throw new Error(`Sync peer ${input.peerNodeId} is not allowed for ${manifest.resourceId}.`);
+  }
   const localByRef = new Map((input.localSnapshots ?? []).map((snapshot) => [snapshot.objectRef, syncObjectSnapshotSchema.parse(snapshot)]));
   const peerByRef = new Map((input.peerSnapshots ?? []).map((snapshot) => [snapshot.objectRef, syncObjectSnapshotSchema.parse(snapshot)]));
   const refs = [...new Set([...localByRef.keys(), ...peerByRef.keys()])].sort();

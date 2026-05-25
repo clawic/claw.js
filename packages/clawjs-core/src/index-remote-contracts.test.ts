@@ -936,6 +936,28 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "sqlite_partial" && entry.routeId === "sync.sqliteResources" && entry.partialResourceSupported), true);
   assert.equal(syncDriverCatalog.entries.some((entry) => entry.driver === "workspace_state" && entry.commands.includes("claw sync apply --driver workspace_state --record true --json")), true);
 
+  assert.throws(() => buildSyncPlan({
+    manifest: createSyncResourceManifest({
+      resourceId: "skills:private",
+      kind: "skills",
+      ownerNodeId: "node.mac",
+      driver: "skills",
+      allowedPeerNodeIds: ["node.server"],
+    }),
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.sync",
+      nodeId: "node.mac",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    localNodeId: "node.mac",
+    peerNodeId: "node.untrusted",
+    localSnapshots: [],
+    peerSnapshots: [],
+    now: "2026-05-17T10:00:00.000Z",
+  }), /not allowed/);
+
   const plan = buildSyncPlan({
     manifest: createSyncResourceManifest({
       resourceId: "skills:default",

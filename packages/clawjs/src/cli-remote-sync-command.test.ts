@@ -7,6 +7,97 @@ import { test } from "vitest";
 import { CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./inspect-cli-test-support.ts";
 
+test("nodes returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["nodes", "definitely_missing", "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: {
+        received?: string | null;
+        validSubcommands?: string[];
+      };
+    };
+    meta: { canonicalCommand: string; subcommand?: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_nodes_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.nodes.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw nodes list --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["list", "pair", "trust", "revoke", "invite", "accept", "share", "heartbeat"]);
+  assert.equal(payload.meta.canonicalCommand, "nodes");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
+test("sync returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["sync", "definitely_missing", "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: {
+        received?: string | null;
+        validSubcommands?: string[];
+      };
+    };
+    meta: { canonicalCommand: string; subcommand?: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_sync_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.sync.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw sync status --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["drivers", "manifest", "status", "plan", "run", "reconcile", "apply", "handoff", "conflicts", "cache"]);
+  assert.equal(payload.meta.canonicalCommand, "sync");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
+test("remote returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["remote", "definitely_missing", "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: {
+        received?: string | null;
+        validSubcommands?: string[];
+      };
+    };
+    meta: { canonicalCommand: string; subcommand?: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_remote_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.remote.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw remote conformance --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.equal(payload.error.details?.validSubcommands?.includes("conformance"), true);
+  assert.equal(payload.error.details?.validSubcommands?.includes("contracts"), true);
+  assert.equal(payload.meta.canonicalCommand, "remote");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
 test("gateway agent-service rejects invalid cost flags before persistence", async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-gateway-agent-cost-"));
 

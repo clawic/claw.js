@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 
 import { CliHandledError, CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { RemoteSyncStateStore, type RemoteSyncCoordinatorSigner } from "./remote-sync-state-store.ts";
 
 type CliContext = {
@@ -21,6 +21,29 @@ type RemoteSyncCliInput = {
   wantsJson: boolean;
   binName: string;
 };
+
+const NODES_SUBCOMMANDS = ["list", "pair", "trust", "revoke", "invite", "accept", "share", "heartbeat"] as const;
+const REMOTE_SUBCOMMANDS = [
+  "classify",
+  "check",
+  "routes",
+  "conformance",
+  "offline-command",
+  "pending",
+  "validation-checklist",
+  "validation-template",
+  "validation-artifact",
+  "validation-runbook",
+  "validation-readiness",
+  "validation-approval-request",
+  "validation-report",
+  "source-qa-template",
+  "decision-review",
+  "closure-gate",
+  "contracts",
+  "e2e-plan",
+  "compat",
+] as const;
 
 function routeIds() {
   return (clawPersistentSurfaceRegistry.routes ?? []).map((route) => route.id);
@@ -117,6 +140,82 @@ function actorContextFromFlags(input: RemoteSyncCliInput) {
 function missing(input: RemoteSyncCliInput, usage: string): number {
   input.context.stderr.write(`Usage: ${input.binName} ${usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+function unknownRemoteSubcommand(input: RemoteSyncCliInput, command: string | undefined): number {
+  const received = command ?? null;
+  const usage = `remote ${REMOTE_SUBCOMMANDS.join("|")}`;
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "remote", new CliHandledError(
+      "unknown_remote_subcommand",
+      command ? `Unknown remote subcommand: ${command}.` : "Missing remote subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.remote.subcommand",
+        suggestion: "Use a registered remote subcommand for classification, conformance, route contracts, validation, or compatibility work.",
+        safeNextStep: "Run claw remote conformance --json, claw remote contracts --json, or rerun with one of error.details.validSubcommands.",
+        details: {
+          received,
+          validSubcommands: [...REMOTE_SUBCOMMANDS],
+        },
+      },
+    ), { subcommand: received });
+    return CLI_EXIT_USAGE;
+  }
+  return missing(input, usage);
+}
+
+const SYNC_SUBCOMMANDS = ["drivers", "manifest", "status", "plan", "run", "reconcile", "apply", "handoff", "conflicts", "cache"];
+
+function writeSyncUsage(input: RemoteSyncCliInput): number {
+  const usage = `Usage: ${input.binName} sync ${SYNC_SUBCOMMANDS.join("|")}`;
+  if (input.wantsJson) {
+    writeCommandJsonError(input.context.stdout, "sync", new CliHandledError(
+      "unknown_sync_subcommand",
+      usage,
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.sync.subcommand",
+        suggestion: "Use a registered sync subcommand.",
+        safeNextStep: `Run ${input.binName} sync status --json to inspect sync state, or ${input.binName} help sync --json for the sync command surface.`,
+        details: {
+          received: input.positionals[1] ?? null,
+          validSubcommands: SYNC_SUBCOMMANDS,
+        },
+      },
+    ), { subcommand: input.positionals[1] ?? null });
+    return CLI_EXIT_USAGE;
+  }
+  input.context.stderr.write(`${usage}\n`);
+  return CLI_EXIT_USAGE;
+}
+
+function unknownNodesSubcommand(input: RemoteSyncCliInput, command: string | undefined): number {
+  const received = command ?? null;
+  const usage = `nodes ${NODES_SUBCOMMANDS.join("|")}`;
+  if (input.wantsJson) {
+    writeCommandJsonError(
+      input.context.stdout,
+      "nodes",
+      new CliHandledError(
+        "unknown_nodes_subcommand",
+        command ? `Unknown nodes subcommand: ${command}` : "Missing nodes subcommand.",
+        CLI_EXIT_USAGE,
+        {
+          location: "cli.nodes.subcommand",
+          suggestion: `Use one of: ${NODES_SUBCOMMANDS.join(", ")}.`,
+          safeNextStep: "Run claw nodes list --json to inspect remote-layer nodes, or rerun with a valid nodes subcommand.",
+          details: {
+            received,
+            validSubcommands: [...NODES_SUBCOMMANDS],
+          },
+        }
+      ),
+      { subcommand: received }
+    );
+    return CLI_EXIT_USAGE;
+  }
+  return missing(input, usage);
 }
 
 function approvedValidationFlag(input: RemoteSyncCliInput, flag: string, requirementId: string): boolean {
@@ -645,7 +744,7 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
       ...(state ? { state } : {}),
     }, `compat: ${status}`, command);
   }
-  return missing(input, "remote classify|check|routes|conformance|offline-command|pending|validation-checklist|validation-template|validation-artifact|validation-runbook|validation-readiness|validation-approval-request|validation-report|source-qa-template|decision-review|closure-gate|contracts|e2e-plan|compat");
+  return unknownRemoteSubcommand(input, command);
 }
 
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
@@ -788,7 +887,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     const state = store && wantsDurableRecord(input) ? store.recordRemoteCacheSnapshot(snapshot, { now: input.flags.now, signer: coordinatorSignerFromFlags(input) }) : undefined;
     return writeOutput(input, "sync", { snapshot, status: state?.coordinatorSignature ? "signed_cache_snapshot_recorded" : state ? "cache_snapshot_recorded" : "dry_run_only", writes: false, ...(state ? { state } : {}) }, `cache: ${state ? "recorded" : "dry_run_only"}`, command);
   }
-  return missing(input, "sync drivers|manifest|status|plan|run|reconcile|apply|handoff|conflicts|cache");
+  return writeSyncUsage(input);
 }
 
 export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
@@ -897,7 +996,7 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
     const status = state?.coordinatorSignature ? "signed_recorded_proposal" : state ? "recorded_proposal" : "dry_run_only";
     return writeOutput(input, "nodes", { share, status, writes: false, ...(state ? { state } : {}) }, `share: ${status}`, command);
   }
-  return missing(input, "nodes list|pair|trust|revoke|invite|accept|share|heartbeat");
+  return unknownNodesSubcommand(input, command);
 }
 
 export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> {
