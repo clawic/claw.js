@@ -230,9 +230,11 @@ test("bridge closes only the slow websocket session when its outbound queue over
 class FakeExternalStream extends EventEmitter implements ExternalDuplexStream {
   failSends = false;
   closed = false;
+  sentPayloads: Buffer[] = [];
 
-  async send(_payload: Buffer): Promise<void> {
+  async send(payload: Buffer): Promise<void> {
     if (this.failSends) throw new Error("send failed");
+    this.sentPayloads.push(payload);
   }
 
   close(): void {
@@ -255,5 +257,29 @@ test("bridge removes external stream sessions when outbound send fails", async (
   assert.equal(stream.closed, true);
   assert.equal(h.bridge.activeSessionCount, 0);
   assert.equal(h.sessionsClosed, 1);
+  await h.shutdown();
+});
+
+test("bridge external streams tolerate frames split across data chunks", async () => {
+  const h = await makeHarness();
+  const stream = new FakeExternalStream();
+  h.bridge.attachExternalStream(stream);
+
+  stream.emit("data", Buffer.from('{"kind":"ping",', "utf8"));
+  await delay(20);
+  assert.equal(stream.closed, false);
+  assert.equal(h.bridge.activeSessionCount, 1);
+
+  stream.emit("data", Buffer.from('"id":"split"}', "utf8"));
+  await delay(20);
+
+  assert.equal(stream.closed, false);
+  assert.equal(h.bridge.activeSessionCount, 1);
+  assert.equal(stream.sentPayloads.length, 1);
+  assert.deepEqual(JSON.parse(stream.sentPayloads[0]!.toString("utf8")), {
+    kind: "pong",
+    id: "split",
+  });
+  stream.close();
   await h.shutdown();
 });

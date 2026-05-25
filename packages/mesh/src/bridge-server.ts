@@ -277,10 +277,11 @@ export class BridgeServer {
           closeExternalSession();
           return;
         }
-        queue.push(Buffer.from(JSON.stringify(frame), "utf8"));
+        queue.push(Buffer.from(`${JSON.stringify(frame)}\n`, "utf8"));
         flush();
       },
     };
+    let inboundBuffer = "";
     const finalize = () => {
       if (session.closed) return;
       session.closed = true;
@@ -314,24 +315,57 @@ export class BridgeServer {
     };
     this.sessions.add(session);
     this.deps.onSession?.(session);
-    stream.on("data", (chunk: Buffer) => {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(chunk.toString("utf8"));
-      } catch {
-        stream.close();
-        return;
-      }
+    const handleParsedFrame = (parsed: unknown): boolean => {
       const frame = BridgeFrameSchema.safeParse(parsed);
       if (!frame.success) {
         stream.close();
-        return;
+        return false;
       }
       if (frame.data.kind === "ping") {
         session.send({ kind: "pong", id: frame.data.id });
-        return;
+        return true;
       }
       void this.deps.onFrame?.(session, frame.data);
+      return true;
+    };
+    const drainInboundBuffer = () => {
+      while (!session.closed) {
+        inboundBuffer = inboundBuffer.trimStart();
+        if (inboundBuffer.length === 0) return;
+        const newlineIndex = inboundBuffer.indexOf("\n");
+        if (newlineIndex >= 0) {
+          const line = inboundBuffer.slice(0, newlineIndex).trim();
+          inboundBuffer = inboundBuffer.slice(newlineIndex + 1);
+          if (!line) continue;
+          try {
+            if (!handleParsedFrame(JSON.parse(line))) return;
+          } catch {
+            stream.close();
+            return;
+          }
+          continue;
+        }
+        try {
+          if (!handleParsedFrame(JSON.parse(inboundBuffer))) return;
+          inboundBuffer = "";
+          return;
+        } catch (err) {
+          if (isLikelyIncompleteJson(inboundBuffer, err)) return;
+          stream.close();
+          return;
+        }
+      }
+    };
+    stream.on("data", (chunk: Buffer) => {
+      inboundBuffer += chunk.toString("utf8");
+      if (
+        Buffer.byteLength(inboundBuffer, "utf8") >
+        this.limits.maxBufferedBytesPerSession
+      ) {
+        stream.close();
+        return;
+      }
+      drainInboundBuffer();
     });
     stream.on("end", finalize);
     stream.on("close", finalize);
@@ -398,4 +432,33 @@ function extractBearer(header: string | string[] | undefined): string | null {
   if (typeof header !== "string") return null;
   if (!header.startsWith("Bearer ")) return null;
   return header.slice("Bearer ".length);
+}
+
+function isLikelyIncompleteJson(source: string, error: unknown): boolean {
+  if (!(error instanceof SyntaxError)) return false;
+  if (error.message.includes("Unexpected end")) return true;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (const char of source) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = inString;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === "{" || char === "[") {
+      depth += 1;
+    } else if (char === "}" || char === "]") {
+      depth -= 1;
+    }
+  }
+  return inString || depth > 0;
 }
