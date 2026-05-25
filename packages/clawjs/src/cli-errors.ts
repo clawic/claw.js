@@ -115,7 +115,7 @@ function redactCliErrorText(value: string): string {
   let redacted = value;
   redacted = redacted.replaceAll(/\bBearer\s+([A-Za-z0-9._-]{6,})/gi, "Bearer [REDACTED]");
   redacted = redacted.replaceAll(/\bsk-[A-Za-z0-9._-]{6,}\b/g, "[REDACTED]");
-  redacted = redacted.replaceAll(/\b(api[_ -]?key|token|secret)\b\s*[:=]\s*([^\s,;]+)/gi, (_match, label: string) => `${label}: [REDACTED]`);
+  redacted = redacted.replaceAll(/\b((?:[A-Za-z0-9]+[_-])*(?:api[_ -]?key|token|secret))\b\s*[:=]\s*([^\s,;]+)/gi, (_match, label: string) => `${label}: [REDACTED]`);
   redacted = redacted.replaceAll(/\/Users\/[^/\s]+/g, "~");
   return redacted;
 }

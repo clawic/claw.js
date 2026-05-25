@@ -3,7 +3,7 @@
 const SECRET_TEXT_PATTERNS = [
   /\bBearer\s+([A-Za-z0-9._-]{6,})/gi,
   /\b(sk-[A-Za-z0-9._-]{6,})\b/g,
-  /\b(api[_ -]?key|token|secret)\b\s*[:=]\s*([^\s,;]+)/gi,
+  /\b((?:[A-Za-z0-9]+[_-])*(?:api[_ -]?key|token|secret))\b\s*[:=]\s*([^\s,;]+)/gi,
   /\/Users\/[^/\s]+/g,
 ];
 
@@ -57,7 +57,7 @@ function runSelfTest() {
     diagnostics: [
       createDiagnostic("example_failure", "token: sk-test-secret-123456", {
         location: "/Users/example/private/repo/file.json",
-        suggestion: "Use synthetic fixtures.",
+        suggestion: "Use synthetic fixtures. GITHUB_TOKEN=ghp_testsecret123456",
         safeNextStep: "Rerun node scripts/actionable-error.mjs --self-test.",
       }),
     ],
@@ -67,7 +67,7 @@ function runSelfTest() {
   if (!output.includes("code: example_failure")) throw new Error("self-test missing stable code");
   if (!output.includes("location: ~/private/repo/file.json")) throw new Error("self-test missing redacted location");
   if (!output.includes("next: Rerun node scripts/actionable-error.mjs --self-test.")) throw new Error("self-test missing next step");
-  if (output.includes("sk-test-secret-123456") || output.includes("/Users/example")) throw new Error("self-test leaked private data");
+  if (output.includes("sk-test-secret-123456") || output.includes("ghp_testsecret123456") || output.includes("/Users/example")) throw new Error("self-test leaked private data");
   console.log("actionable error helper self-test passed");
 }
 

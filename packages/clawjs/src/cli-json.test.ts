@@ -119,19 +119,19 @@ test("CLI handled errors synthesize actionable defaults for legacy code/message 
 });
 
 test("CLI text errors include stable code, status, location, suggestion, and next step", () => {
-  const text = formatCliErrorText(new CliHandledError("invalid_flag", "Unknown flag --wat. token: sk-test-secret-123456", {
+  const text = formatCliErrorText(new CliHandledError("invalid_flag", "Unknown flag --wat. token: sk-test-secret-123456 GITHUB_TOKEN=ghp_testsecret123456", {
     status: "USAGE",
     location: "/Users/example/private/argv.--wat",
-    suggestion: "Use --json or --help to inspect supported flags.",
+    suggestion: "Use --json or --help to inspect supported flags. OPENAI_API_KEY=sk-test-secret-123456",
     safeNextStep: "Run claw inspect commands --json.",
   }));
 
-  assert.match(text, /USAGE: Unknown flag --wat\. token: \[REDACTED\]/);
+  assert.match(text, /USAGE: Unknown flag --wat\. token: \[REDACTED\] GITHUB_TOKEN: \[REDACTED\]/);
   assert.match(text, /code: invalid_flag/);
   assert.match(text, /location: ~\/private\/argv\.--wat/);
-  assert.match(text, /suggestion: Use --json or --help to inspect supported flags\./);
+  assert.match(text, /suggestion: Use --json or --help to inspect supported flags\. OPENAI_API_KEY: \[REDACTED\]/);
   assert.match(text, /next: Run claw inspect commands --json\./);
-  assert.doesNotMatch(text, /sk-test-secret-123456|\/Users\/example/);
+  assert.doesNotMatch(text, /sk-test-secret-123456|ghp_testsecret123456|\/Users\/example/);
 });
 
 test("CLI text errors include actionable defaults for legacy errors", () => {
