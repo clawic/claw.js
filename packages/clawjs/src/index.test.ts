@@ -622,6 +622,26 @@ test("runCli reports malformed evolution ledger JSON as usage", async () => {
   assert.match(payload.error.message, /docs\/evolution\/baseline\.json/);
 });
 
+test("runCli rejects invalid evolution version flags before writing operator JSON", async () => {
+  for (const args of [
+    ["evolution", "repair", "--from=v1 --json", "--json"],
+    ["evolution", "repair", "--to=", "--json"],
+  ]) {
+    const result = await runCliCapture(args, process.cwd());
+    assert.equal(result.code, CLI_EXIT_USAGE, args.join(" "));
+    const payload = JSON.parse(result.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; message: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_evolution_version");
+    assert.equal(payload.error.status, "USAGE");
+    assert.match(payload.error.message, /single evolution version token/);
+    assert.equal(result.stderr, "");
+    assert.doesNotMatch(result.stdout, /claw evolution dry-run --from v1 --json/);
+  }
+});
+
 test("runCli exposes system telemetry snapshot, metrics, history, rules, widgets, providers and controls", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-system-telemetry-cli-"));
   const monitorDb = path.join(workspaceRoot, "monitor.sqlite");

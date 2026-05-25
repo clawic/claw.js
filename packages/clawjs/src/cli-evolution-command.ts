@@ -11,6 +11,8 @@ import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
+const EVOLUTION_VERSION_TOKEN_PATTERN = /^(?:current|foundation|v[0-9]+(?:[._-][A-Za-z0-9]+)*)$/;
+
 interface EvolutionCliInput {
   positionals: string[];
   flags: Record<string, string>;
@@ -43,6 +45,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     return writeEvolutionResult(input, action, payload);
   }
   if (action === "verify" || action === "doctor") {
+    const versionFlags = readEvolutionVersionFlags(input.flags);
     const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
     const current = createCurrentPublicSurfaceBaseline();
     const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
@@ -51,8 +54,8 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
       fixtures,
       ledger,
       stableSurfaces: clawPersistentSurfaceRegistry.nodes,
-      fromVersion: input.flags.from,
-      toVersion: input.flags.to,
+      fromVersion: versionFlags.fromVersion,
+      toVersion: versionFlags.toVersion,
     });
     return writeEvolutionResult(input, action, {
       status: (!diff || diff.uncoveredChanges.length === 0) && migrationLab.status === "pass" ? "ok" : "needs_attention",
@@ -104,6 +107,7 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
     });
   }
   if (["plan", "dry-run", "apply", "repair", "rollback", "backup", "receipt", "report"].includes(action)) {
+    const versionFlags = readEvolutionVersionFlags(input.flags);
     const baseline = readPublicSurfaceBaseline(publicSurfaceBaselinePath);
     const current = createCurrentPublicSurfaceBaseline();
     const diff = baseline ? diffEvolutionPublicSurfaceBaseline({ baseline, current, ledger }) : null;
@@ -112,16 +116,16 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
       fixtures,
       ledger,
       stableSurfaces: clawPersistentSurfaceRegistry.nodes,
-      fromVersion: input.flags.from,
-      toVersion: input.flags.to,
+      fromVersion: versionFlags.fromVersion,
+      toVersion: versionFlags.toVersion,
     });
     const plan = createEvolutionOperatorPlan({
       action: action as ClawEvolutionOperatorAction,
       ledger,
       ledgerPath,
       changes: diff?.changes,
-      fromVersion: input.flags.from,
-      toVersion: input.flags.to,
+      fromVersion: versionFlags.fromVersion,
+      toVersion: versionFlags.toVersion,
     });
     const surfaceBaseline = diff
       ? { status: diff.status, changed: diff.summary.changed, uncovered: diff.summary.uncovered }
@@ -179,6 +183,27 @@ export async function runEvolutionCli(input: EvolutionCliInput): Promise<number>
 function writeEvolutionUsage(input: EvolutionCliInput): number {
   input.context.stderr.write(`Usage: ${input.binName} evolution list|show|diff|plan|dry-run|apply|verify|doctor|repair|rollback|backup|receipt|report [--root PATH] [--json]\n`);
   return CLI_EXIT_USAGE;
+}
+
+function readEvolutionVersionFlags(flags: Record<string, string>): { fromVersion?: string; toVersion?: string } {
+  return {
+    fromVersion: readEvolutionVersionFlag(flags, "from"),
+    toVersion: readEvolutionVersionFlag(flags, "to"),
+  };
+}
+
+function readEvolutionVersionFlag(flags: Record<string, string>, name: "from" | "to"): string | undefined {
+  if (!(name in flags)) return undefined;
+  const value = flags[name]?.trim();
+  if (!value || !EVOLUTION_VERSION_TOKEN_PATTERN.test(value)) {
+    throw new CliHandledError(
+      "invalid_evolution_version",
+      `--${name} must be a single evolution version token such as current, foundation, v1, or v2.`,
+      CLI_EXIT_USAGE,
+      { details: { flag: name } },
+    );
+  }
+  return value;
 }
 
 function writeEvolutionResult(input: EvolutionCliInput, action: string, data: unknown): number {
