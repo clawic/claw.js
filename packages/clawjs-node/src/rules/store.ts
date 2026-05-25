@@ -249,7 +249,9 @@ export class LocalRulesStore {
 
   saveRule(input: RuleInput): RuleRecord {
     const state = this.readState();
-    if (!state.scopes.some((scope) => scope.id === input.scopeId)) {
+    const scopeId = normalizeRuleId(input.scopeId, "scope");
+    const availableScopes = mergeById(BUILTIN_CLAW_RULE_SCOPES, state.scopes);
+    if (!availableScopes.some((scope) => scope.id === scopeId)) {
       throw new Error(`Rule scope not found: ${input.scopeId}`);
     }
     const id = normalizeRuleId(input.id ?? input.title, "rule");
@@ -261,7 +263,7 @@ export class LocalRulesStore {
       title: input.title.trim(),
       kind: input.kind ?? current?.kind ?? "directive",
       status,
-      scopeId: input.scopeId,
+      scopeId,
       content: input.content.trim(),
       ...(input.applyWhen ? { applyWhen: normalizeApplyWhen(input.applyWhen) } : current?.applyWhen ? { applyWhen: current.applyWhen } : {}),
       aliases: uniqueStrings(input.aliases ?? current?.aliases),
