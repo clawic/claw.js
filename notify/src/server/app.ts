@@ -745,9 +745,20 @@ export function buildNotifyApp(options: BuildNotifyAppOptions = {}) {
     if ("tenantId" in principal && principal.tenantId !== receipt.tenantId) {
       return await reply.code(403).send({ error: "Forbidden" });
     }
+    const notification = store.getNotification(receipt.notificationId);
+    if (principal.kind === "source" && notification?.sourceAppId !== principal.sourceAppId) {
+      return await reply.code(403).send({ error: "Forbidden" });
+    }
+    if (principal.kind === "installation" && !store.hasDeliveryForInstallation({
+      tenantId: receipt.tenantId,
+      notificationId: receipt.notificationId,
+      installationId: principal.installationId,
+    })) {
+      return await reply.code(403).send({ error: "Forbidden" });
+    }
     return {
       receipt,
-      notification: store.getNotification(receipt.notificationId),
+      notification,
     };
   });
 

@@ -1092,6 +1092,14 @@ export class NotifyServiceStore {
     if (!installation) return null;
     const receipt = this.getReceipt(receiptId);
     if (!receipt || receipt.status !== "pending") return receipt;
+    if (installation.tenantId !== receipt.tenantId) return null;
+    if (!this.hasDeliveryForInstallation({
+      tenantId: receipt.tenantId,
+      notificationId: receipt.notificationId,
+      installationId,
+    })) {
+      return null;
+    }
     const timestamp = nowIso();
     this.sqlite.prepare(`
       UPDATE receipts
@@ -1104,6 +1112,20 @@ export class NotifyServiceStore {
       WHERE notification_id = ?
     `).run(timestamp, timestamp, receipt.notificationId);
     return this.getReceipt(receiptId);
+  }
+
+  hasDeliveryForInstallation(input: {
+    tenantId: string;
+    notificationId: string;
+    installationId: string;
+  }): boolean {
+    const row = this.sqlite.prepare(`
+      SELECT 1
+      FROM deliveries
+      WHERE tenant_id = ? AND notification_id = ? AND installation_id = ?
+      LIMIT 1
+    `).get(input.tenantId, input.notificationId, input.installationId) as { "1": number } | undefined;
+    return Boolean(row);
   }
 
   cancelNotification(sourceAppId: string, notificationId: string): NotificationRecord | null {

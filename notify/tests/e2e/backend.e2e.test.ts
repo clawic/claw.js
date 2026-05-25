@@ -242,6 +242,93 @@ test("send fanout, multi-device feed, read flow, and critical ack work together"
   assert.equal(receiptPayload.receipt.ackedByInstallationId, androidInstall.record.id);
 });
 
+test("critical receipts can only be read or acked by recipient installations", async () => {
+  const server = await boot();
+  const source = await createSourceApp(server);
+  await createClientApp(server, {
+    id: "recipient-ios",
+    displayName: "Recipient iOS",
+    platform: "ios",
+    bundleId: "com.example.claw.recipient.ios",
+  });
+  await createClientApp(server, {
+    id: "observer-ios",
+    displayName: "Observer iOS",
+    platform: "ios",
+    bundleId: "com.example.claw.observer.ios",
+  });
+  const recipientInstall = await registerInstallation(server, {
+    userId: "recipient-user",
+    clientAppId: "recipient-ios",
+    deviceName: "Recipient iPhone",
+  });
+  const observerInstall = await registerInstallation(server, {
+    userId: "observer-user",
+    clientAppId: "observer-ios",
+    deviceName: "Observer iPhone",
+  });
+
+  const send = await fetch(`${server.baseUrl}/v1/notifications`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(source.token),
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      approvalId: "approval_notify_recipient_only",
+      legalLabel: "Notification delivery - human reviewed",
+      priority: "critical",
+      receiptPolicy: { kind: "critical", retrySec: 30, expireSec: 300 },
+      audience: {
+        userIds: ["recipient-user"],
+      },
+      context: {
+        tenantId: "tenant-a",
+        agentId: "recipient-agent",
+        eventType: STABLE_EVENT_TYPES.opsFailed,
+      },
+      delivery: {
+        mode: "alert",
+        title: "Recipient only",
+      },
+    }),
+  });
+  assert.equal(send.status, 201);
+  const payload = await send.json() as {
+    deliveries: Array<{ installationId: string; state: string }>;
+    receipt: { id: string; status: string };
+  };
+  assert.deepEqual(payload.deliveries.map((delivery) => delivery.installationId), [recipientInstall.record.id]);
+
+  const observerRead = await fetch(`${server.baseUrl}/v1/receipts/${payload.receipt.id}`, {
+    headers: authHeaders(observerInstall.token),
+  });
+  assert.equal(observerRead.status, 403);
+
+  const observerAck = await fetch(`${server.baseUrl}/v1/client/receipts/${payload.receipt.id}/ack`, {
+    method: "POST",
+    headers: authHeaders(observerInstall.token),
+  });
+  assert.equal(observerAck.status, 404);
+
+  const receiptResponse = await fetch(`${server.baseUrl}/v1/receipts/${payload.receipt.id}`, {
+    headers: authHeaders(source.token),
+  });
+  assert.equal(receiptResponse.status, 200);
+  const receiptPayload = await receiptResponse.json() as { receipt: { status: string; ackedByInstallationId: string | null } };
+  assert.equal(receiptPayload.receipt.status, "pending");
+  assert.equal(receiptPayload.receipt.ackedByInstallationId, null);
+
+  const recipientAck = await fetch(`${server.baseUrl}/v1/client/receipts/${payload.receipt.id}/ack`, {
+    method: "POST",
+    headers: authHeaders(recipientInstall.token),
+  });
+  assert.equal(recipientAck.status, 200);
+  const ackPayload = await recipientAck.json() as { receipt: { status: string; ackedByInstallationId: string | null } };
+  assert.equal(ackPayload.receipt.status, "acked");
+  assert.equal(ackPayload.receipt.ackedByInstallationId, recipientInstall.record.id);
+});
+
 test("subscription resolution supports allow, mute, critical-only, unsubscribe, and targeted client apps", async () => {
   const server = await boot();
   const source = await createSourceApp(server);
