@@ -307,6 +307,17 @@ function main() {
       if (!snapshot.sources?.includes("https://hermes-agent.nousresearch.com/docs/user-guide/sessions")) {
         errors.push("Hermes official snapshot must cite the Sessions guide before claiming session command inventory");
       }
+      if (!snapshot.sources?.includes("https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md")) {
+        errors.push("Hermes official snapshot must cite the Session Storage guide before claiming SQLite state.db session-store inventory");
+      }
+      if (runtimePortal.includes("runtime-session-sqlite")) {
+        for (const snippet of ["query_only = ON", "sqlite_with_gateway_transcripts", "sessionDatabasePath", "sessions", "messages"]) {
+          if (!runtimePortal.includes(snippet)) errors.push(`Hermes SQLite session projection guard missing ${snippet}`);
+        }
+        if (!snapshot.sources?.includes("https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md")) {
+          errors.push("Hermes SQLite session projection requires the official Session Storage source");
+        }
+      }
       const requiredHermesCommands = {
         sessions: ["hermes chat", "hermes -z <prompt>", "hermes sessions browse", "hermes sessions export <output> [--session-id ID]", "hermes sessions delete <session-id>", "hermes sessions prune", "hermes sessions stats"],
         skills: ["hermes skills browse", "hermes skills inspect", "hermes bundles list", "hermes curator run --dry-run"],
