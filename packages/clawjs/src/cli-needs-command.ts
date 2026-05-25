@@ -191,9 +191,11 @@ function selectRoutes(input: NeedsCliInput): NeedRoute[] {
 }
 
 function parseLimit(input: NeedsCliInput): number | undefined {
-  if (!input.flags.limit) return undefined;
-  const limit = Number(input.flags.limit);
-  if (!Number.isInteger(limit) || limit < 0) {
+  const raw = input.flags.limit;
+  if (raw === undefined) return undefined;
+  const trimmed = raw.trim();
+  const limit = Number(trimmed);
+  if (!trimmed || !Number.isInteger(limit) || limit < 0) {
     throw new CliHandledError("invalid_limit", "Use --limit with a non-negative integer.", CLI_EXIT_USAGE);
   }
   return limit;

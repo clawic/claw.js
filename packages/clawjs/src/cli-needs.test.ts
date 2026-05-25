@@ -55,11 +55,13 @@ test("runCli evaluates need routes in dry-run mode and saves a canonical workspa
 });
 
 test("runCli rejects invalid need route limits instead of expanding work", async () => {
-  const result = await runCliCapture(["needs", "generate", "--limit", "-1", "--json"], process.cwd());
-  assert.equal(result.code, CLI_EXIT_USAGE);
-  const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string } };
-  assert.equal(payload.ok, false);
-  assert.equal(payload.error.code, "invalid_limit");
+  for (const value of ["-1", ""]) {
+    const result = await runCliCapture(["needs", "generate", `--limit=${value}`, "--json"], process.cwd());
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_limit");
+  }
 });
 
 test("runCli reports corrupt need route ledgers as usage errors", async () => {
