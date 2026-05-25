@@ -59,6 +59,10 @@ export interface MediaStore {
 const MEDIA_COLLECTION = "media";
 const MEDIA_GALLERY_SHARES_COLLECTION = "media-gallery-shares";
 
+interface PersistedMediaGalleryShare extends MediaGalleryShare {
+  mediaIds?: string[];
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -239,7 +243,7 @@ export function createMediaStore(options: {
   agentId?: string;
 }): MediaStore {
   const collection = options.dataStore.collection<MediaRecord>(MEDIA_COLLECTION);
-  const galleryShares = options.dataStore.collection<MediaGalleryShare>(MEDIA_GALLERY_SHARES_COLLECTION);
+  const galleryShares = options.dataStore.collection<PersistedMediaGalleryShare>(MEDIA_GALLERY_SHARES_COLLECTION);
 
   function findBySource(sourceType: string | undefined, sourceId: string | undefined): MediaRecord | null {
     if (!sourceType || !sourceId) return null;
@@ -407,13 +411,15 @@ export function createMediaStore(options: {
       const legal = requireMediaShareReview(input);
       const id = `media-share-${crypto.randomUUID()}`;
       const createdAt = nowIso();
-      const share: MediaGalleryShare = {
+      const filters = input.filters ?? {};
+      const share: PersistedMediaGalleryShare = {
         id,
         label: input.label?.trim() || "Media gallery",
         legalLabel: legal.legalLabel,
         approvalId: legal.approvalId,
         url: `claw://media-gallery/${id}`,
-        filters: input.filters ?? {},
+        filters,
+        mediaIds: this.list(filters).map((record) => record.mediaId),
         createdAt,
         expiresAt: normalizeExpiresAt(input),
       };
@@ -436,9 +442,12 @@ export function createMediaStore(options: {
     resolveGalleryShare(id) {
       const share = galleryShares.get(id);
       if (!share || share.revokedAt || shareExpired(share)) return null;
+      const snapshotItems = Array.isArray(share.mediaIds)
+        ? share.mediaIds.map((mediaId) => this.get(mediaId)).filter((record): record is MediaRecord => record !== null)
+        : null;
       return {
         share,
-        items: this.list(share.filters),
+        items: snapshotItems ?? this.list(share.filters),
       };
     },
   };

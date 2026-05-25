@@ -79,3 +79,40 @@ test("media shares require explicit approval and persistent legal labels", async
   assert.equal(galleryShare.legalLabel, "Exported gallery - human reviewed");
   assert.equal(galleryShare.approvalId, "approval_media_gallery");
 });
+
+test("media gallery shares resolve the reviewed item snapshot", (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-gallery-share-"));
+  useIsolatedDataDir(t, workspaceDir);
+  const dataStore = createWorkspaceStorage(workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+  const media = createMediaStore({
+    dataStore,
+    storage,
+    workspaceId: "workspace-a",
+    agentId: "agent-a",
+  });
+
+  const reviewed = media.register({
+    name: "reviewed.txt",
+    mimeType: "text/plain",
+    kind: "document",
+    sourceText: "alpha reviewed document",
+  });
+  const share = media.createGalleryShare({
+    label: "Reviewed alpha documents",
+    legalLabel: "Exported gallery - human reviewed",
+    approvalId: "approval_media_gallery_snapshot",
+    filters: { kind: "document", query: "alpha" },
+  });
+
+  assert.deepEqual(media.resolveGalleryShare(share.id)?.items.map((item) => item.mediaId), [reviewed.mediaId]);
+
+  media.register({
+    name: "later.txt",
+    mimeType: "text/plain",
+    kind: "document",
+    sourceText: "alpha added after approval",
+  });
+
+  assert.deepEqual(media.resolveGalleryShare(share.id)?.items.map((item) => item.mediaId), [reviewed.mediaId]);
+});
