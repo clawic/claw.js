@@ -63,6 +63,8 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_resources" && entry.mappedCommand === "runtime <runtime-id> resources <domain>"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_domain" && entry.mappedCommand === "runtime <runtime-id> domain <domain>"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_preview"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_resolve" && entry.mappedCommand === "runtime <runtime-id> sessions resolve"), true);
+  assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_history" && entry.mappedCommand === "runtime <runtime-id> sessions history"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_inject"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_abort"), true);
 });

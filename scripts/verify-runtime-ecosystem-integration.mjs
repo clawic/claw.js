@@ -208,6 +208,8 @@ function main() {
     ["cmd_intent_runtime_domain", "runtime <runtime-id> domain <domain>"],
     ["cmd_intent_runtime_sessions_list", "runtime <runtime-id> sessions list"],
     ["cmd_intent_runtime_sessions_preview", "runtime <runtime-id> sessions preview"],
+    ["cmd_intent_runtime_sessions_resolve", "runtime <runtime-id> sessions resolve"],
+    ["cmd_intent_runtime_sessions_history", "runtime <runtime-id> sessions history"],
     ["cmd_intent_runtime_sessions_create", "runtime <runtime-id> sessions create"],
     ["cmd_intent_runtime_sessions_conflicts", "runtime <runtime-id> sessions conflicts"],
   ]) {
