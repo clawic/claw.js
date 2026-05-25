@@ -49,6 +49,8 @@ import {
   type SyncResourceManifest,
 } from "@clawjs/core";
 
+import { CliHandledError, CLI_EXIT_USAGE } from "./cli-errors.ts";
+
 export type RemoteSyncStateAuditEvent = {
   eventId: string;
   eventType: "sync.manifest.recorded" | "sync.queue.enqueued" | "sync.queue.reconciled" | "sync.driver_application.recorded" | "sync.authority_handoff.recorded" | "sync.cache.recorded" | "remote.classification.recorded" | "remote.compat.recorded" | "mesh.invitation.recorded" | "mesh.invitation.accepted" | "mesh.share.recorded" | "mesh.revocation.recorded" | "secret.lease.issued" | "secret.provider.recorded" | "transport.handshake.recorded" | "node.trust.recorded" | "gateway.deployment.recorded" | "gateway.agent_service.recorded" | "gateway.audit.recorded";
@@ -479,7 +481,15 @@ export class RemoteSyncStateStore {
 
   read(): RemoteSyncState {
     if (!fs.existsSync(this.statePath)) return emptyState();
-    return parseState(JSON.parse(fs.readFileSync(this.statePath, "utf8")) as unknown);
+    try {
+      return parseState(JSON.parse(fs.readFileSync(this.statePath, "utf8")) as unknown);
+    } catch (error) {
+      throw new CliHandledError(
+        "invalid_remote_sync_state_json",
+        `Remote sync state must contain valid JSON: ${this.statePath}. ${error instanceof Error ? error.message : "Parse failed."}`,
+        CLI_EXIT_USAGE,
+      );
+    }
   }
 
   write(state: RemoteSyncState): RemoteSyncState {

@@ -46,3 +46,20 @@ test("gateway agent-service rejects invalid cost flags before persistence", asyn
 
   assert.equal(fs.existsSync(path.join(stateDir, "remote-sync-state.json")), false);
 });
+
+test("sync status reports corrupt remote sync state as usage", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-remote-state-corrupt-"));
+  fs.writeFileSync(path.join(stateDir, "remote-sync-state.json"), "{bad", "utf8");
+
+  const result = await runCliCapture(["sync", "status", "--state-dir", stateDir, "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_remote_sync_state_json");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /remote-sync-state\.json/);
+});
