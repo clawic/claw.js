@@ -232,6 +232,10 @@ export interface RuntimeSessionAdapter {
   sessionPersistence?: "ephemeral" | "workspace" | "runtime" | "agent";
   streamingMode?: "none" | "cli" | "gateway" | "hybrid";
   sessionPath?: string;
+  sessionDatabasePath?: string;
+  sessionTranscriptPath?: string;
+  sessionIndexPath?: string;
+  sessionStorageContract?: "directory" | "sqlite" | "sqlite_with_gateway_transcripts" | "runtime_api";
   buildCliInvocation(input: {
     sessionId: string;
     agentId?: string;
@@ -288,6 +292,10 @@ export interface RuntimeResourceHandlers {
 export interface RuntimeSessionHandlers {
   describe(options: RuntimeAdapterOptions): Omit<RuntimeSessionAdapter, "buildCliInvocation"> & {
     sessionPath?: string;
+    sessionDatabasePath?: string;
+    sessionTranscriptPath?: string;
+    sessionIndexPath?: string;
+    sessionStorageContract?: "directory" | "sqlite" | "sqlite_with_gateway_transcripts" | "runtime_api";
   };
   create(options: RuntimeAdapterOptions): RuntimeSessionAdapter;
 }

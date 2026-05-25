@@ -194,6 +194,10 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(conversation.fallbackTransport, "cli");
   assert.equal(conversation.sessionPersistence, "runtime");
   assert.equal(conversation.sessionPath?.endsWith(path.join(".hermes", "sessions")), true);
+  assert.equal(conversation.sessionStorageContract, "sqlite_with_gateway_transcripts");
+  assert.equal(conversation.sessionDatabasePath?.endsWith(path.join(".hermes", "state.db")), true);
+  assert.equal(conversation.sessionTranscriptPath?.endsWith(path.join(".hermes", "sessions")), true);
+  assert.equal(conversation.sessionIndexPath?.endsWith(path.join(".hermes", "sessions", "sessions.json")), true);
 });
 
 test("hermes adapter honors an explicit binary path for runtime probes", async () => {

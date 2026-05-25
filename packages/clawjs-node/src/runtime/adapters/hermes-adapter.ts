@@ -516,6 +516,10 @@ const baseHermesAdapter = createSimpleRuntimeAdapter({
     sessionPersistence: "runtime",
     streamingMode: "hybrid",
     sessionPath: locations.homeDir ? path.join(locations.homeDir, "sessions") : undefined,
+    sessionDatabasePath: locations.homeDir ? path.join(locations.homeDir, "state.db") : undefined,
+    sessionTranscriptPath: locations.homeDir ? path.join(locations.homeDir, "sessions") : undefined,
+    sessionIndexPath: locations.homeDir ? path.join(locations.homeDir, "sessions", "sessions.json") : undefined,
+    sessionStorageContract: "sqlite_with_gateway_transcripts",
   }),
   capabilityDeclarations: {
     runtime: { supported: true, status: "ready", strategy: "cli" },

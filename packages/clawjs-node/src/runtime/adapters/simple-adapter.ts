@@ -79,6 +79,10 @@ interface SimpleRuntimeAdapterSpec {
     sessionPersistence?: "ephemeral" | "workspace" | "runtime" | "agent";
     streamingMode?: "none" | "cli" | "gateway" | "hybrid";
     sessionPath?: string;
+    sessionDatabasePath?: string;
+    sessionTranscriptPath?: string;
+    sessionIndexPath?: string;
+    sessionStorageContract?: "directory" | "sqlite" | "sqlite_with_gateway_transcripts" | "runtime_api";
   };
   capabilityDeclarations?: Partial<Record<RuntimeCapabilityKey, Partial<RuntimeCapabilitySupport>>>;
   capabilityOverrides?: Partial<Record<RuntimeCapabilityKey, Partial<RuntimeCapabilitySupport>>>;
@@ -755,6 +759,10 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
           ...(details.sessionPersistence ? { sessionPersistence: details.sessionPersistence } : {}),
           ...(details.streamingMode ? { streamingMode: details.streamingMode } : {}),
           ...(details.sessionPath ? { sessionPath: details.sessionPath } : {}),
+          ...(details.sessionDatabasePath ? { sessionDatabasePath: details.sessionDatabasePath } : {}),
+          ...(details.sessionTranscriptPath ? { sessionTranscriptPath: details.sessionTranscriptPath } : {}),
+          ...(details.sessionIndexPath ? { sessionIndexPath: details.sessionIndexPath } : {}),
+          ...(details.sessionStorageContract ? { sessionStorageContract: details.sessionStorageContract } : {}),
         };
       },
       create(options) {
@@ -790,6 +798,10 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
           ...(details.sessionPersistence ? { sessionPersistence: details.sessionPersistence } : {}),
           ...(details.streamingMode ? { streamingMode: details.streamingMode } : {}),
           ...(details.sessionPath ? { sessionPath: details.sessionPath } : {}),
+          ...(details.sessionDatabasePath ? { sessionDatabasePath: details.sessionDatabasePath } : {}),
+          ...(details.sessionTranscriptPath ? { sessionTranscriptPath: details.sessionTranscriptPath } : {}),
+          ...(details.sessionIndexPath ? { sessionIndexPath: details.sessionIndexPath } : {}),
+          ...(details.sessionStorageContract ? { sessionStorageContract: details.sessionStorageContract } : {}),
         };
       },
     },
@@ -1155,6 +1167,10 @@ export function createSimpleRuntimeAdapter(spec: SimpleRuntimeAdapterSpec): Runt
         ...(details.sessionPersistence ? { sessionPersistence: details.sessionPersistence } : {}),
         ...(details.streamingMode ? { streamingMode: details.streamingMode } : {}),
         ...(details.sessionPath ? { sessionPath: details.sessionPath } : {}),
+        ...(details.sessionDatabasePath ? { sessionDatabasePath: details.sessionDatabasePath } : {}),
+        ...(details.sessionTranscriptPath ? { sessionTranscriptPath: details.sessionTranscriptPath } : {}),
+        ...(details.sessionIndexPath ? { sessionIndexPath: details.sessionIndexPath } : {}),
+        ...(details.sessionStorageContract ? { sessionStorageContract: details.sessionStorageContract } : {}),
       };
     },
   };
