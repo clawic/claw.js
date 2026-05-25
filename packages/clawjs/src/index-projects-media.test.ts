@@ -817,6 +817,65 @@ test("runCli supports temporal domain commands and schedule shortcut", async () 
   }
 });
 
+test("runCli watch rejects invalid relative durations before persistence", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-watch-invalid-duration-"));
+  const built = buildTimeApp({
+    config: {
+      host: "127.0.0.1",
+      port: 0,
+      dataDir: path.join(tmpDir, "data"),
+      dbPath: path.join(tmpDir, "data", "core.sqlite"),
+      defaultTimeZone: "UTC",
+      schedulerIntervalMs: 50,
+    },
+  });
+  const address = await built.app.listen({ host: "127.0.0.1", port: 0 });
+  const timeUrl = address.replace(/\/$/, "");
+
+  try {
+    const invalidStdout = captureStream();
+    const invalidExitCode = await runCli([
+      "watch",
+      "thread:thread-1",
+      "--if-no", "reply",
+      "--after", "nope",
+      "--then", "remind",
+      "nudge owner",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: invalidStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(invalidExitCode, CLI_EXIT_USAGE);
+    const invalidPayload = JSON.parse(invalidStdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(invalidPayload.ok, false);
+    assert.equal(invalidPayload.error.code, "invalid_duration");
+    assert.equal(invalidPayload.error.status, "USAGE");
+
+    const listStdout = captureStream();
+    const listExitCode = await runCli([
+      "watch",
+      "list",
+      "--time-url", timeUrl,
+      "--workspace", tmpDir,
+      "--json",
+    ], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal(listExitCode, CLI_EXIT_OK);
+    const listPayload = parseCliJsonPayload<{ items: unknown[] }>(listStdout.getOutput());
+    assert.equal(listPayload.items.length, 0);
+  } finally {
+    await built.app.close();
+  }
+});
+
 test("runCli manages local styles, templates, and references", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-design-assets-"));
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-design-cwd-"));

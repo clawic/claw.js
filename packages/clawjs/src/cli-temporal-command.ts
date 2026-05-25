@@ -363,6 +363,9 @@ export async function runTemporalCli(input: {
     if (ifNo !== "reply") {
       throw new CliHandledError("usage_error", 'Only "--if-no reply" is supported today.', CLI_EXIT_USAGE);
     }
+    if (parseSimpleDurationMs(after) === null) {
+      throw new CliHandledError("invalid_duration", `Unsupported duration "${after}". Use simple durations like 30m, 24h, or 2d.`, CLI_EXIT_USAGE);
+    }
     const target = parseWatchTarget(targetValue);
     const payload = await claw.watch.create({
       target: targetValue,
