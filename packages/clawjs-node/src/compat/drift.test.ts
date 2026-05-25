@@ -114,6 +114,48 @@ test("buildCompatDriftReport flags version-family and capability drift", () => {
   ]);
 });
 
+test("buildCompatDriftReport derives capability drift when signature diagnostics are absent", () => {
+  const report = buildCompatDriftReport({
+    schemaVersion: 1,
+    runtimeAdapter: "openclaw",
+    runtimeVersion: "1.2.3",
+    probedAt: "2026-03-21T00:00:00.000Z",
+    capabilities: {
+      version: true,
+      modelsStatus: true,
+      agentsList: true,
+      gatewayCall: true,
+    },
+  }, createMockRuntimeProbeStatus({
+    adapter: "openclaw",
+    runtimeName: "OpenClaw",
+    version: "1.2.3",
+    cliAvailable: true,
+    gatewayAvailable: false,
+    capabilities: {
+      version: true,
+      modelsStatus: true,
+      agentsList: true,
+      gatewayCall: false,
+    },
+    diagnostics: {},
+  }), createMockRuntimeCompatReport({
+    runtimeAdapter: "openclaw",
+    runtimeVersion: "1.2.3",
+    capabilities: {
+      version: true,
+      modelsStatus: true,
+      agentsList: true,
+      gatewayCall: false,
+    },
+    degraded: true,
+    issues: ["OpenClaw gateway is unavailable."],
+  }));
+
+  assert.equal(report.drifted, true);
+  assert.deepEqual(report.issues.map((issue) => issue.code), ["capability_signature"]);
+});
+
 test("buildCompatDriftReport detects adapter-family drift beyond openclaw", () => {
   const report = buildCompatDriftReport({
     schemaVersion: 1,

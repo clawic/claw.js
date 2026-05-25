@@ -14,7 +14,18 @@ export interface CompatDriftReport {
 
 function readStringDiagnostic(source: Record<string, unknown> | undefined, key: string): string | null {
   const value = source?.[key];
-  return typeof value === "string" && value.trim() ? value : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function buildCapabilitySignature(capabilities: Record<string, boolean>): string {
+  return Object.entries(capabilities)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([capability, supported]) => `${capability}=${supported ? "1" : "0"}`)
+    .join("|");
+}
+
+function readCapabilitySignature(source: Record<string, unknown> | undefined, capabilities: Record<string, boolean>): string {
+  return readStringDiagnostic(source, "capabilitySignature") ?? buildCapabilitySignature(capabilities);
 }
 
 export function buildCompatDriftReport(
@@ -56,12 +67,12 @@ export function buildCompatDriftReport(
     });
   }
 
-  const snapshotCapabilitySignature = readStringDiagnostic(snapshot.diagnostics, "capabilitySignature");
-  const currentCapabilitySignature = readStringDiagnostic({
+  const snapshotCapabilitySignature = readCapabilitySignature(snapshot.diagnostics, snapshot.capabilities);
+  const currentCapabilitySignature = readCapabilitySignature({
     ...runtime.diagnostics,
     ...(compat.diagnostics ?? {}),
-  }, "capabilitySignature");
-  if (snapshotCapabilitySignature && currentCapabilitySignature && snapshotCapabilitySignature !== currentCapabilitySignature) {
+  }, compat.capabilities);
+  if (snapshotCapabilitySignature !== currentCapabilitySignature) {
     issues.push({
       code: "capability_signature",
       message: "Compat snapshot capability signature no longer matches the current runtime probe.",
