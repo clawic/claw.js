@@ -34,6 +34,19 @@ test("local storage scopes objects by agent prefix and rejects unsafe keys", (t)
   assert.throws(() => storage.writeText({ key: "../escape.txt", content: "no" }), /Invalid storage key/);
 });
 
+test("local storage list normalizes non-finite limits", (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-limit-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+
+  storage.writeText({ key: "notes/a.txt", content: "a" });
+  storage.writeText({ key: "notes/b.txt", content: "b" });
+
+  assert.equal(storage.list({ limit: Number.NaN }).length, 2);
+  assert.equal(storage.list({ limit: Number.POSITIVE_INFINITY }).length, 2);
+  assert.equal(storage.list({ limit: 1.9 }).length, 1);
+});
+
 test("local storage enforces grants between agents and supports tokens", (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-grants-"));
   useIsolatedStorageDataDir(t, workspaceDir);

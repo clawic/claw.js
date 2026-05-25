@@ -113,6 +113,11 @@ export interface StorageStoreOptions {
   ownerMode?: boolean;
 }
 
+function normalizeStorageListLimit(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return Number.MAX_SAFE_INTEGER;
+  return Math.max(1, Math.floor(value));
+}
+
 interface ObjectRow {
   bucket: string;
   object_key: string;
@@ -550,7 +555,7 @@ export class LocalStorageStore {
     const bucket = normalizeBucket(input.bucket);
     const prefix = this.resolvePrefix(input.prefix);
     this.assertAllowed(bucket, prefix, "objects:list");
-    const limit = Math.max(1, input.limit ?? Number.MAX_SAFE_INTEGER);
+    const limit = normalizeStorageListLimit(input.limit);
     return (this.sqlite.prepare(`
       SELECT bucket, object_key, size_bytes, content_type, sha256, blob_path,
         metadata_json, created_at, updated_at, created_by_agent_id, visibility
