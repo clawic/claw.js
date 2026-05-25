@@ -1,6 +1,7 @@
 // @ts-nocheck
 import fs from "node:fs";
 import path from "node:path";
+import BetterSqlite3 from "better-sqlite3";
 import type { RuntimeAdapterId } from "@clawjs/core";
 import { getRuntimeAdapter, getRuntimeSessionDescriptor, listRuntimeAdapters, NodeProcessHost } from "@clawjs/claw";
 
@@ -1341,7 +1342,108 @@ function runtimeSessionOverlayState(runtimeId: RuntimeAdapterId, sessions = []) 
   };
 }
 
-function listNativeSessions(runtimeId: RuntimeAdapterId, sessionPath: string | undefined, limit = 20) {
+function hermesTimestampToIso(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return new Date(value * 1000).toISOString();
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return new Date(numeric * 1000).toISOString();
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function openHermesSessionDatabase(session) {
+  if (session?.sessionStorageContract !== "sqlite_with_gateway_transcripts") return null;
+  const databasePath = session?.sessionDatabasePath;
+  if (!databasePath || !fs.existsSync(databasePath)) return null;
+  let db = null;
+  try {
+    db = new BetterSqlite3(databasePath, { readonly: true, fileMustExist: true, timeout: 50 });
+    db.pragma("query_only = ON");
+    const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view')").all().map((row) => String(row.name)));
+    if (!tables.has("sessions") || !tables.has("messages")) {
+      db.close();
+      return null;
+    }
+    return db;
+  } catch {
+    try {
+      db?.close();
+    } catch {
+      // best effort only
+    }
+    return null;
+  }
+}
+
+function listHermesSqliteSessions(runtimeId: RuntimeAdapterId, session, limit = 20) {
+  const db = openHermesSessionDatabase(session);
+  if (!db) return null;
+  try {
+    const rows = db.prepare(`
+      SELECT
+        s.id,
+        s.title,
+        s.source,
+        s.model,
+        s.started_at,
+        s.ended_at,
+        s.end_reason,
+        s.message_count,
+        s.tool_call_count,
+        s.input_tokens,
+        s.output_tokens,
+        COALESCE((SELECT MAX(m2.timestamp) FROM messages m2 WHERE m2.session_id = s.id), s.started_at) AS last_active,
+        COALESCE(
+          (SELECT SUBSTR(m.content, 1, 63)
+           FROM messages m
+           WHERE m.session_id = s.id AND m.role = 'user' AND m.content IS NOT NULL
+           ORDER BY m.timestamp, m.id LIMIT 1),
+          ''
+        ) AS preview
+      FROM sessions s
+      ORDER BY last_active DESC, s.started_at DESC
+      LIMIT ?
+    `).all(Math.max(1, Math.min(Number(limit) || 20, 240)));
+    const sessions = rows.map((row) => ({
+      id: String(row.id),
+      label: row.title ? String(row.title) : String(row.id),
+      title: row.title ?? null,
+      kind: "session",
+      source: row.source ?? null,
+      model: row.model ?? null,
+      startedAt: hermesTimestampToIso(row.started_at),
+      endedAt: hermesTimestampToIso(row.ended_at),
+      updatedAt: hermesTimestampToIso(row.last_active ?? row.started_at),
+      endReason: row.end_reason ?? null,
+      messageCount: Number(row.message_count ?? 0),
+      toolCallCount: Number(row.tool_call_count ?? 0),
+      inputTokens: Number(row.input_tokens ?? 0),
+      outputTokens: Number(row.output_tokens ?? 0),
+      preview: row.preview ? redactRuntimeSessionText(String(row.preview)) : null,
+      status: "projected",
+      contentIncluded: false,
+      nativeIdentifier: { name: "sessionId" },
+      sessionStorageContract: session.sessionStorageContract,
+      provenance: {
+        source: "runtime-session-sqlite",
+        runtimeId,
+        path: session.sessionDatabasePath,
+        table: "sessions",
+      },
+    }));
+    return withLocalPinOverlay(runtimeId, sessions);
+  } catch {
+    return null;
+  } finally {
+    db.close();
+  }
+}
+
+function listNativeSessions(runtimeId: RuntimeAdapterId, sessionOrPath, limit = 20) {
+  const session = typeof sessionOrPath === "string" ? { sessionPath: sessionOrPath } : sessionOrPath;
+  const sqliteSessions = runtimeId === "hermes" ? listHermesSqliteSessions(runtimeId, session, limit) : null;
+  if (sqliteSessions) return sqliteSessions;
+  const sessionPath = session?.sessionPath;
   if (!sessionPath || !fs.existsSync(sessionPath)) return [];
   const candidates = [];
   const maxVisited = 240;
@@ -1399,7 +1501,7 @@ function listNativeSessions(runtimeId: RuntimeAdapterId, sessionPath: string | u
 
 function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspace, session, scopeDomain = "all", runtimeOptions?) {
   const includeSessions = scopeDomain === "all" || scopeDomain === "sessions";
-  const sessions = includeSessions ? listNativeSessions(runtimeId, session.sessionPath) : [];
+  const sessions = includeSessions ? listNativeSessions(runtimeId, session) : [];
   const sessionsSupportContract = buildSupportContract(runtimeId, status, "sessions");
   return {
     sessions: {
@@ -1707,7 +1809,7 @@ function nativeSessionLookupKeys(sessionPath: string | undefined, candidate) {
 }
 
 function findNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string) {
-  const sessions = listNativeSessions(runtimeId, session.sessionPath, 240);
+  const sessions = listNativeSessions(runtimeId, session, 240);
   const candidate = sessions.find((entry) => nativeSessionLookupKeys(session.sessionPath, entry).has(sessionId));
   return { sessions, candidate };
 }
@@ -1736,6 +1838,48 @@ function readBoundedRuntimeSessionFile(filePath: string, maxBytes: number) {
   }
 }
 
+function readHermesSqliteSessionMessages(session, sessionId: string, includeContent: boolean, limit: number) {
+  const db = openHermesSessionDatabase(session);
+  if (!db) return null;
+  try {
+    const messages = db.prepare(`
+      SELECT id, role, content, timestamp
+      FROM messages
+      WHERE session_id = ?
+      ORDER BY timestamp, id
+      LIMIT ?
+    `).all(sessionId, Math.max(1, Math.min(Number(limit) || 20, 240))).map((row, index) => {
+      const rawContent = typeof row.content === "string" ? row.content : "";
+      const entry = {
+        id: row.id !== null && row.id !== undefined ? String(row.id) : null,
+        index,
+        role: row.role ?? null,
+        type: "message",
+        createdAt: hermesTimestampToIso(row.timestamp),
+        contentIncluded: false,
+        contentLength: rawContent.length,
+      };
+      if (!includeContent) return entry;
+      const redacted = redactRuntimeSessionText(rawContent);
+      return {
+        ...entry,
+        contentIncluded: true,
+        contentPreview: redacted.slice(0, 280),
+        contentTruncated: redacted.length > 280,
+      };
+    });
+    const totalAvailable = db.prepare("SELECT COUNT(*) AS count FROM messages WHERE session_id = ?").get(sessionId)?.count ?? messages.length;
+    return {
+      messages,
+      totalAvailable: Number(totalAvailable),
+    };
+  } catch {
+    return null;
+  } finally {
+    db.close();
+  }
+}
+
 function previewNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sessionId: string, includeContent: boolean) {
   const { candidate } = findNativeSessionFromPath(runtimeId, session, sessionId);
   if (!candidate) {
@@ -1755,9 +1899,25 @@ function previewNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
     updatedAt: candidate.updatedAt,
     sizeBytes: candidate.sizeBytes,
     contentIncluded: false,
-    nativeIdentifier: { name: "sessionPathId" },
+    nativeIdentifier: candidate.nativeIdentifier ?? { name: "sessionPathId" },
+    provenance: candidate.provenance,
   };
   if (!includeContent) return preview;
+  if (candidate.provenance?.source === "runtime-session-sqlite") {
+    const sqlite = readHermesSqliteSessionMessages(session, candidate.id, true, 3);
+    const contentPreview = sqlite?.messages
+      ?.map((entry) => entry.contentPreview)
+      .filter(Boolean)
+      .join("\n") ?? "";
+    return {
+      ...preview,
+      contentIncluded: true,
+      contentPreview,
+      contentTruncated: Boolean(sqlite && sqlite.totalAvailable > sqlite.messages.length),
+      contentLimitMessages: 3,
+      sessionStorageContract: candidate.sessionStorageContract,
+    };
+  }
   try {
     const maxBytes = 4096;
     const bounded = readBoundedRuntimeSessionFile(candidate.path, maxBytes);
@@ -1788,18 +1948,28 @@ function resolveNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
       nativeIdentifier: { name: "sessionPathId" },
     };
   }
+  const matchedBy = candidate.provenance?.source === "runtime-session-sqlite"
+    ? "sessionId"
+    : nativeSessionLookupKeys(session.sessionPath, candidate).has(sessionId) ? "sessionPathId" : "unknown";
   return {
     id: candidate.id,
     found: true,
     label: candidate.label,
+    title: candidate.title ?? null,
     kind: candidate.kind,
+    source: candidate.source ?? null,
+    model: candidate.model ?? null,
     path: candidate.path,
+    startedAt: candidate.startedAt ?? null,
     updatedAt: candidate.updatedAt,
+    endedAt: candidate.endedAt ?? null,
     sizeBytes: candidate.sizeBytes,
+    messageCount: candidate.messageCount ?? null,
     writesRuntime: false,
     contentIncluded: false,
-    matchedBy: nativeSessionLookupKeys(session.sessionPath, candidate).has(sessionId) ? "sessionPathId" : "unknown",
-    nativeIdentifier: { name: "sessionPathId" },
+    matchedBy,
+    nativeIdentifier: candidate.nativeIdentifier ?? { name: "sessionPathId" },
+    sessionStorageContract: candidate.sessionStorageContract,
     support: "bounded_runtime_session_store_mapping",
     provenance: candidate.provenance,
   };
@@ -1851,6 +2021,32 @@ function historyNativeSessionFromPath(runtimeId: RuntimeAdapterId, session, sess
       totalProjected: 0,
       nativeIdentifier: { name: "sessionPathId" },
     };
+  }
+  if (resolved.provenance?.source === "runtime-session-sqlite") {
+    const sqlite = readHermesSqliteSessionMessages(session, resolved.id, includeContent, limit);
+    if (sqlite) {
+      return {
+        id: resolved.id,
+        found: true,
+        resolved,
+        writesRuntime: false,
+        contentIncluded: includeContent,
+        contentPolicy: includeContent ? "explicit_include_content_bounded_redacted" : "metadata_default_include_content_required",
+        contentLimitMessages: Math.max(1, Math.min(Number(limit) || 20, 240)),
+        contentTruncated: sqlite.totalAvailable > sqlite.messages.length,
+        messages: sqlite.messages,
+        totalProjected: sqlite.messages.length,
+        totalAvailableInStore: sqlite.totalAvailable,
+        nativeIdentifier: { name: "sessionId" },
+        sessionStorageContract: resolved.sessionStorageContract,
+        provenance: {
+          source: "runtime-session-sqlite",
+          runtimeId,
+          path: session.sessionDatabasePath,
+          table: "messages",
+        },
+      };
+    }
   }
   try {
     const maxBytes = 65536;
