@@ -116,3 +116,31 @@ test("media gallery shares resolve the reviewed item snapshot", (t) => {
 
   assert.deepEqual(media.resolveGalleryShare(share.id)?.items.map((item) => item.mediaId), [reviewed.mediaId]);
 });
+
+test("media list rejects invalid date filters", (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-media-date-filter-"));
+  useIsolatedDataDir(t, workspaceDir);
+  const dataStore = createWorkspaceStorage(workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+  const media = createMediaStore({
+    dataStore,
+    storage,
+    workspaceId: "workspace-a",
+    agentId: "agent-a",
+  });
+
+  media.register({
+    name: "dated.txt",
+    mimeType: "text/plain",
+    data: Buffer.from("dated"),
+  });
+
+  assert.throws(
+    () => media.list({ from: "not-a-date" }),
+    /Invalid media from filter: not-a-date/,
+  );
+  assert.throws(
+    () => media.list({ to: "later-ish" }),
+    /Invalid media to filter: later-ish/,
+  );
+});

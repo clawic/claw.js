@@ -167,10 +167,19 @@ function scoreMatch(record: MediaRecord, query: string): { score: number; snippe
   };
 }
 
+function parseDateFilter(value: string | undefined, name: "from" | "to"): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) throw new Error(`Invalid media ${name} filter: ${value}`);
+  return parsed;
+}
+
 function withinDateRange(record: MediaRecord, input: MediaListInput): boolean {
   const created = Date.parse(record.createdAt);
-  if (input.from && created < Date.parse(input.from)) return false;
-  if (input.to && created > Date.parse(input.to)) return false;
+  const from = parseDateFilter(input.from, "from");
+  const to = parseDateFilter(input.to, "to");
+  if (from !== null && created < from) return false;
+  if (to !== null && created > to) return false;
   return true;
 }
 
