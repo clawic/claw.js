@@ -241,7 +241,7 @@ export async function runReportCli(input: {
     }
 
     if (["draft", "bug", "feature", "translation", "security"].includes(command)) {
-      const report = createReport({ command, positionals, flags, argv, state, agentId });
+      const report = createReport({ command, positionals, flags, argv, state, agentId, cwd: context.cwd });
       report.budgetState = reportBudgetState(state, report, "draft", nowIso());
       if (report.budgetState.status === "limited") {
         throw new CliHandledError("report_budget_exceeded", `Report budget exceeded: ${report.budgetState.blockers.join(", ")}`, CLI_EXIT_FAILURE);
@@ -397,6 +397,7 @@ function createReport(input: {
   argv: string[];
   state: ReportGovernanceState;
   agentId: string;
+  cwd: string;
 }): ReportRecord {
   const kind = inferKind(input.command, input.flags);
   const rawTitle = input.flags.title ?? joinedPositionals(input.positionals, 2);
@@ -417,7 +418,7 @@ function createReport(input: {
   const confidence = sanitizeOptional(redactor, input.flags.confidence);
   const reproductionSteps = splitSteps(redactor.sanitize(input.flags.repro ?? input.flags.reproduction ?? input.flags.steps ?? ""));
   const repository = input.flags.repo === "clawix" ? "clawix" : "clawjs";
-  const attachments = parseAttachments(input.argv, input.flags);
+  const attachments = parseAttachments(input.argv, input.flags, input.cwd);
   const destination = inferDestination(kind, input.flags, title, observed);
   const evidence: ReportRecord["evidence"] = buildEvidence(input.flags, redactor);
   const base: Omit<ReportRecord, "quality" | "privacy" | "duplicateCandidates" | "labels" | "fingerprint"> = {
@@ -526,19 +527,30 @@ function buildEvidence(flags: Record<string, string>, redactor: ReturnType<typeo
   return evidence;
 }
 
-function parseAttachments(argv: string[], flags: Record<string, string>): ReportRecord["attachments"] {
+function parseAttachments(argv: string[], flags: Record<string, string>, cwd: string): ReportRecord["attachments"] {
   const requested = [...parseCsvFlag(flags.attachment), ...parseCsvFlag(flags.attachments)];
-  const allowed = new Set([...parseCsvFlag(flags["allow-attachment"]), ...parseCsvFlag(flags["allow-attachments"])].map((value) => path.basename(value)));
+  const allowValues = [...parseCsvFlag(flags["allow-attachment"]), ...parseCsvFlag(flags["allow-attachments"])];
+  const allowedNames = new Set(allowValues.filter(isSimpleAttachmentName));
+  const allowedPaths = new Set(allowValues.filter((value) => !isSimpleAttachmentName(value)).map((value) => normalizeAttachmentPath(cwd, value)));
   const allowAll = argv.includes("--allow-all-attachments");
   return requested.map((entry, index) => {
     const name = path.basename(entry);
+    const requestedPath = normalizeAttachmentPath(cwd, entry);
     return {
       id: `att_${index + 1}`,
       name,
       kind: inferAttachmentKind(name),
-      optIn: allowAll || allowed.has(name) || allowed.has(entry),
+      optIn: allowAll || allowedNames.has(name) || allowedPaths.has(requestedPath),
     };
   });
+}
+
+function isSimpleAttachmentName(value: string): boolean {
+  return value === path.basename(value) && value === path.win32.basename(value) && !path.isAbsolute(value) && !path.win32.isAbsolute(value);
+}
+
+function normalizeAttachmentPath(cwd: string, value: string): string {
+  return path.normalize(path.resolve(cwd, value));
 }
 
 function inferAttachmentKind(name: string): string {

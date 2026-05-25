@@ -216,6 +216,41 @@ test("report preview omits non opted-in attachment paths", async () => {
   assert.equal(payload.data.markdown.includes("private.png"), false);
 });
 
+test("report allow-attachment path does not authorize same-name attachment collisions", async () => {
+  const workspace = tempWorkspace();
+  const allowedAttachmentPath = "/tmp/a/private.log";
+  const blockedAttachmentPath = "/tmp/b/private.log";
+  const draft = await runCliCapture([
+    "report",
+    "bug",
+    "Attachment basename collision",
+    "--workspace",
+    workspace,
+    "--observed",
+    "Bad output",
+    "--expected",
+    "Good output",
+    "--repro",
+    "run report",
+    "--attachment",
+    `${allowedAttachmentPath},${blockedAttachmentPath}`,
+    "--allow-attachment",
+    allowedAttachmentPath,
+    "--json",
+  ], workspace);
+  const created = parsePayload<{ report: { id: string; attachments: Array<{ name: string; optIn: boolean }>; privacy: { attachmentOptInRequired: boolean } } }>(draft.stdout);
+  assert.equal(created.data.report.privacy.attachmentOptInRequired, true);
+  assert.deepEqual(created.data.report.attachments.map((attachment) => ({ name: attachment.name, optIn: attachment.optIn })), [
+    { name: "private.log", optIn: true },
+    { name: "private.log", optIn: false },
+  ]);
+
+  const exported = await runCliCapture(["report", "export", created.data.report.id, "--workspace", workspace, "--include-attachment", "private.log", "--json"], workspace);
+  const exportPayload = parsePayload<{ reports: Array<{ report: { attachments: Array<{ name: string }> }; omittedAttachments: string[] }> }>(exported.stdout);
+  assert.deepEqual(exportPayload.data.reports[0]?.report.attachments.map((attachment) => attachment.name), ["private.log"]);
+  assert.deepEqual(exportPayload.data.reports[0]?.omittedAttachments, ["private.log"]);
+});
+
 test("report submit blocks private security attachments without explicit opt-in", async () => {
   const workspace = tempWorkspace();
   const privateAttachmentPath = ["/Users", "alice", "Desktop", "security.log"].join("/");
