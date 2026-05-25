@@ -302,6 +302,125 @@ test("runCli rejects invalid rules compile limits before compiling", async () =>
   assert.equal(payload.meta.subcommand, "compile");
 });
 
+test("runCli rejects invalid rules and library priority flags before persistence", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-library-priority-"));
+  const rulesDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-priority-"));
+  const libraryDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-library-priority-"));
+  const rulesBase = ["--workspace", workspaceRoot, "--rules-dir", rulesDir, "--json"];
+  const libraryBase = ["--workspace", workspaceRoot, "--library-dir", libraryDir, "--json"];
+
+  assert.equal(await runCli([
+    "rules", "scopes",
+    "--id", "priority-scope",
+    "--kind", "brand",
+    "--name", "Priority Scope",
+    ...rulesBase,
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+
+  for (const value of ["nope", "1.5", " "]) {
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const exitCode = await runCli([
+      "rules", "propose",
+      "--id", `bad-rule-${value.trim() || "blank"}`,
+      "--scope", "priority-scope",
+      "--title", "Bad priority",
+      "--content", "This rule should not be written.",
+      "--priority", value,
+      ...rulesBase,
+    ], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_USAGE);
+    assert.equal(stderr.getOutput(), "");
+    const payload = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; status: string; location: string; details?: Record<string, unknown> };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_rules_priority");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.rules.priority");
+    assert.deepEqual(payload.error.details, { flag: "--priority", value });
+  }
+
+  const rulesListStdout = captureStream();
+  assert.equal(await runCli(["rules", "list", ...rulesBase], {
+    stdout: rulesListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const rulesList = JSON.parse(rulesListStdout.getOutput()) as { data: { rules: Array<{ id: string }> } };
+  assert.equal(rulesList.data.rules.some((rule) => rule.id.startsWith("bad-rule-")), false);
+
+  assert.equal(await runCli([
+    "library", "create", "seed-context",
+    "--kind", "skill",
+    "--context-capsule", "Use the seed capsule.",
+    "--context-priority", "10",
+    ...libraryBase,
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+
+  for (const scenario of [
+    {
+      args: ["library", "create", "bad-create", "--kind", "skill", "--context-capsule", "Bad create.", "--context-priority", "nope"],
+      value: "nope",
+    },
+    {
+      args: ["library", "update", "seed-context", "--context-capsule", "Bad update.", "--context-priority", "1.5"],
+      value: "1.5",
+    },
+    {
+      args: ["library", "import-skill", "bad-import", "--id", "bad-import", "--context-capsule", "Bad import.", "--context-priority", " "],
+      value: " ",
+    },
+  ] as const) {
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const exitCode = await runCli([...scenario.args, ...libraryBase], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_USAGE);
+    assert.equal(stderr.getOutput(), "");
+    const payload = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; status: string; location: string; details?: Record<string, unknown> };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_library_context_priority");
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, "cli.library.contextPriority");
+    assert.deepEqual(payload.error.details, { flag: "--context-priority", value: scenario.value });
+  }
+
+  const libraryListStdout = captureStream();
+  assert.equal(await runCli(["library", "list", ...libraryBase], {
+    stdout: libraryListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const libraryList = JSON.parse(libraryListStdout.getOutput()) as { data: { assets: Array<{ id: string; context?: { priority: number; capsule: string } }> } };
+  assert.equal(libraryList.data.assets.some((asset) => asset.id === "bad-create" || asset.id === "bad-import"), false);
+  assert.deepEqual(libraryList.data.assets.find((asset) => asset.id === "seed-context")?.context, {
+    capsule: "Use the seed capsule.",
+    priority: 10,
+  });
+});
+
 test("runCli knowledge memories search keeps workspaces and runtime source separate", async (t) => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-b-"));

@@ -107,7 +107,7 @@ if (group === "rules") {
         scopeId,
         content: flags.content,
         aliases: parseCsvFlag(flags.aliases),
-        priority: flags.priority ? Number(flags.priority) : undefined,
+        priority: parseIntegerFlag(flags.priority, "priority", "invalid_rules_priority", "cli.rules.priority"),
         key: flags.key,
         references: parseRuleReferences(flags.reference || flags.references),
         agentIds: parseCsvFlag(flags.agent || flags.agents),
@@ -221,7 +221,7 @@ if (group === "library") {
         ...(flags["context-capsule"] ? {
           context: {
             capsule: flags["context-capsule"],
-            priority: flags["context-priority"] ? Number(flags["context-priority"]) : 100,
+            priority: parseIntegerFlag(flags["context-priority"], "context-priority", "invalid_library_context_priority", "cli.library.contextPriority") ?? 100,
             ...(flags["context-read-when"] ? { readWhen: parseCsvFlag(flags["context-read-when"]) } : {}),
           },
         } : {}),
@@ -254,7 +254,7 @@ if (group === "library") {
         ...(flags["context-capsule"] !== undefined ? {
           context: {
             capsule: flags["context-capsule"],
-            priority: flags["context-priority"] ? Number(flags["context-priority"]) : 100,
+            priority: parseIntegerFlag(flags["context-priority"], "context-priority", "invalid_library_context_priority", "cli.library.contextPriority") ?? 100,
             ...(flags["context-read-when"] ? { readWhen: parseCsvFlag(flags["context-read-when"]) } : {}),
           },
         } : {}),
@@ -291,7 +291,7 @@ if (group === "library") {
         ...(flags["context-capsule"] ? {
           context: {
             capsule: flags["context-capsule"],
-            priority: flags["context-priority"] ? Number(flags["context-priority"]) : 100,
+            priority: parseIntegerFlag(flags["context-priority"], "context-priority", "invalid_library_context_priority", "cli.library.contextPriority") ?? 100,
             ...(flags["context-read-when"] ? { readWhen: parseCsvFlag(flags["context-read-when"]) } : {}),
           },
         } : {}),
@@ -577,6 +577,18 @@ function parsePositiveIntegerFlag(value: string | undefined, name: string, code:
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) {
     throw new CliHandledError(code, `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location,
+      details: { flag: `--${name}`, value },
+    });
+  }
+  return parsed;
+}
+
+function parseIntegerFlag(value: string | undefined, name: string, code: string, location: string): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!value.trim() || !Number.isInteger(parsed)) {
+    throw new CliHandledError(code, `--${name} must be an integer.`, CLI_EXIT_USAGE, {
       location,
       details: { flag: `--${name}`, value },
     });
