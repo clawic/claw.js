@@ -342,6 +342,7 @@ export async function runWorkspaceSearchQueryCli(input: {
   context: CliContext;
   wantsJson: boolean;
 }, query: string, domains: string[]): Promise<number> {
+  const limit = parseWorkspaceSearchLimitFlag(input.flags.limit);
   const workspaceRoot = input.flags.workspace || input.context.cwd;
   const claw = await createCliWorkspaceClaw(
     resolveRuntimeAdapterId(input.flags),
@@ -356,12 +357,34 @@ export async function runWorkspaceSearchQueryCli(input: {
     query,
     domains: domains as Array<"areas" | "tasks" | "goals" | "projects" | "milestones" | "activity" | "blockers" | "artifacts" | "decisions" | "work_sessions" | "assignments" | "handoffs" | "approvals" | "capacity" | "reminders" | "deadlines" | "notes" | "people" | "inbox" | "events">,
     strategy: input.flags.strategy as "auto" | "keyword" | "semantic" | "hybrid" | undefined,
-    ...(input.flags.limit ? { limit: Number(input.flags.limit) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
     includeArchived: input.flags["include-archived"] === "true" || input.flags["include-archived"] === "1",
   });
   if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "search", results, { subcommand: "query" });
   else input.context.stdout.write(`${results.map((result) => `${result.domain} ${result.score.toFixed(1)} ${result.id} ${result.title}`).join("\n")}\n`);
   return results.length > 0 ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+}
+
+function parseWorkspaceSearchLimitFlag(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw invalidWorkspaceSearchLimitError(value);
+  }
+  const limit = Number(trimmed);
+  if (!Number.isSafeInteger(limit) || limit <= 0) {
+    throw invalidWorkspaceSearchLimitError(value);
+  }
+  return limit;
+}
+
+function invalidWorkspaceSearchLimitError(value: string): CliHandledError {
+  return new CliHandledError("invalid_workspace_search_limit", "--limit must be a positive safe decimal integer.", CLI_EXIT_USAGE, {
+    location: "cli.search.query.limit",
+    suggestion: "Use a whole-number decimal limit such as --limit 20.",
+    safeNextStep: "Fix --limit and rerun the search query.",
+    details: { value },
+  });
 }
 
 export interface SearchQueryStaleness {

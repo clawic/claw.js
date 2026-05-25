@@ -20,6 +20,29 @@ import {
   runSearchProvidersSnippetsFastPathScenario,
 } from "./cli-search-framework-fast-path-test-utils.ts";
 import { ensureV1MainSchema, resolveClawjsMainDbPath } from "./v1-data-core.ts";
+
+test("workspace search query rejects unsafe decimal limits before consulting workspace", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-workspace-limit-"));
+  for (const limit of ["1e3", "0x10", "1.5", "0", "9007199254740992"]) {
+    const result = await runCliCapture([
+      "search",
+      "query",
+      "project status",
+      "--domains",
+      "tasks",
+      "--workspace",
+      workspaceRoot,
+      "--limit",
+      limit,
+      "--gateway-port",
+      "not-a-port",
+    ], workspaceRoot);
+    assert.equal(result.code, CLI_EXIT_USAGE, limit);
+    assert.match(result.stderr, /--limit must be a positive safe decimal integer\./, limit);
+    assert.doesNotMatch(result.stderr, /gateway-port/, limit);
+  }
+});
+
 test("search rebuild and query use the Search sidecar without workspace state", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cli-"));
   const dataRoot = path.join(workspaceRoot, "data");
