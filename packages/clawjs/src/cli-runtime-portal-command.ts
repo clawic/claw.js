@@ -126,7 +126,7 @@ const RUNTIME_ECOSYSTEM_SUPPORT = {
     recommended: false,
     production: false,
     uiParityClaim: "partial_runtime_lens",
-    summary: "Hermes runtime ecosystem support is a dev-only partial runtime lens until official fixture coverage, write policies, and live channel evidence exist.",
+    summary: "Hermes runtime ecosystem support is a dev-only partial runtime lens until official fixture coverage, write policies, and approved live channel/provider evidence exist.",
     blockingReasons: ["dev_only_runtime_ecosystem", "fixture_coverage_pending", "live_channel_evidence_pending", "live_provider_evidence_pending"],
   },
 };
