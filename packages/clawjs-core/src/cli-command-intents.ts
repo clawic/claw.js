@@ -164,6 +164,20 @@ const registryEntries: ClawCliCommandIntentEntry[] = [
     evidence: ["OpenClaw delegates preview to the official gateway; Codex/Hermes use bounded local session-path preview and require `--include-content` for content samples."],
     nextSteps: ["Run `claw runtime openclaw sessions preview --session-key <id> --json` or add `--include-content` only when a bounded local preview is intended."],
   }),
+  intent("cmd_intent_runtime_sessions_resolve", "runtime sessions resolve", "Resolve a native runtime session identifier through the runtime ecosystem portal.", "covered", {
+    mappedCommand: "runtime <runtime-id> sessions resolve",
+    relatedCommands: ["runtime", "sessions", "openclaw", "codex", "hermes"],
+    risk: ["local_read"],
+    evidence: ["OpenClaw delegates resolve to the official gateway; Codex/Hermes resolve configured session-path identifiers without reading transcript content or writing runtime state."],
+    nextSteps: ["Run `claw runtime <runtime-id> sessions resolve --session-key <id> --json` to inspect the native identifier mapping and provenance."],
+  }),
+  intent("cmd_intent_runtime_sessions_history", "runtime sessions history", "Read native runtime session history through a bounded runtime-scoped contract.", "covered", {
+    mappedCommand: "runtime <runtime-id> sessions history",
+    relatedCommands: ["runtime", "sessions", "openclaw", "codex", "hermes"],
+    risk: ["local_read"],
+    evidence: ["OpenClaw delegates history to the official gateway; Codex/Hermes use bounded redacted session-path history with metadata-only default and explicit `--include-content` for content samples."],
+    nextSteps: ["Run `claw runtime <runtime-id> sessions history --session-key <id> --json`; add `--include-content` only for an intentional bounded redacted content sample."],
+  }),
   intent("cmd_intent_runtime_sessions_send", "runtime sessions send", "Send a message through a native runtime session when an official write path exists.", "covered", {
     mappedCommand: "runtime openclaw sessions send",
     relatedCommands: ["runtime", "sessions", "openclaw"],

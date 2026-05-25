@@ -78,6 +78,18 @@ test("CLI command intent resolution covers runtime ecosystem portal actions", ()
   assert.equal(preview.intent.mappedCommand, "runtime <runtime-id> sessions preview");
   assert.equal(preview.intent.evidence.some((entry) => entry.includes("bounded local session-path preview")), true);
 
+  const resolve = resolveClawCliCommandIntent({ phrase: "runtime sessions resolve" });
+  assert.equal(resolve.status, "covered");
+  assert.equal(resolve.execute, false);
+  assert.equal(resolve.intent.mappedCommand, "runtime <runtime-id> sessions resolve");
+  assert.equal(resolve.intent.evidence.some((entry) => entry.includes("without reading transcript content")), true);
+
+  const history = resolveClawCliCommandIntent({ phrase: "runtime sessions history" });
+  assert.equal(history.status, "covered");
+  assert.equal(history.execute, false);
+  assert.equal(history.intent.mappedCommand, "runtime <runtime-id> sessions history");
+  assert.equal(history.intent.evidence.some((entry) => entry.includes("metadata-only default")), true);
+
   const send = resolveClawCliCommandIntent({ phrase: "runtime sessions send" });
   assert.equal(send.status, "covered");
   assert.equal(send.execute, false);
