@@ -1,9 +1,11 @@
 import type { MediaDirection, MediaKind, MediaListInput, MediaOrigin } from "@clawjs/core";
 
 import { parseCsvFlag, parseJsonFlag } from "./cli-flag-parsers.ts";
+import { CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import type { GenerationCliMediaKind } from "./cli-runtime-utils.ts";
 
 export function buildMediaListInput(flags: Record<string, string>): MediaListInput {
+  const limit = parseMediaLimit(flags.limit);
   return {
     ...(flags.query ? { query: flags.query } : {}),
     ...(flags.kind ? { kind: flags.kind as MediaKind } : {}),
@@ -23,8 +25,19 @@ export function buildMediaListInput(flags: Record<string, string>): MediaListInp
     ...(flags["thread-id"] ? { threadId: flags["thread-id"] } : {}),
     ...(flags.from ? { from: flags.from } : {}),
     ...(flags.to ? { to: flags.to } : {}),
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+    ...(limit ? { limit } : {}),
   };
+}
+
+function parseMediaLimit(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const limit = Number(value);
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new CliHandledError("invalid_media_limit", "--limit must be a positive integer.", CLI_EXIT_USAGE, {
+      location: "cli.media.limit",
+    });
+  }
+  return limit;
 }
 
 export function buildMediaMetadata(

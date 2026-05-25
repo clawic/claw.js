@@ -33,6 +33,7 @@ test("media generation list commands reject invalid limits", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-media-invalid-limits-"));
 
   for (const args of [
+    ["media", "list"],
     ["image", "list"],
     ["video", "list"],
     ["generations", "list"],
