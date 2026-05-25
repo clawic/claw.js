@@ -360,6 +360,87 @@ function normalizeStringList(value: unknown): string[] {
   return value.map((entry) => String(entry).trim()).filter(Boolean);
 }
 
+function normalizeIntegerOption(value: unknown, fieldName: string, min: number, max?: number): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${fieldName} must be a finite number.`);
+  }
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(`${fieldName} must be an integer.`);
+  }
+  if (parsed < min) {
+    throw new Error(`${fieldName} must be at least ${min}.`);
+  }
+  if (max !== undefined && parsed > max) {
+    throw new Error(`${fieldName} must be between ${min} and ${max}.`);
+  }
+  return parsed;
+}
+
+function parseRRuleParts(rrule: string): Record<string, string> {
+  const parts: Record<string, string> = {};
+  for (const rawEntry of rrule.split(";")) {
+    const entry = rawEntry.trim();
+    const separator = entry.indexOf("=");
+    if (separator <= 0) {
+      throw new Error(`Invalid RRULE entry: ${rawEntry}`);
+    }
+    const key = entry.slice(0, separator).trim().toUpperCase();
+    const value = entry.slice(separator + 1).trim();
+    if (!key || !value) {
+      throw new Error(`Invalid RRULE entry: ${rawEntry}`);
+    }
+    if (parts[key] !== undefined) {
+      throw new Error(`Duplicate RRULE field: ${key}`);
+    }
+    parts[key] = value;
+  }
+  return parts;
+}
+
+function parseRRuleInteger(parts: Record<string, string>, key: string, defaultValue: number, min: number, max?: number): number {
+  if (parts[key] !== undefined && !/^-?\d+$/.test(parts[key].trim())) {
+    throw new Error(`RRULE ${key} must be an integer.`);
+  }
+  return normalizeIntegerOption(parts[key] ?? defaultValue, `RRULE ${key}`, min, max) ?? defaultValue;
+}
+
+function parseRRuleWeekdays(parts: Record<string, string>): number[] {
+  const byDay = parts.BYDAY;
+  if (!byDay) {
+    throw new Error("RRULE WEEKLY schedules require BYDAY.");
+  }
+  const days = byDay.split(",").map((entry) => entry.trim().toUpperCase()).filter(Boolean);
+  if (days.length === 0) {
+    throw new Error("RRULE WEEKLY schedules require BYDAY.");
+  }
+  const invalid = days.filter((entry) => RRULE_WEEKDAY_MAP[entry] === undefined);
+  if (invalid.length > 0) {
+    throw new Error(`Invalid RRULE BYDAY value: ${invalid.join(", ")}`);
+  }
+  return days.map((entry) => RRULE_WEEKDAY_MAP[entry]);
+}
+
+function parseSupportedRRule(rrule: string): {
+  freq: "HOURLY" | "WEEKLY";
+  interval: number;
+  byHour: number;
+  byMinute: number;
+  allowedDays: number[];
+} {
+  const parts = parseRRuleParts(rrule);
+  const freq = String(parts.FREQ ?? "").toUpperCase();
+  if (freq !== "HOURLY" && freq !== "WEEKLY") {
+    throw new Error(`Unsupported RRULE FREQ: ${parts.FREQ ?? ""}`);
+  }
+  const interval = parseRRuleInteger(parts, "INTERVAL", 1, 1);
+  const byHour = parseRRuleInteger(parts, "BYHOUR", 0, 0, 23);
+  const byMinute = parseRRuleInteger(parts, "BYMINUTE", 0, 0, 59);
+  const allowedDays = freq === "WEEKLY" ? parseRRuleWeekdays(parts) : [];
+  return { freq, interval, byHour, byMinute, allowedDays };
+}
+
 function heartbeatCustomId(condition: string): string | null {
   return condition.startsWith("custom:") ? condition.slice("custom:".length).trim() || null : null;
 }
@@ -388,35 +469,30 @@ function normalizeHeartbeat(input?: Partial<TemporalHeartbeatPolicy>, current?: 
     throw new Error(`Custom heartbeat checks require opt-in: ${[...new Set(unapprovedCustomChecks)].join(", ")}`);
   }
   if (when.length === 0 && stopWhen.length === 0) return undefined;
-  const gateLimit = Number((gatePolicy as { limit?: unknown }).limit);
-  const inputLimit = Number(input.limit);
+  const gateLimit = normalizeIntegerOption((gatePolicy as { limit?: unknown }).limit, "heartbeat.gate.policy.limit", 1);
+  const inputLimit = normalizeIntegerOption(input.limit, "heartbeat.limit", 1);
   const prompt = input.prompt ?? (gatePolicy as { prompt?: string }).prompt;
-  const cooldownMs = Number(input.cooldownMs ?? (gatePolicy as { cooldownMs?: unknown }).cooldownMs);
+  const cooldownMs = normalizeIntegerOption(input.cooldownMs ?? (gatePolicy as { cooldownMs?: unknown }).cooldownMs, "heartbeat.cooldownMs", 0);
   const maxWakesPolicy = input.maxWakesPerWindow ?? (gatePolicy as { maxWakesPerWindow?: TemporalHeartbeatPolicy["maxWakesPerWindow"] }).maxWakesPerWindow;
   const target = input.target ?? (gatePolicy as { target?: TemporalHeartbeatPolicy["target"] }).target;
   const deliver = input.deliver ?? (gatePolicy as { deliver?: TemporalHeartbeatPolicy["deliver"] }).deliver;
   const activeHours = input.activeHours ?? (gatePolicy as { activeHours?: TemporalHeartbeatPolicy["activeHours"] }).activeHours;
-  const staggerMs = Number(input.staggerMs ?? (gatePolicy as { staggerMs?: unknown }).staggerMs);
+  const staggerMs = normalizeIntegerOption(input.staggerMs ?? (gatePolicy as { staggerMs?: unknown }).staggerMs, "heartbeat.staggerMs", 0);
+  const maxWakesPerWindow = maxWakesPolicy ? {
+    count: normalizeIntegerOption(maxWakesPolicy.count, "heartbeat.maxWakesPerWindow.count", 1) ?? 1,
+    windowMs: normalizeIntegerOption(maxWakesPolicy.windowMs, "heartbeat.maxWakesPerWindow.windowMs", 1) ?? 1,
+  } : undefined;
   return {
     when,
     ...(stopWhen.length > 0 ? { stopWhen } : {}),
     context: "diff",
-    limit: Number.isFinite(inputLimit) && inputLimit > 0
-      ? Math.floor(inputLimit)
-      : Number.isFinite(gateLimit) && gateLimit > 0
-        ? Math.floor(gateLimit)
-        : 20,
+    limit: inputLimit ?? gateLimit ?? 20,
     ...(target === "main" || target === "isolated" ? { target } : {}),
     ...(deliver !== undefined ? { deliver } : {}),
     ...(activeHours ? { activeHours } : {}),
-    ...(Number.isFinite(cooldownMs) && cooldownMs >= 0 ? { cooldownMs: Math.floor(cooldownMs) } : {}),
-    ...(maxWakesPolicy && Number.isFinite(maxWakesPolicy.count) && Number.isFinite(maxWakesPolicy.windowMs) ? {
-      maxWakesPerWindow: {
-        count: Math.max(1, Math.floor(maxWakesPolicy.count)),
-        windowMs: Math.max(1, Math.floor(maxWakesPolicy.windowMs)),
-      },
-    } : {}),
-    ...(Number.isFinite(staggerMs) && staggerMs >= 0 ? { staggerMs: Math.floor(staggerMs) } : {}),
+    ...(cooldownMs !== undefined ? { cooldownMs } : {}),
+    ...(maxWakesPerWindow ? { maxWakesPerWindow } : {}),
+    ...(staggerMs !== undefined ? { staggerMs } : {}),
     ...(prompt ? { prompt } : {}),
     ...(input.gate ? { gate: input.gate } : {}),
     ...(allowedCustomChecks.length > 0 ? { allowedCustomChecks } : {}),
@@ -436,10 +512,11 @@ function normalizeSchedule(
 ): TemporalSchedule {
   const timeZone = input.timezone ?? input.schedule?.timezone ?? current?.timezone ?? defaultTimeZone;
   if (input.natural) {
+    const staggerMs = normalizeIntegerOption(input.schedule?.staggerMs ?? current?.schedule.staggerMs, "schedule.staggerMs", 0);
     const naturalSchedule = buildScheduleFromNatural(input.natural, timeZone);
     return {
       ...naturalSchedule,
-      staggerMs: input.schedule?.staggerMs ?? current?.schedule.staggerMs,
+      ...(staggerMs !== undefined ? { staggerMs } : {}),
     };
   }
   const mode = input.schedule?.mode ?? current?.schedule.mode ?? (kind === "routine" ? "cron" : "one_off");
@@ -454,13 +531,14 @@ function normalizeSchedule(
       cancelledOccurrences: input.schedule?.cancelledOccurrences ?? current?.schedule.cancelledOccurrences ?? [],
     };
   }
+  const staggerMs = normalizeIntegerOption(input.schedule?.staggerMs ?? current?.schedule.staggerMs, "schedule.staggerMs", 0);
   return {
     mode,
     timezone: timeZone,
     startsAt: input.schedule?.startsAt ?? input.startsAt ?? current?.schedule.startsAt ?? current?.startsAt,
     cron: input.schedule?.cron ?? current?.schedule.cron,
     rrule: input.schedule?.rrule ?? current?.schedule.rrule,
-    staggerMs: input.schedule?.staggerMs ?? current?.schedule.staggerMs,
+    ...(staggerMs !== undefined ? { staggerMs } : {}),
     overrides: input.schedule?.overrides ?? current?.schedule.overrides ?? [],
     cancelledOccurrences: input.schedule?.cancelledOccurrences ?? current?.schedule.cancelledOccurrences ?? [],
   };
@@ -494,16 +572,7 @@ export function computeNextRunAt(item: Pick<TemporalItem, "kind" | "startsAt" | 
     return undefined;
   }
   if (schedule.mode === "rrule" && schedule.rrule) {
-    const parts = Object.fromEntries(
-      schedule.rrule.split(";").map((entry) => {
-        const [key, value = ""] = entry.split("=");
-        return [key.toUpperCase(), value];
-      }),
-    );
-    const freq = String(parts.FREQ ?? "").toUpperCase();
-    const interval = Number(parts.INTERVAL ?? "1");
-    const byHour = Number(parts.BYHOUR ?? "0");
-    const byMinute = Number(parts.BYMINUTE ?? "0");
+    const { freq, interval, byHour, byMinute, allowedDays } = parseSupportedRRule(schedule.rrule);
     let candidate = new Date(from.getTime() + 60_000);
     for (let index = 0; index < 20_000; index += 1) {
       const zoned = getZonedParts(candidate, schedule.timezone);
@@ -515,10 +584,6 @@ export function computeNextRunAt(item: Pick<TemporalItem, "kind" | "startsAt" | 
         }
       }
       if (freq === "WEEKLY") {
-        const allowedDays = String(parts.BYDAY ?? "")
-          .split(",")
-          .map((entry) => RRULE_WEEKDAY_MAP[entry])
-          .filter((entry) => Number.isInteger(entry));
         if (allowedDays.includes(weekdayFromParts(zoned)) && zoned.hour === byHour && zoned.minute === byMinute) {
           candidate.setSeconds(0, 0);
           return candidate.toISOString();

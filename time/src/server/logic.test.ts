@@ -52,6 +52,70 @@ test("resolves cron, rrule, and relative schedules", () => {
   assert.equal(relativeItem.nextRunAt, "2026-04-10T08:00:00.000Z");
 });
 
+test("rejects invalid recurrence and throttle numeric ranges", () => {
+  const now = new Date("2026-04-09T08:10:00.000Z");
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "negative interval",
+    schedule: { mode: "rrule", timezone: "UTC", rrule: "FREQ=HOURLY;INTERVAL=-2;BYMINUTE=0" },
+  }, "UTC", now), /RRULE INTERVAL must be at least 1/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "impossible hour",
+    schedule: { mode: "rrule", timezone: "UTC", rrule: "FREQ=WEEKLY;BYDAY=MO;BYHOUR=25;BYMINUTE=0" },
+  }, "UTC", now), /RRULE BYHOUR must be between 0 and 23/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "nan minute",
+    schedule: { mode: "rrule", timezone: "UTC", rrule: "FREQ=HOURLY;BYMINUTE=NaN" },
+  }, "UTC", now), /RRULE BYMINUTE must be an integer/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "negative stagger",
+    schedule: { mode: "cron", timezone: "UTC", cron: "*/5 * * * *", staggerMs: -1 },
+  }, "UTC", now), /schedule\.staggerMs must be at least 0/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "fractional stagger",
+    schedule: { mode: "cron", timezone: "UTC", cron: "*/5 * * * *", staggerMs: 1.5 },
+  }, "UTC", now), /schedule\.staggerMs must be an integer/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "negative cooldown",
+    natural: { command: "every", expression: "5m" },
+    heartbeat: {
+      when: ["workspace.tasks:new"],
+      cooldownMs: -1,
+    },
+  }, "UTC", now), /heartbeat\.cooldownMs must be at least 0/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "zero limit",
+    natural: { command: "every", expression: "5m" },
+    heartbeat: {
+      when: ["workspace.tasks:new"],
+      limit: 0,
+    },
+  }, "UTC", now), /heartbeat\.limit must be at least 1/);
+
+  assert.throws(() => normalizeTemporalItem({
+    kind: "routine",
+    title: "fractional limit",
+    natural: { command: "every", expression: "5m" },
+    heartbeat: {
+      when: ["workspace.tasks:new"],
+      limit: 1.5,
+    },
+  }, "UTC", now), /heartbeat\.limit must be an integer/);
+});
+
 test("does not keep expired one-off schedules runnable", () => {
   const now = new Date("2026-04-09T09:00:00.000Z");
   const expired = normalizeTemporalItem({
