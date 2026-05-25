@@ -343,6 +343,24 @@ test("runCli can summarize and filter the codebase manifest through inspect", as
   assert.equal(filteredPayload.files.every((file) => file.path.startsWith("packages/clawjs/src/") && file.language === "typescript" && file.test === false), true);
 });
 
+test("runCli rejects invalid codebase manifest limits", async () => {
+  const invalid = await runCliCapture(["inspect", "codebase", "--limit", "nope", "--json"], process.cwd());
+  assert.equal(invalid.code, CLI_EXIT_USAGE);
+  const payload = parseCliJson<unknown>(invalid.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error?.code, "invalid_codebase_limit");
+  assert.equal(payload.error?.status, "USAGE");
+  assert.equal(payload.meta.canonicalCommand, "inspect");
+  assert.equal(payload.meta.subcommand, "codebase");
+
+  const zero = await runCliCapture(["inspect", "codebase", "--limit", "0", "--json"], process.cwd());
+  assert.equal(zero.code, CLI_EXIT_OK);
+  const zeroPayload = parseCliJson<{ filter: { limit: number; returned: number }; files: unknown[] }>(zero.stdout).data;
+  assert.equal(zeroPayload.filter.limit, 0);
+  assert.equal(zeroPayload.filter.returned, 0);
+  assert.equal(zeroPayload.files.length, 0);
+});
+
 test("runCli fuses multiple codebase manifests through inspect", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-inspect-codebase-"));
   const frameworkManifestPath = path.join(tempRoot, "clawjs-codebase.json");

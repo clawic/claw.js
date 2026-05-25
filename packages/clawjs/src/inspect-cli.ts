@@ -526,7 +526,7 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
   const symbol = input.flags.symbol;
   const language = input.flags.language;
   const tests = input.flags.tests;
-  const limit = input.flags.limit ? Number(input.flags.limit) : undefined;
+  const limit = parseCodebaseManifestLimit(input.flags.limit);
   const hasFilters = !!(pathPrefix || symbol || language || tests !== undefined || Number.isFinite(limit));
   if (!wantsSummary && !hasFilters) return manifest;
 
@@ -567,6 +567,15 @@ function filterCodebaseManifest(manifest: unknown, input: InspectCliInput): unkn
     ...base,
     files: filteredFiles,
   };
+}
+
+function parseCodebaseManifestLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const limit = Number(raw);
+  if (!Number.isFinite(limit) || limit < 0) {
+    throw new InspectCliError("invalid_codebase_limit", `Expected --limit to be a non-negative number, got ${raw}.`, CLI_EXIT_USAGE);
+  }
+  return Math.floor(limit);
 }
 
 function combineCodebaseManifests(entries: Array<{ manifestPath: string; manifest: Record<string, unknown> }>): unknown {
