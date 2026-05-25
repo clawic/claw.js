@@ -40,6 +40,55 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+const ISO_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+function isJsonPrimitive(value: unknown): value is string | number | boolean | null {
+  return value === null || ["string", "number", "boolean"].includes(typeof value);
+}
+
+function assertJsonSafe(value: unknown, fieldPath: string): void {
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new Error(`Learning state contains a non-finite number at ${fieldPath}.`);
+  }
+  if (isJsonPrimitive(value)) return;
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertJsonSafe(entry, `${fieldPath}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    for (const [key, entry] of Object.entries(value)) {
+      assertJsonSafe(entry, `${fieldPath}.${key}`);
+    }
+    return;
+  }
+  throw new Error(`Learning state contains a non-JSON value at ${fieldPath}.`);
+}
+
+function assertIsoTimestamp(value: string, fieldPath: string): void {
+  if (!ISO_TIMESTAMP_RE.test(value) || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value) {
+    throw new Error(`Learning state contains an invalid timestamp at ${fieldPath}: ${value}`);
+  }
+}
+
+function assertLearningStateIntegrity(state: LearningState): LearningState {
+  assertIsoTimestamp(state.updatedAt, "updatedAt");
+  state.learnings.forEach((learning, learningIndex) => {
+    const learningPath = `learnings[${learningIndex}]`;
+    assertIsoTimestamp(learning.createdAt, `${learningPath}.createdAt`);
+    assertIsoTimestamp(learning.updatedAt, `${learningPath}.updatedAt`);
+    if (learning.archivedAt) assertIsoTimestamp(learning.archivedAt, `${learningPath}.archivedAt`);
+    if (learning.promotedAt) assertIsoTimestamp(learning.promotedAt, `${learningPath}.promotedAt`);
+    learning.evidence.forEach((entry, evidenceIndex) => {
+      assertIsoTimestamp(entry.createdAt, `${learningPath}.evidence[${evidenceIndex}].createdAt`);
+    });
+    learning.promotions.forEach((promotion, promotionIndex) => {
+      assertIsoTimestamp(promotion.createdAt, `${learningPath}.promotions[${promotionIndex}].createdAt`);
+    });
+  });
+  assertJsonSafe(state, "state");
+  return state;
+}
+
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -182,19 +231,18 @@ export class LearningStore {
   }
 
   readState(): LearningState {
-    try {
-      return learningStateSchema.parse(JSON.parse(this.filesystem.readText(this.statePath))) as LearningState;
-    } catch {
+    if (!this.filesystem.exists(this.statePath)) {
       return { schemaVersion: 1, learnings: [], updatedAt: nowIso() };
     }
+    return assertLearningStateIntegrity(learningStateSchema.parse(JSON.parse(this.filesystem.readText(this.statePath))) as LearningState);
   }
 
   writeState(state: LearningState): LearningState {
-    const next = learningStateSchema.parse({
+    const next = assertLearningStateIntegrity(learningStateSchema.parse({
       schemaVersion: 1,
       learnings: [...state.learnings].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
       updatedAt: nowIso(),
-    }) as LearningState;
+    }) as LearningState);
     this.filesystem.ensureDir(path.dirname(this.statePath));
     this.filesystem.withLockRetry(resolveFileLockPath(this.statePath), () => {
       this.filesystem.writeTextAtomic(this.statePath, `${JSON.stringify(next, null, 2)}\n`);
