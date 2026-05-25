@@ -131,6 +131,7 @@ export async function runReportCli(input: {
       return CLI_EXIT_OK;
     }
 
+    validateReportRepositoryFlag(flags.repo);
     const state = readReportState(workspaceRoot);
     const save = () => writeReportState(workspaceRoot, state);
     const findReport = (id: string | undefined): ReportRecord => {
@@ -1160,6 +1161,11 @@ function isReportStatus(value: unknown): value is ReportStatus {
 
 function isReportDestination(value: unknown): value is ReportDestination {
   return typeof value === "string" && ["github_issue", "github_discussion_ideas", "github_discussion_feedback", "private_security_advisory", "local_draft", "canonical_comment", "pr_proposal"].includes(value);
+}
+
+function validateReportRepositoryFlag(value: string | undefined): void {
+  if (!value || value === "clawjs" || value === "clawix") return;
+  throw new CliHandledError("invalid_report_repo", `Invalid report repository: ${value}. Expected clawjs or clawix.`, CLI_EXIT_USAGE);
 }
 
 function writeUsage(context: CliContext, binName: string): void {

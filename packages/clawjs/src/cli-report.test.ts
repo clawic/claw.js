@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { test } from "vitest";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 function tempWorkspace(): string {
@@ -286,6 +286,40 @@ test("report routes ClawJS and Clawix repositories explicitly", async () => {
   const status = parsePayload<{ reports: Array<{ repository: string }> }>(listed.stdout);
   assert.equal(status.data.reports.length, 1);
   assert.equal(status.data.reports[0]?.repository, "clawix");
+});
+
+test("report rejects unsupported repository flags before writing governance state", async () => {
+  const workspace = tempWorkspace();
+  const draft = await runCliCapture([
+    "report",
+    "bug",
+    "Wrong repository",
+    "--workspace",
+    workspace,
+    "--repo",
+    "clawjx",
+    "--observed",
+    "report is routed to the wrong repository",
+    "--expected",
+    "invalid repository is rejected",
+    "--repro",
+    "run report with a typo in --repo",
+    "--json",
+  ], workspace);
+  assert.equal(draft.code, CLI_EXIT_USAGE);
+  const draftPayload = JSON.parse(draft.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(draftPayload.ok, false);
+  assert.equal(draftPayload.error.code, "invalid_report_repo");
+
+  const override = await runCliCapture(["report", "budget", "override", "--workspace", workspace, "--repo", "clawjx", "--json"], workspace);
+  assert.equal(override.code, CLI_EXIT_USAGE);
+  const overridePayload = JSON.parse(override.stdout) as { ok: boolean; error: { code: string } };
+  assert.equal(overridePayload.ok, false);
+  assert.equal(overridePayload.error.code, "invalid_report_repo");
+
+  const status = await runCliCapture(["report", "status", "--workspace", workspace, "--json"], workspace);
+  const statusPayload = parsePayload<{ reports: unknown[] }>(status.stdout);
+  assert.deepEqual(statusPayload.data.reports, []);
 });
 
 test("report submit dry-run plans Claw GitHub connector operations", async () => {
