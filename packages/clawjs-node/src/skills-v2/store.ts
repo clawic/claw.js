@@ -312,16 +312,24 @@ export class SkillsStore {
   // ─── Activation state ─────────────────────────────────────────────────
 
   readState(): SkillsState {
-    if (!this.filesystem.exists(this.statePath())) {
+    const statePath = this.statePath();
+    if (!this.filesystem.exists(statePath)) {
       return { schemaVersion: 1, assignments: [], updatedAt: nowIso() };
     }
+    let raw: string;
+    let data: unknown;
     try {
-      const parsed = skillsStateSchema.safeParse(JSON.parse(this.filesystem.readText(this.statePath())));
-      if (parsed.success) return parsed.data as SkillsState;
-    } catch {
-      // ignore
+      raw = this.filesystem.readText(statePath);
+      data = JSON.parse(raw);
+    } catch (error) {
+      throw new Error(`Invalid skills-v2 state at ${statePath}: corrupt JSON`, { cause: error });
     }
-    return { schemaVersion: 1, assignments: [], updatedAt: nowIso() };
+    const parsed = skillsStateSchema.safeParse(data);
+    if (!parsed.success) {
+      const details = parsed.error.issues.map((issue) => `${issue.path.join(".") || "<root>"}: ${issue.message}`).join("; ");
+      throw new Error(`Invalid skills-v2 state at ${statePath}: ${details}`);
+    }
+    return parsed.data as SkillsState;
   }
 
   writeState(state: SkillsState): SkillsState {

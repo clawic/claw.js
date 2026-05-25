@@ -73,6 +73,21 @@ test("skills-v2 store: activate / resolveActive respects scope hierarchy", () =>
   assert.equal(sessionCtx.length, 3);
 });
 
+test("skills-v2 store: corrupt activation state fails closed and is not overwritten", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-skills-v2-corrupt-state-"));
+  const store = createSkillsStore({ homeDir: home });
+  store.create({ slug: "g1", kind: "procedure", description: "Global skill", body: "G1" });
+
+  const corruptState = "{ corrupt json\n";
+  fs.writeFileSync(store.statePath(), corruptState);
+
+  assert.throws(
+    () => store.activate("g1", { kind: "global" }),
+    /Invalid skills-v2 state .*corrupt JSON/,
+  );
+  assert.equal(fs.readFileSync(store.statePath(), "utf8"), corruptState);
+});
+
 test("skills-v2: instantiate + freeze produces inline body", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-skills-v2-instance-"));
   const store = createSkillsStore({ homeDir: home });
