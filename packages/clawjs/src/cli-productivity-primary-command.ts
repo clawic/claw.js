@@ -22,6 +22,42 @@ function parseProductivityDashboardLimit(raw: string | undefined): number | unde
   return limit;
 }
 
+function parseProductivityNumberFlag(raw: string | undefined, name: string, options: {
+  code: string;
+  min?: number;
+  integer?: boolean;
+}): number | undefined {
+  if (raw === undefined) return undefined;
+  const trimmed = raw.trim();
+  const value = Number(trimmed);
+  const min = options.min ?? Number.NEGATIVE_INFINITY;
+  if (!trimmed || !Number.isFinite(value) || value < min || (options.integer && !Number.isSafeInteger(value))) {
+    const kind = options.integer ? "integer" : "number";
+    const range = Number.isFinite(min) ? ` greater than or equal to ${min}` : "";
+    throw new CliHandledError(options.code, `--${name} must be a finite ${kind}${range}.`, CLI_EXIT_USAGE, {
+      location: `cli.productivity.${name}`,
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
+
+function parseTaskRankFlag(flags: Record<string, string>): number | undefined {
+  return parseProductivityNumberFlag(flags.rank, "rank", { code: "invalid_task_rank" });
+}
+
+function parseTaskEstimateMinutesFlag(flags: Record<string, string>): number | undefined {
+  return parseProductivityNumberFlag(flags["estimate-minutes"], "estimate-minutes", { code: "invalid_task_estimate_minutes", min: 0, integer: true });
+}
+
+function parseTaskActualMinutesFlag(flags: Record<string, string>): number | undefined {
+  return parseProductivityNumberFlag(flags["actual-minutes"], "actual-minutes", { code: "invalid_task_actual_minutes", min: 0, integer: true });
+}
+
+function parseTaskStoryPointsFlag(flags: Record<string, string>): number | undefined {
+  return parseProductivityNumberFlag(flags["story-points"], "story-points", { code: "invalid_task_story_points", min: 0 });
+}
+
 export async function runPrimaryProductivityCli(input: {
   argv: string[];
   group: string | undefined;
@@ -369,7 +405,7 @@ export async function runPrimaryProductivityCli(input: {
         status: flags.status as "todo" | "in_progress" | "blocked" | "done" | "cancelled" | undefined,
         type: flags.type as "todo" | "task" | "bug" | "story" | "feature" | "chore" | undefined,
         priority: flags.priority as "low" | "medium" | "high" | "urgent" | undefined,
-        ...(flags.rank ? { rank: Number(flags.rank) } : {}),
+        ...(flags.rank ? { rank: parseTaskRankFlag(flags) } : {}),
         labels: parseCsvFlag(flags.labels),
         areaId: flags["area-id"],
         listId: flags["list-id"],
@@ -383,9 +419,9 @@ export async function runPrimaryProductivityCli(input: {
         deadlineAt: flags["deadline-at"],
         snoozedUntil: flags["snoozed-until"],
         recurrenceRule: flags["recurrence-rule"],
-        ...(flags["estimate-minutes"] ? { estimateMinutes: Number(flags["estimate-minutes"]) } : {}),
-        ...(flags["actual-minutes"] ? { actualMinutes: Number(flags["actual-minutes"]) } : {}),
-        ...(flags["story-points"] ? { storyPoints: Number(flags["story-points"]) } : {}),
+        ...(flags["estimate-minutes"] ? { estimateMinutes: parseTaskEstimateMinutesFlag(flags) } : {}),
+        ...(flags["actual-minutes"] ? { actualMinutes: parseTaskActualMinutesFlag(flags) } : {}),
+        ...(flags["story-points"] ? { storyPoints: parseTaskStoryPointsFlag(flags) } : {}),
         blockedReason: flags["blocked-reason"],
         waitingOn: flags["waiting-on"],
         startedAt: flags["started-at"],
@@ -422,7 +458,7 @@ export async function runPrimaryProductivityCli(input: {
         status: flags.status as "todo" | "in_progress" | "blocked" | "done" | "cancelled" | undefined,
         type: flags.type as "todo" | "task" | "bug" | "story" | "feature" | "chore" | undefined,
         priority: flags.priority as "low" | "medium" | "high" | "urgent" | undefined,
-        ...(flags.rank ? { rank: Number(flags.rank) } : {}),
+        ...(flags.rank ? { rank: parseTaskRankFlag(flags) } : {}),
         ...(flags.labels ? { labels: parseCsvFlag(flags.labels) } : {}),
         areaId: flags["area-id"],
         listId: flags["list-id"],
@@ -436,9 +472,9 @@ export async function runPrimaryProductivityCli(input: {
         deadlineAt: flags["deadline-at"],
         snoozedUntil: flags["snoozed-until"],
         recurrenceRule: flags["recurrence-rule"],
-        ...(flags["estimate-minutes"] ? { estimateMinutes: Number(flags["estimate-minutes"]) } : {}),
-        ...(flags["actual-minutes"] ? { actualMinutes: Number(flags["actual-minutes"]) } : {}),
-        ...(flags["story-points"] ? { storyPoints: Number(flags["story-points"]) } : {}),
+        ...(flags["estimate-minutes"] ? { estimateMinutes: parseTaskEstimateMinutesFlag(flags) } : {}),
+        ...(flags["actual-minutes"] ? { actualMinutes: parseTaskActualMinutesFlag(flags) } : {}),
+        ...(flags["story-points"] ? { storyPoints: parseTaskStoryPointsFlag(flags) } : {}),
         blockedReason: flags["blocked-reason"],
         waitingOn: flags["waiting-on"],
         startedAt: flags["started-at"],

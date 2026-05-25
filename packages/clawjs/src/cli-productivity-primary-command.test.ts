@@ -130,3 +130,35 @@ test("productivity dashboards reject invalid limits", async (t) => {
     assert.equal(payload.error.status, "USAGE");
   }
 });
+
+test("tasks reject invalid numeric planning flags before creating records", async (t) => {
+  const cwd = useWorkTestRoot(t, "clawjs-task-invalid-numbers-");
+
+  for (const entry of [
+    { args: ["tasks", "create", "Bad rank", "--rank", "nope", "--json"], code: "invalid_task_rank" },
+    { args: ["tasks", "create", "Bad estimate", "--estimate-minutes", "1.5", "--json"], code: "invalid_task_estimate_minutes" },
+    { args: ["tasks", "create", "Bad actual", "--actual-minutes", "-1", "--json"], code: "invalid_task_actual_minutes" },
+    { args: ["tasks", "create", "Bad story", "--story-points", "-0.5", "--json"], code: "invalid_task_story_points" },
+  ]) {
+    const stdout = captureStream();
+    assert.equal(await runCli(entry.args, {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+
+    const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, entry.code);
+    assert.equal(payload.error.status, "USAGE");
+  }
+
+  const listStdout = captureStream();
+  assert.equal(await runCli(["tasks", "list", "--json"], {
+    stdout: listStdout.stream,
+    stderr: captureStream().stream,
+    cwd,
+  }), CLI_EXIT_OK);
+  const listPayload = parseCliJsonPayload<Array<{ id: string }>>(listStdout.getOutput());
+  assert.deepEqual(listPayload, []);
+});
