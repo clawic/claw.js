@@ -32,6 +32,21 @@ function parseNonNegativeNumberFlag(flags: Record<string, string>, name: string,
   return value;
 }
 
+function parseListenerNumberFlag(flags: Record<string, string>, name: string): number | undefined {
+  const raw = flags[name];
+  if (raw === undefined) return undefined;
+  const value = Number(raw.trim());
+  if (!raw.trim() || !Number.isFinite(value) || value < 0) {
+    throw new CliHandledError("invalid_channel_listener_number", `--${name} must be a finite non-negative number.`, CLI_EXIT_USAGE, {
+      location: `channels.flags.${name}`,
+      suggestion: `Pass --${name} with a finite non-negative number, or omit it to use the default.`,
+      safeNextStep: "Rerun the listener command with valid numeric timing flags before starting it.",
+      details: { flag: `--${name}`, value: raw },
+    });
+  }
+  return value;
+}
+
 const CHANNEL_PERMISSION_VALUES = new Set(["read", "write", "ingest", "admin"]);
 
 function parseChannelPermissions(flags: Record<string, string>): Array<"read" | "write" | "ingest" | "admin"> {
@@ -551,6 +566,9 @@ if (group === "channels" && command === "listen") {
   const provider = flags.provider || flags.channel || "telegram";
   const account = flags.account;
   const paths = channelListenerPaths(workspaceRoot, provider, account);
+  const intervalMs = parseListenerNumberFlag(flags, "interval-ms");
+  const timeoutSeconds = parseListenerNumberFlag(flags, "timeout");
+  const processorTimeoutMs = parseListenerNumberFlag(flags, "processor-timeout-ms");
 
   if (subcommand === "run") {
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
@@ -559,9 +577,9 @@ if (group === "channels" && command === "listen") {
       accountId: account,
       processorId: flags.processor,
       once: argv.includes("--once"),
-      intervalMs: flags["interval-ms"] ? Number(flags["interval-ms"]) : undefined,
-      timeoutSeconds: flags.timeout ? Number(flags.timeout) : undefined,
-      processorTimeoutMs: flags["processor-timeout-ms"] ? Number(flags["processor-timeout-ms"]) : undefined,
+      intervalMs,
+      timeoutSeconds,
+      processorTimeoutMs,
       pidPath: paths.pidPath,
       stopPath: paths.stopPath,
       logPath: paths.logPath,
@@ -582,9 +600,9 @@ if (group === "channels" && command === "listen") {
         accountId: account,
         processorId: flags.processor,
         once: argv.includes("--once"),
-        intervalMs: flags["interval-ms"] ? Number(flags["interval-ms"]) : undefined,
-        timeoutSeconds: flags.timeout ? Number(flags.timeout) : undefined,
-        processorTimeoutMs: flags["processor-timeout-ms"] ? Number(flags["processor-timeout-ms"]) : undefined,
+        intervalMs,
+        timeoutSeconds,
+        processorTimeoutMs,
         pidPath: paths.pidPath,
         stopPath: paths.stopPath,
         logPath: paths.logPath,

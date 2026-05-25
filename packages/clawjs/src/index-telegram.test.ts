@@ -218,6 +218,59 @@ test("runCli rejects invalid channel permissions before granting", async () => {
   assert.deepEqual(listPayload.data, []);
 });
 
+test("runCli rejects invalid channel listener timing flags before starting", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channel-listener-timing-"));
+  const processorPath = path.join(workspaceRoot, "processor.cjs");
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.writeFileSync(processorPath, `
+process.stdin.resume();
+process.stdin.on("end", () => process.stdout.write(JSON.stringify({ actions: [] })));
+`);
+
+  const processorExitCode = await runCli([
+    "channels",
+    "processors",
+    "add",
+    "--workspace",
+    workspaceRoot,
+    "--id",
+    "support-router",
+    "--command",
+    `${process.execPath} ${processorPath}`,
+    "--json",
+  ], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const listenStdout = captureStream();
+  const listenExitCode = await runCli([
+    "channels",
+    "listen",
+    "run",
+    "--workspace",
+    workspaceRoot,
+    "--processor",
+    "support-router",
+    "--interval-ms",
+    "nope",
+    "--once",
+    "--json",
+  ], {
+    stdout: listenStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+
+  const payload = JSON.parse(listenStdout.getOutput()) as { ok: boolean; error: { code: string; details?: { flag?: string; value?: string } } };
+  assert.equal(processorExitCode, CLI_EXIT_OK);
+  assert.equal(listenExitCode, CLI_EXIT_USAGE);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_channel_listener_number");
+  assert.deepEqual(payload.error.details, { flag: "--interval-ms", value: "nope" });
+});
+
 test("runCli connects Telegram through channels and runs a processor listener once", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-channels-listener-"));
   const processorPath = path.join(workspaceRoot, "processor.cjs");
