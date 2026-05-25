@@ -248,6 +248,11 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         writesRuntime: false,
       },
       {
+        command: `runtime ${runtimeId} summary`,
+        delegatesTo: "runtime ecosystem summary projection",
+        writesRuntime: false,
+      },
+      {
         command: `runtime ${runtimeId} domains`,
         delegatesTo: "adapter capability map and resource facades",
         writesRuntime: false,
@@ -265,6 +270,11 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       {
         command: `runtime ${runtimeId} session`,
         delegatesTo: "adapter session descriptor",
+        writesRuntime: false,
+      },
+      {
+        command: `runtime ${runtimeId} workspace`,
+        delegatesTo: "adapter workspace descriptor",
         writesRuntime: false,
       },
       {

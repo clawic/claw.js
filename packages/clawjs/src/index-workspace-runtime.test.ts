@@ -1278,7 +1278,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   const commandsPayload = JSON.parse(commandsStdout.getOutput()) as { data: { runtimeId: string; executableByClawCli: Array<{ command: string; delegatesTo?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean }>; resourceDomains: string[] } };
   assert.equal(commandsPayload.data.runtimeId, "codex");
   assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex status"), true);
+  assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex summary"), true);
   assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex support"), true);
+  assert.equal(commandsPayload.data.executableByClawCli.some((entry) => entry.command === "runtime codex workspace"), true);
   assert.equal(commandsPayload.data.executableByClawCli.find((entry) => entry.command === "runtime codex sessions inject --session-key <id> --message <text> --confirm-runtime-write")?.writesRuntime, false);
   assert.equal(commandsPayload.data.executableByClawCli.find((entry) => entry.command === "runtime codex sessions abort --session-key <id> --confirm-runtime-write")?.writesRuntime, false);
   assert.equal(commandsPayload.data.executableByClawCli.find((entry) => entry.command === "runtime codex sessions create --title <title>")?.writesRuntime, false);
@@ -2319,8 +2321,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   const hermesCommandByName = new Map((hermesCommandsPayload.data.executableByClawCli ?? []).map((entry) => [entry.command, entry]));
   assert.equal(hermesCommandsPayload.data.runtimeId, "hermes");
   assert.equal(hermesCommandsPayload.data.authority, "runtime_adapter");
-  assert.equal(hermesCommandsPayload.data.executableByClawCli?.length, 20);
+  assert.equal(hermesCommandsPayload.data.executableByClawCli?.length, 22);
   assert.equal(hermesCommandsPayload.data.resourceDomains?.length, manifest.requiredDomains.length);
+  assert.equal(hermesCommandByName.get("runtime hermes summary")?.writesRuntime, false);
+  assert.equal(hermesCommandByName.get("runtime hermes workspace")?.writesRuntime, false);
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.writesRuntime, false);
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.wouldWriteRuntime, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.delegatesTo, "tui_gateway.prompt.submit");
