@@ -263,7 +263,7 @@ export function createAppsStore(options: CreateAppsStoreOptions = {}): AppsStore
       const targetPath = path.join(rootDir, record.slug, safeRel);
       ensureDir(path.dirname(targetPath));
       const data = input.encoding === "base64"
-        ? Buffer.from(input.content, "base64")
+        ? decodeBase64Content(input.content)
         : Buffer.from(input.content, "utf8");
       fs.writeFileSync(targetPath, data);
       // Bump updatedAt so the manifest mtime tracks file edits.
@@ -387,6 +387,24 @@ function parseJson(raw: string, fallback: any): any {
   } catch {
     return fallback;
   }
+}
+
+function decodeBase64Content(content: string): Buffer {
+  const normalized = content.replace(/\s+/g, "");
+  if (content.length > 0 && normalized.length === 0) throw new Error("Invalid app file content: base64 payload must not be blank.");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) throw new Error("Invalid app file content: payload must be valid base64.");
+  const paddingIndex = normalized.indexOf("=");
+  if (paddingIndex >= 0 && paddingIndex < normalized.length - (normalized.endsWith("==") ? 2 : 1)) {
+    throw new Error("Invalid app file content: payload must be valid base64.");
+  }
+  if (normalized.includes("=") && normalized.length % 4 !== 0) throw new Error("Invalid app file content: payload must be valid base64.");
+  if (normalized.length % 4 === 1) throw new Error("Invalid app file content: payload must be valid base64.");
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+  const buffer = Buffer.from(padded, "base64");
+  if (buffer.toString("base64").replace(/=+$/, "") !== normalized.replace(/=+$/, "")) {
+    throw new Error("Invalid app file content: payload must be valid base64.");
+  }
+  return buffer;
 }
 
 function ensureAppsSchema(sqlite: Database.Database): void {
