@@ -105,12 +105,12 @@ export async function runCollectionsCli(input: {
 function parseCollectionsLimit(raw: string | undefined): number | undefined {
   if (raw === undefined) return undefined;
   const limit = Number(raw);
-  if (!Number.isFinite(limit) || limit < 0) {
-    throw new CliHandledError("invalid_collections_limit", `Expected --limit to be a non-negative number, got ${raw}.`, CLI_EXIT_USAGE, {
+  if (!raw.trim() || !Number.isSafeInteger(limit) || limit < 0) {
+    throw new CliHandledError("invalid_collections_limit", `Expected --limit to be a non-negative integer, got ${raw}.`, CLI_EXIT_USAGE, {
       location: "cli.collections.limit",
-      suggestion: "Pass a non-negative limit such as --limit 20.",
-      safeNextStep: "Rerun claw collections list with a non-negative --limit value.",
+      suggestion: "Pass a non-negative integer limit such as --limit 20.",
+      safeNextStep: "Rerun claw collections list with a non-negative integer --limit value.",
     });
   }
-  return Math.floor(limit);
+  return limit;
 }
