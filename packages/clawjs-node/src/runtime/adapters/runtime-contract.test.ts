@@ -142,7 +142,7 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   ].join("\n"));
   fs.writeFileSync(path.join(homeDir, ".hermes", "auth.json"), JSON.stringify({
     providers: {
-      anthropic: { apiKey: "sk-ant-secret-value" },
+      anthropic: { apiKey: "fixture-redacted-anthropic-key" },
     },
   }, null, 2));
   fs.writeFileSync(path.join(homeDir, ".hermes", "memories", "MEMORY.md"), "remember this\n");
@@ -178,7 +178,7 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(resources.models.defaultModel?.modelId, "anthropic/claude-sonnet-4");
   assert.equal(resources.models.models.some((entry) => entry.id === "anthropic/claude-sonnet-4" && entry.source === "config"), true);
   assert.equal(resources.auth.providers.anthropic?.hasAuth, true);
-  assert.equal(resources.auth.providers.anthropic?.maskedCredential?.includes("sk-ant-secret-value"), false);
+  assert.equal(resources.auth.providers.anthropic?.maskedCredential?.includes("fixture-redacted-anthropic-key"), false);
   assert.equal(resources.memory.memory.some((entry) => entry.path?.endsWith("MEMORY.md")), true);
   assert.equal(resources.memory.memory.some((entry) => entry.summary?.includes("not exposed by default")), true);
   assert.equal(resources.skills.skills.some((entry) => entry.id === "checks"), true);
@@ -258,7 +258,7 @@ test("hermes adapter honors explicit config, auth store, and workspace paths", a
   ].join("\n"));
   fs.writeFileSync(authStorePath, JSON.stringify({
     providers: {
-      openai: { apiKey: "sk-project-secret-value" },
+      openai: { apiKey: "fixture-redacted-openai-key" },
     },
   }, null, 2));
 
@@ -281,7 +281,7 @@ test("hermes adapter honors explicit config, auth store, and workspace paths", a
   assert.equal(resources.models.models.some((entry) => entry.id === "anthropic/wrong-default"), false);
   assert.equal(resources.auth.providers.openai?.hasAuth, true);
   assert.equal(resources.auth.providers.openai?.source, "runtime");
-  assert.equal(resources.auth.providers.openai?.maskedCredential?.includes("sk-project-secret-value"), false);
+  assert.equal(resources.auth.providers.openai?.maskedCredential?.includes("fixture-redacted-openai-key"), false);
   assert.equal(resources.channels.channels.some((entry) => entry.id === "whatsapp" && entry.status === "configured"), true);
   assert.equal(resources.channels.channels.some((entry) => entry.id === "slack"), false);
 });
