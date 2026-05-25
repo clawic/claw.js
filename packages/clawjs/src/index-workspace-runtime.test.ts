@@ -1705,7 +1705,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.support?.ecosystem?.recommended, false);
   assert.equal(hermesPayload.data.support?.ecosystem?.production, false);
   assert.equal(hermesPayload.data.support?.ecosystem?.blockedWriteBackDomains?.includes("sessions"), true);
-  assert.equal(hermesPayload.data.support?.ecosystem?.externalPendingDomains?.includes("channels"), true);
+  for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(hermesPayload.data.support?.ecosystem?.externalPendingDomains?.includes(externalDomain), true);
+    assert.equal(hermesPayload.data.support?.ecosystem?.evidenceRequirements?.find((entry) => entry.id === `hermes.${externalDomain}.live_evidence`)?.approvalRequired, true);
+  }
   assert.equal(hermesPayload.data.support?.ecosystem?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.approvalRequired, true);
   assert.equal(hermesPayload.data.support?.ecosystem?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.evidenceDisposition, "external_pending_until_approved_redacted_live_receipt");
   assert.equal(hermesPayload.data.support?.ecosystem?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.fallbackPolicy, "no_live_claim_promotion_without_explicit_approval");
@@ -1714,7 +1717,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.supportComplete, false);
   assert.equal(hermesPayload.data.supportAudit?.allDomainsAccountedFor, true);
   assert.equal(hermesPayload.data.supportAudit?.blockerSummary?.directBlockerDomains?.includes("sessions"), true);
-  assert.equal(hermesPayload.data.supportAudit?.blockerSummary?.externalPendingDomains?.includes("channels"), true);
+  for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(hermesPayload.data.supportAudit?.blockerSummary?.externalPendingDomains?.includes(externalDomain), true);
+  }
   assert.equal((hermesPayload.data.supportAudit?.blockerSummary?.byBlockerClass?.direct_blocker ?? 0) > 0, true);
   assert.equal(hermesPayload.data.supportAudit?.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.create.action_contract"), true);
   assert.equal(hermesPayload.data.supportAudit?.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.evidenceDisposition, "blocked_until_tui_gateway_wrapper_fixture");
@@ -1722,14 +1727,19 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.supportResolution, "explicitly_product_blocked_not_a_silent_gap");
   assert.equal(hermesPayload.data.supportAudit?.domains?.find((entry) => entry.domain === "sessions")?.evidenceRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.length, manifest.requiredDomains.length);
-  assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "channels")?.closureStatus, "external_pending");
+  for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === externalDomain)?.closureStatus, "external_pending");
+  }
   assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "sessions")?.closureStatus, "product_blocked");
   assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_lowered_claim_until_upstream_native_contract_exists");
-  assert.equal(hermesPayload.data.supportAudit?.closureChecklistSummary?.external_pending, 1);
+  assert.equal(hermesPayload.data.supportAudit?.closureChecklistSummary?.external_pending, 4);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.status, "unpromoted");
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.finalPromotionAllowed, false);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.claimDisposition, "unpromoted_external_pending");
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.providers.live_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.auth.live_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.productBlockedRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.unresolvedNativeRequirementCount, 0);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("approved_redacted_live_evidence"), true);
@@ -2085,11 +2095,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.supportComplete, false);
   assert.equal(hermesSupportPayload.data.allDomainsAccountedFor, true);
   assert.equal(hermesSupportPayload.data.blockerSummary.directBlockerDomains?.includes("sessions"), true);
-  assert.equal(hermesSupportPayload.data.blockerSummary.externalPendingDomains?.includes("channels"), true);
+  for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(hermesSupportPayload.data.blockerSummary.externalPendingDomains?.includes(externalDomain), true);
+  }
   assert.equal((hermesSupportPayload.data.blockerSummary.byBlockerClass?.direct_blocker ?? 0) > 0, true);
   assert.equal((hermesSupportPayload.data.blockerSummary.byBlockerClass?.external_pending ?? 0) > 0, true);
   assert.equal((hermesSupportPayload.data.blockerSummary.productBlockedRequirementCount ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.channels.live_evidence" && entry.approvalRequired === true), true);
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.providers.live_evidence" && entry.approvalRequired === true), true);
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.auth.live_evidence" && entry.approvalRequired === true), true);
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.models.live_evidence" && entry.approvalRequired === true), true);
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.create.action_contract" && entry.commandShape === "not_executable_until_tui_gateway_create_wrapper_fixture_exists"), true);
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.currentBehavior, "non_executable_action_plan_only");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.fallbackPolicy, "do_not_synthesize_native_runtime_action");
@@ -2098,13 +2113,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract")?.userVisibleContract, "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract" && entry.commandShape === "not_executable_until_official_runtime_pin_api_exists"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "channels")?.evidenceRequirementIds?.includes("hermes.channels.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "providers")?.evidenceRequirementIds?.includes("hermes.providers.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "auth")?.evidenceRequirementIds?.includes("hermes.auth.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "models")?.evidenceRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.evidenceRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.evidenceDispositions?.includes("blocked_until_tui_gateway_wrapper_fixture"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.supportResolutions?.includes("explicitly_product_blocked_not_a_silent_gap"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.readProjectionStatus, "projected");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.implementedFacets?.includes("session_list_action"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.blockingFacets?.includes("native_action_contract"), true);
-  for (const projectedDomain of ["skills", "memory", "models", "scheduler"]) {
+  for (const projectedDomain of ["skills", "memory", "scheduler"]) {
     const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === projectedDomain);
     const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === projectedDomain);
     assert.equal(domainAudit?.implementedFacets?.includes("read_projection_contract"), true);
@@ -2117,36 +2135,43 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "models")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "scheduler")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.closureChecklist?.length, manifest.requiredDomains.length);
-  assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "channels")?.closureStatus, "external_pending");
-  assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "channels")?.nextAction, "use_matching_evidenceReentryPacket_after_explicit_approval");
-  assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "channels")?.projectionDisposition, "read_projection_available_live_evidence_pending");
+  for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === externalDomain)?.closureStatus, "external_pending");
+    assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === externalDomain)?.nextAction, "use_matching_evidenceReentryPacket_after_explicit_approval");
+    assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === externalDomain)?.projectionDisposition, "read_projection_available_live_evidence_pending");
+  }
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.closureStatus, "product_blocked");
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.readProjectionStatus, "projected");
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.evidenceRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_lowered_claim_until_upstream_native_contract_exists");
-  assert.equal(hermesSupportPayload.data.closureChecklistSummary?.external_pending, 1);
+  assert.equal(hermesSupportPayload.data.closureChecklistSummary?.external_pending, 4);
   assert.equal((hermesSupportPayload.data.closureChecklistSummary?.product_blocked ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.projectionSummary?.projectedDomainCount, manifest.requiredDomains.length);
   assert.equal(hermesSupportPayload.data.projectionSummary?.unsupportedDomainCount, 0);
   assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.projected, 4);
   assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.degraded_projection, 9);
-  assert.equal(hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount, 10);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount, 7);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.read_projection_contract, manifest.requiredDomains.length);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.ready_runtime_projection, 3);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.degraded_runtime_projection, 9);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.session_list_action, 1);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.native_action_contract, 1);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.totalRequirementCount, hermesSupportPayload.data.blockerSummary.evidenceRequirementCount);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalRequiredCount, 1);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalRequiredCount, 4);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.providers.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.auth.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 1);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 4);
   assert.equal((hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("official_runtime_native_contract_fixture"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.reentryPolicy, "use_evidence_reentry_packets_before_claim_promotion");
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.domainCount, manifest.requiredDomains.length);
-  assert.equal(hermesSupportPayload.data.syncPolicySummary?.externalPendingDomains?.includes("channels"), true);
+  for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(hermesSupportPayload.data.syncPolicySummary?.externalPendingDomains?.includes(externalDomain), true);
+  }
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.blockedWriteBackDomains?.includes("sessions"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayDomains?.includes("sessions"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayActions?.includes("unpin"), true);
@@ -2161,6 +2186,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingCount, hermesSupportPayload.data.blockerSummary.byBlockerClass?.external_pending);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.unresolvedNativeRequirementCount, 0);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.providers.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.auth.live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.productBlockedRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.unresolvedNativeRequirementIds?.length, 0);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("keep_lowered_claim_until_upstream_native_contracts_exist"), true);
@@ -2177,6 +2205,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.channels.live_evidence")?.safeDefault, "do_not_run_without_explicit_approval_and_redaction");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.channels.live_evidence")?.commandShape, "runtime hermes domain channels --json");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.channels.live_evidence")?.riskControls?.includes("read_only_first"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.providers.live_evidence")?.commandShape, "runtime hermes domain providers --json");
+  assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.auth.live_evidence")?.commandShape, "runtime hermes domain auth --json");
+  assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.models.live_evidence")?.commandShape, "runtime hermes domain models --json");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.create.action_contract")?.status, "blocked_until_upstream_contract");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.create.action_contract")?.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.create.action_contract")?.expectedEvidence?.includes("non_destructive_fixture"), true);
