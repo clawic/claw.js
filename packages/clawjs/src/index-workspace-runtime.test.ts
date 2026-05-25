@@ -1433,6 +1433,37 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesChannels?.officialCommands?.includes("hermes gateway status"), true);
   assert.equal(hermesChannels?.provenance?.source, "runtime-ecosystem-manifest");
 
+  for (const resourceDomain of manifest.requiredDomains) {
+    const resourceStdout = captureStream();
+    const resourceExit = await runCli(["runtime", "hermes", "resources", resourceDomain, "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+      stdout: resourceStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(resourceExit), true);
+    const resourcePayload = JSON.parse(resourceStdout.getOutput()) as {
+      data: {
+        runtimeId: string;
+        domain: string;
+        data: {
+          supportContract?: { provenance?: { runtimeId?: string; domain?: string } };
+          providers?: unknown[];
+          models?: unknown[];
+          defaultModel?: unknown;
+        };
+      };
+    };
+    assert.equal(resourcePayload.data.runtimeId, "hermes");
+    assert.equal(resourcePayload.data.domain, resourceDomain);
+    assert.equal(resourcePayload.data.data.supportContract?.provenance?.runtimeId, "hermes");
+    assert.equal(resourcePayload.data.data.supportContract?.provenance?.domain, resourceDomain);
+    if (resourceDomain !== "providers") assert.equal(resourcePayload.data.data.providers, undefined);
+    if (resourceDomain !== "models") {
+      assert.equal(resourcePayload.data.data.models, undefined);
+      assert.equal(resourcePayload.data.data.defaultModel, undefined);
+    }
+  }
+
   const hermesSupportStdout = captureStream();
   const hermesSupportExit = await runCli(["runtime", "hermes", "support", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesSupportStdout.stream,
