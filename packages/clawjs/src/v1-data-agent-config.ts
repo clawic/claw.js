@@ -11,7 +11,6 @@ import {
   nowIso,
   parseCsvOrJson,
   resolveClawjsDataRoot,
-  truthy,
   usage,
   usageError,
   writeSuccess,
@@ -112,6 +111,10 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
     if (!provider || input.flags.enabled === undefined) {
       return usageError(input, "Usage: claw providers settings set PROVIDER --enabled true|false [--json]");
     }
+    const enabled = parseProviderEnabledFlag(input.flags.enabled);
+    if (enabled === null) {
+      return usageError(input, "Usage: claw providers settings set PROVIDER --enabled true|false [--json]");
+    }
     const id = input.flags.id || `provider:${provider}`;
     const now = nowIso();
     store.sqlite.prepare(`
@@ -123,7 +126,7 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
     `).run(
       id,
       provider,
-      truthy(input.flags.enabled) ? 1 : 0,
+      enabled ? 1 : 0,
       input.flags.policy ? JSON.stringify(JSON.parse(input.flags.policy)) : "{}",
       input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}",
       now,
@@ -139,7 +142,7 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
     writeSuccess(input, {
       id,
       provider,
-      enabled: truthy(input.flags.enabled),
+      enabled,
       updatedAt: now,
     });
     return V1_DATA_EXIT_OK;
@@ -163,6 +166,13 @@ function runProviderSettingsCommand(input: V1DataCliInput, store: DatabaseServic
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "providers"));
+}
+
+function parseProviderEnabledFlag(value: string): boolean | null {
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) return true;
+  if (["false", "0", "no"].includes(normalized)) return false;
+  return null;
 }
 
 export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseServiceStore): number {
