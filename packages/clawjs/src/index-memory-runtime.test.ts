@@ -268,6 +268,40 @@ test("runCli rules compiles scoped active rules and ignores pending rules", asyn
   assert.equal(result.omitted.some((entry) => entry.rule.id === "northstar-pending" && entry.reason === "status:pending"), true);
 });
 
+test("runCli rejects invalid rules compile limits before compiling", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-rules-limit-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+
+  const exitCode = await runCli([
+    "rules",
+    "compile",
+    "draft a reply",
+    "--workspace", workspaceRoot,
+    "--limit", "nope",
+    "--json",
+  ], {
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    cwd: process.cwd(),
+  });
+
+  assert.equal(exitCode, CLI_EXIT_USAGE);
+  assert.equal(stderr.getOutput(), "");
+  const payload = JSON.parse(stdout.getOutput()) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string; details?: Record<string, unknown> };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_rules_compile_limit");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.rules.limit");
+  assert.deepEqual(payload.error.details, { flag: "--limit", value: "nope" });
+  assert.equal(payload.meta.canonicalCommand, "rules");
+  assert.equal(payload.meta.subcommand, "compile");
+});
+
 test("runCli knowledge memories search keeps workspaces and runtime source separate", async (t) => {
   const workspaceA = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-a-"));
   const workspaceB = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-b-"));

@@ -147,6 +147,7 @@ if (group === "rules") {
         context.stderr.write("Usage: claw rules compile <prompt> [--brand BRAND] [--output-format website] [--json]\n");
         return CLI_EXIT_USAGE;
       }
+      const limit = parsePositiveIntegerFlag(flags.limit, "limit", "invalid_rules_compile_limit", "cli.rules.limit");
       const result = claw.rules.compile({
         prompt,
         user: flags.user,
@@ -160,7 +161,7 @@ if (group === "rules") {
         outputFormat: flags["output-format"] || flags.output,
         agent: flags.agent,
         channel: flags.channel,
-        ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+        ...(limit !== undefined ? { limit } : {}),
       });
       if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(result.prompt ? `${result.prompt}\n` : "No applicable rules.\n");
@@ -571,12 +572,12 @@ if (group === "skills" && command === "install") {
   return null;
 }
 
-function parsePositiveIntegerFlag(value: string | undefined, name: string, code: string): number | undefined {
+function parsePositiveIntegerFlag(value: string | undefined, name: string, code: string, location = `cli.skills.${name}`): number | undefined {
   if (value === undefined) return undefined;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) {
     throw new CliHandledError(code, `--${name} must be a positive integer.`, CLI_EXIT_USAGE, {
-      location: `cli.skills.${name}`,
+      location,
       details: { flag: `--${name}`, value },
     });
   }
