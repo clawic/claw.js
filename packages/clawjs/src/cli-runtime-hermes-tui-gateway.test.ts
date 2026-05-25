@@ -91,6 +91,10 @@ test("Hermes TUI gateway session actions require confirmation before contacting 
     assert.equal(payload.data.status, "confirmation_required");
     assert.equal(payload.data.requiredFlag, "--confirm-runtime-write");
     assert.equal(payload.data.officialMethod, "prompt.submit");
+    assert.equal(payload.data.transportPolicy?.id, "hermes.tui_gateway.transport_lifecycle_policy");
+    assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "loopback_http_json_rpc_fixture");
+    assert.equal(payload.data.transportPolicy?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+    assert.equal(payload.data.transportPolicy?.credentialPolicy, "no_credential_or_token_emission");
     assert.equal(gateway.requests.length, 0);
   } finally {
     await gateway.close();
@@ -110,6 +114,14 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
     ]);
 
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(exitCode), true);
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.id, "hermes.tui_gateway.transport_lifecycle_policy");
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.configuredEndpointClass, "loopback_http_json_rpc_fixture");
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.startupPolicy, "no_auto_start_stop_or_install_from_runtime_lens");
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.requiredEvidence.includes("approved_native_round_trip_evidence"), true);
+    assert.equal(payload.data.domainData.gateway.resources.some((entry: { id?: string; transportPolicy?: { id?: string } }) => (
+      entry.id === "tui-gateway-transport-policy"
+      && entry.transportPolicy?.id === "hermes.tui_gateway.transport_lifecycle_policy"
+    )), true);
     const actions = new Map((payload.data.domainData.sessions.actionPolicy ?? []).map((entry: { action?: string }) => [entry.action, entry]));
     for (const action of ["send", "inject", "abort", "create"]) {
       const materialized = actions.get(action) as {
@@ -120,6 +132,9 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
         materializedBy?: string;
         fixtureBacked?: boolean;
         productionTransportReady?: boolean;
+        productionTransportStatus?: string;
+        lifecycleStatus?: string;
+        transportPolicy?: { id?: string; configuredEndpointClass?: string };
       };
       assert.equal(materialized?.status, "implemented_requires_confirmation");
       assert.equal(materialized?.writesRuntime, true);
@@ -128,12 +143,30 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
       assert.equal(materialized?.materializedBy, "loopback_tui_gateway_fixture");
       assert.equal(materialized?.fixtureBacked, true);
       assert.equal(materialized?.productionTransportReady, false);
+      assert.equal(materialized?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+      assert.equal(materialized?.lifecycleStatus, "external_user_managed_not_started_by_claw");
+      assert.equal(materialized?.transportPolicy?.configuredEndpointClass, "loopback_http_json_rpc_fixture");
     }
     const sendRequirement = payload.data.supportAudit.evidenceRequirements.find((entry: { id?: string }) => entry.id === "hermes.sessions.send.action_contract");
     assert.equal(sendRequirement?.evidenceDisposition, "fixture_backed_tui_gateway_bridge_pending_production_round_trip_evidence");
     assert.equal(sendRequirement?.currentBehavior, "fixture_backed_tui_gateway_action_available_with_confirm_runtime_write");
     assert.equal(sendRequirement?.userVisibleContract, "executable_only_with_confirmation_and_loopback_tui_gateway_fixture_until_production_transport_is_validated");
     assert.match(sendRequirement?.promotionGate ?? "", /production_transport_lifecycle_policy/);
+    assert.equal(sendRequirement?.transportPolicyId, "hermes.tui_gateway.transport_lifecycle_policy");
+    assert.equal(sendRequirement?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+    assert.equal(sendRequirement?.lifecycleStatus, "external_user_managed_not_started_by_claw");
+
+    const gatewayResources = await runHermesAction([
+      "runtime", "hermes", "resources", "gateway",
+      "--gateway-url", gateway.url,
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(gatewayResources.exitCode), true);
+    assert.equal(gatewayResources.payload.data.data.tuiGatewayTransportPolicy.protocol, "tui_gateway_json_rpc");
+    assert.equal(gatewayResources.payload.data.data.tuiGatewayTransportPolicy.mutationPolicy, "no_production_gateway_mutation_without_explicit_approval_and_contract");
+    assert.equal(gatewayResources.payload.data.data.resources.some((entry: { id?: string }) => entry.id === "tui-gateway-transport-policy"), true);
     assert.equal(gateway.requests.length, 0);
   } finally {
     await gateway.close();
@@ -162,6 +195,7 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
     assert.equal(send.payload.data.status, "ok");
     assert.equal(send.payload.data.writesRuntime, true);
     assert.equal(send.payload.data.officialMethod, "prompt.submit");
+    assert.equal(send.payload.data.transportPolicy?.configuredEndpointClass, "loopback_http_json_rpc_fixture");
     assert.equal(send.payload.data.result.gatewayReceipt.method, "prompt.submit");
 
     const inject = await runHermesAction([
@@ -236,4 +270,6 @@ test("Hermes confirmed TUI gateway writes stay blocked without an explicit endpo
   assert.equal(payload.data.requiredFlag, "--gateway-url");
   assert.equal(payload.data.officialMethod, "prompt.submit");
   assert.equal(payload.data.writesRuntime, false);
+  assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "none");
+  assert.equal(payload.data.transportPolicy?.safeDefault, "fixture_only_no_production_transport_contact");
 });

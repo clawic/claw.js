@@ -396,6 +396,41 @@ function runtimeLocationDiagnostics(status): Record<string, string | undefined> 
   return locations && typeof locations === "object" ? locations as Record<string, string | undefined> : {};
 }
 
+function hermesTuiGatewayTransportPolicy(runtimeOptions?) {
+  const rawEndpoint = runtimeOptions?.gateway?.url;
+  const endpointConfigured = typeof rawEndpoint === "string" && rawEndpoint.trim().length > 0;
+  const loopbackConfigured = endpointConfigured && isLoopbackGatewayUrl(rawEndpoint.trim());
+  return {
+    id: "hermes.tui_gateway.transport_lifecycle_policy",
+    protocol: "tui_gateway_json_rpc",
+    fixtureTransport: "loopback_http_json_rpc_fixture",
+    productionTransportStatus: "blocked_until_production_transport_lifecycle_policy",
+    lifecycleStatus: "external_user_managed_not_started_by_claw",
+    lifecycleOwner: "hermes_runtime_or_user",
+    allowedEndpointClassesWithoutApproval: ["loopback_http_json_rpc_fixture"],
+    configuredEndpointClass: !endpointConfigured
+      ? "none"
+      : loopbackConfigured
+        ? "loopback_http_json_rpc_fixture"
+        : "non_loopback_endpoint_rejected",
+    endpointConfigured,
+    loopbackConfigured,
+    confirmationPolicy: "requires_confirm_runtime_write",
+    startupPolicy: "no_auto_start_stop_or_install_from_runtime_lens",
+    mutationPolicy: "no_production_gateway_mutation_without_explicit_approval_and_contract",
+    credentialPolicy: "no_credential_or_token_emission",
+    safeDefault: "fixture_only_no_production_transport_contact",
+    supportClaimEffect: "blocks_recommended_production_native_parity",
+    requiredEvidence: [
+      "production_transport_lifecycle_policy",
+      "approved_native_round_trip_evidence",
+      "non_destructive_fixture",
+      "no_plaintext_credential_token_evidence",
+    ],
+    reentryCondition: "attach_production_transport_lifecycle_policy_before_claim_promotion_or_non_loopback_gateway_use",
+  };
+}
+
 function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, runtimeOptions, session) {
   const capability = domainCapability(status, "gateway");
   const locations = runtimeLocationDiagnostics(status);
@@ -442,6 +477,39 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
         source: "runtime-options",
         runtimeId,
         path: gatewayOptions.configPath ?? locations.gatewayConfigPath,
+      },
+    });
+  }
+  if (runtimeId === "hermes") {
+    const transportPolicy = hermesTuiGatewayTransportPolicy(runtimeOptions);
+    resources.push({
+      id: "tui-gateway-transport-policy",
+      label: "TUI Gateway transport policy",
+      status: transportPolicy.loopbackConfigured ? "fixture_ready" : "blocked",
+      kind: "transport_lifecycle_policy",
+      enabled: transportPolicy.loopbackConfigured,
+      summary: transportPolicy.loopbackConfigured
+        ? "Loopback fixture transport is configured; production transport remains blocked."
+        : "Production TUI Gateway transport remains blocked until lifecycle policy and evidence exist.",
+      limitations: [
+        transportPolicy.productionTransportStatus,
+        transportPolicy.lifecycleStatus,
+        transportPolicy.startupPolicy,
+        transportPolicy.mutationPolicy,
+      ],
+      attributes: [
+        `protocol: ${transportPolicy.protocol}`,
+        `fixture transport: ${transportPolicy.fixtureTransport}`,
+        `configured endpoint class: ${transportPolicy.configuredEndpointClass}`,
+        `production transport: ${transportPolicy.productionTransportStatus}`,
+        `lifecycle: ${transportPolicy.lifecycleStatus}`,
+        `confirmation: ${transportPolicy.confirmationPolicy}`,
+        `credential policy: ${transportPolicy.credentialPolicy}`,
+      ],
+      transportPolicy,
+      provenance: {
+        source: "runtime-portal-hermes-tui-gateway-policy",
+        runtimeId,
       },
     });
   }
@@ -992,6 +1060,10 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         officialProtocol: action.officialProtocol,
         officialMethod: action.officialMethod,
         officialContractSource: action.officialContractSource,
+        transportPolicyId: action.transportPolicy?.id,
+        transportPolicy: action.transportPolicy,
+        productionTransportStatus: action.productionTransportStatus ?? action.transportPolicy?.productionTransportStatus,
+        lifecycleStatus: action.lifecycleStatus ?? action.transportPolicy?.lifecycleStatus,
       }];
     });
   const evidenceRequirements = [...domainEvidenceRequirements, ...sessionActionRequirements];
@@ -1278,6 +1350,9 @@ function materializeSessionActionContract(runtimeId: RuntimeAdapterId, contract,
     abort: "runtime_gateway_control",
     create: "runtime_gateway_write",
   }[contract.action];
+  const transportPolicy = runtimeId === "hermes" && gatewayActionPersistence
+    ? hermesTuiGatewayTransportPolicy(runtimeOptions)
+    : null;
   if (runtimeId === "hermes" && gatewayActionPersistence && hasLoopbackTuiGateway(runtimeOptions)) {
     return {
       ...materialized,
@@ -1289,6 +1364,18 @@ function materializeSessionActionContract(runtimeId: RuntimeAdapterId, contract,
       materializedBy: "loopback_tui_gateway_fixture",
       fixtureBacked: true,
       productionTransportReady: false,
+      productionTransportStatus: transportPolicy?.productionTransportStatus,
+      lifecycleStatus: transportPolicy?.lifecycleStatus,
+      transportPolicy,
+    };
+  }
+  if (transportPolicy) {
+    return {
+      ...materialized,
+      productionTransportReady: false,
+      productionTransportStatus: transportPolicy.productionTransportStatus,
+      lifecycleStatus: transportPolicy.lifecycleStatus,
+      transportPolicy,
     };
   }
   return materialized;
@@ -1601,6 +1688,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       gatewayAvailable: status.gatewayAvailable,
       resources: buildGatewayOperationalResources(runtimeId, status, runtimeOptions, session),
       capability: domainCapability(status, "gateway") ?? null,
+      tuiGatewayTransportPolicy: runtimeId === "hermes" ? hermesTuiGatewayTransportPolicy(runtimeOptions) : null,
       supportContract: buildSupportContract(runtimeId, status, "gateway"),
     },
     doctorCompat: {
@@ -1633,6 +1721,7 @@ function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) 
   const requestedWorkspace = input.flags["runtime-workspace"] ?? input.workspaceRoot ?? null;
   const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === "create") ?? {};
   const officialContract = officialSessionActionContract(runtimeId, actionContract);
+  const transportPolicy = runtimeId === "hermes" ? hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)) : undefined;
   return {
     runtimeId,
     domain: "sessions",
@@ -1682,6 +1771,10 @@ function sessionCreatePlan(runtimeId: RuntimeAdapterId, input, supportContract) 
       officialProtocol: officialContract.protocol,
       officialMethod: officialContract.method,
     },
+    transportPolicyId: transportPolicy?.id,
+    transportPolicy,
+    productionTransportStatus: transportPolicy?.productionTransportStatus,
+    lifecycleStatus: transportPolicy?.lifecycleStatus,
     supportContract,
   };
 }
@@ -1717,6 +1810,8 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
     "round_trip_native_visibility",
   ];
   const wouldWriteRuntime = extra.wouldWriteRuntime ?? ["send", "inject", "abort", "create"].includes(action);
+  const transportPolicy = extra.transportPolicy
+    ?? (runtimeId === "hermes" && wouldWriteRuntime ? hermesTuiGatewayTransportPolicy() : undefined);
   return {
     runtimeId,
     domain: "sessions",
@@ -1752,6 +1847,10 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
     commandShape: `runtime ${runtimeId} sessions ${action} --json`,
     evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
     evidenceReentryStatus: officialContract.known ? "blocked_until_tui_gateway_wrapper_fixture" : "blocked_until_upstream_contract",
+    transportPolicyId: transportPolicy?.id,
+    transportPolicy,
+    productionTransportStatus: transportPolicy?.productionTransportStatus,
+    lifecycleStatus: transportPolicy?.lifecycleStatus,
     actionContract,
     supportContract,
     ...extra,
@@ -2572,6 +2671,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
     if (!isTruthyFlag(input, "confirm-runtime-write")) {
       const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
       const officialContract = officialSessionActionContract(runtimeId, actionContract);
+      const transportPolicy = runtimeId === "hermes" ? hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)) : undefined;
       writePayload(input, {
         runtimeId,
         domain: "sessions",
@@ -2584,6 +2684,10 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         officialProtocol: officialContract.protocol,
         officialMethod: officialContract.method,
         officialContractSource: officialContract.source,
+        transportPolicyId: transportPolicy?.id,
+        transportPolicy,
+        productionTransportStatus: transportPolicy?.productionTransportStatus,
+        lifecycleStatus: transportPolicy?.lifecycleStatus,
         result: {
           id: sessionKey,
           messagePreview: message.slice(0, 160),
@@ -2602,6 +2706,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
           gatewayError: gateway.error,
           gatewayStatusCode: gateway.statusCode,
           gatewayRequest: gateway.request,
+          transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
       }
@@ -2615,6 +2720,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         officialProtocol: gateway.protocol,
         officialMethod: gateway.method,
         officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         result: {
           id: sessionKey,
           messagePreview: message.slice(0, 160),
@@ -2661,6 +2767,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
     if (!isTruthyFlag(input, "confirm-runtime-write")) {
       const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
       const officialContract = officialSessionActionContract(runtimeId, actionContract);
+      const transportPolicy = runtimeId === "hermes" ? hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)) : undefined;
       writePayload(input, {
         runtimeId,
         domain: "sessions",
@@ -2673,6 +2780,10 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         officialProtocol: officialContract.protocol,
         officialMethod: officialContract.method,
         officialContractSource: officialContract.source,
+        transportPolicyId: transportPolicy?.id,
+        transportPolicy,
+        productionTransportStatus: transportPolicy?.productionTransportStatus,
+        lifecycleStatus: transportPolicy?.lifecycleStatus,
         result: {
           id: sessionKey,
           nativeIdentifier: { name: runtimeId === "hermes" ? "session_id" : "sessionKey" },
@@ -2690,6 +2801,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
           gatewayError: gateway.error,
           gatewayStatusCode: gateway.statusCode,
           gatewayRequest: gateway.request,
+          transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
       }
@@ -2703,6 +2815,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         officialProtocol: gateway.protocol,
         officialMethod: gateway.method,
         officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         result: {
           id: sessionKey,
           nativeIdentifier: { name: "session_id" },
@@ -2739,6 +2852,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       if (!isTruthyFlag(input, "confirm-runtime-write")) {
         const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
         const officialContract = officialSessionActionContract(runtimeId, actionContract);
+        const transportPolicy = hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId));
         writePayload(input, {
           runtimeId,
           domain: "sessions",
@@ -2751,6 +2865,10 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
           officialProtocol: officialContract.protocol,
           officialMethod: officialContract.method,
           officialContractSource: officialContract.source,
+          transportPolicyId: transportPolicy.id,
+          transportPolicy,
+          productionTransportStatus: transportPolicy.productionTransportStatus,
+          lifecycleStatus: transportPolicy.lifecycleStatus,
           createPlan: sessionCreatePlan(runtimeId, input, supportContract),
           supportContract,
         }, { runtimeId, operation: "sessions", action });
@@ -2764,6 +2882,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
           gatewayError: gateway.error,
           gatewayStatusCode: gateway.statusCode,
           gatewayRequest: gateway.request,
+          transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
           createPlan: sessionCreatePlan(runtimeId, input, supportContract),
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
@@ -2784,6 +2903,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
           officialProtocol: gateway.protocol,
           officialMethod: gateway.method,
           officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+          transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
           result: {
             id: createdSessionId,
             titleRequested: title,
@@ -2813,6 +2933,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         officialProtocol: gateway.protocol,
         officialMethod: gateway.method,
         officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         result: {
           id: createdSessionId,
           titleRequested: title,
