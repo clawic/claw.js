@@ -512,6 +512,7 @@ export async function runSearchAdminCli(input: {
 
   if (command === "jobs") {
     const action = input.positionals[2] ?? "list";
+    const jobsLimit = parseSearchJobsLimit(input.flags.limit);
     const store = openCliSearchStore(input.flags);
     let data: {
       action: string;
@@ -538,7 +539,7 @@ export async function runSearchAdminCli(input: {
           priority: input.flags.priority ? Number(input.flags.priority) : undefined,
           scheduledAt: input.flags["scheduled-at"],
         });
-        data = { action, item, items: store.listIndexJobs({ source, limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: "ready" };
+        data = { action, item, items: store.listIndexJobs({ source, limit: jobsLimit }), state: "ready" };
       } else if (action === "schedule" || action === "event") {
         const source = input.flags.source ?? input.positionals[4];
         const operation = SearchDocuments.parseSearchIndexJobOperation(input.flags.operation ?? input.flags.op ?? input.positionals[3]);
@@ -557,10 +558,10 @@ export async function runSearchAdminCli(input: {
           scheduledAt: input.flags["scheduled-at"],
           observedAt: input.flags["observed-at"],
         });
-        data = { action, item, items: store.listIndexJobs({ source, limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: "ready" };
+        data = { action, item, items: store.listIndexJobs({ source, limit: jobsLimit }), state: "ready" };
       } else if (action === "claim") {
         const items = store.claimIndexJobs({
-          limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+          limit: jobsLimit,
           now: input.flags.now,
           leaseMs: input.flags["lease-ms"] ? Number(input.flags["lease-ms"]) : undefined,
           sources: SearchDocuments.parseListFlag(input.flags.sources ?? input.flags.source),
@@ -574,7 +575,7 @@ export async function runSearchAdminCli(input: {
           return CLI_EXIT_USAGE;
         }
         const item = store.completeIndexJob(id);
-        data = { action, item, items: store.listIndexJobs({ limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: item ? "ready" : "empty" };
+        data = { action, item, items: store.listIndexJobs({ limit: jobsLimit }), state: item ? "ready" : "empty" };
       } else if (action === "fail") {
         const id = input.positionals[3] ?? input.flags.id;
         const error = input.flags.error ?? input.positionals.slice(4).join(" ");
@@ -587,12 +588,12 @@ export async function runSearchAdminCli(input: {
           retry: readBooleanFlag(input.argv, input.flags, "retry"),
           scheduledAt: input.flags["scheduled-at"],
         });
-        data = { action, item, items: store.listIndexJobs({ limit: input.flags.limit ? Number(input.flags.limit) : undefined }), state: item ? "ready" : "empty" };
+        data = { action, item, items: store.listIndexJobs({ limit: jobsLimit }), state: item ? "ready" : "empty" };
       } else {
         const items = store.listIndexJobs({
           status: SearchDocuments.parseSearchIndexJobStatus(input.flags.status),
           source: input.flags.source,
-          limit: input.flags.limit ? Number(input.flags.limit) : undefined,
+          limit: jobsLimit,
         });
         data = { action, items, state: items.length ? "ready" : "empty" };
       }
@@ -725,4 +726,17 @@ export async function runSearchAdminCli(input: {
 
   input.context.stderr.write(`${buildCommandHelp(input.binName, "search") ?? input.usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+function parseSearchJobsLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_search_limit", `Expected --limit to be a positive number, got ${raw}.`, CLI_EXIT_USAGE, {
+      location: "cli.search.jobs.limit",
+      suggestion: "Pass a positive limit such as --limit 50.",
+      safeNextStep: "Rerun search jobs with a positive --limit value.",
+    });
+  }
+  return Math.min(1000, Math.floor(parsed));
 }

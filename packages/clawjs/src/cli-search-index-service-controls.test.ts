@@ -80,6 +80,34 @@ test("search service run-once obeys worker resource budgets", async () => {
     assert.equal(failurePayload.data.worker?.items[0]?.error?.includes("cannot index source"), true);
   });
 });
+
+test("search jobs and service reject non-numeric limits as usage errors", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-invalid-limit-"));
+  const dataRoot = path.join(workspaceRoot, "data");
+  await withPatchedEnv({
+    CLAW_DATA_DIR: dataRoot,
+    CLAW_DB_PATH: undefined,
+    CLAW_DATABASE_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    CLAW_SEARCH_DB_PATH: undefined,
+  }, async () => {
+    const jobs = await runCliCapture(["search", "jobs", "--limit", "nope", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(jobs.code, CLI_EXIT_USAGE);
+    const jobsPayload = JSON.parse(jobs.stdout) as { error: { code: string; status: string; location?: string } };
+    assert.equal(jobsPayload.error.code, "invalid_search_limit");
+    assert.equal(jobsPayload.error.status, "USAGE");
+    assert.equal(jobsPayload.error.location, "cli.search.jobs.limit");
+    assert.equal(fs.existsSync(registeredSearchDatabasePath(dataRoot)), false);
+
+    const service = await runCliCapture(["search", "service", "run-once", "--limit", "nope", "--data-dir", dataRoot, "--json"], workspaceRoot);
+    assert.equal(service.code, CLI_EXIT_USAGE);
+    const servicePayload = JSON.parse(service.stdout) as { error: { code: string; status: string; location?: string } };
+    assert.equal(servicePayload.error.code, "invalid_search_limit");
+    assert.equal(servicePayload.error.status, "USAGE");
+    assert.equal(servicePayload.error.location, "cli.search.service.maxJobs");
+  });
+});
+
 test("search source controls persist canonical config in core.sqlite", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-core-config-"));
   const dataRoot = path.join(workspaceRoot, "data");

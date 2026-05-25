@@ -555,7 +555,7 @@ function searchServiceSnapshot(
   const store = openCliSearchStore(flags);
   try {
     registerCliSearchSources(store, flags);
-    const jobs = store.listIndexJobs({ limit: flags.limit ? Number(flags.limit) : 50 });
+    const jobs = store.listIndexJobs({ limit: parseSearchServiceIntegerFlag(flags.limit, 50, 1, 1000, "limit", "cli.search.service.limit") });
     return {
       action,
       service,
@@ -1146,9 +1146,9 @@ export function expandSearchPath(value: string): string {
 }
 
 function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchServiceWorkerBudgets {
-  const maxJobs = SearchDocuments.boundedNumberFlag(flags["max-jobs"] ?? flags.limit, 10, 1, 1000);
-  const maxRuntimeMs = SearchDocuments.boundedNumberFlag(flags["max-runtime-ms"] ?? flags["worker-runtime-ms"], 30_000, 1, 10 * 60 * 1000);
-  const maxFailures = SearchDocuments.boundedNumberFlag(flags["max-failures"] ?? flags["failure-limit"], 10, 1, 1000);
+  const maxJobs = parseSearchServiceIntegerFlag(flags["max-jobs"] ?? flags.limit, 10, 1, 1000, flags["max-jobs"] === undefined ? "limit" : "max-jobs", "cli.search.service.maxJobs");
+  const maxRuntimeMs = parseSearchServiceIntegerFlag(flags["max-runtime-ms"] ?? flags["worker-runtime-ms"], 30_000, 1, 10 * 60 * 1000, flags["max-runtime-ms"] === undefined ? "worker-runtime-ms" : "max-runtime-ms", "cli.search.service.maxRuntimeMs");
+  const maxFailures = parseSearchServiceIntegerFlag(flags["max-failures"] ?? flags["failure-limit"], 10, 1, 1000, flags["max-failures"] === undefined ? "failure-limit" : "max-failures", "cli.search.service.maxFailures");
   const leaseMs = SearchDocuments.parseOptionalBoundedInteger(flags["lease-ms"], 1000, 60 * 60 * 1000);
   return {
     maxJobs,
@@ -1156,6 +1156,19 @@ function readSearchServiceWorkerBudgets(flags: Record<string, string>): SearchSe
     maxFailures,
     ...(leaseMs === undefined ? {} : { leaseMs }),
   };
+}
+
+function parseSearchServiceIntegerFlag(raw: string | undefined, fallback: number, min: number, max: number, flagName: string, location: string): number {
+  if (raw === undefined) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new CliHandledError("invalid_search_limit", `Expected --${flagName} to be a positive number, got ${raw}.`, CLI_EXIT_USAGE, {
+      location,
+      suggestion: `Pass a positive number such as --${flagName} ${fallback}.`,
+      safeNextStep: `Rerun search service with a positive --${flagName} value.`,
+    });
+  }
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
 }
 
 function localSearchEmbeddingModel(model: string | undefined): string {
