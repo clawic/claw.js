@@ -170,7 +170,7 @@ async function runCliRouterAndExit() {
 
 const wantsHelpFlag = args.includes("--help") || args.includes("-h");
 const rootHelp = !first || first === "help" || first === "--help" || first === "-h";
-if ((wantsHelpFlag && !(rootHelp && !args.includes("--all"))) || (first === "help" && args.includes("--all")) || args.includes("--version") || args.includes("-v")) {
+if ((rootHelp && wantsJson()) || (wantsHelpFlag && !(rootHelp && !args.includes("--all"))) || (first === "help" && args.includes("--all")) || args.includes("--version") || args.includes("-v")) {
   if (await runCliRouterAndExit()) {
     process.exit();
   }

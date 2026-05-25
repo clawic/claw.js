@@ -33,6 +33,34 @@ test("package bin exposes router-backed version and full help", () => {
   assert.match(help.stdout, /Advanced commands:/);
 });
 
+test("package bin keeps help output parseable when json is requested", () => {
+  const rootHelp = runClawBin(["help", "--json"]);
+  assert.equal(rootHelp.status, 0, rootHelp.stderr);
+  const rootPayload = JSON.parse(rootHelp.stdout) as {
+    ok: boolean;
+    data: { command: string; help: string };
+    meta: { canonicalCommand: string; invokedCommand: string };
+  };
+  assert.equal(rootPayload.ok, true);
+  assert.equal(rootPayload.meta.canonicalCommand, "claw");
+  assert.equal(rootPayload.meta.invokedCommand, "help");
+  assert.equal(rootPayload.data.command, "claw");
+  assert.match(rootPayload.data.help, /Usage: claw <command> \[options\]/);
+
+  const commandHelp = runClawBin(["system", "--help", "--json"]);
+  assert.equal(commandHelp.status, 0, commandHelp.stderr);
+  const commandPayload = JSON.parse(commandHelp.stdout) as {
+    ok: boolean;
+    data: { command: string; help: string };
+    meta: { canonicalCommand: string; invokedCommand: string };
+  };
+  assert.equal(commandPayload.ok, true);
+  assert.equal(commandPayload.meta.canonicalCommand, "system");
+  assert.equal(commandPayload.meta.invokedCommand, "system");
+  assert.equal(commandPayload.data.command, "system");
+  assert.match(commandPayload.data.help, /Usage: claw system /);
+});
+
 test("package bin delegates inspect and collection discovery to the canonical router", () => {
   const commands = runClawBin(["inspect", "commands", "--json"]);
   assert.equal(commands.status, 0, commands.stderr);
