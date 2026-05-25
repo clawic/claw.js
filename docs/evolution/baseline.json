@@ -354,6 +354,25 @@
       "createdAt": "2026-05-23T00:00:00.000Z"
     },
     {
+      "id": "evo_database_alias_read_surfaces",
+      "title": "Database alias read surfaces",
+      "class": "compatible",
+      "status": "active",
+      "steward": "claw",
+      "surfaces": [
+        "claw.cli.command.collections",
+        "claw.cli.command.records"
+      ],
+      "tests": [
+        "packages/clawjs/src/index.test.ts",
+        "scripts/evolution-governance-check.mjs",
+        "docs/evolution/public-surface-baseline.json"
+      ],
+      "adr": "docs/adr/0007-cli-agent-interface.md",
+      "notes": "Documents compatible read alias expansion for collection schema discovery and records schema/query help so non-mutating CLI discovery remains covered by the public surface baseline.",
+      "createdAt": "2026-05-25T00:00:00.000Z"
+    },
+    {
       "id": "evo_agent_coordination_storage_surfaces",
       "title": "Agent coordination storage surfaces",
       "class": "additive",
