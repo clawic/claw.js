@@ -279,6 +279,20 @@ function requireOneOf<T extends string>(value: string | undefined, values: Set<s
   return value as T;
 }
 
+function requireUnitNumberFlag(value: string, flagName: string, code: string, location: string): number {
+  const trimmed = value.trim();
+  const parsed = Number(trimmed);
+  if (!trimmed || !Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw new CliHandledError(code, `${flagName} must be a number between 0 and 1.`, CLI_EXIT_USAGE, {
+      location,
+      suggestion: `Pass ${flagName} with a value such as 0.5.`,
+      safeNextStep: `Rerun the command with a valid ${flagName} value.`,
+      details: { flag: flagName, value },
+    });
+  }
+  return parsed;
+}
+
 export async function runOutcomesCli(input: {
   argv: string[];
   positionals: string[];
@@ -301,11 +315,11 @@ export async function runOutcomesCli(input: {
       const subject = flags.subject || flags.title || joinedPositionals(positionals, 2);
       const result = requireOneOf<OutcomeResult>(flags.result, OUTCOME_RESULTS, "result");
       const note = flags.note || flags.reason;
-      const score = flags.score !== undefined ? Number(flags.score) : Number.NaN;
-      if (!subject || !note || !Number.isFinite(score)) {
+      if (!subject || !note || flags.score === undefined) {
         context.stderr.write(`Usage: ${binName} outcomes add --subject TEXT --result worked|failed|mixed --score 0.82 --note TEXT\n`);
         return CLI_EXIT_USAGE;
       }
+      const score = requireUnitNumberFlag(flags.score, "--score", "invalid_outcome_score", "cli.outcomes.score");
       const outcome = claw.outcomes.add({
         subject,
         result,
@@ -672,7 +686,7 @@ export async function runJudgmentCli(input: {
       const judgment = claw.judgment.record(id, {
         chosen,
         rationale,
-        ...(flags.confidence ? { confidence: Number(flags.confidence) } : {}),
+        ...(flags.confidence !== undefined ? { confidence: requireUnitNumberFlag(flags.confidence, "--confidence", "invalid_judgment_confidence", "cli.judgment.confidence") } : {}),
         outcome: flags.outcome,
       });
       if (wantsJson) writeProductivityCommandJson(context, "judgment", positionals, judgment);
