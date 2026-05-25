@@ -283,6 +283,12 @@ function buildDeclaredCapabilityMap(spec: SimpleRuntimeAdapterSpec, options: Run
       strategy: "native",
       diagnostics: { source: "derived", probeMethod: "none", inventoryFreshness: "static" },
     },
+    configuration: {
+      supported: true,
+      status: "ready",
+      strategy: "config",
+      diagnostics: { source: "config", probeMethod: "config", inventoryFreshness: "live" },
+    },
     ...(spec.capabilityDeclarations ?? {}),
     ...(spec.capabilityOverrides ?? {}),
   });

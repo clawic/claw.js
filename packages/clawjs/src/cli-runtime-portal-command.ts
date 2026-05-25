@@ -560,7 +560,6 @@ function domainCapability(status, domain: string) {
     : domain === "gateway" ? "session_gateway"
     : domain === "doctorCompat" ? "compat"
     : domain === "sandboxPermissions" ? "sandbox"
-    : domain === "configuration" ? "workspace"
     : domain;
   return capabilityMap[capabilityKey];
 }
@@ -1444,6 +1443,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       diagnostics: status.diagnostics ?? {},
       runtimeLocations: runtimeLocationDiagnostics(status),
       redactionPolicy: "redacted_paths_and_presence_only",
+      capability: domainCapability(status, "configuration") ?? null,
       supportContract: buildSupportContract(runtimeId, status, "configuration"),
     },
   };

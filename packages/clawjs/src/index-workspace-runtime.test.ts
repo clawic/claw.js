@@ -1357,6 +1357,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(codexSessionsChecklist?.blockingFacets?.includes("native_action_contract"), true);
   assert.equal(codexSessionsChecklist?.projectionDisposition, "read_projection_available_write_back_blocked");
   assert.equal(codexSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.readProjectionStatus, "projected");
+  assert.equal(codexSupportPayload.data.domains?.find((entry) => entry.domain === "configuration")?.readProjectionStatus, "projected");
   assert.equal(codexSupportPayload.data.domains?.find((entry) => entry.domain === "scheduler")?.readProjectionStatus, "unsupported_by_runtime");
   assert.equal(codexSupportPayload.data.closureChecklistSummary?.product_blocked, manifest.requiredDomains.length);
   assert.equal(codexSupportPayload.data.projectionSummary?.byReadProjectionStatus?.projected, 6);
@@ -1487,6 +1488,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         configuration?: {
           runtimeLocations?: Record<string, string>;
           redactionPolicy?: string;
+          capability?: { supported?: boolean; status?: string; strategy?: string };
         };
       };
       domains: Array<{
@@ -1588,6 +1590,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.sandboxPermissions?.resources?.some((entry) => entry.id === "sandbox-policy" && entry.attributes?.includes("write policy: explicit_approval_only")), true);
   assert.equal(hermesPayload.data.domainData.configuration?.runtimeLocations?.homeDir, hermesHome);
   assert.equal(hermesPayload.data.domainData.configuration?.redactionPolicy, "redacted_paths_and_presence_only");
+  assert.equal(hermesPayload.data.domainData.configuration?.capability?.supported, true);
+  assert.equal(hermesPayload.data.domainData.configuration?.capability?.strategy, "config");
   assert.deepEqual(hermesPayload.data.domainData.sessions?.actionContracts?.map((entry) => entry.action), manifest.sessionActionContracts.hermes.map((entry) => entry.action));
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.status, "blocked");
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.wouldWriteRuntime, true);
@@ -1644,6 +1648,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           permissionMode?: string;
           runtimeLocations?: Record<string, string>;
           redactionPolicy?: string;
+          capability?: { supported?: boolean; status?: string; strategy?: string };
         };
       };
     };
@@ -1668,6 +1673,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     if (resourceDomain === "configuration") {
       assert.equal(resourcePayload.data.data.runtimeLocations?.homeDir, hermesHome);
       assert.equal(resourcePayload.data.data.redactionPolicy, "redacted_paths_and_presence_only");
+      assert.equal(resourcePayload.data.data.capability?.strategy, "config");
     }
   }
 

@@ -160,6 +160,7 @@ function buildCapabilityMap(details: CodexProbeDetails): RuntimeCapabilityMap {
     plugins: { supported: true, status: details.cliAvailable ? "ready" : "degraded", strategy: "cli" },
     doctor: { supported: true, status: "ready", strategy: "derived" },
     compat: { supported: true, status: "ready", strategy: "native" },
+    configuration: { supported: true, status: "ready", strategy: "config" },
   });
 }
 

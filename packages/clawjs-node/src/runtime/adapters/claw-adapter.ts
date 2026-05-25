@@ -79,6 +79,7 @@ function buildCapabilityMap(options: RuntimeAdapterOptions): RuntimeCapabilityMa
     plugins: { supported: false, status: "unsupported", strategy: "unsupported" },
     doctor: { supported: true, status: "ready", strategy: "native" },
     compat: { supported: true, status: "ready", strategy: "native" },
+    configuration: { supported: true, status: "ready", strategy: "config" },
   });
 }
 

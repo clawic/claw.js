@@ -171,6 +171,8 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(status.capabilityMap.sandbox.supported, true);
   assert.equal(status.capabilityMap.sandbox.status, "degraded");
   assert.equal(status.capabilityMap.plugins.supported, true);
+  assert.equal(status.capabilityMap.configuration.supported, true);
+  assert.equal(status.capabilityMap.configuration.strategy, "config");
 
   const resources = await getRuntimeResourceCatalogs(hermesAdapter, runner, options);
   assert.equal(resources.models.defaultModel?.modelId, "anthropic/claude-sonnet-4");

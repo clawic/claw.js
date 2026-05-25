@@ -147,6 +147,7 @@ const ALL_RUNTIME_CAPABILITIES: RuntimeCapabilityKey[] = [
   "plugins",
   "doctor",
   "compat",
+  "configuration",
 ];
 
 export function buildRuntimeCapabilityMap(

@@ -102,7 +102,8 @@ export type RuntimeCapabilityKey =
   | "sandbox"
   | "plugins"
   | "doctor"
-  | "compat";
+  | "compat"
+  | "configuration";
 export type RuntimeCapabilityStrategy = "native" | "cli" | "gateway" | "config" | "derived" | "hosted" | "bridge" | "unsupported";
 
 export interface CapabilityState {

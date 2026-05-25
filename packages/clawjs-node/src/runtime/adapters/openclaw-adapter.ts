@@ -192,6 +192,7 @@ export const openclawAdapter: RuntimeAdapter = {
       plugins: { supported: true, status: "ready", strategy: "native" },
       doctor: { supported: true, status: "ready", strategy: "native" },
       compat: { supported: true, status: "ready", strategy: "native" },
+      configuration: { supported: true, status: "ready", strategy: "config" },
     });
     return openClawMirrorFeatures(capabilityMap);
   },
@@ -238,6 +239,7 @@ export const openclawAdapter: RuntimeAdapter = {
       },
       doctor: { supported: true, status: "ready", strategy: "native" },
       compat: { supported: true, status: "ready", strategy: "native" },
+      configuration: { supported: true, status: "ready", strategy: "config" },
     });
     return {
       installed: status.cliAvailable,
