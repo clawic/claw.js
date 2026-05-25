@@ -31,3 +31,20 @@ test("local rules can target the listed builtin global scope", () => {
   const compiled = store.compile({ prompt: "Update routing guidance.", domain: "routing" });
   assert.equal(compiled.included.some((match) => match.rule.id === rule.id), true);
 });
+
+test("propose fails closed without overwriting corrupt local rules state", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-rules-store-"));
+  const store = createLocalRulesStore({ rootDir, env: {} });
+  const corruptState = "{";
+  fs.mkdirSync(rootDir, { recursive: true });
+  fs.writeFileSync(store.statePath(), corruptState, "utf8");
+
+  assert.throws(() => {
+    store.propose({
+      scopeId: "clawjs",
+      title: "Preserve corrupt local state",
+      content: "Do not overwrite an unreadable rules file.",
+    });
+  }, /Invalid rules state JSON/);
+  assert.equal(fs.readFileSync(store.statePath(), "utf8"), corruptState);
+});

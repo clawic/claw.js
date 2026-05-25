@@ -153,18 +153,28 @@ export class LocalRulesStore {
   }
 
   readState(): RulesState {
-    try {
-      const parsed = rulesStateSchema.safeParse(JSON.parse(this.filesystem.readText(this.statePath())));
-      if (parsed.success) return parsed.data as RulesState;
-    } catch {
-      // Fall through to an empty state.
+    const statePath = this.statePath();
+    if (!this.filesystem.exists(statePath)) {
+      return {
+        schemaVersion: 1,
+        scopes: [],
+        rules: [],
+        updatedAt: nowIso(),
+      };
     }
-    return {
-      schemaVersion: 1,
-      scopes: [],
-      rules: [],
-      updatedAt: nowIso(),
-    };
+
+    let data: unknown;
+    try {
+      data = JSON.parse(this.filesystem.readText(statePath));
+    } catch (error) {
+      throw new Error(`Invalid rules state JSON at ${statePath}: ${(error as Error).message}`);
+    }
+
+    const parsed = rulesStateSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new Error(`Invalid rules state record at ${statePath}: ${parsed.error.message}`);
+    }
+    return parsed.data as RulesState;
   }
 
   readEffectiveState(): RulesState {
