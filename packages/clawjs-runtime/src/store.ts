@@ -117,6 +117,7 @@ const SCHEMA_DDL = `
   CREATE INDEX IF NOT EXISTS idx_runtime_logs_job_time       ON runtime_logs(job_id, recorded_at DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_runtime_logs_process_time   ON runtime_logs(process_id, recorded_at DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_runtime_logs_subsystem_time ON runtime_logs(subsystem, level, recorded_at DESC, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_runtime_logs_subsystem_recorded_at ON runtime_logs(subsystem, recorded_at DESC, id DESC);
   CREATE INDEX IF NOT EXISTS idx_runtime_logs_time           ON runtime_logs(recorded_at DESC, id DESC);
 
   CREATE TABLE IF NOT EXISTS kanban_tasks (

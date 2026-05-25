@@ -75,6 +75,37 @@ test("RuntimeServiceStore records redacted queryable logs by session process sub
   }
 });
 
+test("RuntimeServiceStore uses subsystem time index without temp sort for subsystem-only log lists", () => {
+  const rootDir = tempRoot("clawjs-runtime-log-subsystem-plan-");
+  const store = new RuntimeServiceStore(path.join(rootDir, "runtime.sqlite"));
+  try {
+    for (let index = 0; index < 200; index += 1) {
+      store.recordRuntimeLog({
+        subsystem: index % 2 === 0 ? "runtime.api" : "runtime.worker",
+        level: index % 3 === 0 ? "warning" : "info",
+        message: `runtime log ${index}`,
+        recordedAt: 1_800_000_000_000 + index,
+      });
+    }
+
+    const queryPlan = store.db.prepare(`
+      EXPLAIN QUERY PLAN
+      SELECT *
+      FROM runtime_logs
+      WHERE subsystem = @subsystem
+      ORDER BY recorded_at DESC, id DESC
+      LIMIT @limit OFFSET @offset
+    `).all({ subsystem: "runtime.api", limit: 100, offset: 0 }) as Array<{ detail: string }>;
+    const details = queryPlan.map((row) => row.detail);
+
+    assert.equal(details.some((detail) => detail.includes("idx_runtime_logs_subsystem_recorded_at")), true);
+    assert.equal(details.some((detail) => detail.includes("USE TEMP B-TREE")), false);
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("runtime job events are mirrored into session-scoped runtime logs", () => {
   const rootDir = tempRoot("clawjs-runtime-job-logs-");
   const store = new RuntimeServiceStore(path.join(rootDir, "runtime.sqlite"));
