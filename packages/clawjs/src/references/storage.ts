@@ -13,8 +13,19 @@ function referencesRootDir(workspaceRoot: string): string {
   return resolveClawPersistentSurfacePath("claw.workspace.references", workspaceRoot);
 }
 
+function validateReferenceId(referenceId: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(referenceId) || referenceId === "." || referenceId === "..") {
+    throw new CliHandledError("invalid_reference_id", `Invalid reference id: ${referenceId}`, CLI_EXIT_USAGE, {
+      location: "reference.id",
+      suggestion: "Use a reference id made of letters, numbers, dots, underscores, or dashes.",
+      safeNextStep: "Retry with an id like image.brand-reference-1234.",
+    });
+  }
+  return referenceId;
+}
+
 export function referenceDir(workspaceRoot: string, referenceId: string): string {
-  return path.join(referencesRootDir(workspaceRoot), referenceId);
+  return path.join(referencesRootDir(workspaceRoot), validateReferenceId(referenceId));
 }
 
 function referenceManifestPath(workspaceRoot: string, referenceId: string): string {
