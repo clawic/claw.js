@@ -1726,6 +1726,147 @@ function runtimeWriteActionEvidence(action: string): string[] | null {
   return null;
 }
 
+function hermesTuiGatewayEndpoint(input): string | null {
+  const raw = input.flags["tui-gateway-url"] ?? input.flags["gateway-url"];
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+function isLoopbackGatewayUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function hermesTuiGatewayRequest(action: string, sessionKey: string, message?: string) {
+  if (action === "send") {
+    return {
+      method: "prompt.submit",
+      params: {
+        session_id: sessionKey,
+        text: message,
+      },
+    };
+  }
+  if (action === "inject") {
+    return {
+      method: "session.steer",
+      params: {
+        session_id: sessionKey,
+        text: message,
+      },
+    };
+  }
+  if (action === "abort") {
+    return {
+      method: "session.interrupt",
+      params: {
+        session_id: sessionKey,
+      },
+    };
+  }
+  return null;
+}
+
+async function callHermesTuiGatewayJsonRpc(input, action: string, sessionKey: string, message?: string) {
+  const endpoint = hermesTuiGatewayEndpoint(input);
+  const request = hermesTuiGatewayRequest(action, sessionKey, message);
+  if (!request) {
+    return {
+      ok: false,
+      blocked: true,
+      reason: `Hermes TUI gateway action ${action} is not wired yet.`,
+    };
+  }
+  if (!endpoint) {
+    return {
+      ok: false,
+      blocked: true,
+      reason: `Native ${action} is blocked until the runtime exposes a fixture-backed official ${action} contract and --gateway-url is configured.`,
+      requiredFlag: "--gateway-url",
+    };
+  }
+  if (!isLoopbackGatewayUrl(endpoint)) {
+    return {
+      ok: false,
+      blocked: true,
+      reason: "Hermes TUI gateway writes are currently limited to explicit loopback fixture endpoints.",
+      requiredEndpoint: "loopback_http_json_rpc",
+    };
+  }
+
+  const jsonRpcId = input.flags["rpc-id"] ?? `claw-${Date.now()}`;
+  const body = {
+    jsonrpc: "2.0",
+    id: jsonRpcId,
+    method: request.method,
+    params: request.params,
+  };
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(input.flags["gateway-token"] ? { authorization: `Bearer ${input.flags["gateway-token"]}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await response.text();
+    let payload = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      return {
+        ok: false,
+        blocked: false,
+        reason: "Hermes TUI gateway returned non-JSON response.",
+        statusCode: response.status,
+      };
+    }
+    if (!response.ok || payload?.error) {
+      return {
+        ok: false,
+        blocked: false,
+        reason: payload?.error?.message ?? `Hermes TUI gateway returned HTTP ${response.status}.`,
+        statusCode: response.status,
+        error: payload?.error ?? null,
+        request: {
+          id: jsonRpcId,
+          method: request.method,
+          params: request.params,
+        },
+      };
+    }
+    return {
+      ok: true,
+      method: request.method,
+      protocol: "tui_gateway_json_rpc",
+      transport: "loopback_http_json_rpc_fixture",
+      endpoint: new URL(endpoint).origin,
+      request: {
+        id: jsonRpcId,
+        method: request.method,
+        params: request.params,
+      },
+      response: payload,
+      result: payload?.result ?? null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      blocked: false,
+      reason: error instanceof Error ? error.message : "Hermes TUI gateway request failed.",
+      request: {
+        id: jsonRpcId,
+        method: request.method,
+        params: request.params,
+      },
+    };
+  }
+}
+
 function nextPinSortOrder(pinnedThreads): number {
   const maxSortOrder = Array.isArray(pinnedThreads)
     ? pinnedThreads.reduce((max, entry) => Math.max(max, Number(entry?.sortOrder ?? 0) || 0), 0)
@@ -2367,11 +2508,13 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       );
       return CLI_EXIT_USAGE;
     }
-    if (runtimeId !== "openclaw") {
+    if (runtimeId !== "openclaw" && runtimeId !== "hermes") {
       writePayload(input, blockedSessionAction(runtimeId, action, `Native ${action} is blocked until the runtime exposes a fixture-backed official ${action} contract.`, supportContract), { runtimeId, operation: "sessions", action });
       return CLI_EXIT_DEGRADED;
     }
     if (!isTruthyFlag(input, "confirm-runtime-write")) {
+      const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
+      const officialContract = officialSessionActionContract(runtimeId, actionContract);
       writePayload(input, {
         runtimeId,
         domain: "sessions",
@@ -2381,14 +2524,56 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         writesRuntime: false,
         wouldWriteRuntime: true,
         requiredFlag: "--confirm-runtime-write",
+        officialProtocol: officialContract.protocol,
+        officialMethod: officialContract.method,
+        officialContractSource: officialContract.source,
         result: {
           id: sessionKey,
           messagePreview: message.slice(0, 160),
-          nativeIdentifier: { name: "sessionKey" },
+          nativeIdentifier: { name: runtimeId === "hermes" ? "session_id" : "sessionKey" },
         },
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes") {
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey, message);
+      if (!gateway.ok) {
+        writePayload(input, blockedSessionAction(runtimeId, action, gateway.reason ?? `Hermes TUI gateway ${action} failed.`, supportContract, {
+          requiredFlag: gateway.requiredFlag,
+          requiredEndpoint: gateway.requiredEndpoint,
+          gatewayError: gateway.error,
+          gatewayStatusCode: gateway.statusCode,
+          gatewayRequest: gateway.request,
+        }), { runtimeId, operation: "sessions", action });
+        return CLI_EXIT_DEGRADED;
+      }
+      writePayload(input, {
+        runtimeId,
+        domain: "sessions",
+        action,
+        status: "ok",
+        authority: "runtime",
+        writesRuntime: true,
+        officialProtocol: gateway.protocol,
+        officialMethod: gateway.method,
+        officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        result: {
+          id: sessionKey,
+          messagePreview: message.slice(0, 160),
+          nativeIdentifier: { name: "session_id" },
+          gatewayReceipt: {
+            protocol: gateway.protocol,
+            transport: gateway.transport,
+            method: gateway.method,
+            requestId: gateway.request.id,
+            endpoint: gateway.endpoint,
+          },
+          gatewayResult: gateway.result,
+        },
+        supportContract,
+      }, { runtimeId, operation: "sessions", action });
+      return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
     const result = action === "inject"
       ? normalizeOpenClawInjectResult(await claw.runtime.openclaw.chat.inject({ sessionKey, message }), sessionKey)
@@ -2412,11 +2597,13 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       writeMissingRuntimeSessionKeyError(input, runtimeId, action);
       return CLI_EXIT_USAGE;
     }
-    if (runtimeId !== "openclaw") {
+    if (runtimeId !== "openclaw" && runtimeId !== "hermes") {
       writePayload(input, blockedSessionAction(runtimeId, action, "Native abort is blocked until the runtime exposes a fixture-backed official abort contract.", supportContract), { runtimeId, operation: "sessions", action });
       return CLI_EXIT_DEGRADED;
     }
     if (!isTruthyFlag(input, "confirm-runtime-write")) {
+      const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
+      const officialContract = officialSessionActionContract(runtimeId, actionContract);
       writePayload(input, {
         runtimeId,
         domain: "sessions",
@@ -2426,13 +2613,54 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         writesRuntime: false,
         wouldWriteRuntime: true,
         requiredFlag: "--confirm-runtime-write",
+        officialProtocol: officialContract.protocol,
+        officialMethod: officialContract.method,
+        officialContractSource: officialContract.source,
         result: {
           id: sessionKey,
-          nativeIdentifier: { name: "sessionKey" },
+          nativeIdentifier: { name: runtimeId === "hermes" ? "session_id" : "sessionKey" },
         },
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes") {
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey);
+      if (!gateway.ok) {
+        writePayload(input, blockedSessionAction(runtimeId, action, gateway.reason ?? "Hermes TUI gateway abort failed.", supportContract, {
+          requiredFlag: gateway.requiredFlag,
+          requiredEndpoint: gateway.requiredEndpoint,
+          gatewayError: gateway.error,
+          gatewayStatusCode: gateway.statusCode,
+          gatewayRequest: gateway.request,
+        }), { runtimeId, operation: "sessions", action });
+        return CLI_EXIT_DEGRADED;
+      }
+      writePayload(input, {
+        runtimeId,
+        domain: "sessions",
+        action,
+        status: "ok",
+        authority: "runtime",
+        writesRuntime: true,
+        officialProtocol: gateway.protocol,
+        officialMethod: gateway.method,
+        officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        result: {
+          id: sessionKey,
+          nativeIdentifier: { name: "session_id" },
+          gatewayReceipt: {
+            protocol: gateway.protocol,
+            transport: gateway.transport,
+            method: gateway.method,
+            requestId: gateway.request.id,
+            endpoint: gateway.endpoint,
+          },
+          gatewayResult: gateway.result,
+        },
+        supportContract,
+      }, { runtimeId, operation: "sessions", action });
+      return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
     const result = normalizeOpenClawAbortResult(await claw.runtime.openclaw.chat.abort({ sessionKey }), sessionKey);
     writePayload(input, {
