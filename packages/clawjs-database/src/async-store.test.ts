@@ -201,6 +201,55 @@ test("DatabaseServiceStore materializes record indexes for list filters and uniq
   }
 });
 
+test("DatabaseServiceStore rolls back record note side effects when record insert fails", () => {
+  const rootDir = tempRoot("clawjs-database-record-atomicity-");
+  const store = new DatabaseServiceStore(path.join(rootDir, "core.sqlite"), path.join(rootDir, "files"));
+  try {
+    store.createCollection("main", {
+      name: "atomic_records",
+      displayName: "Atomic Records",
+      fields: [{ name: "title", type: "text", required: true }],
+      indexes: [{ name: "atomic_records_title_unique_idx", fields: ["title"], unique: true }],
+    });
+
+    store.createRecord("main", "atomic_records", {
+      title: "unique",
+      notes: "first record note",
+      pageId: "atomic-kept-page",
+    });
+
+    assert.equal(
+      (store.sqlite.prepare("SELECT COUNT(*) AS n FROM pages WHERE id = ?").get("atomic-kept-page") as { n: number }).n,
+      1,
+    );
+
+    assert.throws(
+      () => store.createRecord("main", "atomic_records", {
+        title: "unique",
+        notes: "must not leak",
+        pageId: "atomic-leak-page",
+      }),
+      /UNIQUE constraint failed/,
+    );
+
+    assert.equal(
+      (store.sqlite.prepare("SELECT COUNT(*) AS n FROM pages WHERE id = ?").get("atomic-leak-page") as { n: number }).n,
+      0,
+    );
+    assert.equal(
+      (store.sqlite.prepare("SELECT COUNT(*) AS n FROM page_blocks WHERE page_id = ?").get("atomic-leak-page") as { n: number }).n,
+      0,
+    );
+    assert.equal(
+      (store.sqlite.prepare("SELECT COUNT(*) AS n FROM notes_fts WHERE page_id = ?").get("atomic-leak-page") as { n: number }).n,
+      0,
+    );
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("database HTTP listRecords is SQL-paged, rejects unsupported filters, and exposes metrics", async () => {
   const rootDir = tempRoot("clawjs-database-http-");
   const built = buildDatabaseApp({

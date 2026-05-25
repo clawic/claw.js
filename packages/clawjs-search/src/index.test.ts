@@ -577,6 +577,40 @@ test("SearchStore ranking cache expires old entries and rehydrates current rows"
   }
 });
 
+test("SearchStore discards corrupt ranking cache entries and rebuilds query results", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-cache-corrupt-"));
+  const store = new SearchStore(path.join(dir, "search.sqlite"));
+  try {
+    store.registerSource(createFrameworkSearchSourceManifest({
+      id: "commands",
+      domain: "commands",
+      name: "Commands",
+      resultTypes: ["command"],
+    }));
+    store.upsertDocument({
+      id: "commands:cache-corrupt",
+      source: "commands",
+      domain: "commands",
+      type: "command",
+      title: "cache corruption recovery",
+      body: "cachefragile",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.equal(store.query({ query: "cachefragile", domains: ["commands"] }).results[0]?.id, "commands:cache-corrupt");
+    assert.equal(store.rankingCacheStats().entries, 1);
+
+    store.db.prepare("UPDATE search_ranking_cache SET payload_json = ?").run("{not valid json");
+
+    const output = store.query({ query: "cachefragile", domains: ["commands"] });
+    assert.equal(output.results[0]?.id, "commands:cache-corrupt");
+    const cacheRow = store.db.prepare("SELECT json_valid(payload_json) AS valid FROM search_ranking_cache").get() as { valid: number } | undefined;
+    assert.equal(cacheRow?.valid, 1);
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("SearchStore parses inline domain, source, shard, type and scope filters", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-search-inline-filters-"));
   const store = new SearchStore(path.join(dir, "search.sqlite"));

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import Database from "better-sqlite3";
 
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
 import { createWorkspaceClaw } from "./index.ts";
@@ -277,4 +278,43 @@ test("createWorkspaceClaw anchors relative workspace roots before cwd changes", 
   const wrongAuditPath = path.join(otherDir, "workspace", ".claw", "audit", "audit.jsonl");
   assert.equal(fs.existsSync(expectedAuditPath), true);
   assert.equal(fs.existsSync(wrongAuditPath), false);
+});
+
+test("projects list skips partial project records without breaking the workspace", { concurrency: false }, async (t) => {
+  const workspaceDir = createWorkspaceDir("partial-project-record");
+  const dataRoot = useIsolatedClawDataRoot(t, workspaceDir);
+  const claw = await createWorkspaceClaw({
+    runtime: { adapter: "demo" },
+    workspace: {
+      appId: "demo",
+      workspaceId: "workspace-partial-project-record",
+      agentId: "agent-partial-project-record",
+      rootDir: workspaceDir,
+    },
+  });
+
+  const stableProject = await claw.projects.create({
+    name: "Recoverable project",
+    status: "in_progress",
+  });
+
+  const sqlite = new Database(path.join(dataRoot, "core.sqlite"));
+  try {
+    sqlite.prepare(`
+      INSERT INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run("projects", "project-partial", JSON.stringify({
+      id: "project-partial",
+      name: "Interrupted project write",
+      status: "in_progress",
+    }), null, null);
+  } finally {
+    sqlite.close();
+  }
+
+  const projects = await claw.projects.list();
+
+  assert.deepEqual(projects.map((project) => project.id), [stableProject.id]);
+  assert.equal(await claw.projects.get("project-partial"), null);
+  assert.equal(await claw.projects.remove("project-partial"), false);
 });

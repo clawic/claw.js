@@ -226,6 +226,12 @@ function parseJsonField<T>(value: string | null): T | null {
   }
 }
 
+function parseJsonObjectField(value: string | null): Record<string, unknown> | null {
+  const parsed = parseJsonField<unknown>(value);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return parsed as Record<string, unknown>;
+}
+
 function rowToKanbanTask(row: KanbanTaskRow): KanbanTaskRecord {
   return {
     id: row.id,
@@ -397,7 +403,7 @@ function rowToJob(row: JobRow): RuntimeJobRecord {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     error: row.error,
-    payload: row.payload_json ? (JSON.parse(row.payload_json) as Record<string, unknown>) : null,
+    payload: parseJsonObjectField(row.payload_json),
   };
 }
 

@@ -136,6 +136,26 @@ interface SearchFragmentMaterialization {
   match: SearchLexicalMatch;
 }
 
+function isRankingCachePayload(value: unknown): value is SearchRankingCachePayload {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Partial<SearchRankingCachePayload>;
+  if (typeof payload.query !== "string") return false;
+  if (payload.sourceSet !== "framework" && payload.sourceSet !== "full") return false;
+  if (!Array.isArray(payload.results)) return false;
+  if (typeof payload.partial !== "boolean") return false;
+  if (!Array.isArray(payload.omittedSources)) return false;
+  if (payload.facets !== undefined && !Array.isArray(payload.facets)) return false;
+  return payload.results.every((result) => {
+    const ref = result as Partial<SearchRankingCachePayload["results"][number]>;
+    return typeof ref.id === "string"
+      && typeof ref.score === "number"
+      && Number.isFinite(ref.score)
+      && typeof ref.updatedAt === "string"
+      && typeof ref.order === "number"
+      && Number.isFinite(ref.order);
+  });
+}
+
 export class SearchStore {
   readonly db: Database.Database;
   readonly engine = SEARCH_SQLITE_ENGINE;
@@ -1807,7 +1827,18 @@ export class SearchStore {
       this.db.prepare("DELETE FROM search_ranking_cache WHERE cache_key = ?").run(cacheKey);
       return null;
     }
-    const payload = parseJson<SearchRankingCachePayload>(row.payload_json);
+    let payload: SearchRankingCachePayload;
+    try {
+      const parsed = parseJson<unknown>(row.payload_json);
+      if (!isRankingCachePayload(parsed)) {
+        this.db.prepare("DELETE FROM search_ranking_cache WHERE cache_key = ?").run(cacheKey);
+        return null;
+      }
+      payload = parsed;
+    } catch {
+      this.db.prepare("DELETE FROM search_ranking_cache WHERE cache_key = ?").run(cacheKey);
+      return null;
+    }
     const resultRefs = Array.isArray(payload.results) ? payload.results : [];
     if (!resultRefs.length) {
       return {

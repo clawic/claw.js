@@ -607,8 +607,29 @@ export function createWorkspaceCoreProductivityFacades(input: {
     search: async (query, options = {}) => searchWorkspace({ ...options, query, domains: ["goals"] }),
   };
 
+  function isReadableProjectRecord(value: unknown): boolean {
+    if (!value || typeof value !== "object") return false;
+    const record = value as Record<string, unknown>;
+    return typeof record.id === "string" && record.id.trim().length > 0
+      && typeof record.name === "string" && record.name.trim().length > 0
+      && typeof record.status === "string" && record.status.trim().length > 0
+      && typeof record.createdAt === "string" && record.createdAt.trim().length > 0
+      && typeof record.updatedAt === "string" && record.updatedAt.trim().length > 0;
+  }
+
+  function readableProjectRecord(value: unknown): ProjectRecord | null {
+    return isReadableProjectRecord(value) ? value as ProjectRecord : null;
+  }
+
+  function listReadableProjectRecords(): ProjectRecord[] {
+    return projectsCollection.list().flatMap((project) => {
+      const readable = readableProjectRecord(project);
+      return readable ? [readable] : [];
+    });
+  }
+
   const projectsApi: WorkspaceClawInstance["projects"] = {
-    list: async (options = {}) => projectsCollection.list()
+    list: async (options = {}) => listReadableProjectRecords()
       .filter((project) => !isArchived(project, options.includeArchived))
       .filter((project) => {
         if (!options.status) return true;
@@ -619,7 +640,7 @@ export function createWorkspaceCoreProductivityFacades(input: {
       .filter((project) => !options.goalId || project.goalId === options.goalId)
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
       .slice(0, options.limit ?? Number.MAX_SAFE_INTEGER),
-    get: async (id) => projectsCollection.get(id),
+    get: async (id) => readableProjectRecord(projectsCollection.get(id)),
     create: async (input) => {
       const timestamp = nowIso();
       const project: ProjectRecord = {
@@ -672,7 +693,7 @@ export function createWorkspaceCoreProductivityFacades(input: {
       return project;
     },
     update: async (id, input) => {
-      const current = assertRecord(projectsCollection.get(id), "Project", id);
+      const current = assertRecord(readableProjectRecord(projectsCollection.get(id)), "Project", id);
       const project: ProjectRecord = {
         ...current,
         name: input.name?.trim() || current.name,
@@ -725,7 +746,7 @@ export function createWorkspaceCoreProductivityFacades(input: {
     },
     archive: async (id) => projectsApi.update(id, { archivedAt: nowIso() }),
     remove: async (id) => {
-      const existing = projectsCollection.get(id);
+      const existing = readableProjectRecord(projectsCollection.get(id));
       if (!existing) return false;
       projectsCollection.remove(id);
       removeIndex("projects", id);

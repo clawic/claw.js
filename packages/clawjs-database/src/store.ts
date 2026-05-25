@@ -923,19 +923,22 @@ export class DatabaseServiceStore {
     const validated = this.validateRecordPayload(collection, payload, "create");
     const id = randomUUID();
     const now = nowIso();
-    const normalized = this.normalizeRecordForStorage({
-      namespaceId,
-      collectionName,
-      recordId: id,
-      collection,
-      payload: validated,
-      timestamp: now,
+    const create = this.sqlite.transaction((): RecordEnvelope => {
+      const normalized = this.normalizeRecordForStorage({
+        namespaceId,
+        collectionName,
+        recordId: id,
+        collection,
+        payload: validated,
+        timestamp: now,
+      });
+      this.sqlite.prepare(`
+        INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(namespaceId, collectionName, id, JSON.stringify(normalized), now, now);
+      return this.getRecord(namespaceId, collectionName, id)!;
     });
-    this.sqlite.prepare(`
-      INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(namespaceId, collectionName, id, JSON.stringify(normalized), now, now);
-    return this.getRecord(namespaceId, collectionName, id)!;
+    return create();
   }
 
   putRecord(input: {
@@ -951,29 +954,32 @@ export class DatabaseServiceStore {
     const validated = this.validateRecordPayload(collection, input.payload, "update");
     const createdAt = input.createdAt ?? nowIso();
     const updatedAt = input.updatedAt ?? createdAt;
-    const normalized = this.normalizeRecordForStorage({
-      namespaceId: input.namespaceId,
-      collectionName: input.collectionName,
-      recordId: input.recordId,
-      collection,
-      payload: validated,
-      timestamp: updatedAt,
+    const put = this.sqlite.transaction((): RecordEnvelope => {
+      const normalized = this.normalizeRecordForStorage({
+        namespaceId: input.namespaceId,
+        collectionName: input.collectionName,
+        recordId: input.recordId,
+        collection,
+        payload: validated,
+        timestamp: updatedAt,
+      });
+      this.sqlite.prepare(`
+        INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(namespace_id, collection_name, id) DO UPDATE SET
+          data_json = excluded.data_json,
+          updated_at = excluded.updated_at
+      `).run(
+        input.namespaceId,
+        input.collectionName,
+        input.recordId,
+        JSON.stringify(normalized),
+        createdAt,
+        updatedAt,
+      );
+      return this.getRecord(input.namespaceId, input.collectionName, input.recordId)!;
     });
-    this.sqlite.prepare(`
-      INSERT INTO records (namespace_id, collection_name, id, data_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(namespace_id, collection_name, id) DO UPDATE SET
-        data_json = excluded.data_json,
-        updated_at = excluded.updated_at
-    `).run(
-      input.namespaceId,
-      input.collectionName,
-      input.recordId,
-      JSON.stringify(normalized),
-      createdAt,
-      updatedAt,
-    );
-    return this.getRecord(input.namespaceId, input.collectionName, input.recordId)!;
+    return put();
   }
 
   updateRecord(namespaceId: string, collectionName: string, id: string, payload: Record<string, unknown>): RecordEnvelope {
@@ -987,31 +993,37 @@ export class DatabaseServiceStore {
     };
     const validated = this.validateRecordPayload(collection, merged, "update");
     const now = nowIso();
-    const normalized = this.normalizeRecordForStorage({
-      namespaceId,
-      collectionName,
-      recordId: id,
-      collection,
-      payload: validated,
-      timestamp: now,
+    const update = this.sqlite.transaction((): RecordEnvelope => {
+      const normalized = this.normalizeRecordForStorage({
+        namespaceId,
+        collectionName,
+        recordId: id,
+        collection,
+        payload: validated,
+        timestamp: now,
+      });
+      this.sqlite.prepare(`
+        UPDATE records
+        SET data_json = ?, updated_at = ?
+        WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      `).run(JSON.stringify(normalized), now, namespaceId, collectionName, id);
+      return this.getRecord(namespaceId, collectionName, id)!;
     });
-    this.sqlite.prepare(`
-      UPDATE records
-      SET data_json = ?, updated_at = ?
-      WHERE namespace_id = ? AND collection_name = ? AND id = ?
-    `).run(JSON.stringify(normalized), now, namespaceId, collectionName, id);
-    return this.getRecord(namespaceId, collectionName, id)!;
+    return update();
   }
 
   deleteRecord(namespaceId: string, collectionName: string, id: string): boolean {
-    this.sqlite.prepare(`
-      DELETE FROM pages
-      WHERE source_record_domain = ? AND source_record_id = ?
-    `).run(`${namespaceId}.${collectionName}`, id);
-    return this.sqlite.prepare(`
-      DELETE FROM records
-      WHERE namespace_id = ? AND collection_name = ? AND id = ?
-    `).run(namespaceId, collectionName, id).changes > 0;
+    const remove = this.sqlite.transaction((): boolean => {
+      this.sqlite.prepare(`
+        DELETE FROM pages
+        WHERE source_record_domain = ? AND source_record_id = ?
+      `).run(`${namespaceId}.${collectionName}`, id);
+      return this.sqlite.prepare(`
+        DELETE FROM records
+        WHERE namespace_id = ? AND collection_name = ? AND id = ?
+      `).run(namespaceId, collectionName, id).changes > 0;
+    });
+    return remove();
   }
 
   getMeta(key: string): string | null {
