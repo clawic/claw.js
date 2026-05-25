@@ -1,6 +1,6 @@
 import { buildDatabaseApp, DatabaseApiClient } from "@clawjs/database";
 
-import { CliHandledError } from "./cli-errors.ts";
+import { CLI_EXIT_FAILURE, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError } from "./cli-json.ts";
 
 type Writable = NodeJS.WritableStream;
@@ -45,35 +45,35 @@ export async function runEmbeddedDatabaseCli(input: {
     return wantsHelp ? 0 : 64;
   }
 
-  if (group === "serve") {
-    const { app } = buildDatabaseApp({
-      config: {
-        ...(flags.host ? { host: flags.host } : {}),
-        ...(flags.port ? { port: Number(flags.port) } : {}),
-        ...(flags["data-dir"] ? { dataDir: flags["data-dir"] } : {}),
-        ...(flags["db-path"] ? { dbPath: flags["db-path"] } : {}),
-        ...(flags["files-dir"] ? { filesDir: flags["files-dir"] } : {}),
-        ...(flags.secret ? { jwtSecret: flags.secret } : {}),
-      },
-    });
-    const address = await app.listen({
-      host: flags.host ?? "127.0.0.1",
-      port: flags.port ? Number(flags.port) : 4510,
-    });
-    stdout.write(`${address}\n`);
-    return 0;
-  }
-
-  const baseUrl = flags.url ?? "http://127.0.0.1:4510";
-  const client = new DatabaseApiClient({
-    baseUrl,
-    token: flags.token,
-  });
-
-  const parseJsonFlag = <T,>(value: string | undefined, fallback: T): T => value ? JSON.parse(value) as T : fallback;
-  const parseCsvFlag = (value: string | undefined): string[] => (value ?? "").split(",").map((entry) => entry.trim()).filter(Boolean);
-
   try {
+    if (group === "serve") {
+      const port = parsePortFlag(flags.port);
+      const { app } = buildDatabaseApp({
+        config: {
+          ...(flags.host ? { host: flags.host } : {}),
+          ...(hasFlag(flags, "port") ? { port } : {}),
+          ...(flags["data-dir"] ? { dataDir: flags["data-dir"] } : {}),
+          ...(flags["db-path"] ? { dbPath: flags["db-path"] } : {}),
+          ...(flags["files-dir"] ? { filesDir: flags["files-dir"] } : {}),
+          ...(flags.secret ? { jwtSecret: flags.secret } : {}),
+        },
+      });
+      const address = await app.listen({
+        host: flags.host ?? "127.0.0.1",
+        port,
+      });
+      stdout.write(`${address}\n`);
+      return 0;
+    }
+
+    const baseUrl = flags.url ?? "http://127.0.0.1:4510";
+    const client = new DatabaseApiClient({
+      baseUrl,
+      token: flags.token,
+    });
+
+    const parseCsvFlag = (value: string | undefined): string[] => (value ?? "").split(",").map((entry) => entry.trim()).filter(Boolean);
+
     if (group === "login") {
       write(await client.login(flags.email ?? "", flags.password ?? ""));
       return 0;
@@ -101,8 +101,8 @@ export async function runEmbeddedDatabaseCli(input: {
       write(await client.createCollection(flags.namespace ?? "", {
         name: flags.name ?? subcommand ?? "",
         displayName: flags["display-name"],
-        fields: parseJsonFlag(flags.fields, []),
-        indexes: parseJsonFlag(flags.indexes, []),
+        fields: parseJsonFlag(flags.fields, "fields", []),
+        indexes: parseJsonFlag(flags.indexes, "indexes", []),
       }));
       return 0;
     }
@@ -110,8 +110,8 @@ export async function runEmbeddedDatabaseCli(input: {
     if (group === "collection" && command === "update") {
       write(await client.updateCollection(flags.namespace ?? "", flags.name ?? subcommand ?? "", {
         displayName: flags["display-name"],
-        ...(flags.fields ? { fields: parseJsonFlag(flags.fields, []) } : {}),
-        ...(flags.indexes ? { indexes: parseJsonFlag(flags.indexes, []) } : {}),
+        ...(hasFlag(flags, "fields") ? { fields: parseJsonFlag(flags.fields, "fields", []) } : {}),
+        ...(hasFlag(flags, "indexes") ? { indexes: parseJsonFlag(flags.indexes, "indexes", []) } : {}),
       }));
       return 0;
     }
@@ -125,12 +125,12 @@ export async function runEmbeddedDatabaseCli(input: {
     }
 
     if (group === "record" && command === "create") {
-      write(await client.createRecord(flags.namespace ?? "", flags.collection ?? "", parseJsonFlag(flags.data, {})));
+      write(await client.createRecord(flags.namespace ?? "", flags.collection ?? "", parseJsonFlag(flags.data, "data", {})));
       return 0;
     }
 
     if (group === "record" && command === "update") {
-      write(await client.updateRecord(flags.namespace ?? "", flags.collection ?? "", flags.id ?? subcommand ?? "", parseJsonFlag(flags.data, {})));
+      write(await client.updateRecord(flags.namespace ?? "", flags.collection ?? "", flags.id ?? subcommand ?? "", parseJsonFlag(flags.data, "data", {})));
       return 0;
     }
 
@@ -181,17 +181,13 @@ export async function runEmbeddedDatabaseCli(input: {
     stderr.write("Unknown command.\n");
     return 64;
   } catch (error) {
-    const originalMessage = error instanceof Error ? error.message : String(error);
+    const handled = databaseCliError(error);
     const serviceHint = "The low-level `claw database ...` admin surface requires `claw database serve` or --url pointing at a running database service. For the local agent-facing catalog, use `claw collections list --json`.";
     if (wantsJson) {
-      writeCommandJsonError(stdout, "database", new CliHandledError(
-        "database_service_unavailable",
-        `${originalMessage}. ${serviceHint}`,
-        1,
-      ), {
+      writeCommandJsonError(stdout, "database", handled, {
         invokedCommand: "database",
         subcommand: [group, command].filter(Boolean).join(".") || null,
-        hint: serviceHint,
+        ...(handled.code === "database_service_unavailable" ? { hint: serviceHint } : {}),
         suggestedCommands: [
           "claw collections list --json",
           "claw collections <collection> schema --json",
@@ -199,10 +195,52 @@ export async function runEmbeddedDatabaseCli(input: {
         ],
       });
     } else {
-      stderr.write(`${originalMessage}\n${serviceHint}\n`);
+      stderr.write(`${handled.message}\n`);
     }
-    return 1;
+    return handled.exitCode;
   }
+}
+
+function hasFlag(flags: Record<string, string>, name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(flags, name);
+}
+
+function parsePortFlag(value: string | undefined): number {
+  if (value === undefined) return 4510;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new CliHandledError("invalid_database_port", "--port must be a decimal TCP port from 1 to 65535.", CLI_EXIT_USAGE);
+  }
+  const port = Number(trimmed);
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65535) {
+    throw new CliHandledError("invalid_database_port", "--port must be a decimal TCP port from 1 to 65535.", CLI_EXIT_USAGE);
+  }
+  return port;
+}
+
+function parseJsonFlag<T>(value: string | undefined, name: string, fallback: T): T {
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch (error) {
+    throw new CliHandledError(
+      `invalid_database_${name}_json`,
+      `Invalid JSON for --${name}: ${error instanceof Error ? error.message : "parse error"}`,
+      CLI_EXIT_USAGE,
+    );
+  }
+}
+
+function databaseCliError(error: unknown): CliHandledError {
+  if (error instanceof CliHandledError) return error;
+  const originalMessage = error instanceof Error ? error.message : String(error);
+  const serviceHint = "The low-level `claw database ...` admin surface requires `claw database serve` or --url pointing at a running database service. For the local agent-facing catalog, use `claw collections list --json`.";
+  return new CliHandledError(
+    "database_service_unavailable",
+    `${originalMessage}. ${serviceHint}`,
+    CLI_EXIT_FAILURE,
+  );
 }
 
 function extractPositionals(argv: string[]): string[] {
