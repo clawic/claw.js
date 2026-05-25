@@ -742,6 +742,17 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     }
   }
 
+  if (group === "db" && command === "list" && !subcommand) {
+    return await runCollectionsCli({
+      argv: ["collections", "list", ...argv.slice(2)],
+      positionals: ["collections", "list"],
+      flags,
+      context,
+      wantsJson,
+      runCli: runCliUnsafe,
+    });
+  }
+
   if (group === "db") {
     const dbWorkspaceRoot = flags.workspace || context.cwd;
     const dbCollection = coreProductivityCollection(positionals[1]);

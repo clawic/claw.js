@@ -1143,6 +1143,7 @@ claw database token create
 claw database file list
 
 claw collections list
+claw collections schema <collection>
 claw collections <collection> schema
 claw collections <collection> list
 
@@ -1168,6 +1169,7 @@ claw records <collection> create --set title=Task
 claw records <collection> update record-123 --set status=done
 claw records <collection> delete record-123
 claw records <collection> query "blocked auth"
+claw records <collection> schema
 claw records tasks list
 ```
 

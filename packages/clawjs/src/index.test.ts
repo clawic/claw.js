@@ -80,6 +80,46 @@ test("runCli rejects removed public pre-v1 namespaces before V1 routing", async 
   }
 });
 
+test("runCli supports non-mutating database collection discovery aliases", async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-db-readonly-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+
+  const collectionsHelpStdout = captureStream();
+  assert.equal(await runCli(["collections", "--help"], {
+    stdout: collectionsHelpStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(collectionsHelpStdout.getOutput(), /collections list\|schema <collection>\|<collection> list\|get\|schema/);
+
+  const recordsHelpStdout = captureStream();
+  assert.equal(await runCli(["records", "--help"], {
+    stdout: recordsHelpStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  assert.match(recordsHelpStdout.getOutput(), /records <collection> list\|get\|create\|update\|delete\|schema\|query/);
+
+  const dbListStdout = captureStream();
+  assert.equal(await runCli(["db", "list", "--json"], {
+    stdout: dbListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const dbList = parseCliJsonPayload<{ collections: Array<{ name: string }>; visibility: string }>(dbListStdout.getOutput());
+  assert.equal(dbList.collections.some((collection) => collection.name === "tasks"), true);
+  assert.equal(dbList.visibility, "active");
+
+  const commandFirstSchemaStdout = captureStream();
+  assert.equal(await runCli(["collections", "schema", "tasks", "--json"], {
+    stdout: commandFirstSchemaStdout.stream,
+    stderr: captureStream().stream,
+    cwd: workspaceRoot,
+  }), CLI_EXIT_OK);
+  const commandFirstSchema = parseCliJsonPayload<{ collection: { name: string } }>(commandFirstSchemaStdout.getOutput());
+  assert.equal(commandFirstSchema.collection.name, "tasks");
+});
+
 test("runCli exposes portable archive governance and signed-host gates", async () => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-archive-cli-"));
   const archivePath = path.join(cwd, "local.clawbackup");

@@ -9724,7 +9724,7 @@
       "name": "collections",
       "kind": "alias",
       "target": "database",
-      "usage": "collections list|<collection> list|get|schema",
+      "usage": "collections list|schema <collection>|<collection> list|get|schema",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.collections.v1"
     },
@@ -10442,7 +10442,7 @@
       "name": "records",
       "kind": "alias",
       "target": "database",
-      "usage": "records <collection> list|get|create|update|delete",
+      "usage": "records <collection> list|get|create|update|delete|schema|query",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.records.v1"
     },

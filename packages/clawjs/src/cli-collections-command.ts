@@ -16,8 +16,11 @@ export async function runCollectionsCli(input: {
   wantsJson: boolean;
   runCli: (argv: string[], context: CliContext) => Promise<number>;
 }): Promise<number> {
-  const [, command] = input.positionals;
+  const [, command, collectionName] = input.positionals;
   if (command !== "list") {
+    if (command === "schema" && collectionName) {
+      return await input.runCli(["db", collectionName, "schema", ...input.argv.slice(3)], input.context);
+    }
     return await input.runCli(["db", ...input.argv.slice(1)], input.context);
   }
 
