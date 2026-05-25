@@ -131,6 +131,7 @@ test("runCli can discover workspaces under an explicit root", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-discover-"));
   const workspaceA = path.join(tempRoot, "apps", "a");
   const workspaceB = path.join(tempRoot, "apps", "nested", "b");
+  const workspaceAtRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-discover-root-"));
 
   await runCli(["workspace", "init", "--workspace", workspaceA, "--json"], {
     stdout: captureStream().stream,
@@ -138,6 +139,11 @@ test("runCli can discover workspaces under an explicit root", async () => {
     cwd: process.cwd(),
   });
   await runCli(["workspace", "init", "--workspace", workspaceB, "--json"], {
+    stdout: captureStream().stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  await runCli(["workspace", "init", "--workspace", workspaceAtRoot, "--json"], {
     stdout: captureStream().stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
@@ -153,21 +159,33 @@ test("runCli can discover workspaces under an explicit root", async () => {
   assert.equal(exitCode, CLI_EXIT_OK);
   assert.match(stdout.getOutput(), /"workspaceId": "a"/);
   assert.match(stdout.getOutput(), /"workspaceId": "b"/);
-});
 
-test("runCli rejects invalid workspace discover max depth", async () => {
-  const stdout = captureStream();
-  const exitCode = await runCli(["workspace", "discover", "--max-depth", "nope", "--json"], {
-    stdout: stdout.stream,
+  const rootDepthStdout = captureStream();
+  const rootDepthExitCode = await runCli(["workspace", "discover", "--root", workspaceAtRoot, "--max-depth", "0", "--json"], {
+    stdout: rootDepthStdout.stream,
     stderr: captureStream().stream,
     cwd: process.cwd(),
   });
 
-  assert.equal(exitCode, CLI_EXIT_USAGE);
-  const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
-  assert.equal(payload.ok, false);
-  assert.equal(payload.error.code, "invalid_workspace_max_depth");
-  assert.equal(payload.error.status, "USAGE");
+  assert.equal(rootDepthExitCode, CLI_EXIT_OK);
+  assert.match(rootDepthStdout.getOutput(), /"workspaceId"/);
+});
+
+test("runCli rejects invalid workspace discover max depth", async () => {
+  for (const maxDepth of ["nope", "1e3", "0x10", "1.0", "-1", "9007199254740992", " 6", "6 "]) {
+    const stdout = captureStream();
+    const exitCode = await runCli(["workspace", "discover", "--max-depth", maxDepth, "--json"], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_USAGE);
+    const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_workspace_max_depth");
+    assert.equal(payload.error.status, "USAGE");
+  }
 });
 
 test("runCli manages agent-native plans, policies, reviews, and delegation runs", async () => {
