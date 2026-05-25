@@ -2134,9 +2134,26 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  const hermesSessionDescriptorPayload = JSON.parse(hermesSessionDescriptorStdout.getOutput()) as { data: { runtimeId: string; session?: { sessionPath?: string; supportsGateway?: boolean; primaryTransport?: string } } };
+  const hermesSessionDescriptorPayload = JSON.parse(hermesSessionDescriptorStdout.getOutput()) as {
+    data: {
+      runtimeId: string;
+      session?: {
+        sessionPath?: string;
+        sessionDatabasePath?: string;
+        sessionTranscriptPath?: string;
+        sessionIndexPath?: string;
+        sessionStorageContract?: string;
+        supportsGateway?: boolean;
+        primaryTransport?: string;
+      };
+    };
+  };
   assert.equal(hermesSessionDescriptorPayload.data.runtimeId, "hermes");
   assert.equal(hermesSessionDescriptorPayload.data.session?.sessionPath?.endsWith(".hermes/sessions"), true);
+  assert.equal(hermesSessionDescriptorPayload.data.session?.sessionStorageContract, "sqlite_with_gateway_transcripts");
+  assert.equal(hermesSessionDescriptorPayload.data.session?.sessionDatabasePath?.endsWith(".hermes/state.db"), true);
+  assert.equal(hermesSessionDescriptorPayload.data.session?.sessionTranscriptPath?.endsWith(".hermes/sessions"), true);
+  assert.equal(hermesSessionDescriptorPayload.data.session?.sessionIndexPath?.endsWith(".hermes/sessions/sessions.json"), true);
   assert.equal(hermesSessionDescriptorPayload.data.session?.primaryTransport, "gateway");
   assert.equal(hermesSessionDescriptorPayload.data.session?.supportsGateway, true);
 
