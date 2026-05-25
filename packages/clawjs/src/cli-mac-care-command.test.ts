@@ -230,6 +230,61 @@ test("mac-care scan persists read-only wave output only when requested", async (
   });
 });
 
+test("mac-care persist flag honors explicit false and rejects invalid values before writing sidecar", async () => {
+  const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-mac-care-persist-flag-data-"));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-mac-care-persist-flag-home-"));
+  const home = path.join(fixtureRoot, "home");
+  fs.mkdirSync(path.join(home, "Library", "Caches", "com.example.cache"), { recursive: true });
+  fs.writeFileSync(path.join(home, "Library", "Caches", "com.example.cache", "blob.bin"), "cache");
+
+  await withPatchedEnv({ CLAW_DATA_DIR: dataRoot }, async () => {
+    const explicitFalseStdout = captureStream();
+    assert.equal(await runCli([
+      "mac-care",
+      "scan",
+      "--home",
+      home,
+      "--persist",
+      "false",
+      "--json",
+    ], {
+      stdout: explicitFalseStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_OK);
+    const explicitFalse = parseCliJsonPayload<{
+      persistence: { persisted: boolean; candidateRows: number };
+    }>(explicitFalseStdout.getOutput());
+    assert.equal(explicitFalse.persistence.persisted, false);
+    assert.equal(explicitFalse.persistence.candidateRows, 0);
+    assert.equal(fs.existsSync(path.join(dataRoot, "mac_care.sqlite")), false);
+
+    const invalidStdout = captureStream();
+    assert.equal(await runCli([
+      "mac-care",
+      "scan",
+      "--home",
+      home,
+      "--persist",
+      "maybe",
+      "--json",
+    ], {
+      stdout: invalidStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_USAGE);
+    const invalid = JSON.parse(invalidStdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; status: string; message: string };
+    };
+    assert.equal(invalid.ok, false);
+    assert.equal(invalid.error.code, "invalid_boolean_flag");
+    assert.equal(invalid.error.status, "USAGE");
+    assert.match(invalid.error.message, /--persist/);
+    assert.equal(fs.existsSync(path.join(dataRoot, "mac_care.sqlite")), false);
+  });
+});
+
 test("mac-care app-updates handoff prepares inventory-only host-confirmed update handoff", async () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-mac-care-app-update-"));
   const home = path.join(fixtureRoot, "home");

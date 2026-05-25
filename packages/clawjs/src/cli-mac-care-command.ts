@@ -16,6 +16,7 @@ import { findClawPersistentSurfaceNode } from "@clawjs/core/catalogs";
 import fs from "node:fs";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { buildMacCareAppUpdateApprovalPackage, buildMacCareAppUpdateHandoffReport, buildMacCareCloudProviderApprovalPackage, buildMacCareCloudProviderHandoffReport, buildMacCareFinalizerFixtureScan, buildMacCareProtectionApprovalPackage, buildMacCareProtectionEngineReadiness, getPersistedMacCareScan, listPersistedMacCareScans, persistMacCareScanReport, runMacCareProtectionFixtureScan, runMacCareReadOnlyScanner } from "./cli-mac-care-scanner.ts";
 
@@ -72,6 +73,7 @@ export async function runMacCareCli(input: MacCareCliInput): Promise<number> {
       else input.context.stderr.write(`${error.message}\n`);
       return CLI_EXIT_USAGE;
     }
+    const persistScan = shouldPersist(input);
     const report = runMacCareReadOnlyScanner({
       homeDir,
       applicationsDir: input.flags["applications-dir"],
@@ -79,7 +81,7 @@ export async function runMacCareCli(input: MacCareCliInput): Promise<number> {
       oldFileDays: parsePositiveIntegerFlag(input.flags["old-file-days"], "old-file-days"),
       maxEntriesPerModule: parsePositiveIntegerFlag(input.flags["max-entries"], "max-entries"),
     });
-    const persistence = shouldPersist(input) ? persistMacCareScanReport(report) : {
+    const persistence = persistScan ? persistMacCareScanReport(report) : {
       persisted: false,
       sidecar: MAC_CARE_SIDECAR_FILENAME,
       scanId: report.scanId,
@@ -438,8 +440,9 @@ function writeFinalizerFixtureScan(input: MacCareCliInput): number {
     else input.context.stderr.write(`${error.message}\n`);
     return CLI_EXIT_USAGE;
   }
+  const persistScan = shouldPersist(input);
   const report = buildMacCareFinalizerFixtureScan({ fixtureDir });
-  const persistence = shouldPersist(input) ? persistMacCareScanReport(report) : {
+  const persistence = persistScan ? persistMacCareScanReport(report) : {
     persisted: false,
     sidecar: MAC_CARE_SIDECAR_FILENAME,
     scanId: report.scanId,
@@ -572,6 +575,5 @@ function parseProtectionAdapterId(value: string | undefined): MacCareProtectionA
 }
 
 function shouldPersist(input: MacCareCliInput): boolean {
-  if (input.argv.includes("--persist")) return true;
-  return input.flags.persist === "true";
+  return readBooleanFlag(input.argv, input.flags, "persist");
 }
