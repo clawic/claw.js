@@ -154,6 +154,26 @@ test("scoped defaults resolve by matching scope and priority", () => {
   assert.deepEqual(refs, ["revenuecat_release_agent", "revenuecat_read_key", "revenuecat_api_v2", "revenuecat_api_v1"]);
 });
 
+test("default resolution keeps equal-priority defaults scoped to provider environment and app", () => {
+  const refs = resolveConnectorContextDefaultRefs({
+    providerId: "apple",
+    operationId: "apple.upload",
+    appId: "app.release",
+    environment: "production",
+    rules: [
+      { id: "global", scope: { kind: "global" }, contextRef: "global_default", priority: 100 },
+      { id: "provider", scope: { kind: "provider", id: "apple" }, providerId: "apple", contextRef: "apple_provider_default", priority: 100 },
+      { id: "environment", scope: { kind: "environment", id: "production" }, providerId: "apple", contextRef: "apple_production_default", priority: 100 },
+      { id: "app", scope: { kind: "app", id: "app.release" }, providerId: "apple", contextRef: "apple_app_default", priority: 100 },
+      { id: "wrong_provider", scope: { kind: "provider", id: "google" }, providerId: "google", contextRef: "google_default", priority: 900 },
+      { id: "wrong_environment", scope: { kind: "environment", id: "staging" }, providerId: "apple", contextRef: "apple_staging_default", priority: 900 },
+      { id: "wrong_app", scope: { kind: "app", id: "app.preview" }, providerId: "apple", contextRef: "apple_preview_default", priority: 900 },
+    ],
+  });
+
+  assert.deepEqual(refs, ["apple_app_default", "apple_production_default", "apple_provider_default", "global_default"]);
+});
+
 test("object and field policies apply only to matching agent role and operation scopes", () => {
   const candidate: ConnectorGovernedContextRecord = {
     id: "apple_app_release",
