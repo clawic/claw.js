@@ -14,10 +14,17 @@ function parseCodeListFlag(value: string | undefined): string[] {
     : [];
 }
 
+function parseCodeDecimalIntegerFlag(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!/^[0-9]+$/.test(trimmed)) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
 function parseCodeNonNegativeIntegerFlag(value: string | undefined, flagName: string, errorCode: string): number | undefined {
   if (value === undefined) return undefined;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  const parsed = parseCodeDecimalIntegerFlag(value);
+  if (parsed === undefined || parsed < 0) {
     throw new CliHandledError(errorCode, `Expected --${flagName} to be a non-negative integer, got ${value}.`, CLI_EXIT_USAGE, {
       suggestion: `Pass a non-negative integer such as --${flagName} 60000.`,
       safeNextStep: `Rerun claw code agents list with a valid --${flagName} value.`,
@@ -28,8 +35,8 @@ function parseCodeNonNegativeIntegerFlag(value: string | undefined, flagName: st
 
 function parseCodeServePortFlag(value: string | undefined): number {
   if (value === undefined) return 0;
-  const port = Number(value);
-  if (!value.trim() || !Number.isInteger(port) || port < 0 || port > 65_535) {
+  const port = parseCodeDecimalIntegerFlag(value);
+  if (port === undefined || port > 65_535) {
     throw new CliHandledError("invalid_code_serve_port", `Expected --port to be an integer from 0 to 65535, got ${value}.`, CLI_EXIT_USAGE, {
       suggestion: "Pass a valid local port such as --port 8787, or omit --port to use an ephemeral port.",
       safeNextStep: "Rerun claw code serve with a valid --port value.",
