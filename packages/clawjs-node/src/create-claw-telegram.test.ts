@@ -228,6 +228,71 @@ test("createClaw channels registry supports Telegram accounts, bindings, targets
   assert.equal(channels.some((channel) => channel.id === "telegram:ops" && channel.status === "connected"), true);
 });
 
+test("createClaw channels reject invalid Telegram thread ids before proxy send", async () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-invalid-telegram-thread-"));
+  const { proxyPath, statePath } = createFakeSecretsProxy();
+  const claw = await createClaw({
+    runtime: {
+      adapter: "openclaw",
+      env: {
+        ...process.env,
+        CLAW_SECRETS_PROXY_PATH: proxyPath,
+        FAKE_TELEGRAM_PROXY_STATE: statePath,
+      },
+    },
+    workspace: {
+      appId: "demo",
+      workspaceId: "invalid-telegram-thread",
+      agentId: "invalid-telegram-thread",
+      rootDir: workspaceDir,
+    },
+  });
+
+  await claw.channels.accounts.registerTelegramBot({
+    accountId: "support",
+    secretName: "telegram_support_bot_token",
+  });
+  claw.channels.bindings.grant({
+    agentId: "support-agent",
+    provider: "telegram",
+    accountId: "support",
+    targetId: "1001",
+    permissions: ["write"],
+  });
+
+  await assert.rejects(
+    () => claw.channels.messages.send({
+      provider: "telegram",
+      accountId: "support",
+      targetId: "1001",
+      text: "invalid thread text",
+      threadId: "topic-42",
+      agentId: "support-agent",
+      approvalId: "approval_channels_message_send",
+      legalLabel: "Channel message send - human reviewed",
+    }),
+    /Message thread id must be a positive integer: topic-42/,
+  );
+  await assert.rejects(
+    () => claw.channels.messages.send({
+      provider: "telegram",
+      accountId: "support",
+      targetId: "1001",
+      text: "invalid thread media",
+      mediaType: "photo",
+      media: "file_123",
+      threadId: "42.5",
+      agentId: "support-agent",
+      approvalId: "approval_channels_message_send_media",
+      legalLabel: "Channel message send - human reviewed",
+    }),
+    /Message thread id must be a positive integer: 42\.5/,
+  );
+
+  const proxyState = JSON.parse(fs.readFileSync(statePath, "utf8")) as { lastSend?: unknown };
+  assert.equal(proxyState.lastSend, undefined);
+});
+
 test("createClaw channel listener invokes a detached processor action", async () => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-instance-channels-listener-"));
   const processorPath = path.join(workspaceDir, "processor.cjs");

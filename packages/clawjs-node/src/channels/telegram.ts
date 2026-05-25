@@ -137,6 +137,19 @@ function telegramMediaMethod(type: NonNullable<SendChannelMessageInput["mediaTyp
   })[type];
 }
 
+function normalizeTelegramMessageThreadId(value: SendChannelMessageInput["threadId"]): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = typeof value === "number"
+    ? value
+    : /^[0-9]+$/.test(value.trim())
+      ? Number(value.trim())
+      : NaN;
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`Message thread id must be a positive integer: ${String(value)}`);
+  }
+  return parsed;
+}
+
 function isTelegramHtmlParseError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /parse|entity|can't parse|unsupported start tag|bad request/i.test(message);
@@ -438,6 +451,7 @@ export async function sendTelegramAccountMessage(
   const account = requireTelegramAccount(options.registry, input.accountId);
   const textPayload = buildTelegramTextPayload(input);
   const mediaType = input.mediaType ?? "photo";
+  const messageThreadId = normalizeTelegramMessageThreadId(input.threadId);
   const send = (text: string, parseMode?: "HTML" | "Markdown" | "MarkdownV2") => input.media
     ? callTelegramApi<JsonRecord>(
       options.runner,
@@ -450,7 +464,7 @@ export async function sendTelegramAccountMessage(
         [mediaType]: input.media,
         ...(input.text ? { caption: text } : {}),
         ...(input.text && parseMode ? { parse_mode: parseMode } : {}),
-        ...(input.threadId !== undefined ? { message_thread_id: Number(input.threadId) } : {}),
+        ...(messageThreadId !== undefined ? { message_thread_id: messageThreadId } : {}),
       },
     )
     : callTelegramApi<JsonRecord>(
@@ -463,7 +477,7 @@ export async function sendTelegramAccountMessage(
         chat_id: input.targetId,
         text,
         ...(parseMode ? { parse_mode: parseMode } : {}),
-        ...(input.threadId !== undefined ? { message_thread_id: Number(input.threadId) } : {}),
+        ...(messageThreadId !== undefined ? { message_thread_id: messageThreadId } : {}),
       },
     );
   let response: JsonRecord;
@@ -477,6 +491,7 @@ export async function sendTelegramAccountMessage(
     ...input,
     provider: "telegram",
     accountId: normalizeAccountId(input.accountId),
+    threadId: messageThreadId,
   }, response);
   options.registry.events.record({
     type: clawChannelEvents.messageSent,
