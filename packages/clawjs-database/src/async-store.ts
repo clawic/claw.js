@@ -53,6 +53,7 @@ export class AsyncDatabaseServiceStore {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this.rejectAll(new Error("database store worker is closed"));
     await this.worker.terminate();
   }
 
@@ -225,12 +226,21 @@ export class AsyncDatabaseServiceStore {
     let failed = false;
     this.queueDepth += 1;
     const run = () => new Promise<T>((resolve, reject) => {
+      if (this.closed) {
+        reject(new Error("database store worker is closed"));
+        return;
+      }
       const id = this.nextId++;
       this.pending.set(id, {
         resolve: (value) => resolve(value as T),
         reject,
       });
-      this.worker.postMessage({ id, operation, args });
+      try {
+        this.worker.postMessage({ id, operation, args });
+      } catch (error) {
+        this.pending.delete(id);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
     });
     const promise = this.serial.then(run, run);
     this.serial = promise.then(() => undefined, () => undefined);

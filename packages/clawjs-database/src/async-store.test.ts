@@ -12,6 +12,7 @@ import { buildDatabaseApp } from "./app.ts";
 import { loadDatabaseConfig } from "./config.ts";
 import { RealtimeHub } from "./realtime.ts";
 import { DatabaseServiceStore } from "./store.ts";
+import { StorageMetrics } from "./storage-metrics.ts";
 import type { RecordChangeEvent } from "./types.ts";
 
 function tempRoot(prefix: string): string {
@@ -26,6 +27,32 @@ async function adminToken(app: ReturnType<typeof buildDatabaseApp>["app"]): Prom
   });
   assert.equal(response.statusCode, 200);
   return (response.json() as { accessToken: string }).accessToken;
+}
+
+class StalledStoreWorker {
+  readonly messages: unknown[] = [];
+  terminated = false;
+
+  postMessage(message: unknown): void {
+    this.messages.push(message);
+  }
+
+  async terminate(): Promise<number> {
+    this.terminated = true;
+    return 0;
+  }
+}
+
+function asyncStoreWithWorker(worker: StalledStoreWorker): AsyncDatabaseServiceStore {
+  return Object.assign(Object.create(AsyncDatabaseServiceStore.prototype), {
+    worker,
+    pending: new Map(),
+    metrics: new StorageMetrics(),
+    nextId: 1,
+    queueDepth: 0,
+    closed: false,
+    serial: Promise.resolve(),
+  }) as AsyncDatabaseServiceStore;
 }
 
 test("AsyncDatabaseServiceStore serializes worker calls, reports errors, and closes", async () => {
@@ -54,6 +81,38 @@ test("AsyncDatabaseServiceStore serializes worker calls, reports errors, and clo
     () => store.listNamespaces(),
     /closed/,
   );
+});
+
+test("AsyncDatabaseServiceStore rejects in-flight and queued calls when closed", async () => {
+  const worker = new StalledStoreWorker();
+  const store = asyncStoreWithWorker(worker);
+  const callStore = store as unknown as {
+    call<T>(operation: string, ...args: unknown[]): Promise<T>;
+  };
+
+  const inFlight = callStore.call("createRecord", "main", "items", { title: "queued" });
+  const queued = callStore.call("updateRecord", "main", "items", "record-1", { title: "after-close" });
+  const inFlightSettled = inFlight.then(
+    () => "fulfilled",
+    (error: Error) => error,
+  );
+  const queuedSettled = queued.then(
+    () => "fulfilled",
+    (error: Error) => error,
+  );
+
+  await Promise.resolve();
+  assert.equal(worker.messages.length, 1);
+
+  await store.close();
+
+  const inFlightResult = await inFlightSettled;
+  const queuedResult = await queuedSettled;
+  assert.match(String(inFlightResult), /database store worker is closed/);
+  assert.match(String(queuedResult), /database store worker is closed/);
+  assert.equal(worker.terminated, true);
+  assert.equal(worker.messages.length, 1);
+  assert.equal(store.snapshotMetrics().queueDepth, 0);
 });
 
 test("AsyncDatabaseServiceStore saves file uploads from managed temp paths", async () => {
