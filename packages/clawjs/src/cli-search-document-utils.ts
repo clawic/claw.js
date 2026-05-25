@@ -232,9 +232,9 @@ export function parseSearchFiltersFlag(value: string | undefined): Record<string
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   if (trimmed.startsWith("{")) {
-    const parsed = JSON.parse(trimmed) as unknown;
+    const parsed = parseSearchJsonFlag(trimmed, "filters") as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("--filters must be a JSON object");
+      throw searchJsonFlagUsageError("filters", "--filters must be a JSON object");
     }
     return parsed as Record<string, unknown>;
   }
@@ -286,8 +286,8 @@ export function parseSearchIndexJobStatus(value: string | undefined): "queued" |
 
 export function parseSearchJobPayloadFlag(value: string | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
-  const parsed = JSON.parse(value) as unknown;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("--payload must be a JSON object");
+  const parsed = parseSearchJsonFlag(value, "payload") as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw searchJsonFlagUsageError("payload", "--payload must be a JSON object");
   return parsed as Record<string, unknown>;
 }
 
@@ -305,14 +305,30 @@ export function formatSearchShardLine(item: unknown): string {
 
 export function parseSearchEmbeddingFlag(value: string | undefined, model: string | undefined): { model: string; vector: number[] } | undefined {
   if (!value) return undefined;
-  const parsed = JSON.parse(value) as unknown;
-  if (!Array.isArray(parsed)) throw new Error("--embedding must be a JSON number array");
+  const parsed = parseSearchJsonFlag(value, "embedding") as unknown;
+  if (!Array.isArray(parsed)) throw searchJsonFlagUsageError("embedding", "--embedding must be a JSON number array");
   const vector = parsed.map((entry) => {
-    if (typeof entry !== "number" || !Number.isFinite(entry)) throw new Error("--embedding must be a JSON number array");
+    if (typeof entry !== "number" || !Number.isFinite(entry)) throw searchJsonFlagUsageError("embedding", "--embedding must be a JSON number array");
     return entry;
   });
-  if (!vector.length) throw new Error("--embedding must not be empty");
+  if (!vector.length) throw searchJsonFlagUsageError("embedding", "--embedding must not be empty");
   return { model: model ?? "local", vector };
+}
+
+function parseSearchJsonFlag(value: string, flag: "filters" | "payload" | "embedding"): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw searchJsonFlagUsageError(flag, `--${flag} must be valid JSON`);
+  }
+}
+
+function searchJsonFlagUsageError(flag: "filters" | "payload" | "embedding", message: string): CliHandledError {
+  return new CliHandledError(`invalid_search_${flag}_json`, message, {
+    exitCode: CLI_EXIT_USAGE,
+    location: `cli.search.${flag}`,
+    details: { flag },
+  });
 }
 
 export function localTextEmbeddingForQuery(query: string, strategy: SearchQueryInput["strategy"], flags: Record<string, string>): { model: string; vector: number[] } | undefined {
