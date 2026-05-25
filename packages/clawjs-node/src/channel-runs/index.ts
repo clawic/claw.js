@@ -80,6 +80,24 @@ function positiveInteger(value: number | undefined, fallback: number): number {
   return Math.max(1, Math.floor(value));
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasErrorCode(error: unknown, code: string): boolean {
+  return isRecord(error) && error.code === code;
+}
+
+function parseChannelRunState(value: unknown, statePath: string): ChannelRunState {
+  if (!isRecord(value) || value.schemaVersion !== 1 || !isRecord(value.runs)) {
+    throw new Error(`Invalid channel run state at ${statePath}`);
+  }
+  return {
+    schemaVersion: 1,
+    runs: value.runs as Record<string, ChannelRunRecord>,
+  };
+}
+
 export function resolveChannelRunKey(input: ChannelRunTarget): string {
   return [
     input.provider,
@@ -135,14 +153,12 @@ export class ChannelRunStore {
   }
 
   private readState(): ChannelRunState {
+    const statePath = this.statePath();
     try {
-      const parsed = JSON.parse(this.filesystem.readText(this.statePath())) as Partial<ChannelRunState>;
-      return {
-        schemaVersion: 1,
-        runs: parsed.runs && typeof parsed.runs === "object" ? parsed.runs as Record<string, ChannelRunRecord> : {},
-      };
-    } catch {
-      return { schemaVersion: 1, runs: {} };
+      return parseChannelRunState(JSON.parse(this.filesystem.readText(statePath)), statePath);
+    } catch (error) {
+      if (hasErrorCode(error, "ENOENT")) return { schemaVersion: 1, runs: {} };
+      throw error;
     }
   }
 

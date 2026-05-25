@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "vitest";
 
 import { SessionStore } from "../sessions/store.ts";
+import { resolveClawWorkspaceSurfacePath } from "../surface-paths.ts";
 import { ChannelRunStore, resolveChannelRunKey } from "./index.ts";
 
 function fixture() {
@@ -16,6 +17,32 @@ function fixture() {
     runs: new ChannelRunStore(workspaceDir, sessions),
   };
 }
+
+test("ChannelRunStore fails closed for corrupt or invalid persisted state", () => {
+  const { workspaceDir, sessions, runs } = fixture();
+  const statePath = resolveClawWorkspaceSurfacePath("claw.workspace.channel_runs_state", workspaceDir);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  const session = sessions.createSession("Telegram corrupt state");
+  const target = {
+    provider: "telegram",
+    accountId: "test-account",
+    targetId: "test-chat-corrupt",
+    sessionId: session.sessionId,
+  };
+
+  const invalidShape = `${JSON.stringify({ schemaVersion: 1, runs: [] }, null, 2)}\n`;
+  fs.writeFileSync(statePath, invalidShape);
+  assert.throws(
+    () => runs.resolveOrCreateChannelRun(target),
+    /Invalid channel run state/,
+  );
+  assert.equal(fs.readFileSync(statePath, "utf8"), invalidShape);
+
+  const corruptJson = "{\"schemaVersion\":1,";
+  fs.writeFileSync(statePath, corruptJson);
+  assert.throws(() => runs.resolveOrCreateChannelRun(target), SyntaxError);
+  assert.equal(fs.readFileSync(statePath, "utf8"), corruptJson);
+});
 
 test("ChannelRunStore resolves state, queues deterministically, and compacts sessions", () => {
   const { sessions, runs } = fixture();
