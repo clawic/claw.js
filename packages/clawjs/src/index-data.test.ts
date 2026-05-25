@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 
 import { MAC_CARE_SIDECAR_FILENAME, clawStorageFiles, resolveClawGlobalDataStorageDir, resolveCodexHomeDir } from "@clawjs/core";
 
-import { CLI_EXIT_OK, runCli } from "./index.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE, runCli } from "./index.ts";
 import { resolveClawjsDataRoot, resolveClawjsFilesDir, resolveClawjsMainDbPath } from "./v1-data.ts";
 import { ensureV1MainSchema, openMainDataStore, openSidecar, writeMcpServers } from "./v1-data-core.ts";
 import { captureStream, runInternalV1Cli, useIsolatedClawDataRoot, withPatchedEnv } from "./index-test-utils.ts";
@@ -874,6 +874,39 @@ test("runCli exposes Agents V1 safe surface projection gate", async () => {
     assert.equal(retirement.audit.resourceType, "agent");
   });
   fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test("personalities reject invalid version before creating records", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-personality-invalid-version-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-personality-invalid-version-cwd-"));
+    const stdout = captureStream();
+    assert.equal(await runCli(["personalities", "upsert", "p.bad", "--name", "Bad", "--version", "nope", "--json"], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_USAGE);
+
+    const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "usage");
+    assert.equal(payload.error.status, "USAGE");
+
+    const listStdout = captureStream();
+    assert.equal(await runCli(["personalities", "list", "--json"], {
+      stdout: listStdout.stream,
+      stderr: captureStream().stream,
+      cwd,
+    }), CLI_EXIT_OK);
+    const listPayload = parseCliJsonPayload<{ items: Array<{ id: string }> }>(listStdout.getOutput());
+    assert.equal(listPayload.items.some((item) => item.id === "p.bad"), false);
+  });
 });
 
 test("app-state projects persist opaque resource ids alongside paths", async () => {

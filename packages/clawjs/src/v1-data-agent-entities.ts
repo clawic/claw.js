@@ -452,16 +452,25 @@ function personalityFromInput(input: V1DataCliInput): Personality | null {
   const id = input.flags.id || input.positionals[2];
   const name = input.flags.name || input.positionals.slice(3).join(" ") || id;
   if (!id || !name) return null;
+  const version = parsePersonalityVersionFlag(input.flags.version);
+  if (version === null) return null;
   const now = nowIso();
   return {
     id,
     name,
     description: input.flags.description || "",
     promptMarkdown: input.flags.prompt || input.flags.body || "",
-    version: Number(input.flags.version ?? 1),
+    version,
     createdAt: input.flags["created-at"] || now,
     updatedAt: now,
   };
+}
+
+function parsePersonalityVersionFlag(value: string | undefined): number | null {
+  if (value === undefined) return 1;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return null;
+  return parsed;
 }
 
 function collectionFromInput(input: V1DataCliInput): SkillCollection | null {
