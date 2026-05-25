@@ -872,6 +872,54 @@ process.exit(0);
   }
 });
 
+test("runCli keeps Codex auth remove JSON parseable when delegated logout fails", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-codex-remove-json-fail-"));
+  const binDir = path.join(workspaceRoot, "bin");
+  const fakeCodex = path.join(binDir, "codex");
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(fakeCodex, `#!/usr/bin/env node
+if (process.argv[2] === "logout") {
+  process.stdout.write("raw logout stdout\\n");
+  process.stderr.write("raw logout stderr\\n");
+  process.exit(7);
+}
+process.exit(0);
+`, { mode: 0o755 });
+
+  const previousCodexPath = process.env.CLAW_CODEX_PATH;
+  process.env.CLAW_CODEX_PATH = fakeCodex;
+  try {
+    const stdout = captureStream();
+    const stderr = captureStream();
+    const exitCode = await runCli(["auth", "remove", "--runtime", "codex", "--workspace", workspaceRoot, "--json"], {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      cwd: process.cwd(),
+    });
+
+    assert.equal(exitCode, CLI_EXIT_FAILURE);
+    assert.equal(stderr.getOutput(), "");
+    assert.doesNotMatch(stdout.getOutput(), /raw logout stdout/);
+    const envelope = JSON.parse(stdout.getOutput()) as {
+      ok: boolean;
+      error: { code: string; details: { stdoutBytes: number; stderrBytes: number; stdoutTruncated: boolean; stderrTruncated: boolean } };
+      meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
+    };
+    assert.equal(envelope.ok, false);
+    assert.equal(envelope.error.code, "codex_logout_failed");
+    assert.equal(envelope.error.details.stdoutBytes > 0, true);
+    assert.equal(envelope.error.details.stderrBytes > 0, true);
+    assert.equal(envelope.error.details.stdoutTruncated, false);
+    assert.equal(envelope.error.details.stderrTruncated, false);
+    assert.equal(envelope.meta.canonicalCommand, "auth");
+    assert.equal(envelope.meta.invokedCommand, "auth");
+    assert.equal(envelope.meta.subcommand, "remove");
+  } finally {
+    if (previousCodexPath === undefined) delete process.env.CLAW_CODEX_PATH;
+    else process.env.CLAW_CODEX_PATH = previousCodexPath;
+  }
+});
+
 test("runCli can repair a workspace and canonicalize compat snapshots", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-repair-"));
   fs.mkdirSync(resolveClawPersistentSurfacePath("claw.workspace.compat", workspaceRoot), { recursive: true });

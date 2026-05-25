@@ -204,19 +204,89 @@ export function runForegroundProcess(
     stderr: NodeJS.WritableStream;
   },
 ): Promise<number> {
+  return runForegroundProcessCapture(command, args, options).then((result) => result.exitCode);
+}
+
+export interface ForegroundProcessResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  stdoutBytes: number;
+  stderrBytes: number;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
+  signal: NodeJS.Signals | null;
+}
+
+function appendBoundedOutput(current: string, chunk: string, limit = 4096): string {
+  const combined = current + chunk;
+  return combined.length > limit ? combined.slice(combined.length - limit) : combined;
+}
+
+export function runForegroundProcessCapture(
+  command: string,
+  args: string[],
+  options: {
+    cwd: string;
+    env?: NodeJS.ProcessEnv;
+    stdout?: NodeJS.WritableStream;
+    stderr?: NodeJS.WritableStream;
+  },
+): Promise<ForegroundProcessResult> {
   return new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let settled = false;
+    const finish = (result: ForegroundProcessResult): void => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    child.stdout?.on("data", (chunk) => options.stdout.write(chunk));
-    child.stderr?.on("data", (chunk) => options.stderr.write(chunk));
-    child.on("error", (error) => {
-      options.stderr.write(`${error.message}\n`);
-      resolve(CLI_EXIT_FAILURE);
+    child.stdout?.on("data", (chunk) => {
+      const text = String(chunk);
+      stdoutBytes += Buffer.byteLength(chunk);
+      stdout = appendBoundedOutput(stdout, text);
+      options.stdout?.write(chunk);
     });
-    child.on("close", (exitCode) => resolve(exitCode ?? CLI_EXIT_FAILURE));
+    child.stderr?.on("data", (chunk) => {
+      const text = String(chunk);
+      stderrBytes += Buffer.byteLength(chunk);
+      stderr = appendBoundedOutput(stderr, text);
+      options.stderr?.write(chunk);
+    });
+    child.on("error", (error) => {
+      const text = `${error.message}\n`;
+      stderrBytes += Buffer.byteLength(text);
+      stderr = appendBoundedOutput(stderr, text);
+      options.stderr?.write(text);
+      finish({
+        exitCode: CLI_EXIT_FAILURE,
+        stdout,
+        stderr,
+        stdoutBytes,
+        stderrBytes,
+        stdoutTruncated: stdoutBytes > Buffer.byteLength(stdout),
+        stderrTruncated: stderrBytes > Buffer.byteLength(stderr),
+        signal: null,
+      });
+    });
+    child.on("close", (exitCode, signal) => finish({
+      exitCode: exitCode ?? CLI_EXIT_FAILURE,
+      stdout,
+      stderr,
+      stdoutBytes,
+      stderrBytes,
+      stdoutTruncated: stdoutBytes > Buffer.byteLength(stdout),
+      stderrTruncated: stderrBytes > Buffer.byteLength(stderr),
+      signal,
+    }));
   });
 }
 export function resolveCliPackageVersion(): string | null {

@@ -61,7 +61,7 @@ import { parseRuleHints, parseRuleReferences } from "./cli-rule-utils.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 export { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { cliErrorFromUnknown, setCliJsonMetaProvider, writeCommandJsonError, writeCommandJsonOk, writeJsonLine } from "./cli-json.ts"; import { installCliRuntimeMetaProvider } from "./cli-runtime-meta.ts";
-import { HOST_FORWARD_DOMAINS, ensureDomainSurfaceRunning, relayBrowserRequest, requireRelayBrowserConfig, resolveCliPackageVersion, runForegroundProcess, runOpenCli } from "./cli-legacy-open.ts";
+import { HOST_FORWARD_DOMAINS, ensureDomainSurfaceRunning, relayBrowserRequest, requireRelayBrowserConfig, resolveCliPackageVersion, runForegroundProcess, runForegroundProcessCapture, runOpenCli } from "./cli-legacy-open.ts";
 import { runOpenServerCommand } from "./cli-open-server.ts";
 import { runCollectionsCli } from "./cli-collections-command.ts";
 import { collectFlagValues, extractPositionals, formatCliTable, joinedPositionals, parseCsvFlag, parseFlags, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
@@ -213,6 +213,53 @@ const PROFESSIONAL_RECORDS_OPTIONAL_GROUPS = new Set([
     ...system.centers.flatMap((center) => [center.commandNoun, ...center.commandAliases]),
   ]),
 ]);
+
+async function runCodexLogoutForAuth(input: {
+  flags: Record<string, string>;
+  workspaceRoot: string;
+  context: CliContext;
+  wantsJson: boolean;
+}): Promise<number> {
+  const logoutCommand = buildCodexCommand(["logout"], {
+    homeDir: input.flags["home-dir"],
+    env: process.env,
+  });
+  if (!input.wantsJson) {
+    return await runForegroundProcess(logoutCommand.command, logoutCommand.args, {
+      cwd: input.workspaceRoot,
+      env: logoutCommand.env,
+      stdout: input.context.stdout,
+      stderr: input.context.stderr,
+    });
+  }
+
+  const result = await runForegroundProcessCapture(logoutCommand.command, logoutCommand.args, {
+    cwd: input.workspaceRoot,
+    env: logoutCommand.env,
+  });
+  if (result.exitCode === CLI_EXIT_OK) return CLI_EXIT_OK;
+
+  throw new CliHandledError(
+    "codex_logout_failed",
+    result.signal
+      ? `Codex logout was interrupted by signal ${result.signal}.`
+      : `Codex logout failed with exit code ${result.exitCode}.`,
+    CLI_EXIT_FAILURE,
+    {
+      location: "runtime.codex.logout",
+      suggestion: "Check the configured Codex binary and retry only after the logout command can complete.",
+      safeNextStep: "Run claw auth status --runtime codex --json, then rerun the auth command.",
+      details: {
+        exitCode: result.exitCode,
+        signal: result.signal,
+        stdoutBytes: result.stdoutBytes,
+        stderrBytes: result.stderrBytes,
+        stdoutTruncated: result.stdoutTruncated,
+        stderrTruncated: result.stderrTruncated,
+      },
+    },
+  );
+}
 
 async function runOptionalProfessionalRecordsCli(input: {
   argv: string[];
@@ -1806,16 +1853,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return CLI_EXIT_USAGE;
     }
     if (runtimeAdapterId === "codex" && readBooleanFlag(argv, flags, "force", false) && !argv.includes("--dry-run")) {
-      const logoutCommand = buildCodexCommand(["logout"], {
-        homeDir: flags["home-dir"],
-        env: process.env,
-      });
-      const logoutExitCode = await runForegroundProcess(logoutCommand.command, logoutCommand.args, {
-        cwd: workspaceRoot,
-        env: logoutCommand.env,
-        stdout: context.stdout,
-        stderr: context.stderr,
-      });
+      const logoutExitCode = await runCodexLogoutForAuth({ flags, workspaceRoot, context, wantsJson });
       if (logoutExitCode !== CLI_EXIT_OK) return logoutExitCode;
     }
     if (argv.includes("--dry-run")) {
@@ -1860,16 +1898,10 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return CLI_EXIT_USAGE;
     }
     if (runtimeAdapterId === "codex") {
-      const logoutCommand = buildCodexCommand(["logout"], {
-        homeDir: flags["home-dir"],
-        env: process.env,
-      });
-      return await runForegroundProcess(logoutCommand.command, logoutCommand.args, {
-        cwd: workspaceRoot,
-        env: logoutCommand.env,
-        stdout: context.stdout,
-        stderr: context.stderr,
-      });
+      const logoutExitCode = await runCodexLogoutForAuth({ flags, workspaceRoot, context, wantsJson });
+      if (logoutExitCode !== CLI_EXIT_OK) return logoutExitCode;
+      if (wantsJson) writeRootJson({ removed: true, provider, adapter: runtimeAdapterId });
+      return CLI_EXIT_OK;
     }
     const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
     const removed = claw.auth.removeProvider(provider);
