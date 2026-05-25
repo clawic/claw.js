@@ -121,6 +121,49 @@ test("agent-resource malformed input returns an actionable JSON error", async ()
   assert.equal(resultPayload.ok, false);
   assert.equal(resultPayload.error.code, "invalid_agent_resource_mode");
   assert.match(resultPayload.error.message, /Invalid resource lease mode/);
+  assert.equal(fs.existsSync(path.join(stateDir, "agent-coordination.sqlite")), false);
+});
+
+test("agent-resource rejects non-decimal TTL and PID values before opening coordination state", async () => {
+  const cases = [
+    { flag: "ttl", value: "NaN", code: "invalid_agent_resource_ttl" },
+    { flag: "ttl", value: "1.5", code: "invalid_agent_resource_ttl" },
+    { flag: "ttl", value: "0", code: "invalid_agent_resource_ttl" },
+    { flag: "ttl", value: "1e3", code: "invalid_agent_resource_ttl" },
+    { flag: "ttl", value: "0x10", code: "invalid_agent_resource_ttl" },
+    { flag: "pid", value: "NaN", code: "invalid_agent_resource_pid" },
+    { flag: "pid", value: "1.0", code: "invalid_agent_resource_pid" },
+    { flag: "pid", value: "0", code: "invalid_agent_resource_pid" },
+    { flag: "pid", value: "1e3", code: "invalid_agent_resource_pid" },
+    { flag: "pid", value: "0x10", code: "invalid_agent_resource_pid" },
+  ];
+
+  for (const testCase of cases) {
+    const stateDir = tempStateDir();
+    const args = [
+      "agent-resource",
+      "acquire",
+      "--state-dir",
+      stateDir,
+      "--resource",
+      `fixture:${testCase.flag}-${testCase.value}`,
+      "--mode",
+      "exclusive",
+      "--intent",
+      `invalid-${testCase.flag}-intent`,
+      `--${testCase.flag}`,
+      testCase.value,
+      "--json",
+    ];
+
+    const result = await runCliCapture(args, process.cwd());
+    assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+    const resultPayload = payload(result.stdout);
+    assert.equal(resultPayload.ok, false);
+    assert.equal(resultPayload.error.code, testCase.code);
+    assert.equal(resultPayload.error.status, "USAGE");
+    assert.equal(fs.existsSync(path.join(stateDir, "agent-coordination.sqlite")), false);
+  }
 });
 
 test("agent-resource rejects blank resource ids before writing ledger rows", async () => {
@@ -143,13 +186,7 @@ test("agent-resource rejects blank resource ids before writing ledger rows", asy
   assert.equal(resultPayload.ok, false);
   assert.equal(resultPayload.error.code, "missing_agent_resource_flag");
   assert.equal(resultPayload.error.status, "USAGE");
-
-  const sqlite = new Database(path.join(stateDir, "agent-coordination.sqlite"), { readonly: true });
-  const leaseCount = sqlite.prepare("SELECT count(*) AS count FROM resource_leases").get() as { count: number };
-  const demandCount = sqlite.prepare("SELECT count(*) AS count FROM resource_demands").get() as { count: number };
-  sqlite.close();
-  assert.equal(leaseCount.count, 0);
-  assert.equal(demandCount.count, 0);
+  assert.equal(fs.existsSync(path.join(stateDir, "agent-coordination.sqlite")), false);
 });
 
 test("coordination store rejects blank resource ids for programmatic callers", async () => {

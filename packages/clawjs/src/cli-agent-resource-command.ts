@@ -46,9 +46,8 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
     }, { subcommand: command });
   }
 
-  const store = await openAgentCoordinationStore(paths);
-
   if (command === "plan") {
+    const store = await openAgentCoordinationStore(paths);
     const intent = store.createIntent({
       id: input.flags.intent,
       repo: resolveMaybePath(input.flags.repo, input.context.cwd),
@@ -65,14 +64,17 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
     const resource = requiredFlag(input, "resource", command);
     const intent = requiredFlag(input, "intent", command);
     const mode = parseMode(input.flags.mode || "exclusive");
+    const pid = input.flags.pid ? parsePositiveIntegerFlag(input.flags.pid, "pid") : undefined;
+    const ttlSeconds = parsePositiveIntegerFlag(input.flags.ttl, "ttl", 600);
+    const store = await openAgentCoordinationStore(paths);
     const result = store.acquire({
       resourceId: resource,
       mode,
       intentId: intent,
       agentId: input.flags.agent,
       sessionId: input.flags.session,
-      pid: input.flags.pid ? parsePositiveInteger(input.flags.pid, process.pid) : undefined,
-      ttlSeconds: parsePositiveInteger(input.flags.ttl, 600),
+      pid,
+      ttlSeconds,
       resourceKind: input.flags.kind,
       reason: input.flags.reason,
       metadata: { command: "agent-resource acquire" },
@@ -93,10 +95,13 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
 
   if (command === "heartbeat") {
     const leaseId = requiredFlag(input, "lease", command);
+    const status = parseHeartbeatStatus(input.flags.status);
+    const ttlSeconds = input.flags.ttl ? parsePositiveIntegerFlag(input.flags.ttl, "ttl") : undefined;
+    const store = await openAgentCoordinationStore(paths);
     const lease = store.heartbeat({
       leaseId,
-      status: parseHeartbeatStatus(input.flags.status),
-      ttlSeconds: input.flags.ttl ? parsePositiveInteger(input.flags.ttl, 600) : undefined,
+      status,
+      ttlSeconds,
       metadata: { command: "agent-resource heartbeat" },
     });
     if (!lease) return fail(input, command, "lease_not_found", `Unknown coordination lease: ${leaseId}`, CLI_EXIT_FAILURE);
@@ -106,6 +111,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
   if (command === "release") {
     const leaseId = requiredFlag(input, "lease", command);
     const status = parseReleaseStatus(input.flags.status || "abandoned");
+    const store = await openAgentCoordinationStore(paths);
     const lease = store.release({
       leaseId,
       status,
@@ -124,6 +130,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
   if (command === "waitlist") {
     const resource = requiredFlag(input, "resource", command);
     const intent = requiredFlag(input, "intent", command);
+    const store = await openAgentCoordinationStore(paths);
     const demand = store.waitlist({
       resourceId: resource,
       intentId: intent,
@@ -136,6 +143,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
   }
 
   if (command === "reap") {
+    const store = await openAgentCoordinationStore(paths);
     const result = store.reap();
     return ok(input, { reaped: result.reaped.map(publicLease) }, { subcommand: command });
   }
@@ -143,6 +151,7 @@ export async function runAgentResourceCli(input: AgentResourceCliInput): Promise
   if (command === "bypass") {
     const intent = requiredFlag(input, "intent", command);
     const reason = requiredFlag(input, "reason", command);
+    const store = await openAgentCoordinationStore(paths);
     const audit = store.recordBypass({
       intentId: intent,
       agentId: input.flags.agent,
@@ -209,11 +218,17 @@ function parseReleaseStatus(value: string): AgentWorkResultStatus {
   return value as AgentWorkResultStatus;
 }
 
-function parsePositiveInteger(value: string | undefined, fallback: number): number {
+function parsePositiveIntegerFlag(value: string | undefined, flagName: "ttl" | "pid", fallback?: number): number | undefined {
   if (!value) return fallback;
+  if (!/^[1-9]\d*$/.test(value)) throw invalidPositiveIntegerFlag(value, flagName);
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) throw new CliHandledError("invalid_agent_resource_ttl", `Expected a positive integer TTL, got ${value}`, CLI_EXIT_USAGE);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw invalidPositiveIntegerFlag(value, flagName);
   return parsed;
+}
+
+function invalidPositiveIntegerFlag(value: string, flagName: "ttl" | "pid"): CliHandledError {
+  const label = flagName === "ttl" ? "TTL" : "PID";
+  return new CliHandledError(`invalid_agent_resource_${flagName}`, `Expected a positive decimal integer ${label}, got ${value}`, CLI_EXIT_USAGE);
 }
 
 function resolvePaths(input: AgentResourceCliInput) {
