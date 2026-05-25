@@ -68,7 +68,7 @@ export class LeaseStore {
     if (!row) throw new Error("Lease not found");
     if (row.revoked_at) throw new Error("Lease revoked");
     if (row.consumed_at) throw new Error("Lease already consumed");
-    if (new Date(row.expires_at).getTime() <= Date.now()) throw new Error("Lease expired");
+    if (leaseExpiredOrInvalid(row.expires_at)) throw new Error("Lease expired");
     this.db.prepare("UPDATE leases SET consumed_at = ? WHERE id = ?").run(nowIso(), row.id);
     return { ...row, consumed_at: nowIso() };
   }
@@ -92,15 +92,30 @@ export class LeaseStore {
   }
 
   listActive(tenantId: string): LeaseRow[] {
-    return this.db
+    const rows = this.db
       .prepare(
-        "SELECT * FROM leases WHERE tenant_id = ? AND revoked_at IS NULL AND consumed_at IS NULL AND expires_at > ? ORDER BY created_at DESC",
+        "SELECT * FROM leases WHERE tenant_id = ? AND revoked_at IS NULL AND consumed_at IS NULL ORDER BY created_at DESC",
       )
-      .all(tenantId, nowIso()) as LeaseRow[];
+      .all(tenantId) as LeaseRow[];
+    return rows.filter((row) => !leaseExpiredOrInvalid(row.expires_at));
   }
 
   sweepExpired(): number {
-    const result = this.db.prepare("DELETE FROM leases WHERE expires_at < ?").run(nowIso());
-    return result.changes;
+    const now = nowIso();
+    const expired = this.db.prepare("SELECT id, expires_at FROM leases WHERE expires_at < ?").all(now) as Array<Pick<LeaseRow, "id" | "expires_at">>;
+    const invalid = this.db.prepare("SELECT id, expires_at FROM leases WHERE expires_at >= ?").all(now) as Array<Pick<LeaseRow, "id" | "expires_at">>;
+    const ids = [...expired, ...invalid.filter((row) => leaseExpiredOrInvalid(row.expires_at))].map((row) => row.id);
+    if (ids.length === 0) return 0;
+    const deleteLease = this.db.prepare("DELETE FROM leases WHERE id = ?");
+    const transaction = this.db.transaction((leaseIds: string[]) => {
+      for (const id of leaseIds) deleteLease.run(id);
+    });
+    transaction(ids);
+    return ids.length;
   }
+}
+
+function leaseExpiredOrInvalid(expiresAt: string): boolean {
+  const expiresAtMs = new Date(expiresAt).getTime();
+  return !Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now();
 }
