@@ -78,6 +78,9 @@ test("runCreateClawAgent scaffolds an agent repository without installing depend
   const skillsReadme = fs.readFileSync(path.join(appDir, "skills", "README.md"), "utf8");
   assert.match(skillsReadme, /skills/i);
 
+  const projectConfig = JSON.parse(fs.readFileSync(path.join(appDir, "claw.project.json"), "utf8"));
+  assert.equal(projectConfig.directories.skills, "skills");
+
   const readme = fs.readFileSync(path.join(appDir, "README.md"), "utf8");
   assert.match(readme, /Support Agent/);
   assert.match(readme, /agent:reply/);

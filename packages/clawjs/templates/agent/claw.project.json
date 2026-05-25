@@ -12,7 +12,7 @@
     "agentId": "__APP_SLUG__"
   },
   "directories": {
-    "skills": "claw/skills",
+    "skills": "skills",
     "plugins": "claw/plugins",
     "providers": "claw/providers",
     "channels": "claw/channels",

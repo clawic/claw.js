@@ -1302,6 +1302,26 @@ test("runCli can scaffold a workspace-first project with the new command surface
   assert.equal(projectConfig.directories.skills, "claw/skills");
 });
 
+test("runCli scaffolds agent skills where the generated project looks for them", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-new-agent-"));
+  const stdout = captureStream();
+
+  const exitCode = await runCli(["new", "agent", "support-agent", "--no-install", "--json"], {
+    stdout: stdout.stream,
+    stderr: captureStream().stream,
+    cwd: tempRoot,
+  });
+
+  assert.equal(exitCode, CLI_EXIT_OK);
+  assert.match(stdout.getOutput(), /"type": "agent"/);
+
+  const projectRoot = path.join(tempRoot, "support-agent");
+  assert.equal(fs.existsSync(path.join(projectRoot, "skills", "README.md")), true);
+
+  const projectConfig = JSON.parse(fs.readFileSync(path.join(projectRoot, "claw.project.json"), "utf8"));
+  assert.equal(projectConfig.directories.skills, "skills");
+});
+
 test("runCli can manage command-backed generations end to end", async (t) => {
   const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-generations-"));
   useIsolatedClawDataRoot(t, workspaceDir);
