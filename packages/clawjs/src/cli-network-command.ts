@@ -168,6 +168,15 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   throw new CliHandledError("invalid_boolean", `Invalid boolean value: ${value}`, CLI_EXIT_USAGE);
 }
 
+function parseNonNegativeInteger(value: string | undefined, fallback: number, flagName: string): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new CliHandledError("invalid_network_event_bytes", `${flagName} must be a non-negative integer.`, CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
 function upsertRule(state: NetworkControlState, flags: Record<string, string>, id: string): NetworkControlState {
   const existing = mergedRules(state).find((rule) => rule.id === id);
   const now = nowIso();
@@ -392,8 +401,8 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
         endpoint,
         adapterId: evaluation.adapterId,
         evaluation,
-        bytesIn: Number(input.flags["bytes-in"] ?? 0),
-        bytesOut: Number(input.flags["bytes-out"] ?? 0),
+        bytesIn: parseNonNegativeInteger(input.flags["bytes-in"], 0, "--bytes-in"),
+        bytesOut: parseNonNegativeInteger(input.flags["bytes-out"], 0, "--bytes-out"),
         detailOptIn,
       });
       const recorded = recordEvent(event, input.flags);

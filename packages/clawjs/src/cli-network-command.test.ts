@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("network CLI exposes status, adapters, manifests and aggregate privacy defaults", async () => {
@@ -94,6 +94,51 @@ test("network CLI records Monitor-backed events and keeps details redacted unles
     assert.equal(detailPayload.data.events[0].endpoint.value, "remote.chatGateway");
     assert.equal(detailPayload.data.events[0].redaction.domainHidden, false);
   });
+});
+
+test("network CLI rejects invalid event byte counters before recording", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-network-invalid-bytes-"));
+  const monitorDb = path.join(workspace, "monitor.sqlite");
+
+  const invalidText = await runCliCapture([
+    "network",
+    "events",
+    "record",
+    "--workspace",
+    workspace,
+    "--monitor-db",
+    monitorDb,
+    "--bytes-in",
+    "nope",
+    "--json",
+  ], workspace);
+  assert.equal(invalidText.code, CLI_EXIT_USAGE);
+  const invalidTextPayload = JSON.parse(invalidText.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string };
+  };
+  assert.equal(invalidTextPayload.ok, false);
+  assert.equal(invalidTextPayload.error.code, "invalid_network_event_bytes");
+  assert.equal(invalidTextPayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(monitorDb), false);
+
+  const negative = await runCliCapture([
+    "network",
+    "events",
+    "record",
+    "--workspace",
+    workspace,
+    "--monitor-db",
+    monitorDb,
+    "--bytes-out",
+    "-1",
+    "--json",
+  ], workspace);
+  assert.equal(negative.code, CLI_EXIT_USAGE);
+  const negativePayload = JSON.parse(negative.stdout) as { error: { code: string; status: string } };
+  assert.equal(negativePayload.error.code, "invalid_network_event_bytes");
+  assert.equal(negativePayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(monitorDb), false);
 });
 
 test("network CLI applies rules to Gateway route explanations and suggestions never auto-apply", async () => {
