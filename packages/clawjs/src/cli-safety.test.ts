@@ -1,7 +1,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 
-import { CLI_EXIT_OK } from "./cli-errors.ts";
+import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
 test("safety domains exposes regulated policy coverage", async () => {
@@ -104,6 +104,49 @@ test("safety check can return confirm or allow through central policy config", a
   assert.equal(allowPayload.data.decision.allowed, true);
   assert.equal(allowPayload.data.decision.policyDecision, "allow");
   assert.ok(allowPayload.data.decision.reasonCodes.includes("sensitive_export_review_required"));
+});
+
+test("safety check validates boolean guard flags", async () => {
+  const invalid = await runCliCapture([
+    "safety",
+    "check",
+    "--domain",
+    "legal",
+    "--effect",
+    "summary",
+    "--minor",
+    "maybe",
+    "--json",
+  ], process.cwd());
+  assert.equal(invalid.code, CLI_EXIT_USAGE, invalid.stderr || invalid.stdout);
+  const invalidPayload = JSON.parse(invalid.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string };
+  };
+  assert.equal(invalidPayload.ok, false);
+  assert.equal(invalidPayload.error.code, "invalid_boolean_flag");
+  assert.equal(invalidPayload.error.status, "USAGE");
+
+  const explicitFalse = await runCliCapture([
+    "safety",
+    "check",
+    "--domain",
+    "legal",
+    "--effect",
+    "summary",
+    "--external",
+    "false",
+    "--export",
+    "false",
+    "--json",
+  ], process.cwd());
+  assert.equal(explicitFalse.code, CLI_EXIT_OK, explicitFalse.stderr || explicitFalse.stdout);
+  const falsePayload = JSON.parse(explicitFalse.stdout) as {
+    data: { decision: { allowed: boolean; policyDecision: string; reasonCodes: string[] } };
+  };
+  assert.equal(falsePayload.data.decision.allowed, true);
+  assert.equal(falsePayload.data.decision.policyDecision, "allow");
+  assert.equal(falsePayload.data.decision.reasonCodes.includes("external_review_required"), false);
 });
 
 test("safety explain returns policy evidence for regulated domains", async () => {

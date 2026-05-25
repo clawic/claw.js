@@ -477,7 +477,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "governance") return await runGovernanceCli({ positionals, flags, context, wantsJson, binName });
   if (group === "evolution") return await runEvolutionCli({ positionals, flags, context, wantsJson, binName });
   if (group === "archive") return await runArchiveCli({ argv, positionals, flags, context, wantsJson, binName });
-  if (group === "safety") return await runSafetyCli({ positionals, flags, context, wantsJson, binName });
+  if (group === "safety") return await runSafetyCli({ argv, positionals, flags, context, wantsJson, binName });
   const connectorContextExit = await runConnectorContextCli({ group, command, subcommand, positionals, flags, argv, context, wantsJson, binName });
   if (connectorContextExit !== null) return connectorContextExit;
   const projectManifestExit = await runProjectManifestCli({ argv, positionals, flags, context, wantsJson, binName });

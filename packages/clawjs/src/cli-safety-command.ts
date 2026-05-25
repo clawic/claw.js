@@ -13,10 +13,11 @@ import {
 } from "@clawjs/core";
 
 import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
-import { formatCliTable } from "./cli-flag-parsers.ts";
+import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 
 interface SafetyCliInput {
+  argv: string[];
   positionals: string[];
   flags: Record<string, string>;
   context: {
@@ -65,21 +66,21 @@ export async function runSafetyCli(input: SafetyCliInput): Promise<number> {
       regulatedDomain: domain,
       decisionEffect,
       requestedUse: requestedUse as Parameters<typeof evaluateRegulatedAction>[0]["requestedUse"],
-      minorInvolved: input.flags.minor === "true" || input.flags["minor-involved"] === "true",
-      externalAction: input.flags.external === "true" || input.flags["external-action"] === "true",
-      sensitiveExport: input.flags.export === "true" || input.flags["sensitive-export"] === "true",
-      remoteOrProviderUse: input.flags.remote === "true" || input.flags.provider === "true",
-      professionalContext: input.flags.professional === "true" || input.flags["professional-context"] === "true",
+      minorInvolved: readSafetyBooleanFlag(input, ["minor", "minor-involved"]),
+      externalAction: readSafetyBooleanFlag(input, ["external", "external-action"]),
+      sensitiveExport: readSafetyBooleanFlag(input, ["export", "sensitive-export"]),
+      remoteOrProviderUse: readSafetyBooleanFlag(input, ["remote", "provider"]),
+      professionalContext: readSafetyBooleanFlag(input, ["professional", "professional-context"]),
       policyConfig: {
         mode: parsePolicyMode(input.flags.mode || input.flags["policy-mode"]),
-        confirmed: input.flags.confirm === "true" || input.flags.approved === "true",
+        confirmed: readSafetyBooleanFlag(input, ["confirm", "approved"]),
         approvalId: input.flags["approval-id"] ?? input.flags["host-approval-id"],
         legalLabel: input.flags["legal-label"],
-        globalConsent: input.flags["global-consent"] === "true",
-        materialConsent: input.flags["material-consent"] === "true",
-        destinationAuthorized: input.flags["destination-authorized"] === "true",
-        automationAuthorized: input.flags["automation-authorized"] === "true",
-        auditOnly: input.flags["audit-only"] === "true",
+        globalConsent: readSafetyBooleanFlag(input, ["global-consent"]),
+        materialConsent: readSafetyBooleanFlag(input, ["material-consent"]),
+        destinationAuthorized: readSafetyBooleanFlag(input, ["destination-authorized"]),
+        automationAuthorized: readSafetyBooleanFlag(input, ["automation-authorized"]),
+        auditOnly: readSafetyBooleanFlag(input, ["audit-only"]),
       },
     });
     return writeSafetyResult(input, { decision });
@@ -128,6 +129,14 @@ function parsePolicyMode(value: string | undefined): "strict" | "normal" | "auth
   const allowed = ["strict", "normal", "authorized_automation"];
   if (allowed.includes(value)) return value as "strict" | "normal" | "authorized_automation";
   throw new CliHandledError("invalid_policy_mode", `Use one of: ${allowed.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function readSafetyBooleanFlag(input: SafetyCliInput, names: string[]): boolean {
+  let enabled = false;
+  for (const name of names) {
+    if (readBooleanFlag(input.argv, input.flags, name, false)) enabled = true;
+  }
+  return enabled;
 }
 
 function writeSafetyUsage(input: SafetyCliInput): number {
