@@ -215,6 +215,10 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
     }
     const now = nowIso();
     const skillRefs = parseCsvOrJson(input.flags["skill-refs"] || input.flags["skill-ref"]) ?? [];
+    const scopeJson = parseSnippetJsonFlag(input, "scope");
+    if (scopeJson === null) return V1_DATA_EXIT_USAGE;
+    const metadataJson = parseSnippetJsonFlag(input, "metadata");
+    if (metadataJson === null) return V1_DATA_EXIT_USAGE;
     store.sqlite.prepare(`
       INSERT INTO snippets (id, slug, kind, title, body, shortcut, scope_json, skill_refs_json, metadata_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -228,9 +232,9 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
       title,
       body,
       input.flags.shortcut || null,
-      input.flags.scope ? JSON.stringify(JSON.parse(input.flags.scope)) : "{}",
+      scopeJson,
       JSON.stringify(skillRefs),
-      input.flags.metadata ? JSON.stringify(JSON.parse(input.flags.metadata)) : "{}",
+      metadataJson,
       now,
       now,
     );
@@ -268,4 +272,15 @@ export function runSnippetsCommand(input: V1DataCliInput, store: DatabaseService
     return changes > 0 ? V1_DATA_EXIT_OK : V1_DATA_EXIT_FAILURE;
   }
   return usageError(input, usage(input.binName, "snippets"));
+}
+
+function parseSnippetJsonFlag(input: V1DataCliInput, flag: "scope" | "metadata"): string | null {
+  const value = input.flags[flag];
+  if (value === undefined) return "{}";
+  try {
+    return JSON.stringify(JSON.parse(value));
+  } catch {
+    writeError(input, `invalid_snippet_${flag}_json`, `Expected --${flag} to be valid JSON.`, V1_DATA_EXIT_USAGE);
+    return null;
+  }
 }

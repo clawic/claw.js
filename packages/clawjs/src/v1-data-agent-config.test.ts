@@ -102,3 +102,52 @@ test("providers reject invalid policy and metadata JSON before persistence", asy
     }
   });
 });
+
+test("snippets reject invalid scope and metadata JSON before persistence", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-json-"));
+  await withPatchedEnv({
+    CLAW_HOME: path.join(tempRoot, "home"),
+    CLAW_DATA_DIR: tempRoot,
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-snippet-json-cwd-"));
+    const cases: Array<{ flag: string; code: string; slug: string }> = [
+      { flag: "--scope", code: "invalid_snippet_scope_json", slug: "bad-scope" },
+      { flag: "--metadata", code: "invalid_snippet_metadata_json", slug: "bad-metadata" },
+    ];
+
+    for (const testCase of cases) {
+      const stdout = captureStream();
+      assert.equal(await runInternalV1Cli([
+        "snippets",
+        "upsert",
+        testCase.slug,
+        "--title",
+        "Snippet",
+        "--body",
+        "Body",
+        testCase.flag,
+        "{bad",
+        "--json",
+      ], {
+        stdout: stdout.stream,
+        stderr: captureStream().stream,
+        cwd,
+      }), CLI_EXIT_USAGE);
+      const error = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+      assert.equal(error.ok, false);
+      assert.equal(error.error.code, testCase.code);
+      assert.equal(error.error.status, "USAGE");
+    }
+
+    const sqlite = new Database(resolveClawjsMainDbPath({ CLAW_DATA_DIR: tempRoot } as NodeJS.ProcessEnv));
+    try {
+      const rows = sqlite.prepare("SELECT slug FROM snippets ORDER BY slug").all();
+      assert.deepEqual(rows, []);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
