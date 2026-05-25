@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSnapshotDate": "2026-05-21",
+  "sourceSnapshotDate": "2026-05-25",
   "description": "Runtime ecosystem support is declared through official snapshots, triple matrices, authority policy, and claim guardrails. This manifest is the canonical machine-readable nucleus for ADR 0047.",
   "requiredDomains": [
     "sessions",
@@ -226,9 +226,13 @@
       "production": false,
       "uiParityClaim": "partial_template_only",
       "officialSnapshot": {
-        "capturedAt": "2026-05-21",
+        "capturedAt": "2026-05-25",
         "sourceType": "official_docs",
         "sources": [
+          "https://hermes-agent.nousresearch.com/docs/user-guide/cli/",
+          "https://hermes-agent.nousresearch.com/docs/ko/reference/cli-commands",
+          "https://hermes-agent.nousresearch.com/docs/user-guide/configuration",
+          "https://hermes-agent.nousresearch.com/docs/user-guide/security",
           "https://github.com/NousResearch/hermes-agent"
         ],
         "driftPolicy": "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
@@ -240,19 +244,19 @@
       },
       "tripleMatrix": {
         "nativeSurface": [
-          { "domain": "sessions", "nativeTerms": ["conversation", "CLI chat", "gateway chat", "resume", "session picker", "session title"], "officialCommands": ["hermes", "hermes --continue", "hermes --resume <session_id>", "hermes sessions list", "hermes sessions rename", "/new", "/reset", "/sessions", "/title"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "skills", "nativeTerms": ["skills", "Skills Hub"], "officialCommands": ["/skills", "/<skill-name>"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "memory", "nativeTerms": ["persistent memory", "user profiles"], "officialCommands": ["memory docs", "OpenClaw migrate memories"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "channels", "nativeTerms": ["gateway", "Telegram", "Discord", "Slack", "WhatsApp", "Signal", "Email"], "officialCommands": ["hermes gateway", "hermes gateway setup", "hermes gateway start"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "providers", "nativeTerms": ["LLM provider"], "officialCommands": ["hermes model"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "auth", "nativeTerms": ["configuration", "API keys migration"], "officialCommands": ["hermes setup", "hermes claw migrate"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "models", "nativeTerms": ["model"], "officialCommands": ["hermes model", "/model"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "scheduler", "nativeTerms": ["cron"], "officialCommands": ["cron scheduling docs"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "plugins", "nativeTerms": ["tools", "toolsets", "MCP"], "officialCommands": ["hermes tools", "MCP integration docs"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "gateway", "nativeTerms": ["messaging gateway"], "officialCommands": ["hermes gateway"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "doctorCompat", "nativeTerms": ["doctor", "update"], "officialCommands": ["hermes doctor", "hermes update"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "sandboxPermissions", "nativeTerms": ["command approval", "container isolation"], "officialCommands": ["security docs", "tools docs"], "authority": "runtime", "claim": "inventoried" },
-          { "domain": "configuration", "nativeTerms": ["config"], "officialCommands": ["hermes config set", "hermes setup"], "authority": "runtime", "claim": "inventoried" }
+          { "domain": "sessions", "nativeTerms": ["conversation", "CLI chat", "gateway chat", "resume", "session picker", "session title", "SQLite state.db", "JSONL export", "session-store statistics"], "officialCommands": ["hermes", "hermes chat", "hermes -z <prompt>", "hermes --continue", "hermes --resume <session_id>", "hermes chat --continue <name>", "hermes chat --resume <session>", "hermes sessions list", "hermes sessions browse", "hermes sessions export <output> [--session-id ID]", "hermes sessions delete <session-id>", "hermes sessions prune", "hermes sessions stats", "hermes sessions rename <session-id> <title>", "/new", "/reset", "/sessions", "/title"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "skills", "nativeTerms": ["skills", "Skills Hub", "skill bundles", "curator", "skill slash commands"], "officialCommands": ["hermes skills browse", "hermes skills search", "hermes skills install", "hermes skills inspect", "hermes skills list", "hermes skills check", "hermes skills update", "hermes skills audit", "hermes skills uninstall", "hermes skills reset", "hermes skills publish", "hermes skills snapshot", "hermes skills tap", "hermes skills config", "hermes bundles list", "hermes bundles show <name>", "hermes curator status", "hermes curator run --dry-run", "/skills", "/<skill-name>"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "memory", "nativeTerms": ["persistent memory", "MEMORY.md", "USER.md", "external memory provider", "memory provider plugin", "profile memory"], "officialCommands": ["hermes memory setup", "hermes memory status", "hermes memory off", "hermes plugins list", "hermes profile show <name>", "hermes claw migrate --preset user-data --dry-run"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "channels", "nativeTerms": ["gateway", "Telegram", "Discord", "Slack", "WhatsApp", "Signal", "Email", "pairing", "webhook delivery"], "officialCommands": ["hermes gateway setup", "hermes gateway run", "hermes gateway start", "hermes gateway stop", "hermes gateway restart", "hermes gateway status", "hermes gateway list", "hermes whatsapp", "hermes slack manifest", "hermes pairing list", "hermes pairing approve <platform> <code>", "hermes webhook subscribe", "hermes portal status"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "providers", "nativeTerms": ["LLM provider", "provider credential pool", "fallback provider chain", "Nous Portal", "custom endpoint"], "officialCommands": ["hermes model", "hermes chat --provider <provider>", "hermes auth list", "hermes auth status <provider>", "hermes fallback list", "hermes fallback add", "hermes fallback remove", "hermes portal status", "hermes setup model"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "auth", "nativeTerms": ["credential pools", "OAuth", "API keys", ".env", "auth.json", "subscription auth", "OpenClaw migration"], "officialCommands": ["hermes auth", "hermes auth list", "hermes auth add <provider>", "hermes auth remove <provider> <index>", "hermes auth reset <provider>", "hermes auth status <provider>", "hermes auth logout <provider>", "hermes auth spotify", "hermes model", "hermes setup --portal", "hermes portal status", "hermes claw migrate --dry-run"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "models", "nativeTerms": ["model", "provider model picker", "fallback model", "custom endpoint", "session model switch"], "officialCommands": ["hermes model", "hermes chat --model <model>", "hermes chat --provider <provider>", "hermes fallback list", "hermes fallback add", "hermes fallback clear", "/model", "/model <provider>:<model>", "/model <model> --global"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "scheduler", "nativeTerms": ["cron", "scheduled job", "webhook activation", "kanban dispatcher", "background session"], "officialCommands": ["hermes cron list", "hermes cron create", "hermes cron add", "hermes cron edit", "hermes cron pause", "hermes cron resume", "hermes cron run", "hermes cron remove", "hermes cron status", "hermes cron tick", "hermes webhook subscribe", "hermes kanban", "/background <prompt>"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "plugins", "nativeTerms": ["plugins", "tools", "toolsets", "MCP", "ACP", "shell hooks", "Computer Use"], "officialCommands": ["hermes plugins", "hermes plugins install <identifier>", "hermes plugins update <name>", "hermes plugins remove <name>", "hermes plugins enable <name>", "hermes plugins disable <name>", "hermes plugins list", "hermes tools", "hermes tools --summary", "hermes mcp serve", "hermes mcp add <name>", "hermes mcp list", "hermes mcp test <name>", "hermes mcp configure <name>", "hermes mcp login <name>", "hermes acp", "hermes hooks list", "hermes computer-use status"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "gateway", "nativeTerms": ["messaging gateway", "service lifecycle", "Tool Gateway routing", "dashboard", "logs"], "officialCommands": ["hermes gateway run", "hermes gateway start", "hermes gateway stop", "hermes gateway restart", "hermes gateway status", "hermes gateway list", "hermes gateway install", "hermes gateway uninstall", "hermes gateway setup", "hermes portal status", "hermes portal tools", "hermes logs gateway", "hermes dashboard --status"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "doctorCompat", "nativeTerms": ["doctor", "status", "dump", "debug report", "logs", "update", "version"], "officialCommands": ["hermes doctor", "hermes doctor --fix", "hermes status", "hermes status --all", "hermes status --deep", "hermes dump", "hermes dump --show-keys", "hermes debug share --local", "hermes logs", "hermes update --check", "hermes version", "hermes --version", "hermes --help"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "sandboxPermissions", "nativeTerms": ["command approval", "container isolation", "terminal backend", "YOLO mode", "checkpoints", "shell-hook consent", "security audit"], "officialCommands": ["hermes setup terminal", "hermes config set terminal.backend <backend>", "hermes chat --yolo", "hermes checkpoints", "hermes hooks list", "hermes hooks doctor", "hermes security audit", "hermes tools --summary", "security docs", "tools docs"], "authority": "runtime", "claim": "inventoried" },
+          { "domain": "configuration", "nativeTerms": ["config.yaml", ".env", "auth.json", "profile", "dashboard", "setup wizard", "config migration"], "officialCommands": ["hermes config show", "hermes config edit", "hermes config set <key> <value>", "hermes config path", "hermes config env-path", "hermes config check", "hermes config migrate", "hermes setup", "hermes setup --non-interactive", "hermes setup --quick", "hermes setup --reset", "hermes dashboard", "hermes dashboard --status", "hermes profile list", "hermes profile show <name>"], "authority": "runtime", "claim": "inventoried" }
         ],
         "clawDomainSurface": [
           { "domain": "sessions", "clawSurface": "native session template", "canonicalAuthority": "runtime", "persistence": "index_and_shadow_when_safe" },
