@@ -757,6 +757,48 @@ test("runCli rejects invalid v1 sessions limits before querying sqlite", async (
   });
 });
 
+test("runCli rejects invalid secondary command limits before listing", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secondary-limit-"));
+  await withPatchedEnv({
+    CLAW_DATA_DIR: path.join(tempRoot, "data"),
+    CLAW_DB_PATH: undefined,
+    DATABASE_DB_PATH: undefined,
+    DATABASE_FILES_DIR: undefined,
+  }, async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-secondary-limit-cwd-"));
+    const cases = [
+      {
+        args: ["connectors", "operation", "list", "--limit", "nope", "--json"],
+        code: "invalid_connectors_limit",
+        canonicalCommand: "connectors",
+      },
+      {
+        args: ["connectors", "operations", "list", "--limit", "0", "--json"],
+        code: "invalid_connectors_limit",
+        canonicalCommand: "connectors",
+      },
+      {
+        args: ["sheets", "workbooks", "list", "--limit", "1.5", "--workspace", cwd, "--json"],
+        code: "invalid_sheets_limit",
+        canonicalCommand: "sheets",
+      },
+    ];
+
+    for (const { args, code, canonicalCommand } of cases) {
+      const stdout = captureStream();
+      assert.equal(await runCli(args, {
+        stdout: stdout.stream,
+        stderr: captureStream().stream,
+        cwd,
+      }), CLI_EXIT_USAGE);
+      const payload = parseCliJsonError(stdout.getOutput());
+      assert.equal(payload.error.code, code);
+      assert.equal(payload.error.status, "USAGE");
+      assert.equal(payload.meta.canonicalCommand, canonicalCommand);
+    }
+  });
+});
+
 test("runCli manages V2 conversation artifact sidecars for audio, drive, runtime, search, and backup reset", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-v2-sidecars-"));
   await withPatchedEnv({

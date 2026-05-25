@@ -116,6 +116,8 @@ export function runConnectorsCommand(input: V1DataCliInput, store: DatabaseServi
   if (scope !== "operation" && scope !== "operations") return usageError(input, usage(input.binName, "connectors"));
   const command = input.positionals[2] || "list";
   if (command === "list") {
+    const limit = positiveIntegerFlag(input, "limit", 100, "invalid_connectors_limit");
+    if (limit === undefined) return V1_DATA_EXIT_USAGE;
     const where: string[] = [];
     const params: string[] = [];
     if (input.flags.provider) {
@@ -133,7 +135,7 @@ export function runConnectorsCommand(input: V1DataCliInput, store: DatabaseServi
       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
       ORDER BY o.provider_id, o.id
       LIMIT ?
-    `).all(...params, Math.max(1, Number(input.flags.limit ?? 100)));
+    `).all(...params, limit);
     writeSuccess(input, { items: rows.map(normalizeDbRow) });
     return V1_DATA_EXIT_OK;
   }
@@ -272,11 +274,13 @@ export function runSheetsCommand(input: V1DataCliInput): number {
   const workspaceRoot = path.resolve(input.cwd, expandHome(input.flags.workspace || input.cwd));
   const root = resolveSheetsWorkbooksCliRoot(input);
   if (command === "list") {
+    const limit = positiveIntegerFlag(input, "limit", 100, "invalid_sheets_limit");
+    if (limit === undefined) return V1_DATA_EXIT_USAGE;
     const items = fs.existsSync(root)
       ? fs.readdirSync(root)
         .filter((entry) => entry.endsWith(".json"))
         .sort()
-        .slice(0, Math.max(1, Number(input.flags.limit ?? 100)))
+        .slice(0, limit)
         .map((entry) => normalizeWorkbookManifest(readWorkbookManifest(path.join(root, entry)), path.basename(entry, ".json")))
       : [];
     writeSuccess(input, { root, items });
