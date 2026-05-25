@@ -7,6 +7,8 @@ import path from "node:path";
 
 import { test } from "vitest";
 
+import { resolveClawPersistentSurfacePath } from "@clawjs/core";
+
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
@@ -320,6 +322,20 @@ test("report rejects unsupported repository flags before writing governance stat
   const status = await runCliCapture(["report", "status", "--workspace", workspace, "--json"], workspace);
   const statusPayload = parsePayload<{ reports: unknown[] }>(status.stdout);
   assert.deepEqual(statusPayload.data.reports, []);
+});
+
+test("report rejects corrupt governance state JSON as usage", async () => {
+  const workspace = tempWorkspace();
+  const statePath = resolveClawPersistentSurfacePath("claw.workspace.reports.governance_state", workspace);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  fs.writeFileSync(statePath, "{bad");
+
+  const status = await runCliCapture(["report", "status", "--workspace", workspace, "--json"], workspace);
+  assert.equal(status.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(status.stdout) as { ok: boolean; error: { code: string; status: string } };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_report_state_json");
+  assert.equal(payload.error.status, "USAGE");
 });
 
 test("report submit dry-run plans Claw GitHub connector operations", async () => {

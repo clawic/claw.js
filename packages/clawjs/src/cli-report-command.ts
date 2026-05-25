@@ -1080,7 +1080,12 @@ function readReportState(workspaceRoot: string): ReportGovernanceState {
     const now = nowIso();
     return { schemaVersion: 1, fingerprintSalt: randomBytes(24).toString("hex"), createdAt: now, updatedAt: now, reports: [], budgetEvents: [], budgetOverrides: [] };
   }
-  return normalizeReportState(JSON.parse(fs.readFileSync(file, "utf8")));
+  try {
+    return normalizeReportState(JSON.parse(fs.readFileSync(file, "utf8")));
+  } catch (error) {
+    if (error instanceof CliHandledError) throw error;
+    throw new CliHandledError("invalid_report_state_json", `Report governance state must contain valid JSON: ${file}`, CLI_EXIT_USAGE);
+  }
 }
 
 function writeReportState(workspaceRoot: string, state: ReportGovernanceState): void {
