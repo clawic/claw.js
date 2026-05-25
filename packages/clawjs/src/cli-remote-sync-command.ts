@@ -23,6 +23,7 @@ type RemoteSyncCliInput = {
 };
 
 const NODES_SUBCOMMANDS = ["list", "pair", "trust", "revoke", "invite", "accept", "share", "heartbeat"] as const;
+const GATEWAY_SUBCOMMANDS = ["serve", "project", "conformance", "agent-service", "audit", "secret-lease", "secret-provider"] as const;
 const REMOTE_SUBCOMMANDS = [
   "classify",
   "check",
@@ -208,6 +209,34 @@ function unknownNodesSubcommand(input: RemoteSyncCliInput, command: string | und
           details: {
             received,
             validSubcommands: [...NODES_SUBCOMMANDS],
+          },
+        }
+      ),
+      { subcommand: received }
+    );
+    return CLI_EXIT_USAGE;
+  }
+  return missing(input, usage);
+}
+
+function unknownGatewaySubcommand(input: RemoteSyncCliInput, command: string | undefined): number {
+  const received = command ?? null;
+  const usage = `gateway ${GATEWAY_SUBCOMMANDS.join("|")}`;
+  if (input.wantsJson) {
+    writeCommandJsonError(
+      input.context.stdout,
+      "gateway",
+      new CliHandledError(
+        "unknown_gateway_subcommand",
+        command ? `Unknown gateway subcommand: ${command}` : "Missing gateway subcommand.",
+        CLI_EXIT_USAGE,
+        {
+          location: "cli.gateway.subcommand",
+          suggestion: `Use one of: ${GATEWAY_SUBCOMMANDS.join(", ")}.`,
+          safeNextStep: "Run claw gateway conformance --json to inspect gateway parity, or rerun with a valid gateway subcommand.",
+          details: {
+            received,
+            validSubcommands: [...GATEWAY_SUBCOMMANDS],
           },
         }
       ),
@@ -1154,7 +1183,7 @@ export async function runGatewayCli(input: RemoteSyncCliInput): Promise<number> 
     }
     return writeOutput(input, "gateway", { status: "signed_secret_lease_issued", writes: false, ...state }, "secret-lease: signed_secret_lease_issued", command);
   }
-  return missing(input, "gateway serve|project|conformance|agent-service|audit|secret-lease|secret-provider");
+  return unknownGatewaySubcommand(input, command);
 }
 
 export function remoteSyncExitForPayload(payload: { status?: string; missingRoutes?: unknown[] }): number {

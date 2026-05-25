@@ -94,7 +94,20 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       }
       const targetCanonicalCommand = canonicalCommandFor(helpTarget);
       const commandHelp = buildCommandHelp(binName, helpTarget);
-      writeCommandJsonOk(context.stdout, targetCanonicalCommand, { command: targetCanonicalCommand, help: commandHelp ?? usage }, {
+      if (!commandHelp) {
+        writeCommandJsonError(context.stdout, targetCanonicalCommand, new CliHandledError("unknown_help_topic", `No help topic found for ${helpTarget}.`, CLI_EXIT_USAGE, {
+          safeNextStep: `Run ${binName} search ${JSON.stringify(helpTarget)} --json or ${binName} inspect commands --json.`,
+          details: {
+            topic: helpTarget,
+            related: relatedCliMatches(helpTarget, { limit: 8 }),
+          },
+        }), {
+          invokedCommand: group ?? helpTarget,
+          subcommand: group === "help" ? helpTarget : command ?? null,
+        });
+        return CLI_EXIT_USAGE;
+      }
+      writeCommandJsonOk(context.stdout, targetCanonicalCommand, { command: targetCanonicalCommand, help: commandHelp }, {
         invokedCommand: group ?? helpTarget,
         subcommand: group === "help" ? helpTarget : command ?? null,
         ...(subcommand ? { operation: subcommand } : {}),
@@ -106,7 +119,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       return CLI_EXIT_OK;
     }
     const commandHelp = buildCommandHelp(binName, helpTarget);
-    context.stdout.write(`${commandHelp ?? usage}\n`);
+    if (!commandHelp) {
+      context.stderr.write(`No help topic found for ${helpTarget}. Run ${binName} search ${JSON.stringify(helpTarget)} --json or ${binName} inspect commands --json.\n`);
+      return CLI_EXIT_USAGE;
+    }
+    context.stdout.write(`${commandHelp}\n`);
     return CLI_EXIT_OK;
   }
 

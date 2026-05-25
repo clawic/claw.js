@@ -162,6 +162,78 @@ test("guidance and resources list reject invalid status filters", async (t) => {
   assert.equal(resourcesPayload.error.location, "cli.resources.status");
 });
 
+test("guidance returns JSON usage errors for unknown subcommands", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-unknown-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const guidanceDir = path.join(cwd, "guidance");
+
+  const result = await runCliCapture([
+    "guidance", "definitely_missing",
+    "--guidance-dir", guidanceDir,
+    "--json",
+  ], cwd);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string | null; validSubcommands?: string[] };
+    };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_guidance_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.guidance.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw guidance list --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["status", "list", "show", "create", "archive", "match"]);
+  assert.equal(payload.meta.canonicalCommand, "guidance");
+  assert.equal(payload.meta.invokedCommand, "guidance");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+  assert.equal(fs.existsSync(path.join(guidanceDir, "guidance.json")), false);
+});
+
+test("resources returns JSON usage errors for unknown subcommands", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-resources-unknown-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const resourcesDir = path.join(cwd, "resources");
+
+  const result = await runCliCapture([
+    "resources", "definitely_missing",
+    "--resources-dir", resourcesDir,
+    "--json",
+  ], cwd);
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string | null; validSubcommands?: string[] };
+    };
+    meta: { canonicalCommand: string; invokedCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_resources_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.resources.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw resources list --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["list", "register", "show", "resolve", "read", "status"]);
+  assert.equal(payload.meta.canonicalCommand, "resources");
+  assert.equal(payload.meta.invokedCommand, "resources");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+  assert.equal(fs.existsSync(path.join(resourcesDir, "resources.json")), false);
+});
+
 test("guidance create rejects invalid enum and integer flags before writing state", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-create-flags-"));
   useIsolatedClawDataRoot(t, cwd);

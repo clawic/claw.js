@@ -96,6 +96,28 @@ test("package bin routes help topics through the canonical router", () => {
   assert.equal(payload.meta.subcommand, "search");
 });
 
+test("package bin rejects unknown help topics instead of returning root help", () => {
+  const jsonHelp = runClawBin(["help", "definitely_missing", "--json"]);
+  assert.equal(jsonHelp.status, 64, jsonHelp.stderr || jsonHelp.stdout);
+  const payload = JSON.parse(jsonHelp.stdout) as {
+    ok: boolean;
+    error: { code: string; safeNextStep: string; details?: { related?: unknown[] } };
+    meta: { invokedCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_help_topic");
+  assert.match(payload.error.safeNextStep, /claw search "definitely_missing" --json/);
+  assert.equal(Array.isArray(payload.error.details?.related), true);
+  assert.equal(payload.meta.invokedCommand, "help");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+
+  const textHelp = runClawBin(["help", "definitely_missing"]);
+  assert.equal(textHelp.status, 64, textHelp.stderr || textHelp.stdout);
+  assert.equal(textHelp.stdout, "");
+  assert.match(textHelp.stderr, /No help topic found for definitely_missing/);
+  assert.doesNotMatch(textHelp.stderr, /Primary commands and portals:/);
+});
+
 test("package bin delegates inspect and collection discovery to the canonical router", () => {
   const commands = runClawBin(["inspect", "commands", "--json"]);
   assert.equal(commands.status, 0, commands.stderr);

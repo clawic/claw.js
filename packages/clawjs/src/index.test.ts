@@ -165,6 +165,33 @@ test("runCli exposes portable archive governance and signed-host gates", async (
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-archive-cli-"));
   const archivePath = path.join(cwd, "local.clawbackup");
 
+  const unknownArchiveStdout = captureStream();
+  const unknownArchiveStderr = captureStream();
+  assert.equal(await runCli(["archive", "definitely_missing", "--json"], {
+    stdout: unknownArchiveStdout.stream,
+    stderr: unknownArchiveStderr.stream,
+    cwd,
+  }), CLI_EXIT_USAGE);
+  assert.equal(unknownArchiveStderr.getOutput(), "");
+  const unknownArchive = JSON.parse(unknownArchiveStdout.getOutput()) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: { received?: string; validSubcommands?: string[] };
+    };
+  };
+  assert.equal(unknownArchive.ok, false);
+  assert.equal(unknownArchive.error.code, "unknown_archive_subcommand");
+  assert.equal(unknownArchive.error.status, "USAGE");
+  assert.equal(unknownArchive.error.location, "cli.archive.subcommand");
+  assert.equal(unknownArchive.error.details?.received, "definitely_missing");
+  assert.deepEqual(unknownArchive.error.details?.validSubcommands, ["plan", "export", "verify", "inspect", "import", "restore", "doctor"]);
+  assert.match(unknownArchive.error.safeNextStep, /archive plan --json/);
+  assert.match(unknownArchive.error.safeNextStep, /help archive --json/);
+
   const planStdout = captureStream();
   assert.equal(await runCli(["archive", "plan", "--include-secrets", "--json"], {
     stdout: planStdout.stream,

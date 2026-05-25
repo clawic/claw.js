@@ -98,6 +98,36 @@ test("remote returns JSON usage errors for unknown subcommands", async () => {
   assert.equal(payload.meta.subcommand, "definitely_missing");
 });
 
+test("gateway returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["gateway", "definitely_missing", "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: {
+        received?: string | null;
+        validSubcommands?: string[];
+      };
+    };
+    meta: { canonicalCommand: string; subcommand?: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "unknown_gateway_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.gateway.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw gateway conformance --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["serve", "project", "conformance", "agent-service", "audit", "secret-lease", "secret-provider"]);
+  assert.equal(payload.meta.canonicalCommand, "gateway");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+});
+
 test("gateway agent-service rejects invalid cost flags before persistence", async () => {
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-gateway-agent-cost-"));
 

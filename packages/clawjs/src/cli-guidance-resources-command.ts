@@ -31,7 +31,9 @@ type GuidanceResourcesClaw = Awaited<ReturnType<typeof createCliClaw>> & {
 
 const GUIDANCE_LIST_STATUSES = ["active", "archived"] as const;
 const GUIDANCE_SEVERITIES = ["info", "notice", "warning", "critical"] as const;
+const GUIDANCE_SUBCOMMANDS = ["status", "list", "show", "create", "archive", "match"] as const;
 const RESOURCE_LIST_STATUSES = ["active", "missing", "moved", "stale"] as const;
+const RESOURCE_SUBCOMMANDS = ["list", "register", "show", "resolve", "read", "status"] as const;
 
 export async function runGuidanceResourcesCli(input: {
   group: string | undefined;
@@ -175,6 +177,26 @@ function runGuidanceCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & {
     return CLI_EXIT_OK;
   }
 
+  if (wantsJson) {
+    writeCommandJsonError(context.stdout, "guidance", new CliHandledError(
+      "unknown_guidance_subcommand",
+      command ? `Unknown guidance subcommand: ${command}.` : "Missing guidance subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.guidance.subcommand",
+        suggestion: `Use one of: ${GUIDANCE_SUBCOMMANDS.join(", ")}.`,
+        safeNextStep: "Run claw guidance list --json to inspect active guidance, or claw help guidance --json for the guidance command surface.",
+        details: {
+          received: command ?? null,
+          validSubcommands: [...GUIDANCE_SUBCOMMANDS],
+        },
+      },
+    ), {
+      invokedCommand: "guidance",
+      subcommand: command ?? null,
+    });
+    return CLI_EXIT_USAGE;
+  }
   context.stderr.write("Usage: claw guidance list|show|create|archive|match\n");
   return CLI_EXIT_USAGE;
 }
@@ -235,7 +257,27 @@ function runResourcesCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & 
     return CLI_EXIT_OK;
   }
 
-  context.stderr.write("Usage: claw resources list|register|show|resolve|read|status\n");
+  if (wantsJson) {
+    writeCommandJsonError(context.stdout, "resources", new CliHandledError(
+      "unknown_resources_subcommand",
+      command ? `Unknown resources subcommand: ${command}.` : "Missing resources subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.resources.subcommand",
+        suggestion: `Use one of: ${RESOURCE_SUBCOMMANDS.join(", ")}.`,
+        safeNextStep: "Run claw resources list --json to inspect registered resources, or claw help resources --json for the resources command surface.",
+        details: {
+          received: command ?? null,
+          validSubcommands: [...RESOURCE_SUBCOMMANDS],
+        },
+      },
+    ), {
+      invokedCommand: "resources",
+      subcommand: command ?? null,
+    });
+    return CLI_EXIT_USAGE;
+  }
+  context.stderr.write(`Usage: claw resources ${RESOURCE_SUBCOMMANDS.join("|")}\n`);
   return CLI_EXIT_USAGE;
 }
 

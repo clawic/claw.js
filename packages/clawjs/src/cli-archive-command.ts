@@ -17,7 +17,7 @@ import path from "node:path";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface ArchiveCliInput {
   positionals: string[];
@@ -32,7 +32,8 @@ interface ArchiveCliInput {
   binName: string;
 }
 
-const ARCHIVE_ACTIONS = new Set(["plan", "export", "verify", "inspect", "import", "restore", "doctor"]);
+const ARCHIVE_SUBCOMMANDS = ["plan", "export", "verify", "inspect", "import", "restore", "doctor"] as const;
+const ARCHIVE_ACTIONS = new Set<string>(ARCHIVE_SUBCOMMANDS);
 
 export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
   const action = input.positionals[1] || "plan";
@@ -207,7 +208,26 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
 }
 
 function writeArchiveUsage(input: ArchiveCliInput): number {
-  input.context.stderr.write(`Usage: ${input.binName} archive plan|export|verify|inspect|import|restore|doctor [--json] [--include-secrets] [--signed-host] [--output PATH.clawbackup] [--archive PATH.clawbackup] [--target PATH] [--approve --confirm-restore PATH]\n`);
+  const usage = `Usage: ${input.binName} archive ${ARCHIVE_SUBCOMMANDS.join("|")} [--json] [--include-secrets] [--signed-host] [--output PATH.clawbackup] [--archive PATH.clawbackup] [--target PATH] [--approve --confirm-restore PATH]`;
+  if (input.wantsJson) {
+    const received = input.positionals[1] ?? null;
+    writeCommandJsonError(input.context.stdout, "archive", new CliHandledError(
+      "unknown_archive_subcommand",
+      received ? `Unknown archive subcommand: ${received}.` : usage,
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.archive.subcommand",
+        suggestion: "Use a registered portable archive subcommand.",
+        safeNextStep: `Run ${input.binName} archive plan --json to preview the archive, or ${input.binName} help archive --json for the archive command surface.`,
+        details: {
+          received,
+          validSubcommands: [...ARCHIVE_SUBCOMMANDS],
+        },
+      },
+    ), { subcommand: received });
+    return CLI_EXIT_USAGE;
+  }
+  input.context.stderr.write(`${usage}\n`);
   return CLI_EXIT_USAGE;
 }
 
