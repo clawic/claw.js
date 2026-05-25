@@ -14,6 +14,18 @@ function parseCodeListFlag(value: string | undefined): string[] {
     : [];
 }
 
+function parseCodeNonNegativeIntegerFlag(value: string | undefined, flagName: string, errorCode: string): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new CliHandledError(errorCode, `Expected --${flagName} to be a non-negative integer, got ${value}.`, CLI_EXIT_USAGE, {
+      suggestion: `Pass a non-negative integer such as --${flagName} 60000.`,
+      safeNextStep: `Rerun claw code agents list with a valid --${flagName} value.`,
+    });
+  }
+  return parsed;
+}
+
 function resolveCodeIntentId(positionals: string[], flags: Record<string, string>, index = 2): string {
   const id = flags.intent ?? flags["intent-id"] ?? flags.id ?? positionals[index];
   if (!id) throw new CliHandledError("usage_error", "A code intent id is required.", CLI_EXIT_USAGE);
@@ -142,7 +154,7 @@ export async function runCodeCli(input: {
     }
 
     if (command === "agents" && subcommand === "list") {
-      const offlineAfterMs = input.flags["offline-after-ms"] ? Number(input.flags["offline-after-ms"]) : undefined;
+      const offlineAfterMs = parseCodeNonNegativeIntegerFlag(input.flags["offline-after-ms"], "offline-after-ms", "invalid_code_agent_offline_after_ms");
       const agents = globalIndex.listAgents({ ...(offlineAfterMs !== undefined ? { offlineAfterMs } : {}) });
       if (input.wantsJson) writeCodeJson({ agents });
       else input.context.stdout.write(formatCliTable(agents.map((agent: { id: string; status: string; projectId: string | null; intentId: string | null }) => ({
