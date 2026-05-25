@@ -1584,8 +1584,13 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     );
     CREATE INDEX IF NOT EXISTS connector_context_records_provider_idx
       ON connector_context_records(provider_id, kind, state);
+    CREATE INDEX IF NOT EXISTS connector_context_records_provider_display_idx
+      ON connector_context_records(provider_id, kind, display_name);
     CREATE INDEX IF NOT EXISTS connector_context_records_parent_idx
       ON connector_context_records(parent_id);
+    CREATE INDEX IF NOT EXISTS connector_context_records_resource_id_idx
+      ON connector_context_records(resource_id)
+      WHERE resource_id IS NOT NULL;
     CREATE TABLE IF NOT EXISTS connector_context_defaults (
       id TEXT PRIMARY KEY,
       scope_kind TEXT NOT NULL,
@@ -1622,6 +1627,8 @@ export const V1_MAIN_SCHEMA_SQL = String.raw`
     );
     CREATE INDEX IF NOT EXISTS connector_context_audit_events_provider_idx
       ON connector_context_audit_events(provider_id, operation_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS connector_context_audit_events_created_idx
+      ON connector_context_audit_events(created_at DESC);
     CREATE TABLE IF NOT EXISTS connector_audit_events (
       id TEXT PRIMARY KEY,
       request_id TEXT NOT NULL,
