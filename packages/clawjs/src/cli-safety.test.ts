@@ -4,6 +4,35 @@ import assert from "node:assert/strict";
 import { CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { runCliCapture } from "./index-test-utils.ts";
 
+test("safety returns JSON usage errors for unknown subcommands", async () => {
+  const result = await runCliCapture(["safety", "definitely_missing", "--json"], process.cwd());
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: {
+      code: string;
+      status: string;
+      location: string;
+      safeNextStep: string;
+      details?: {
+        received?: string | null;
+        validSubcommands?: string[];
+      };
+    };
+    meta: { canonicalCommand: string; subcommand: string | null };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.meta.canonicalCommand, "safety");
+  assert.equal(payload.meta.subcommand, "definitely_missing");
+  assert.equal(payload.error.code, "unknown_safety_subcommand");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.safety.subcommand");
+  assert.equal(payload.error.safeNextStep.includes("claw safety domains --json"), true);
+  assert.equal(payload.error.details?.received, "definitely_missing");
+  assert.deepEqual(payload.error.details?.validSubcommands, ["domains", "classify", "check", "explain", "disclaimers"]);
+});
+
 test("safety domains exposes regulated policy coverage", async () => {
   const result = await runCliCapture(["safety", "domains", "--json"], process.cwd());
   assert.equal(result.code, CLI_EXIT_OK, result.stderr || result.stdout);

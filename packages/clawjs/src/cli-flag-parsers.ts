@@ -22,6 +22,7 @@ export function collectFlagValues(argv: string[], name: string): string[] {
   const prefix = `--${name}=`;
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
+    if (token === "--") break;
     if (token === `--${name}`) {
       const next = argv[index + 1];
       if (next && !next.startsWith("--")) {
@@ -37,6 +38,14 @@ export function collectFlagValues(argv: string[], name: string): string[] {
   return values;
 }
 
+export function hasCliFlag(argv: string[], flag: string): boolean {
+  for (const token of argv) {
+    if (token === "--") return false;
+    if (token === flag) return true;
+  }
+  return false;
+}
+
 export function readBooleanFlag(argv: string[], flags: Record<string, string>, name: string, fallback = false): boolean {
   const value = flags[name];
   if (value !== undefined) {
@@ -45,7 +54,7 @@ export function readBooleanFlag(argv: string[], flags: Record<string, string>, n
     if (["false", "0", "no", "off"].includes(normalized)) return false;
     throw new CliHandledError("invalid_boolean_flag", `--${name} must be true or false.`, CLI_EXIT_USAGE);
   }
-  if (argv.includes(`--${name}`)) return true;
+  if (hasCliFlag(argv, `--${name}`)) return true;
   if (value === undefined) return fallback;
   return fallback;
 }
@@ -59,6 +68,7 @@ export function parseFlags(argv: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
+    if (token === "--") break;
     if (!token?.startsWith("--")) continue;
     const equalsIndex = token.indexOf("=");
     if (equalsIndex > 2) {
@@ -76,6 +86,10 @@ export function extractPositionals(argv: string[]): string[] {
   const positionals: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
+    if (token === "--") {
+      positionals.push(...argv.slice(index + 1));
+      break;
+    }
     if (!token?.startsWith("--")) {
       positionals.push(token);
       continue;

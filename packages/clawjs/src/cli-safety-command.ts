@@ -14,7 +14,7 @@ import {
 
 import { CliHandledError, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 
 interface SafetyCliInput {
   argv: string[];
@@ -27,6 +27,8 @@ interface SafetyCliInput {
   wantsJson: boolean;
   binName: string;
 }
+
+const SAFETY_SUBCOMMANDS = ["domains", "classify", "check", "explain", "disclaimers"] as const;
 
 export async function runSafetyCli(input: SafetyCliInput): Promise<number> {
   const action = input.positionals[1];
@@ -140,6 +142,27 @@ function readSafetyBooleanFlag(input: SafetyCliInput, names: string[]): boolean 
 }
 
 function writeSafetyUsage(input: SafetyCliInput): number {
+  if (input.wantsJson) {
+    const received = input.positionals[1] ?? null;
+    writeCommandJsonError(input.context.stdout, "safety", new CliHandledError(
+      "unknown_safety_subcommand",
+      received ? `Unknown safety subcommand: ${received}.` : "Missing safety subcommand.",
+      CLI_EXIT_USAGE,
+      {
+        location: "cli.safety.subcommand",
+        suggestion: "Use one of the registered safety subcommands.",
+        safeNextStep: `Run ${input.binName} safety domains --json to list regulated-domain coverage, or ${input.binName} help safety --json for the safety command surface.`,
+        details: {
+          received,
+          validSubcommands: [...SAFETY_SUBCOMMANDS],
+        },
+      },
+    ), {
+      subcommand: received,
+    });
+    return CLI_EXIT_USAGE;
+  }
+
   input.context.stderr.write([
     `Usage: ${input.binName} safety domains|classify|check|explain|disclaimers [options]`,
     "",
