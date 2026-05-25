@@ -530,6 +530,77 @@ test("runUserKnowledgeCli rejects invalid confidence before user proposal persis
   assert.equal((JSON.parse(listStdout.getOutput()) as { data: { proposals: unknown[] } }).data.proposals.length, 0);
 });
 
+test("runUserKnowledgeCli reports invalid user metadata flags as usage before proposal persistence", async (t) => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-user-metadata-"));
+  useIsolatedClawDataRoot(t, workspaceRoot);
+  const scenarios = [
+    { flag: "--sensitivity", value: "bogus", code: "invalid_user_sensitivity" },
+    { flag: "--visibility", value: "bogus", code: "invalid_user_visibility" },
+    { flag: "--domain", value: "bogus", code: "invalid_user_domain" },
+  ];
+
+  for (const scenario of scenarios) {
+    const argv = [
+      "user",
+      "propose",
+      "--path", "identity.name",
+      "--value", "Ada",
+      scenario.flag, scenario.value,
+      "--workspace", workspaceRoot,
+      "--json",
+    ];
+    const stdout = captureStream();
+
+    assert.equal(await runUserKnowledgeCli({
+      group: "user",
+      command: "propose",
+      subcommand: undefined,
+      positionals: extractPositionals(argv),
+      flags: parseFlags(argv),
+      argv,
+      context: {
+        stdout: stdout.stream,
+        stderr: captureStream().stream,
+        cwd: process.cwd(),
+      },
+      wantsJson: true,
+      workspaceRoot,
+      appId: "demo",
+      workspaceId: "demo-user-metadata",
+      agentId: "demo-user-metadata",
+      runtimeAdapterId: "demo",
+    }), CLI_EXIT_USAGE);
+
+    const payload = JSON.parse(stdout.getOutput()) as { ok: boolean; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, scenario.code);
+    assert.equal(payload.error.status, "USAGE");
+
+    const listStdout = captureStream();
+    const listArgv = ["user", "review", "list", "--workspace", workspaceRoot, "--json"];
+    assert.equal(await runUserKnowledgeCli({
+      group: "user",
+      command: "review",
+      subcommand: "list",
+      positionals: ["user", "review", "list"],
+      flags: parseFlags(listArgv),
+      argv: listArgv,
+      context: {
+        stdout: listStdout.stream,
+        stderr: captureStream().stream,
+        cwd: process.cwd(),
+      },
+      wantsJson: true,
+      workspaceRoot,
+      appId: "demo",
+      workspaceId: "demo-user-metadata",
+      agentId: "demo-user-metadata",
+      runtimeAdapterId: "demo",
+    }), CLI_EXIT_OK);
+    assert.equal((JSON.parse(listStdout.getOutput()) as { data: { proposals: unknown[] } }).data.proposals.length, 0);
+  }
+});
+
 test("runCli runtime knowledge memories search returns ok for empty results when explicitly requested", async (t) => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-memory-search-"));
   useIsolatedClawDataRoot(t, workspaceRoot);

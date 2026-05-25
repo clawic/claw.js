@@ -1,4 +1,17 @@
-import type { RuntimeAdapterId, UserCompileProfile, UserDomainId, UserEntityType, UserFactSensitivity, UserPackId, UserRecordType } from "@clawjs/core";
+import {
+  userDomainIdSchema,
+  userFactSensitivitySchema,
+  userFactVisibilitySchema,
+  userPackIdSchema,
+  type RuntimeAdapterId,
+  type UserCompileProfile,
+  type UserDomainId,
+  type UserEntityType,
+  type UserFactSensitivity,
+  type UserFactVisibility,
+  type UserPackId,
+  type UserRecordType,
+} from "@clawjs/core";
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -16,17 +29,54 @@ function readUserConfidenceFlag(value: string): number {
   return parsed;
 }
 
-function parseUserMetadataFlags(flags: Record<string, string>) {
+function readUserEnumFlag<T extends string>(
+  value: string,
+  schema: { options: readonly T[]; safeParse(input: unknown): { success: true; data: T } | { success: false } },
+  flagName: string,
+  errorCode: string,
+): T {
+  const trimmed = value.trim();
+  const parsed = schema.safeParse(trimmed);
+  if (!parsed.success) {
+    throw new CliHandledError(errorCode, `${flagName} must be one of: ${schema.options.join(", ")}.`, CLI_EXIT_USAGE);
+  }
+  return parsed.data;
+}
+
+function readUserDomainFlag(value: string): UserDomainId {
+  return readUserEnumFlag(value, userDomainIdSchema, "--domain", "invalid_user_domain");
+}
+
+function readUserPackOrDomainFlag(value: string): UserPackId | UserDomainId {
+  const trimmed = value.trim();
+  const domain = userDomainIdSchema.safeParse(trimmed);
+  if (domain.success) return domain.data;
+  const pack = userPackIdSchema.safeParse(trimmed);
+  if (pack.success) return pack.data;
+  const options = [...userPackIdSchema.options, ...userDomainIdSchema.options];
+  throw new CliHandledError("invalid_user_domain", `--domain must be one of: ${options.join(", ")}.`, CLI_EXIT_USAGE);
+}
+
+function readUserSensitivityFlag(value: string): UserFactSensitivity {
+  return readUserEnumFlag(value, userFactSensitivitySchema, "--sensitivity", "invalid_user_sensitivity");
+}
+
+function readUserVisibilityFlag(value: string): UserFactVisibility {
+  return readUserEnumFlag(value, userFactVisibilitySchema, "--visibility", "invalid_user_visibility");
+}
+
+function parseUserMetadataFlags(flags: Record<string, string>, options: { includeDomain?: boolean } = {}) {
+  const includeDomain = options.includeDomain ?? true;
   return {
-    ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
+    ...(includeDomain && flags.domain ? { domain: readUserDomainFlag(flags.domain) } : {}),
     ...(flags.supersedes ? { supersedes: flags.supersedes } : {}),
     ...(flags.source ? { source: flags.source } : {}),
-    ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
+    ...(flags.sensitivity ? { sensitivity: readUserSensitivityFlag(flags.sensitivity) } : {}),
     ...(flags.confidence !== undefined ? { confidence: readUserConfidenceFlag(flags.confidence) } : {}),
     ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
     ...(flags["valid-to"] ? { validTo: flags["valid-to"] } : {}),
     ...(flags.notes ? { notes: flags.notes } : {}),
-    ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+    ...(flags.visibility ? { visibility: readUserVisibilityFlag(flags.visibility) } : {}),
   };
 }
 
@@ -229,7 +279,7 @@ if (group === "user") {
     }
 
     if (command === "wizard") {
-      const domain = (subcommand || flags.domain) as UserPackId | UserDomainId | undefined;
+      const domain = subcommand ? readUserPackOrDomainFlag(subcommand) : flags.domain ? readUserPackOrDomainFlag(flags.domain) : undefined;
       const title = flags.title || joinedPositionals(positionals, 3);
       if (!domain || !title) {
         context.stderr.write("Usage: claw user wizard <domain> --title TEXT [--set key=value ...] [--user ID]\n");
@@ -240,7 +290,7 @@ if (group === "user") {
         domain,
         title,
         fields: parseUserFieldsFromSetFlags(argv),
-        ...metadata(),
+        ...parseUserMetadataFlags(flags, { includeDomain: false }),
       });
       if (wantsJson) writeSurfaceJson(proposal);
       else context.stdout.write(`proposed ${proposal.id}\n`);
@@ -314,10 +364,10 @@ if (group === "user") {
     if (command === "query") {
       const result = claw.user.query({
         userId: targetUserId,
-        ...(flags.domain ? { domain: flags.domain as UserPackId | UserDomainId } : {}),
+        ...(flags.domain ? { domain: readUserPackOrDomainFlag(flags.domain) } : {}),
         ...(flags.type ? { type: flags.type } : {}),
         ...(flags.status ? { status: flags.status } : {}),
-        ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
+        ...(flags.sensitivity ? { sensitivity: readUserSensitivityFlag(flags.sensitivity) } : {}),
         ...(flags.source ? { source: flags.source } : {}),
         ...(flags.date ? { date: flags.date } : {}),
         ...(flags.text ? { text: flags.text } : {}),
@@ -374,12 +424,12 @@ if (group === "user") {
           ...(flags.value !== undefined ? { value: parseUserFactValue(flags.value, "proposal value") } : {}),
           ...(flags["record-type"] || flags.type ? { recordType: (flags["record-type"] || flags.type) as UserRecordType } : {}),
           ...(flags.title ? { title: flags.title } : {}),
-          ...(flags.domain ? { domain: flags.domain as UserDomainId } : {}),
+          ...(flags.domain ? { domain: readUserDomainFlag(flags.domain) } : {}),
           ...(flags.source ? { source: flags.source } : {}),
-          ...(flags.sensitivity ? { sensitivity: flags.sensitivity as UserFactSensitivity } : {}),
+          ...(flags.sensitivity ? { sensitivity: readUserSensitivityFlag(flags.sensitivity) } : {}),
           ...(flags.confidence !== undefined ? { confidence: readUserConfidenceFlag(flags.confidence) } : {}),
           ...(flags.notes ? { notes: flags.notes } : {}),
-          ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+          ...(flags.visibility ? { visibility: readUserVisibilityFlag(flags.visibility) } : {}),
           ...(argv.includes("--set") ? { fields: parseUserFieldsFromSetFlags(argv) } : {}),
         };
         const proposal = claw.user.review.edit(proposalId, patch, targetUserId);
@@ -496,7 +546,7 @@ if (group === "user") {
         ...(argv.includes("--set") ? { fields: parseUserFieldsFromSetFlags(argv) } : {}),
         ...(flags.notes ? { notes: flags.notes } : {}),
         ...(flags["valid-from"] ? { validFrom: flags["valid-from"] } : {}),
-        ...(flags.visibility ? { visibility: flags.visibility as "agent" | "public" | "private" } : {}),
+        ...(flags.visibility ? { visibility: readUserVisibilityFlag(flags.visibility) } : {}),
       });
       if (wantsJson) writeSurfaceJson(result);
       else context.stdout.write(`superseded ${id}\n`);
