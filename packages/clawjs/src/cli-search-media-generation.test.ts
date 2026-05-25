@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { resolveClawPersistentSurfacePath } from "@clawjs/core";
-import { CLI_EXIT_DEGRADED, CLI_EXIT_OK } from "./index.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./index.ts";
 import { createFakeGenerationScript, runCliCapture, withPatchedEnv } from "./index-test-utils.ts";
 
 test("media generation Search event paths use persistent surface routes", () => {
@@ -27,6 +27,31 @@ test("generations Search source paths use persistent surface routes", () => {
   assert.match(source, /resolveClawPersistentSurfacePath\("claw\.workspace\.data", root, "collections", collection\)/);
   assert.equal(source.includes('path.join(workspaceRoot, ".claw", "data", "assets", outputRelativePath)'), false);
   assert.equal(source.includes('path.join(root, ".claw", "data", "collections", collection'), false);
+});
+
+test("media generation list commands reject invalid limits", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "claw-media-invalid-limits-"));
+
+  for (const args of [
+    ["image", "list"],
+    ["video", "list"],
+    ["generations", "list"],
+    ["voice-notes", "list"],
+  ]) {
+    const result = await runCliCapture([
+      ...args,
+      "--workspace",
+      workspaceRoot,
+      "--limit",
+      "nope",
+      "--json",
+    ], workspaceRoot);
+    assert.equal(result.code, CLI_EXIT_USAGE, result.stdout || result.stderr);
+    const payload = JSON.parse(result.stdout) as { ok: false; error: { code: string; status: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "invalid_media_limit");
+    assert.equal(payload.error.status, "USAGE");
+  }
 });
 
 test("search rebuild indexes generations.artifacts from workspace generation records", async () => {

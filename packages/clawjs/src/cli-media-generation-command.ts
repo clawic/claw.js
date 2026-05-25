@@ -4,7 +4,7 @@ import path from "path";
 import type { ClawInstance, VoiceNoteStatus } from "@clawjs/claw";
 import { resolveClawPersistentSurfacePath, type MediaDirection, type MediaKind, type MediaListInput, type MediaOrigin, type RuntimeAdapterId } from "@clawjs/core";
 
-import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
+import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { parseCsvFlag, parseJsonFlag, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
 import { createCliClaw } from "./cli-claw-factory.ts";
@@ -108,6 +108,17 @@ function resolveMediaCanonicalCommand(group: string | undefined, mediaGroup: Gen
   if (mediaGroup === "image") return "images";
   if (mediaGroup === "audio" || mediaGroup === "video") return mediaGroup;
   return group ?? "media";
+}
+
+function parsePositiveIntegerFlag(raw: string | undefined, flagName: string): number | undefined {
+  if (raw === undefined) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new CliHandledError("invalid_media_limit", `--${flagName} must be a positive integer.`, CLI_EXIT_USAGE, {
+      location: `cli.media.${flagName}`,
+    });
+  }
+  return value;
 }
 
 export async function runMediaGenerationCli(input: {
@@ -505,6 +516,7 @@ if (group === "voice-notes" && (command === "add" || command === "create")) {
 
 if (group === "voice-notes" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+  const limit = parsePositiveIntegerFlag(flags.limit, "limit");
   const notes = claw.voiceNotes.list({
     origin: flags.origin,
     provider: flags.provider,
@@ -513,7 +525,7 @@ if (group === "voice-notes" && command === "list") {
     threadId: flags["thread-id"],
     status: flags.status as VoiceNoteStatus | undefined,
     query: flags.query,
-    limit: flags.limit ? Number(flags.limit) : undefined,
+    limit,
   });
   if (wantsJson) {
     writeMediaJson(notes);
@@ -776,12 +788,13 @@ if (mediaGroup && command === "generate") {
 }
 
 if (mediaGroup && command === "list") {
+  const limit = parsePositiveIntegerFlag(flags.limit, "limit");
   if (mediaGroup === "image") {
     const { media } = await getImageGenerationFacade();
     const records = media.list({
       ...(flags.backend ? { backendId: flags.backend } : {}),
       ...(flags.status ? { status: flags.status as "succeeded" | "failed" } : {}),
-      ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+      ...(limit !== undefined ? { limit } : {}),
       ...(flags.query ? { query: flags.query } : {}),
       ...(parseImageType(flags.type) ? { imageType: parseImageType(flags.type) } : {}),
       ...(flags.project ? { project: flags.project } : {}),
@@ -802,7 +815,7 @@ if (mediaGroup && command === "list") {
   const records = media.list({
     ...(flags.backend ? { backendId: flags.backend } : {}),
     ...(flags.status ? { status: flags.status as "succeeded" | "failed" } : {}),
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
   });
   if (wantsJson) {
     writeMediaJson(records);
@@ -938,11 +951,12 @@ if (group === "generations" && command === "create") {
 
 if (group === "generations" && command === "list") {
   const claw = await createCliClaw(runtimeAdapterId, flags, workspaceRoot, appId, workspaceId, agentId);
+  const limit = parsePositiveIntegerFlag(flags.limit, "limit");
   const records = claw.generations.list({
     ...(flags.kind ? { kind: flags.kind as "image" | "video" | "audio" | "document" } : {}),
     ...(flags.backend ? { backendId: flags.backend } : {}),
     ...(flags.status ? { status: flags.status as "succeeded" | "failed" } : {}),
-    ...(flags.limit ? { limit: Number(flags.limit) } : {}),
+    ...(limit !== undefined ? { limit } : {}),
   });
   if (wantsJson) {
     writeMediaJson(records);
