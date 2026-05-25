@@ -24,6 +24,7 @@ type RemoteSyncCliInput = {
 
 const NODES_SUBCOMMANDS = ["list", "pair", "trust", "revoke", "invite", "accept", "share", "heartbeat"] as const;
 const GATEWAY_SUBCOMMANDS = ["serve", "project", "conformance", "agent-service", "audit", "secret-lease", "secret-provider"] as const;
+const SYNC_DRIVERS = ["skills", "memory_user_model", "sessions", "drive_files", "blobs", "sqlite_tables", "sqlite_partial", "sidecar", "search_index", "agent_config", "workspace_state"] as const satisfies readonly SyncDriver[];
 const REMOTE_SUBCOMMANDS = [
   "classify",
   "check",
@@ -262,20 +263,21 @@ function conformancePayload() {
 
 function parseDriver(value: string | undefined): SyncDriver {
   const driver = value ?? "skills";
-  if (
-    driver === "skills"
-    || driver === "memory_user_model"
-    || driver === "sessions"
-    || driver === "drive_files"
-    || driver === "blobs"
-    || driver === "sqlite_tables"
-    || driver === "sqlite_partial"
-    || driver === "sidecar"
-    || driver === "search_index"
-    || driver === "agent_config"
-    || driver === "workspace_state"
-  ) return driver;
-  throw new Error(`Invalid sync driver: ${driver}`);
+  if ((SYNC_DRIVERS as readonly string[]).includes(driver)) return driver as SyncDriver;
+  throw new CliHandledError(
+    "invalid_sync_driver",
+    `--driver must be one of: ${SYNC_DRIVERS.join(", ")}. Received: ${driver}.`,
+    CLI_EXIT_USAGE,
+    {
+      location: "cli.sync.driver",
+      suggestion: "Choose a registered sync driver before creating manifests, plans, or durable sync records.",
+      safeNextStep: "Run claw sync drivers --json to inspect the sync driver catalog, then rerun with one of error.details.validDrivers.",
+      details: {
+        received: driver,
+        validDrivers: [...SYNC_DRIVERS],
+      },
+    },
+  );
 }
 
 function parseAuthority(value: string | undefined): SyncAuthority | undefined {
@@ -538,7 +540,9 @@ function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve
       CLI_EXIT_USAGE,
     );
   }
-  const deploymentKind = deploymentKindFlag ?? (input.flags.hosted === "true" || operation === "project" ? "hosted" : "self_hosted");
+  const deploymentKind: "hosted" | "self_hosted" = deploymentKindFlag === "hosted" || deploymentKindFlag === "self_hosted"
+    ? deploymentKindFlag
+    : input.flags.hosted === "true" || operation === "project" ? "hosted" : "self_hosted";
   return createGatewayDeploymentManifest({
     deploymentKind,
     gatewayNodeId: input.flags["gateway-node"] ?? input.flags["owner-node"] ?? "gateway.local",

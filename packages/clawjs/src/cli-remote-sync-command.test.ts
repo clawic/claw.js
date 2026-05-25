@@ -77,6 +77,23 @@ test("sync returns JSON usage errors for unknown subcommands", async () => {
   assert.equal(payload.meta.subcommand, "definitely_missing");
 });
 
+test("sync manifest rejects invalid driver as usage", async () => {
+  const result = await runCliCapture(["sync", "manifest", "--driver", "not-a-driver", "--json"], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string; location: string; details?: { validDrivers?: string[] } };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_sync_driver");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.sync.driver");
+  assert.match(payload.error.message, /--driver/);
+  assert.equal(payload.error.details?.validDrivers?.includes("skills"), true);
+});
+
 test("remote returns JSON usage errors for unknown subcommands", async () => {
   const result = await runCliCapture(["remote", "definitely_missing", "--json"], process.cwd());
 
