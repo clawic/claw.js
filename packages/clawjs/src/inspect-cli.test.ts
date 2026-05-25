@@ -260,9 +260,9 @@ test("runCli explains inspect subcommands through inspect why", async () => {
     tests: string[];
   }>(result.stdout).data;
   assert.equal(payload.type, "inspectSubcommand");
-  assert.equal(payload.name, "inspect command-intents");
+  assert.equal(payload.name, "inspect surface-parity");
   assert.equal(payload.canonicalName, "inspect");
-  assert.equal(payload.subcommand, "command-intents");
+  assert.equal(payload.subcommand, "surface-parity");
   assert.equal(payload.source.file, "packages/clawjs/src/inspect-cli.ts");
   assert.equal(payload.tests.includes("packages/clawjs/src/inspect-cli.test.ts"), true);
 });
