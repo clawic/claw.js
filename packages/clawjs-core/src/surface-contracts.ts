@@ -1,4 +1,5 @@
 import { compactStableClawCliCommandNames } from "./compact-catalogs.ts";
+import { normalizeClawPathSeparators } from "./path-utils.ts";
 
 export const clawSurfaceRegistryVersion = 1;
 
@@ -1471,5 +1472,5 @@ const clawPersistentSurfacePathMap: Readonly<Record<string, string>> = {
 export function resolveClawPersistentSurfacePath(idOrPath: string, rootDir = "", ...children: string[]): string {
   const surfacePath = clawPersistentSurfacePathMap[idOrPath] ?? idOrPath;
   const parts = [rootDir, surfacePath, ...children].filter(Boolean);
-  return parts.join("/").replace(/\/+/g, "/").replace(/\/$/, "");
+  return normalizeClawPathSeparators(parts.join("/"));
 }
