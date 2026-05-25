@@ -346,6 +346,40 @@ test("cross-process JSON boundary parsers enforce declared payload byte ceilings
   }
 });
 
+test("cross-process JSON boundary rejects invalid UTF-8 buffers before JSON parse", () => {
+  const result = parseCrossProcessJsonContract(
+    new Uint8Array([0x22, 0xff, 0x22]),
+    clawCommandRequestSchema,
+    {
+      contractId: "claw.protocol.hostCommand.v1",
+      maxBytes: clawCrossProcessJsonContractLimits["claw.protocol.hostCommand.v1"],
+    },
+  );
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.byteLength, 3);
+    assert.equal(result.error.code, "json_contract_invalid_utf8");
+  }
+});
+
+test("cross-process JSON boundary enforces byte ceilings against raw IPC bytes", () => {
+  const result = parseCrossProcessJsonContract(
+    new Uint8Array([0xef, 0xbb, 0xbf, 0x7b, 0x7d]),
+    clawCommandRequestSchema,
+    {
+      contractId: "claw.protocol.hostCommand.v1",
+      maxBytes: 4,
+    },
+  );
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.byteLength, 5);
+    assert.equal(result.error.code, "json_contract_payload_oversized");
+  }
+});
+
 test("cross-process JSON boundary parser preserves partial schema issues in a stable error envelope", () => {
   const result = parseCrossProcessJsonContract(
     encode({

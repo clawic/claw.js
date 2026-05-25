@@ -33,6 +33,7 @@ export type ClawCrossProcessJsonContractId = keyof typeof clawCrossProcessJsonCo
 
 export type ClawCrossProcessJsonErrorCode =
   | "json_contract_payload_oversized"
+  | "json_contract_invalid_utf8"
   | "json_contract_truncated"
   | "json_contract_malformed"
   | "json_contract_unknown_fields"
@@ -65,9 +66,18 @@ export type CrossProcessJsonParseResult<T> =
   };
 
 const textEncoder = new TextEncoder();
+const fatalTextDecoder = new TextDecoder("utf8", { fatal: true });
 
-function normalizeJsonInput(input: string | Uint8Array): string {
-  return typeof input === "string" ? input : new TextDecoder("utf8", { fatal: false }).decode(input);
+function normalizeJsonInput(input: string | Uint8Array): { ok: true; text: string; byteLength: number } | { ok: false; byteLength: number } {
+  if (typeof input === "string") {
+    return { ok: true, text: input, byteLength: jsonByteLength(input) };
+  }
+
+  try {
+    return { ok: true, text: fatalTextDecoder.decode(input), byteLength: input.byteLength };
+  } catch {
+    return { ok: false, byteLength: input.byteLength };
+  }
 }
 
 function jsonByteLength(value: string): number {
@@ -204,8 +214,8 @@ export function parseCrossProcessJsonContract<T>(
   schema: z.ZodType<T>,
   options: ParseCrossProcessJsonContractOptions,
 ): CrossProcessJsonParseResult<T> {
-  const text = normalizeJsonInput(input);
-  const byteLength = jsonByteLength(text);
+  const normalized = normalizeJsonInput(input);
+  const byteLength = normalized.byteLength;
   if (byteLength > options.maxBytes) {
     return {
       ok: false,
@@ -218,6 +228,20 @@ export function parseCrossProcessJsonContract<T>(
       },
     };
   }
+
+  if (!normalized.ok) {
+    return {
+      ok: false,
+      contractId: options.contractId,
+      byteLength,
+      error: {
+        code: "json_contract_invalid_utf8",
+        message: `${options.contractId} JSON payload is not valid UTF-8`,
+      },
+    };
+  }
+
+  const { text } = normalized;
 
   let parsed: unknown;
   try {
