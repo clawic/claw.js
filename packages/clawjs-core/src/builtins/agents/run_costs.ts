@@ -6,7 +6,7 @@ export const RUN_COSTS: BuiltinCollectionDefinition = {
   family: "agents",
   aliases: ["run_cost","run_costs"],
   fields: [
-    { name: "runId", type: "relation", required: true, relation: { collectionName: "runs" } },
+    { name: "runId", type: "relation", required: true, relation: { collectionName: "agent_runs" } },
     { name: "model", type: "text" },
     { name: "inputTokens", type: "number" },
     { name: "outputTokens", type: "number" },

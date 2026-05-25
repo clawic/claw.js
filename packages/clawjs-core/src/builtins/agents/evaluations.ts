@@ -13,7 +13,7 @@ export const EVALUATIONS: BuiltinCollectionDefinition = {
     { name: "metric", type: "select", required: true, options: ["accuracy","latency","cost","safety","tool_use_correctness","hallucination_rate","completeness","consistency","human_preference","rouge","bleu","custom"] },
     { name: "score", type: "number" },
     { name: "benchmarkRef", type: "text" },
-    { name: "runId", type: "relation", relation: { collectionName: "runs" } },
+    { name: "runId", type: "relation", relation: { collectionName: "agent_runs" } },
     { name: "computedAt", type: "date" },
     { name: "source", type: "json" },
     { name: "links", type: "json" },

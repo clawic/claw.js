@@ -7,7 +7,7 @@ export const FEEDBACK_LOOPS: BuiltinCollectionDefinition = {
   aliases: ["feedback_loop","feedback_loops"],
   fields: [
     { name: "companyId", type: "relation", relation: { collectionName: "companies" } },
-    { name: "runId", type: "relation", relation: { collectionName: "runs" } },
+    { name: "runId", type: "relation", relation: { collectionName: "agent_runs" } },
     { name: "agentSessionId", type: "relation", relation: { collectionName: "agent_sessions" } },
     { name: "actorId", type: "relation", required: true, relation: { collectionName: "actors" } },
     { name: "rating", type: "number" },

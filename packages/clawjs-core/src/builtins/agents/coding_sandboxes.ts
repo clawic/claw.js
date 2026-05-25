@@ -7,7 +7,7 @@ export const CODING_SANDBOXES: BuiltinCollectionDefinition = {
   aliases: ["sandbox","sandboxes","coding_sandbox","coding_sandboxes"],
   fields: [
     { name: "companyId", type: "relation", required: true, relation: { collectionName: "companies" } },
-    { name: "runId", type: "relation", relation: { collectionName: "runs" } },
+    { name: "runId", type: "relation", relation: { collectionName: "agent_runs" } },
     { name: "sessionId", type: "relation", relation: { collectionName: "agent_sessions" } },
     { name: "vmType", type: "text" },
     { name: "cpuLimit", type: "number" },

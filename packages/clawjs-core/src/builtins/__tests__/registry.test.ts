@@ -67,6 +67,26 @@ test("builtin registry: relations point to known collections", () => {
   }
 });
 
+test("builtin registry: agent run extension relations target canonical agent_runs", () => {
+  const runExtensionNames = new Set([
+    "run_costs",
+    "tool_invocations",
+    "evaluations",
+    "feedback_loops",
+    "coding_sandboxes",
+  ]);
+
+  for (const collection of BUILTIN_COLLECTIONS) {
+    if (!runExtensionNames.has(collection.name)) continue;
+    const runField = collection.fields.find((field) => field.name === "runId");
+    assert.equal(
+      runField?.relation?.collectionName,
+      "agent_runs",
+      `Collection "${collection.name}" runId must reference the canonical agent_runs collection`,
+    );
+  }
+});
+
 test("builtin registry: no SYSTEM_FIELDS reserved as field name", () => {
   for (const collection of BUILTIN_COLLECTIONS) {
     for (const field of collection.fields) {
