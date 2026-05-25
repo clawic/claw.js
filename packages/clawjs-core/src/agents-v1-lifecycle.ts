@@ -681,7 +681,12 @@ export function createAgentServiceApiHttpResponse(input: AgentServiceApiHttpRequ
 }
 
 export function grantMatches(request: AgentAccessRequest, grant: AgentResourceGrant, now: Date): boolean {
-  if (grant.expiresAt && new Date(grant.expiresAt).getTime() <= now.getTime()) return false;
+  const nowMs = now.getTime();
+  if (!Number.isFinite(nowMs)) return false;
+  if (grant.expiresAt) {
+    const expiresAtMs = new Date(grant.expiresAt).getTime();
+    if (!Number.isFinite(expiresAtMs) || expiresAtMs <= nowMs) return false;
+  }
   return matches(request.resourceType, grant.resourceType)
     && matches(request.action, grant.action)
     && matchesOptional(request.resourceId, grant.resourceId)

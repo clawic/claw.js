@@ -184,6 +184,23 @@ test("Agents V1 grant expiry and denies fail closed", () => {
   assert.deepEqual(result.reasons, ["agent: no active allow grant", "connector: denied by deny"]);
 });
 
+test("Agents V1 grants with invalid expiry fail closed", () => {
+  const invalidExpiry = { ...allow("invalid-expiry"), expiresAt: "not-a-date" };
+  const result = evaluateAgentEffectiveAccess({
+    requested: request,
+    agentGrants: [invalidExpiry],
+    assignmentGrants: [allow("assignment")],
+    executionProfileGrants: [allow("execution")],
+    connectorGrants: [allow("connector")],
+    hostGrants: [allow("host")],
+    runScopeGrants: [allow("run")],
+    now: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(result.allowed, false);
+  assert.deepEqual(result.reasons, ["agent: no active allow grant"]);
+  assert.deepEqual(result.matchedGrantIds, ["assignment", "execution", "connector", "host", "run"]);
+});
+
 test("Agents V1 secrets require brokered lease action instead of direct reads", () => {
   const secretRequest: AgentAccessRequest = {
     resourceType: "secret",
