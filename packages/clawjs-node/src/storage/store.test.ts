@@ -5,6 +5,9 @@ import os from "os";
 import path from "path";
 import type { TestContext } from "vitest";
 
+import { clawStorageApiRoutes } from "@clawjs/core";
+
+import { startStorageHttpServer } from "./http.ts";
 import { createLocalStorageStore } from "./store.ts";
 
 function useIsolatedStorageDataDir(t: TestContext, workspaceDir: string): void {
@@ -45,6 +48,40 @@ test("local storage list normalizes non-finite limits", (t) => {
   assert.equal(storage.list({ limit: Number.NaN }).length, 2);
   assert.equal(storage.list({ limit: Number.POSITIVE_INFINITY }).length, 2);
   assert.equal(storage.list({ limit: 1.9 }).length, 1);
+});
+
+test("storage HTTP rejects invalid object list limits before querying", async (t) => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-storage-http-limit-"));
+  useIsolatedStorageDataDir(t, workspaceDir);
+  const storage = createLocalStorageStore({ workspaceDir, agentId: "agent-a" });
+  t.after(() => storage.close());
+
+  storage.writeText({ key: "notes/a.txt", content: "a" });
+  storage.writeText({ key: "notes/b.txt", content: "b" });
+  const issued = storage.issueToken({
+    label: "reader",
+    grants: [{
+      bucket: "workspace",
+      prefix: "agents/agent-a/",
+      operations: ["objects:list", "objects:read"],
+    }],
+  });
+  const server = await startStorageHttpServer({ store: storage });
+  t.after(() => server.close());
+
+  const requestObjects = (limit: string) => fetch(`${server.url}${clawStorageApiRoutes.objects}?prefix=agents%2Fagent-a%2F&limit=${encodeURIComponent(limit)}`, {
+    headers: { authorization: `Bearer ${issued.token}` },
+  });
+
+  const valid = await requestObjects("1");
+  assert.equal(valid.status, 200);
+  assert.equal(((await valid.json()) as { items: unknown[] }).items.length, 1);
+
+  for (const limit of ["NaN", "0", "-1", "1.5", "9007199254740992"]) {
+    const response = await requestObjects(limit);
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: "invalid_storage_limit" });
+  }
 });
 
 test("local storage enforces grants between agents and supports tokens", (t) => {

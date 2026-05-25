@@ -51,6 +51,15 @@ function sendError(response: ServerResponse, status: number, message: string): v
   sendJson(response, status, { error: message });
 }
 
+function parseStorageListLimit(url: URL): number | undefined {
+  if (!url.searchParams.has("limit")) return undefined;
+  const raw = url.searchParams.get("limit")?.trim() ?? "";
+  if (!/^[0-9]+$/.test(raw)) throw new Error("invalid_storage_limit");
+  const limit = Number(raw);
+  if (!Number.isSafeInteger(limit) || limit < 1) throw new Error("invalid_storage_limit");
+  return limit;
+}
+
 function objectRoute(url: URL): { bucket: string; key: string } | null {
   const prefix = clawStorageApiRoutes.objectPrefix;
   if (!url.pathname.startsWith(prefix)) return null;
@@ -131,13 +140,16 @@ export function createStorageHttpHandler(
         if (!token) return sendError(response, 401, "missing_token");
         const scoped = options.store.scopedTokenStore(token);
         if (!scoped) return sendError(response, 401, "invalid_token");
-        const items = scoped.list({
-          bucket: url.searchParams.get("bucket") ?? undefined,
-          prefix: url.searchParams.get("prefix") ?? undefined,
-          limit: url.searchParams.get("limit") ? Number(url.searchParams.get("limit")) : undefined,
-        });
-        scoped.close();
-        return sendJson(response, 200, { items });
+        try {
+          const items = scoped.list({
+            bucket: url.searchParams.get("bucket") ?? undefined,
+            prefix: url.searchParams.get("prefix") ?? undefined,
+            limit: parseStorageListLimit(url),
+          });
+          return sendJson(response, 200, { items });
+        } finally {
+          scoped.close();
+        }
       }
 
       const objectRef = objectRoute(url);
