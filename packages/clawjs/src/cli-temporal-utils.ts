@@ -99,7 +99,7 @@ function parseHeartbeatLimit(raw: string | undefined): number | undefined {
 function parseActiveHours(raw: string | undefined, timezone: string | undefined): NonNullable<NonNullable<TemporalItem["heartbeat"]>["activeHours"]> | undefined {
   if (!raw) return undefined;
   const match = raw.trim().match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
-  if (!match) {
+  if (!match || !isClockTime(match[1]!) || !isClockTime(match[2]!)) {
     throw new CliHandledError("usage_error", 'Invalid --active-hours. Use "09:00-18:00".', CLI_EXIT_USAGE);
   }
   return {
@@ -107,6 +107,11 @@ function parseActiveHours(raw: string | undefined, timezone: string | undefined)
     end: match[2]!,
     timezone: timezone || "UTC",
   };
+}
+
+function isClockTime(value: string): boolean {
+  const [hour, minute] = value.split(":").map((part) => Number(part));
+  return Number.isInteger(hour) && Number.isInteger(minute) && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
 }
 
 function parseHeartbeatGate(pathValue: string | undefined): NonNullable<TemporalItem["heartbeat"]>["gate"] | undefined {

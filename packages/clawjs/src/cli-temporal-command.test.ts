@@ -62,3 +62,31 @@ test("routines every rejects invalid heartbeat context limits as usage", async (
   assert.equal(payload.error.status, "USAGE");
   assert.match(payload.error.message, /--limit/);
 });
+
+test("routines every rejects impossible active hour windows as usage", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-temporal-active-hours-"));
+
+  const result = await runCliCapture([
+    "routines",
+    "every",
+    "5m",
+    "active hours heartbeat",
+    "--when",
+    "idle",
+    "--active-hours",
+    "99:99-99:99",
+    "--workspace",
+    workspace,
+    "--json",
+  ], process.cwd());
+
+  assert.equal(result.code, CLI_EXIT_USAGE, result.stderr || result.stdout);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; message: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "usage_error");
+  assert.equal(payload.error.status, "USAGE");
+  assert.match(payload.error.message, /--active-hours/);
+});
