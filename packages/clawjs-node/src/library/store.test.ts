@@ -154,3 +154,28 @@ test("skill capsules validate length, prefer skill.json, and sort by priority th
   assert.match(result.prompt, /Use the JSON capsule/);
   assert.doesNotMatch(result.prompt, /Use the frontmatter capsule/);
 });
+
+test("skill context priority rejects non-finite and fractional values instead of truncating", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-library-priority-"));
+  const store = createLocalLibraryStore({ rootDir });
+  const contextWithPriority = (capsule: string, priority: unknown) =>
+    ({ capsule, priority } as { capsule: string; priority: number });
+
+  for (const [index, priority] of ["1.5", "Infinity", "NaN", 1.5, Number.POSITIVE_INFINITY, Number.NaN].entries()) {
+    assert.throws(() => store.create({
+      id: `bad-priority-${index}`,
+      kind: "skill",
+      title: `Bad Priority ${index}`,
+      context: contextWithPriority("Bad priority.", priority),
+    }), /Skill context priority must be a finite safe integer/);
+  }
+
+  const valid = store.create({
+    id: "string-priority",
+    kind: "skill",
+    title: "String Priority",
+    context: contextWithPriority("Valid string priority.", "7"),
+  });
+  assert.equal(valid.context?.priority, 7);
+  assert.deepEqual(store.list().map((asset) => asset.id), ["string-priority"]);
+});

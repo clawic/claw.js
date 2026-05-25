@@ -122,17 +122,23 @@ function cleanReadWhen(values: unknown): string[] | undefined {
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
+function normalizeSkillContextPriority(value: unknown): number | null {
+  if (value === undefined) return 100;
+  if (typeof value === "number") return Number.isSafeInteger(value) ? value : null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!/^[+-]?\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
 function normalizeSkillContextCapsule(input: unknown): SkillContextCapsule | null {
   if (!input || typeof input !== "object") return null;
   const record = input as Record<string, unknown>;
   const capsule = typeof record.capsule === "string" ? record.capsule.trim() : "";
   if (!capsule || capsule.length > SKILL_CONTEXT_CAPSULE_MAX_CHARS) return null;
-  const rawPriority = record.priority;
-  const priority = typeof rawPriority === "number" && Number.isFinite(rawPriority)
-    ? Math.trunc(rawPriority)
-    : typeof rawPriority === "string" && rawPriority.trim() && Number.isFinite(Number(rawPriority))
-      ? Math.trunc(Number(rawPriority))
-      : 100;
+  const priority = normalizeSkillContextPriority(record.priority);
+  if (priority === null) return null;
   const readWhen = cleanReadWhen(record.readWhen ?? record["read-when"]);
   return {
     capsule,
@@ -142,6 +148,9 @@ function normalizeSkillContextCapsule(input: unknown): SkillContextCapsule | nul
 }
 
 function assertSkillContextCapsule(input: SkillContextCapsule): SkillContextCapsule {
+  if (normalizeSkillContextPriority((input as unknown as Record<string, unknown>).priority) === null) {
+    throw new Error("Skill context priority must be a finite safe integer.");
+  }
   const normalized = normalizeSkillContextCapsule(input);
   if (!normalized) {
     throw new Error(`Skill context capsule must be 1-${SKILL_CONTEXT_CAPSULE_MAX_CHARS} characters.`);
@@ -180,7 +189,7 @@ function parseSkillFrontmatterContext(raw: string): SkillContextCapsule | null {
     if (!entry) continue;
     const key = entry[1] === "read-when" ? "readWhen" : entry[1];
     const value = entry[2].trim().replace(/^["']|["']$/g, "");
-    context[key] = key === "priority" ? Number(value) : value;
+    context[key] = value;
   }
   return normalizeSkillContextCapsule(context);
 }
