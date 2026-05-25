@@ -1,4 +1,4 @@
-import { TEMPLATE_SCHEMA_VERSION, type TemplateManifest } from "./schema.ts";
+import { isTemplateCategory, TEMPLATE_SCHEMA_VERSION, type TemplateAspect, type TemplateManifest, type TemplateOutputFormat } from "./schema.ts";
 import { CLI_EXIT_USAGE, CliHandledError } from "../cli-errors.ts";
 
 const FRONTMATTER_OPEN = "---json";
@@ -73,25 +73,112 @@ function parseTemplateFrontmatterJson(head: string): Partial<TemplateManifest> {
 }
 
 export function normalizeTemplateManifest(input: Partial<TemplateManifest>): TemplateManifest {
-  if (!input || typeof input !== "object") throw new Error("Template manifest must be an object");
-  if (!input.id) throw new Error("Template manifest missing 'id'");
-  if (!input.name) throw new Error("Template manifest missing 'name'");
-  if (!input.category) throw new Error("Template manifest missing 'category'");
-  if (!input.aspect) throw new Error("Template manifest missing 'aspect'");
+  if (!input || typeof input !== "object") throw templateManifestUsageError("Template manifest must be an object");
+  const id = requiredTemplateString(input.id, "id");
+  const name = requiredTemplateString(input.name, "name");
+  const category = requiredTemplateString(input.category, "category");
+  if (!isTemplateCategory(category)) {
+    throw templateManifestUsageError(`Template manifest field 'category' must be a supported template category, got '${category}'`);
+  }
+  const aspect = normalizeTemplateAspect(input.aspect);
+  const tags = optionalTemplateStringArray(input.tags, "tags") ?? [];
+  const slots = optionalTemplateObjectArray(input.slots, "slots") ?? [];
+  const variants = optionalTemplateObjectArray(input.variants, "variants") ?? [{ id: "default", label: "Default" }];
+  const outputs = normalizeTemplateOutputs(input.outputs);
   return {
     schemaVersion: TEMPLATE_SCHEMA_VERSION,
-    id: input.id,
-    name: input.name,
-    category: input.category,
-    aspect: input.aspect,
+    id,
+    name,
+    category,
+    aspect,
     description: input.description,
-    tags: input.tags ?? [],
-    slots: input.slots ?? [],
-    variants: input.variants ?? [{ id: "default", label: "Default" }],
-    outputs: input.outputs ?? ["html", "pdf", "png"],
+    tags,
+    slots,
+    variants,
+    outputs,
     defaultStyleId: input.defaultStyleId,
     builtin: input.builtin === true,
     createdAt: input.createdAt ?? new Date().toISOString(),
     updatedAt: input.updatedAt ?? new Date().toISOString(),
   };
 }
+
+function templateManifestUsageError(message: string): CliHandledError {
+  return new CliHandledError("invalid_template_manifest", message, CLI_EXIT_USAGE, {
+    location: "template.manifest",
+    suggestion: "Fix the TEMPLATE.md JSON manifest fields before reading or rendering the template.",
+    safeNextStep: "Run the template command again after correcting the manifest field named in the error.",
+  });
+}
+
+function requiredTemplateString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw templateManifestUsageError(`Template manifest missing or invalid '${field}'`);
+  }
+  return value;
+}
+
+function optionalTemplateStringArray(value: unknown, field: string): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw templateManifestUsageError(`Template manifest field '${field}' must be an array of strings`);
+  }
+  return value;
+}
+
+function optionalTemplateObjectArray<TValue extends object>(value: unknown, field: string): TValue[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || value.some((item) => !item || typeof item !== "object" || Array.isArray(item))) {
+    throw templateManifestUsageError(`Template manifest field '${field}' must be an array of objects`);
+  }
+  return value as TValue[];
+}
+
+function normalizeTemplateAspect(value: unknown): TemplateAspect {
+  if (typeof value === "string") {
+    if (TEMPLATE_ASPECTS.has(value)) return value as TemplateAspect;
+    throw templateManifestUsageError(`Template manifest field 'aspect' must be a supported aspect, got '${value}'`);
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const candidate = value as { width?: unknown; height?: unknown; unit?: unknown };
+    if (
+      typeof candidate.width === "number"
+      && typeof candidate.height === "number"
+      && Number.isFinite(candidate.width)
+      && Number.isFinite(candidate.height)
+      && candidate.width > 0
+      && candidate.height > 0
+      && (candidate.unit === "px" || candidate.unit === "mm")
+    ) {
+      return { width: candidate.width, height: candidate.height, unit: candidate.unit };
+    }
+  }
+  throw templateManifestUsageError("Template manifest missing or invalid 'aspect'");
+}
+
+function normalizeTemplateOutputs(value: unknown): TemplateOutputFormat[] {
+  if (value === undefined || value === null) return ["html", "pdf", "png"];
+  if (!Array.isArray(value) || value.length === 0) {
+    throw templateManifestUsageError("Template manifest field 'outputs' must be a non-empty array");
+  }
+  for (const output of value) {
+    if (typeof output !== "string" || !TEMPLATE_OUTPUT_FORMATS.has(output)) {
+      throw templateManifestUsageError(`Template manifest field 'outputs' contains unsupported format '${String(output)}'`);
+    }
+  }
+  return value as TemplateOutputFormat[];
+}
+
+const TEMPLATE_ASPECTS = new Set([
+  "16:9",
+  "4:3",
+  "1:1",
+  "4:5",
+  "9:16",
+  "a4-portrait",
+  "a4-landscape",
+  "letter-portrait",
+  "letter-landscape",
+]);
+
+const TEMPLATE_OUTPUT_FORMATS = new Set(["html", "pdf", "png", "svg", "pptx"]);

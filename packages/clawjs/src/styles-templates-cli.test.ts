@@ -54,3 +54,24 @@ test("template get reports malformed TEMPLATE.md frontmatter as a json usage err
   assert.equal(payload.meta.canonicalCommand, "templates");
   assert.equal(payload.meta.subcommand, "get");
 });
+
+test("template get reports invalid TEMPLATE.md manifests as usage errors", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-template-manifest-"));
+  writeFile(root, ".claw/templates/bad-template/TEMPLATE.md", "---json\n{\"id\":\"bad-template\",\"name\":\"Bad template\",\"category\":\"report\"}\n---\n# Bad template\n");
+
+  const result = await runCliCapture(["template", "get", "bad-template", "--workspace", root, "--json"], root);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string; location: string; message: string };
+    meta: { canonicalCommand: string; subcommand: string };
+  };
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "invalid_template_manifest");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "template.manifest");
+  assert.match(payload.error.message, /aspect/);
+  assert.equal(payload.meta.canonicalCommand, "templates");
+  assert.equal(payload.meta.subcommand, "get");
+});
