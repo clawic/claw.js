@@ -129,6 +129,31 @@ test("guidance match rejects invalid limits before matching", async (t) => {
   assert.equal(negativePayload.error.code, "invalid_guidance_limit");
 });
 
+test("guidance match rejects invalid actor and risk enum flags before matching", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-match-enums-"));
+  useIsolatedClawDataRoot(t, cwd);
+  const guidanceDir = path.join(cwd, "guidance");
+
+  for (const [flag, value, code, location] of [
+    ["--actor-kind", "robot", "invalid_guidance_actor_kind", "cli.guidance.actor_kind"],
+    ["--risk-class", "risky", "invalid_guidance_risk_class", "cli.guidance.risk_class"],
+  ] as const) {
+    const result = await runCliCapture([
+      "guidance", "match",
+      "--command", "resources list",
+      flag, value,
+      "--guidance-dir", guidanceDir,
+      "--json",
+    ], cwd);
+    assert.equal(result.code, CLI_EXIT_USAGE);
+    const payload = JSON.parse(result.stdout) as { ok: boolean; error: { code: string; status: string; location: string } };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, code);
+    assert.equal(payload.error.status, "USAGE");
+    assert.equal(payload.error.location, location);
+  }
+});
+
 test("guidance and resources list reject invalid status filters", async (t) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-cli-guidance-status-"));
   useIsolatedClawDataRoot(t, cwd);
@@ -242,6 +267,10 @@ test("guidance create rejects invalid enum and integer flags before writing stat
   for (const [flag, value, code, location] of [
     ["--severity", "urgent", "invalid_guidance_severity", "cli.guidance.severity"],
     ["--priority", "soon", "invalid_guidance_priority", "cli.guidance.priority"],
+    ["--actor-kind", "robot", "invalid_guidance_actor_kind", "cli.guidance.actor_kind"],
+    ["--actor-kinds", "agent,robot", "invalid_guidance_actor_kind", "cli.guidance.actor_kind"],
+    ["--risk-class", "risky", "invalid_guidance_risk_class", "cli.guidance.risk_class"],
+    ["--risk-classes", "write,risky", "invalid_guidance_risk_class", "cli.guidance.risk_class"],
   ] as const) {
     const result = await runCliCapture([
       "guidance", "create",

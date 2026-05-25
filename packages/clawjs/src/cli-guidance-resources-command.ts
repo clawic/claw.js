@@ -1,4 +1,4 @@
-import { resourceKindSchema, type ResourceKind, type RuntimeAdapterId } from "@clawjs/core";
+import { actorKindSchema, guidanceRiskClassSchema, resourceKindSchema, type ResourceKind, type RuntimeAdapterId } from "@clawjs/core";
 
 import type { CliContext } from "./index.ts";
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
@@ -31,6 +31,8 @@ type GuidanceResourcesClaw = Awaited<ReturnType<typeof createCliClaw>> & {
 
 const GUIDANCE_LIST_STATUSES = ["active", "archived"] as const;
 const GUIDANCE_SEVERITIES = ["info", "notice", "warning", "critical"] as const;
+const GUIDANCE_ACTOR_KINDS = actorKindSchema.options;
+const GUIDANCE_RISK_CLASSES = guidanceRiskClassSchema.options;
 const GUIDANCE_SUBCOMMANDS = ["status", "list", "show", "create", "archive", "match"] as const;
 const RESOURCE_LIST_STATUSES = ["active", "missing", "moved", "stale"] as const;
 const RESOURCE_SUBCOMMANDS = ["list", "register", "show", "resolve", "read", "status"] as const;
@@ -138,8 +140,8 @@ function runGuidanceCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & {
         projects: parseCsvFlag(flags.project || flags.projects),
         workspaces: parseCsvFlag(flags.workspace || flags.workspaces),
         agents: parseCsvFlag(flags.agent || flags.agents),
-        actorKinds: parseCsvFlag(flags["actor-kind"] || flags["actor-kinds"]) as Array<"human" | "agent" | "automation" | "unknown">,
-        riskClasses: parseCsvFlag(flags["risk-class"] || flags["risk-classes"]) as Array<"read" | "write" | "destructive" | "cost" | "native-permission" | "secret">,
+        actorKinds: parseAllowedCsvFlag(flags["actor-kind"] || flags["actor-kinds"], GUIDANCE_ACTOR_KINDS, "invalid_guidance_actor_kind", "guidance create --actor-kind", "cli.guidance.actor_kind"),
+        riskClasses: parseAllowedCsvFlag(flags["risk-class"] || flags["risk-classes"], GUIDANCE_RISK_CLASSES, "invalid_guidance_risk_class", "guidance create --risk-class", "cli.guidance.risk_class"),
       },
     });
     if (wantsJson) write(record);
@@ -169,8 +171,12 @@ function runGuidanceCli(input: Parameters<typeof runGuidanceResourcesCli>[0] & {
       project: flags.project,
       workspace: flags.workspace,
       agent: flags.agent,
-      actorKind: flags["actor-kind"] as "human" | "agent" | "automation" | "unknown" | undefined,
-      riskClass: flags["risk-class"] as "read" | "write" | "destructive" | "cost" | "native-permission" | "secret" | undefined,
+      actorKind: flags["actor-kind"]
+        ? parseAllowedFlag(flags["actor-kind"], GUIDANCE_ACTOR_KINDS, "invalid_guidance_actor_kind", "guidance match --actor-kind", "cli.guidance.actor_kind")
+        : undefined,
+      riskClass: flags["risk-class"]
+        ? parseAllowedFlag(flags["risk-class"], GUIDANCE_RISK_CLASSES, "invalid_guidance_risk_class", "guidance match --risk-class", "cli.guidance.risk_class")
+        : undefined,
       ...(flags.limit !== undefined ? { limit: parseNonNegativeIntegerFlag(flags.limit, "guidance match limit") } : {}),
     });
     if (wantsJson) write(result);
@@ -315,6 +321,16 @@ function parseAllowedFlag<TValue extends string>(
 ): TValue {
   if ((allowed as readonly string[]).includes(value)) return value as TValue;
   throw new CliHandledError(code, `${label} must be one of: ${allowed.join(", ")}.`, CLI_EXIT_USAGE, { location });
+}
+
+function parseAllowedCsvFlag<TValue extends string>(
+  value: string | undefined,
+  allowed: readonly TValue[],
+  code: string,
+  label: string,
+  location: string,
+): TValue[] {
+  return parseCsvFlag(value).map((entry) => parseAllowedFlag(entry, allowed, code, label, location));
 }
 
 function parseResourceMaxBytesFlag(value: string): number {
