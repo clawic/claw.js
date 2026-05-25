@@ -141,6 +141,49 @@ test("network CLI rejects invalid event byte counters before recording", async (
   assert.equal(fs.existsSync(monitorDb), false);
 });
 
+test("network CLI rejects invalid history limits before opening Monitor storage", async () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-network-invalid-limit-"));
+  const monitorDb = path.join(workspace, "monitor.sqlite");
+
+  const events = await runCliCapture([
+    "network",
+    "events",
+    "--workspace",
+    workspace,
+    "--monitor-db",
+    monitorDb,
+    "--limit",
+    "nope",
+    "--json",
+  ], workspace);
+  assert.equal(events.code, CLI_EXIT_USAGE);
+  const eventsPayload = JSON.parse(events.stdout) as {
+    ok: boolean;
+    error: { code: string; status: string };
+  };
+  assert.equal(eventsPayload.ok, false);
+  assert.equal(eventsPayload.error.code, "invalid_network_limit");
+  assert.equal(eventsPayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(monitorDb), false);
+
+  const suggestions = await runCliCapture([
+    "network",
+    "suggestions",
+    "--workspace",
+    workspace,
+    "--monitor-db",
+    monitorDb,
+    "--limit",
+    "NaN",
+    "--json",
+  ], workspace);
+  assert.equal(suggestions.code, CLI_EXIT_USAGE);
+  const suggestionsPayload = JSON.parse(suggestions.stdout) as { error: { code: string; status: string } };
+  assert.equal(suggestionsPayload.error.code, "invalid_network_limit");
+  assert.equal(suggestionsPayload.error.status, "USAGE");
+  assert.equal(fs.existsSync(monitorDb), false);
+});
+
 test("network CLI applies rules to Gateway route explanations and suggestions never auto-apply", async () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "claw-network-rules-"));
   const monitorDb = path.join(workspace, "monitor.sqlite");

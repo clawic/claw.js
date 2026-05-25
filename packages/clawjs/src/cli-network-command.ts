@@ -177,6 +177,15 @@ function parseNonNegativeInteger(value: string | undefined, fallback: number, fl
   return parsed;
 }
 
+function parseNetworkLimit(value: string | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new CliHandledError("invalid_network_limit", "--limit must be a non-negative integer.", CLI_EXIT_USAGE);
+  }
+  return parsed;
+}
+
 function upsertRule(state: NetworkControlState, flags: Record<string, string>, id: string): NetworkControlState {
   const existing = mergedRules(state).find((rule) => rule.id === id);
   const now = nowIso();
@@ -411,8 +420,8 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
       else writeHuman(input.context, payload);
       return CLI_EXIT_OK;
     }
-    const limit = Number(input.flags.limit ?? 20);
-    const history = readEvents(input.flags, detailOptIn, Number.isFinite(limit) ? limit : 20);
+    const limit = parseNetworkLimit(input.flags.limit, 20);
+    const history = readEvents(input.flags, detailOptIn, limit);
     const payload = { store: "monitor.sqlite", dbPath: history.dbPath, detailOptIn, events: history.events };
     if (input.wantsJson) writeCommandJsonOk(input.context.stdout, "network", payload, { subcommand: "events list" });
     else writeHuman(input.context, payload);
@@ -455,7 +464,7 @@ export async function runNetworkCli(input: NetworkCliInput): Promise<number> {
   }
 
   if (command === "suggestions") {
-    const history = readEvents(input.flags, true, Number(input.flags.limit ?? 10));
+    const history = readEvents(input.flags, true, parseNetworkLimit(input.flags.limit, 10));
     const suggestions = history.events
       .filter((event) => event.decision === "ask" || event.decision === "deny")
       .map((event) => createNetworkRuleSuggestion({ event, ruleStewardAgentId: input.flags["agent-id"] }));
