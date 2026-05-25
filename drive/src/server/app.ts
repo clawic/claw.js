@@ -475,7 +475,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.patch(clawDriveApiRoutePatterns.item, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write", itemId });
     if (!principal) return null;
     const body = readBody(request);
     const detail = store.updateItem(itemId, {
@@ -490,7 +490,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemMove, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write", itemId });
     if (!principal) return null;
     const body = readBody(request);
     const detail = store.moveItem(itemId, typeof body.parentId === "string" ? body.parentId : null);
@@ -502,7 +502,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemCopy, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write", itemId });
     if (!principal) return null;
     const body = readBody(request);
     const detail = store.copyItem(itemId, typeof body.parentId === "string" ? body.parentId : null, actorFromPrincipal(principal));
@@ -512,7 +512,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemContent, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write", itemId });
     if (!principal) return null;
     const body = readBody(request);
     try {
@@ -531,7 +531,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemTrash, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete", itemId });
     if (!principal) return null;
     const detail = store.trashItem(itemId);
     await audit(store, bus, principal, "item_trashed", itemId);
@@ -541,7 +541,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemRestore, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete", itemId });
     if (!principal) return null;
     const detail = store.restoreItem(itemId);
     await audit(store, bus, principal, "item_restored", itemId);
@@ -551,7 +551,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.delete(clawDriveApiRoutePatterns.item, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:delete", itemId });
     if (!principal) return null;
     const ok = store.deleteItemForever(itemId);
     if (ok) {
@@ -570,7 +570,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemComments, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write", itemId });
     if (!principal) return null;
     const body = readBody(request);
     const comment = store.addComment(itemId, String(body.body ?? ""), actorFromPrincipal(principal).name);
@@ -587,21 +587,21 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemRevisionRestore, async (request, reply) => {
     const { itemId, revisionId } = request.params as { itemId: string; revisionId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:write", itemId });
     if (!principal) return null;
     return store.restoreRevision(itemId, revisionId, actorFromPrincipal(principal));
   });
 
   app.get(clawDriveApiRoutePatterns.itemShares, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share", itemId });
     if (!principal) return null;
     return { items: store.listShares(itemId) };
   });
 
   app.post(clawDriveApiRoutePatterns.itemShares, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share", itemId });
     if (!principal) return null;
     const body = readBody(request);
     const mode = (typeof body.mode === "string" ? body.mode : "read") as "read" | "tailnet" | "public_tunnel" | "agent";
@@ -649,7 +649,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
 
   app.post(clawDriveApiRoutePatterns.itemShareRevoke, async (request, reply) => {
     const { itemId, shareId } = request.params as { itemId: string; shareId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share", itemId });
     if (!principal) return null;
     const actor = {
       kind: principalKindForAudit(principal),
@@ -670,7 +670,7 @@ export async function buildDriveApp(options: BuildDriveAppOptions = {}) {
   // Aggregate listing across all share modes
   app.get(clawDriveApiRoutePatterns.itemSharesAll, async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
-    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share" });
+    const principal = await requirePrincipal(request, reply, auth, store, { operation: "items:share", itemId });
     if (!principal) return null;
     return {
       read: store.listShares(itemId),

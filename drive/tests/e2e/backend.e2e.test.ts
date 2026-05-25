@@ -274,6 +274,72 @@ test("agent share revoke writes one audit event", async () => {
   assert.equal(matchingRevokes.length, 1);
 });
 
+test("agent item write shares cannot modify a different item", async () => {
+  const { authFetch, baseUrl } = await boot();
+
+  const allowedResponse = await authFetch(clawApiPath("items"), {
+    method: "POST",
+    body: JSON.stringify({ kind: "doc", name: "Allowed doc" }),
+  });
+  assert.equal(allowedResponse.status, 201);
+  const allowed = await allowedResponse.json() as { id: string };
+
+  const blockedResponse = await authFetch(clawApiPath("items"), {
+    method: "POST",
+    body: JSON.stringify({ kind: "doc", name: "Blocked doc" }),
+  });
+  assert.equal(blockedResponse.status, 201);
+  const blocked = await blockedResponse.json() as { id: string };
+
+  const shareResponse = await authFetch(clawApiPath(`items/${allowed.id}/shares`), {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "agent",
+      capabilityKind: "drive.item.write",
+      ttlMinutes: 10,
+      agentName: "writer",
+    }),
+  });
+  assert.equal(shareResponse.status, 201);
+  const share = await shareResponse.json() as { token: string };
+
+  const allowedDetail = await (await authFetch(clawApiPath(`items/${allowed.id}`))).json() as {
+    currentRevisionId: string | null;
+    content: { kind: "doc"; blocks: Array<{ id: string; type: string; text?: string }> };
+  };
+  allowedDetail.content.blocks[1].text = "Agent may write this document";
+  const allowedWrite = await fetch(`${baseUrl}${clawApiPath(`items/${allowed.id}/content`)}`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${share.token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      baseRevisionId: allowedDetail.currentRevisionId,
+      content: allowedDetail.content,
+    }),
+  });
+  assert.equal(allowedWrite.status, 200);
+
+  const blockedDetail = await (await authFetch(clawApiPath(`items/${blocked.id}`))).json() as {
+    currentRevisionId: string | null;
+    content: { kind: "doc"; blocks: Array<{ id: string; type: string; text?: string }> };
+  };
+  blockedDetail.content.blocks[1].text = "Agent must not write this document";
+  const blockedWrite = await fetch(`${baseUrl}${clawApiPath(`items/${blocked.id}/content`)}`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${share.token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      baseRevisionId: blockedDetail.currentRevisionId,
+      content: blockedDetail.content,
+    }),
+  });
+  assert.equal(blockedWrite.status, 403);
+});
+
 test("scoped tokens can read lists after creation", async () => {
   const { authFetch, baseUrl } = await boot();
 
