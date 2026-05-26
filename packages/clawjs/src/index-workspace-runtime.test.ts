@@ -2174,6 +2174,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.officialMethod, "session.create");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract")?.userVisibleContract, "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract" && entry.commandShape === "not_executable_until_official_runtime_pin_api_exists"), true);
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.unpin.native_write_back_contract")?.userVisibleContract, "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists");
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.unpin.native_write_back_contract" && entry.commandShape === "not_executable_until_official_runtime_unpin_api_exists"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "channels")?.evidenceRequirementIds?.includes("hermes.channels.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "providers")?.evidenceRequirementIds?.includes("hermes.providers.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "auth")?.evidenceRequirementIds?.includes("hermes.auth.live_evidence"), true);
@@ -2356,6 +2358,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.models.live_evidence")?.commandShape, "runtime hermes domain models --json");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.models.live_evidence")?.exactCommand, "claw runtime hermes domain models --json");
   const hermesCreateReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.create.action_contract");
+  const hermesPinReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.pin.native_write_back_contract");
+  const hermesUnpinReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.unpin.native_write_back_contract");
   assert.equal(hermesCreateReentry?.status, "blocked_until_upstream_contract");
   assert.equal(hermesCreateReentry?.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
   assert.equal(hermesCreateReentry?.expectedEvidence?.includes("non_destructive_fixture"), true);
@@ -2367,6 +2371,18 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesCreateReentry?.productionTransportCommandShape, "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
   assert.equal(hermesCreateReentry?.claimBlockedUntil, "tui_gateway_wrapper_fixture_and_round_trip_evidence_attached");
   assert.equal(hermesCreateReentry?.doNotRunWithoutApproval, true);
+  assert.equal(hermesPinReentry?.status, "blocked_until_upstream_contract");
+  assert.equal(hermesPinReentry?.commandShape, "not_executable_until_official_runtime_pin_api_exists");
+  assert.equal(hermesPinReentry?.exactCommand, "not_executable_until_official_runtime_pin_api_exists");
+  assert.equal(hermesPinReentry?.fallbackPolicy, "do_not_write_runtime_pin_state_without_official_api");
+  assert.equal(hermesPinReentry?.claimBlockedUntil, "official_runtime_contract_fixture_and_round_trip_evidence_attached");
+  assert.equal(hermesPinReentry?.doNotRunWithoutApproval, false);
+  assert.equal(hermesUnpinReentry?.status, "blocked_until_upstream_contract");
+  assert.equal(hermesUnpinReentry?.commandShape, "not_executable_until_official_runtime_unpin_api_exists");
+  assert.equal(hermesUnpinReentry?.exactCommand, "not_executable_until_official_runtime_unpin_api_exists");
+  assert.equal(hermesUnpinReentry?.fallbackPolicy, "do_not_write_runtime_pin_state_without_official_api");
+  assert.equal(hermesUnpinReentry?.claimBlockedUntil, "official_runtime_contract_fixture_and_round_trip_evidence_attached");
+  assert.equal(hermesUnpinReentry?.doNotRunWithoutApproval, false);
 
   const hermesSandboxStdout = captureStream();
   const hermesSandboxExit = await runCli(["runtime", "hermes", "domain", "sandboxPermissions", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {

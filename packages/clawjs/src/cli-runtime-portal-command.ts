@@ -1895,6 +1895,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       evidenceArtifactTemplate: requirement.evidenceArtifactTemplate,
       riskControls: requirement.riskControls ?? [],
       reentryCondition: requirement.reentryCondition,
+      fallbackPolicy: requirement.fallbackPolicy,
       claimEffect: requirement.claimEffect,
       claimBlockedUntil: requirement.claimBlockedUntil ?? requirement.promotionGate,
       supportResolution: requirement.supportResolution,
