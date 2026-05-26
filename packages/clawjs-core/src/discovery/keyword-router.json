@@ -92,7 +92,7 @@
     },
     {
       "id": "assignment",
-      "keywords": ["assignment", "assignments", "assignee", "asignar", "asignación", "owner", "delegation", "delegate"],
+      "keywords": ["assignment", "assignments", "assignee", "asignar", "asignación", "steward", "delegation", "delegate"],
       "primaryCommand": "assignments",
       "summary": "Assignments of work to people, agents or teams.",
       "useWhen": "You want to record or transfer stewardship of work units explicitly.",
@@ -147,7 +147,7 @@
     },
     {
       "id": "person",
-      "keywords": ["person", "people", "persona", "personas", "contact", "contacts", "contacto", "stakeholder", "owner-person"],
+      "keywords": ["person", "people", "persona", "personas", "contact", "contacts", "contacto", "stakeholder", "steward-person"],
       "primaryCommand": "people",
       "summary": "People records.",
       "useWhen": "You want to register or look up people involved in your work and link them to tasks, assignments and handoffs.",

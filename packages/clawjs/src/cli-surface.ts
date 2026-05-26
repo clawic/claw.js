@@ -1,13 +1,13 @@
 import {
   GENERATED_CLI_COMMANDS,
   GENERATED_COLLECTION_ALIASES,
+  GENERATED_KEYWORD_ROUTER_CONCEPTS,
   GENERATED_PUBLIC_PORTAL_HELP_ONLY,
   GENERATED_REMOVED_PUBLIC_COMMANDS,
   GENERATED_REMOVED_RUNTIME_COMMANDS,
   GENERATED_REMOVED_V1_CRUD_COMMANDS,
   type GeneratedCliCommandEntry,
 } from "./cli-router.generated.ts";
-import { findKeywordRouterConcept, findKeywordRouterConceptByCommand } from "@clawjs/core";
 
 export const DEFAULT_CLI_BIN = "claw";
 
@@ -28,6 +28,10 @@ export interface ClawCliSearchResult {
 
 const PUBLIC_CLI_SURFACE: ClawCliCommandRegistryEntry[] = [...GENERATED_CLI_COMMANDS as readonly ClawCliCommandRegistryEntry[]];
 const PUBLIC_CLI_SURFACE_BY_NAME = new Map(PUBLIC_CLI_SURFACE.map((entry) => [entry.name, entry]));
+const KEYWORD_ROUTER_CONCEPTS = [...GENERATED_KEYWORD_ROUTER_CONCEPTS];
+type GeneratedKeywordRouterConcept = (typeof KEYWORD_ROUTER_CONCEPTS)[number];
+const KEYWORD_ROUTER_CONCEPT_BY_ID = new Map<string, GeneratedKeywordRouterConcept>(KEYWORD_ROUTER_CONCEPTS.map((concept) => [concept.id, concept]));
+const KEYWORD_ROUTER_CONCEPT_BY_COMMAND = new Map<string, GeneratedKeywordRouterConcept>(KEYWORD_ROUTER_CONCEPTS.map((concept) => [concept.primaryCommand, concept]));
 
 function surfaceRows(entries: ClawCliCommandRegistryEntry[]): string[] {
   return entries.map((entry) => {
@@ -104,14 +108,14 @@ export function buildCommandHelp(binName: string, group: string): string | null 
   ];
   if (entry.target) baseLines.push(`Routes to: ${entry.target}`);
 
-  const concept = findKeywordRouterConceptByCommand(entry.name);
+  const concept = KEYWORD_ROUTER_CONCEPT_BY_COMMAND.get(entry.name);
   if (concept) {
     baseLines.push("", `Use this when: ${concept.useWhen}`);
     baseLines.push("", "Example:", `  ${concept.exampleInvocation}`);
     if (concept.relatedConcepts.length > 0) {
       baseLines.push("", "Related commands:");
       for (const relatedId of concept.relatedConcepts) {
-        const related = findKeywordRouterConcept(relatedId);
+        const related = KEYWORD_ROUTER_CONCEPT_BY_ID.get(relatedId);
         if (related) {
           baseLines.push(`  ${binName} ${related.primaryCommand.padEnd(14)} ${related.summary}`);
         }

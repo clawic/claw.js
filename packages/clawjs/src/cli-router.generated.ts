@@ -5785,6 +5785,924 @@ export const GENERATED_CLI_COMMANDS = [
     routeGroup: "legacy"
   }
 ] as const satisfies readonly GeneratedCliCommandEntry[];
+export const GENERATED_KEYWORD_ROUTER_CONCEPTS = [
+  {
+    id: "task",
+    keywords: [
+      "task",
+      "tasks",
+      "todo",
+      "todos",
+      "to-do",
+      "tarea",
+      "tareas",
+      "pendiente",
+      "pendientes",
+      "work-item",
+      "ticket",
+      "action-item"
+    ],
+    primaryCommand: "tasks",
+    summary: "Task records and local-first work items.",
+    useWhen: "You want to create, list, update or close a work item with status, priority, due date or assignee.",
+    exampleInvocation: "claw tasks list --status open --json",
+    relatedConcepts: [
+      "project",
+      "blocker",
+      "assignment",
+      "goal",
+      "agenda"
+    ],
+    antiPattern: "Do not use `claw db tasks` or `claw collections tasks` for this. Those are fallbacks for raw schema or migration access.",
+    family: "work"
+  },
+  {
+    id: "note",
+    keywords: [
+      "note",
+      "notes",
+      "page",
+      "pages",
+      "nota",
+      "notas",
+      "apuntar",
+      "anotar",
+      "annotation",
+      "snippet",
+      "memo"
+    ],
+    primaryCommand: "notes",
+    summary: "Notes and pages.",
+    useWhen: "You want to write, list, edit or link long-form notes and pages.",
+    exampleInvocation: "claw notes list --json",
+    relatedConcepts: [
+      "knowledge",
+      "decision",
+      "inbox-item"
+    ],
+    antiPattern: "Do not use `claw db pages` for this; the dedicated command applies the right schema and indexing.",
+    family: "work"
+  },
+  {
+    id: "decision",
+    keywords: [
+      "decision",
+      "decisions",
+      "decisión",
+      "decisiones",
+      "adr",
+      "rationale",
+      "trade-off",
+      "tradeoff",
+      "choice",
+      "decidir",
+      "razón"
+    ],
+    primaryCommand: "decisions",
+    summary: "Recorded work decisions with rationale and trade-offs.",
+    useWhen: "You want to capture a non-trivial choice, its options, the selected one and why.",
+    exampleInvocation: "claw decisions list --json",
+    relatedConcepts: [
+      "note",
+      "outcome",
+      "learning"
+    ],
+    antiPattern: "Do not store decisions as plain notes; the dedicated command keeps the structured rationale.",
+    family: "work"
+  },
+  {
+    id: "inbox-item",
+    keywords: [
+      "inbox",
+      "triage",
+      "incoming",
+      "bandeja",
+      "captura",
+      "capture",
+      "queue",
+      "untriaged"
+    ],
+    primaryCommand: "inbox",
+    summary: "Inbox and triage of incoming items.",
+    useWhen: "You want to drop something quickly without classifying it yet, or process the queue to promote items to tasks, notes or decisions.",
+    exampleInvocation: "claw inbox list --json",
+    relatedConcepts: [
+      "task",
+      "note",
+      "decision"
+    ],
+    antiPattern: "Do not skip inbox by writing low-confidence items directly as tasks; the inbox keeps un-promoted items separate.",
+    family: "work"
+  },
+  {
+    id: "project",
+    keywords: [
+      "project",
+      "projects",
+      "proyecto",
+      "proyectos",
+      "initiative",
+      "epic",
+      "workspace"
+    ],
+    primaryCommand: "projects",
+    summary: "Unified Claw projects across tasks, notes, goals and decisions.",
+    useWhen: "You want to create, list or update a project that groups related work.",
+    exampleInvocation: "claw projects list --json",
+    relatedConcepts: [
+      "task",
+      "goal",
+      "project-folder"
+    ],
+    antiPattern: "Do not use `claw db projects` for this; the dedicated command enforces the project lifecycle.",
+    family: "work"
+  },
+  {
+    id: "project-folder",
+    keywords: [
+      "project-folder",
+      "manifest",
+      "claw.project.json",
+      "attach",
+      "detach",
+      "handoff",
+      "folder"
+    ],
+    primaryCommand: "project",
+    summary: "Project folder manifest, attach/detach, safe handoff and path-mutable identity.",
+    useWhen: "You are inside (or pointing at) a local folder and want to attach, detach, inspect or hand off its project manifest.",
+    exampleInvocation: "claw project inspect --json",
+    relatedConcepts: [
+      "project",
+      "task"
+    ],
+    antiPattern: "Singular `project` is folder-level; plural `projects` is for project records. Do not confuse them.",
+    family: "work"
+  },
+  {
+    id: "goal",
+    keywords: [
+      "goal",
+      "goals",
+      "objective",
+      "objetivo",
+      "meta",
+      "milestone",
+      "outcome-target"
+    ],
+    primaryCommand: "goals",
+    summary: "Goal records.",
+    useWhen: "You want to define, list or update higher-level goals that tasks roll up to.",
+    exampleInvocation: "claw goals list --json",
+    relatedConcepts: [
+      "task",
+      "outcome",
+      "review"
+    ],
+    antiPattern: "Do not store goals as notes; the dedicated command links them to tasks and outcomes.",
+    family: "work"
+  },
+  {
+    id: "blocker",
+    keywords: [
+      "blocker",
+      "blockers",
+      "blocked",
+      "blocking",
+      "bloqueo",
+      "bloqueador",
+      "depende",
+      "dependency",
+      "impediment",
+      "stuck"
+    ],
+    primaryCommand: "blockers",
+    summary: "Blockers that prevent work from progressing.",
+    useWhen: "You want to record what is blocking a task, project or decision and on whom or what it depends.",
+    exampleInvocation: "claw blockers list --json",
+    relatedConcepts: [
+      "task",
+      "assignment",
+      "handoff"
+    ],
+    antiPattern: "Do not bury blockers inside task descriptions; the dedicated command makes them queryable.",
+    family: "work"
+  },
+  {
+    id: "assignment",
+    keywords: [
+      "assignment",
+      "assignments",
+      "assignee",
+      "asignar",
+      "asignación",
+      "steward",
+      "delegation",
+      "delegate"
+    ],
+    primaryCommand: "assignments",
+    summary: "Assignments of work to people, agents or teams.",
+    useWhen: "You want to record or transfer stewardship of work units explicitly.",
+    exampleInvocation: "claw assignments list --json",
+    relatedConcepts: [
+      "task",
+      "handoff",
+      "person"
+    ],
+    antiPattern: "Do not encode the assignee only in a task title; the dedicated command supports routing and audit.",
+    family: "work"
+  },
+  {
+    id: "handoff",
+    keywords: [
+      "handoff",
+      "handoffs",
+      "handover",
+      "entrega",
+      "transfer",
+      "pass",
+      "delegate"
+    ],
+    primaryCommand: "handoffs",
+    summary: "Handoffs of context, stewardship or status between agents, people or teams.",
+    useWhen: "You are passing a piece of work to someone else and want the receiving side to have the full context.",
+    exampleInvocation: "claw handoffs list --json",
+    relatedConcepts: [
+      "assignment",
+      "blocker",
+      "approval"
+    ],
+    antiPattern: "Do not rely on chat messages for handoffs; the dedicated command keeps the structured context.",
+    family: "work"
+  },
+  {
+    id: "approval",
+    keywords: [
+      "approval",
+      "approvals",
+      "approve",
+      "aprobación",
+      "aprobar",
+      "review-gate",
+      "sign-off",
+      "consent"
+    ],
+    primaryCommand: "approvals",
+    summary: "Work approvals via the signed host broker.",
+    useWhen: "You need explicit human approval for a sensitive action, transition or release.",
+    exampleInvocation: "claw approvals list --json",
+    relatedConcepts: [
+      "handoff",
+      "decision",
+      "blocker"
+    ],
+    antiPattern: "Do not fake approvals as decisions; approvals require an explicit approver and broker policy.",
+    family: "work"
+  },
+  {
+    id: "artifact",
+    keywords: [
+      "artifact",
+      "artifacts",
+      "deliverable",
+      "entregable",
+      "output",
+      "output-file",
+      "asset"
+    ],
+    primaryCommand: "artifacts",
+    summary: "Work artifacts produced by tasks, projects or runs.",
+    useWhen: "You want to register a concrete output (file, report, build, dataset) tied to a piece of work.",
+    exampleInvocation: "claw artifacts list --json",
+    relatedConcepts: [
+      "task",
+      "project",
+      "outcome"
+    ],
+    antiPattern: "Do not just save the file in a random folder; the dedicated command links it to its work item.",
+    family: "work"
+  },
+  {
+    id: "commitment",
+    keywords: [
+      "commitment",
+      "commitments",
+      "promise",
+      "promises",
+      "promesa",
+      "follow-up",
+      "compromiso",
+      "external-commitment"
+    ],
+    primaryCommand: "commitments",
+    summary: "Promises and follow-ups made to others or the future self.",
+    useWhen: "You want to record an explicit promise to do, deliver or check on something, separately from internal tasks.",
+    exampleInvocation: "claw commitments list --json",
+    relatedConcepts: [
+      "task",
+      "deadline",
+      "person"
+    ],
+    antiPattern: "Do not bury follow-up promises in chat; the dedicated command tracks deadline and party.",
+    family: "work"
+  },
+  {
+    id: "person",
+    keywords: [
+      "person",
+      "people",
+      "persona",
+      "personas",
+      "contact",
+      "contacts",
+      "contacto",
+      "stakeholder",
+      "steward-person"
+    ],
+    primaryCommand: "people",
+    summary: "People records.",
+    useWhen: "You want to register or look up people involved in your work and link them to tasks, assignments and handoffs.",
+    exampleInvocation: "claw people list --json",
+    relatedConcepts: [
+      "assignment",
+      "handoff",
+      "commitment"
+    ],
+    antiPattern: "Do not use `claw db people` for routine lookups; the dedicated command keeps host broker forwarding for contacts.",
+    family: "work"
+  },
+  {
+    id: "my-work",
+    keywords: [
+      "my-work",
+      "mywork",
+      "personal-work",
+      "mi-trabajo",
+      "what-i-have",
+      "what-am-i-doing",
+      "self"
+    ],
+    primaryCommand: "my-work",
+    summary: "Personal work summary across tasks, projects, goals and blockers.",
+    useWhen: "You want a single read-only digest of what you currently own.",
+    exampleInvocation: "claw my-work --json",
+    relatedConcepts: [
+      "task",
+      "agenda",
+      "team-work"
+    ],
+    antiPattern: "Do not assemble this view by hand from multiple commands; the dedicated command unifies it.",
+    family: "work"
+  },
+  {
+    id: "team-work",
+    keywords: [
+      "team-work",
+      "teamwork",
+      "team",
+      "equipo",
+      "team-summary",
+      "collective"
+    ],
+    primaryCommand: "team-work",
+    summary: "Team work summary across tasks, projects, goals and blockers.",
+    useWhen: "You want a single read-only digest of what your team currently owns.",
+    exampleInvocation: "claw team-work --json",
+    relatedConcepts: [
+      "my-work",
+      "assignment",
+      "handoff"
+    ],
+    antiPattern: "Do not aggregate the team view by hand; the dedicated command unifies it.",
+    family: "work"
+  },
+  {
+    id: "agenda",
+    keywords: [
+      "agenda",
+      "today",
+      "hoy",
+      "now",
+      "current",
+      "due-today",
+      "what-is-up"
+    ],
+    primaryCommand: "agenda",
+    summary: "Agenda view of tasks, calendar events and reminders for the current window.",
+    useWhen: "You want a single read-only view of what is happening now, today or this week.",
+    exampleInvocation: "claw agenda --json",
+    relatedConcepts: [
+      "calendar",
+      "reminder",
+      "task"
+    ],
+    antiPattern: "Do not list tasks + calendar separately; the dedicated command unifies them.",
+    family: "time"
+  },
+  {
+    id: "calendar",
+    keywords: [
+      "calendar",
+      "calendario",
+      "event",
+      "events",
+      "evento",
+      "meeting",
+      "appointment",
+      "reunión"
+    ],
+    primaryCommand: "calendar",
+    summary: "Framework calendar event records and host calendar projection.",
+    useWhen: "You want to create, list, update or delete calendar events.",
+    exampleInvocation: "claw calendar list --json",
+    relatedConcepts: [
+      "agenda",
+      "reminder",
+      "deadline"
+    ],
+    antiPattern: "Do not use `claw db calendar_events` for this; the dedicated command projects to host calendars when broker permits.",
+    family: "time"
+  },
+  {
+    id: "reminder",
+    keywords: [
+      "reminder",
+      "reminders",
+      "recordatorio",
+      "recordatorios",
+      "remind",
+      "alert",
+      "ping-me"
+    ],
+    primaryCommand: "reminders",
+    summary: "Reminders.",
+    useWhen: "You want a time-based ping at a specific moment, distinct from a calendar event.",
+    exampleInvocation: "claw reminders list --json",
+    relatedConcepts: [
+      "calendar",
+      "deadline",
+      "agenda"
+    ],
+    antiPattern: "Do not use a task with due-date for a notify-me-at-X reminder; reminders are first-class.",
+    family: "time"
+  },
+  {
+    id: "deadline",
+    keywords: [
+      "deadline",
+      "deadlines",
+      "due",
+      "due-date",
+      "fecha-límite",
+      "limite",
+      "limit",
+      "by-when"
+    ],
+    primaryCommand: "deadlines",
+    summary: "Deadlines.",
+    useWhen: "You want to record a hard deadline that may apply to one or many work items.",
+    exampleInvocation: "claw deadlines list --json",
+    relatedConcepts: [
+      "task",
+      "commitment",
+      "reminder"
+    ],
+    antiPattern: "Do not encode deadlines only inside task fields; the dedicated command lets you query and roll-up across items.",
+    family: "time"
+  },
+  {
+    id: "routine",
+    keywords: [
+      "routine",
+      "routines",
+      "rutina",
+      "recurring",
+      "recurrence",
+      "habit",
+      "habito",
+      "habit-loop",
+      "weekly",
+      "daily"
+    ],
+    primaryCommand: "routines",
+    summary: "Recurring routines.",
+    useWhen: "You want to define a recurrence (daily/weekly/custom) and have it generate concrete instances.",
+    exampleInvocation: "claw routines list --json",
+    relatedConcepts: [
+      "schedule",
+      "reminder",
+      "review"
+    ],
+    antiPattern: "Do not duplicate tasks manually for each occurrence; routines exist for this.",
+    family: "time"
+  },
+  {
+    id: "schedule",
+    keywords: [
+      "schedule",
+      "scheduling",
+      "agendar",
+      "plan-time",
+      "block-time",
+      "time-block"
+    ],
+    primaryCommand: "schedule",
+    summary: "Natural scheduling verb for placing work into time.",
+    useWhen: "You want to place an existing task or item into a specific time block or move it.",
+    exampleInvocation: "claw schedule --help",
+    relatedConcepts: [
+      "calendar",
+      "agenda",
+      "routine"
+    ],
+    antiPattern: "Do not edit calendar events to schedule tasks; the dedicated verb links them.",
+    family: "time"
+  },
+  {
+    id: "watch-rule",
+    keywords: [
+      "watch",
+      "watcher",
+      "watch-rule",
+      "trigger",
+      "automation-rule",
+      "saved-watch"
+    ],
+    primaryCommand: "watch",
+    summary: "Watch rules that monitor conditions and fire actions.",
+    useWhen: "You want to define or list a rule that watches a signal, file, query or condition and reacts when it changes.",
+    exampleInvocation: "claw watch --help",
+    relatedConcepts: [
+      "routine",
+      "schedule",
+      "reminder"
+    ],
+    antiPattern: "Do not poll with a cron-like task; the dedicated watch surface owns the trigger lifecycle.",
+    family: "time"
+  },
+  {
+    id: "timeline",
+    keywords: [
+      "timeline",
+      "history",
+      "histórico",
+      "past",
+      "log",
+      "log-view",
+      "linea-temporal"
+    ],
+    primaryCommand: "timeline",
+    summary: "Timeline view of work and events across time.",
+    useWhen: "You want a chronological read-only view of what happened.",
+    exampleInvocation: "claw timeline --json",
+    relatedConcepts: [
+      "agenda",
+      "review",
+      "outcome"
+    ],
+    antiPattern: "Do not reconstruct timelines by hand from raw collections; the dedicated command unifies them.",
+    family: "time"
+  },
+  {
+    id: "review",
+    keywords: [
+      "review",
+      "weekly-review",
+      "daily-review",
+      "retrospective",
+      "retro",
+      "revisión",
+      "review-time"
+    ],
+    primaryCommand: "review",
+    summary: "Daily and weekly review surface.",
+    useWhen: "You want to run a structured review of recent work, decisions and outcomes.",
+    exampleInvocation: "claw review --json",
+    relatedConcepts: [
+      "timeline",
+      "outcome",
+      "decision"
+    ],
+    antiPattern: "Do not write reviews only as notes; the dedicated command links to the underlying items.",
+    family: "time"
+  },
+  {
+    id: "knowledge",
+    keywords: [
+      "knowledge",
+      "kb",
+      "wiki",
+      "memory",
+      "memoria",
+      "context",
+      "contexto",
+      "what-do-i-know"
+    ],
+    primaryCommand: "knowledge",
+    summary: "Knowledge portal backed by the private memory implementation.",
+    useWhen: "You want to capture or retrieve durable knowledge that is not a single note (concepts, references, learnings tied to topics).",
+    exampleInvocation: "claw knowledge --help",
+    relatedConcepts: [
+      "note",
+      "learning",
+      "decision"
+    ],
+    antiPattern: "Do not use `claw db` to look at memory; the portal applies the right scoping and redaction.",
+    family: "knowledge"
+  },
+  {
+    id: "learning",
+    keywords: [
+      "learning",
+      "learnings",
+      "aprendizaje",
+      "lesson",
+      "lessons-learned",
+      "insight"
+    ],
+    primaryCommand: "learning",
+    summary: "Learning capture and promotion.",
+    useWhen: "You want to record a learning so the agent or team can reuse it later.",
+    exampleInvocation: "claw learning --help",
+    relatedConcepts: [
+      "knowledge",
+      "decision",
+      "outcome"
+    ],
+    antiPattern: "Do not store learnings as decisions; learnings are descriptive, decisions are prescriptive.",
+    family: "agent"
+  },
+  {
+    id: "outcome",
+    keywords: [
+      "outcome",
+      "outcomes",
+      "result",
+      "results",
+      "resultado",
+      "shipped",
+      "delivered",
+      "impact"
+    ],
+    primaryCommand: "outcomes",
+    summary: "Outcome tracking.",
+    useWhen: "You want to record what actually happened as a result of work and tie it to goals or decisions.",
+    exampleInvocation: "claw outcomes --help",
+    relatedConcepts: [
+      "goal",
+      "decision",
+      "review"
+    ],
+    antiPattern: "Do not conflate outcomes with tasks closed; an outcome is the realized effect, not the action.",
+    family: "agent"
+  },
+  {
+    id: "judgment",
+    keywords: [
+      "judgment",
+      "evaluation",
+      "assessment",
+      "evaluación",
+      "rating",
+      "score"
+    ],
+    primaryCommand: "judgment",
+    summary: "Reasoned evaluations distinct from work decisions.",
+    useWhen: "You want to record an evaluation of something (a model, a person's work, a system) without making it a decision yet.",
+    exampleInvocation: "claw judgment --help",
+    relatedConcepts: [
+      "decision",
+      "learning",
+      "outcome"
+    ],
+    antiPattern: "Do not record judgments as decisions; judgments are inputs, decisions are commitments.",
+    family: "agent"
+  },
+  {
+    id: "plan",
+    keywords: [
+      "plan",
+      "planning",
+      "plan-of-action",
+      "strategy",
+      "roadmap"
+    ],
+    primaryCommand: "plan",
+    summary: "Semantic planning gate.",
+    useWhen: "You want to draft, gate or revise an implementation plan before executing.",
+    exampleInvocation: "claw plan --help",
+    relatedConcepts: [
+      "task",
+      "decision",
+      "review"
+    ],
+    antiPattern: "Do not save plans as long notes; the dedicated command gates approval and revision.",
+    family: "agent"
+  },
+  {
+    id: "rules",
+    keywords: [
+      "rules",
+      "policy",
+      "policies",
+      "convention",
+      "guideline",
+      "regla",
+      "reglas"
+    ],
+    primaryCommand: "rules",
+    summary: "Persistent agent rules.",
+    useWhen: "You want to record an explicit, persistent rule the agent should follow across sessions.",
+    exampleInvocation: "claw rules --help",
+    relatedConcepts: [
+      "learning",
+      "guidance",
+      "decision"
+    ],
+    antiPattern: "Do not save rules only as notes; the dedicated command makes them queryable and citable.",
+    family: "agent"
+  },
+  {
+    id: "context",
+    keywords: [
+      "context",
+      "context-pack",
+      "briefing",
+      "background",
+      "primer",
+      "loadout"
+    ],
+    primaryCommand: "context",
+    summary: "Context packs.",
+    useWhen: "You want to bundle a reusable context (instructions + references) for an agent run.",
+    exampleInvocation: "claw context --help",
+    relatedConcepts: [
+      "library",
+      "rules",
+      "knowledge"
+    ],
+    antiPattern: "Do not paste the same context into every prompt; the dedicated command lets you compose and reuse it.",
+    family: "agent"
+  },
+  {
+    id: "library",
+    keywords: [
+      "library",
+      "bundle",
+      "skill-bundle",
+      "snippet-library",
+      "instruction-pack"
+    ],
+    primaryCommand: "library",
+    summary: "Reusable local skills, instructions and bundles.",
+    useWhen: "You want to manage reusable instruction bundles that agents pull on demand.",
+    exampleInvocation: "claw library --help",
+    relatedConcepts: [
+      "context",
+      "knowledge",
+      "rules"
+    ],
+    antiPattern: "Do not copy-paste reusable instructions; the dedicated command versions and shares them.",
+    family: "agent"
+  },
+  {
+    id: "guidance",
+    keywords: [
+      "guidance",
+      "hint",
+      "tip",
+      "warning",
+      "advice",
+      "pista"
+    ],
+    primaryCommand: "guidance",
+    summary: "Compact just-in-time CLI guidance for agent and human command attempts.",
+    useWhen: "You want to surface or record short, situational hints that fire when a user or agent tries something.",
+    exampleInvocation: "claw guidance list --json",
+    relatedConcepts: [
+      "rules",
+      "router-discovery",
+      "about"
+    ],
+    antiPattern: "Do not use guidance to store rules; guidance is situational, rules are persistent.",
+    family: "agent"
+  },
+  {
+    id: "router-discovery",
+    keywords: [
+      "router",
+      "discover",
+      "discovery",
+      "where",
+      "which-command",
+      "what-command",
+      "find-command",
+      "how-to",
+      "qué-comando",
+      "cómo"
+    ],
+    primaryCommand: "router",
+    summary: "Keyword router that maps free-form intent to the right dedicated command.",
+    useWhen: "You do not know which command to use. Pass one or more keywords and get back commands, examples and anti-patterns.",
+    exampleInvocation: "claw router task deadline blocker --json",
+    relatedConcepts: [
+      "about",
+      "search-content",
+      "inspect"
+    ],
+    antiPattern: "Do not start exploring with `claw search query` for command discovery; `search query` is for indexed content.",
+    family: "discovery"
+  },
+  {
+    id: "about",
+    keywords: [
+      "about",
+      "intro",
+      "introduction",
+      "what-is",
+      "purpose",
+      "qué-es"
+    ],
+    primaryCommand: "about",
+    summary: "30-second explanation of what Claw is for, with the capability map and the entry commands.",
+    useWhen: "You are new to the framework or want to recalibrate what Claw is for.",
+    exampleInvocation: "claw about",
+    relatedConcepts: [
+      "router-discovery",
+      "search-content",
+      "inspect"
+    ],
+    antiPattern: "Do not skim only the README on GitHub; `claw about` reflects what is actually installed.",
+    family: "discovery"
+  },
+  {
+    id: "search-content",
+    keywords: [
+      "search",
+      "find-content",
+      "query",
+      "fts",
+      "full-text",
+      "buscar-contenido"
+    ],
+    primaryCommand: "search",
+    summary: "Framework-wide search over indexed content, sources, manifests and saved searches.",
+    useWhen: "You want to find a document, note, page, surface or piece of indexed content by text.",
+    exampleInvocation: "claw search query \"keyword phrase\" --json",
+    relatedConcepts: [
+      "router-discovery",
+      "inspect",
+      "knowledge"
+    ],
+    antiPattern: "Do not use `search query` to discover which command to run; use `router` for that.",
+    family: "discovery"
+  },
+  {
+    id: "inspect",
+    keywords: [
+      "inspect",
+      "registry",
+      "schema-list",
+      "list-commands",
+      "what-exists"
+    ],
+    primaryCommand: "inspect",
+    summary: "Read-only stable surface inspection across commands, schemas, storage, routes and contracts.",
+    useWhen: "You want the canonical registry view of commands, schemas, ADRs, surfaces or routes.",
+    exampleInvocation: "claw inspect commands --json",
+    relatedConcepts: [
+      "router-discovery",
+      "about",
+      "search-content"
+    ],
+    antiPattern: "Do not assemble registry views by grepping source; `inspect` is the stable surface.",
+    family: "discovery"
+  },
+  {
+    id: "raw-data",
+    keywords: [
+      "db",
+      "database",
+      "collection",
+      "collections",
+      "records",
+      "schema",
+      "raw-table",
+      "migration",
+      "dump"
+    ],
+    primaryCommand: "db",
+    summary: "Generic local-first database CRUD. Fallback for collections without a dedicated command and for schema or migration access.",
+    useWhen: "The thing you want has no dedicated command, or you are doing schema, migration or low-level CRUD work explicitly.",
+    exampleInvocation: "claw db <collection> schema --json",
+    relatedConcepts: [
+      "inspect",
+      "router-discovery"
+    ],
+    antiPattern: "Do not reach for `claw db` when a dedicated command exists (tasks, notes, decisions, inbox, calendar, etc.). Use `claw router <topic>` first.",
+    family: "database"
+  }
+] as const;
 export const GENERATED_CLI_ROUTE_GROUPS = {
   source: "inspect-search-governance",
   setup: "scaffold-setup",

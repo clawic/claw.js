@@ -7,6 +7,9 @@ import {
 import {
   clawCliCommandRegistry,
 } from "../packages/clawjs-core/src/cli-command-registry.ts";
+import {
+  listKeywordRouterConcepts,
+} from "../packages/clawjs-core/src/discovery/keyword-router.ts";
 import { createDiagnostic, printActionableFailureReport } from "./actionable-error.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
@@ -194,6 +197,7 @@ if (args.has("--self-test")) {
 }
 
 const commands = clawCliCommandRegistry.commands.map(compactCommand);
+const keywordRouterConcepts = listKeywordRouterConcepts();
 const routeGroups = {};
 for (const entry of commands) {
   const roots = [entry.name];
@@ -260,6 +264,7 @@ export interface GeneratedCliCommandEntry {
 
 export const GENERATED_CLI_ROUTER_VERSION = ${JSON.stringify(clawCliCommandRegistry.version)} as const;
 export const GENERATED_CLI_COMMANDS = ${tsConst(commands)} as const satisfies readonly GeneratedCliCommandEntry[];
+export const GENERATED_KEYWORD_ROUTER_CONCEPTS = ${tsConst(keywordRouterConcepts)} as const;
 export const GENERATED_CLI_ROUTE_GROUPS = ${tsConst(routeGroups)} as const satisfies Record<string, GeneratedCliRouteGroup>;
 export const GENERATED_STABLE_CLI_COMMANDS = ${tsConst(stableCommands)} as const;
 export const GENERATED_COLLECTION_ALIASES = ${tsConst(collectionAliases)} as const;
