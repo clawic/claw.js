@@ -409,6 +409,27 @@ function main() {
       if ((action.action === "pin" || action.action === "unpin") && (action.authority !== "clawix_local_overlay" || action.writesRuntime !== false)) {
         errors.push(`${runtimeId}.${action.action} session action must be local overlay only`);
       }
+      if (action.action === "pin" || action.action === "unpin") {
+        const expectedEvidenceId = `${runtimeId}.sessions.${action.action}.native_write_back_contract`;
+        if (action.nativeWriteBackStatus !== "blocked_until_official_runtime_write_back_contract") {
+          errors.push(`${runtimeId}.${action.action} session action must expose native write-back blocker status`);
+        }
+        if (action.officialRuntimeWriteBackContractRequired !== true || action.officialRuntimeWriteBackContractKnown !== false) {
+          errors.push(`${runtimeId}.${action.action} session action must declare missing official runtime write-back contract`);
+        }
+        if (action.nativeWriteBackSafeDefault !== "keep_local_overlay_and_do_not_write_runtime_pin_state") {
+          errors.push(`${runtimeId}.${action.action} session action must declare local-overlay pin safe default`);
+        }
+        if (action.userVisibleContract !== "local_overlay_only_until_official_runtime_pin_api_exists") {
+          errors.push(`${runtimeId}.${action.action} session action must expose the local-overlay user-visible contract`);
+        }
+        if (action.claimEffect !== "blocks_native_write_back_parity_not_local_overlay") {
+          errors.push(`${runtimeId}.${action.action} session action must block native write-back parity without blocking local overlay`);
+        }
+        if (action.evidenceRequirementId !== expectedEvidenceId) {
+          errors.push(`${runtimeId}.${action.action} session action must use evidence id ${expectedEvidenceId}`);
+        }
+      }
     }
     for (const actionName of ["send", "inject", "abort"]) {
       const action = manifestActions.find((entry) => entry.action === actionName);

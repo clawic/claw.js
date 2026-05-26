@@ -1145,7 +1145,21 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   fs.writeFileSync(path.join(hermesHome, "mcp", "github.json"), "{}\n");
   const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), "docs/runtime-ecosystem-integration.manifest.json"), "utf8")) as {
     requiredDomains: string[];
-    sessionActionContracts: Record<string, Array<{ action: string; status: string; writesRuntime: boolean; wouldWriteRuntime?: boolean; authority: string; requiredEvidence?: string[] }>>;
+    sessionActionContracts: Record<string, Array<{
+      action: string;
+      status: string;
+      writesRuntime: boolean;
+      wouldWriteRuntime?: boolean;
+      authority: string;
+      requiredEvidence?: string[];
+      nativeWriteBackStatus?: string;
+      officialRuntimeWriteBackContractRequired?: boolean;
+      officialRuntimeWriteBackContractKnown?: boolean;
+      nativeWriteBackSafeDefault?: string;
+      userVisibleContract?: string;
+      claimEffect?: string;
+      evidenceRequirementId?: string;
+    }>>;
   };
   const requiredHermesJsonPortalCommands: Array<{ label: string; args: string[]; exits?: number[] }> = [
     { label: "runtime hermes summary", args: ["runtime", "hermes", "summary"] },
@@ -1666,7 +1680,21 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           auth?: Record<string, unknown>;
         };
         sessions?: {
-          actionContracts?: Array<{ action: string; status: string; writesRuntime: boolean; wouldWriteRuntime?: boolean; authority: string; requiredEvidence?: string[] }>;
+          actionContracts?: Array<{
+            action: string;
+            status: string;
+            writesRuntime: boolean;
+            wouldWriteRuntime?: boolean;
+            authority: string;
+            requiredEvidence?: string[];
+            nativeWriteBackStatus?: string;
+            officialRuntimeWriteBackContractRequired?: boolean;
+            officialRuntimeWriteBackContractKnown?: boolean;
+            nativeWriteBackSafeDefault?: string;
+            userVisibleContract?: string;
+            claimEffect?: string;
+            evidenceRequirementId?: string;
+          }>;
           actionPolicy?: Array<{ action: string; status: string; writesRuntime: boolean }>;
           sessions?: Array<{ id: string; kind: string; path: string; provenance?: { source?: string } }>;
         };
@@ -1851,6 +1879,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "create")?.wouldWriteRuntime, true);
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "create")?.officialMethod, "session.create");
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.authority, "clawix_local_overlay");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.officialRuntimeWriteBackContractRequired, true);
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.officialRuntimeWriteBackContractKnown, false);
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.nativeWriteBackSafeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.userVisibleContract, "local_overlay_only_until_official_runtime_pin_api_exists");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.claimEffect, "blocks_native_write_back_parity_not_local_overlay");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "pin")?.evidenceRequirementId, "hermes.sessions.pin.native_write_back_contract");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "unpin")?.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "unpin")?.evidenceRequirementId, "hermes.sessions.unpin.native_write_back_contract");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "list")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "preview")?.status, "implemented");
   assert.equal(hermesPayload.data.domainData.sessions?.actionPolicy?.find((entry) => entry.action === "resolve")?.status, "implemented");
