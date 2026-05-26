@@ -86,6 +86,26 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   assert.equal(resolvedPayload.data.resolution.intent.risk.includes("local_write"), true);
   assert.equal(resolvedPayload.data.resolution.intent.nextSteps.some((entry) => entry.includes("--confirm-runtime-write")), true);
 
+  const hermesPin = await runCliCapture(["commands", "resolve", "hermes", "sessions", "pin", "--json"], process.cwd());
+  assert.equal(hermesPin.code, CLI_EXIT_OK);
+  const hermesPinPayload = JSON.parse(hermesPin.stdout) as {
+    data: { resolution: { status: string; execute: boolean; intent: { mappedCommand: string; evidence: string[] } } };
+  };
+  assert.equal(hermesPinPayload.data.resolution.status, "covered");
+  assert.equal(hermesPinPayload.data.resolution.execute, false);
+  assert.equal(hermesPinPayload.data.resolution.intent.mappedCommand, "runtime hermes sessions pin");
+  assert.equal(hermesPinPayload.data.resolution.intent.evidence.some((entry) => entry.includes("Runtime-specific phrase `hermes sessions pin`")), true);
+
+  const hermesCreate = await runCliCapture(["commands", "resolve", "hermes", "sessions", "create", "--json"], process.cwd());
+  assert.equal(hermesCreate.code, CLI_EXIT_OK);
+  const hermesCreatePayload = JSON.parse(hermesCreate.stdout) as {
+    data: { resolution: { status: string; execute: boolean; intent: { mappedCommand: string; risk: string[] } } };
+  };
+  assert.equal(hermesCreatePayload.data.resolution.status, "blocked");
+  assert.equal(hermesCreatePayload.data.resolution.execute, false);
+  assert.equal(hermesCreatePayload.data.resolution.intent.mappedCommand, "runtime hermes sessions create");
+  assert.equal(hermesCreatePayload.data.resolution.intent.risk.includes("local_write"), true);
+
   const listed = await runCliCapture(["commands", "list", "--source", "registry", "--json"], process.cwd());
   assert.equal(listed.code, CLI_EXIT_OK);
   const listedPayload = JSON.parse(listed.stdout) as {

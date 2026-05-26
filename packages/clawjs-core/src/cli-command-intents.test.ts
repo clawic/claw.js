@@ -199,11 +199,29 @@ test("CLI command intent resolution covers runtime ecosystem portal actions", ()
   assert.equal(pin.intent.mappedCommand, "runtime <runtime-id> sessions pin");
   assert.equal(pin.intent.evidence.some((entry) => entry.includes("writesRuntime: false")), true);
 
+  const hermesPin = resolveClawCliCommandIntent({ phrase: "hermes sessions pin" });
+  assert.equal(hermesPin.status, "covered");
+  assert.equal(hermesPin.execute, false);
+  assert.equal(hermesPin.intent.mappedCommand, "runtime hermes sessions pin");
+  assert.equal(hermesPin.intent.relatedCommands.includes("hermes"), true);
+  assert.equal(hermesPin.intent.evidence.some((entry) => entry.includes("Runtime-specific phrase `hermes sessions pin`")), true);
+
   const unpin = resolveClawCliCommandIntent({ phrase: "runtime sessions unpin" });
   assert.equal(unpin.status, "covered");
   assert.equal(unpin.execute, false);
   assert.equal(unpin.intent.mappedCommand, "runtime <runtime-id> sessions unpin");
   assert.equal(unpin.intent.nextSteps.some((entry) => entry.includes("host app-state projection")), true);
+
+  const hermesCreate = resolveClawCliCommandIntent({ phrase: "hermes sessions create" });
+  assert.equal(hermesCreate.status, "blocked");
+  assert.equal(hermesCreate.execute, false);
+  assert.equal(hermesCreate.intent.mappedCommand, "runtime hermes sessions create");
+  assert.equal(hermesCreate.intent.risk.includes("local_write"), true);
+
+  const hermesPreview = resolveClawCliCommandIntent({ phrase: "hermes sessions preview sqlite-native-session" });
+  assert.equal(hermesPreview.status, "covered");
+  assert.equal(hermesPreview.execute, false);
+  assert.equal(hermesPreview.intent.mappedCommand, "runtime hermes sessions preview");
 
   const conflicts = resolveClawCliCommandIntent({ phrase: "runtime sessions conflicts" });
   assert.equal(conflicts.status, "covered");

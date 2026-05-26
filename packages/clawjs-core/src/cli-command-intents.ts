@@ -303,6 +303,7 @@ const registryEntries: ClawCliCommandIntentEntry[] = [
 ];
 
 const COLLECTION_INTENT_ACTIONS = new Set(["list", "get", "create", "update", "delete", "query", "schema"]);
+const RUNTIME_COMMAND_INTENT_RUNTIME_IDS = new Set(["openclaw", "codex", "hermes"]);
 
 function intent(
   id: string,
@@ -395,6 +396,8 @@ export function resolveClawCliCommandIntent(input: {
       execute: false,
     };
   }
+  const runtimeSpecific = resolutionFromRuntimeSpecificPhrase(input.phrase, normalizedPhrase, entries, related);
+  if (runtimeSpecific) return runtimeSpecific;
   const firstToken = normalizedPhrase.split(" ")[0] ?? "";
   const command = firstToken ? resolveClawCliCommand(firstToken) : undefined;
   if (command) return resolutionFromCommand(input.phrase, normalizedPhrase, command, related);
@@ -406,6 +409,51 @@ export function resolveClawCliCommandIntent(input: {
   if (professionalRecordsIntent.status !== "data_gap") return resolutionFromProfessionalRecordsIntent(input.phrase, normalizedPhrase, professionalRecordsIntent, related);
   if (collectionResolution) return collectionResolution;
   return resolutionFromRelated(input.phrase, normalizedPhrase, related);
+}
+
+function resolutionFromRuntimeSpecificPhrase(
+  query: string,
+  normalizedPhrase: string,
+  entries: ClawCliCommandIntentEntry[],
+  related: ClawCliSearchResult[],
+): ClawCliCommandIntentResolution | undefined {
+  const tokens = normalizedPhrase.split(" ").filter(Boolean);
+  const runtimeId = tokens[0];
+  if (!runtimeId || !RUNTIME_COMMAND_INTENT_RUNTIME_IDS.has(runtimeId) || tokens.length < 2) return undefined;
+  const runtimeTail = tokens.slice(1);
+  const candidatePhrases = [
+    `runtime ${runtimeTail.join(" ")}`,
+    runtimeTail.length >= 2 ? `runtime ${runtimeTail.slice(0, 2).join(" ")}` : undefined,
+    `runtime ${runtimeTail[0]}`,
+  ].filter((phrase): phrase is string => Boolean(phrase));
+  const target = candidatePhrases
+    .map((phrase) => entries.find((entry) => entry.normalizedPhrase === phrase))
+    .find((entry): entry is ClawCliCommandIntentEntry => Boolean(entry));
+  if (!target) return undefined;
+  const mappedCommand = target.mappedCommand?.replace("runtime <runtime-id>", `runtime ${runtimeId}`);
+  const entry: ClawCliCommandIntentEntry = {
+    ...target,
+    id: `cmd_intent_runtime_specific_${normalizedPhrase.replace(/[^a-z0-9]+/g, "_")}`,
+    phrase: query,
+    normalizedPhrase,
+    mappedCommand,
+    relatedCommands: Array.from(new Set([...target.relatedCommands, runtimeId])),
+    evidence: [
+      `Runtime-specific phrase \`${runtimeId} ${runtimeTail.join(" ")}\` maps to the manifest-backed \`${target.mappedCommand}\` intent.`,
+      ...target.evidence,
+    ],
+    nextSteps: target.nextSteps.map((step) => step.replace(/runtime <runtime-id>/g, `runtime ${runtimeId}`)),
+  };
+  return {
+    schemaVersion: 1,
+    query,
+    normalizedPhrase,
+    status: entry.status,
+    intent: entry,
+    related,
+    nextSteps: entry.nextSteps,
+    execute: false,
+  };
 }
 
 export function commandIntentToNeedOpportunity(entry: ClawCliCommandIntentEntry): NeedOpportunity | null {
