@@ -98,10 +98,23 @@ function isSecretConfigKey(key: string): boolean {
   return HERMES_SECRET_KEY_PATTERN.test(key) || HERMES_CAMEL_SECRET_KEY_PATTERN.test(key);
 }
 
-function addHermesProviderId(ids: Set<string>, candidate: string | undefined): void {
+function normalizeHermesProviderId(candidate: string | undefined): string | null {
   const normalized = candidate?.trim();
-  if (!normalized || !HERMES_ID_PATTERN.test(normalized) || isSecretConfigKey(normalized)) return;
+  if (!normalized || !HERMES_ID_PATTERN.test(normalized) || isSecretConfigKey(normalized)) return null;
+  return normalized;
+}
+
+function addHermesProviderId(ids: Set<string>, candidate: string | undefined): void {
+  const normalized = normalizeHermesProviderId(candidate);
+  if (!normalized) return;
   ids.add(normalized);
+}
+
+function providerRefForModel(config: HermesConfigSnapshot, modelId: string): string | undefined {
+  const candidate = modelId.includes("/")
+    ? modelId.split("/")[0]
+    : valueFor(config, ["provider", "default_provider", "defaultProvider"]);
+  return normalizeHermesProviderId(candidate) ?? undefined;
 }
 
 function readHermesDirectory(dirPath: string | undefined): fs.Dirent[] {
@@ -336,8 +349,9 @@ function defaultModelFromConfig(config: HermesConfigSnapshot): DefaultModelRef |
     "auxiliary.compression.model",
   ]);
   if (!modelId) return null;
+  const provider = providerRefForModel(config, modelId);
   return {
-    provider: modelId.includes("/") ? modelId.split("/")[0] : valueFor(config, ["provider", "default_provider", "defaultProvider"]),
+    provider,
     modelId,
     label: modelId,
   };
@@ -361,7 +375,7 @@ function listHermesModelsFromConfig(config: HermesConfigSnapshot): ModelDescript
   for (const [key, value] of Object.entries(config.values)) {
     if (!/(^|\.)(model|default_model|fallback_model)$/i.test(key)) continue;
     if (!value || value.includes("${") || isSecretConfigKey(key)) continue;
-    const provider = value.includes("/") ? value.split("/")[0] : valueFor(config, ["provider", "default_provider"]) ?? "default";
+    const provider = providerRefForModel(config, value) ?? "default";
     models.set(value, {
       id: value,
       modelId: value,
