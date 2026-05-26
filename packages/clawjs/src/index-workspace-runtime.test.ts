@@ -2669,6 +2669,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         claimEffect?: string;
         evidenceRequirementId?: string;
         requiredEvidence?: string[];
+        transportPolicyId?: string;
+        transportPolicy?: {
+          id?: string;
+          productionTransportStatus?: string;
+          lifecycleStatus?: string;
+          configuredEndpointClass?: string;
+          safeDefault?: string;
+        };
+        productionTransportStatus?: string;
+        lifecycleStatus?: string;
+        productionTransportCommandShape?: string;
+        doNotRunWithoutApproval?: boolean;
+        claimBlockedUntil?: string;
+        requiredEndpoint?: string;
         nativeWriteBackContract?: {
           status?: string;
           writesRuntime?: boolean;
@@ -2701,14 +2715,25 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.nativeWriteBackFixtureRequired, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.nativeWriteBackSafeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.evidenceRequirementId, "hermes.sessions.send.action_contract");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.transportPolicyId, "hermes.tui_gateway.transport_lifecycle_policy");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.transportPolicy?.configuredEndpointClass, "none");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.lifecycleStatus, "external_user_managed_not_started_by_claw");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.productionTransportCommandShape, "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.doNotRunWithoutApproval, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.claimBlockedUntil, "production_transport_lifecycle_policy_and_native_round_trip_evidence_attached");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.requiredEndpoint, "loopback_http_json_rpc");
   assert.equal(hermesCommandByName.get("runtime hermes sessions send --session-key <id> --message <text> --confirm-runtime-write")?.nativeWriteBackContract?.fixtureRequired, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions inject --session-key <id> --message <text> --confirm-runtime-write")?.evidenceRequirementId, "hermes.sessions.inject.action_contract");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions inject --session-key <id> --message <text> --confirm-runtime-write")?.productionTransportCommandShape, "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
   assert.equal(hermesCommandByName.get("runtime hermes sessions abort --session-key <id> --confirm-runtime-write")?.nativeWriteBackContract?.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions abort --session-key <id> --confirm-runtime-write")?.transportPolicyId, "hermes.tui_gateway.transport_lifecycle_policy");
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.wouldWriteRuntime, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.delegatesTo, "tui_gateway.session.create");
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.userVisibleContract, "non_executable_until_tui_gateway_wrapper_fixture_exists");
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.claimEffect, "blocks_recommended_production_native_parity");
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.requiredEvidence?.includes("tui_gateway_session_create_fixture"), true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.doNotRunWithoutApproval, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.writesLocalOverlay, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
   assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackSafeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");

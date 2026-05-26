@@ -315,6 +315,9 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
   const blockedRuntimeSessionWriteContract = (action: "send" | "inject" | "abort" | "create") => {
     const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
     const officialContract = officialSessionActionContract(runtimeId, actionContract);
+    const transportPolicy = runtimeId === "hermes" && officialContract.known
+      ? hermesTuiGatewayTransportPolicy()
+      : undefined;
     const requiredEvidence = actionContract.requiredEvidence ?? runtimeWriteActionEvidence(action) ?? [
       "official_runtime_cli_or_api",
       "non_destructive_fixture",
@@ -340,6 +343,20 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       supportResolution: "explicitly_product_blocked_not_a_silent_gap",
       evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
       requiredEvidence,
+      transportPolicyId: transportPolicy?.id,
+      transportPolicy,
+      productionTransportStatus: transportPolicy?.productionTransportStatus,
+      lifecycleStatus: transportPolicy?.lifecycleStatus,
+      productionTransportCommandShape: transportPolicy
+        ? "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval"
+        : undefined,
+      doNotRunWithoutApproval: Boolean(transportPolicy),
+      claimBlockedUntil: transportPolicy
+        ? "production_transport_lifecycle_policy_and_native_round_trip_evidence_attached"
+        : officialContract.known
+          ? "tui_gateway_wrapper_fixture_and_round_trip_evidence_attached"
+          : "official_runtime_contract_fixture_and_round_trip_evidence_attached",
+      requiredEndpoint: transportPolicy ? "loopback_http_json_rpc" : undefined,
       nativeWriteBackContract: {
         status: "blocked",
         writesRuntime: false,
