@@ -2707,12 +2707,61 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  const hermesPinPayload = JSON.parse(hermesPinStdout.getOutput()) as { data: { action: string; status: string; authority: string; writesRuntime: boolean; writesLocalOverlay: boolean; result?: { pinned?: boolean; overlayThreadId?: string } } };
+  const hermesPinPayload = JSON.parse(hermesPinStdout.getOutput()) as {
+    data: {
+      action: string;
+      status: string;
+      authority: string;
+      writesRuntime: boolean;
+      wouldWriteRuntime?: boolean;
+      writesLocalOverlay: boolean;
+      writeBackStatus?: string;
+      nativeWriteBackStatus?: string;
+      nativeWriteBackBlockerClass?: string;
+      officialRuntimeWriteBackContractRequired?: boolean;
+      officialRuntimeWriteBackContractKnown?: boolean;
+      nativeWriteBackFixtureRequired?: boolean;
+      nativeWriteBackSafeDefault?: string;
+      userVisibleContract?: string;
+      claimEffect?: string;
+      supportResolution?: string;
+      evidenceRequirementId?: string;
+      riskControls?: string[];
+      nativeWriteBackContract?: {
+        status?: string;
+        writesRuntime?: boolean;
+        officialContractRequired?: boolean;
+        officialContractKnown?: boolean;
+        fixtureRequired?: boolean;
+        evidenceRequirementId?: string;
+      };
+      result?: { pinned?: boolean; overlayThreadId?: string };
+    };
+  };
   assert.equal(hermesPinPayload.data.action, "pin");
   assert.equal(hermesPinPayload.data.status, "local_overlay_applied");
   assert.equal(hermesPinPayload.data.authority, "clawix_local_overlay");
   assert.equal(hermesPinPayload.data.writesRuntime, false);
+  assert.equal(hermesPinPayload.data.wouldWriteRuntime, false);
   assert.equal(hermesPinPayload.data.writesLocalOverlay, true);
+  assert.equal(hermesPinPayload.data.writeBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesPinPayload.data.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesPinPayload.data.nativeWriteBackBlockerClass, "direct_blocker");
+  assert.equal(hermesPinPayload.data.officialRuntimeWriteBackContractRequired, true);
+  assert.equal(hermesPinPayload.data.officialRuntimeWriteBackContractKnown, false);
+  assert.equal(hermesPinPayload.data.nativeWriteBackFixtureRequired, true);
+  assert.equal(hermesPinPayload.data.nativeWriteBackSafeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
+  assert.equal(hermesPinPayload.data.userVisibleContract, "local_overlay_only_until_official_runtime_pin_api_exists");
+  assert.equal(hermesPinPayload.data.claimEffect, "blocks_native_write_back_parity_not_local_overlay");
+  assert.equal(hermesPinPayload.data.supportResolution, "explicitly_product_blocked_not_a_silent_gap");
+  assert.equal(hermesPinPayload.data.evidenceRequirementId, "hermes.sessions.pin.native_write_back_contract");
+  assert.equal(hermesPinPayload.data.riskControls?.includes("no_silent_runtime_write"), true);
+  assert.equal(hermesPinPayload.data.nativeWriteBackContract?.status, "blocked");
+  assert.equal(hermesPinPayload.data.nativeWriteBackContract?.writesRuntime, false);
+  assert.equal(hermesPinPayload.data.nativeWriteBackContract?.officialContractRequired, true);
+  assert.equal(hermesPinPayload.data.nativeWriteBackContract?.officialContractKnown, false);
+  assert.equal(hermesPinPayload.data.nativeWriteBackContract?.fixtureRequired, true);
+  assert.equal(hermesPinPayload.data.nativeWriteBackContract?.evidenceRequirementId, "hermes.sessions.pin.native_write_back_contract");
   assert.equal(hermesPinPayload.data.result?.pinned, true);
   assert.equal(hermesPinPayload.data.result?.overlayThreadId, "runtime:hermes:sessions:2026%2F05%2F21%2Fruntime-session");
 
@@ -2765,11 +2814,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   }), CLI_EXIT_OK);
-  const hermesUnpinPayload = JSON.parse(hermesUnpinStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; writesLocalOverlay: boolean; result?: { pinned?: boolean } } };
+  const hermesUnpinPayload = JSON.parse(hermesUnpinStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; writesLocalOverlay: boolean; nativeWriteBackStatus?: string; evidenceRequirementId?: string; nativeWriteBackContract?: { status?: string; officialContractRequired?: boolean; evidenceRequirementId?: string }; result?: { pinned?: boolean } } };
   assert.equal(hermesUnpinPayload.data.action, "unpin");
   assert.equal(hermesUnpinPayload.data.status, "local_overlay_applied");
   assert.equal(hermesUnpinPayload.data.writesRuntime, false);
   assert.equal(hermesUnpinPayload.data.writesLocalOverlay, true);
+  assert.equal(hermesUnpinPayload.data.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesUnpinPayload.data.evidenceRequirementId, "hermes.sessions.unpin.native_write_back_contract");
+  assert.equal(hermesUnpinPayload.data.nativeWriteBackContract?.status, "blocked");
+  assert.equal(hermesUnpinPayload.data.nativeWriteBackContract?.officialContractRequired, true);
+  assert.equal(hermesUnpinPayload.data.nativeWriteBackContract?.evidenceRequirementId, "hermes.sessions.unpin.native_write_back_contract");
   assert.equal(hermesUnpinPayload.data.result?.pinned, false);
 
   const hermesUnpinnedListStdout = captureStream();
