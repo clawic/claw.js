@@ -3984,6 +3984,19 @@ function verifyHermesAbortRoundTrip(session: any, sessionKey: unknown) {
   };
 }
 
+function hermesRoundTripClaimFields(action: string, roundTripVerification) {
+  if (roundTripVerification?.status === "verified") {
+    return { status: "ok" };
+  }
+  return {
+    status: "partial",
+    roundTripVerificationStatus: roundTripVerification?.status ?? "missing",
+    safeDefault: roundTripVerification?.safeDefault ?? "keep_action_claim_unpromoted_until_native_round_trip_verification",
+    userVisibleContract: `gateway_${action}_accepted_but_native_round_trip_not_verified`,
+    claimEffect: `does_not_satisfy_native_session_${action}_parity`,
+  };
+}
+
 function isTruthyFlag(input, name: string) {
   return input.argv?.includes(`--${name}`) || input.flags[name] === "true";
 }
@@ -4226,11 +4239,13 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
       }
+      const roundTripVerification = verifyHermesMessageRoundTrip(payload.domainData.sessions.session, sessionKey, message, action);
+      const roundTripClaim = hermesRoundTripClaimFields(action, roundTripVerification);
       writePayload(input, {
         runtimeId,
         domain: "sessions",
         action,
-        status: "ok",
+        ...roundTripClaim,
         authority: "runtime",
         writesRuntime: true,
         officialProtocol: gateway.protocol,
@@ -4248,7 +4263,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
             requestId: gateway.request.id,
             endpoint: gateway.endpoint,
           },
-          roundTripVerification: verifyHermesMessageRoundTrip(payload.domainData.sessions.session, sessionKey, message, action),
+          roundTripVerification,
           gatewayResult: gateway.result,
         },
         supportContract,
@@ -4318,11 +4333,13 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
       }
+      const roundTripVerification = verifyHermesAbortRoundTrip(payload.domainData.sessions.session, sessionKey);
+      const roundTripClaim = hermesRoundTripClaimFields(action, roundTripVerification);
       writePayload(input, {
         runtimeId,
         domain: "sessions",
         action,
-        status: "ok",
+        ...roundTripClaim,
         authority: "runtime",
         writesRuntime: true,
         officialProtocol: gateway.protocol,
@@ -4339,7 +4356,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
             requestId: gateway.request.id,
             endpoint: gateway.endpoint,
           },
-          roundTripVerification: verifyHermesAbortRoundTrip(payload.domainData.sessions.session, sessionKey),
+          roundTripVerification,
           gatewayResult: gateway.result,
         },
         supportContract,
@@ -4439,7 +4456,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         runtimeId,
         domain: "sessions",
         action,
-        status: "ok",
+        ...hermesRoundTripClaimFields(action, roundTripVerification),
         authority: "runtime",
         writesRuntime: true,
         officialProtocol: gateway.protocol,

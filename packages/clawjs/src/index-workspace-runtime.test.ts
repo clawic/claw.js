@@ -1246,6 +1246,102 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(payload.data.safeDefault, "metadata_only_projection_until_official_runtime_session_store_or_cli_is_available", action);
     assert.equal(payload.data.claimEffect, `does_not_satisfy_native_session_${action}_parity`, action);
   }
+  const originalFetch = globalThis.fetch;
+  const gatewayCalls: Array<{ method?: string; params?: Record<string, unknown> }> = [];
+  globalThis.fetch = (async (_url, init) => {
+    const request = JSON.parse(String(init?.body ?? "{}"));
+    gatewayCalls.push({ method: request.method, params: request.params });
+    return new Response(JSON.stringify({
+      jsonrpc: "2.0",
+      id: request.id,
+      result: request.method === "session.create" ? { session_id: "gateway-created-session" } : { accepted: true },
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+  try {
+    const hermesGatewaySendStdout = captureStream();
+    assert.equal(await runCli([
+      "runtime", "hermes", "sessions", "send",
+      "--session-key", "missing-session",
+      "--message", "hello",
+      "--confirm-runtime-write",
+      "--gateway-url", "http://127.0.0.1:18999",
+      "--workspace", workspaceRoot,
+      "--home-dir", missingHermesHome,
+      "--json",
+    ], {
+      stdout: hermesGatewaySendStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_DEGRADED);
+    const hermesGatewaySendPayload = JSON.parse(hermesGatewaySendStdout.getOutput()) as {
+      data: {
+        status?: string;
+        writesRuntime?: boolean;
+        roundTripVerificationStatus?: string;
+        safeDefault?: string;
+        claimEffect?: string;
+        result?: {
+          roundTripVerification?: { status?: string; safeDefault?: string };
+          gatewayReceipt?: { transport?: string; method?: string };
+        };
+      };
+    };
+    assert.equal(hermesGatewaySendPayload.data.status, "partial");
+    assert.equal(hermesGatewaySendPayload.data.writesRuntime, true);
+    assert.equal(hermesGatewaySendPayload.data.roundTripVerificationStatus, "unavailable_no_sqlite_history");
+    assert.equal(hermesGatewaySendPayload.data.safeDefault, "keep_action_claim_unpromoted_until_native_history_can_be_read");
+    assert.equal(hermesGatewaySendPayload.data.claimEffect, "does_not_satisfy_native_session_send_parity");
+    assert.equal(hermesGatewaySendPayload.data.result?.roundTripVerification?.status, "unavailable_no_sqlite_history");
+    assert.equal(hermesGatewaySendPayload.data.result?.gatewayReceipt?.transport, "loopback_http_json_rpc_fixture");
+    assert.equal(hermesGatewaySendPayload.data.result?.gatewayReceipt?.method, "prompt.submit");
+
+    const hermesGatewayCreateStdout = captureStream();
+    assert.equal(await runCli([
+      "runtime", "hermes", "sessions", "create",
+      "--title", "Native Draft",
+      "--confirm-runtime-write",
+      "--gateway-url", "http://127.0.0.1:18999",
+      "--workspace", workspaceRoot,
+      "--home-dir", missingHermesHome,
+      "--json",
+    ], {
+      stdout: hermesGatewayCreateStdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_DEGRADED);
+    const hermesGatewayCreatePayload = JSON.parse(hermesGatewayCreateStdout.getOutput()) as {
+      data: {
+        status?: string;
+        writesRuntime?: boolean;
+        roundTripVerificationStatus?: string;
+        safeDefault?: string;
+        claimEffect?: string;
+        result?: {
+          id?: string;
+          titleApplied?: boolean;
+          roundTripVerification?: { status?: string; safeDefault?: string };
+          gatewayReceipt?: { transport?: string; method?: string };
+          titleGatewayReceipt?: { method?: string } | null;
+        };
+      };
+    };
+    assert.equal(hermesGatewayCreatePayload.data.status, "partial");
+    assert.equal(hermesGatewayCreatePayload.data.writesRuntime, true);
+    assert.equal(hermesGatewayCreatePayload.data.roundTripVerificationStatus, "not_found");
+    assert.equal(hermesGatewayCreatePayload.data.safeDefault, "keep_create_claim_fixture_or_production_round_trip_blocked_until_native_list_sees_created_session");
+    assert.equal(hermesGatewayCreatePayload.data.claimEffect, "does_not_satisfy_native_session_create_parity");
+    assert.equal(hermesGatewayCreatePayload.data.result?.id, "gateway-created-session");
+    assert.equal(hermesGatewayCreatePayload.data.result?.titleApplied, true);
+    assert.equal(hermesGatewayCreatePayload.data.result?.roundTripVerification?.status, "not_found");
+    assert.equal(hermesGatewayCreatePayload.data.result?.gatewayReceipt?.method, "session.create");
+    assert.equal(hermesGatewayCreatePayload.data.result?.titleGatewayReceipt?.method, "session.title");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual(gatewayCalls.map((entry) => entry.method), ["prompt.submit", "session.create", "session.title"]);
 
   const hermesBinaryStatusStdout = captureStream();
   const hermesBinaryStatusExit = await runCli(["runtime", "hermes", "status", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--binary-path", hermesBinaryPath, "--json"], {
