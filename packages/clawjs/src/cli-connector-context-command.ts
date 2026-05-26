@@ -32,6 +32,7 @@ interface ConnectorContextCliInput {
 }
 
 const CONNECTOR_CONTEXT_ACTIONS = ["list", "show", "schema", "upsert", "edit", "link-secret", "defaults", "doctor", "validate", "explain", "export", "activate", "pause", "block", "retire", "audit"] as const;
+const CONNECTOR_CONTEXT_ACTION_USAGE = "list|show|schema|upsert|edit|link-secret|defaults|doctor|validate|explain|export|activate|pause|block|retire|audit";
 
 export async function runConnectorContextCli(input: ConnectorContextCliInput): Promise<number | null> {
   if (input.group === "connectors" && input.command !== "context" && input.command !== "ctx") return null;
@@ -300,7 +301,7 @@ function writeConnectorContextUsage(input: ConnectorContextCliInput): number {
     return CLI_EXIT_USAGE;
   }
   input.context.stderr.write([
-    `Usage: ${usagePrefix(input)} ${CONNECTOR_CONTEXT_ACTIONS.join("|")} [options]`,
+    `Usage: ${usagePrefix(input)} ${CONNECTOR_CONTEXT_ACTION_USAGE} [options]`,
     "",
     "Examples:",
     `  ${usagePrefix(input)} list --json`,
