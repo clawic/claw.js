@@ -316,7 +316,7 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         wouldWriteRuntime: runtimeId !== "openclaw",
       },
       {
-        command: `runtime ${runtimeId} sessions create --title <title>`,
+        command: `runtime ${runtimeId} sessions create --title <title> --confirm-runtime-write`,
         delegatesTo: runtimeId === "hermes" ? "tui_gateway.session.create" : "blocked until official runtime create contract and fixture",
         writesRuntime: false,
         wouldWriteRuntime: true,
@@ -2138,7 +2138,7 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
     claimEffect: "blocks_recommended_production_native_parity",
     promotionGate: officialContract.known ? "session_action_claim_remains_blocked_until_tui_gateway_wrapper_fixture_and_round_trip_evidence_exist" : "session_action_claim_remains_blocked_until_official_contract_fixture_and_round_trip_evidence_exist",
     safeDefault: "keep_unpromoted_and_do_not_synthesize_runtime_state",
-    commandShape: `runtime ${runtimeId} sessions ${action} --json`,
+    commandShape: runtimeSessionActionCommandShape(runtimeId, action),
     evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
     evidenceReentryStatus: officialContract.known ? "blocked_until_tui_gateway_wrapper_fixture" : "blocked_until_upstream_contract",
     transportPolicyId: transportPolicy?.id,
@@ -2149,6 +2149,19 @@ function blockedSessionAction(runtimeId: RuntimeAdapterId, action: string, reaso
     supportContract,
     ...extra,
   };
+}
+
+function runtimeSessionActionCommandShape(runtimeId: RuntimeAdapterId, action: string): string {
+  if (action === "send" || action === "inject") {
+    return `runtime ${runtimeId} sessions ${action} --session-key <id> --message <text> --confirm-runtime-write --json`;
+  }
+  if (action === "abort") {
+    return `runtime ${runtimeId} sessions abort --session-key <id> --confirm-runtime-write --json`;
+  }
+  if (action === "create") {
+    return `runtime ${runtimeId} sessions create --title <title> --confirm-runtime-write --json`;
+  }
+  return `runtime ${runtimeId} sessions ${action} --json`;
 }
 
 function runtimeWriteActionEvidence(action: string): string[] | null {

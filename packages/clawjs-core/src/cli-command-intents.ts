@@ -239,7 +239,7 @@ const registryEntries: ClawCliCommandIntentEntry[] = [
     relatedCommands: ["runtime", "sessions", "openclaw", "codex", "hermes"],
     risk: ["local_write", "external_service"],
     evidence: ["Runtime session create is recognized by the portal but returns a non-mutating create plan until an official runtime create API/CLI, fixture, and round-trip evidence exist."],
-    nextSteps: ["Run `claw runtime <runtime-id> sessions create --title <title> --json` to inspect the blocked create plan; do not write directly to runtime stores or create a Claw portable session and label it native."],
+    nextSteps: ["Run `claw runtime <runtime-id> sessions create --title <title> --json` to inspect the blocked create plan; add `--confirm-runtime-write` only for an intentional supported runtime create; do not write directly to runtime stores or create a Claw portable session and label it native."],
   }),
   intent("cmd_intent_runtime_sessions_pin", "runtime sessions pin", "Pin a native runtime session in the local Clawix/ClawJS overlay without writing back to the runtime.", "covered", {
     mappedCommand: "runtime <runtime-id> sessions pin",
