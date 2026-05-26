@@ -45,6 +45,40 @@ export interface GeneratedCliCommandEntry {
 export const GENERATED_CLI_ROUTER_VERSION = 1 as const;
 export const GENERATED_CLI_COMMANDS = [
   {
+    name: "source",
+    kind: "canonical",
+    summary: "Verify and activate source checkout mode for agents using ClawJS from local main instead of npm-published packages.",
+    usage: "source status [--source-root PATH] [--json]",
+    family: "diagnostics",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.source.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw source --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md",
+      "docs/official-trust-and-compatibility.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0051-supply-chain-security-governance.md"
+    ],
+    tests: [
+      "packages/clawjs/src/source-mode.test.ts",
+      "scripts/verify-source-mode.mjs"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-source-command.ts",
+      symbol: "runSourceCli"
+    },
+    routeGroup: "inspect-search-governance"
+  },
+  {
     name: "setup",
     kind: "canonical",
     summary: "Reviewable progressive setup for minimal, normal and advanced modes.",
@@ -2052,6 +2086,71 @@ export const GENERATED_CLI_COMMANDS = [
     source: {
       file: "packages/clawjs/src/index.ts",
       symbol: "runCliUnsafe"
+    },
+    routeGroup: "inspect-search-governance"
+  },
+  {
+    name: "router",
+    kind: "canonical",
+    summary: "Keyword router that maps free-form intent to the right dedicated command. Pass one or more keywords; returns commands, examples and anti-patterns.",
+    usage: "router <keyword> [keyword ...] [--limit N] [--json]",
+    family: "discovery",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.router.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw router --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0017-discoverability-and-meta-code-routing.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-router-command.test.ts",
+      "packages/clawjs-core/src/discovery/keyword-router.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-router-command.ts",
+      symbol: "runCliRouterCommand"
+    },
+    routeGroup: "inspect-search-governance"
+  },
+  {
+    name: "about",
+    kind: "canonical",
+    summary: "30-second introduction to what Claw is for, with the capability map and entry commands for agents.",
+    usage: "about [--json]",
+    family: "discovery",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.about.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw about --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0017-discoverability-and-meta-code-routing.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-about-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-about-command.ts",
+      symbol: "runCliAboutCommand"
     },
     routeGroup: "inspect-search-governance"
   },
@@ -5687,6 +5786,7 @@ export const GENERATED_CLI_COMMANDS = [
   }
 ] as const satisfies readonly GeneratedCliCommandEntry[];
 export const GENERATED_CLI_ROUTE_GROUPS = {
+  source: "inspect-search-governance",
   setup: "scaffold-setup",
   modules: "scaffold-setup",
   host: "host-system-network",
@@ -5744,6 +5844,8 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   "dense-fixtures": "domain-data",
   "dense-fixture": "domain-data",
   search: "inspect-search-governance",
+  router: "inspect-search-governance",
+  about: "inspect-search-governance",
   signals: "domain-data",
   life: "domain-data",
   report: "media-documents",
@@ -5866,6 +5968,7 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   info: "legacy"
 } as const satisfies Record<string, GeneratedCliRouteGroup>;
 export const GENERATED_STABLE_CLI_COMMANDS = [
+  "about",
   "accessibility",
   "accounts",
   "agenda",
@@ -5984,6 +6087,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "report",
   "resources",
   "review",
+  "router",
   "routines",
   "rules",
   "runtime",
@@ -6003,6 +6107,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "snippets",
   "social",
   "soul",
+  "source",
   "speech",
   "stt",
   "styles",

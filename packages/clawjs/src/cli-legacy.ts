@@ -26,6 +26,7 @@ import {
   scaffoldProject,
   type SupportedPackageManager,
 } from "./scaffold.ts";
+import { sourceModeRequested } from "./source-mode.ts";
 import { runSlidesCli } from "./slides.ts";
 import { runStyleCli } from "./styles/index.ts";
 import { runTemplateCli } from "./templates/index.ts";
@@ -1130,7 +1131,7 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     const projectName = subcommand;
     const supportedTypes: ClawProjectType[] = ["app", "agent", "server", "workspace", "skill", "plugin"];
     if (!type || !supportedTypes.includes(type) || !projectName) {
-      context.stderr.write(`Usage: ${binName} new app|agent|server|workspace|skill|plugin <name> [--dir PATH] [--template NAME] [--package-manager npm|pnpm] [--git] [--install] [--yes]\n`);
+      context.stderr.write(`Usage: ${binName} new app|agent|server|workspace|skill|plugin <name> [--dir PATH] [--template NAME] [--package-manager npm|pnpm] [--source] [--source-root PATH] [--git] [--install] [--yes]\n`);
       return CLI_EXIT_USAGE;
     }
 
@@ -1159,6 +1160,8 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
         packageManager,
         install,
         git,
+        sourceMode: sourceModeRequested(argv, flags),
+        sourceRoot: flags["source-root"],
         successLabel: `${type} ${slug}`,
         nextSteps: buildScaffoldNextSteps(type, packageManager),
         completionNote: buildScaffoldCompletionNote(type),

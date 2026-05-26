@@ -7,6 +7,7 @@ import {
   GENERATED_REMOVED_V1_CRUD_COMMANDS,
   type GeneratedCliCommandEntry,
 } from "./cli-router.generated.ts";
+import { findKeywordRouterConcept, findKeywordRouterConceptByCommand } from "@clawjs/core";
 
 export const DEFAULT_CLI_BIN = "claw";
 
@@ -41,10 +42,21 @@ export function buildCliUsage(binName = DEFAULT_CLI_BIN, options: { all?: boolea
   return [
     `Usage: ${binName} <command> [options]`,
     "",
+    `${binName} is the operational memory CLI for AI agents.`,
+    "It owns the storage, search and tools that agents use to capture, recall,",
+    "plan and reason. Most agent work flows through dedicated commands, not the",
+    "generic database.",
+    "",
+    "Start here:",
+    `  ${binName} about                     what Claw is for, in 30 seconds`,
+    `  ${binName} router <terms>            find the right command from your intent`,
+    `  ${binName} help <command>            show command-specific help`,
+    `  ${binName} inspect commands --json   list commands for agents and tools`,
+    "",
     "Primary commands and portals:",
     ...surfaceRows(primary),
     "",
-    "Project scaffolding:",
+    "Project scaffolding (for starting a new project):",
     `  ${binName} new app|agent|server|workspace|skill|plugin <name> [--dir PATH] [--template NAME] [--package-manager npm|pnpm] [--git] [--install] [--yes]`,
     `  ${binName} generate skill|plugin|provider|channel|command <name> [--project PATH]`,
     `  ${binName} add provider|channel|telegram|scheduler|memory|workspace [name] [--project PATH]`,
@@ -85,17 +97,42 @@ function cliSurfaceEntry(name: string | undefined): ClawCliCommandRegistryEntry 
 export function buildCommandHelp(binName: string, group: string): string | null {
   const entry = cliSurfaceEntry(group) ?? cliSurfaceEntry(SINGULAR_MEDIA_COMMAND_ALIASES.get(group));
   if (!entry) return null;
-  return [
+  const baseLines: string[] = [
     `Usage: ${binName} ${entry.usage ?? `${group} [command] [options]`}`,
     "",
     `${entry.kind}: ${entry.summary}`,
-    ...(entry.target ? [`Routes to: ${entry.target}`] : []),
-    ...((entry.relatedSurfaces?.length ?? 0) > 0 ? ["", "Related surfaces:", ...entry.relatedSurfaces!.map((surface) => `  ${surface}`)] : []),
-    `Support: ${entry.support.state} - ${entry.support.reason}`,
-    `Security: ${entry.securityPolicy}`,
-    "",
-    `Run \`${binName} --help --all\` to see the full public surface.`,
-  ].join("\n");
+  ];
+  if (entry.target) baseLines.push(`Routes to: ${entry.target}`);
+
+  const concept = findKeywordRouterConceptByCommand(entry.name);
+  if (concept) {
+    baseLines.push("", `Use this when: ${concept.useWhen}`);
+    baseLines.push("", "Example:", `  ${concept.exampleInvocation}`);
+    if (concept.relatedConcepts.length > 0) {
+      baseLines.push("", "Related commands:");
+      for (const relatedId of concept.relatedConcepts) {
+        const related = findKeywordRouterConcept(relatedId);
+        if (related) {
+          baseLines.push(`  ${binName} ${related.primaryCommand.padEnd(14)} ${related.summary}`);
+        }
+      }
+    }
+    baseLines.push("", `Do not use: ${concept.antiPattern}`);
+    baseLines.push("", `Find by intent: ${binName} router ${concept.id}`);
+  }
+
+  if ((entry.relatedSurfaces?.length ?? 0) > 0) {
+    baseLines.push("", "Related surfaces:");
+    for (const surface of entry.relatedSurfaces!) {
+      baseLines.push(`  ${surface}`);
+    }
+  }
+
+  baseLines.push(`Support: ${entry.support.state} - ${entry.support.reason}`);
+  baseLines.push(`Security: ${entry.securityPolicy}`);
+  baseLines.push("");
+  baseLines.push(`Run \`${binName} --help --all\` to see the full public surface.`);
+  return baseLines.join("\n");
 }
 
 export function removedPublicCommandMessage(group: string, binName: string): string | null {

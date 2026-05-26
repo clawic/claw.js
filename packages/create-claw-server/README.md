@@ -8,6 +8,13 @@ This package is a direct generator entrypoint. The primary documented flow is `c
 npx create-claw-server my-claw-server
 ```
 
+For a local checkout instead of published ClawJS packages, run the generator
+through source mode:
+
+```bash
+create-claw-server my-claw-server --source --source-root /path/to/clawjs
+```
+
 The generated server includes:
 
 - a TypeScript Node.js HTTP server

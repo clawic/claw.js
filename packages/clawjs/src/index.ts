@@ -150,6 +150,11 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runVerifyCli({ argv, context, wantsJson });
   }
 
+  if (group === "source") {
+    const { runSourceCli } = await import("./cli-source-command.ts");
+    return await runSourceCli({ positionals, flags, context, wantsJson, binName });
+  }
+
   validateNotifyFlags({ group, command, flags });
 
   if (group === "agent-resource") {
@@ -184,6 +189,18 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
       workspaceRoot: flags.workspace || context.cwd,
     });
   }
+
+  if (group === "router") {
+    const { runCliRouterCommand } = await import("./cli-router-command.ts");
+    return await runCliRouterCommand({ positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "about") {
+    const { runCliAboutCommand } = await import("./cli-about-command.ts");
+    return await runCliAboutCommand({ flags, context, wantsJson, binName });
+  }
+
+  await maybeWriteDatabaseDedicatedAdvisory({ group, command, wantsJson, context, binName });
 
   const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
   if (v1DataExit !== null) return v1DataExit;
@@ -487,6 +504,8 @@ async function handleUnknownCliCommand(input: {
   const phrase = input.positionals.length ? input.positionals.join(" ") : input.group;
   const related = relatedCliMatches(phrase, { limit: 5 });
   const commandIntent = input.commandIntent ?? await resolveCommandIntent(phrase);
+  const routerSuggestions = await loadRouterSuggestionsSafely(phrase, 3);
+  const binName = input.context.binName ?? "claw";
   if (input.wantsJson) {
     writeJsonError(
       input.context.stdout,
@@ -496,6 +515,7 @@ async function handleUnknownCliCommand(input: {
         canonicalCommand: null,
         related,
         commandIntent,
+        routerSuggestions,
       },
     );
     return CLI_EXIT_USAGE;
@@ -503,9 +523,116 @@ async function handleUnknownCliCommand(input: {
   if (related.length > 0) {
     input.context.stderr.write(`Unknown command: ${input.group}\nRelated:\n${related.map((entry) => `  ${entry.name}${entry.canonicalCommand ? ` -> ${entry.canonicalCommand}` : ""} (${entry.type})`).join("\n")}\n\n`);
   }
-  input.context.stderr.write(`Intent: ${commandIntent.status}. Try: ${input.context.binName ?? "claw"} commands resolve ${JSON.stringify(phrase)} --json\n\n`);
+  if (routerSuggestions.length > 0) {
+    const lines = routerSuggestions.map((suggestion) => `  ${binName} ${suggestion.primaryCommand}  ${suggestion.summary}`);
+    input.context.stderr.write(`Router suggests for ${JSON.stringify(phrase)}:\n${lines.join("\n")}\n  See: ${binName} router ${input.positionals.length ? input.positionals.join(" ") : input.group}\n\n`);
+  }
+  input.context.stderr.write(`Intent: ${commandIntent.status}. Try: ${binName} commands resolve ${JSON.stringify(phrase)} --json\n\n`);
   input.context.stderr.write(`${input.usage}\n`);
   return CLI_EXIT_USAGE;
+}
+
+async function loadRouterSuggestionsSafely(phrase: string, limit: number): Promise<Array<{
+  primaryCommand: string;
+  summary: string;
+  exampleInvocation: string;
+  score: number;
+}>> {
+  try {
+    const core = await import(CORE_CATALOGS_MODULE);
+    const fn = (core as { relatedKeywordSuggestions?: (phrase: string, options?: { limit?: number }) => Array<{
+      primaryCommand: string;
+      summary: string;
+      exampleInvocation: string;
+      score: number;
+    }> }).relatedKeywordSuggestions;
+    if (typeof fn === "function") {
+      return fn(phrase, { limit });
+    }
+  } catch {
+    // Keep unknown-command usable when optional built artifacts are absent.
+  }
+  return [];
+}
+
+async function maybeWriteDatabaseDedicatedAdvisory(input: {
+  group: string;
+  command: string | undefined;
+  wantsJson: boolean;
+  context: CliContext;
+  binName: string;
+}): Promise<void> {
+  if (input.wantsJson) return;
+  if (input.group !== "db" && input.group !== "collections" && input.group !== "records") return;
+  const collectionName = input.command;
+  if (!collectionName) return;
+  const dedicated = await resolveDedicatedCommandForCollection(collectionName);
+  if (!dedicated) return;
+  input.context.stderr.write(
+    [
+      `Note: \`${input.binName} ${dedicated}\` is the dedicated command for \`${collectionName}\`.`,
+      `      \`${input.binName} ${input.group} ${collectionName}\` works but is intended for schema or migration access.`,
+      `      Run \`${input.binName} router ${collectionName}\` to see when to use which.`,
+      "",
+    ].join("\n"),
+  );
+}
+
+const DEDICATED_PRODUCTIVITY_COMMANDS = new Set([
+  "tasks",
+  "notes",
+  "decisions",
+  "inbox",
+  "people",
+  "projects",
+  "goals",
+  "blockers",
+  "approvals",
+  "assignments",
+  "handoffs",
+  "artifacts",
+  "commitments",
+  "agenda",
+  "calendar",
+  "reminders",
+  "deadlines",
+  "routines",
+  "schedule",
+  "watch",
+  "timeline",
+  "review",
+  "my-work",
+  "team-work",
+]);
+
+const COLLECTION_TO_DEDICATED_ALIASES = new Map<string, string>([
+  ["task", "tasks"],
+  ["note", "notes"],
+  ["page", "notes"],
+  ["pages", "notes"],
+  ["decision", "decisions"],
+  ["project", "projects"],
+  ["goal", "goals"],
+  ["blocker", "blockers"],
+  ["approval", "approvals"],
+  ["assignment", "assignments"],
+  ["handoff", "handoffs"],
+  ["artifact", "artifacts"],
+  ["commitment", "commitments"],
+  ["reminder", "reminders"],
+  ["deadline", "deadlines"],
+  ["routine", "routines"],
+  ["calendar_event", "calendar"],
+  ["calendar_events", "calendar"],
+  ["person", "people"],
+]);
+
+async function resolveDedicatedCommandForCollection(collectionName: string): Promise<string | null> {
+  const lower = collectionName.toLowerCase();
+  if (DEDICATED_PRODUCTIVITY_COMMANDS.has(lower)) return lower;
+  const aliased = COLLECTION_TO_DEDICATED_ALIASES.get(lower);
+  if (aliased) return aliased;
+  return null;
 }
 
 async function resolveCommandIntent(phrase: string): Promise<{ status: string; execute: boolean; intent?: unknown }> {

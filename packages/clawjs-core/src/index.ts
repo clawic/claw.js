@@ -32,6 +32,7 @@ export * from "./custom-app-sdk-contracts.ts";
 export * from "./custom-app-sdk-inspection.ts";
 export * from "./need-route-lab.ts";
 export * from "./cli-guidance.ts";
+export * from "./discovery/keyword-router.ts";
 export { clawCliCommandRegistry } from "./cli-command-registry.ts";
 export { clawPersistentSurfaceRegistry } from "./surface-registry.ts";
 export * from "./connector-control-plane.ts";

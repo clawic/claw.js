@@ -24,6 +24,10 @@ npm run plugin:check
 npm run build
 ```
 
+If this project contains `claw.source.json`, it was generated in source mode.
+Internal `@clawjs/*` packages resolve from that checkout when present, while
+npm still installs third-party dependencies normally.
+
 Use this starter when one skill is too small and you need a shareable extension package with config and lifecycle behavior.
 
 ## Safety and legal

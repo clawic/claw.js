@@ -8,6 +8,13 @@ This package is a direct generator entrypoint. The primary documented flow is `c
 npx create-claw-plugin jira-integration
 ```
 
+For a local checkout instead of published ClawJS packages, run the generator
+through source mode:
+
+```bash
+create-claw-plugin jira-integration --source --source-root /path/to/clawjs
+```
+
 The generated package includes:
 
 - a `plugin.json` manifest with runtime support metadata

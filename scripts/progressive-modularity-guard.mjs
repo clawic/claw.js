@@ -209,10 +209,10 @@ requireText("docs/adr/0031-progressive-modularity-and-zero-surprise-install.md",
 requireText("docs/decision-map.md", ["progressive modularity", "scripts/progressive-modularity-guard.mjs"]);
 requireText("docs/cli.md", ["claw setup", "claw setup --interactive", "claw modules", "Progressive Setup", "--details", "--enable id1,id2", "@clawjs/domain-pack-dense-data"]);
 requireText("packages/clawjs/src/cli-modules-command.ts", ["ModuleKind = \"capability\" | \"area\"", "requiresExplicitInstall", "optionalPack", "@clawjs/local-data", "requiredModuleForCliGroup", "hasModuleConfigForCli", "runSetupCli", "runModulesCli"]);
-requireText("packages/clawjs/bin/claw.mjs", ["@clawjs/local-data", "optional_pack_missing", "Safe base commands"]);
+requireText("packages/clawjs/bin/claw.mjs", ["@clawjs/local-data", "optional_pack_missing", "Start here"]);
 requireText("packages/clawjs-local-data/package.json", ["@clawjs/local-data", "Optional local data capability pack"]);
-requireText("packages/clawjs/src/cli-collections-command.ts", ["--available", "activeCollectionFilterForModules", "visibility"]);
-requireText("packages/clawjs/bin/claw.mjs", ["DATA_GROUPS", "RUNTIME_GROUPS", "optional_pack_missing", "Safe base commands", "claw modules install"]);
+requireText("packages/clawjs/src/cli-collections-command.ts", ["available", "activeCollectionFilterForModules", "visibility"]);
+requireText("packages/clawjs/bin/claw.mjs", ["DATA_GROUPS", "RUNTIME_GROUPS", "optional_pack_missing", "Start here", "claw modules install"]);
 requireText("packages/clawjs/src/index.ts", ["GENERATED_CLI_ROUTE_GROUPS", "runGeneratedCliRoute", "import(\"./cli-legacy.ts\")", "writePublicPortalHelpOnly"]);
 requireText("packages/clawjs/src/index-installed.test.ts", ["base CLI dependency", "optional_pack_missing", "@clawjs/local-data"]);
 requireText("scripts/cli-base-import-budget.baseline.json", ["tasks-missing-pack", "search-missing-pack", "dense-domain-disabled", "@clawjs/runtime"]);

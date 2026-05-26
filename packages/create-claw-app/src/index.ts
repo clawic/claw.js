@@ -9,19 +9,22 @@ import {
   type ScaffoldContext,
   type SupportedPackageManager,
 } from "../../clawjs/src/scaffold.ts";
+import { sourceModeRequested } from "../../clawjs/src/source-mode.ts";
 
 export interface CreateClawAppContext extends ScaffoldContext {}
 
 export const CREATE_CLAW_APP_EXIT_OK = 0;
 export const CREATE_CLAW_APP_EXIT_FAILURE = 1;
 export const CREATE_CLAW_APP_EXIT_USAGE = 64;
-export const CREATE_CLAW_APP_USAGE = "Usage: create-claw-app <project-directory> [--skip-install] [--use-npm|--use-pnpm] [--template next]";
+export const CREATE_CLAW_APP_USAGE = "Usage: create-claw-app <project-directory> [--skip-install] [--use-npm|--use-pnpm] [--source] [--source-root PATH] [--template next]";
 
 interface ParsedArgs {
   targetDir: string | null;
   install: boolean;
   packageManager: SupportedPackageManager;
   template: string;
+  sourceMode: boolean;
+  sourceRoot?: string;
   wantsHelp: boolean;
   unknownOption: string | null;
 }
@@ -31,6 +34,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let install = true;
   let packageManager: SupportedPackageManager = detectPackageManager();
   let template = "next";
+  let sourceRoot: string | undefined;
   let wantsHelp = false;
   let unknownOption: string | null = null;
 
@@ -55,6 +59,26 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     if (token === "--use-pnpm") {
       packageManager = "pnpm";
+      continue;
+    }
+
+    if (token === "--source") {
+      continue;
+    }
+
+    if (token === "--source-root") {
+      const value = argv[index + 1];
+      if (value && !value.startsWith("--")) {
+        sourceRoot = value;
+        index += 1;
+      } else {
+        sourceRoot = "";
+      }
+      continue;
+    }
+
+    if (token.startsWith("--source-root=")) {
+      sourceRoot = token.slice("--source-root=".length);
       continue;
     }
 
@@ -88,7 +112,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     targetDir = token;
   }
 
-  return { targetDir, install, packageManager, template, wantsHelp, unknownOption };
+  return { targetDir, install, packageManager, template, sourceMode: sourceModeRequested(argv, sourceRoot ? { "source-root": sourceRoot } : {}), sourceRoot, wantsHelp, unknownOption };
 }
 
 export async function runCreateClawApp(argv: string[], context: CreateClawAppContext): Promise<number> {
@@ -130,6 +154,8 @@ export async function runCreateClawApp(argv: string[], context: CreateClawAppCon
       },
       packageManager: parsed.packageManager,
       install: parsed.install,
+      sourceMode: parsed.sourceMode,
+      sourceRoot: parsed.sourceRoot,
       successLabel: appSlug,
       nextSteps: [
         `${parsed.packageManager} run claw:init`,

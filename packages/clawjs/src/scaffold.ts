@@ -2,6 +2,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import path from "path";
 import { spawn } from "child_process";
+import { applySourceModeToProject, resolveSourceModeStatus } from "./source-mode.ts";
 
 export type SupportedPackageManager = "npm" | "pnpm";
 
@@ -20,6 +21,8 @@ export interface ScaffoldProjectOptions {
   packageManager: SupportedPackageManager;
   install?: boolean;
   git?: boolean;
+  sourceMode?: boolean;
+  sourceRoot?: string;
   successLabel: string;
   nextSteps: string[];
   completionNote?: string;
@@ -182,6 +185,14 @@ export async function scaffoldProject(options: ScaffoldProjectOptions): Promise<
     throw error;
   }
 
+  const sourceStatus = resolveSourceModeStatus({
+    cwd: options.context.cwd,
+    sourceRoot: options.sourceRoot,
+    requested: options.sourceMode,
+    allowCheckout: false,
+  });
+  const sourceResult = applySourceModeToProject(options.targetPath, sourceStatus);
+
   if (install) {
     options.context.stdout.write(`Installing dependencies with ${options.packageManager}...\n`);
     await exec(options.packageManager, ["install"], { cwd: options.targetPath });
@@ -203,6 +214,9 @@ export async function scaffoldProject(options: ScaffoldProjectOptions): Promise<
   }
   for (const step of options.nextSteps) {
     options.context.stdout.write(`  ${step}\n`);
+  }
+  if (sourceResult.applied) {
+    options.context.stdout.write(`Source mode: ${sourceResult.packageNames.length} ClawJS package(s) resolve from ${sourceStatus.sourceRoot}\n`);
   }
   if (options.completionNote) {
     options.context.stdout.write("\n");

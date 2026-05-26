@@ -11,6 +11,10 @@ npm run agent:report
 npm run agent:reply -- "Say hello"
 ```
 
+If this project contains `claw.source.json`, it was generated in source mode.
+Internal `@clawjs/*` packages resolve from that checkout, while npm still
+installs third-party dependencies normally.
+
 ## What is included
 
 - Agent-first runtime files such as `SOUL.md`, `AGENTS.md`, `TOOLS.md`, `IDENTITY.md`, and `HEARTBEAT.md`

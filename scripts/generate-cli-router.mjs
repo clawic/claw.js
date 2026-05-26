@@ -98,7 +98,7 @@ const SPECIAL_ROUTE_ALIASES = new Map([
 ]);
 
 function routeGroupForEntry(entry) {
-  if (["inspect", "search", "governance", "debt", "safety", "evolution", "commands", "needs", "agent-resource", "test"].includes(entry.name)) return "inspect-search-governance";
+  if (["inspect", "search", "router", "about", "source", "governance", "debt", "safety", "evolution", "commands", "needs", "agent-resource", "test"].includes(entry.name)) return "inspect-search-governance";
   if (["database", "db", "collections", "records", "work", "tasks", "notes", "people", "projects", "goals", "inbox", "approvals", "blockers", "decisions", "assignments", "handoffs", "artifacts", "commitments", "agenda", "review", "timeline", "my-work", "team-work"].includes(entry.name)) return "database-productivity";
   if (["host", "system", "network", "domains"].includes(entry.name) || entry.family === "mac-control" || entry.family === "mac-care") return "host-system-network";
   if (["remote", "sync", "nodes", "gateway"].includes(entry.name)) return "remote-sync";

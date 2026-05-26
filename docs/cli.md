@@ -18,6 +18,39 @@ The public package family also keeps `create-claw-app`, `create-claw-agent`,
 `create-claw-server`, and `create-claw-plugin`. It does not expose public
 `clawjs` bins.
 
+## Source Mode
+
+Source mode lets agents use a GitHub checkout from `main` without depending on
+published npm artifacts for internal ClawJS packages. The public command stays
+`claw`; the trust label reported by inspection is `source`, not `official`.
+
+```bash
+git clone https://github.com/clawic/clawjs.git
+cd clawjs
+git checkout main
+npm ci
+npm run build:packages
+npm run source:activate -- --bin-dir ~/.local/bin
+claw source status --json
+```
+
+`claw source status --json` reports the source root, branch, commit, trust
+label, and package map. Source root discovery uses this order:
+`--source-root PATH`, `CLAWJS_SOURCE_ROOT`, `claw.source.json`, then the active
+checkout for status inspection.
+
+Generated projects can opt into source mode explicitly:
+
+```bash
+claw new workspace demo --source --install
+create-claw-app demo-app --source --source-root /path/to/clawjs
+```
+
+The scaffold rewrites internal `@clawjs/*` direct and transitive dependencies
+to local `file:` specs, writes `claw.source.json`, and writes `.npmrc` with
+`install-links=true`. npm still installs external third-party packages from
+their normal sources.
+
 ## Registry And JSON Contract
 
 `claw` is the agent-facing interface to the framework. Public commands,
@@ -146,6 +179,17 @@ does not silently install them. SQLite-backed local data commands such as
 `@clawjs/local-data` pack. Deep niche domains such as health, legal, ERP,
 labs/pharma, construction, and IoT use the optional
 `@clawjs/domain-pack-dense-data` pack for deep commands.
+
+In source mode, optional-pack guidance stays explicit but switches to local
+package specs. For example:
+
+```bash
+claw modules install health --source --json
+```
+
+returns an `npm install --install-links file:...` command that includes the
+optional pack and its internal `@clawjs/*` closure from the source checkout,
+rather than asking npm for published ClawJS packages.
 
 Default collection/catalog lists show active safe areas only. Use explicit
 available discovery, such as `claw collections list --available`, to inspect

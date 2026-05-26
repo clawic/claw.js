@@ -11,6 +11,7 @@ import {
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
 import { writeCommandJsonOk } from "./cli-json.ts";
+import { buildSourceInstallCommand, resolveSourceModeStatus, sourceModeRequested } from "./source-mode.ts";
 
 type ModuleKind = "capability" | "area";
 type ModuleState = "available" | "visible" | "enabled" | "configured" | "running" | "permissioned";
@@ -673,7 +674,17 @@ export async function runModulesCli(input: {
       throw new CliHandledError("unknown_module", "Usage: claw modules install <module-id>", CLI_EXIT_USAGE);
     }
     const module = MODULE_DEFINITIONS.find((entry) => entry.id === moduleId)!;
-    const installCommand = module.optionalPack ? `npm install ${module.optionalPack}` : null;
+    const sourceStatus = sourceModeRequested(input.argv, input.flags)
+      ? resolveSourceModeStatus({
+        cwd: input.context.cwd,
+        sourceRoot: input.flags["source-root"],
+        requested: true,
+        allowCheckout: false,
+      })
+      : resolveSourceModeStatus({ cwd: input.context.cwd, allowCheckout: false });
+    const optionalPackages = module.optionalPack?.split(/\s+/).filter(Boolean) ?? [];
+    const sourceInstallCommand = optionalPackages.length > 0 ? buildSourceInstallCommand(sourceStatus, optionalPackages) : null;
+    const installCommand = sourceInstallCommand ?? (module.optionalPack ? `npm install ${module.optionalPack}` : null);
     const message = module.optionalPack
       ? `Module ${moduleId} uses optional pack ${module.optionalPack}. Install it explicitly with \`${installCommand}\`, then enable the module.`
       : `Module ${moduleId} is available, but installation is explicit and this module has no automatic installer. Review requirements, then enable or install the relevant pack.`;
@@ -683,6 +694,11 @@ export async function runModulesCli(input: {
         module,
         optionalPack: module.optionalPack ?? null,
         installCommand,
+        sourceMode: sourceStatus.active ? {
+          trustLabel: sourceStatus.trustLabel,
+          sourceRoot: sourceStatus.sourceRoot,
+          sourceRootSource: sourceStatus.sourceRootSource,
+        } : null,
         message,
         next: [installCommand, `claw modules enable ${moduleId}`].filter((entry): entry is string => Boolean(entry)),
       }, { subcommand: "install" });

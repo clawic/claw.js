@@ -8,6 +8,13 @@ This package is a direct generator entrypoint. The primary documented flow is `c
 npx create-claw-app my-claw-app
 ```
 
+For a local checkout instead of published ClawJS packages, run the generator
+through source mode:
+
+```bash
+create-claw-app my-claw-app --source --source-root /path/to/clawjs
+```
+
 The generated app includes:
 
 - Next.js App Router setup

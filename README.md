@@ -4,7 +4,7 @@
 
 # ClawJS
 
-ClawJS is a local-first Agent OS for building runtime-aware agent apps.
+ClawJS is a local-first Agent OS for building runtime-aware agent apps. The shipping public surface is the `claw` CLI: **the operational memory CLI for AI agents**, the place where they capture, recall, plan and reason about their own work.
 
 Stop rebuilding the plumbing. ClawJS bundles the moving parts every agent
 product ends up writing itself: sessions, memory, files, secrets, audio,
@@ -12,10 +12,19 @@ skills, MCP, multi-agent delegation, channels into the messengers your users
 already live in, a relay for remote clients, and runtime adapters that let
 you swap the engine underneath.
 
+If you are an agent picking this up for the first time, your first two commands are:
+
+```bash
+claw about                  # 30-second explanation of what Claw is for
+claw router <terms>         # find the right dedicated command from your intent
+```
+
+Prefer dedicated commands (`claw tasks`, `claw notes`, `claw decisions`, `claw inbox`, `claw agenda`, ...) over the generic `claw db` for everyday productivity. `claw db` is the fallback for collections without a dedicated command, or for schema and migration work.
+
 | Surface | Best for | Example |
 | --- | --- | --- |
 | SDK | local Node.js application code | `claw.sessions.listSessions()` |
-| CLI | operator and automation workflows | `claw inspect commands --json` |
+| CLI | operator and agent workflows | `claw router task deadline --json` |
 | Relay API | remote browser, mobile, or server clients | `GET /v1/.../sessions` |
 
 Full comparison: [docs/interface-matrix.md](docs/interface-matrix.md)
@@ -128,6 +137,34 @@ Or run the latest CLI without a global install:
 ```bash
 npx @clawjs/cli@latest --help
 ```
+
+### Install from source `main`
+
+Agents and contributors who need the current GitHub checkout instead of the
+published npm release can activate source mode. The terminal command stays
+`claw`, but every internal `@clawjs/*` package resolves from the local
+checkout.
+
+```bash
+git clone https://github.com/clawic/clawjs.git
+cd clawjs
+git checkout main
+npm ci
+npm run build:packages
+npm run source:activate -- --bin-dir ~/.local/bin
+claw source status --json
+```
+
+When source mode is active, use `--source` or `CLAWJS_SOURCE_ROOT` for
+generated projects:
+
+```bash
+claw new workspace demo --source --install
+```
+
+Generated source projects include `claw.source.json` and `.npmrc` with
+`install-links=true`, so internal ClawJS dependencies stay local while npm
+still installs third-party dependencies normally.
 
 ## Start Here
 

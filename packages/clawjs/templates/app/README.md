@@ -10,6 +10,10 @@ npm run claw:init
 npm run dev
 ```
 
+If this project contains `claw.source.json`, it was generated in source mode.
+Internal `@clawjs/*` packages resolve from that checkout, while npm still
+installs third-party dependencies normally.
+
 ## What is included
 
 - App Router based Next.js app

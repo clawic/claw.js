@@ -22,14 +22,19 @@ function runClawBin(args: string[]): { status: number | null; stdout: string; st
   };
 }
 
-test("package bin root help explains the minimal startup view and discovery paths", () => {
+test("package bin root help leads with the operational-memory framing and discovery paths", () => {
   const help = runClawBin(["--help"]);
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /Usage: claw <command> \[options\]/);
-  assert.match(help.stdout, /Minimal startup help: only safe base commands are shown here\./);
+  assert.match(help.stdout, /operational memory CLI for AI agents/);
+  assert.match(help.stdout, /claw about\s+what Claw is for/);
+  assert.match(help.stdout, /claw router <terms>\s+find the right command/);
   assert.match(help.stdout, /claw --help --all\s+show the full public command surface/);
   assert.match(help.stdout, /claw help <command>\s+show command-specific help/);
   assert.match(help.stdout, /claw inspect commands --json\s+list commands for agents and tools/);
+  assert.match(help.stdout, /Common surfaces:/);
+  assert.match(help.stdout, /Capture\s+claw inbox/);
+  assert.match(help.stdout, /Database\s+claw db/);
   assert.doesNotMatch(help.stdout, /Primary commands and portals:/);
   assert.doesNotMatch(help.stdout, /Advanced commands:/);
 });
@@ -73,6 +78,49 @@ test("package bin keeps help output parseable when json is requested", () => {
   assert.equal(commandPayload.meta.invokedCommand, "system");
   assert.equal(commandPayload.data.command, "system");
   assert.match(commandPayload.data.help, /Usage: claw system /);
+});
+
+test("claw help tasks is enriched from the keyword router", () => {
+  const result = runClawBin(["help", "tasks"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Use this when:/);
+  assert.match(result.stdout, /Example:/);
+  assert.match(result.stdout, /claw tasks list --status open/);
+  assert.match(result.stdout, /Related commands:/);
+  assert.match(result.stdout, /claw projects/);
+  assert.match(result.stdout, /Do not use:/);
+  assert.match(result.stdout, /Find by intent: claw router task/);
+});
+
+test("claw help <non-productivity> stays in the minimal format", () => {
+  const result = runClawBin(["help", "host"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /Use this when:/);
+  assert.doesNotMatch(result.stdout, /Find by intent:/);
+  assert.match(result.stdout, /Support:/);
+});
+
+test("claw db <productivity-collection> prints the dedicated-command advisory on stderr", () => {
+  const result = runClawBin(["db", "tasks", "schema", "--json"]);
+  assert.doesNotMatch(result.stderr, /dedicated command/);
+  const human = runClawBin(["db", "tasks", "schema"]);
+  assert.match(human.stderr, /`claw tasks` is the dedicated command for `tasks`/);
+  assert.match(human.stderr, /claw router tasks/);
+});
+
+test("unknown command surfaces router suggestions in JSON and human output", () => {
+  const jsonResult = runClawBin(["totally-not-a-claw-command-xyz", "--json"]);
+  const jsonPayload = JSON.parse(jsonResult.stdout) as {
+    ok: boolean;
+    meta: { routerSuggestions: Array<{ primaryCommand: string }> };
+  };
+  assert.equal(jsonPayload.ok, false);
+  assert.ok(Array.isArray(jsonPayload.meta.routerSuggestions));
+
+  const humanResult = runClawBin(["tarea-inexistente-xyz"]);
+  assert.match(humanResult.stderr, /Router suggests for "tarea-inexistente-xyz"/);
+  assert.match(humanResult.stderr, /claw tasks/);
+  assert.match(humanResult.stderr, /See: claw router tarea-inexistente-xyz/);
 });
 
 test("package bin routes help topics through the canonical router", () => {
