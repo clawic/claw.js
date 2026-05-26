@@ -998,6 +998,13 @@ function hermesAuthStateResources(status, authState): Array<Record<string, unkno
       const stateRecord = isObjectRecord(state) ? state : null;
       const source = stringFrom(stateRecord?.source);
       const resourcePath = hermesAuthResourcePath(status, source);
+      const hasAuth = stateRecord?.hasAuth === true;
+      const summary = stringFrom(stateRecord?.maskedCredential)
+        ?? (stateRecord
+          ? hasAuth
+            ? "Hermes auth is configured; credential value remains redacted."
+            : "Hermes auth is missing; no credential value is exposed."
+          : "Hermes auth state is redacted; no credential value is exposed.");
       const attributes = stateRecord
         ? [
           source ? `source: ${source}` : undefined,
@@ -1010,11 +1017,11 @@ function hermesAuthStateResources(status, authState): Array<Record<string, unkno
       return {
         id: providerId,
         label: stringFrom(stateRecord?.provider) ?? providerId,
-        status: stateRecord ? (stateRecord.hasAuth === true ? "configured" : "missing") : "redacted",
+        status: stateRecord ? (hasAuth ? "configured" : "missing") : "redacted",
         kind: stringFrom(stateRecord?.authType) ?? (stateRecord ? "auth" : "redacted_auth_state"),
         path: resourcePath,
         enabled: stateRecord && typeof stateRecord.hasAuth === "boolean" ? stateRecord.hasAuth : undefined,
-        summary: stringFrom(stateRecord?.maskedCredential),
+        summary,
         nativeIdentifier: { name: "authProviderId" },
         provenance: {
           source: "hermes-runtime-adapter",
@@ -2637,6 +2644,8 @@ function listHermesSqliteSessions(runtimeId: RuntimeAdapterId, session, limit = 
       preview: row.preview ? redactRuntimeSessionText(String(row.preview)) : null,
       status: "projected",
       contentIncluded: false,
+      path: session.sessionDatabasePath,
+      summary: "Hermes SQLite session metadata; transcript content is not included by default.",
       nativeIdentifier: { name: "sessionId" },
       sessionStorageContract: session.sessionStorageContract,
       provenance: {
@@ -2703,6 +2712,7 @@ function listNativeSessions(runtimeId: RuntimeAdapterId, sessionOrPath, limit = 
         updatedAt: stat.mtime.toISOString(),
         sizeBytes: stat.size,
         status: "projected",
+        summary: "Hermes session path metadata; transcript content is not included by default.",
         nativeIdentifier: { name: "sessionPathId" },
         provenance: {
           source: "runtime-session-store",
