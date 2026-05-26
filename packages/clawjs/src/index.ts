@@ -200,6 +200,16 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
     return await runCliAboutCommand({ flags, context, wantsJson, binName });
   }
 
+  if (group === "instructions") {
+    const { runInstructionsCli } = await import("./cli-instructions-command.ts");
+    return await runInstructionsCli({ positionals, flags, context, wantsJson, binName });
+  }
+
+  if (group === "prompt") {
+    const { runPromptCli } = await import("./cli-prompt-command.ts");
+    return await runPromptCli({ positionals, flags, context, wantsJson, binName });
+  }
+
   await maybeWriteDatabaseDedicatedAdvisory({ group, command, wantsJson, context, binName });
 
   const v1DataExit = await runV1DataRouteIfPossible({ group, positionals, flags, argv, context, wantsJson, binName });
