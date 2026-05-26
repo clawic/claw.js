@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 import {
   INSTRUCTION_ACTIONS,
@@ -26,7 +28,7 @@ import type { DatabaseServiceStore } from "@clawjs/database";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
-import { openMainDataStore } from "./v1-data-core.ts";
+import { openMainDataStore, resolveClawjsDataRoot } from "./v1-data-core.ts";
 
 const NAMESPACE = "main";
 const COLLECTION = "instructions";
@@ -42,6 +44,7 @@ const SUBCOMMANDS = [
   "approve",
   "propose",
   "where",
+  "reconcile",
 ] as const;
 type Subcommand = (typeof SUBCOMMANDS)[number];
 
@@ -102,6 +105,7 @@ function usage(binName: string): string {
     `  approve <id>                          promote a proposed instruction to active`,
     `  propose --from=<ev> ...               add an agent-proposed instruction (state=proposed)`,
     `  where <command> [<action>]            show seeds + overrides applicable to a target`,
+    `  reconcile                             reconcile claw.global.root/instructions/manifest.yaml`,
     "",
     "Common flags:",
     "  --json                                emit a machine-readable envelope",
@@ -180,6 +184,135 @@ function rowFromInstruction(instruction: ClawInstruction): Omit<InstructionsRow,
     proposedFrom: instruction.proposedFrom,
     source: instruction.source,
   };
+}
+
+function manifestPath(env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(resolveClawjsDataRoot(env), "instructions", "manifest.yaml");
+}
+
+function parseManifestScalar(raw: string): unknown {
+  const value = raw.trim();
+  if (value.length === 0) return "";
+  if (value === "true") return true;
+  if (value === "false") return false;
+  if (/^-?\d+$/.test(value)) return Number.parseInt(value, 10);
+  if (/^-?\d+\.\d+$/.test(value)) return Number.parseFloat(value);
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, "\n");
+  }
+  return value;
+}
+
+function parseInstructionsManifest(content: string): ClawInstruction[] {
+  const lines = content.split(/\r?\n/);
+  const instructions: Array<Record<string, unknown> & { target?: Record<string, unknown> }> = [];
+  let schemaVersion: number | undefined;
+  let inInstructions = false;
+  let current: (Record<string, unknown> & { target?: Record<string, unknown> }) | undefined;
+  let inTarget = false;
+
+  for (const [index, line] of lines.entries()) {
+    if (/^\s*(#.*)?$/.test(line)) continue;
+    const indent = line.match(/^ */)?.[0].length ?? 0;
+    const trimmed = line.trim();
+    if (indent === 0) {
+      inTarget = false;
+      if (trimmed === "instructions:") {
+        inInstructions = true;
+        continue;
+      }
+      const match = trimmed.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+      if (!match) throw new CliHandledError("invalid_manifest", `Invalid manifest line ${index + 1}: ${trimmed}`, CLI_EXIT_USAGE);
+      if (match[1] === "schemaVersion") schemaVersion = parseManifestScalar(match[2]) as number;
+      continue;
+    }
+    if (!inInstructions) {
+      throw new CliHandledError("invalid_manifest", `Unexpected nested manifest line ${index + 1}: ${trimmed}`, CLI_EXIT_USAGE);
+    }
+    if (indent === 2 && trimmed.startsWith("- ")) {
+      current = {};
+      instructions.push(current);
+      inTarget = false;
+      const rest = trimmed.slice(2).trim();
+      if (rest.length > 0) {
+        const match = rest.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+        if (!match) throw new CliHandledError("invalid_manifest", `Invalid instruction line ${index + 1}: ${trimmed}`, CLI_EXIT_USAGE);
+        current[match[1]] = parseManifestScalar(match[2]);
+      }
+      continue;
+    }
+    if (!current) {
+      throw new CliHandledError("invalid_manifest", `Manifest field before instruction at line ${index + 1}.`, CLI_EXIT_USAGE);
+    }
+    if (indent === 4 && trimmed === "target:") {
+      current.target = {};
+      inTarget = true;
+      continue;
+    }
+    const match = trimmed.match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (!match) throw new CliHandledError("invalid_manifest", `Invalid manifest line ${index + 1}: ${trimmed}`, CLI_EXIT_USAGE);
+    if (indent === 6 && inTarget) {
+      current.target ??= {};
+      current.target[match[1]] = parseManifestScalar(match[2]);
+    } else if (indent === 4) {
+      inTarget = false;
+      current[match[1]] = parseManifestScalar(match[2]);
+    } else {
+      throw new CliHandledError("invalid_manifest", `Unsupported indentation at line ${index + 1}.`, CLI_EXIT_USAGE);
+    }
+  }
+
+  if (schemaVersion !== INSTRUCTIONS_SCHEMA_VERSION) {
+    throw new CliHandledError("invalid_manifest", "Manifest schemaVersion must be 1.", CLI_EXIT_USAGE);
+  }
+  return instructions.map((entry, index) => {
+    if (typeof entry.id !== "string" || entry.id.length === 0) {
+      throw new CliHandledError("invalid_manifest", `Instruction ${index + 1} must declare id.`, CLI_EXIT_USAGE);
+    }
+    const instruction: ClawInstruction = {
+      id: entry.id,
+      schemaVersion: INSTRUCTIONS_SCHEMA_VERSION,
+      target: (entry.target ?? {}) as InstructionTarget,
+      trigger: (entry.trigger as InstructionTrigger | undefined) ?? "surface-action",
+      activation: (entry.activation as ClawInstruction["activation"] | undefined) ?? "on",
+      priority: typeof entry.priority === "number" ? entry.priority : INSTRUCTION_PRIORITY_DEFAULT,
+      severity: (entry.severity as ClawInstruction["severity"] | undefined) ?? "info",
+      useWhen: typeof entry.useWhen === "string" ? entry.useWhen : undefined,
+      useNot: typeof entry.useNot === "string" ? entry.useNot : undefined,
+      readPolicy: typeof entry.readPolicy === "string" ? entry.readPolicy : undefined,
+      writePolicy: typeof entry.writePolicy === "string" ? entry.writePolicy : undefined,
+      before: typeof entry.before === "string" ? entry.before : undefined,
+      after: typeof entry.after === "string" ? entry.after : undefined,
+      forbid: typeof entry.forbid === "string" ? entry.forbid : undefined,
+      notes: typeof entry.notes === "string" ? entry.notes : undefined,
+      provenance: "user",
+      state: (entry.state as ClawInstruction["state"] | undefined) ?? "active",
+      source: `manifest:${entry.id}`,
+      createdAt: "",
+      updatedAt: "",
+    };
+    const validation = validateInstructionShape(instruction);
+    if (!validation.ok) {
+      throw new CliHandledError(
+        "invalid_manifest",
+        `Manifest instruction ${entry.id} failed validation: ${validation.issues.map((issue) => `${issue.field}: ${issue.message}`).join("; ")}`,
+        CLI_EXIT_USAGE,
+      );
+    }
+    return instruction;
+  });
+}
+
+function managedManifestKey(instruction: ClawInstruction): string | undefined {
+  if (instruction.provenance !== "user") return undefined;
+  if (typeof instruction.source !== "string" || !instruction.source.startsWith("manifest:")) return undefined;
+  return instruction.source.slice("manifest:".length);
+}
+
+function sameManifestInstruction(current: ClawInstruction, next: ClawInstruction): boolean {
+  const a = rowFromInstruction(current);
+  const b = rowFromInstruction(next);
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function instructionFromRow(row: Record<string, unknown>, fallbackId?: string): ClawInstruction {
@@ -523,6 +656,93 @@ function runWhere(input: InstructionsCliInput, store: DatabaseServiceStore): num
   return CLI_EXIT_OK;
 }
 
+function runReconcile(input: InstructionsCliInput, store: DatabaseServiceStore): number {
+  const pathToManifest = manifestPath();
+  if (!fs.existsSync(pathToManifest)) {
+    throw new CliHandledError(
+      "manifest_not_found",
+      `Instruction manifest not found at ${pathToManifest}.`,
+      CLI_EXIT_FAILURE,
+    );
+  }
+  const desired = parseInstructionsManifest(fs.readFileSync(pathToManifest, "utf8"));
+  const desiredById = new Map(desired.map((instruction) => [instruction.id, instruction]));
+  if (desiredById.size !== desired.length) {
+    throw new CliHandledError("invalid_manifest", "Manifest instruction ids must be unique.", CLI_EXIT_USAGE);
+  }
+
+  const live = listStoredInstructions(store);
+  const liveById = new Map(live.map((instruction) => [instruction.id, instruction]));
+  const managedByKey = new Map<string, ClawInstruction>();
+  for (const instruction of live) {
+    const key = managedManifestKey(instruction);
+    if (key) managedByKey.set(key, instruction);
+  }
+
+  let added = 0;
+  let updated = 0;
+  let archived = 0;
+  let unchanged = 0;
+
+  for (const instruction of desired) {
+    const current = liveById.get(instruction.id);
+    if (current && managedManifestKey(current) !== instruction.id) {
+      throw new CliHandledError(
+        "manifest_id_conflict",
+        `Instruction id ${instruction.id} already exists outside manifest management.`,
+        CLI_EXIT_USAGE,
+      );
+    }
+    const payload = rowFromInstruction(instruction);
+    if (!current) {
+      store.putRecord({
+        namespaceId: NAMESPACE,
+        collectionName: COLLECTION,
+        recordId: instruction.id,
+        payload: payload as Record<string, unknown>,
+      });
+      added += 1;
+    } else if (sameManifestInstruction(current, instruction)) {
+      unchanged += 1;
+    } else {
+      store.putRecord({
+        namespaceId: NAMESPACE,
+        collectionName: COLLECTION,
+        recordId: instruction.id,
+        payload: payload as Record<string, unknown>,
+        createdAt: current.createdAt,
+      });
+      updated += 1;
+    }
+  }
+
+  for (const [key, instruction] of managedByKey) {
+    if (desiredById.has(key) || instruction.state === "archived") continue;
+    const next: ClawInstruction = { ...instruction, state: "archived" };
+    store.putRecord({
+      namespaceId: NAMESPACE,
+      collectionName: COLLECTION,
+      recordId: instruction.id,
+      payload: rowFromInstruction(next) as Record<string, unknown>,
+      createdAt: instruction.createdAt,
+    });
+    archived += 1;
+  }
+
+  const payload = {
+    manifestPath: pathToManifest,
+    counts: { added, updated, archived, unchanged },
+  };
+  if (input.wantsJson) {
+    writeCommandJsonOk(input.context.stdout, CANONICAL_COMMAND, payload, { canonicalCommand: CANONICAL_COMMAND, operation: "reconcile" });
+    return CLI_EXIT_OK;
+  }
+  input.context.stdout.write(
+    `Reconciled instructions manifest: added ${added}, updated ${updated}, archived ${archived}, unchanged ${unchanged}\n`,
+  );
+  return CLI_EXIT_OK;
+}
+
 function runList(input: InstructionsCliInput, store: DatabaseServiceStore): number {
   const filter = parseFilter(input.flags);
   const all = listStoredInstructions(store);
@@ -687,6 +907,8 @@ export async function runInstructionsCli(input: InstructionsCliInput): Promise<n
         return runPropose(input, store);
       case "where":
         return runWhere(input, store);
+      case "reconcile":
+        return runReconcile(input, store);
     }
   } catch (error) {
     if (input.wantsJson) {

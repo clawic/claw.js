@@ -205,5 +205,113 @@ test("instructions add rejects body fields exceeding caps", async () => {
 test("instructions without subcommand prints usage on stderr", async () => {
   const result = await callCli(["instructions"], {}, false);
   assert.equal(result.status, 64);
-  assert.match(result.stderr, /Usage: claw instructions <list\|show\|add\|edit\|rm\|approve\|propose\|where>/);
+  assert.match(result.stderr, /Usage: claw instructions <list\|show\|add\|edit\|rm\|approve\|propose\|where\|reconcile>/);
+});
+
+function writeManifest(root: string, body: string): void {
+  const dir = path.join(root, "instructions");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "manifest.yaml"), body);
+}
+
+function manifestWith(ids: string[]): string {
+  const entries = ids.map((id) => [
+    `  - id: ${id}`,
+    "    target:",
+    "      command: tasks",
+    "      action: write",
+    "    trigger: surface-action",
+    "    activation: on",
+    "    priority: 82",
+    "    severity: warn",
+    `    useWhen: ${id} from manifest`,
+  ].join("\n"));
+  return ["schemaVersion: 1", "instructions:", ...entries].join("\n");
+}
+
+test("instructions reconcile round-trips manifest rows and is idempotent", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  const prevData = process.env.CLAW_DATA_DIR;
+  makeIsolatedEnv(root);
+  process.env.CLAW_DATA_DIR = root;
+  try {
+    writeManifest(root, manifestWith(["manifest.tasks.write"]));
+    const reconcile = await callCli(["instructions", "reconcile"], {}, true);
+    assert.equal(reconcile.status, 0, reconcile.stderr);
+    const envelope = JSON.parse(reconcile.stdout);
+    assert.deepEqual(envelope.data.counts, { added: 1, updated: 0, archived: 0, unchanged: 0 });
+
+    const show = await callCli(["instructions", "show", "manifest.tasks.write"], {}, true);
+    assert.equal(show.status, 0, show.stderr);
+    const shown = JSON.parse(show.stdout);
+    assert.equal(shown.data.provenance, "user");
+    assert.equal(shown.data.source, "manifest:manifest.tasks.write");
+    assert.equal(shown.data.useWhen, "manifest.tasks.write from manifest");
+
+    const second = await callCli(["instructions", "reconcile"], {}, true);
+    assert.equal(second.status, 0, second.stderr);
+    assert.deepEqual(JSON.parse(second.stdout).data.counts, { added: 0, updated: 0, archived: 0, unchanged: 1 });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+    if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+  }
+});
+
+test("instructions reconcile rejects invalid manifests", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  const prevData = process.env.CLAW_DATA_DIR;
+  makeIsolatedEnv(root);
+  process.env.CLAW_DATA_DIR = root;
+  try {
+    writeManifest(root, [
+      "schemaVersion: 1",
+      "instructions:",
+      "  - id: invalid",
+      "    target:",
+      "      command: Tasks",
+      "    severity: warn",
+    ].join("\n"));
+    const reconcile = await callCli(["instructions", "reconcile"], {}, true);
+    assert.equal(reconcile.status, 64);
+    const envelope = JSON.parse(reconcile.stdout);
+    assert.equal(envelope.ok, false);
+    assert.equal(envelope.error.code, "invalid_manifest");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+    if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+  }
+});
+
+test("instructions reconcile archives manifest-managed rows omitted from manifest", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  const prevData = process.env.CLAW_DATA_DIR;
+  makeIsolatedEnv(root);
+  process.env.CLAW_DATA_DIR = root;
+  try {
+    writeManifest(root, manifestWith(["manifest.keep", "manifest.omit"]));
+    assert.equal((await callCli(["instructions", "reconcile"], {}, true)).status, 0);
+    writeManifest(root, manifestWith(["manifest.keep"]));
+    const reconcile = await callCli(["instructions", "reconcile"], {}, true);
+    assert.equal(reconcile.status, 0, reconcile.stderr);
+    assert.deepEqual(JSON.parse(reconcile.stdout).data.counts, { added: 0, updated: 0, archived: 1, unchanged: 1 });
+
+    const omitted = await callCli(["instructions", "show", "manifest.omit"], {}, true);
+    assert.equal(omitted.status, 0, omitted.stderr);
+    assert.equal(JSON.parse(omitted.stdout).data.state, "archived");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+    if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+  }
 });
