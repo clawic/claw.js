@@ -83,7 +83,7 @@ test("code ledger policy rejects unsafe numeric thresholds", () => {
 
 test("code ledger status queries use ordered snapshot indexes", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "claw-code-ledger-indexes-"));
-  const db = new Database(path.join(root, "code.sqlite"));
+  const db = new Database(path.join(root, "runtime.sqlite"));
   try {
     db.exec(CODE_LEDGER_SCHEMA_SQL);
     db.prepare(`
