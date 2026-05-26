@@ -1,5 +1,8 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   INSTRUCTION_BODY_CAPS,
@@ -17,6 +20,10 @@ import {
 } from "./cli-instructions-seeds.ts";
 
 const REQUIRED_SURFACES = ["tasks", "decisions", "notes", "inbox", "agenda", "people", "memory", "db"];
+const AGENT_RULES_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../docs/agent-rules",
+);
 
 test("every canonical surface has at least one seed", () => {
   for (const surface of REQUIRED_SURFACES) {
@@ -114,4 +121,30 @@ test("resolver order is consistent with cli-instructions general resolver", () =
     direct.map((entry) => entry.source),
     helper.map((entry) => entry.source),
   );
+});
+
+test("agent-rules migrated chunks map one-to-one to catalog seeds", () => {
+  const sourceSet = new Set(CATALOG_SEED_INSTRUCTIONS.map((catalogEntry) => catalogEntry.source));
+  const markerCounts = new Map<string, number>();
+  let governanceMarkers = 0;
+
+  for (const file of fs.readdirSync(AGENT_RULES_DIR).filter((name) => name.endsWith(".md"))) {
+    const content = fs.readFileSync(path.join(AGENT_RULES_DIR, file), "utf8");
+    const markers = content.matchAll(/<!--\s*(migrated-to:\s*(catalog:[^ ]+)|governance:\s*stays-in-docs)\s*-->/g);
+    for (const marker of markers) {
+      if (marker[2]) {
+        const source = marker[2];
+        assert.equal(sourceSet.has(source), true, `${file} marker ${source} has no catalog seed`);
+        markerCounts.set(source, (markerCounts.get(source) ?? 0) + 1);
+      } else {
+        governanceMarkers += 1;
+      }
+    }
+  }
+
+  for (const source of sourceSet) {
+    if (!source.startsWith("catalog:agent-rules.")) continue;
+    assert.equal(markerCounts.get(source), 1, `${source} must have exactly one migrated-to marker`);
+  }
+  assert.equal(governanceMarkers > 0, true, "expected governance markers for non-catalog doc chunks");
 });

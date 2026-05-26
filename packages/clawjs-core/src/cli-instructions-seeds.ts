@@ -241,6 +241,139 @@ export const CATALOG_SEED_INSTRUCTIONS: ReadonlyArray<CatalogSeedEntry> = [
         "When the user starts a session, the productivity surfaces (tasks, inbox, agenda) are the highest-signal context. Read them first.",
     },
   ),
+
+  policy(
+    "catalog:agent-rules.commands.command-output.read",
+    { command: "commands", action: "read" },
+    PRIORITY_INFO,
+    "info",
+    {
+      readPolicy: "Prefer --json for agent-readable output when inspecting Claw state or command results.",
+      notes: "Core discovery commands include info, doctor, workspace inspect, and features describe.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.commands.command-safety.write",
+    { command: "commands", action: "write" },
+    PRIORITY_BLOCK,
+    "block",
+    {
+      useWhen: "A command may touch real services, paid APIs, production data, installs, auth, or destructive flows.",
+      forbid: "Do not run those commands unless isolated or explicitly approved.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.channels.channels.write",
+    { command: "channels", action: "write" },
+    PRIORITY_WARN,
+    "warn",
+    {
+      useWhen: "Configuring external message ingestion, listener flows, bridges, or reply routing.",
+      writePolicy: "Preserve channel session context and respect owner authorization, topic authorization, reply policy, queue, stop, compact, and status commands.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.reporting.report-flow.write",
+    { command: "report", action: "write" },
+    PRIORITY_BLOCK,
+    "block",
+    {
+      useWhen: "Helping a user send feedback, bug reports, features, translations, or security reports to GitHub.",
+      writePolicy: "Draft, check, dedupe, preview, and publish only after explicit user confirmation through the Claw GitHub connector.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.reporting.report-safety.write",
+    { command: "report", action: "write" },
+    PRIORITY_BLOCK,
+    "block",
+    {
+      forbid: "Never publish raw logs, secrets, local usernames, private URLs, auth headers, tokens, production data, or public security findings.",
+      useNot: "Do not create automatic pull requests or publish when a report lacks enough actionable information.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.reporting.report-retention.delete",
+    { command: "report", action: "delete" },
+    PRIORITY_BLOCK,
+    "block",
+    {
+      useWhen: "Managing report retention, pruning, or cleanup.",
+      writePolicy: "Use report export, delete, and prune only for manual retention.",
+      forbid: "Do not close, lock, suppress, or upload attachments automatically.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.rules-skills-library.rules.read",
+    { command: "rules", action: "read" },
+    PRIORITY_INFO,
+    "info",
+    {
+      readPolicy: "Choose the smallest durable mechanism: rules for always-on behavior, skills for procedures, library for reusable assets, and soul for identity.",
+      before: "Use rules list/compile, skills search, or library resolve/sync before expanding always-loaded instructions.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.runtime.state-inspection.read",
+    { command: "runtime", action: "read" },
+    PRIORITY_WARN,
+    "warn",
+    {
+      readPolicy: "Inspect runtime, auth, models, and provider auth state before changing runtime state.",
+      before: "For host-dependent issues, validate in the same execution mode the user uses.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.runtime.state-repair.write",
+    { command: "runtime", action: "write" },
+    PRIORITY_WARN,
+    "warn",
+    {
+      writePolicy: "Use runtime repair and runtime setup-workspace before manual file edits.",
+      before: "Use dry-run for install, uninstall, repair, and setup plans when available.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.secrets.secret-values.write",
+    { command: "secrets", action: "write" },
+    PRIORITY_BLOCK,
+    "block",
+    {
+      useWhen: "Working with secret references, connector config, plugin config, CLI calls, or model code.",
+      writePolicy: "Use secretName references, brokered HTTP, or typed actions; never resolve secretRefs into plaintext.",
+      forbid: "Do not ask for, print, store, or log master passwords, Secret Keys, recovery phrases, Emergency Kits, signed-host tokens, or host assertion keys.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.secrets.secret-metadata.read",
+    { command: "secrets", action: "read" },
+    PRIORITY_WARN,
+    "warn",
+    {
+      readPolicy: "Discover only metadata with secrets list, describe, types, and capabilities.",
+      forbid: "Missing principal, host, placement, risk, capability, approval, or policy context means stop and fail closed.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.service-surfaces.surfaces.write",
+    { command: "surfaces", action: "write" },
+    PRIORITY_WARN,
+    "warn",
+    {
+      writePolicy: "Use the product surface that owns the domain instead of routing through a generic fallback.",
+      notes: "Dedicated surfaces include Relay, media, time, notify, content, IoT, database, ERP, drive, execution, and delegation.",
+    },
+  ),
+  policy(
+    "catalog:agent-rules.workspace-loop.workspace.read",
+    { command: "workspace", action: "read" },
+    PRIORITY_WARN,
+    "warn",
+    {
+      readPolicy: "Search workspace state before unmanaged files and use my-work or team-work for coordination loops.",
+      before: "Use tasks, projects, goals, blockers, decisions, and notes before creating loose local records.",
+    },
+  ),
 ];
 
 export function listCatalogSeedInstructions(): ReadonlyArray<CatalogSeedEntry> {

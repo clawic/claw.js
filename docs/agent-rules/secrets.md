@@ -4,12 +4,14 @@ description: Compact secret handling rules for ClawJS agents.
 ---
 
 # Secrets
+<!-- migrated-to: catalog:agent-rules.secrets.secret-values.write -->
 
 Never handle literal secret values.
 
 - Treat [Secrets Security Model](../secrets-security.md) as the canonical
   policy for vaults, brokered use, connectors, plugins, CLI, audit, and
   backups.
+<!-- migrated-to: catalog:agent-rules.secrets.secret-metadata.read -->
 - Discover metadata with `claw secrets list`, `describe`, `types`, and `capabilities`.
 - Use `secretName` references in configs and library requirements.
 - Use brokered HTTP or typed actions for real calls; do not resolve

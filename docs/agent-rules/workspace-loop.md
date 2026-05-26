@@ -4,6 +4,7 @@ description: Compact workspace operating loop for ClawJS agents.
 ---
 
 # Workspace Loop
+<!-- migrated-to: catalog:agent-rules.workspace-loop.workspace.read -->
 
 Use ClawJS workspace state before unmanaged files:
 

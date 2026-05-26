@@ -4,6 +4,7 @@ description: Compact command reference for ClawJS-aware agents.
 ---
 
 # Agent Commands
+<!-- migrated-to: catalog:agent-rules.commands.command-output.read -->
 
 Prefer `--json` for agent-readable output.
 
@@ -33,4 +34,5 @@ claw sessions list --json
 claw inference generate-text --prompt "..." --domain workspace --json
 ```
 
+<!-- migrated-to: catalog:agent-rules.commands.command-safety.write -->
 Do not run commands against real services, paid APIs, production data, installs, auth, or destructive flows unless isolated or explicitly approved.

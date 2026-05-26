@@ -4,6 +4,7 @@ description: Compact guide to dedicated ClawJS service surfaces.
 ---
 
 # Service Surfaces
+<!-- migrated-to: catalog:agent-rules.service-surfaces.surfaces.write -->
 
 Use the product surface that owns the domain:
 

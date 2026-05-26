@@ -4,6 +4,7 @@ description: Compact instructions for choosing ClawJS rules, skills, and library
 ---
 
 # Rules, Skills, Library
+<!-- migrated-to: catalog:agent-rules.rules-skills-library.rules.read -->
 
 Use the smallest durable mechanism:
 

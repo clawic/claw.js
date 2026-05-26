@@ -4,12 +4,14 @@ description: Compact ClawJS operating references for agents.
 ---
 
 # Agent Rules
+<!-- governance: stays-in-docs -->
 
 These pages keep always-loaded instructions short. `AGENTS.md` and `CLAUDE.md`
 route here; this page routes to the durable canon, skills, and validation
 lanes. Do not duplicate long ADR rationale here.
 
 ## Canonical Routes
+<!-- governance: stays-in-docs -->
 
 - Constitution routing: [Constitution Operational Map](../constitution-map.md).
 - Decision routing: [Decision Map](../decision-map.md).
@@ -70,6 +72,7 @@ lanes. Do not duplicate long ADR rationale here.
 - OpenClaw host-dependent debugging: `agents/wiki/openclaw.md`.
 
 ## Skill Routes
+<!-- governance: stays-in-docs -->
 
 Use `skills/<id>/SKILL.md` instead of loading long procedures into prompts.
 
@@ -95,6 +98,7 @@ Use `skills/<id>/SKILL.md` instead of loading long procedures into prompts.
 Run `node ./scripts/skills-check.mjs` after adding or changing skills.
 
 ## Invariants
+<!-- governance: stays-in-docs -->
 
 - `claw` is the single public CLI. Do not introduce new public `clawjs`,
   `clawix`, or `commander` command surfaces.
@@ -144,6 +148,7 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   network call, or niche domain activation.
 
 ## Validation Safety
+<!-- governance: stays-in-docs -->
 
 - Hermetic tests are required but not sufficient for host-dependent bugs.
 - Do not send real prompts, touch production data, call paid APIs, mutate real
@@ -157,6 +162,7 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   optimization, and validated fixes compare resource behavior before and after.
 
 ## Public Hygiene And Commits
+<!-- governance: stays-in-docs -->
 
 - Public repositories must not contain maintainer-private paths, signing
   identities, bundle IDs, Team IDs, SKUs, release credentials, local launchers,
@@ -174,6 +180,7 @@ Run `node ./scripts/skills-check.mjs` after adding or changing skills.
   approval.
 
 ## More Specific Rule Pages
+<!-- governance: stays-in-docs -->
 
 - [Workspace loop](./workspace-loop.md): tasks, notes, search, planning records.
 - [Commands](./commands.md): CLI and SDK operating shortcuts.

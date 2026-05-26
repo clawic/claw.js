@@ -1,9 +1,11 @@
 # Agent Reporting Rules
+<!-- governance: stays-in-docs -->
 
 Use `claw report` whenever an agent wants to help a user send feedback to
 GitHub.
 
 ## Required Flow
+<!-- migrated-to: catalog:agent-rules.reporting.report-flow.write -->
 
 1. Draft the report locally with `claw report bug`, `feature`, `translation`,
    `security`, or `draft`.
@@ -21,6 +23,7 @@ GitHub.
    its output as advisory until a human approves the external action.
 
 ## Hard Rules
+<!-- migrated-to: catalog:agent-rules.reporting.report-safety.write -->
 
 - Do not publish raw logs, secrets, local usernames, full local paths, host
   names, private URLs, auth headers, tokens, or production data.
@@ -40,6 +43,7 @@ GitHub.
   and secret broker. Do not shell out to `gh` by default.
 
 ## Routing
+<!-- governance: stays-in-docs -->
 
 - Concrete bugs, crashes, regressions, documentation issues, performance
   defects, and specific translation fixes route to GitHub Issues.
@@ -55,6 +59,7 @@ GitHub.
   tasks. It must not close, lock, delete, or publish.
 
 ## Maintenance
+<!-- migrated-to: catalog:agent-rules.reporting.report-retention.delete -->
 
 - Use `claw report github bootstrap --dry-run` before opening a repo to agent
   reports. Apply only safe connector-supported setup with `--apply --confirm`.

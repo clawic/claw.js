@@ -4,6 +4,7 @@ description: Compact channel rules for Telegram and agent processors.
 ---
 
 # Channels
+<!-- migrated-to: catalog:agent-rules.channels.channels.write -->
 
 Use channels for external message ingestion and reply routing.
 
