@@ -1734,6 +1734,9 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         fallbackPolicy: isLocalOverlayGap
           ? "do_not_write_runtime_pin_state_without_official_api"
           : "do_not_synthesize_native_runtime_action",
+        safeDefault: isLocalOverlayGap
+          ? "keep_local_overlay_and_do_not_write_runtime_pin_state"
+          : "keep_unpromoted_and_do_not_synthesize_runtime_state",
         claimEffect: "blocks_recommended_production_native_parity",
         reentryCondition: isLocalOverlayGap
           ? "add_official_runtime_pin_write_back_contract_fixture_and_round_trip_evidence"
@@ -1913,7 +1916,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         ? "do_not_run_without_explicit_approval_and_redaction"
         : isApprovalGate
           ? "do_not_run_without_approval_gate_fixture"
-        : "keep_unpromoted_and_do_not_synthesize_runtime_state",
+        : requirement.safeDefault ?? "keep_unpromoted_and_do_not_synthesize_runtime_state",
     };
   });
   const blockedPromotionClaims = [

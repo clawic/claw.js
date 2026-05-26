@@ -1601,7 +1601,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           uiParityClaim?: string;
           blockedWriteBackDomains?: string[];
           externalPendingDomains?: string[];
-        evidenceRequirements?: Array<{ id: string; blockerClass: string; commandShape: string; approvalRequired: boolean; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
+      evidenceRequirements?: Array<{ id: string; blockerClass: string; commandShape: string; approvalRequired: boolean; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; safeDefault?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
         };
       };
       commands?: {
@@ -2045,7 +2045,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         evidenceRequirementCount?: number;
         productBlockedRequirementCount?: number;
       };
-      evidenceRequirements?: Array<{ id: string; blockerClass: string; approvalRequired: boolean; commandShape: string; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
+      evidenceRequirements?: Array<{ id: string; blockerClass: string; approvalRequired: boolean; commandShape: string; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; safeDefault?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
       domains?: Array<{ domain: string; writeBackAllowed?: boolean; writeBackApprovalGated?: boolean; evidenceRequirementIds?: string[]; blockerClasses?: string[]; evidenceDispositions?: string[]; supportResolutions?: string[]; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
       closureChecklist?: Array<{ domain: string; closureStatus: string; evidenceRequirementIds?: string[]; safeDefault?: string; nextAction?: string; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[]; projectionDisposition?: string }>;
       closureChecklistSummary?: Record<string, number>;
@@ -2170,10 +2170,13 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.create.action_contract" && entry.commandShape === "not_executable_until_tui_gateway_create_wrapper_fixture_exists"), true);
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.currentBehavior, "non_executable_action_plan_only");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.fallbackPolicy, "do_not_synthesize_native_runtime_action");
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.productDecision, "native_session_action_unimplemented_until_tui_gateway_wrapper_fixture");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.create.action_contract")?.officialMethod, "session.create");
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract")?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract")?.userVisibleContract, "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.pin.native_write_back_contract" && entry.commandShape === "not_executable_until_official_runtime_pin_api_exists"), true);
+  assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.unpin.native_write_back_contract")?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === "hermes.sessions.unpin.native_write_back_contract")?.userVisibleContract, "pin_state_is_clawix_local_overlay_until_runtime_write_back_exists");
   assert.equal(hermesSupportPayload.data.evidenceRequirements?.some((entry) => entry.id === "hermes.sessions.unpin.native_write_back_contract" && entry.commandShape === "not_executable_until_official_runtime_unpin_api_exists"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "channels")?.evidenceRequirementIds?.includes("hermes.channels.live_evidence"), true);
@@ -2375,12 +2378,14 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPinReentry?.commandShape, "not_executable_until_official_runtime_pin_api_exists");
   assert.equal(hermesPinReentry?.exactCommand, "not_executable_until_official_runtime_pin_api_exists");
   assert.equal(hermesPinReentry?.fallbackPolicy, "do_not_write_runtime_pin_state_without_official_api");
+  assert.equal(hermesPinReentry?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
   assert.equal(hermesPinReentry?.claimBlockedUntil, "official_runtime_contract_fixture_and_round_trip_evidence_attached");
   assert.equal(hermesPinReentry?.doNotRunWithoutApproval, false);
   assert.equal(hermesUnpinReentry?.status, "blocked_until_upstream_contract");
   assert.equal(hermesUnpinReentry?.commandShape, "not_executable_until_official_runtime_unpin_api_exists");
   assert.equal(hermesUnpinReentry?.exactCommand, "not_executable_until_official_runtime_unpin_api_exists");
   assert.equal(hermesUnpinReentry?.fallbackPolicy, "do_not_write_runtime_pin_state_without_official_api");
+  assert.equal(hermesUnpinReentry?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
   assert.equal(hermesUnpinReentry?.claimBlockedUntil, "official_runtime_contract_fixture_and_round_trip_evidence_attached");
   assert.equal(hermesUnpinReentry?.doNotRunWithoutApproval, false);
 
