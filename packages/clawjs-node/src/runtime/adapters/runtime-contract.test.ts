@@ -360,13 +360,13 @@ test("hermes adapter redacts config and auth secrets from resource catalogs", as
     "hermes-plugin-token-secret-123456",
     "hermes-mcp-api-key-secret-123456",
     "hermes-env-openrouter-secret-123456",
-    "sk-hermes-model-secret-123456",
-    "sk-hermes-provider-secret-123456",
+    "hermes-model-secret-value-123456",
+    "hermes-provider-secret-value-123456",
   ];
   fs.writeFileSync(path.join(hermesHome, "config.yaml"), [
     "model: project-model",
-    "fallback_model: sk-hermes-model-secret-123456",
-    "provider: sk-hermes-provider-secret-123456",
+    "fallback_model: hermes-model-secret-value-123456",
+    "provider: hermes-provider-secret-value-123456",
     "providers:",
     "  local-agent:",
     "    api_key: hermes-provider-api-key-secret-123456",
@@ -405,10 +405,10 @@ test("hermes adapter redacts config and auth secrets from resource catalogs", as
   const providerIds = resources.providers.providers.map((provider) => provider.id);
   assert.equal(providerIds.includes("local-agent"), true);
   assert.equal(providerIds.some((id) => id.includes(".api_key") || id.includes(".token")), false);
-  assert.equal(providerIds.includes("sk-hermes-provider-secret-123456"), false);
+  assert.equal(providerIds.includes("hermes-provider-secret-value-123456"), false);
   assert.equal(resources.models.defaultModel?.provider, undefined);
   assert.equal(resources.models.models.find((model) => model.id === "project-model")?.provider, "default");
-  assert.equal(resources.models.models.some((model) => model.id === "sk-hermes-model-secret-123456"), false);
+  assert.equal(resources.models.models.some((model) => model.id === "hermes-model-secret-value-123456"), false);
   assert.equal(resources.auth.providers["local-agent"]?.hasAuth, true);
   assert.equal(resources.auth.providers.openai?.maskedCredential?.includes("hermes-auth-store-token-secret-123456"), false);
   assert.equal(resources.channels.channels.find((channel) => channel.id === "slack")?.metadata?.configKeys?.includes("channels.slack.bot_token"), false);

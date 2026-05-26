@@ -666,7 +666,7 @@ test("Mac action broker returns dry-run receipts before approval or host executi
     capabilityId: "mac.text.inject",
     actor,
     host,
-    target: { kind: "app", name: "Notes", selector: { bundleId: "com.apple.Notes", windowTitle: "Scratch" } },
+    target: { kind: "app", name: "Notes", selector: { bundleId: "com.example.Notes", windowTitle: "Scratch" } },
     arguments: { text: "do not persist this payload", secretRef: "secret_lease_text" },
     dryRun: true,
     reason: "Preview text injection without native mutation",
