@@ -26,4 +26,5 @@ export * from "./cli-command-registry.ts";
 export * from "./cli-command-intents.ts";
 export * from "./cli-instructions.ts";
 export * from "./cli-instructions-seeds.ts";
+export * from "./cli-instructions-render.ts";
 export * from "./builtins/index.ts";
