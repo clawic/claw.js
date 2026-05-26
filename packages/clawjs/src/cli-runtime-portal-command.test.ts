@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "vitest";
 
 import { CLI_EXIT_USAGE } from "./cli-errors.ts";
@@ -169,4 +172,95 @@ test("Hermes support audit keeps repair and permission policies behind approval-
   const closure = payload.data?.closureChecklist ?? [];
   assert.equal(closure.find((item) => item.domain === "doctorCompat")?.closureStatus, "product_blocked");
   assert.equal(closure.find((item) => item.domain === "sandboxPermissions")?.closureStatus, "product_blocked");
+});
+
+test("Hermes approval-gate fixtures attach redacted receipts without runtime mutation", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-approval-gate-"));
+  const fixturePath = path.join(tempDir, "approval-gate-fixture.json");
+  fs.writeFileSync(fixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: [
+      {
+        domain: "doctorCompat",
+        receiptId: "fixture-doctor-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "denied_without_approval",
+        command: "hermes doctor --fix --dry-run",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+      {
+        domain: "sandboxPermissions",
+        receiptId: "fixture-sandbox-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "dry_run_only",
+        command: "hermes security audit --dry-run",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+    ],
+  }));
+
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "support",
+    "--approval-gate-fixture",
+    fixturePath,
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      evidenceRequirements?: Array<{ id?: string }>;
+      evidenceReadinessSummary?: {
+        approvalGateBlockedCount?: number;
+        approvalGateRequirementIds?: string[];
+        nextRequiredActions?: string[];
+      };
+      domains?: Array<{
+        domain?: string;
+        approvalGateFixtureStatus?: string;
+        approvalGateFixtureReceipt?: { receiptId?: string; plaintextSecretLeak?: boolean; mutationWithoutApproval?: boolean };
+        implementedFacets?: string[];
+        blockingFacets?: string[];
+      }>;
+      closureChecklist?: Array<{ domain?: string; closureStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
+      finalPromotionReview?: { requiredForPromotion?: string[] };
+      finalSupportClaimDecision?: { blockedPromotionClaims?: string[] };
+    };
+  };
+
+  assert.equal(result.code, 2);
+  assert.equal(payload.data?.evidenceRequirements?.some((requirement) => requirement.id === "hermes.doctorCompat.approval_gate_evidence"), false);
+  assert.equal(payload.data?.evidenceRequirements?.some((requirement) => requirement.id === "hermes.sandboxPermissions.approval_gate_evidence"), false);
+  assert.equal(payload.data?.evidenceReadinessSummary?.approvalGateBlockedCount, 0);
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.approvalGateRequirementIds, []);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), false);
+  assert.equal(payload.data?.finalPromotionReview?.requiredForPromotion?.includes("approval_gate_fixture_and_redacted_receipt"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), false);
+
+  const doctorDomain = payload.data?.domains?.find((domain) => domain.domain === "doctorCompat");
+  const sandboxDomain = payload.data?.domains?.find((domain) => domain.domain === "sandboxPermissions");
+  assert.equal(doctorDomain?.approvalGateFixtureStatus, "attached");
+  assert.equal(sandboxDomain?.approvalGateFixtureStatus, "attached");
+  assert.equal(doctorDomain?.approvalGateFixtureReceipt?.receiptId, "fixture-doctor-denial");
+  assert.equal(sandboxDomain?.approvalGateFixtureReceipt?.receiptId, "fixture-sandbox-denial");
+  assert.equal(doctorDomain?.approvalGateFixtureReceipt?.plaintextSecretLeak, false);
+  assert.equal(sandboxDomain?.approvalGateFixtureReceipt?.mutationWithoutApproval, false);
+  assert.equal(doctorDomain?.implementedFacets?.includes("approval_gate_fixture_receipt"), true);
+  assert.equal(sandboxDomain?.blockingFacets?.includes("approval_gate_contract"), false);
+
+  const doctorClosure = payload.data?.closureChecklist?.find((item) => item.domain === "doctorCompat");
+  const sandboxClosure = payload.data?.closureChecklist?.find((item) => item.domain === "sandboxPermissions");
+  assert.equal(doctorClosure?.closureStatus, "implemented_or_projected");
+  assert.equal(sandboxClosure?.closureStatus, "implemented_or_projected");
+  assert.equal(doctorClosure?.implementedFacets?.includes("approval_gate_fixture_receipt"), true);
+  assert.equal(sandboxClosure?.blockingFacets?.includes("approval_gate_contract"), false);
 });

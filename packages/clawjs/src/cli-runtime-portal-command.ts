@@ -388,6 +388,7 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
     secretRef: input.flags["secret-ref"],
     envKey: input.flags["env-key"],
     permissionMode: input.flags.sandbox,
+    approvalGateFixturePath: input.flags["approval-gate-fixture"],
     gateway: {
       url: input.flags["gateway-url"],
       token: input.flags["gateway-token"],
@@ -395,6 +396,69 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
       configPath: input.flags["gateway-config"],
     },
     env: process.env,
+  };
+}
+
+function readApprovalGateFixture(runtimeOptions?) {
+  const fixturePath = runtimeOptions?.approvalGateFixturePath;
+  if (typeof fixturePath !== "string" || fixturePath.trim().length === 0) return null;
+  try {
+    const stat = fs.statSync(fixturePath);
+    if (!stat.isFile() || stat.size > 64 * 1024) {
+      return {
+        status: "invalid",
+        path: fixturePath,
+        reason: stat.isFile() ? "fixture_too_large" : "not_a_file",
+      };
+    }
+    const parsed = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+    return {
+      status: "loaded",
+      path: fixturePath,
+      parsed,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      path: fixturePath,
+      reason: "unreadable_or_invalid_json",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function approvalGateReceiptFor(runtimeId: RuntimeAdapterId, domain: string, runtimeOptions?) {
+  if (runtimeId !== "hermes") return null;
+  if (domain !== "doctorCompat" && domain !== "sandboxPermissions") return null;
+  const fixture = readApprovalGateFixture(runtimeOptions);
+  if (!fixture || fixture.status !== "loaded") return null;
+  const parsed = fixture.parsed;
+  if (parsed?.runtimeId && parsed.runtimeId !== runtimeId) return null;
+  const receipts = Array.isArray(parsed?.receipts) ? parsed.receipts : [];
+  const receipt = receipts.find((entry) => entry?.domain === domain);
+  if (!receipt) return null;
+  const redacted = receipt.redacted === true;
+  const plaintextSecretLeak = receipt.plaintextSecretLeak === true;
+  const mutationWithoutApproval = receipt.mutationWithoutApproval === true
+    || (receipt.approved !== true && receipt.mutationPerformed === true);
+  const fixtureReceipt = receipt.receiptType === "approval_gate_fixture_receipt"
+    || receipt.receiptId
+    || receipt.status === "denied_without_approval"
+    || receipt.status === "dry_run_only";
+  if (!redacted || plaintextSecretLeak || mutationWithoutApproval || !fixtureReceipt) return null;
+  return {
+    domain,
+    receiptId: receipt.receiptId ?? `${runtimeId}.${domain}.approval_gate_fixture_receipt`,
+    receiptType: "approval_gate_fixture_receipt",
+    status: receipt.status ?? "fixture_attached",
+    command: receipt.command ?? `claw runtime ${runtimeId} domain ${domain} --json`,
+    approved: receipt.approved === true,
+    mutationPerformed: receipt.mutationPerformed === true,
+    mutationWithoutApproval: false,
+    plaintextSecretLeak: false,
+    redacted: true,
+    evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
+    source: "approval-gate-fixture",
   };
 }
 
@@ -1088,11 +1152,12 @@ function externalDomainEvidenceArtifactTemplate(runtimeId: RuntimeAdapterId, dom
   };
 }
 
-function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, policy) {
+function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, policy, runtimeOptions?) {
   const requirements = [];
   const validation = String(policy.validation ?? "");
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
   const approvalGatedWritePolicy = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
+  const approvalGateReceipt = approvalGateReceiptFor(runtimeId, domain, runtimeOptions);
   if (validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) {
     const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
     const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
@@ -1179,7 +1244,7 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
       doNotRunWithoutApproval: false,
     });
   }
-  if (approvalGatedWritePolicy) {
+  if (approvalGatedWritePolicy && !approvalGateReceipt) {
     const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
     const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
     requirements.push({
@@ -1232,11 +1297,12 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
   return requirements;
 }
 
-function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: string) {
+function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: string, runtimeOptions?) {
   const policy = domainPolicy(runtimeId, domain);
-  const evidenceRequirements = evidenceRequirementsFor(runtimeId, domain, policy);
+  const evidenceRequirements = evidenceRequirementsFor(runtimeId, domain, policy, runtimeOptions);
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
   const writeBackApprovalGated = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
+  const approvalGateFixtureReceipt = approvalGateReceiptFor(runtimeId, domain, runtimeOptions);
   return {
     ...policy,
     authority: domainAuthority(domain),
@@ -1245,6 +1311,12 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
       && writeBackPolicy !== "external_pending_live_accounts"
       && !writeBackApprovalGated,
     writeBackApprovalGated,
+    approvalGateFixtureStatus: writeBackApprovalGated
+      ? approvalGateFixtureReceipt
+        ? "attached"
+        : "missing"
+      : "not_required",
+    approvalGateFixtureReceipt,
     externalPending: String(policy.validation).includes("external_pending")
       || writeBackPolicy.includes("external_pending"),
     evidenceRequirements,
@@ -1256,7 +1328,7 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
   };
 }
 
-function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId) {
+function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId, runtimeOptions?) {
   const support = RUNTIME_ECOSYSTEM_SUPPORT[runtimeId] ?? {
     supportStage: "dev_only",
     recommended: false,
@@ -1280,7 +1352,7 @@ function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId) {
     .filter(([, policy]) => String(policy?.validation ?? "").includes("external_pending")
       || String(policy?.writeBackPolicy ?? "").includes("external_pending"))
     .map(([domain]) => domain);
-  const evidenceRequirements = Object.entries(policies).flatMap(([domain, policy]) => evidenceRequirementsFor(runtimeId, domain, policy));
+  const evidenceRequirements = Object.entries(policies).flatMap(([domain, policy]) => evidenceRequirementsFor(runtimeId, domain, policy, runtimeOptions));
   return {
     scope: "runtime_ecosystem",
     ...support,
@@ -1319,6 +1391,7 @@ function runtimeDomainImplementedFacets(audit, sessionActions = []) {
   if (status === "ready") facets.push("ready_runtime_projection");
   if (status === "degraded") facets.push("degraded_runtime_projection");
   if (audit.writeBackAllowed === true) facets.push("runtime_write_policy_allowed");
+  if (audit.approvalGateFixtureStatus === "attached") facets.push("approval_gate_fixture_receipt");
   if (audit.domain === "sessions") {
     const readActions = new Set(["list", "preview", "resolve", "history"]);
     const implementedReadActions = sessionActions
@@ -1548,7 +1621,7 @@ function runtimeSyncPolicySummary(domainAudits, payload) {
   };
 }
 
-function buildPortalSupport(adapter, runtimeId: RuntimeAdapterId) {
+function buildPortalSupport(adapter, runtimeId: RuntimeAdapterId, runtimeOptions?) {
   const adapterSupport = {
     scope: "runtime_adapter",
     stability: adapter.stability,
@@ -1558,7 +1631,7 @@ function buildPortalSupport(adapter, runtimeId: RuntimeAdapterId) {
   return {
     ...adapterSupport,
     adapter: adapterSupport,
-    ecosystem: buildRuntimeEcosystemSupport(runtimeId),
+    ecosystem: buildRuntimeEcosystemSupport(runtimeId, runtimeOptions),
   };
 }
 
@@ -1729,6 +1802,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       writeBackPolicy: domain.writeBackPolicy,
       writeBackAllowed: domain.writeBackAllowed,
       writeBackApprovalGated: domain.writeBackApprovalGated,
+      approvalGateFixtureStatus: domain.approvalGateFixtureStatus,
+      approvalGateFixtureReceipt: domain.approvalGateFixtureReceipt,
       validation: domain.validation,
       externalPending: domain.externalPending,
       persistence: domain.persistence,
@@ -2358,7 +2433,7 @@ function listNativeSessions(runtimeId: RuntimeAdapterId, sessionOrPath, limit = 
 function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspace, session, scopeDomain = "all", runtimeOptions?) {
   const includeSessions = scopeDomain === "all" || scopeDomain === "sessions";
   const sessions = includeSessions ? listNativeSessions(runtimeId, session) : [];
-  const sessionsSupportContract = buildSupportContract(runtimeId, status, "sessions");
+  const sessionsSupportContract = buildSupportContract(runtimeId, status, "sessions", runtimeOptions);
   return {
     sessions: {
       session,
@@ -2370,33 +2445,33 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       actionPolicy: sessionActionPolicy(runtimeId, session, sessionsSupportContract, runtimeOptions),
       overlayState: runtimeSessionOverlayState(runtimeId, sessions),
     },
-    skills: { skills: resources.skills ?? [], supportContract: buildSupportContract(runtimeId, status, "skills") },
-    memory: { memory: resources.memory ?? [], supportContract: buildSupportContract(runtimeId, status, "memory") },
-    channels: { channels: resources.channels ?? [], supportContract: buildSupportContract(runtimeId, status, "channels") },
-    providers: { providers: resources.providers ?? [], supportContract: buildSupportContract(runtimeId, status, "providers") },
-    auth: { auth: resources.auth ?? null, authState: resources.authState ?? null, resources: resources.authResources ?? [], supportContract: buildSupportContract(runtimeId, status, "auth") },
-    models: { models: resources.models ?? [], defaultModel: resources.defaultModel ?? null, supportContract: buildSupportContract(runtimeId, status, "models") },
-    scheduler: { schedulers: resources.schedulers ?? [], supportContract: buildSupportContract(runtimeId, status, "scheduler") },
-    plugins: { plugins: resources.plugins ?? [], status: resources.status ?? status.capabilityMap?.plugins ?? null, supportContract: buildSupportContract(runtimeId, status, "plugins") },
+    skills: { skills: resources.skills ?? [], supportContract: buildSupportContract(runtimeId, status, "skills", runtimeOptions) },
+    memory: { memory: resources.memory ?? [], supportContract: buildSupportContract(runtimeId, status, "memory", runtimeOptions) },
+    channels: { channels: resources.channels ?? [], supportContract: buildSupportContract(runtimeId, status, "channels", runtimeOptions) },
+    providers: { providers: resources.providers ?? [], supportContract: buildSupportContract(runtimeId, status, "providers", runtimeOptions) },
+    auth: { auth: resources.auth ?? null, authState: resources.authState ?? null, resources: resources.authResources ?? [], supportContract: buildSupportContract(runtimeId, status, "auth", runtimeOptions) },
+    models: { models: resources.models ?? [], defaultModel: resources.defaultModel ?? null, supportContract: buildSupportContract(runtimeId, status, "models", runtimeOptions) },
+    scheduler: { schedulers: resources.schedulers ?? [], supportContract: buildSupportContract(runtimeId, status, "scheduler", runtimeOptions) },
+    plugins: { plugins: resources.plugins ?? [], status: resources.status ?? status.capabilityMap?.plugins ?? null, supportContract: buildSupportContract(runtimeId, status, "plugins", runtimeOptions) },
     gateway: {
       gatewayAvailable: status.gatewayAvailable,
       resources: buildGatewayOperationalResources(runtimeId, status, runtimeOptions, session),
       capability: domainCapability(status, "gateway") ?? null,
       tuiGatewayTransportPolicy: runtimeId === "hermes" ? hermesTuiGatewayTransportPolicy(runtimeOptions) : null,
-      supportContract: buildSupportContract(runtimeId, status, "gateway"),
+      supportContract: buildSupportContract(runtimeId, status, "gateway", runtimeOptions),
     },
     doctorCompat: {
       runtimeVersion: status.version,
       diagnostics: status.diagnostics ?? {},
       resources: buildDoctorOperationalResources(runtimeId, status),
       capability: domainCapability(status, "doctorCompat") ?? null,
-      supportContract: buildSupportContract(runtimeId, status, "doctorCompat"),
+      supportContract: buildSupportContract(runtimeId, status, "doctorCompat", runtimeOptions),
     },
     sandboxPermissions: {
       permissionMode: runtimeOptions?.permissionMode ?? "read-only",
       resources: buildSandboxOperationalResources(runtimeId, status, runtimeOptions),
       capability: domainCapability(status, "sandboxPermissions") ?? null,
-      supportContract: buildSupportContract(runtimeId, status, "sandboxPermissions"),
+      supportContract: buildSupportContract(runtimeId, status, "sandboxPermissions", runtimeOptions),
     },
     configuration: {
       canonicalPaths: workspace.canonicalPaths,
@@ -2409,7 +2484,7 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       resources: resources.configurationResources ?? [],
       redactionPolicy: "redacted_paths_and_presence_only",
       capability: domainCapability(status, "configuration") ?? null,
-      supportContract: buildSupportContract(runtimeId, status, "configuration"),
+      supportContract: buildSupportContract(runtimeId, status, "configuration", runtimeOptions),
     },
   };
 }
@@ -3946,10 +4021,10 @@ function domainCount(domain: string, data) {
   return undefined;
 }
 
-function domainRows(runtimeId: RuntimeAdapterId, status, domainData) {
+function domainRows(runtimeId: RuntimeAdapterId, status, domainData, runtimeOptions?) {
   return RUNTIME_PORTAL_DOMAIN_ORDER.map((domain) => {
     const capability = domainCapability(status, domain);
-    const supportContract = buildSupportContract(runtimeId, status, domain);
+    const supportContract = buildSupportContract(runtimeId, status, domain, runtimeOptions);
     return {
       domain,
       supported: capability?.supported ?? (domain === "workspace" || domain === "sessions" ? true : undefined),
@@ -3966,6 +4041,8 @@ function domainRows(runtimeId: RuntimeAdapterId, status, domainData) {
       writeBackPolicy: supportContract.writeBackPolicy,
       writeBackAllowed: supportContract.writeBackAllowed,
       writeBackApprovalGated: supportContract.writeBackApprovalGated,
+      approvalGateFixtureStatus: supportContract.approvalGateFixtureStatus,
+      approvalGateFixtureReceipt: supportContract.approvalGateFixtureReceipt,
       validation: supportContract.validation,
       externalPending: supportContract.externalPending,
       evidenceRequirements: supportContract.evidenceRequirements,
@@ -4116,7 +4193,7 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
   const payload = {
     runtimeId,
     runtimeName: adapter.runtimeName,
-    support: buildPortalSupport(adapter, runtimeId),
+    support: buildPortalSupport(adapter, runtimeId, runtimeOptions),
     status,
     session,
     workspace,
@@ -4128,7 +4205,7 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
   if (requestedResourceDomain === "all" || requestedResourceDomain === "sessions") {
     await attachOpenClawSessionInventory(runtimeId, claw, payload, Math.max(1, Number(input.flags.limit ?? 20)));
   }
-  payload.domains = domainRows(runtimeId, status, payload.domainData);
+  payload.domains = domainRows(runtimeId, status, payload.domainData, runtimeOptions);
   payload.supportAudit = buildSupportAudit(runtimeId, payload);
 
   if (operation === "summary" || operation === "domains") {
