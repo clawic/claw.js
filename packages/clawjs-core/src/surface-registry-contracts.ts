@@ -1605,6 +1605,42 @@ export const clawPortContractCatalog = defineStableCatalogFromEntries(Object.ent
 })]));
 
 export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
+  about: {
+    concept: "Human and agent orientation command that explains the Claw CLI purpose, capability map, and safe entry commands without invoking domain actions.",
+    authorizingDecision: {
+      ref: "ADR 0018: CLI action intent registry",
+      path: "docs/adr/0018-cli-action-intent-registry.md",
+    },
+    completingSurface: {
+      human: "docs/cli.md getting-started guidance and claw about help text",
+      programmatic: "claw about --json",
+    },
+    nonInference: "This command is explanatory only; it does not create work items, grant authority, or imply support for commands outside the registered CLI surface.",
+  },
+  router: {
+    concept: "Deterministic keyword router that maps free-form intent terms to registered dedicated CLI commands, examples, and anti-patterns.",
+    authorizingDecision: {
+      ref: "ADR 0018: CLI action intent registry",
+      path: "docs/adr/0018-cli-action-intent-registry.md",
+    },
+    completingSurface: {
+      human: "docs/cli.md router guidance and claw router help text",
+      programmatic: "claw router <keyword> [keyword ...] --json",
+    },
+    nonInference: "Router matches are advisory command-selection evidence only; they do not execute matched commands or authorize unknown aliases.",
+  },
+  source: {
+    concept: "Source-mode inspection command that reports whether the CLI is operating from trusted local source or package mode.",
+    authorizingDecision: {
+      ref: "ADR 0003: Source file boundaries",
+      path: "docs/adr/0003-source-file-boundaries.md",
+    },
+    completingSurface: {
+      human: "docs/cli.md source mode section",
+      programmatic: "claw source status --json",
+    },
+    nonInference: "Source mode reporting does not make local code trusted by itself and does not bypass package, signing, or release validation.",
+  },
   "agent-resource": {
     concept: "Shared local coordination ledger CLI for agent leases, pending demands, reusable test results, repair stewardship, and bypass audit receipts.",
     authorizingDecision: {
@@ -1655,31 +1691,62 @@ export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>>
   },
 };
 
+export const cliCommandResourceContracts: Partial<Record<string, ClawResourceContract>> = {
+  about: {
+    startup: "Runs only when invoked from the CLI; importing ClawJS does not run the about command.",
+    idle: "No daemon, watcher, or background task is started.",
+    memory: "Reads bounded generated CLI registry metadata and static about sections only.",
+    streaming: "No stream is opened; output is a bounded text or JSON response.",
+    storage: "Does not read or write persistent storage.",
+    hotPath: "Base CLI discovery path only; it must remain within the CLI base import budget.",
+    scale: "Output is bounded by the fixed CLI capability map and entry-command list.",
+    validation: "packages/clawjs/src/cli-about-command.test.ts",
+  },
+  router: {
+    startup: "Runs only when invoked from the CLI; importing ClawJS does not execute router matching.",
+    idle: "No daemon, watcher, or background task is started.",
+    memory: "Reads bounded generated keyword-router concepts and CLI registry metadata.",
+    streaming: "No stream is opened; output is a bounded list of ranked matches.",
+    storage: "Does not read or write persistent storage.",
+    hotPath: "Base CLI discovery path only; keyword matching must remain deterministic and lightweight.",
+    scale: "Search is bounded by the generated keyword concept list and requested limit.",
+    validation: "packages/clawjs/src/cli-router-command.test.ts",
+  },
+  source: {
+    startup: "Runs only when invoked from the CLI; importing ClawJS does not inspect source mode.",
+    idle: "No daemon, watcher, or background task is started.",
+    memory: "Reads bounded process and package/source metadata needed for source-mode reporting.",
+    streaming: "No stream is opened; output is a bounded text or JSON status response.",
+    storage: "Does not mutate storage; reports source/package state only.",
+    hotPath: "Base CLI diagnostics path only; it must not load optional domain packs.",
+    scale: "Work is bounded to local source-mode detection and static status fields.",
+    validation: "scripts/verify-source-mode.mjs",
+  },
+  "agent-resource": {
+    startup: "Runs only when invoked from the CLI; importing ClawJS does not open the coordination ledger.",
+    idle: "No daemon or background wait loop is started by the command.",
+    memory: "Each invocation loads bounded ledger rows for the requested acquire/status/reap operation.",
+    streaming: "No stream is exposed; heartbeat is an explicit command and JSON heartbeat file update.",
+    storage: "Writes agent intents, leases, demands, work results, repair stewardship, and bypass audit rows to the registered coordination SQLite database.",
+    hotPath: "Agent automation/control-plane path only; user-facing app hot paths must not depend on it.",
+    scale: "Indexed lease and demand lookups are designed for concurrent local agents and bounded recent status output.",
+    validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
+  },
+  test: {
+    startup: "Runs only when invoked from the CLI and reads the repo manifest on demand.",
+    idle: "No background runner is created; busy checks record pending demand and return.",
+    memory: "Plans and selected checks are bounded to the requested repo/lane/check IDs.",
+    streaming: "The test facade does not stream; underlying test commands own their stdout/stderr.",
+    storage: "Uses the shared coordination ledger for leases and reusable work results instead of separate state.",
+    hotPath: "Validation path only; application runtime must not synchronously call it.",
+    scale: "Designed for repo-local manifests with targeted lanes and result fingerprint reuse.",
+    validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
+  },
+};
+
 export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliCommands.map((command) => {
   const surfaceNarrative = cliCommandNarratives[command];
-  const resourceContract = command === "agent-resource"
-    ? {
-        startup: "Runs only when invoked from the CLI; importing ClawJS does not open the coordination ledger.",
-        idle: "No daemon or background wait loop is started by the command.",
-        memory: "Each invocation loads bounded ledger rows for the requested acquire/status/reap operation.",
-        streaming: "No stream is exposed; heartbeat is an explicit command and JSON heartbeat file update.",
-        storage: "Writes agent intents, leases, demands, work results, repair stewardship, and bypass audit rows to the registered coordination SQLite database.",
-        hotPath: "Agent automation/control-plane path only; user-facing app hot paths must not depend on it.",
-        scale: "Indexed lease and demand lookups are designed for concurrent local agents and bounded recent status output.",
-        validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
-      }
-    : command === "test"
-      ? {
-          startup: "Runs only when invoked from the CLI and reads the repo manifest on demand.",
-          idle: "No background runner is created; busy checks record pending demand and return.",
-          memory: "Plans and selected checks are bounded to the requested repo/lane/check IDs.",
-          streaming: "The test facade does not stream; underlying test commands own their stdout/stderr.",
-          storage: "Uses the shared coordination ledger for leases and reusable work results instead of separate state.",
-          hotPath: "Validation path only; application runtime must not synchronously call it.",
-          scale: "Designed for repo-local manifests with targeted lanes and result fingerprint reuse.",
-          validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
-        }
-      : undefined;
+  const resourceContract = cliCommandResourceContracts[command];
   return [command, clawStableContractCatalogEntry({
     ...contractDefaults,
     id: `claw.cli.command.${command}`,
