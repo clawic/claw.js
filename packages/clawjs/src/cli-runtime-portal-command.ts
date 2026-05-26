@@ -594,6 +594,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       kind: session?.transport?.kind ?? "gateway",
       enabled: Boolean(session?.supportsGateway),
       summary: status.gatewayAvailable ? "Gateway endpoint configured." : "Gateway endpoint unavailable or not configured.",
+      nativeIdentifier: { name: "gatewayStatusId" },
       limitations: capability?.limitations ?? [],
       attributes: [
         `runtime: ${runtimeId}`,
@@ -617,6 +618,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       path: gatewayOptions.configPath ?? locations.gatewayConfigPath,
       enabled: Boolean(gatewayOptions.url || gatewayOptions.port || gatewayOptions.configPath || locations.gatewayConfigPath),
       summary: gatewayOptions.url ? "Gateway endpoint configured; credential value is not exposed." : "Gateway configuration path projected.",
+      nativeIdentifier: { name: "gatewayConfigurationId" },
       limitations: [],
       attributes: [
         `url configured: ${boolLabel(Boolean(gatewayOptions.url))}`,
@@ -642,6 +644,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       summary: transportPolicy.loopbackConfigured
         ? "Loopback fixture transport is configured; production transport remains blocked."
         : "Production TUI Gateway transport remains blocked until lifecycle policy and evidence exist.",
+      nativeIdentifier: { name: "transportPolicyId" },
       limitations: [
         transportPolicy.productionTransportStatus,
         transportPolicy.lifecycleStatus,
@@ -678,6 +681,7 @@ function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
       kind: capability?.strategy ?? "diagnostics",
       enabled: Boolean(capability?.supported),
       summary: lastError ?? status.version ?? "Runtime diagnostics available.",
+      nativeIdentifier: { name: "doctorStatusId" },
       limitations: capability?.limitations ?? [],
       attributes: [
         `runtime: ${runtimeId}`,
@@ -705,6 +709,7 @@ function buildSandboxOperationalResources(runtimeId: RuntimeAdapterId, status, r
       kind: capability?.strategy ?? "approval_policy",
       enabled: Boolean(capability?.supported),
       summary: "No runtime or host permission is changed by the runtime lens.",
+      nativeIdentifier: { name: "sandboxPolicyId" },
       limitations: capability?.limitations ?? [],
       attributes: [
         `runtime: ${runtimeId}`,
@@ -851,6 +856,7 @@ function hermesPolicyResource(domain: string, status, input: {
   attributes?: string[];
   limitations?: string[];
   enabled?: boolean;
+  nativeIdentifierName?: string;
 }) {
   const policy = domainPolicy("hermes", domain);
   const capability = domainCapability(status, domain);
@@ -863,6 +869,7 @@ function hermesPolicyResource(domain: string, status, input: {
     path: input.path,
     enabled: input.enabled ?? Boolean(capability?.supported),
     summary: input.summary,
+    nativeIdentifier: { name: input.nativeIdentifierName ?? "policyId" },
     limitations: input.limitations ?? [
       `write back: ${policy.writeBackPolicy}`,
       `validation: ${policy.validation}`,
@@ -2638,6 +2645,10 @@ function listHermesSqliteSessions(runtimeId: RuntimeAdapterId, session, limit = 
         path: session.sessionDatabasePath,
         table: "sessions",
       },
+      limitations: [
+        `write back: ${domainPolicy(runtimeId, "sessions").writeBackPolicy}`,
+        `validation: ${domainPolicy(runtimeId, "sessions").validation}`,
+      ],
     }));
     return withLocalPinOverlay(runtimeId, sessions);
   } catch {
@@ -2692,11 +2703,16 @@ function listNativeSessions(runtimeId: RuntimeAdapterId, sessionOrPath, limit = 
         updatedAt: stat.mtime.toISOString(),
         sizeBytes: stat.size,
         status: "projected",
+        nativeIdentifier: { name: "sessionPathId" },
         provenance: {
           source: "runtime-session-store",
           runtimeId,
           path: fullPath,
         },
+        limitations: [
+          `write back: ${domainPolicy(runtimeId, "sessions").writeBackPolicy}`,
+          `validation: ${domainPolicy(runtimeId, "sessions").validation}`,
+        ],
       });
     }
   }
