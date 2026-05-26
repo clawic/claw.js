@@ -1786,12 +1786,15 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
   const blockedPromotionClaims = [
     ...(supportComplete ? [] : ["recommended", "production", "native_parity"]),
     ...(productBlockedRequirements.length > 0 ? ["write_back"] : []),
+    ...(externalPendingRequirements.length > 0 ? ["external_live_evidence"] : []),
+    ...(unresolvedNativeRequirements.length > 0 || productBlockedRequirements.length > 0 ? ["upstream_native_contracts"] : []),
   ];
   const finalSupportClaimDecision = {
     status: supportComplete ? "promoted" : "not_promoted",
     decision: supportComplete
       ? "promote_runtime_ecosystem_claims"
       : "keep_current_lowered_runtime_ecosystem_claim",
+    claimDisposition: finalPromotionReview.claimDisposition,
     effectiveSupportStage: ecosystem.supportStage,
     recommended: ecosystem.recommended === true && supportComplete,
     production: ecosystem.production === true && supportComplete,
@@ -1803,6 +1806,9 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         : "ui_parity_not_claimed",
     blockedPromotionClaims,
     blockerClasses: Object.keys(byBlockerClass),
+    productBlockedByDecisionCount: productBlockedRequirements.length,
+    externalPendingCount: externalPendingRequirements.length,
+    unresolvedNativeRequirementCount: unresolvedNativeRequirements.length,
     productBlockedRequirementIds: productBlockedRequirements.map((requirement) => requirement.id),
     externalPendingRequirementIds: externalPendingRequirements.map((requirement) => requirement.id),
     unresolvedNativeRequirementIds: unresolvedNativeRequirements.map((requirement) => requirement.id),

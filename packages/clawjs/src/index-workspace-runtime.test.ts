@@ -1639,11 +1639,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         finalSupportClaimDecision?: {
           status?: string;
           decision?: string;
+          claimDisposition?: string;
           effectiveSupportStage?: string;
           recommended?: boolean;
           production?: boolean;
           uiParityDisposition?: string;
           blockedPromotionClaims?: string[];
+          productBlockedByDecisionCount?: number;
+          externalPendingCount?: number;
+          unresolvedNativeRequirementCount?: number;
           reentryPolicy?: string;
           safeDefault?: string;
           userVisibleStatus?: string;
@@ -1754,12 +1758,18 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.userVisibleStatus, "runtime_ecosystem_available_with_product_blocked_or_external_pending_claims");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.effectiveSupportStage, "dev_only");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.recommended, false);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.production, false);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.uiParityDisposition, "partial_lens_validated_not_full_native_parity");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("recommended"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.productBlockedByDecisionCount, hermesPayload.data.supportAudit?.finalPromotionReview?.productBlockedByDecisionCount);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.externalPendingCount, hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingCount);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.unresolvedNativeRequirementCount, hermesPayload.data.supportAudit?.finalPromotionReview?.unresolvedNativeRequirementCount);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.reentryPolicy, "use_evidenceReentryPackets_exactly_before_revisiting_claim");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.safeDefault, "keep_unpromoted_until_evidence_or_upstream_contract_changes");
   assert.equal(hermesPayload.data.commands?.resourceDomains?.length, manifest.requiredDomains.length);
@@ -2088,11 +2098,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       finalSupportClaimDecision?: {
         status?: string;
         decision?: string;
+        claimDisposition?: string;
         effectiveSupportStage?: string;
         recommended?: boolean;
         production?: boolean;
         uiParityDisposition?: string;
         blockedPromotionClaims?: string[];
+        productBlockedByDecisionCount?: number;
+        externalPendingCount?: number;
+        unresolvedNativeRequirementCount?: number;
         reentryPolicy?: string;
         safeDefault?: string;
         userVisibleStatus?: string;
@@ -2241,9 +2255,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("keep_lowered_claim_until_upstream_native_contracts_exist"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.effectiveSupportStage, "dev_only");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("native_parity"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.productBlockedByDecisionCount, hermesSupportPayload.data.finalPromotionReview?.productBlockedByDecisionCount);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.externalPendingCount, hermesSupportPayload.data.finalPromotionReview?.externalPendingCount);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.unresolvedNativeRequirementCount, hermesSupportPayload.data.finalPromotionReview?.unresolvedNativeRequirementCount);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.reentryPolicy, "use_evidenceReentryPackets_exactly_before_revisiting_claim");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.safeDefault, "keep_unpromoted_until_evidence_or_upstream_contract_changes");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.userVisibleStatus, "runtime_ecosystem_available_but_not_recommended_or_production");
