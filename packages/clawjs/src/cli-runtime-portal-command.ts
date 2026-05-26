@@ -2263,6 +2263,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
           ? "blocked_until_approval_gate_fixture"
         : isFixtureBackedTuiGatewayRequirement(requirement)
           ? "blocked_until_production_transport_lifecycle"
+        : isTuiGatewayWrapperBlockedRequirement(requirement)
+          ? "blocked_until_tui_gateway_wrapper_fixture"
         : isProductBlocked
           ? "blocked_until_upstream_contract"
           : "blocked_until_resolution",
