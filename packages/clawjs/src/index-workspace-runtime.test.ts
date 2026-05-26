@@ -1780,6 +1780,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           evidenceRequirementCount?: number;
         };
         evidenceRequirements?: Array<{ id: string; blockerClass: string; commandShape: string; approvalRequired: boolean }>;
+        evidenceReentryPackets?: Array<{
+          id: string;
+          requirementId?: string;
+          status?: string;
+          blockerClass?: string;
+          approvalRequired?: boolean;
+          exactCommand?: string;
+          safeDefault?: string;
+          supportResolution?: string;
+          officialMethod?: string;
+          productionTransportStatus?: string;
+          productionTransportCommandShape?: string;
+          doNotRunWithoutApproval?: boolean;
+        }>;
         domains?: Array<{ domain: string; evidenceRequirementIds?: string[]; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
         closureChecklist?: Array<{ domain: string; closureStatus: string; evidenceRequirementIds?: string[]; safeDefault?: string; nextAction?: string; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[]; projectionDisposition?: string }>;
         closureChecklistSummary?: Record<string, number>;
@@ -1994,6 +2008,37 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.unresolvedNativeRequirementCount, hermesPayload.data.supportAudit?.finalPromotionReview?.unresolvedNativeRequirementCount);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.reentryPolicy, "use_evidenceReentryPackets_exactly_before_revisiting_claim");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.safeDefault, "keep_unpromoted_until_evidence_or_upstream_contract_changes");
+  const hermesReentryPackets = hermesPayload.data.supportAudit?.evidenceReentryPackets ?? [];
+  const hermesReentryStatusCounts = new Map<string, number>();
+  for (const packet of hermesReentryPackets) {
+    hermesReentryStatusCounts.set(packet.status ?? "unknown", (hermesReentryStatusCounts.get(packet.status ?? "unknown") ?? 0) + 1);
+  }
+  const hermesReentryPacket = (id: string) => hermesReentryPackets.find((entry) => (entry.requirementId ?? entry.id) === id);
+  assert.equal(hermesReentryPackets.length, 22);
+  assert.equal(hermesReentryStatusCounts.get("approval_required"), 4);
+  assert.equal(hermesReentryStatusCounts.get("blocked_until_approval_gate_fixture"), 2);
+  assert.equal(hermesReentryStatusCounts.get("blocked_until_tui_gateway_wrapper_fixture"), 4);
+  assert.equal(hermesReentryStatusCounts.get("blocked_until_upstream_contract"), 12);
+  assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.blockerClass, "external_pending");
+  assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.approvalRequired, true);
+  assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.doNotRunWithoutApproval, true);
+  assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.exactCommand, "claw runtime hermes domain channels --json");
+  assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.safeDefault, "do_not_run_without_explicit_approval_and_redaction");
+  assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.supportResolution, "external_pending_not_product_blocked");
+  assert.equal(hermesReentryPacket("hermes.sandboxPermissions.approval_gate_evidence")?.status, "blocked_until_approval_gate_fixture");
+  assert.equal(hermesReentryPacket("hermes.sandboxPermissions.approval_gate_evidence")?.approvalRequired, true);
+  assert.equal(hermesReentryPacket("hermes.sandboxPermissions.approval_gate_evidence")?.doNotRunWithoutApproval, true);
+  assert.equal(hermesReentryPacket("hermes.sandboxPermissions.approval_gate_evidence")?.safeDefault, "do_not_run_without_approval_gate_fixture");
+  assert.equal(hermesReentryPacket("hermes.sessions.create.action_contract")?.status, "blocked_until_tui_gateway_wrapper_fixture");
+  assert.equal(hermesReentryPacket("hermes.sessions.create.action_contract")?.officialMethod, "session.create");
+  assert.equal(hermesReentryPacket("hermes.sessions.create.action_contract")?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+  assert.equal(hermesReentryPacket("hermes.sessions.create.action_contract")?.productionTransportCommandShape, "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
+  assert.equal(hermesReentryPacket("hermes.sessions.send.action_contract")?.officialMethod, "prompt.submit");
+  assert.equal(hermesReentryPacket("hermes.sessions.send.action_contract")?.doNotRunWithoutApproval, true);
+  assert.equal(hermesReentryPacket("hermes.sessions.pin.native_write_back_contract")?.exactCommand, "not_executable_until_official_runtime_pin_api_exists");
+  assert.equal(hermesReentryPacket("hermes.sessions.pin.native_write_back_contract")?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
+  assert.equal(hermesReentryPacket("hermes.sessions.unpin.native_write_back_contract")?.exactCommand, "not_executable_until_official_runtime_unpin_api_exists");
+  assert.equal(hermesReentryPacket("hermes.sessions.unpin.native_write_back_contract")?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
   assert.equal(hermesPayload.data.commands?.resourceDomains?.length, manifest.requiredDomains.length);
   assert.equal(hermesPayload.data.commands?.executableByClawCli?.find((entry) => entry.command === "runtime hermes support")?.writesRuntime, false);
   assert.equal(hermesPayload.data.commands?.executableByClawCli?.find((entry) => entry.command === "runtime hermes sessions inject --session-key <id> --message <text> --confirm-runtime-write")?.writesRuntime, false);
