@@ -371,6 +371,14 @@ function main() {
       if (!snapshot.sources?.includes("https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration")) {
         errors.push("Hermes official snapshot must cite Programmatic Integration before claiming TUI gateway session write/control contracts");
       }
+      for (const snippet of [
+        "officialTransportSurface: \"stdio_or_websocket_json_rpc\"",
+        "officialTransportClasses: [\"stdio_json_rpc\", \"websocket_json_rpc\"]",
+        "officialTransportSource: \"https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration\"",
+        "productionTransportBlocker: \"approval_required_for_non_loopback_endpoint_and_lifecycle_management\"",
+      ]) {
+        if (!runtimePortal.includes(snippet)) errors.push(`Hermes TUI Gateway transport policy missing current official transport guard: ${snippet}`);
+      }
       if (runtimePortal.includes("runtime-session-sqlite")) {
         for (const snippet of ["query_only = ON", "sqlite_with_gateway_transcripts", "sessionDatabasePath", "sessions", "messages"]) {
           if (!runtimePortal.includes(snippet)) errors.push(`Hermes SQLite session projection guard missing ${snippet}`);

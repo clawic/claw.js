@@ -2148,6 +2148,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.gateway?.resources?.find((entry) => entry.id === "gateway-status")?.limitations?.includes("gateway_endpoint_unavailable_or_not_configured"), true);
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.id, "hermes.tui_gateway.transport_lifecycle_policy");
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+  assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.officialTransportSurface, "stdio_or_websocket_json_rpc");
+  assert.deepEqual(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.officialTransportClasses, ["stdio_json_rpc", "websocket_json_rpc"]);
+  assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.officialTransportSource, "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration");
+  assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.productionTransportBlocker, "approval_required_for_non_loopback_endpoint_and_lifecycle_management");
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.lifecycleStatus, "external_user_managed_not_started_by_claw");
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.credentialPolicy, "no_credential_or_token_emission");
   assert.equal(hermesPayload.data.domainData.gateway?.resources?.some((entry) => entry.id === "tui-gateway-transport-policy" && entry.transportPolicy?.id === "hermes.tui_gateway.transport_lifecycle_policy"), true);
@@ -2271,6 +2275,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     if (resourceDomain === "gateway") {
       assert.equal(resourcePayload.data.data.resources?.some((entry) => entry.id === "gateway-status"), true);
       assert.equal(resourcePayload.data.data.tuiGatewayTransportPolicy?.protocol, "tui_gateway_json_rpc");
+      assert.equal(resourcePayload.data.data.tuiGatewayTransportPolicy?.officialTransportSurface, "stdio_or_websocket_json_rpc");
+      assert.equal(resourcePayload.data.data.tuiGatewayTransportPolicy?.productionTransportBlocker, "approval_required_for_non_loopback_endpoint_and_lifecycle_management");
       assert.equal(resourcePayload.data.data.tuiGatewayTransportPolicy?.mutationPolicy, "no_production_gateway_mutation_without_explicit_approval_and_contract");
       assert.equal(resourcePayload.data.data.resources?.some((entry) => entry.id === "tui-gateway-transport-policy" && entry.transportPolicy?.id === "hermes.tui_gateway.transport_lifecycle_policy"), true);
     }

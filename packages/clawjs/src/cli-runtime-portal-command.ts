@@ -694,8 +694,12 @@ function hermesTuiGatewayTransportPolicy(runtimeOptions?) {
   return {
     id: "hermes.tui_gateway.transport_lifecycle_policy",
     protocol: "tui_gateway_json_rpc",
+    officialTransportSurface: "stdio_or_websocket_json_rpc",
+    officialTransportClasses: ["stdio_json_rpc", "websocket_json_rpc"],
+    officialTransportSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
     fixtureTransport: "loopback_http_json_rpc_fixture",
     productionTransportStatus: "blocked_until_production_transport_lifecycle_policy",
+    productionTransportBlocker: "approval_required_for_non_loopback_endpoint_and_lifecycle_management",
     lifecycleStatus: "external_user_managed_not_started_by_claw",
     lifecycleOwner: "hermes_runtime_or_user",
     allowedEndpointClassesWithoutApproval: ["loopback_http_json_rpc_fixture"],

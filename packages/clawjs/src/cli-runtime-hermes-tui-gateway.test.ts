@@ -199,8 +199,12 @@ test("Hermes TUI gateway session actions require confirmation before contacting 
     assert.equal(payload.data.requiredFlag, "--confirm-runtime-write");
     assert.equal(payload.data.officialMethod, "prompt.submit");
     assert.equal(payload.data.transportPolicy?.id, "hermes.tui_gateway.transport_lifecycle_policy");
+    assert.equal(payload.data.transportPolicy?.officialTransportSurface, "stdio_or_websocket_json_rpc");
+    assert.deepEqual(payload.data.transportPolicy?.officialTransportClasses, ["stdio_json_rpc", "websocket_json_rpc"]);
+    assert.equal(payload.data.transportPolicy?.officialTransportSource, "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration");
     assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "loopback_http_json_rpc_fixture");
     assert.equal(payload.data.transportPolicy?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
+    assert.equal(payload.data.transportPolicy?.productionTransportBlocker, "approval_required_for_non_loopback_endpoint_and_lifecycle_management");
     assert.equal(payload.data.transportPolicy?.credentialPolicy, "no_credential_or_token_emission");
     assert.equal(gateway.requests.length, 0);
   } finally {
@@ -222,8 +226,12 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
 
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(exitCode), true);
     assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.id, "hermes.tui_gateway.transport_lifecycle_policy");
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.officialTransportSurface, "stdio_or_websocket_json_rpc");
+    assert.deepEqual(payload.data.domainData.gateway.tuiGatewayTransportPolicy.officialTransportClasses, ["stdio_json_rpc", "websocket_json_rpc"]);
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.officialTransportSource, "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration");
     assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.configuredEndpointClass, "loopback_http_json_rpc_fixture");
     assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.startupPolicy, "no_auto_start_stop_or_install_from_runtime_lens");
+    assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.productionTransportBlocker, "approval_required_for_non_loopback_endpoint_and_lifecycle_management");
     assert.equal(payload.data.domainData.gateway.tuiGatewayTransportPolicy.requiredEvidence.includes("approved_native_round_trip_evidence"), true);
     assert.equal(payload.data.domainData.gateway.resources.some((entry: { id?: string; transportPolicy?: { id?: string } }) => (
       entry.id === "tui-gateway-transport-policy"
@@ -313,7 +321,9 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
       ...common,
     ]);
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(send.exitCode), true);
-    assert.equal(send.payload.data.status, "ok");
+    assert.equal(send.payload.data.status, "partial");
+    assert.equal(send.payload.data.roundTripVerificationStatus, "unavailable_no_sqlite_history");
+    assert.equal(send.payload.data.claimEffect, "does_not_satisfy_native_session_send_parity");
     assert.equal(send.payload.data.writesRuntime, true);
     assert.equal(send.payload.data.officialMethod, "prompt.submit");
     assert.equal(send.payload.data.transportPolicy?.configuredEndpointClass, "loopback_http_json_rpc_fixture");
@@ -326,7 +336,9 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
       ...common,
     ]);
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(inject.exitCode), true);
-    assert.equal(inject.payload.data.status, "ok");
+    assert.equal(inject.payload.data.status, "partial");
+    assert.equal(inject.payload.data.roundTripVerificationStatus, "unavailable_no_sqlite_history");
+    assert.equal(inject.payload.data.claimEffect, "does_not_satisfy_native_session_inject_parity");
     assert.equal(inject.payload.data.officialMethod, "session.steer");
 
     const abort = await runHermesAction([
@@ -335,7 +347,9 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
       ...common,
     ]);
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(abort.exitCode), true);
-    assert.equal(abort.payload.data.status, "ok");
+    assert.equal(abort.payload.data.status, "partial");
+    assert.equal(abort.payload.data.roundTripVerificationStatus, "not_found");
+    assert.equal(abort.payload.data.claimEffect, "does_not_satisfy_native_session_abort_parity");
     assert.equal(abort.payload.data.officialMethod, "session.interrupt");
 
     const create = await runHermesAction([
@@ -344,7 +358,9 @@ test("Hermes TUI gateway session actions post fixture-backed JSON-RPC when confi
       ...common,
     ]);
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(create.exitCode), true);
-    assert.equal(create.payload.data.status, "ok");
+    assert.equal(create.payload.data.status, "partial");
+    assert.equal(create.payload.data.roundTripVerificationStatus, "not_found");
+    assert.equal(create.payload.data.claimEffect, "does_not_satisfy_native_session_create_parity");
     assert.equal(create.payload.data.officialMethod, "session.create");
     assert.equal(create.payload.data.result.id, "created-tui-session");
     assert.equal(create.payload.data.result.titleApplied, true);
@@ -577,7 +593,8 @@ test("Hermes TUI gateway token is never emitted in runtime portal JSON", async (
     ]);
 
     assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(send.exitCode), true);
-    assert.equal(send.payload.data.status, "ok");
+    assert.equal(send.payload.data.status, "partial");
+    assert.equal(send.payload.data.roundTripVerificationStatus, "unavailable_no_sqlite_history");
     assert.equal(send.payload.data.transportPolicy?.credentialPolicy, "no_credential_or_token_emission");
     assert.equal(JSON.stringify(send.payload).includes(secretToken), false);
     assert.equal(JSON.stringify(gateway.requests).includes(secretToken), false);
@@ -641,5 +658,7 @@ test("Hermes confirmed TUI gateway writes reject production and credentialed end
     assert.equal(payload.data.officialMethod, "prompt.submit");
     assert.equal(payload.data.writesRuntime, false);
     assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "non_loopback_endpoint_rejected");
+    assert.equal(payload.data.transportPolicy?.officialTransportSurface, "stdio_or_websocket_json_rpc");
+    assert.equal(payload.data.transportPolicy?.productionTransportBlocker, "approval_required_for_non_loopback_endpoint_and_lifecycle_management");
   }
 });
