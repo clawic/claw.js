@@ -4817,6 +4817,8 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
   const scopedFlags = { ...input.flags, runtime: runtimeId };
   const claw = await input.createCliClaw(runtimeId, scopedFlags, input.workspaceRoot, input.appId, input.workspaceId, input.agentId);
 
+  const runtimeOptions = runtimeOptionsFromInput(input, runtimeId);
+
   if (operation === "commands") {
     writePayload(input, buildCommandMatrix(adapter, runtimeId), { runtimeId, operation });
     return CLI_EXIT_OK;
@@ -4836,13 +4838,13 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
       workspace: {
         managedFiles: await claw.workspace.listManagedFiles(),
         canonicalPaths: claw.workspace.canonicalPaths(),
+        runtimeLocations: adapter.resolveLocations(runtimeOptions),
         inspect: await claw.workspace.inspect(),
       },
     }, { runtimeId, operation });
     return CLI_EXIT_OK;
   }
 
-  const runtimeOptions = runtimeOptionsFromInput(input, runtimeId);
   const status = await claw.runtime.status();
   const session = getRuntimeSessionDescriptor(adapter, runtimeOptions);
   const workspace = {

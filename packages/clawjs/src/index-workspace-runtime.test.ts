@@ -1394,6 +1394,83 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesBinaryStatusPayload.data?.status?.cliAvailable, true);
   assert.equal(hermesBinaryStatusPayload.data?.status?.version, "hermes 9.9.9");
   assert.equal(hermesBinaryStatusPayload.data?.status?.capabilities?.scheduler, true);
+
+  const hermesOverrideWorkspacePath = path.join(workspaceRoot, "hermes-runtime-workspace-override");
+  const hermesOverrideConfigPath = path.join(workspaceRoot, "hermes-overrides", "project-hermes.yaml");
+  const hermesOverrideAuthStorePath = path.join(workspaceRoot, "hermes-overrides", "auth.json");
+  fs.mkdirSync(hermesOverrideWorkspacePath, { recursive: true });
+  fs.mkdirSync(path.dirname(hermesOverrideConfigPath), { recursive: true });
+  fs.writeFileSync(hermesOverrideConfigPath, [
+    "model: openai/override-model",
+    "provider: openai",
+    "channels:",
+    "  whatsapp:",
+    "    enabled: true",
+  ].join("\n"));
+  fs.writeFileSync(hermesOverrideAuthStorePath, JSON.stringify({
+    providers: {
+      openai: { apiKey: "OVERRIDE_AUTH_SECRET_1234567890" },
+    },
+  }, null, 2));
+
+  const hermesOverrideDomainsStdout = captureStream();
+  const hermesOverrideDomainsExit = await runCli([
+    "runtime", "hermes", "domains",
+    "--workspace", workspaceRoot,
+    "--home-dir", hermesHome,
+    "--runtime-workspace", hermesOverrideWorkspacePath,
+    "--config-path", hermesOverrideConfigPath,
+    "--auth-store", hermesOverrideAuthStorePath,
+    "--json",
+  ], {
+    stdout: hermesOverrideDomainsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesOverrideDomainsExit), true);
+  assert.equal(hermesOverrideDomainsStdout.getOutput().includes("OVERRIDE_AUTH_SECRET_1234567890"), false);
+  const hermesOverrideDomainsPayload = JSON.parse(hermesOverrideDomainsStdout.getOutput()) as {
+    data: {
+      status?: { diagnostics?: { locations?: { workspacePath?: string; configPath?: string; authStorePath?: string } } };
+      domainData?: {
+        models?: { defaultModel?: { modelId?: string } };
+        channels?: { channels?: Array<{ id?: string; status?: string }> };
+        auth?: { authState?: { providers?: Record<string, { source?: string; hasAuth?: boolean; maskedCredential?: string | null }> } };
+      };
+    };
+  };
+  assert.equal(hermesOverrideDomainsPayload.data.status?.diagnostics?.locations?.workspacePath, hermesOverrideWorkspacePath);
+  assert.equal(hermesOverrideDomainsPayload.data.status?.diagnostics?.locations?.configPath, hermesOverrideConfigPath);
+  assert.equal(hermesOverrideDomainsPayload.data.status?.diagnostics?.locations?.authStorePath, hermesOverrideAuthStorePath);
+  assert.equal(hermesOverrideDomainsPayload.data.domainData?.models?.defaultModel?.modelId, "openai/override-model");
+  assert.equal(hermesOverrideDomainsPayload.data.domainData?.channels?.channels?.some((entry) => entry.id === "whatsapp" && entry.status === "configured"), true);
+  assert.equal(hermesOverrideDomainsPayload.data.domainData?.auth?.authState?.providers?.openai?.source, "runtime");
+  assert.equal(hermesOverrideDomainsPayload.data.domainData?.auth?.authState?.providers?.openai?.hasAuth, true);
+  assert.equal(hermesOverrideDomainsPayload.data.domainData?.auth?.authState?.providers?.openai?.maskedCredential?.includes("OVERRIDE_AUTH_SECRET_1234567890"), false);
+
+  const hermesOverrideWorkspaceStdout = captureStream();
+  const hermesOverrideWorkspaceExit = await runCli([
+    "runtime", "hermes", "workspace",
+    "--workspace", workspaceRoot,
+    "--home-dir", hermesHome,
+    "--runtime-workspace", hermesOverrideWorkspacePath,
+    "--config-path", hermesOverrideConfigPath,
+    "--auth-store", hermesOverrideAuthStorePath,
+    "--json",
+  ], {
+    stdout: hermesOverrideWorkspaceStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  });
+  assert.equal(hermesOverrideWorkspaceExit, CLI_EXIT_OK);
+  const hermesOverrideWorkspacePayload = JSON.parse(hermesOverrideWorkspaceStdout.getOutput()) as {
+    data?: { workspace?: { runtimeLocations?: { homeDir?: string; workspacePath?: string; configPath?: string; authStorePath?: string } } };
+  };
+  assert.equal(hermesOverrideWorkspacePayload.data?.workspace?.runtimeLocations?.homeDir, hermesHome);
+  assert.equal(hermesOverrideWorkspacePayload.data?.workspace?.runtimeLocations?.workspacePath, hermesOverrideWorkspacePath);
+  assert.equal(hermesOverrideWorkspacePayload.data?.workspace?.runtimeLocations?.configPath, hermesOverrideConfigPath);
+  assert.equal(hermesOverrideWorkspacePayload.data?.workspace?.runtimeLocations?.authStorePath, hermesOverrideAuthStorePath);
+
   const hermesSupportClaimStdout = captureStream();
   const hermesSupportClaimExit = await runCli(["runtime", "hermes", "support", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesSupportClaimStdout.stream,
