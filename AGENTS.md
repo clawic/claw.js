@@ -121,6 +121,16 @@ test, inspect `claw test plan --lane <lane> --json`; if the runner reports
 `PENDING`, do not wait idly or launch the same lane yourself. Record the
 pending status and continue with non-conflicting work until the lease clears.
 
+## Operational Guidance
+
+For surface-level operational rules (which surface to use for which intent,
+read/write policies, hooks on session start or user turn), call
+`claw prompt session-start --tier=compact --json` at agent boot and
+`claw prompt for-action <command> <action> --json` before any write. These
+rules complement, never override, `CONSTITUTION.md` and `AGENTS.md`. Inspect
+the catalog with `claw inspect instructions --json`; manage local overrides
+with `claw instructions list|show|add|edit|rm|approve|propose|where`.
+
 ## Public Hygiene And Commits
 
 Public repositories must not contain maintainer-private paths, source session or

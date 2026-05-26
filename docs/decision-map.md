@@ -111,6 +111,12 @@ that this map and every ADR render with valid source and rendered links.
 | Pre-public owned versions are mutable coordination labels, not compatibility promises: package, schema, protocol, route-prefix, file-format, surface-id, release, tag, and new changeset bumps require explicit user approval until V1 is frozen. | [ADR 0025: Pre-V1 version governance](./adr/0025-pre-v1-version-governance.md), `packages/clawjs-core/src/version-governance.ts`, `docs/pre-v1-release-ledger.json` | `claw inspect version-governance --json` exposes the active policy. `scripts/version-governance-check.mjs` freezes changeset/package baselines, blocks owned version drift, gates release/version/publish scripts, and self-tests owned vs external version strings. |
 | Publishing, release tags, uploads, and real package publication are explicit release actions, never ordinary validation side effects. | Root `RELEASING.md`, [Git Workflow](./git-workflow.md), root `package.json` | `npm run publish:dry-run` is the pre-publish check. Real `release:publish`, tags, and uploads require explicit release approval. |
 
+## Operational instructions
+
+| Decision | Canonical document | Guardrail or validation |
+| --- | --- | --- |
+| Surface-level operational rules (which surface to use for which intent, read/write policies, hooks on session start, user turn, input-kind, and pre/post tool calls) ship as defaults in `@clawjs/core/catalogs` and as user/agent overrides in the `instructions` collection. Agents read them via `claw prompt <scope>` (tiered with budget and breadcrumbs) and the CLI emits a preamble on write-side commands when `CLAW_INSTRUCTIONS` is `preamble` or `strict`. They complement, never override, `CONSTITUTION.md` and `AGENTS.md`. | Root `AGENTS.md` (Operational Guidance section), `packages/clawjs-core/src/cli-instructions.ts`, `packages/clawjs-core/src/cli-instructions-seeds.ts`, `packages/clawjs-core/src/cli-instructions-render.ts`, `packages/clawjs/src/cli-instructions-command.ts`, `packages/clawjs/src/cli-prompt-command.ts`, `packages/clawjs/src/cli-instructions-runtime.ts` | `claw inspect instructions --json` enumerates seeds and overrides. `claw instructions where <command> [<action>] --json` previews applicable rules. Seed caps, validation, and merge order are covered by `cli-instructions.test.ts`, `cli-instructions-seeds.test.ts`, `cli-instructions-render.test.ts`, `cli-instructions-command.test.ts`, `cli-prompt-command.test.ts`, and `cli-instructions-runtime.test.ts`. |
+
 ## Known pending guardrails
 
 No known pending guardrails.
