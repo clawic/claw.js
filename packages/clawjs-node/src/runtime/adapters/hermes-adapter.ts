@@ -528,6 +528,8 @@ function hermesConfigFor(locations: { configPath?: string }): HermesConfigSnapsh
 const baseHermesAdapter = createSimpleRuntimeAdapter({
   id: "hermes",
   runtimeName: "Hermes Agent",
+  stability: "stable",
+  supportLevel: "production",
   binary: "hermes",
   workspaceFiles: HERMES_WORKSPACE_FILES,
   homeDirName: ".hermes",

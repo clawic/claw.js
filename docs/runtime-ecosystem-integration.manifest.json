@@ -221,7 +221,7 @@
     {
       "id": "hermes",
       "name": "Hermes Agent",
-      "supportStage": "dev_only",
+      "supportStage": "operable",
       "recommended": false,
       "production": false,
       "uiParityClaim": "partial_runtime_lens",
@@ -238,7 +238,7 @@
           "https://hermes-agent.nousresearch.com/docs/user-guide/security",
           "https://github.com/NousResearch/hermes-agent"
         ],
-        "driftPolicy": "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
+        "driftPolicy": "hermes_operable_non_default_until_final_production_recommended_policy"
       },
       "portal": {
         "shape": "claw runtime hermes <domain-or-command> ... --json",

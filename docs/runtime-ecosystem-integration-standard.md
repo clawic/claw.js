@@ -92,13 +92,15 @@ claw runtime <runtime-id> domain <domain> --json
 claw runtime <runtime-id> resources <domain> --json
 ```
 
-For Hermes, the current dev-only partial runtime lens keeps the complete 44-command JSON portal set guarded while support claims remain lowered. That
-set includes summary/status/commands/domains/support, domain and resource reads
-for every manifest domain, session/workspace reads, and session list/preview/resolve/history/send/inject/abort/create/pin/unpin/conflicts
+For Hermes, the current operable non-default runtime lens keeps the complete 44-command JSON portal set guarded while recommended and production ecosystem
+claims remain lowered. The adapter support metadata may be production-grade
+without making Hermes the recommended default runtime. That set includes
+summary/status/commands/domains/support, domain and resource reads for every
+manifest domain, session/workspace reads, and session list/preview/resolve/history/send/inject/abort/create/pin/unpin/conflicts
 envelopes. Guarded command coverage is not a promotion signal by itself:
 native write-back, production TUI Gateway transport, and approved live
 channel/provider/auth/model evidence still gate recommended, production, and
-native-parity claims.
+native-parity ecosystem claims.
 
 Hermes session reads have two valid fixture paths. A bounded local session
 store can satisfy list/preview/resolve/history without transcript content by
@@ -133,8 +135,8 @@ explicit and redacted: `--approval-gate-fixture`, `--live-evidence-fixture`,
 `--production-transport-fixture`, `--write-back-contract-fixture`, and
 `--native-contract-fixture`. Those fixtures remove their matching audit
 requirements, but they do not promote Hermes out of its manifest support stage;
-production/recommended claims still require an explicit ecosystem support
-policy change.
+production/recommended ecosystem claims still require an explicit ecosystem
+support policy change.
 `evidenceReadinessSummary` aggregates the remaining evidence lanes into
 approval-required, external-pending, upstream-contract-blocked,
 product-blocked, and unresolved-native counts plus the exact requirement ids

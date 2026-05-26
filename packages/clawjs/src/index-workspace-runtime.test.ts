@@ -1481,7 +1481,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   const hermesSupportClaimPayload = JSON.parse(hermesSupportClaimStdout.getOutput()) as {
     data: { supportStage?: string; recommended?: boolean; production?: boolean; uiParityClaim?: string };
   };
-  assert.equal(hermesSupportClaimPayload.data.supportStage, "dev_only");
+  assert.equal(hermesSupportClaimPayload.data.supportStage, "operable");
   assert.equal(hermesSupportClaimPayload.data.recommended, false);
   assert.equal(hermesSupportClaimPayload.data.production, false);
   assert.equal(hermesSupportClaimPayload.data.uiParityClaim, "partial_runtime_lens");
@@ -2046,8 +2046,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     };
   };
   assert.equal(hermesPayload.data.runtimeId, "hermes");
-  assert.equal(hermesPayload.data.support?.adapter?.supportLevel, "dev-only");
-  assert.equal(hermesPayload.data.support?.ecosystem?.supportStage, "dev_only");
+  assert.equal(hermesPayload.data.support?.adapter?.supportLevel, "production");
+  assert.equal(hermesPayload.data.support?.ecosystem?.supportStage, "operable");
   assert.equal(hermesPayload.data.support?.ecosystem?.recommended, false);
   assert.equal(hermesPayload.data.support?.ecosystem?.production, false);
   assert.equal(hermesPayload.data.officialSnapshot?.capturedAt, "2026-05-26");
@@ -2055,13 +2055,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.officialSnapshot?.sourceType, "official_docs");
   assert.equal(hermesPayload.data.officialSnapshot?.sources?.includes("https://hermes-agent.nousresearch.com/docs/user-guide/cli/"), true);
   assert.equal(hermesPayload.data.officialSnapshot?.sources?.includes("https://github.com/NousResearch/hermes-agent"), true);
-  assert.equal(hermesPayload.data.officialSnapshot?.driftPolicy, "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete");
+  assert.equal(hermesPayload.data.officialSnapshot?.driftPolicy, "hermes_operable_non_default_until_final_production_recommended_policy");
   assert.equal(hermesPayload.data.support?.ecosystem?.officialSnapshot?.manifestSource, "docs/runtime-ecosystem-integration.manifest.json");
   assert.deepEqual(hermesPayload.data.support?.ecosystem?.officialSnapshot?.sources, hermesPayload.data.officialSnapshot?.sources);
-  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("native write-back contracts"), true);
-  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("approval-gate receipts"), true);
-  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("TUI Gateway production transport policy"), true);
-  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("channel/provider/auth/model evidence"), true);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("operable non-default runtime lens"), true);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("adapter support is production-grade"), true);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("recommended/production ecosystem claims remain false"), true);
   for (const reason of [
     "native_write_back_pending",
     "approval_gate_fixture_pending",
@@ -2123,7 +2122,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
-  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.effectiveSupportStage, "dev_only");
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.effectiveSupportStage, "operable");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.recommended, false);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.production, false);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.uiParityDisposition, "partial_lens_validated_not_full_native_parity");
@@ -2751,7 +2750,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.commandCoverageSummary?.executableMatrixCommandCount, 22);
   assert.equal(hermesSupportPayload.data.commandCoverageSummary?.promotionSignal, false);
   assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportClaim, "partial_runtime_lens");
-  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportStage, "dev_only");
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportStage, "operable");
   assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportImpact, "guarded_command_coverage_does_not_promote_support");
   assert.equal(hermesSupportPayload.data.commandCoverageSummary?.safeDefault, "guarded_command_coverage_does_not_promote_support");
   assert.equal(hermesSupportPayload.data.commandCoverageSummary?.exactCommand, "claw runtime hermes commands --json");
@@ -2845,7 +2844,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
-  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.effectiveSupportStage, "dev_only");
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.effectiveSupportStage, "operable");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.commandCoverageSummary?.totalCommandCount, 44);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.commandCoverageSummary?.promotionSignal, false);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.commandCoverageSummary?.safeDefault, "guarded_command_coverage_does_not_promote_support");
@@ -3115,7 +3114,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesCommandsPayload.data.jsonPortalCommandSet?.executableMatrixCommandCount, 22);
   assert.equal(hermesCommandsPayload.data.jsonPortalCommandSet?.promotionSignal, false);
   assert.equal(hermesCommandsPayload.data.jsonPortalCommandSet?.supportClaim, "partial_runtime_lens");
-  assert.equal(hermesCommandsPayload.data.jsonPortalCommandSet?.supportStage, "dev_only");
+  assert.equal(hermesCommandsPayload.data.jsonPortalCommandSet?.supportStage, "operable");
   assert.equal(hermesCommandsPayload.data.jsonPortalCommandSet?.safeDefault, "guarded_command_coverage_does_not_promote_support");
   assert.equal(hermesCommandByName.get("runtime hermes summary")?.writesRuntime, false);
   assert.equal(hermesCommandByName.get("runtime hermes workspace")?.writesRuntime, false);

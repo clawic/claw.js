@@ -14,6 +14,13 @@ test("runtime adapters expose support metadata with one recommended production p
   assert.ok(adapters.every((adapter) => allowedSupportLevels.has(adapter.supportLevel)));
   assert.equal(recommended.length, 1);
   assert.equal(recommendedProduction.length, 1);
+  assert.deepEqual(
+    adapters
+      .filter((adapter) => adapter.supportLevel === "production")
+      .map((adapter) => adapter.id)
+      .sort(),
+    ["hermes", "openclaw"]
+  );
   assert.equal(recommendedProduction[0]?.id, "openclaw");
   assert.equal(recommendedProduction[0]?.stability, "stable");
   assert.equal(recommendedProduction[0]?.supportLevel, "production");
@@ -21,8 +28,8 @@ test("runtime adapters expose support metadata with one recommended production p
   assert.equal(hermes.id, "hermes");
   assert.equal(hermes.runtimeName, "Hermes Agent");
   assert.equal(hermes.recommended, undefined);
-  assert.equal(hermes.stability, "dev-only");
-  assert.equal(hermes.supportLevel, "dev-only");
+  assert.equal(hermes.stability, "stable");
+  assert.equal(hermes.supportLevel, "production");
   assert.equal(adapters.some((adapter) => adapter.id === "hermes"), true);
   assert.equal(adapters.some((adapter) => adapter.id === "codex" && adapter.stability === "dev-only" && adapter.supportLevel === "dev-only"), true);
   assert.equal(adapters.some((adapter) => adapter.id === "claw" && !adapter.recommended && adapter.stability === "stable" && adapter.supportLevel === "dev-only"), true);

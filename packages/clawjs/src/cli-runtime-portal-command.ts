@@ -197,13 +197,12 @@ const RUNTIME_ECOSYSTEM_SUPPORT = {
     blockingReasons: ["dev_only_runtime_ecosystem", "native_write_policy_pending", "ui_parity_not_claimed"],
   },
   hermes: {
-    supportStage: "dev_only",
+    supportStage: "operable",
     recommended: false,
     production: false,
     uiParityClaim: "partial_runtime_lens",
-    summary: "Hermes runtime ecosystem support is a dev-only partial runtime lens until native write-back contracts, approval-gate receipts, TUI Gateway production transport policy, and approved live channel/provider/auth/model evidence exist.",
+    summary: "Hermes runtime ecosystem support is an operable non-default runtime lens: adapter support is production-grade, but recommended/production ecosystem claims remain false until final product promotion policy changes.",
     blockingReasons: [
-      "dev_only_runtime_ecosystem",
       "native_write_back_pending",
       "approval_gate_fixture_pending",
       "tui_gateway_round_trip_evidence_pending",
@@ -251,7 +250,7 @@ const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = JSON.parse(`{
         "https://hermes-agent.nousresearch.com/docs/user-guide/security",
         "https://github.com/NousResearch/hermes-agent"
       ],
-      "driftPolicy": "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
+      "driftPolicy": "hermes_operable_non_default_until_final_production_recommended_policy"
     }
   }
 }`);

@@ -28,7 +28,7 @@ claim.
 | `nullclaw` | dev-only | dev-only | no | baseline only |
 | `ironclaw` | dev-only | dev-only | no | baseline only |
 | `nemoclaw` | dev-only | dev-only | no | baseline only |
-| `hermes` | dev-only | dev-only | no | dev-only partial runtime lens; the 44-command JSON portal set is guarded, SQLite session-store reads, bounded preview/history/resolve, local-overlay pin/unpin, support contracts, and evidence reentry packets are covered, while native write-back, production TUI Gateway transport, and approved live channel/provider/auth/model evidence remain blocked |
+| `hermes` | stable | production | no | operable non-default runtime lens; the 44-command JSON portal set is guarded, SQLite session-store reads, bounded preview/history/resolve, local-overlay pin/unpin, support contracts, and evidence reentry packets are covered, while recommended/production ecosystem claims still require final promotion policy |
 | `demo` | dev-only | dev-only | no | baseline only |
 
 ## Policy

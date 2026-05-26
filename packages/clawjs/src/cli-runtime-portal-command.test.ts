@@ -595,7 +595,6 @@ test("Hermes support audit removes external live blockers when every approved re
   assert.equal(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired?.includes("approved_redacted_live_evidence"), false);
   assert.equal(payload.data?.finalSupportClaimDecision?.externalPendingCount, 0);
   assert.deepEqual(payload.data?.blockingReasons, [
-    "dev_only_runtime_ecosystem",
     "native_write_back_pending",
     "production_transport_policy_pending",
   ]);
@@ -769,5 +768,5 @@ test("Hermes support audit removes all reentry blockers when official contract r
     "ecosystem_production_claim",
     "ecosystem_recommended_claim",
   ]);
-  assert.deepEqual(payload.data?.blockingReasons, ["dev_only_runtime_ecosystem"]);
+  assert.deepEqual(payload.data?.blockingReasons, []);
 });
