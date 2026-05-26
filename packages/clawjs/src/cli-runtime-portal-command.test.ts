@@ -741,6 +741,10 @@ test("Hermes support audit removes all reentry blockers when official contract r
         implementedFacets?: string[];
       }>;
       finalSupportClaimDecision?: {
+        status?: string;
+        decision?: string;
+        claimDisposition?: string;
+        supportCompletionMode?: string | null;
         blockedPromotionClaims?: string[];
         productBlockedByDecisionCount?: number;
         promotionEvidenceRequired?: string[];
@@ -764,9 +768,10 @@ test("Hermes support audit removes all reentry blockers when official contract r
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), false);
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), false);
   assert.equal(payload.data?.finalSupportClaimDecision?.productBlockedByDecisionCount, 0);
-  assert.deepEqual(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired, [
-    "ecosystem_production_claim",
-    "ecosystem_recommended_claim",
-  ]);
+  assert.equal(payload.data?.finalSupportClaimDecision?.status, "operable_non_default_complete");
+  assert.equal(payload.data?.finalSupportClaimDecision?.decision, "keep_operable_non_default_runtime_claim");
+  assert.equal(payload.data?.finalSupportClaimDecision?.claimDisposition, "operable_non_default_complete");
+  assert.equal(payload.data?.finalSupportClaimDecision?.supportCompletionMode, "operable_non_default");
+  assert.deepEqual(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired, []);
   assert.deepEqual(payload.data?.blockingReasons, []);
 });

@@ -137,6 +137,10 @@ explicit and redacted: `--approval-gate-fixture`, `--live-evidence-fixture`,
 requirements, but they do not promote Hermes out of its manifest support stage;
 production/recommended ecosystem claims still require an explicit ecosystem
 support policy change.
+When all evidence requirements are closed for a runtime whose manifest policy is
+`supportStage: operable`, `recommended: false`, and `production: false`, the
+support audit closes as `operable_non_default_complete`; it does not synthesize
+a default-runtime or production ecosystem claim.
 `evidenceReadinessSummary` aggregates the remaining evidence lanes into
 approval-required, external-pending, upstream-contract-blocked,
 product-blocked, and unresolved-native counts plus the exact requirement ids

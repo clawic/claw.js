@@ -2182,8 +2182,17 @@ function runtimeDomainProjectionDisposition(closureStatus: string, readProjectio
   return "projection_blocked_until_direct_issue_resolved";
 }
 
-function runtimeClaimDisposition(supportComplete: boolean, productBlockedCount: number, externalPendingCount: number): string {
-  if (supportComplete) return "all_claims_supported_by_current_evidence";
+function runtimeClaimDisposition(
+  supportComplete: boolean,
+  productBlockedCount: number,
+  externalPendingCount: number,
+  completionMode?: "recommended_production" | "operable_non_default",
+): string {
+  if (supportComplete) {
+    return completionMode === "operable_non_default"
+      ? "operable_non_default_complete"
+      : "all_claims_supported_by_current_evidence";
+  }
   if (productBlockedCount > 0 && externalPendingCount > 0) return "unpromoted_product_blocked_and_external_pending";
   if (externalPendingCount > 0) return "unpromoted_external_pending";
   if (productBlockedCount > 0) return "unpromoted_product_claim_lowered";
@@ -2638,10 +2647,18 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?
     .filter((domain) => domain.blockerClasses.includes("external_pending"))
     .map((domain) => domain.domain);
   const allDomainsAccountedFor = RUNTIME_PORTAL_DOMAIN_ORDER.every((domain) => domains.some((entry) => entry.domain === domain));
+  const recommendedProductionClaimed = ecosystem.production === true && ecosystem.recommended === true;
+  const operableNonDefaultClaimed = ecosystem.supportStage === "operable"
+    && ecosystem.production === false
+    && ecosystem.recommended === false;
+  const supportCompletionMode = recommendedProductionClaimed
+    ? "recommended_production"
+    : operableNonDefaultClaimed
+      ? "operable_non_default"
+      : null;
   const supportComplete = allDomainsAccountedFor
     && evidenceRequirements.length === 0
-    && ecosystem.production === true
-    && ecosystem.recommended === true;
+    && supportCompletionMode !== null;
   const closureState = supportComplete ? "complete" : "blocked";
   const productBlockedRequirements = evidenceRequirements.filter((requirement) => requirement.supportResolution === "explicitly_product_blocked_not_a_silent_gap");
   const externalPendingRequirements = evidenceRequirements.filter((requirement) => requirement.supportResolution === "external_pending_not_product_blocked" || requirement.blockerClass === "external_pending");
@@ -2652,13 +2669,19 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?
   const productionTransportRequirements = evidenceRequirements.filter((requirement) => requiresProductionTransportLifecycle(requirement));
   const commandCoverageSummary = runtimeSupportCommandCoverageSummary(runtimeId, payload);
   const finalPromotionReview = {
-    status: supportComplete ? "promoted" : "unpromoted",
-    finalPromotionAllowed: supportComplete,
+    status: supportComplete
+      ? supportCompletionMode === "operable_non_default"
+        ? "operable_non_default_complete"
+        : "promoted"
+      : "unpromoted",
+    finalPromotionAllowed: supportComplete && supportCompletionMode === "recommended_production",
+    supportCompletionMode,
     commandCoverageSummary,
     claimDisposition: runtimeClaimDisposition(
       supportComplete,
       productBlockedRequirements.length,
       externalPendingRequirements.length,
+      supportCompletionMode ?? undefined,
     ),
     productBlockedByDecisionCount: productBlockedRequirements.length,
     externalPendingCount: externalPendingRequirements.length,
@@ -2673,11 +2696,13 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?
       ...(productionTransportRequirements.length > 0 ? ["production_transport_lifecycle_policy_and_native_round_trip_evidence"] : []),
       ...(unresolvedNativeRequirements.length > 0 ? ["official_runtime_native_contracts"] : []),
       ...(productBlockedRequirements.length > 0 ? ["keep_lowered_claim_until_upstream_native_contracts_exist"] : []),
-      ...(ecosystem.production !== true ? ["ecosystem_production_claim"] : []),
-      ...(ecosystem.recommended !== true ? ["ecosystem_recommended_claim"] : []),
+      ...(!supportComplete && ecosystem.production !== true ? ["ecosystem_production_claim"] : []),
+      ...(!supportComplete && ecosystem.recommended !== true ? ["ecosystem_recommended_claim"] : []),
     ],
     userVisibleStatus: supportComplete
-      ? "runtime_ecosystem_promoted"
+      ? supportCompletionMode === "operable_non_default"
+        ? "runtime_ecosystem_operable_non_default_complete"
+        : "runtime_ecosystem_promoted"
       : "runtime_ecosystem_available_with_product_blocked_or_external_pending_claims",
   };
   const evidenceReentryPackets = evidenceRequirements.map((requirement) => {
@@ -2746,18 +2771,27 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?
     ...(unresolvedNativeRequirements.length > 0 || productBlockedRequirements.length > 0 ? ["upstream_native_contracts"] : []),
   ];
   const finalSupportClaimDecision = {
-    status: supportComplete ? "promoted" : "not_promoted",
+    status: supportComplete
+      ? supportCompletionMode === "operable_non_default"
+        ? "operable_non_default_complete"
+        : "promoted"
+      : "not_promoted",
     decision: supportComplete
-      ? "promote_runtime_ecosystem_claims"
+      ? supportCompletionMode === "operable_non_default"
+        ? "keep_operable_non_default_runtime_claim"
+        : "promote_runtime_ecosystem_claims"
       : "keep_current_lowered_runtime_ecosystem_claim",
     claimDisposition: finalPromotionReview.claimDisposition,
+    supportCompletionMode,
     effectiveSupportStage: ecosystem.supportStage,
     recommended: ecosystem.recommended === true && supportComplete,
     production: ecosystem.production === true && supportComplete,
     uiParityClaim: ecosystem.uiParityClaim,
     commandCoverageSummary,
     uiParityDisposition: supportComplete
-      ? "ui_parity_promoted"
+      ? supportCompletionMode === "operable_non_default"
+        ? "partial_lens_operable_non_default_complete"
+        : "ui_parity_promoted"
       : runtimeId === "openclaw" || runtimeId === "hermes"
         ? "partial_lens_validated_not_full_native_parity"
         : "ui_parity_not_claimed",
@@ -2774,10 +2808,14 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?
       ? "use_evidenceReentryPackets_exactly_before_revisiting_claim"
       : "no_reentry_packets_required_for_current_claim",
     safeDefault: supportComplete
-      ? "claim_may_be_promoted"
+      ? supportCompletionMode === "operable_non_default"
+        ? "operable_non_default_claim_is_current_policy"
+        : "claim_may_be_promoted"
       : "keep_unpromoted_until_evidence_or_upstream_contract_changes",
     userVisibleStatus: supportComplete
-      ? "runtime_ecosystem_promoted"
+      ? supportCompletionMode === "operable_non_default"
+        ? "runtime_ecosystem_operable_non_default_complete"
+        : "runtime_ecosystem_promoted"
       : "runtime_ecosystem_available_but_not_recommended_or_production",
   };
   const closureChecklist = RUNTIME_PORTAL_DOMAIN_ORDER.map((domain) => {
