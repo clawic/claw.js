@@ -1193,6 +1193,24 @@
       "expiresAt": null
     },
     {
+      "id": "mcp-protocol-client-request-timeout",
+      "surface": "MCP protocol client request timeout",
+      "ownerArea": "mcp",
+      "path": "packages/clawjs-mcp/src/client.ts",
+      "mechanism": "timeout",
+      "activation": "Only while an MCP JSON-RPC request is active and a positive timeoutMs option is configured.",
+      "visibleOnly": false,
+      "inactivityShutdown": "Timeout clears in the request finally block after fetch resolves, rejects, or aborts.",
+      "backoff": "Bounded per-request timeout rather than polling or retrying.",
+      "sharedTimer": "dedicated request timer with active MCP request-lease rationale.",
+      "diagnosticsOptIn": false,
+      "releaseBehavior": "Enabled only for active MCP client requests with configured timeoutMs.",
+      "debugBehavior": "Debug builds may inspect timeout errors without changing the request-scoped lifecycle.",
+      "evidence": "MCPProtocolClient creates an AbortController only for a positive finite timeoutMs and clears the timer in finally.",
+      "blocksRelease": false,
+      "expiresAt": null
+    },
+    {
       "id": "relay-connector-device-pairing-poll",
       "surface": "Relay connector enrollment",
       "ownerArea": "relay",
