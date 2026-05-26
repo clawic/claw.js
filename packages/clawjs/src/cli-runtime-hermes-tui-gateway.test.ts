@@ -545,6 +545,49 @@ test("Hermes confirmed TUI gateway writes stay blocked without an explicit endpo
   assert.equal(payload.data.transportPolicy?.safeDefault, "fixture_only_no_production_transport_contact");
 });
 
+test("Hermes TUI gateway token is never emitted in runtime portal JSON", async (t) => {
+  const gateway = await createHermesTuiGatewayFixture();
+  try {
+    const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+    const secretToken = ["fixture", "gateway", "token", "must", "not", "leak"].join("-");
+    const send = await runHermesAction([
+      "runtime", "hermes", "sessions", "send",
+      "--session-key", "token-session",
+      "--message", "token fixture hello",
+      "--gateway-url", gateway.url,
+      "--gateway-token", secretToken,
+      "--confirm-runtime-write",
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(send.exitCode), true);
+    assert.equal(send.payload.data.status, "ok");
+    assert.equal(send.payload.data.transportPolicy?.credentialPolicy, "no_credential_or_token_emission");
+    assert.equal(JSON.stringify(send.payload).includes(secretToken), false);
+    assert.equal(JSON.stringify(gateway.requests).includes(secretToken), false);
+
+    const gatewayResources = await runHermesAction([
+      "runtime", "hermes", "resources", "gateway",
+      "--gateway-url", gateway.url,
+      "--gateway-token", secretToken,
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(gatewayResources.exitCode), true);
+    assert.equal(gatewayResources.payload.data.data.resources.some((entry: { id?: string; attributes?: string[] }) => (
+      entry.id === "gateway-configuration"
+      && entry.attributes?.includes("token configured: true")
+      && entry.attributes?.includes("secret policy: redacted_presence_only")
+    )), true);
+    assert.equal(JSON.stringify(gatewayResources.payload).includes(secretToken), false);
+  } finally {
+    await gateway.close();
+  }
+});
+
 test("Hermes confirmed TUI gateway writes reject non-HTTP and credentialed loopback endpoints", async (t) => {
   for (const gatewayUrl of [
     "ws://127.0.0.1:31337",
