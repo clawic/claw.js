@@ -234,6 +234,7 @@ test("Hermes approval-gate fixtures attach redacted receipts without runtime mut
       closureChecklist?: Array<{ domain?: string; closureStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
       finalPromotionReview?: { requiredForPromotion?: string[] };
       finalSupportClaimDecision?: { blockedPromotionClaims?: string[] };
+      blockingReasons?: string[];
     };
   };
 
@@ -245,6 +246,9 @@ test("Hermes approval-gate fixtures attach redacted receipts without runtime mut
   assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), false);
   assert.equal(payload.data?.finalPromotionReview?.requiredForPromotion?.includes("approval_gate_fixture_and_redacted_receipt"), false);
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("approval_gate_fixture_pending"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("native_write_back_pending"), true);
+  assert.equal(payload.data?.blockingReasons?.includes("production_transport_policy_pending"), true);
 
   const doctorDomain = payload.data?.domains?.find((domain) => domain.domain === "doctorCompat");
   const sandboxDomain = payload.data?.domains?.find((domain) => domain.domain === "sandboxPermissions");

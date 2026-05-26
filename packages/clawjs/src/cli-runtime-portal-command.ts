@@ -2041,6 +2041,33 @@ function runtimeEvidenceReadinessSummary({
   };
 }
 
+function runtimeSupportBlockingReasons(ecosystem, evidenceReadinessSummary, externalPendingRequirements) {
+  const reasons = new Set(ecosystem.blockingReasons ?? []);
+  if (evidenceReadinessSummary.writeBackContractBlockedCount === 0) {
+    reasons.delete("native_write_back_pending");
+  }
+  if (evidenceReadinessSummary.approvalGateBlockedCount === 0) {
+    reasons.delete("approval_gate_fixture_pending");
+  }
+  if (evidenceReadinessSummary.tuiGatewayBlockedCount === 0) {
+    reasons.delete("tui_gateway_round_trip_evidence_pending");
+  }
+  if (evidenceReadinessSummary.productionTransportBlockedCount === 0) {
+    reasons.delete("production_transport_policy_pending");
+  }
+  for (const [domain, reason] of [
+    ["channels", "live_channel_evidence_pending"],
+    ["providers", "live_provider_evidence_pending"],
+    ["auth", "live_auth_evidence_pending"],
+    ["models", "live_model_evidence_pending"],
+  ]) {
+    if (!externalPendingRequirements.some((requirement) => requirement.id === `hermes.${domain}.live_evidence`)) {
+      reasons.delete(reason);
+    }
+  }
+  return [...reasons];
+}
+
 function runtimeSyncPolicySummary(domainAudits, payload) {
   const sessionActions = payload.domainData?.sessions?.actionPolicy
     ?? payload.domainData?.sessions?.actionContracts
@@ -2549,6 +2576,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     externalPendingRequirements,
     unresolvedNativeRequirements,
   });
+  const blockingReasons = runtimeSupportBlockingReasons(ecosystem, evidenceReadinessSummary, externalPendingRequirements);
   const syncPolicySummary = runtimeSyncPolicySummary(domainAudits, payload);
   return {
     runtimeId,
@@ -2563,7 +2591,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     uiParityClaim: ecosystem.uiParityClaim,
     officialSnapshot: ecosystem.officialSnapshot ?? runtimeOfficialSnapshot(runtimeId),
     summary: ecosystem.summary,
-    blockingReasons: ecosystem.blockingReasons ?? [],
+    blockingReasons,
     blockerSummary: {
       byBlockerClass,
       directBlockerDomains,
