@@ -610,6 +610,9 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
     permissionMode: input.flags.sandbox,
     approvalGateFixturePath: input.flags["approval-gate-fixture"],
     liveEvidenceFixturePath: input.flags["live-evidence-fixture"],
+    productionTransportFixturePath: input.flags["production-transport-fixture"],
+    writeBackContractFixturePath: input.flags["write-back-contract-fixture"],
+    nativeContractFixturePath: input.flags["native-contract-fixture"],
     gateway: {
       url: input.flags["gateway-url"],
       token: input.flags["gateway-token"],
@@ -650,6 +653,90 @@ function readApprovalGateFixture(runtimeOptions?) {
 
 function readLiveEvidenceFixture(runtimeOptions?) {
   const fixturePath = runtimeOptions?.liveEvidenceFixturePath;
+  if (typeof fixturePath !== "string" || fixturePath.trim().length === 0) return null;
+  try {
+    const stat = fs.statSync(fixturePath);
+    if (!stat.isFile() || stat.size > 128 * 1024) {
+      return {
+        status: "invalid",
+        path: fixturePath,
+        reason: stat.isFile() ? "fixture_too_large" : "not_a_file",
+      };
+    }
+    const parsed = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+    return {
+      status: "loaded",
+      path: fixturePath,
+      parsed,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      path: fixturePath,
+      reason: "unreadable_or_invalid_json",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function readProductionTransportFixture(runtimeOptions?) {
+  const fixturePath = runtimeOptions?.productionTransportFixturePath;
+  if (typeof fixturePath !== "string" || fixturePath.trim().length === 0) return null;
+  try {
+    const stat = fs.statSync(fixturePath);
+    if (!stat.isFile() || stat.size > 128 * 1024) {
+      return {
+        status: "invalid",
+        path: fixturePath,
+        reason: stat.isFile() ? "fixture_too_large" : "not_a_file",
+      };
+    }
+    const parsed = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+    return {
+      status: "loaded",
+      path: fixturePath,
+      parsed,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      path: fixturePath,
+      reason: "unreadable_or_invalid_json",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function readWriteBackContractFixture(runtimeOptions?) {
+  const fixturePath = runtimeOptions?.writeBackContractFixturePath;
+  if (typeof fixturePath !== "string" || fixturePath.trim().length === 0) return null;
+  try {
+    const stat = fs.statSync(fixturePath);
+    if (!stat.isFile() || stat.size > 128 * 1024) {
+      return {
+        status: "invalid",
+        path: fixturePath,
+        reason: stat.isFile() ? "fixture_too_large" : "not_a_file",
+      };
+    }
+    const parsed = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+    return {
+      status: "loaded",
+      path: fixturePath,
+      parsed,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      path: fixturePath,
+      reason: "unreadable_or_invalid_json",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function readNativeContractFixture(runtimeOptions?) {
+  const fixturePath = runtimeOptions?.nativeContractFixturePath;
   if (typeof fixturePath !== "string" || fixturePath.trim().length === 0) return null;
   try {
     const stat = fs.statSync(fixturePath);
@@ -746,6 +833,123 @@ function liveEvidenceReceiptFor(runtimeId: RuntimeAdapterId, domain: string, run
     supportContractMatchesManifest: true,
     evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
     source: "live-evidence-fixture",
+  };
+}
+
+function writeBackContractReceiptFor(runtimeId: RuntimeAdapterId, domain: string, runtimeOptions?) {
+  if (runtimeId !== "hermes") return null;
+  const fixture = readWriteBackContractFixture(runtimeOptions);
+  if (!fixture || fixture.status !== "loaded") return null;
+  const parsed = fixture.parsed;
+  if (parsed?.runtimeId && parsed.runtimeId !== runtimeId) return null;
+  const receipts = Array.isArray(parsed?.receipts) ? parsed.receipts : [];
+  const receipt = receipts.find((entry) => entry?.domain === domain);
+  if (!receipt) return null;
+  const approved = receipt.approved === true;
+  const redacted = receipt.redacted === true;
+  const plaintextSecretLeak = receipt.plaintextSecretLeak === true;
+  const officialContractKnown = receipt.officialContractKnown === true;
+  const nonDestructiveFixture = receipt.nonDestructiveFixture === true;
+  const roundTripNativeVisibility = receipt.roundTripNativeVisibility === true;
+  const noSilentWriteBack = receipt.noSilentWriteBack === true;
+  const supportContractMatchesManifest = receipt.supportContractMatchesManifest === true;
+  const fixtureReceipt = receipt.receiptType === "official_runtime_write_back_contract_receipt"
+    || receipt.receiptId
+    || receipt.status === "official_write_back_contract_verified";
+  if (!approved || !redacted || plaintextSecretLeak || !officialContractKnown || !nonDestructiveFixture || !roundTripNativeVisibility || !noSilentWriteBack || !supportContractMatchesManifest || !fixtureReceipt) return null;
+  return {
+    domain,
+    receiptId: receipt.receiptId ?? `${runtimeId}.${domain}.write_back_contract_receipt`,
+    receiptType: "official_runtime_write_back_contract_receipt",
+    status: receipt.status ?? "official_write_back_contract_verified",
+    approved: true,
+    redacted: true,
+    plaintextSecretLeak: false,
+    officialContractKnown: true,
+    nonDestructiveFixture: true,
+    roundTripNativeVisibility: true,
+    noSilentWriteBack: true,
+    supportContractMatchesManifest: true,
+    evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
+    source: "write-back-contract-fixture",
+  };
+}
+
+function nativeContractReceiptFor(runtimeId: RuntimeAdapterId, action: string, runtimeOptions?) {
+  if (runtimeId !== "hermes") return null;
+  if (action !== "pin" && action !== "unpin") return null;
+  const fixture = readNativeContractFixture(runtimeOptions);
+  if (!fixture || fixture.status !== "loaded") return null;
+  const parsed = fixture.parsed;
+  if (parsed?.runtimeId && parsed.runtimeId !== runtimeId) return null;
+  const receipts = Array.isArray(parsed?.receipts) ? parsed.receipts : [];
+  const receipt = receipts.find((entry) => entry?.domain === "sessions" && entry?.action === action);
+  if (!receipt) return null;
+  const approved = receipt.approved === true;
+  const redacted = receipt.redacted === true;
+  const plaintextSecretLeak = receipt.plaintextSecretLeak === true;
+  const officialContractKnown = receipt.officialContractKnown === true;
+  const nonDestructiveFixture = receipt.nonDestructiveFixture === true;
+  const roundTripNativeVisibility = receipt.roundTripNativeVisibility === true;
+  const writesRuntime = receipt.writesRuntime === true;
+  const fixtureReceipt = receipt.receiptType === "official_runtime_native_contract_receipt"
+    || receipt.receiptId
+    || receipt.status === "official_native_contract_verified";
+  if (!approved || !redacted || plaintextSecretLeak || !officialContractKnown || !nonDestructiveFixture || !roundTripNativeVisibility || !writesRuntime || !fixtureReceipt) return null;
+  return {
+    domain: "sessions",
+    action,
+    receiptId: receipt.receiptId ?? `${runtimeId}.sessions.${action}.native_contract_receipt`,
+    receiptType: "official_runtime_native_contract_receipt",
+    status: receipt.status ?? "official_native_contract_verified",
+    approved: true,
+    redacted: true,
+    plaintextSecretLeak: false,
+    officialContractKnown: true,
+    nonDestructiveFixture: true,
+    roundTripNativeVisibility: true,
+    writesRuntime: true,
+    evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
+    source: "native-contract-fixture",
+  };
+}
+
+function productionTransportReceiptFor(runtimeId: RuntimeAdapterId, action: string, runtimeOptions?) {
+  if (runtimeId !== "hermes") return null;
+  if (!["send", "inject", "abort", "create"].includes(action)) return null;
+  const fixture = readProductionTransportFixture(runtimeOptions);
+  if (!fixture || fixture.status !== "loaded") return null;
+  const parsed = fixture.parsed;
+  if (parsed?.runtimeId && parsed.runtimeId !== runtimeId) return null;
+  const receipts = Array.isArray(parsed?.receipts) ? parsed.receipts : [];
+  const receipt = receipts.find((entry) => entry?.domain === "sessions" && entry?.action === action);
+  if (!receipt) return null;
+  const approved = receipt.approved === true;
+  const redacted = receipt.redacted === true;
+  const plaintextSecretLeak = receipt.plaintextSecretLeak === true;
+  const lifecyclePolicyApproved = receipt.lifecyclePolicyApproved === true;
+  const productionTransportLifecycleManaged = receipt.productionTransportLifecycleManaged === true;
+  const nonLoopbackEndpointApproved = receipt.nonLoopbackEndpointApproved === true;
+  const nativeRoundTripVerified = receipt.nativeRoundTripVerified === true;
+  const fixtureReceipt = receipt.receiptType === "production_transport_lifecycle_receipt"
+    || receipt.receiptId
+    || receipt.status === "production_transport_lifecycle_verified";
+  if (!approved || !redacted || plaintextSecretLeak || !lifecyclePolicyApproved || !productionTransportLifecycleManaged || !nonLoopbackEndpointApproved || !nativeRoundTripVerified || !fixtureReceipt) return null;
+  return {
+    domain: "sessions",
+    action,
+    receiptId: receipt.receiptId ?? `${runtimeId}.sessions.${action}.production_transport_receipt`,
+    receiptType: "production_transport_lifecycle_receipt",
+    status: receipt.status ?? "production_transport_lifecycle_verified",
+    approved: true,
+    redacted: true,
+    plaintextSecretLeak: false,
+    lifecyclePolicyApproved: true,
+    productionTransportLifecycleManaged: true,
+    nonLoopbackEndpointApproved: true,
+    nativeRoundTripVerified: true,
+    evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
+    source: "production-transport-fixture",
   };
 }
 
@@ -1669,6 +1873,7 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
   const approvalGatedWritePolicy = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
   const approvalGateReceipt = approvalGateReceiptFor(runtimeId, domain, runtimeOptions);
   const liveEvidenceReceipt = liveEvidenceReceiptFor(runtimeId, domain, runtimeOptions);
+  const writeBackContractReceipt = writeBackContractReceiptFor(runtimeId, domain, runtimeOptions);
   if ((validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) && !liveEvidenceReceipt) {
     const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
     const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
@@ -1712,7 +1917,7 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
       doNotRunWithoutApproval: true,
     });
   }
-  if (writeBackPolicy.startsWith("blocked")) {
+  if (writeBackPolicy.startsWith("blocked") && !writeBackContractReceipt) {
     requirements.push({
       id: `${runtimeId}.${domain}.write_back_contract`,
       blockerClass: "direct_blocker",
@@ -1818,6 +2023,7 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
   const writeBackApprovalGated = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
   const approvalGateFixtureReceipt = approvalGateReceiptFor(runtimeId, domain, runtimeOptions);
   const liveEvidenceFixtureReceipt = liveEvidenceReceiptFor(runtimeId, domain, runtimeOptions);
+  const writeBackContractFixtureReceipt = writeBackContractReceiptFor(runtimeId, domain, runtimeOptions);
   return {
     ...policy,
     authority: domainAuthority(domain),
@@ -1839,6 +2045,12 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
         : "missing"
       : "not_required",
     liveEvidenceFixtureReceipt,
+    writeBackContractFixtureStatus: writeBackPolicy.startsWith("blocked")
+      ? writeBackContractFixtureReceipt
+        ? "attached"
+        : "missing"
+      : "not_required",
+    writeBackContractFixtureReceipt,
     externalPending: String(policy.validation).includes("external_pending")
       || writeBackPolicy.includes("external_pending"),
     evidenceRequirements,
@@ -1927,6 +2139,7 @@ function runtimeDomainImplementedFacets(audit, sessionActions = []) {
   if (audit.writeBackAllowed === true) facets.push("runtime_write_policy_allowed");
   if (audit.approvalGateFixtureStatus === "attached") facets.push("approval_gate_fixture_receipt");
   if (audit.liveEvidenceFixtureStatus === "attached") facets.push("approved_live_evidence_receipt");
+  if (audit.writeBackContractFixtureStatus === "attached") facets.push("official_write_back_contract_receipt");
   if (audit.domain === "sessions") {
     const readActions = new Set(["list", "preview", "resolve", "history"]);
     const implementedReadActions = sessionActions
@@ -2244,7 +2457,7 @@ function sessionActionEvidenceArtifactTemplate(runtimeId: RuntimeAdapterId, acti
   };
 }
 
-function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
+function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?) {
   const ecosystem = payload.support?.ecosystem ?? buildRuntimeEcosystemSupport(runtimeId);
   const domains = payload.domains ?? [];
   const domainEvidenceRequirements = ecosystem.evidenceRequirements ?? domains.flatMap((domain) => domain.evidenceRequirements ?? []);
@@ -2255,7 +2468,11 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       const isLocalOverlayGap = status === "local_overlay_only" && String(action.guard ?? "").includes("official");
       const hasOfficialGatewayContract = String(action.guard ?? "").includes("tui_gateway") || typeof action.officialMethod === "string";
       const isFixtureBackedGateway = status === "implemented_requires_confirmation" && action.fixtureBacked === true;
+      const nativeContractReceipt = nativeContractReceiptFor(runtimeId, action.action, runtimeOptions);
+      const productionTransportReceipt = productionTransportReceiptFor(runtimeId, action.action, runtimeOptions);
       if (!isBlocked && !isLocalOverlayGap) return [];
+      if (isLocalOverlayGap && nativeContractReceipt) return [];
+      if (isFixtureBackedGateway && productionTransportReceipt) return [];
       const evidenceKind = isLocalOverlayGap ? "native_write_back_contract" : "action_contract";
       const evidenceDisposition = isLocalOverlayGap
         ? "local_overlay_until_official_runtime_write_back_contract"
@@ -2395,6 +2612,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       approvalGateFixtureReceipt: domain.approvalGateFixtureReceipt,
       liveEvidenceFixtureStatus: domain.liveEvidenceFixtureStatus,
       liveEvidenceFixtureReceipt: domain.liveEvidenceFixtureReceipt,
+      writeBackContractFixtureStatus: domain.writeBackContractFixtureStatus,
+      writeBackContractFixtureReceipt: domain.writeBackContractFixtureReceipt,
       validation: domain.validation,
       externalPending: domain.externalPending,
       persistence: domain.persistence,
@@ -5062,6 +5281,8 @@ function domainRows(runtimeId: RuntimeAdapterId, status, domainData, runtimeOpti
       approvalGateFixtureReceipt: supportContract.approvalGateFixtureReceipt,
       liveEvidenceFixtureStatus: supportContract.liveEvidenceFixtureStatus,
       liveEvidenceFixtureReceipt: supportContract.liveEvidenceFixtureReceipt,
+      writeBackContractFixtureStatus: supportContract.writeBackContractFixtureStatus,
+      writeBackContractFixtureReceipt: supportContract.writeBackContractFixtureReceipt,
       validation: supportContract.validation,
       externalPending: supportContract.externalPending,
       evidenceRequirements: supportContract.evidenceRequirements,
@@ -5228,7 +5449,7 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
     await attachOpenClawSessionInventory(runtimeId, claw, payload, Math.max(1, Number(input.flags.limit ?? 20)));
   }
   payload.domains = domainRows(runtimeId, status, payload.domainData, runtimeOptions);
-  payload.supportAudit = buildSupportAudit(runtimeId, payload);
+  payload.supportAudit = buildSupportAudit(runtimeId, payload, runtimeOptions);
 
   if (operation === "summary" || operation === "domains") {
     writePayload(input, payload, { runtimeId, operation });

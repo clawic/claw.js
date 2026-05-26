@@ -128,6 +128,13 @@ native write-back are visible as different facts instead of one ambiguous
 blocked state. `projectionSummary` aggregates those row fields into counts for
 read projection state, implemented facets, blocking facets, and domains that
 are product-blocked for promotion while still usable as read projections.
+Hermes reentry fixtures may close individual lanes only when the receipt is
+explicit and redacted: `--approval-gate-fixture`, `--live-evidence-fixture`,
+`--production-transport-fixture`, `--write-back-contract-fixture`, and
+`--native-contract-fixture`. Those fixtures remove their matching audit
+requirements, but they do not promote Hermes out of its manifest support stage;
+production/recommended claims still require an explicit ecosystem support
+policy change.
 `evidenceReadinessSummary` aggregates the remaining evidence lanes into
 approval-required, external-pending, upstream-contract-blocked,
 product-blocked, and unresolved-native counts plus the exact requirement ids

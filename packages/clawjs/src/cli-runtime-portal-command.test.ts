@@ -600,3 +600,174 @@ test("Hermes support audit removes external live blockers when every approved re
     "production_transport_policy_pending",
   ]);
 });
+
+test("Hermes support audit removes all reentry blockers when official contract receipts are attached", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-official-contract-evidence-"));
+  const approvalFixturePath = path.join(tempDir, "approval-gate-fixture.json");
+  const liveFixturePath = path.join(tempDir, "live-evidence-fixture.json");
+  const productionTransportFixturePath = path.join(tempDir, "production-transport-fixture.json");
+  const writeBackContractFixturePath = path.join(tempDir, "write-back-contract-fixture.json");
+  const nativeContractFixturePath = path.join(tempDir, "native-contract-fixture.json");
+  fs.writeFileSync(approvalFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: [
+      {
+        domain: "doctorCompat",
+        receiptId: "fixture-doctor-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "denied_without_approval",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+      {
+        domain: "sandboxPermissions",
+        receiptId: "fixture-sandbox-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "dry_run_only",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+    ],
+  }));
+  fs.writeFileSync(liveFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: ["channels", "providers", "auth", "models"].map((domain) => ({
+      domain,
+      receiptId: `fixture-${domain}-live-evidence`,
+      receiptType: "external_live_evidence_receipt",
+      status: "approved_redacted_live_evidence",
+      command: `claw runtime hermes domain ${domain} --json`,
+      approved: true,
+      readOnly: true,
+      redacted: true,
+      mutationPerformed: false,
+      plaintextSecretLeak: false,
+      supportContractMatchesManifest: true,
+    })),
+  }));
+  fs.writeFileSync(productionTransportFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: ["send", "inject", "abort", "create"].map((action) => ({
+      domain: "sessions",
+      action,
+      receiptId: `fixture-${action}-production-transport`,
+      receiptType: "production_transport_lifecycle_receipt",
+      status: "production_transport_lifecycle_verified",
+      approved: true,
+      redacted: true,
+      plaintextSecretLeak: false,
+      lifecyclePolicyApproved: true,
+      productionTransportLifecycleManaged: true,
+      nonLoopbackEndpointApproved: true,
+      nativeRoundTripVerified: true,
+    })),
+  }));
+  fs.writeFileSync(writeBackContractFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: ["sessions", "skills", "memory", "providers", "auth", "models", "scheduler", "plugins", "gateway", "configuration"].map((domain) => ({
+      domain,
+      receiptId: `fixture-${domain}-write-back-contract`,
+      receiptType: "official_runtime_write_back_contract_receipt",
+      status: "official_write_back_contract_verified",
+      approved: true,
+      redacted: true,
+      plaintextSecretLeak: false,
+      officialContractKnown: true,
+      nonDestructiveFixture: true,
+      roundTripNativeVisibility: true,
+      noSilentWriteBack: true,
+      supportContractMatchesManifest: true,
+    })),
+  }));
+  fs.writeFileSync(nativeContractFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: ["pin", "unpin"].map((action) => ({
+      domain: "sessions",
+      action,
+      receiptId: `fixture-${action}-native-contract`,
+      receiptType: "official_runtime_native_contract_receipt",
+      status: "official_native_contract_verified",
+      approved: true,
+      redacted: true,
+      plaintextSecretLeak: false,
+      officialContractKnown: true,
+      nonDestructiveFixture: true,
+      roundTripNativeVisibility: true,
+      writesRuntime: true,
+    })),
+  }));
+
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "support",
+    "--gateway-url",
+    "http://127.0.0.1:9",
+    "--approval-gate-fixture",
+    approvalFixturePath,
+    "--live-evidence-fixture",
+    liveFixturePath,
+    "--production-transport-fixture",
+    productionTransportFixturePath,
+    "--write-back-contract-fixture",
+    writeBackContractFixturePath,
+    "--native-contract-fixture",
+    nativeContractFixturePath,
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      evidenceReadinessSummary?: {
+        totalRequirementCount?: number;
+        productionTransportBlockedCount?: number;
+        writeBackContractBlockedCount?: number;
+        productBlockedCount?: number;
+        nextRequiredActions?: string[];
+      };
+      domains?: Array<{
+        domain?: string;
+        writeBackContractFixtureStatus?: string;
+        writeBackContractFixtureReceipt?: { receiptId?: string; plaintextSecretLeak?: boolean };
+        implementedFacets?: string[];
+      }>;
+      finalSupportClaimDecision?: {
+        blockedPromotionClaims?: string[];
+        productBlockedByDecisionCount?: number;
+        promotionEvidenceRequired?: string[];
+      };
+      blockingReasons?: string[];
+    };
+  };
+
+  assert.equal(result.code, 2);
+  assert.equal(payload.data?.evidenceReadinessSummary?.totalRequirementCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.productionTransportBlockedCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.writeBackContractBlockedCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.productBlockedCount, 0);
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.nextRequiredActions, []);
+  const sessionsDomain = payload.data?.domains?.find((entry) => entry.domain === "sessions");
+  assert.equal(sessionsDomain?.writeBackContractFixtureStatus, "attached");
+  assert.equal(sessionsDomain?.writeBackContractFixtureReceipt?.receiptId, "fixture-sessions-write-back-contract");
+  assert.equal(sessionsDomain?.writeBackContractFixtureReceipt?.plaintextSecretLeak, false);
+  assert.equal(sessionsDomain?.implementedFacets?.includes("official_write_back_contract_receipt"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.productBlockedByDecisionCount, 0);
+  assert.deepEqual(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired, [
+    "ecosystem_production_claim",
+    "ecosystem_recommended_claim",
+  ]);
+  assert.deepEqual(payload.data?.blockingReasons, ["dev_only_runtime_ecosystem"]);
+});
