@@ -142,7 +142,7 @@ const RUNTIME_ECOSYSTEM_SUPPORT = {
 };
 
 const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = JSON.parse(`{
-  "sourceSnapshotDate": "2026-05-25",
+  "sourceSnapshotDate": "2026-05-26",
   "runtimes": {
     "openclaw": {
       "capturedAt": "2026-05-21",
@@ -164,7 +164,7 @@ const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = JSON.parse(`{
       "driftPolicy": "codex_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
     },
     "hermes": {
-      "capturedAt": "2026-05-25",
+      "capturedAt": "2026-05-26",
       "sourceType": "official_docs",
       "sources": [
         "https://hermes-agent.nousresearch.com/docs/user-guide/cli/",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSnapshotDate": "2026-05-25",
+  "sourceSnapshotDate": "2026-05-26",
   "description": "Runtime ecosystem support is declared through official snapshots, triple matrices, authority policy, and claim guardrails. This manifest is the canonical machine-readable nucleus for ADR 0047.",
   "requiredDomains": [
     "sessions",
@@ -226,7 +226,7 @@
       "production": false,
       "uiParityClaim": "partial_runtime_lens",
       "officialSnapshot": {
-        "capturedAt": "2026-05-25",
+        "capturedAt": "2026-05-26",
         "sourceType": "official_docs",
         "sources": [
           "https://hermes-agent.nousresearch.com/docs/user-guide/cli/",
