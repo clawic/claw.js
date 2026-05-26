@@ -2171,7 +2171,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         claimBlockedUntil: isFixtureBackedGateway
           ? "production_transport_lifecycle_policy_and_native_round_trip_evidence_attached"
           : hasOfficialGatewayContract
-            ? "tui_gateway_wrapper_fixture_and_round_trip_evidence_attached"
+            ? "tui_gateway_wrapper_fixture_production_transport_lifecycle_policy_and_native_round_trip_evidence_attached"
             : "official_runtime_contract_fixture_and_round_trip_evidence_attached",
         doNotRunWithoutApproval: hasOfficialGatewayContract,
       }];

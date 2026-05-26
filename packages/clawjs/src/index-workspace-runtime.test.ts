@@ -2531,7 +2531,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesCreateReentry?.expectedRedactedEvidence?.includes("no_plaintext_secrets_or_credentials"), true);
   assert.equal(hermesCreateReentry?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
   assert.equal(hermesCreateReentry?.productionTransportCommandShape, "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
-  assert.equal(hermesCreateReentry?.claimBlockedUntil, "tui_gateway_wrapper_fixture_and_round_trip_evidence_attached");
+  assert.equal(hermesCreateReentry?.claimBlockedUntil, "tui_gateway_wrapper_fixture_production_transport_lifecycle_policy_and_native_round_trip_evidence_attached");
   assert.equal(hermesCreateReentry?.doNotRunWithoutApproval, true);
   assert.equal(hermesPinReentry?.status, "blocked_until_upstream_contract");
   assert.equal(hermesPinReentry?.commandShape, "not_executable_until_official_runtime_pin_api_exists");
