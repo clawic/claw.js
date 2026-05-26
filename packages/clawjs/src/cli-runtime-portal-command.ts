@@ -587,6 +587,11 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
   const locations = runtimeLocationDiagnostics(status);
   const gatewayOptions = runtimeOptions?.gateway ?? {};
   const gatewayStatusPath = gatewayOptions.configPath ?? locations.gatewayConfigPath ?? locations.configPath ?? session?.sessionPath ?? locations.homeDir;
+  const gatewayStatusLimitations = capability?.limitations?.length
+    ? capability.limitations
+    : status.gatewayAvailable
+      ? []
+      : ["gateway_endpoint_unavailable_or_not_configured"];
   const resources = [
     {
       id: "gateway-status",
@@ -597,7 +602,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       enabled: Boolean(session?.supportsGateway),
       summary: status.gatewayAvailable ? "Gateway endpoint configured." : "Gateway endpoint unavailable or not configured.",
       nativeIdentifier: { name: "gatewayStatusId" },
-      limitations: capability?.limitations ?? [],
+      limitations: gatewayStatusLimitations,
       attributes: [
         `runtime: ${runtimeId}`,
         `primary transport: ${session?.primaryTransport ?? "unknown"}`,
@@ -680,6 +685,11 @@ function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
   const lastError = status?.diagnostics?.lastError;
   const locations = runtimeLocationDiagnostics(status);
   const doctorPath = locations.binaryPath ?? locations.executablePath ?? locations.homeDir;
+  const doctorLimitations = capability?.limitations?.length
+    ? capability.limitations
+    : status.cliAvailable
+      ? []
+      : ["runtime_cli_unavailable_or_not_configured"];
   return [
     {
       id: "doctor-status",
@@ -690,7 +700,7 @@ function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
       enabled: Boolean(capability?.supported),
       summary: lastError ?? status.version ?? "Runtime diagnostics available.",
       nativeIdentifier: { name: "doctorStatusId" },
-      limitations: capability?.limitations ?? [],
+      limitations: doctorLimitations,
       attributes: [
         `runtime: ${runtimeId}`,
         `cli available: ${boolLabel(status.cliAvailable)}`,

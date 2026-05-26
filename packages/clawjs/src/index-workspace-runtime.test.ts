@@ -1715,7 +1715,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           schedulers?: Array<{ id: string; kind?: string; status?: string; enabled?: boolean }>;
         };
         gateway?: {
-          resources?: Array<{ id: string; status?: string; kind?: string; path?: string; summary?: string; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { path?: string }; transportPolicy?: { id?: string } }>;
+          resources?: Array<{ id: string; status?: string; kind?: string; path?: string; summary?: string; limitations?: string[]; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { path?: string }; transportPolicy?: { id?: string } }>;
           tuiGatewayTransportPolicy?: {
             id?: string;
             protocol?: string;
@@ -1726,7 +1726,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           };
         };
         doctorCompat?: {
-          resources?: Array<{ id: string; status?: string; kind?: string; path?: string; summary?: string; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { path?: string } }>;
+          resources?: Array<{ id: string; status?: string; kind?: string; path?: string; summary?: string; limitations?: string[]; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { path?: string } }>;
         };
         sandboxPermissions?: {
           permissionMode?: string;
@@ -1940,6 +1940,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.gateway?.resources?.find((entry) => entry.id === "gateway-status")?.nativeIdentifier?.name, "gatewayStatusId");
   assert.equal(hermesPayload.data.domainData.gateway?.resources?.find((entry) => entry.id === "gateway-status")?.path?.endsWith("config.yaml"), true);
   assert.equal(hermesPayload.data.domainData.gateway?.resources?.find((entry) => entry.id === "gateway-status")?.provenance?.path?.endsWith("config.yaml"), true);
+  assert.equal(hermesPayload.data.domainData.gateway?.resources?.find((entry) => entry.id === "gateway-status")?.limitations?.includes("gateway_endpoint_unavailable_or_not_configured"), true);
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.id, "hermes.tui_gateway.transport_lifecycle_policy");
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
   assert.equal(hermesPayload.data.domainData.gateway?.tuiGatewayTransportPolicy?.lifecycleStatus, "external_user_managed_not_started_by_claw");
@@ -1952,6 +1953,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.doctorCompat?.resources?.find((entry) => entry.id === "doctor-status")?.nativeIdentifier?.name, "doctorStatusId");
   assert.equal(hermesPayload.data.domainData.doctorCompat?.resources?.find((entry) => entry.id === "doctor-status")?.path?.endsWith(".hermes"), true);
   assert.equal(hermesPayload.data.domainData.doctorCompat?.resources?.find((entry) => entry.id === "doctor-status")?.provenance?.path?.endsWith(".hermes"), true);
+  assert.equal(hermesPayload.data.domainData.doctorCompat?.resources?.find((entry) => entry.id === "doctor-status")?.limitations?.includes("runtime_cli_unavailable_or_not_configured"), true);
   assert.equal(hermesPayload.data.domainData.sandboxPermissions?.permissionMode, "read-only");
   assert.equal(hermesPayload.data.domainData.sandboxPermissions?.resources?.some((entry) => entry.id === "sandbox-policy" && entry.attributes?.includes("write policy: explicit_approval_only")), true);
   assert.equal(hermesPayload.data.domainData.sandboxPermissions?.resources?.find((entry) => entry.id === "sandbox-policy")?.nativeIdentifier?.name, "sandboxPolicyId");
