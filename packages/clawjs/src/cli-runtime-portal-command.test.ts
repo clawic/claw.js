@@ -268,3 +268,140 @@ test("Hermes approval-gate fixtures attach redacted receipts without runtime mut
   assert.equal(doctorClosure?.implementedFacets?.includes("approval_gate_fixture_receipt"), true);
   assert.equal(sandboxClosure?.blockingFacets?.includes("approval_gate_contract"), false);
 });
+
+test("Hermes support audit discounts every locally verifiable fixture while preserving real blockers", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-local-parity-"));
+  const hermesHome = path.join(tempDir, ".hermes");
+  const hermesSessionDir = path.join(hermesHome, "sessions", "2026", "05", "26");
+  fs.mkdirSync(hermesSessionDir, { recursive: true });
+  fs.writeFileSync(path.join(hermesSessionDir, "runtime-session.jsonl"), [
+    "{\"type\":\"metadata\",\"content\":\"hermes native preview\"}",
+    "{\"role\":\"assistant\",\"content\":\"Hermes reply with api_key=TEST_SECRET_1234567890\"}",
+    "{\"role\":\"user\",\"content\":\"follow up\"}",
+    "",
+  ].join("\n"));
+
+  const fixturePath = path.join(tempDir, "approval-gate-fixture.json");
+  fs.writeFileSync(fixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: [
+      {
+        domain: "doctorCompat",
+        receiptId: "fixture-doctor-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "denied_without_approval",
+        command: "hermes doctor --fix --dry-run",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+      {
+        domain: "sandboxPermissions",
+        receiptId: "fixture-sandbox-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "dry_run_only",
+        command: "hermes security audit --dry-run",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+    ],
+  }));
+
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "support",
+    "--home-dir",
+    hermesHome,
+    "--gateway-url",
+    "http://127.0.0.1:9",
+    "--approval-gate-fixture",
+    fixturePath,
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      supportComplete?: boolean;
+      evidenceReadinessSummary?: {
+        totalRequirementCount?: number;
+        upstreamContractBlockedCount?: number;
+        approvalGateBlockedCount?: number;
+        tuiGatewayWrapperBlockedCount?: number;
+        tuiGatewayFixtureBackedCount?: number;
+        productionTransportBlockedCount?: number;
+        writeBackContractBlockedCount?: number;
+        nextRequiredActions?: string[];
+        upstreamContractRequirementIds?: string[];
+      };
+      finalSupportClaimDecision?: {
+        blockedPromotionClaims?: string[];
+        promotionEvidenceRequired?: string[];
+      };
+      blockingReasons?: string[];
+      closureChecklist?: Array<{
+        domain?: string;
+        closureStatus?: string;
+        implementedFacets?: string[];
+        blockingFacets?: string[];
+      }>;
+    };
+  };
+
+  assert.equal(result.code, 2);
+  assert.equal(result.stdout.includes("TEST_SECRET_1234567890"), false);
+  assert.equal(payload.data?.supportComplete, false);
+  assert.equal(payload.data?.evidenceReadinessSummary?.totalRequirementCount, 20);
+  assert.equal(payload.data?.evidenceReadinessSummary?.upstreamContractBlockedCount, 12);
+  assert.equal(payload.data?.evidenceReadinessSummary?.approvalGateBlockedCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.tuiGatewayWrapperBlockedCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.tuiGatewayFixtureBackedCount, 4);
+  assert.equal(payload.data?.evidenceReadinessSummary?.productionTransportBlockedCount, 4);
+  assert.equal(payload.data?.evidenceReadinessSummary?.writeBackContractBlockedCount, 12);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), false);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), false);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("production_transport_lifecycle_policy_and_native_round_trip_evidence"), true);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("official_runtime_write_back_contract_fixture"), true);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("official_runtime_native_contract_fixture"), true);
+  for (const readAction of ["preview", "resolve", "history"]) {
+    assert.equal(payload.data?.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes(`hermes.sessions.${readAction}.action_contract`), false);
+  }
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.upstreamContractRequirementIds, [
+    "hermes.sessions.write_back_contract",
+    "hermes.skills.write_back_contract",
+    "hermes.memory.write_back_contract",
+    "hermes.providers.write_back_contract",
+    "hermes.auth.write_back_contract",
+    "hermes.models.write_back_contract",
+    "hermes.scheduler.write_back_contract",
+    "hermes.plugins.write_back_contract",
+    "hermes.gateway.write_back_contract",
+    "hermes.configuration.write_back_contract",
+    "hermes.sessions.pin.native_write_back_contract",
+    "hermes.sessions.unpin.native_write_back_contract",
+  ]);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("tui_gateway_wrapper_fixture"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired?.includes("approval_gate_fixture_and_redacted_receipt"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("approval_gate_fixture_pending"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("tui_gateway_round_trip_evidence_pending"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("native_write_back_pending"), true);
+  assert.equal(payload.data?.blockingReasons?.includes("production_transport_policy_pending"), true);
+
+  const sessionClosure = payload.data?.closureChecklist?.find((item) => item.domain === "sessions");
+  assert.equal(sessionClosure?.implementedFacets?.includes("session_preview_action"), true);
+  assert.equal(sessionClosure?.implementedFacets?.includes("session_resolve_action"), true);
+  assert.equal(sessionClosure?.implementedFacets?.includes("session_history_action"), true);
+  assert.equal(sessionClosure?.blockingFacets?.includes("native_write_back_contract"), true);
+  assert.equal(sessionClosure?.blockingFacets?.includes("native_action_contract"), true);
+});
