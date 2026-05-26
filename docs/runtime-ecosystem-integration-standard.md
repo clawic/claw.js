@@ -100,6 +100,14 @@ native write-back, production TUI Gateway transport, and approved live
 channel/provider/auth/model evidence still gate recommended, production, and
 native-parity claims.
 
+Hermes session reads have two valid fixture paths. A bounded local session
+store can satisfy list/preview/resolve/history without transcript content by
+default. When `--gateway-url` points at an explicit loopback TUI Gateway
+fixture, list/preview/resolve/history may instead materialize through
+`session.list`, `session.history`, and `session.status`; those reads must keep
+`writesRuntime: false`, redact content before JSON output, and must not count
+as production transport evidence.
+
 `support` returns the runtime ecosystem support audit: all manifest domains
 accounted for, current support stage, blocking reasons, blocker classes,
 evidence requirements, session-action blockers, the exact promotion gate, and
