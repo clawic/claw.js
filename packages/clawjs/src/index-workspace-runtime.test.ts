@@ -2333,6 +2333,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   for (const approvalGatedDomain of ["doctorCompat", "sandboxPermissions"]) {
     const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === approvalGatedDomain);
     const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === approvalGatedDomain);
+    const requirement = hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === `hermes.${approvalGatedDomain}.approval_gate_evidence`);
+    assert.equal(requirement?.safeDefault, "do_not_run_without_approval_gate_fixture");
     assert.equal(domainAudit?.evidenceRequirementIds?.includes(`hermes.${approvalGatedDomain}.approval_gate_evidence`), true);
     assert.equal(domainAudit?.supportResolutions?.includes("explicitly_product_blocked_not_a_silent_gap"), true);
     assert.equal(domainAudit?.writeBackAllowed, false);
@@ -2347,6 +2349,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   for (const projectedDomain of ["skills", "memory", "scheduler"]) {
     const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === projectedDomain);
     const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === projectedDomain);
+    const requirement = hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === `hermes.${projectedDomain}.write_back_contract`);
+    assert.equal(requirement?.safeDefault, "keep_read_projection_only_until_official_runtime_write_back_contract_exists");
     assert.equal(domainAudit?.implementedFacets?.includes("read_projection_contract"), true);
     assert.equal(domainAudit?.blockingFacets?.includes("native_write_back_contract"), true);
     assert.equal(checklistItem?.closureStatus, "product_blocked");
@@ -2360,6 +2364,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "scheduler")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.closureChecklist?.length, manifest.requiredDomains.length);
   for (const externalDomain of ["channels", "providers", "auth", "models"]) {
+    const requirement = hermesSupportPayload.data.evidenceRequirements?.find((entry) => entry.id === `hermes.${externalDomain}.live_evidence`);
+    assert.equal(requirement?.safeDefault, "do_not_run_without_explicit_approval_and_redaction");
     assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === externalDomain)?.closureStatus, "external_pending");
     assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === externalDomain)?.nextAction, "use_matching_evidenceReentryPacket_after_explicit_approval");
     assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === externalDomain)?.projectionDisposition, "read_projection_available_live_evidence_pending");
@@ -2414,8 +2420,11 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 4);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_approval_gate_fixture, 2);
   assert.equal((hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract ?? 0) > 0, true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.keep_unpromoted_and_do_not_synthesize_runtime_state, 14);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.keep_unpromoted_and_do_not_synthesize_runtime_state, 4);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.keep_read_projection_only_until_official_runtime_write_back_contract_exists, 10);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.keep_local_overlay_and_do_not_write_runtime_pin_state, 2);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.do_not_run_without_explicit_approval_and_redaction, 4);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.do_not_run_without_approval_gate_fixture, 2);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), true);
