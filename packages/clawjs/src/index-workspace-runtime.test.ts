@@ -2493,7 +2493,24 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     data: {
       runtimeId: string;
       authority?: string;
-      executableByClawCli?: Array<{ command?: string; writesRuntime?: boolean; wouldWriteRuntime?: boolean; writesLocalOverlay?: boolean }>;
+      executableByClawCli?: Array<{
+        command?: string;
+        delegatesTo?: string;
+        writesRuntime?: boolean;
+        wouldWriteRuntime?: boolean;
+        writesLocalOverlay?: boolean;
+        nativeWriteBackStatus?: string;
+        nativeWriteBackSafeDefault?: string;
+        evidenceRequirementId?: string;
+        nativeWriteBackContract?: {
+          status?: string;
+          writesRuntime?: boolean;
+          officialContractRequired?: boolean;
+          officialContractKnown?: boolean;
+          safeDefault?: string;
+          evidenceRequirementId?: string;
+        };
+      }>;
       resourceDomains?: string[];
     };
   };
@@ -2510,6 +2527,21 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.wouldWriteRuntime, true);
   assert.equal(hermesCommandByName.get("runtime hermes sessions create --title <title> --confirm-runtime-write")?.delegatesTo, "tui_gateway.session.create");
   assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.writesLocalOverlay, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackSafeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.evidenceRequirementId, "hermes.sessions.pin.native_write_back_contract");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackContract?.officialContractRequired, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackContract?.officialContractKnown, false);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackContract?.writesRuntime, false);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions pin --session-key <id>")?.nativeWriteBackContract?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.writesLocalOverlay, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.nativeWriteBackStatus, "blocked_until_official_runtime_write_back_contract");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.nativeWriteBackSafeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.evidenceRequirementId, "hermes.sessions.unpin.native_write_back_contract");
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.nativeWriteBackContract?.officialContractRequired, true);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.nativeWriteBackContract?.officialContractKnown, false);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.nativeWriteBackContract?.writesRuntime, false);
+  assert.equal(hermesCommandByName.get("runtime hermes sessions unpin --session-key <id>")?.nativeWriteBackContract?.safeDefault, "keep_local_overlay_and_do_not_write_runtime_pin_state");
 
   const hermesDomainSessionsStdout = captureStream();
   assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(await runCli(["runtime", "hermes", "domain", "sessions", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {

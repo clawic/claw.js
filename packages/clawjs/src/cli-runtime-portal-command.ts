@@ -238,6 +238,30 @@ function runtimePortalUsage(binName: string): string {
 }
 
 function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
+  const localOverlayPinWriteBackContract = (action: "pin" | "unpin") => ({
+    nativeWriteBackStatus: "blocked_until_official_runtime_write_back_contract",
+    nativeWriteBackBlockerClass: "direct_blocker",
+    officialRuntimeWriteBackContractRequired: true,
+    officialRuntimeWriteBackContractKnown: false,
+    nativeWriteBackFixtureRequired: true,
+    nativeWriteBackSafeDefault: "keep_local_overlay_and_do_not_write_runtime_pin_state",
+    userVisibleContract: "local_overlay_only_until_official_runtime_pin_api_exists",
+    claimEffect: "blocks_native_write_back_parity_not_local_overlay",
+    supportResolution: "explicitly_product_blocked_not_a_silent_gap",
+    evidenceRequirementId: `${runtimeId}.sessions.${action}.native_write_back_contract`,
+    nativeWriteBackContract: {
+      status: "blocked",
+      writesRuntime: false,
+      wouldWriteRuntime: false,
+      officialContractRequired: true,
+      officialContractKnown: false,
+      fixtureRequired: true,
+      safeDefault: "keep_local_overlay_and_do_not_write_runtime_pin_state",
+      userVisibleContract: "local_overlay_only_until_official_runtime_pin_api_exists",
+      claimEffect: "blocks_native_write_back_parity_not_local_overlay",
+      evidenceRequirementId: `${runtimeId}.sessions.${action}.native_write_back_contract`,
+    },
+  });
   return {
     runtimeId,
     runtimeName: adapter.runtimeName,
@@ -327,12 +351,14 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         delegatesTo: "ClawJS app-state local overlay",
         writesRuntime: false,
         writesLocalOverlay: true,
+        ...localOverlayPinWriteBackContract("pin"),
       },
       {
         command: `runtime ${runtimeId} sessions unpin --session-key <id>`,
         delegatesTo: "ClawJS app-state local overlay",
         writesRuntime: false,
         writesLocalOverlay: true,
+        ...localOverlayPinWriteBackContract("unpin"),
       },
       {
         command: `runtime ${runtimeId} sessions conflicts`,
