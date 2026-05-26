@@ -1061,21 +1061,54 @@ function freshnessFor(status, domain: string) {
     ?? (status.cliAvailable ? "snapshot" : "degraded_snapshot");
 }
 
+function runtimePortalExactCommand(commandShape: string | undefined): string | undefined {
+  if (typeof commandShape !== "string" || commandShape.length === 0) return undefined;
+  return commandShape.startsWith("runtime ") ? `claw ${commandShape}` : commandShape;
+}
+
+function runtimePortalEvidenceSafetyPolicy(): string {
+  return "redacted_values_only_in_commands_outputs_and_evidence";
+}
+
+function externalDomainEvidenceArtifactTemplate(runtimeId: RuntimeAdapterId, domain: string, exactCommand: string) {
+  return {
+    runtimeId,
+    domain,
+    command: exactCommand,
+    redacted: true,
+    plaintextSecretLeak: false,
+    supportContractMatchesManifest: true,
+  };
+}
+
 function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, policy) {
   const requirements = [];
   const validation = String(policy.validation ?? "");
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
   if (validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) {
+    const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
+    const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
     requirements.push({
       id: `${runtimeId}.${domain}.live_evidence`,
       blockerClass: "external_pending",
       approvalRequired: true,
-      commandShape: `runtime ${runtimeId} domain ${domain} --json`,
+      commandShape,
+      exactCommand,
+      preflightCommand: `claw runtime ${runtimeId} support --json`,
+      approvalScope: "read_only_redacted_live_domain_evidence_only",
+      evidenceSafetyPolicy: runtimePortalEvidenceSafetyPolicy(),
       expectedEvidence: [
         "redacted_json_receipt",
         "no_plaintext_secrets",
         "support_contract_matches_manifest",
       ],
+      expectedRedactedEvidence: [
+        "redacted_json_receipt_for_exact_command",
+        "no_plaintext_secrets_or_credentials",
+        "support_contract_matches_manifest",
+        "evidence_attached_to_goal_before_claim_promotion",
+      ],
+      evidenceArtifactTemplate: externalDomainEvidenceArtifactTemplate(runtimeId, domain, exactCommand),
       riskControls: [
         "read_only_first",
         "no_paid_calls_without_explicit_approval",
@@ -1090,6 +1123,8 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
       supportResolution: "external_pending_not_product_blocked",
       userVisibleContract: "read_only_degraded_projection_until_live_evidence_is_approved",
       promotionGate: "claim_remains_unpromoted_until_redacted_live_evidence_is_attached",
+      claimBlockedUntil: "approved_redacted_live_evidence_attached",
+      doNotRunWithoutApproval: true,
     });
   }
   if (writeBackPolicy.startsWith("blocked")) {
@@ -1098,11 +1133,26 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
       blockerClass: "direct_blocker",
       approvalRequired: false,
       commandShape: "not_executable_until_official_runtime_contract_exists",
+      exactCommand: "not_executable_until_official_runtime_contract_exists",
+      preflightCommand: `claw runtime ${runtimeId} domain ${domain} --json`,
+      approvalScope: "none_until_official_runtime_contract_exists",
+      evidenceSafetyPolicy: runtimePortalEvidenceSafetyPolicy(),
       expectedEvidence: [
         "official_runtime_cli_or_api",
         "non_destructive_fixture",
         "round_trip_native_visibility",
       ],
+      expectedRedactedEvidence: [
+        "official_runtime_contract_reference",
+        "non_destructive_fixture_receipt",
+        "round_trip_native_visibility_without_secret_material",
+      ],
+      evidenceArtifactTemplate: {
+        runtimeId,
+        domain,
+        blockedUntil: "official_runtime_contract_fixture_and_round_trip_evidence",
+        plaintextSecretLeak: false,
+      },
       riskControls: [
         "no_silent_write_back",
         "no_direct_runtime_store_mutation",
@@ -1117,6 +1167,8 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
       supportResolution: "explicitly_product_blocked_not_a_silent_gap",
       userVisibleContract: "read_only_projection_or_local_overlay_only",
       promotionGate: "write_back_claim_remains_blocked_until_contract_fixture_and_round_trip_evidence_exist",
+      claimBlockedUntil: "official_runtime_contract_fixture_and_round_trip_evidence_attached",
+      doNotRunWithoutApproval: false,
     });
   }
   return requirements;
@@ -1379,6 +1431,33 @@ function buildPortalSupport(adapter, runtimeId: RuntimeAdapterId) {
   };
 }
 
+function sessionActionLoopbackFixtureCommand(runtimeId: RuntimeAdapterId, action: string): string {
+  if (action === "send" || action === "inject") {
+    return `claw runtime ${runtimeId} sessions ${action} --session-key <approved-session-id> --message <approved-message> --confirm-runtime-write --gateway-url <approved-loopback-fixture-url> --json`;
+  }
+  if (action === "abort") {
+    return `claw runtime ${runtimeId} sessions abort --session-key <approved-session-id> --confirm-runtime-write --gateway-url <approved-loopback-fixture-url> --json`;
+  }
+  if (action === "create") {
+    return `claw runtime ${runtimeId} sessions create --title <approved-title> --confirm-runtime-write --gateway-url <approved-loopback-fixture-url> --json`;
+  }
+  return runtimePortalExactCommand(runtimeSessionActionCommandShape(runtimeId, action)) ?? `claw runtime ${runtimeId} sessions ${action} --json`;
+}
+
+function sessionActionEvidenceArtifactTemplate(runtimeId: RuntimeAdapterId, action, exactCommand: string) {
+  return {
+    runtimeId,
+    domain: "sessions",
+    action: action.action,
+    command: exactCommand,
+    writesRuntime: action.writesRuntime === true,
+    wouldWriteRuntime: action.wouldWriteRuntime === true,
+    redacted: true,
+    plaintextSecretLeak: false,
+    fixtureBacked: action.fixtureBacked === true,
+  };
+}
+
 function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
   const ecosystem = payload.support?.ecosystem ?? buildRuntimeEcosystemSupport(runtimeId);
   const domains = payload.domains ?? [];
@@ -1399,22 +1478,44 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
           : hasOfficialGatewayContract
             ? "blocked_until_tui_gateway_wrapper_fixture"
             : "blocked_until_official_runtime_action_contract";
+      const commandShape = isLocalOverlayGap
+        ? `not_executable_until_official_runtime_${action.action}_api_exists`
+        : isFixtureBackedGateway
+          ? `runtime_${runtimeId}_sessions_${action.action}_requires_confirm_runtime_write_and_loopback_tui_gateway_fixture`
+          : hasOfficialGatewayContract
+            ? `not_executable_until_tui_gateway_${action.action}_wrapper_fixture_exists`
+            : `not_executable_until_official_runtime_${action.action}_contract_exists`;
+      const exactCommand = isLocalOverlayGap
+        ? commandShape
+        : hasOfficialGatewayContract
+          ? sessionActionLoopbackFixtureCommand(runtimeId, action.action)
+          : commandShape;
       return [{
         id: `${runtimeId}.sessions.${action.action}.${evidenceKind}`,
         blockerClass: "direct_blocker",
         approvalRequired: false,
-        commandShape: isLocalOverlayGap
-          ? `not_executable_until_official_runtime_${action.action}_api_exists`
-          : isFixtureBackedGateway
-            ? `runtime_${runtimeId}_sessions_${action.action}_requires_confirm_runtime_write_and_loopback_tui_gateway_fixture`
-            : hasOfficialGatewayContract
-              ? `not_executable_until_tui_gateway_${action.action}_wrapper_fixture_exists`
-              : `not_executable_until_official_runtime_${action.action}_contract_exists`,
+        commandShape,
+        exactCommand,
+        preflightCommand: `claw runtime ${runtimeId} support --json`,
+        approvalScope: hasOfficialGatewayContract
+          ? "approved_loopback_fixture_only_until_production_transport_policy"
+          : "none_until_official_runtime_contract_exists",
+        evidenceSafetyPolicy: runtimePortalEvidenceSafetyPolicy(),
         expectedEvidence: action.requiredEvidence ?? [
           "official_runtime_cli_or_api",
           "non_destructive_fixture",
           "round_trip_native_visibility",
         ],
+        expectedRedactedEvidence: [
+          ...(action.requiredEvidence ?? [
+            "official_runtime_cli_or_api",
+            "non_destructive_fixture",
+            "round_trip_native_visibility",
+          ]),
+          "no_plaintext_secrets_or_credentials",
+          "evidence_attached_to_goal_before_claim_promotion",
+        ],
+        evidenceArtifactTemplate: sessionActionEvidenceArtifactTemplate(runtimeId, action, exactCommand),
         riskControls: [
           "no_silent_runtime_write",
           "no_direct_runtime_store_mutation",
@@ -1464,6 +1565,15 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         transportPolicy: action.transportPolicy,
         productionTransportStatus: action.productionTransportStatus ?? action.transportPolicy?.productionTransportStatus,
         lifecycleStatus: action.lifecycleStatus ?? action.transportPolicy?.lifecycleStatus,
+        productionTransportCommandShape: hasOfficialGatewayContract
+          ? "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval"
+          : undefined,
+        claimBlockedUntil: isFixtureBackedGateway
+          ? "production_transport_lifecycle_policy_and_native_round_trip_evidence_attached"
+          : hasOfficialGatewayContract
+            ? "tui_gateway_wrapper_fixture_and_round_trip_evidence_attached"
+            : "official_runtime_contract_fixture_and_round_trip_evidence_attached",
+        doNotRunWithoutApproval: hasOfficialGatewayContract,
       }];
     });
   const evidenceRequirements = [...domainEvidenceRequirements, ...sessionActionRequirements];
@@ -1562,13 +1672,28 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
           : "blocked_until_resolution",
       approvalRequired: !!requirement.approvalRequired,
       commandShape: requirement.commandShape,
+      exactCommand: requirement.exactCommand ?? runtimePortalExactCommand(requirement.commandShape),
+      preflightCommand: requirement.preflightCommand,
+      approvalScope: requirement.approvalScope,
+      evidenceSafetyPolicy: requirement.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
       expectedEvidence: requirement.expectedEvidence ?? [],
+      expectedRedactedEvidence: requirement.expectedRedactedEvidence ?? requirement.expectedEvidence ?? [],
+      evidenceArtifactTemplate: requirement.evidenceArtifactTemplate,
       riskControls: requirement.riskControls ?? [],
       reentryCondition: requirement.reentryCondition,
       claimEffect: requirement.claimEffect,
+      claimBlockedUntil: requirement.claimBlockedUntil ?? requirement.promotionGate,
       supportResolution: requirement.supportResolution,
       productDecision: requirement.productDecision,
       userVisibleContract: requirement.userVisibleContract,
+      officialProtocol: requirement.officialProtocol,
+      officialMethod: requirement.officialMethod,
+      officialContractSource: requirement.officialContractSource,
+      transportPolicyId: requirement.transportPolicyId,
+      productionTransportStatus: requirement.productionTransportStatus,
+      lifecycleStatus: requirement.lifecycleStatus,
+      productionTransportCommandShape: requirement.productionTransportCommandShape,
+      doNotRunWithoutApproval: requirement.doNotRunWithoutApproval ?? isExternalPending,
       safeDefault: isExternalPending
         ? "do_not_run_without_explicit_approval_and_redaction"
         : "keep_unpromoted_and_do_not_synthesize_runtime_state",
