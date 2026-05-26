@@ -2049,7 +2049,7 @@ function runtimeSupportBlockingReasons(ecosystem, evidenceReadinessSummary, exte
   if (evidenceReadinessSummary.approvalGateBlockedCount === 0) {
     reasons.delete("approval_gate_fixture_pending");
   }
-  if (evidenceReadinessSummary.tuiGatewayBlockedCount === 0) {
+  if (evidenceReadinessSummary.tuiGatewayWrapperBlockedCount === 0) {
     reasons.delete("tui_gateway_round_trip_evidence_pending");
   }
   if (evidenceReadinessSummary.productionTransportBlockedCount === 0) {

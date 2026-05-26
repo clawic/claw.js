@@ -282,6 +282,8 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
     ]);
     assert.equal(payload.data.supportAudit.evidenceReadinessSummary.nextRequiredActions.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), false);
     assert.equal(payload.data.supportAudit.evidenceReadinessSummary.nextRequiredActions.includes("production_transport_lifecycle_policy_and_native_round_trip_evidence"), true);
+    assert.equal(payload.data.supportAudit.blockingReasons.includes("tui_gateway_round_trip_evidence_pending"), false);
+    assert.equal(payload.data.supportAudit.blockingReasons.includes("production_transport_policy_pending"), true);
     assert.equal(payload.data.supportAudit.finalSupportClaimDecision.blockedPromotionClaims.includes("tui_gateway_wrapper_fixture"), false);
     assert.equal(payload.data.supportAudit.finalSupportClaimDecision.blockedPromotionClaims.includes("production_transport_lifecycle"), true);
 
