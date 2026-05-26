@@ -2569,6 +2569,29 @@ function sessionActionPolicy(runtimeId: RuntimeAdapterId, session, supportContra
   return sessionActionContracts(runtimeId).map((contract) => materializeSessionActionContract(runtimeId, contract, session, runtimeOptions));
 }
 
+function degradedMissingSessionStoreRead(action: string, sessionKey: string) {
+  return {
+    runtimeId: "hermes",
+    domain: "sessions",
+    action,
+    status: "degraded",
+    authority: "runtime",
+    writesRuntime: false,
+    degradedReason: "runtime_cli_unavailable_or_session_store_missing",
+    result: {
+      id: sessionKey,
+      found: false,
+      writesRuntime: false,
+      contentIncluded: false,
+      nativeIdentifier: { name: "sessionPathId" },
+      ...(action === "history" ? { messages: [], totalProjected: 0 } : {}),
+    },
+    safeDefault: "metadata_only_projection_until_official_runtime_session_store_or_cli_is_available",
+    userVisibleContract: `session_${action}_is_degraded_until_native_store_or_cli_evidence_exists`,
+    claimEffect: `does_not_satisfy_native_session_${action}_parity`,
+  };
+}
+
 function runtimeSessionOverlayThreadId(runtimeId: RuntimeAdapterId, sessionKey: string): string {
   return `runtime:${runtimeId}:sessions:${encodeURIComponent(sessionKey)}`;
 }
@@ -4037,7 +4060,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
-    if (payload.domainData.sessions.session?.sessionPath) {
+    if (sessionStoreAvailable(payload.domainData.sessions.session)) {
       const result = previewNativeSessionFromPath(runtimeId, payload.domainData.sessions.session, sessionKey, isTruthyFlag(input, "include-content"));
       writePayload(input, {
         runtimeId,
@@ -4050,6 +4073,10 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes") {
+      writePayload(input, { ...degradedMissingSessionStoreRead(action, sessionKey), supportContract }, { runtimeId, operation: "sessions", action });
+      return CLI_EXIT_DEGRADED;
     }
     writePayload(input, blockedSessionAction(runtimeId, action, "Native preview is blocked until the runtime exposes a fixture-backed official preview contract or a local session path.", supportContract), { runtimeId, operation: "sessions", action });
     return CLI_EXIT_DEGRADED;
@@ -4075,7 +4102,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
-    if (payload.domainData.sessions.session?.sessionPath) {
+    if (sessionStoreAvailable(payload.domainData.sessions.session)) {
       const result = resolveNativeSessionFromPath(runtimeId, payload.domainData.sessions.session, sessionKey);
       writePayload(input, {
         runtimeId,
@@ -4088,6 +4115,10 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes") {
+      writePayload(input, { ...degradedMissingSessionStoreRead(action, sessionKey), supportContract }, { runtimeId, operation: "sessions", action });
+      return CLI_EXIT_DEGRADED;
     }
     writePayload(input, blockedSessionAction(runtimeId, action, "Native resolve is blocked until the runtime exposes a fixture-backed official resolve contract.", supportContract), { runtimeId, operation: "sessions", action });
     return CLI_EXIT_DEGRADED;
@@ -4114,7 +4145,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
-    if (payload.domainData.sessions.session?.sessionPath) {
+    if (sessionStoreAvailable(payload.domainData.sessions.session)) {
       const limit = Math.max(1, Number(input.flags.limit ?? 20));
       const result = historyNativeSessionFromPath(runtimeId, payload.domainData.sessions.session, sessionKey, isTruthyFlag(input, "include-content"), limit);
       writePayload(input, {
@@ -4128,6 +4159,10 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes") {
+      writePayload(input, { ...degradedMissingSessionStoreRead(action, sessionKey), supportContract }, { runtimeId, operation: "sessions", action });
+      return CLI_EXIT_DEGRADED;
     }
     writePayload(input, blockedSessionAction(runtimeId, action, "Native history is blocked until the runtime exposes a fixture-backed official history contract and content policy.", supportContract), { runtimeId, operation: "sessions", action });
     return CLI_EXIT_DEGRADED;

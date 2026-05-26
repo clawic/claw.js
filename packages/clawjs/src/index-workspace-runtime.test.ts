@@ -1221,6 +1221,31 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesMissingStoreListPayload.data.result?.totalProjected, 0);
   assert.equal(hermesMissingStoreListPayload.data.safeDefault, "metadata_only_projection_until_official_runtime_session_store_or_cli_is_available");
   assert.equal(hermesMissingStoreListPayload.data.claimEffect, "does_not_satisfy_native_session_list_parity");
+  for (const action of ["preview", "resolve", "history"]) {
+    const stdout = captureStream();
+    assert.equal(await runCli(["runtime", "hermes", "sessions", action, "--session-key", "missing-session", "--workspace", workspaceRoot, "--home-dir", missingHermesHome, "--json"], {
+      stdout: stdout.stream,
+      stderr: captureStream().stream,
+      cwd: process.cwd(),
+    }), CLI_EXIT_DEGRADED);
+    const payload = JSON.parse(stdout.getOutput()) as {
+      data: {
+        status?: string;
+        degradedReason?: string;
+        writesRuntime?: boolean;
+        result?: { found?: boolean; totalProjected?: number };
+        safeDefault?: string;
+        claimEffect?: string;
+      };
+    };
+    assert.equal(payload.data.status, "degraded", action);
+    assert.equal(payload.data.degradedReason, "runtime_cli_unavailable_or_session_store_missing", action);
+    assert.equal(payload.data.writesRuntime, false, action);
+    assert.equal(payload.data.result?.found, false, action);
+    if (action === "history") assert.equal(payload.data.result?.totalProjected, 0, action);
+    assert.equal(payload.data.safeDefault, "metadata_only_projection_until_official_runtime_session_store_or_cli_is_available", action);
+    assert.equal(payload.data.claimEffect, `does_not_satisfy_native_session_${action}_parity`, action);
+  }
 
   const hermesBinaryStatusStdout = captureStream();
   const hermesBinaryStatusExit = await runCli(["runtime", "hermes", "status", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--binary-path", hermesBinaryPath, "--json"], {
