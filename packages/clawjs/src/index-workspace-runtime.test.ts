@@ -1740,6 +1740,11 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       domains: Array<{
         domain: string;
         count?: number;
+        status?: string;
+        runtimeCapabilityStatus?: string;
+        runtimeCapabilitySupported?: boolean;
+        runtimeCapabilityStrategy?: string;
+        readProjectionStatus?: string;
         claim?: string;
         writeBackPolicy?: string;
         validation?: string;
@@ -1826,6 +1831,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.commands?.executableByClawCli?.find((entry) => entry.command === "runtime hermes sessions inject --session-key <id> --message <text> --confirm-runtime-write")?.writesRuntime, false);
   assert.equal(hermesPayload.data.commands?.executableByClawCli?.find((entry) => entry.command === "runtime hermes sessions abort --session-key <id> --confirm-runtime-write")?.delegatesTo, "tui_gateway.session.interrupt");
   assert.deepEqual(hermesPayload.data.domains.map((entry) => entry.domain), manifest.requiredDomains);
+  const hermesSessionsDomain = hermesPayload.data.domains.find((entry) => entry.domain === "sessions");
+  assert.equal(hermesSessionsDomain?.status, "error");
+  assert.equal(hermesSessionsDomain?.runtimeCapabilityStatus, "error");
+  assert.equal(hermesSessionsDomain?.runtimeCapabilitySupported, true);
+  assert.equal(hermesSessionsDomain?.runtimeCapabilityStrategy, "cli");
+  assert.equal(hermesSessionsDomain?.readProjectionStatus, "projected");
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("hermes --continue"), true);
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("/sessions"), true);
   assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "sessions")?.officialCommands?.includes("hermes sessions export <output> [--session-id ID]"), true);

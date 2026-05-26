@@ -4084,11 +4084,25 @@ function domainRows(runtimeId: RuntimeAdapterId, status, domainData, runtimeOpti
   return RUNTIME_PORTAL_DOMAIN_ORDER.map((domain) => {
     const capability = domainCapability(status, domain);
     const supportContract = buildSupportContract(runtimeId, status, domain, runtimeOptions);
+    const domainStatus = capability?.status ?? (domain === "workspace" ? "ready" : undefined);
+    const sessionActions = domain === "sessions"
+      ? domainData?.sessions?.actionPolicy ?? domainData?.sessions?.actionContracts ?? []
+      : [];
+    const projectionAudit = {
+      domain,
+      status: domainStatus,
+      nativeAuthority: supportContract.nativeAuthority,
+      relation: supportContract.relation,
+    };
     return {
       domain,
       supported: capability?.supported ?? (domain === "workspace" || domain === "sessions" ? true : undefined),
-      status: capability?.status ?? (domain === "workspace" ? "ready" : undefined),
+      status: domainStatus,
+      runtimeCapabilityStatus: capability?.status,
+      runtimeCapabilitySupported: capability?.supported,
       strategy: capability?.strategy ?? (domain === "workspace" ? "native" : undefined),
+      runtimeCapabilityStrategy: capability?.strategy,
+      readProjectionStatus: runtimeDomainReadProjectionStatus(projectionAudit, sessionActions),
       count: domainCount(domain, domainData),
       authority: domainAuthority(domain),
       claim: supportContract.claim,
