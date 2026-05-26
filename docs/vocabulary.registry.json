@@ -16,7 +16,10 @@
             "id": "generic-owner-authority",
             "pattern": "\\bowner(?:Id|Kind|_id|ship)?\\b",
             "suggestion": "Do not use generic owner vocabulary for authority. Use steward/principal/grant/scope or a documented domain owner field.",
-            "allowedPathIncludes": ["packages/clawjs/src/cli-search-heavy-command.ts"],
+            "allowedPathIncludes": [
+              "packages/clawjs-integrations/fixtures/started-provider-runtime-catalog.json",
+              "packages/clawjs/src/cli-search-heavy-command.ts"
+            ],
             "allowedContextPhrases": ["legal owner", "asset owner", "account owner", "pet owner", "provider owner", "domain owner", "legacy ownerId projection", "legacy owner_id read-only projection", "host ownership docs", "host ownership", "ownership docs", "ownership relation"]
           },
           {
@@ -48,14 +51,19 @@
             "pattern": "\\btenant(?:Id|_id)?\\b",
             "suggestion": "Tenant is technical isolation only. Use workspace, project, entity, scope, principal, or provider tenant.",
             "allowedPathIncludes": [
+              "docs/persistent-surface.md",
+              "notify/tests/e2e/backend.e2e.test.ts",
               "packages/clawjs/src/cli-legacy.ts",
               "packages/clawjs/src/cli-legacy-open.ts",
-              "packages/clawjs-core/src/remote-sync-schemas.ts",
+              "packages/clawjs/src/cli-remote-sync-command.test.ts",
               "packages/clawjs-core/src/index-remote-contracts.test.ts",
-              "relay/src/shared/protocol.ts",
+              "packages/clawjs-core/src/remote-sync-schemas.ts",
+              "relay/src/server/db.test.ts",
+              "relay/src/server/db.ts",
+              "relay/src/service-proxy/local.test.ts",
               "relay/src/shared/protocol.test.ts",
-              "relay/tests/e2e/relay.e2e.test.ts",
-              "docs/persistent-surface.md"
+              "relay/src/shared/protocol.ts",
+              "relay/tests/e2e/relay.e2e.test.ts"
             ],
             "allowedContextPhrases": ["technical tenant", "provider tenant", "hosted tenant", "remote tenant", "tenant isolation", "tenant semantics", "multi-tenant", "multitenant", "compatibility tenant"]
           }

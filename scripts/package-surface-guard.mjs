@@ -7,8 +7,14 @@ import { createDiagnostic, printActionableFailureReport } from "./actionable-err
 const cwd = process.cwd();
 const args = process.argv.slice(2);
 const ownerArgIndex = args.indexOf("--owner");
-const owner = ownerArgIndex >= 0 ? args[ownerArgIndex + 1] : "clawjs";
-const targets = args.filter((arg, index) => !arg.startsWith("--") && index !== ownerArgIndex + 1);
+const stewardArgIndex = args.indexOf("--steward");
+const surfaceSteward = stewardArgIndex >= 0
+  ? args[stewardArgIndex + 1]
+  : ownerArgIndex >= 0
+    ? args[ownerArgIndex + 1]
+    : "clawjs";
+const optionValueIndexes = new Set([ownerArgIndex + 1, stewardArgIndex + 1].filter((index) => index > 0));
+const targets = args.filter((arg, index) => !arg.startsWith("--") && !optionValueIndexes.has(index));
 
 const ignoredDirs = new Set([
   "node_modules",
@@ -51,10 +57,10 @@ if (process.argv.includes("--self-test")) {
   process.exit(0);
 }
 
-if (!["clawjs", "clawix"].includes(owner)) {
+if (!["clawjs", "clawix"].includes(surfaceSteward)) {
   printActionableFailureReport({
     title: "Package surface guard usage error:",
-    diagnostics: [usageDiagnostic("package_surface_invalid_owner", `unsupported owner ${owner}`)],
+    diagnostics: [usageDiagnostic("package_surface_invalid_steward", `unsupported surface steward ${surfaceSteward}`)],
   });
   process.exit(64);
 }
@@ -90,7 +96,7 @@ function usageDiagnostic(code, message) {
     status: "USAGE",
     location: "scripts/package-surface-guard.mjs",
     suggestion: "Use a known owner and pass at least one package file or directory.",
-    safeNextStep: "Run node scripts/package-surface-guard.mjs [--owner clawjs|clawix] <file-or-dir>...",
+    safeNextStep: "Run node scripts/package-surface-guard.mjs [--steward clawjs|clawix] <file-or-dir>...",
   });
 }
 
@@ -104,7 +110,7 @@ function packageSurfaceDiagnostic(code, message, options = {}) {
 
 function packageNameViolation(name, file) {
   if (!name || isTemplateName(name)) return undefined;
-  if (owner === "clawjs") {
+  if (surfaceSteward === "clawjs") {
     if (name.startsWith("@clawjs/")) return undefined;
     if (clawjsUnscopedPackages.has(name)) return undefined;
     return packageSurfaceDiagnostic("package_surface_name_invalid", `${relative(file)} package name "${name}" must be @clawjs/* or an approved unscoped generator/config package`, {
@@ -128,7 +134,7 @@ function binViolations(bin, file) {
     : bin && typeof bin === "object" && !Array.isArray(bin)
       ? Object.entries(bin)
       : [];
-  const allowed = owner === "clawjs" ? clawjsAllowedBins : clawixAllowedBins;
+  const allowed = surfaceSteward === "clawjs" ? clawjsAllowedBins : clawixAllowedBins;
   return entries.flatMap(([key, target]) => {
     const findings = [];
     if (!allowed.has(key)) {
@@ -191,7 +197,7 @@ for (const file of packageFiles) {
   violations.push(...binViolations(parsed.bin, file));
 }
 
-if (owner === "clawjs") {
+if (surfaceSteward === "clawjs") {
   const rootPackageJsonPath = path.join(cwd, "package.json");
   const buildPackagesPath = path.join(cwd, "scripts", "build-packages.mjs");
   const packSmokePath = path.join(cwd, "scripts", "pack-smoke.mjs");

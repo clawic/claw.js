@@ -18,14 +18,14 @@ function makeNode(name: string) {
 }
 
 test("auto_publish: requires conditions to pass", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const { block } = newBlock({
     archetype: "standalone",
     vertical: "item/v1",
     audience: { groups: ["public"] },
     fieldsPerLevel: { title: ["public"], price_hint_eur: ["public"] },
     content: { title: "Bike", price_hint_eur: 350 },
-    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey, roleCertificate: issuer.roleCert,
   });
   const res = evaluate(
     { scope: "block", autoPublish: { allowed: true, conditions: [{ field: "price_hint_eur", op: "gte", value: 100 }] } },
@@ -44,7 +44,7 @@ test("auto_publish: requires conditions to pass", () => {
 });
 
 test("auto_respond: respects cooldown per peer", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const peer = makeNode("peer");
   const { block } = newBlock({
     archetype: "standalone",
@@ -52,7 +52,7 @@ test("auto_respond: respects cooldown per peer", () => {
     audience: { groups: ["public"] },
     fieldsPerLevel: { title: ["public"] },
     content: { title: "Bike" },
-    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey, roleCertificate: issuer.roleCert,
   });
   const now = 1_700_000_000;
   const recent = [{
@@ -69,7 +69,7 @@ test("auto_respond: respects cooldown per peer", () => {
 });
 
 test("auto_respond: cooldown is scoped to the same peer and block", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const peer = makeNode("peer");
   const first = newBlock({
     archetype: "standalone",
@@ -77,8 +77,8 @@ test("auto_respond: cooldown is scoped to the same peer and block", () => {
     audience: { groups: ["public"] },
     fieldsPerLevel: { title: ["public"] },
     content: { title: "Bike" },
-    rolePubkey: owner.role.publicKey,
-    roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey,
+    roleCertificate: issuer.roleCert,
   }).block;
   const second = newBlock({
     archetype: "standalone",
@@ -86,8 +86,8 @@ test("auto_respond: cooldown is scoped to the same peer and block", () => {
     audience: { groups: ["public"] },
     fieldsPerLevel: { title: ["public"] },
     content: { title: "Helmet" },
-    rolePubkey: owner.role.publicKey,
-    roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey,
+    roleCertificate: issuer.roleCert,
   }).block;
   const now = 1_700_000_000;
   const recent = [{
@@ -103,7 +103,7 @@ test("auto_respond: cooldown is scoped to the same peer and block", () => {
 });
 
 test("auto_accept_interest: requireSharedGroup gates non-friends", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const stranger = makeNode("stranger");
   const friend = makeNode("friend");
   const friends = addMember(createGroup({ id: "friends" }), friend.root.publicKey);
@@ -113,7 +113,7 @@ test("auto_accept_interest: requireSharedGroup gates non-friends", () => {
     audience: { groups: ["public"] },
     fieldsPerLevel: { title: ["public"] },
     content: { title: "Bike" },
-    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey, roleCertificate: issuer.roleCert,
   });
   const blocked = evaluate(
     { scope: "block", autoAcceptInterest: { allowed: true, requireSharedGroup: true } },
@@ -130,14 +130,14 @@ test("auto_accept_interest: requireSharedGroup gates non-friends", () => {
 });
 
 test("auto_lower_price: respects frequency window", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const { block } = newBlock({
     archetype: "standalone",
     vertical: "item/v1",
     audience: { groups: ["public"] },
     fieldsPerLevel: { price_hint_eur: ["public"] },
     content: { price_hint_eur: 500 },
-    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey, roleCertificate: issuer.roleCert,
   });
   const now = 1_700_000_000;
   const recent = [{
@@ -153,14 +153,14 @@ test("auto_lower_price: respects frequency window", () => {
 });
 
 test("auto_lower_price: rejects partial safety bounds", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const { block } = newBlock({
     archetype: "standalone",
     vertical: "item/v1",
     audience: { groups: ["public"] },
     fieldsPerLevel: { price_hint_eur: ["public"] },
     content: { price_hint_eur: 500 },
-    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey, roleCertificate: issuer.roleCert,
   });
   const partialPolicy = {
     scope: "block",
@@ -191,14 +191,14 @@ test("auto_lower_price: rejects partial safety bounds", () => {
 });
 
 test("audit storage records decisions and exposes per-block history", () => {
-  const owner = makeNode("owner");
+  const issuer = makeNode("issuer");
   const { block } = newBlock({
     archetype: "standalone",
     vertical: "item/v1",
     audience: { groups: ["public"] },
     fieldsPerLevel: { title: ["public"] },
     content: { title: "Bike" },
-    rolePubkey: owner.role.publicKey, roleCertificate: owner.roleCert,
+    rolePubkey: issuer.role.publicKey, roleCertificate: issuer.roleCert,
   });
   const storage = new InMemoryAuditStorage();
   const res = evaluate(

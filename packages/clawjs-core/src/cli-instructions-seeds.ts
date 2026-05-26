@@ -269,7 +269,7 @@ export const CATALOG_SEED_INSTRUCTIONS: ReadonlyArray<CatalogSeedEntry> = [
     "warn",
     {
       useWhen: "Configuring external message ingestion, listener flows, bridges, or reply routing.",
-      writePolicy: "Preserve channel session context and respect owner authorization, topic authorization, reply policy, queue, stop, compact, and status commands.",
+      writePolicy: "Preserve channel session context and respect principal authorization, topic authorization, reply policy, queue, stop, compact, and status commands.",
     },
   ),
   policy(

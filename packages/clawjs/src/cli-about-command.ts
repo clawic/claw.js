@@ -26,7 +26,7 @@ const CAPABILITY_GROUPS: CapabilityGroup[] = [
   {
     id: "work",
     label: "Manage work",
-    oneLiner: "Tasks, projects, goals, blockers and ownership.",
+    oneLiner: "Tasks, projects, goals, blockers and stewardship.",
     commands: ["tasks", "projects", "goals", "blockers", "assignments", "handoffs", "approvals"],
   },
   {

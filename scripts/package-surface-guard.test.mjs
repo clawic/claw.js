@@ -46,7 +46,7 @@ test("package surface guard accepts approved bins with existing package-local ta
 });
 
 function runGuard(cwd, target) {
-  return spawnSync(process.execPath, [scriptPath, "--owner", "clawjs", target], {
+  return spawnSync(process.execPath, [scriptPath, "--steward", "clawjs", target], {
     cwd,
     encoding: "utf8",
   });

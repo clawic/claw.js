@@ -295,7 +295,7 @@ function parseAuthority(value: string | undefined): SyncAuthority | undefined {
     CLI_EXIT_USAGE,
     {
       location: "cli.sync.requested_authority",
-      suggestion: "Use a supported sync authority value for handoff receipts.",
+      suggestion: "Use a supported handoff role value for handoff receipts.",
       safeNextStep: "Rerun sync handoff with --requested-authority primary, replica, cache, mirror, or joint.",
       details: {
         received: value,
