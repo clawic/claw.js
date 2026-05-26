@@ -33,6 +33,7 @@ interface ArchiveCliInput {
 }
 
 const ARCHIVE_SUBCOMMANDS = ["plan", "export", "verify", "inspect", "import", "restore", "doctor"] as const;
+const ARCHIVE_SUBCOMMAND_USAGE = "plan|export|verify|inspect|import|restore|doctor";
 const ARCHIVE_ACTIONS = new Set<string>(ARCHIVE_SUBCOMMANDS);
 
 export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
@@ -208,7 +209,7 @@ export async function runArchiveCli(input: ArchiveCliInput): Promise<number> {
 }
 
 function writeArchiveUsage(input: ArchiveCliInput): number {
-  const usage = `Usage: ${input.binName} archive ${ARCHIVE_SUBCOMMANDS.join("|")} [--json] [--include-secrets] [--signed-host] [--output PATH.clawbackup] [--archive PATH.clawbackup] [--target PATH] [--approve --confirm-restore PATH]`;
+  const usage = `Usage: ${input.binName} archive ${ARCHIVE_SUBCOMMAND_USAGE} [--json] [--include-secrets] [--signed-host] [--output PATH.clawbackup] [--archive PATH.clawbackup] [--target PATH] [--approve --confirm-restore PATH]`;
   if (input.wantsJson) {
     const received = input.positionals[1] ?? null;
     writeCommandJsonError(input.context.stdout, "archive", new CliHandledError(
