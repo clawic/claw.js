@@ -602,8 +602,10 @@ test("Hermes TUI gateway token is never emitted in runtime portal JSON", async (
   }
 });
 
-test("Hermes confirmed TUI gateway writes reject non-HTTP and credentialed loopback endpoints", async (t) => {
+test("Hermes confirmed TUI gateway writes reject production and credentialed endpoints", async (t) => {
   for (const gatewayUrl of [
+    "http://198.51.100.10:31337",
+    "https://hermes-gateway.example.invalid/rpc",
     "ws://127.0.0.1:31337",
     "http://user:pass@127.0.0.1:31337",
     "http://127.0.0.1:31337?token=fixture-secret",
@@ -628,6 +630,14 @@ test("Hermes confirmed TUI gateway writes reject non-HTTP and credentialed loopb
     assert.equal(exitCode, CLI_EXIT_DEGRADED);
     assert.equal(payload.data.status, "blocked");
     assert.equal(payload.data.requiredEndpoint, "loopback_http_json_rpc");
+    assert.equal(payload.data.endpointPolicy, "non_loopback_endpoint_rejected_until_production_transport_lifecycle_policy");
+    assert.equal(payload.data.approvalScope, "production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
+    assert.equal(payload.data.productionTransportCommandShape, "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval");
+    assert.equal(payload.data.safeDefault, "fixture_only_no_production_transport_contact");
+    assert.equal(payload.data.doNotRunWithoutApproval, true);
+    assert.equal(payload.data.claimBlockedUntil, "production_transport_lifecycle_policy_and_native_round_trip_evidence_attached");
+    assert.equal(payload.data.productDecision, "production_gateway_transport_blocked_until_lifecycle_policy_and_approval");
+    assert.equal(payload.data.userVisibleContract, "non_loopback_gateway_endpoint_rejected_until_production_transport_lifecycle_policy");
     assert.equal(payload.data.officialMethod, "prompt.submit");
     assert.equal(payload.data.writesRuntime, false);
     assert.equal(payload.data.transportPolicy?.configuredEndpointClass, "non_loopback_endpoint_rejected");

@@ -3167,6 +3167,15 @@ async function callHermesTuiGatewayJsonRpc(input, action: string, sessionKey: st
       blocked: true,
       reason: "Hermes TUI gateway writes are currently limited to explicit loopback fixture endpoints.",
       requiredEndpoint: "loopback_http_json_rpc",
+      endpointPolicy: "non_loopback_endpoint_rejected_until_production_transport_lifecycle_policy",
+      approvalScope: "production_transport_lifecycle_policy_and_non_loopback_endpoint_approval",
+      productionTransportCommandShape: "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval",
+      safeDefault: "fixture_only_no_production_transport_contact",
+      doNotRunWithoutApproval: true,
+      claimBlockedUntil: "production_transport_lifecycle_policy_and_native_round_trip_evidence_attached",
+      productDecision: "production_gateway_transport_blocked_until_lifecycle_policy_and_approval",
+      userVisibleContract: "non_loopback_gateway_endpoint_rejected_until_production_transport_lifecycle_policy",
+      promotionGate: "session_action_claim_remains_blocked_until_production_transport_lifecycle_policy_and_native_round_trip_evidence_exist",
     };
   }
 
@@ -3238,6 +3247,25 @@ async function callHermesTuiGatewayJsonRpc(input, action: string, sessionKey: st
       },
     };
   }
+}
+
+function hermesGatewayBlockedOverrides(gateway) {
+  return Object.fromEntries(Object.entries({
+    requiredFlag: gateway.requiredFlag,
+    requiredEndpoint: gateway.requiredEndpoint,
+    gatewayError: gateway.error,
+    gatewayStatusCode: gateway.statusCode,
+    gatewayRequest: gateway.request,
+    endpointPolicy: gateway.endpointPolicy,
+    approvalScope: gateway.approvalScope,
+    productionTransportCommandShape: gateway.productionTransportCommandShape,
+    safeDefault: gateway.safeDefault,
+    doNotRunWithoutApproval: gateway.doNotRunWithoutApproval,
+    claimBlockedUntil: gateway.claimBlockedUntil,
+    productDecision: gateway.productDecision,
+    userVisibleContract: gateway.userVisibleContract,
+    promotionGate: gateway.promotionGate,
+  }).filter(([, value]) => value !== undefined));
 }
 
 function nextPinSortOrder(pinnedThreads): number {
@@ -4123,11 +4151,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey, message);
       if (!gateway.ok) {
         writePayload(input, blockedSessionAction(runtimeId, action, gateway.reason ?? `Hermes TUI gateway ${action} failed.`, supportContract, {
-          requiredFlag: gateway.requiredFlag,
-          requiredEndpoint: gateway.requiredEndpoint,
-          gatewayError: gateway.error,
-          gatewayStatusCode: gateway.statusCode,
-          gatewayRequest: gateway.request,
+          ...hermesGatewayBlockedOverrides(gateway),
           transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
@@ -4219,11 +4243,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey);
       if (!gateway.ok) {
         writePayload(input, blockedSessionAction(runtimeId, action, gateway.reason ?? "Hermes TUI gateway abort failed.", supportContract, {
-          requiredFlag: gateway.requiredFlag,
-          requiredEndpoint: gateway.requiredEndpoint,
-          gatewayError: gateway.error,
-          gatewayStatusCode: gateway.statusCode,
-          gatewayRequest: gateway.request,
+          ...hermesGatewayBlockedOverrides(gateway),
           transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
         }), { runtimeId, operation: "sessions", action });
         return CLI_EXIT_DEGRADED;
@@ -4301,11 +4321,7 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       const gateway = await callHermesTuiGatewayJsonRpc(input, action, null, undefined, { cols: input.flags.cols ?? 80 });
       if (!gateway.ok) {
         writePayload(input, blockedSessionAction(runtimeId, action, gateway.reason ?? "Hermes TUI gateway create failed.", supportContract, {
-          requiredFlag: gateway.requiredFlag,
-          requiredEndpoint: gateway.requiredEndpoint,
-          gatewayError: gateway.error,
-          gatewayStatusCode: gateway.statusCode,
-          gatewayRequest: gateway.request,
+          ...hermesGatewayBlockedOverrides(gateway),
           transportPolicy: hermesTuiGatewayTransportPolicy(runtimeOptionsFromInput(input, runtimeId)),
           createPlan: sessionCreatePlan(runtimeId, input, supportContract),
         }), { runtimeId, operation: "sessions", action });
