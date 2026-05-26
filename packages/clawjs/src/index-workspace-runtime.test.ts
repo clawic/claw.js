@@ -2146,6 +2146,14 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.readProjectionStatus, "projected");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.implementedFacets?.includes("session_list_action"), true);
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "sessions")?.blockingFacets?.includes("native_action_contract"), true);
+  for (const approvalGatedDomain of ["doctorCompat", "sandboxPermissions"]) {
+    const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === approvalGatedDomain);
+    const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === approvalGatedDomain);
+    assert.equal(domainAudit?.evidenceRequirementIds?.includes(`hermes.${approvalGatedDomain}.approval_gate_evidence`), true);
+    assert.equal(domainAudit?.supportResolutions?.includes("explicitly_product_blocked_not_a_silent_gap"), true);
+    assert.equal(checklistItem?.closureStatus, "product_blocked");
+    assert.equal(checklistItem?.evidenceRequirementIds?.includes(`hermes.${approvalGatedDomain}.approval_gate_evidence`), true);
+  }
   for (const projectedDomain of ["skills", "memory", "scheduler"]) {
     const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === projectedDomain);
     const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === projectedDomain);
@@ -2174,19 +2182,21 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.projectionSummary?.unsupportedDomainCount, 0);
   assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.projected, 4);
   assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.degraded_projection, 9);
-  assert.equal(hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount, 7);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount, 9);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.read_projection_contract, manifest.requiredDomains.length);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.ready_runtime_projection, 3);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.degraded_runtime_projection, 9);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.session_list_action, 1);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.native_action_contract, 1);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.totalRequirementCount, hermesSupportPayload.data.blockerSummary.evidenceRequirementCount);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalRequiredCount, 4);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalRequiredCount, 6);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.providers.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.auth.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.doctorCompat.approval_gate_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.sandboxPermissions.approval_gate_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 4);
   assert.equal((hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);

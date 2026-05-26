@@ -1085,6 +1085,10 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
   const requirements = [];
   const validation = String(policy.validation ?? "");
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
+  const approvalGatedWritePolicy = runtimeId === "hermes"
+    && !writeBackPolicy.startsWith("blocked")
+    && !writeBackPolicy.includes("external_pending")
+    && (writeBackPolicy.includes("approval") || writeBackPolicy.includes("repair"));
   if (validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) {
     const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
     const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
@@ -1169,6 +1173,56 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
       promotionGate: "write_back_claim_remains_blocked_until_contract_fixture_and_round_trip_evidence_exist",
       claimBlockedUntil: "official_runtime_contract_fixture_and_round_trip_evidence_attached",
       doNotRunWithoutApproval: false,
+    });
+  }
+  if (approvalGatedWritePolicy) {
+    const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
+    const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
+    requirements.push({
+      id: `${runtimeId}.${domain}.approval_gate_evidence`,
+      blockerClass: "direct_blocker",
+      approvalRequired: true,
+      commandShape,
+      exactCommand,
+      preflightCommand: `claw runtime ${runtimeId} support --json`,
+      approvalScope: "non_destructive_approval_gate_fixture_only",
+      evidenceSafetyPolicy: runtimePortalEvidenceSafetyPolicy(),
+      expectedEvidence: [
+        "approval_gate_fixture",
+        "non_destructive_dry_run_or_denial_receipt",
+        "no_runtime_or_host_mutation_without_approval",
+      ],
+      expectedRedactedEvidence: [
+        "approval_gate_fixture_receipt",
+        "non_destructive_dry_run_or_denial_receipt",
+        "no_plaintext_secrets_or_permission_tokens",
+        "evidence_attached_to_goal_before_claim_promotion",
+      ],
+      evidenceArtifactTemplate: {
+        runtimeId,
+        domain,
+        command: exactCommand,
+        approvalGated: true,
+        redacted: true,
+        plaintextSecretLeak: false,
+        mutationWithoutApproval: false,
+      },
+      riskControls: [
+        "no_unapproved_runtime_repair",
+        "no_unapproved_host_permission_change",
+        "no_silent_permission_or_repair_mutation",
+      ],
+      evidenceDisposition: "blocked_until_approval_gate_fixture",
+      currentBehavior: "read_only_projection_only_no_repair_or_permission_mutation",
+      fallbackPolicy: "do_not_execute_repair_or_permission_mutation_without_approval_gate_fixture",
+      claimEffect: "blocks_recommended_production_native_parity",
+      reentryCondition: `add_${domain}_approval_gate_fixture_and_redacted_receipt`,
+      productDecision: "approval_gated_runtime_or_host_action_unpromoted_until_fixture_exists",
+      supportResolution: "explicitly_product_blocked_not_a_silent_gap",
+      userVisibleContract: "read_only_projection_until_non_destructive_approval_gate_is_validated",
+      promotionGate: "claim_remains_unpromoted_until_approval_gate_fixture_and_redacted_receipt_exist",
+      claimBlockedUntil: "approval_gate_fixture_and_redacted_receipt_attached",
+      doNotRunWithoutApproval: true,
     });
   }
   return requirements;

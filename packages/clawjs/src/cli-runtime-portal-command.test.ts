@@ -96,3 +96,60 @@ test("runtime session usage errors preserve JSON envelopes", async () => {
   assert.equal(unknownActionPayload.meta?.runtimeId, "hermes");
   assert.equal(unknownActionPayload.meta?.action, "teleport");
 });
+
+test("Hermes support audit keeps repair and permission policies behind approval-gate evidence", async () => {
+  const result = await runCliCapture(["runtime", "hermes", "support", "--json"], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      evidenceRequirements?: Array<{
+        id?: string;
+        blockerClass?: string;
+        approvalRequired?: boolean;
+        exactCommand?: string;
+        supportResolution?: string;
+        doNotRunWithoutApproval?: boolean;
+        expectedRedactedEvidence?: string[];
+      }>;
+      evidenceReentryPackets?: Array<{
+        requirementId?: string;
+        status?: string;
+        exactCommand?: string;
+        doNotRunWithoutApproval?: boolean;
+        claimBlockedUntil?: string;
+      }>;
+      closureChecklist?: Array<{
+        domain?: string;
+        closureStatus?: string;
+        evidenceRequirementIds?: string[];
+      }>;
+    };
+  };
+
+  assert.equal(result.code, 2);
+  const requirements = payload.data?.evidenceRequirements ?? [];
+  const doctor = requirements.find((requirement) => requirement.id === "hermes.doctorCompat.approval_gate_evidence");
+  const sandbox = requirements.find((requirement) => requirement.id === "hermes.sandboxPermissions.approval_gate_evidence");
+  for (const requirement of [doctor, sandbox]) {
+    assert.equal(requirement?.blockerClass, "direct_blocker");
+    assert.equal(requirement?.approvalRequired, true);
+    assert.equal(requirement?.supportResolution, "explicitly_product_blocked_not_a_silent_gap");
+    assert.equal(requirement?.doNotRunWithoutApproval, true);
+    assert.equal(requirement?.expectedRedactedEvidence?.includes("approval_gate_fixture_receipt"), true);
+  }
+  assert.equal(doctor?.exactCommand, "claw runtime hermes domain doctorCompat --json");
+  assert.equal(sandbox?.exactCommand, "claw runtime hermes domain sandboxPermissions --json");
+
+  const packets = payload.data?.evidenceReentryPackets ?? [];
+  const doctorPacket = packets.find((packet) => packet.requirementId === "hermes.doctorCompat.approval_gate_evidence");
+  const sandboxPacket = packets.find((packet) => packet.requirementId === "hermes.sandboxPermissions.approval_gate_evidence");
+  assert.equal(doctorPacket?.status, "blocked_until_upstream_contract");
+  assert.equal(sandboxPacket?.status, "blocked_until_upstream_contract");
+  assert.equal(doctorPacket?.doNotRunWithoutApproval, true);
+  assert.equal(sandboxPacket?.doNotRunWithoutApproval, true);
+  assert.equal(doctorPacket?.claimBlockedUntil, "approval_gate_fixture_and_redacted_receipt_attached");
+  assert.equal(sandboxPacket?.claimBlockedUntil, "approval_gate_fixture_and_redacted_receipt_attached");
+
+  const closure = payload.data?.closureChecklist ?? [];
+  assert.equal(closure.find((item) => item.domain === "doctorCompat")?.closureStatus, "product_blocked");
+  assert.equal(closure.find((item) => item.domain === "sandboxPermissions")?.closureStatus, "product_blocked");
+});
