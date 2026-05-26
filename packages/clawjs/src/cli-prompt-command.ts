@@ -14,6 +14,7 @@ import {
 } from "@clawjs/core/catalogs";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { listPluginMaterializedSeedInstructions } from "./cli-instructions-plugin-seeds.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { openMainDataStore } from "./v1-data-core.ts";
 
@@ -200,8 +201,9 @@ export async function runPromptCli(input: PromptCliInput): Promise<number> {
     const budgetTokens = parseBudget(input.flags.budget);
 
     const seeds = listMaterializedSeedInstructions();
+    const pluginSeeds = listPluginMaterializedSeedInstructions(input.context.cwd);
     const overrides = loadInstructions();
-    const resolved = resolveInstructionsForEvent([...seeds, ...overrides], event);
+    const resolved = resolveInstructionsForEvent([...seeds, ...pluginSeeds, ...overrides], event);
     const payload = renderInstructionsPayload(resolved, event, {
       tier,
       ...(typeof budgetTokens === "number" ? { budgetTokens } : {}),

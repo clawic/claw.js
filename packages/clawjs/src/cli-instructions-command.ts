@@ -27,6 +27,7 @@ import { listMaterializedSeedInstructions } from "@clawjs/core/catalogs";
 import type { DatabaseServiceStore } from "@clawjs/database";
 
 import { CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
+import { listPluginMaterializedSeedInstructions } from "./cli-instructions-plugin-seeds.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { openMainDataStore, resolveClawjsDataRoot } from "./v1-data-core.ts";
 
@@ -613,7 +614,8 @@ function runWhere(input: InstructionsCliInput, store: DatabaseServiceStore): num
 
   const overrides = listStoredInstructions(store);
   const seeds = listMaterializedSeedInstructions();
-  const all = [...seeds, ...overrides];
+  const pluginSeeds = listPluginMaterializedSeedInstructions(input.context.cwd);
+  const all = [...seeds, ...pluginSeeds, ...overrides];
   const resolved = resolveInstructionsForEvent(all, { target, trigger });
 
   const payload = {

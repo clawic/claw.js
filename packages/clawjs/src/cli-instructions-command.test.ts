@@ -41,7 +41,7 @@ function tmpRoot(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "claw-instructions-cli-"));
 }
 
-async function callCli(positionals: string[], flags: Record<string, string>, wantsJson: boolean) {
+async function callCli(positionals: string[], flags: Record<string, string>, wantsJson: boolean, cwd = process.cwd()) {
   const streams = makeStreams();
   const status = await runInstructionsCli({
     positionals,
@@ -49,7 +49,7 @@ async function callCli(positionals: string[], flags: Record<string, string>, wan
     context: {
       stdout: streams.stdout as unknown as NodeJS.WritableStream,
       stderr: streams.stderr as unknown as NodeJS.WritableStream,
-      cwd: process.cwd(),
+      cwd,
     },
     wantsJson,
     binName: "claw",
@@ -313,5 +313,42 @@ test("instructions reconcile archives manifest-managed rows omitted from manifes
     if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
     if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
     if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+  }
+});
+
+test("instructions where merges plugin-provided seeds from openclaw manifests", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  makeIsolatedEnv(root);
+  try {
+    const fixtureRoot = path.resolve("packages/clawjs/tests/fixtures/instructions-plugin/happy");
+    const where = await callCli(["instructions", "where", "fixture-tool", "write"], {}, true, fixtureRoot);
+    assert.equal(where.status, 0, where.stderr);
+    const envelope = JSON.parse(where.stdout);
+    assert.equal(envelope.data.rules.some((rule: { source: string | null }) => rule.source === "plugin:fixture-instructions:0"), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+  }
+});
+
+test("instructions where rejects invalid plugin instruction seeds", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  makeIsolatedEnv(root);
+  try {
+    const fixtureRoot = path.resolve("packages/clawjs/tests/fixtures/instructions-plugin/invalid");
+    const where = await callCli(["instructions", "where", "fixture-tool", "write"], {}, true, fixtureRoot);
+    assert.equal(where.status, 64);
+    const envelope = JSON.parse(where.stdout);
+    assert.equal(envelope.ok, false);
+    assert.equal(envelope.error.code, "plugin_instructions_invalid");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
   }
 });

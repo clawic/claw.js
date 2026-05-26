@@ -1,0 +1,19 @@
+{
+  "id": "fixture-invalid-instructions",
+  "name": "Invalid Fixture Instructions",
+  "version": "0.0.0",
+  "instructions": [
+    {
+      "schemaVersion": 1,
+      "target": {
+        "command": "FixtureTool",
+        "action": "write"
+      },
+      "trigger": "surface-action",
+      "activation": "auto",
+      "priority": 88,
+      "severity": "warn",
+      "before": "This seed should fail target validation."
+    }
+  ]
+}
