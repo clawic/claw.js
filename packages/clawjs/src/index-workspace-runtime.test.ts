@@ -1613,6 +1613,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           recommended?: boolean;
           production?: boolean;
           uiParityClaim?: string;
+          summary?: string;
+          blockingReasons?: string[];
           blockedWriteBackDomains?: string[];
           externalPendingDomains?: string[];
       evidenceRequirements?: Array<{ id: string; blockerClass: string; commandShape: string; approvalRequired: boolean; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; safeDefault?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
@@ -1752,6 +1754,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.support?.ecosystem?.supportStage, "dev_only");
   assert.equal(hermesPayload.data.support?.ecosystem?.recommended, false);
   assert.equal(hermesPayload.data.support?.ecosystem?.production, false);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("channel/provider/auth/model evidence"), true);
+  for (const reason of ["live_channel_evidence_pending", "live_provider_evidence_pending", "live_auth_evidence_pending", "live_model_evidence_pending"]) {
+    assert.equal(hermesPayload.data.support?.ecosystem?.blockingReasons?.includes(reason), true);
+  }
   assert.equal(hermesPayload.data.support?.ecosystem?.blockedWriteBackDomains?.includes("sessions"), true);
   for (const externalDomain of ["channels", "providers", "auth", "models"]) {
     assert.equal(hermesPayload.data.support?.ecosystem?.externalPendingDomains?.includes(externalDomain), true);
