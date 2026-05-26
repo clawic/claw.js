@@ -31,7 +31,7 @@ claw router memoria decisión
 | Group | Commands | Purpose |
 |---|---|---|
 | Capture | `claw inbox`, `claw notes`, `claw decisions` | Quick capture and triage of incoming items, notes and decisions. |
-| Manage work | `claw tasks`, `claw projects`, `claw goals`, `claw blockers`, `claw assignments`, `claw handoffs`, `claw approvals` | Tasks, projects, goals, blockers and ownership. |
+| Manage work | `claw tasks`, `claw projects`, `claw goals`, `claw blockers`, `claw assignments`, `claw handoffs`, `claw approvals` | Tasks, projects, goals, blockers and stewardship. |
 | Plan time | `claw agenda`, `claw calendar`, `claw reminders`, `claw deadlines`, `claw routines`, `claw schedule` | Calendar, reminders, deadlines, routines and agenda. |
 | Remember | `claw knowledge`, `claw learning`, `claw outcomes`, `claw context`, `claw library` | Durable knowledge, learnings, outcomes and reusable context for agents. |
 | Find your way | `claw router`, `claw about`, `claw search`, `claw inspect` | When you do not know what to type. |

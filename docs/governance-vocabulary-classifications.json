@@ -1002,11 +1002,11 @@
       "id": "current-profile-docs-runtime-ecosystem-integration-manifest",
       "path": "docs/runtime-ecosystem-integration.manifest.json",
       "pattern": "profile",
-      "classification": "profileProjection",
-      "rationale": "This path preserves profile vocabulary as a projection or compatibility identifier, not an authority shortcut.",
-      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
-      "maxOccurrences": 1,
-      "steward": "clawjs-docs"
+      "classification": "providerProfile",
+      "rationale": "Runtime ecosystem manifest names runtime auth/model/config profiles as provider/runtime profile projections, not governance identity.",
+      "canonicalDoc": "docs/runtime-ecosystem-integration-standard.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-runtime"
     },
     {
       "id": "current-profile-docs-security-threat-model-coverage",
@@ -1366,6 +1366,256 @@
       "rationale": "This path uses companyId as a business-domain entity identifier, not as authority or access control.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
       "maxOccurrences": 3,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-integrations-src-github-operation-executor-test-ts",
+      "path": "packages/clawjs-integrations/src/github-operation-executor.test.ts",
+      "pattern": "owner_field",
+      "classification": "externalProviderSchema",
+      "rationale": "GitHub operation tests use provider API repository owner fields; this is external provider schema vocabulary, not Claw authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 8,
+      "steward": "clawjs-integrations"
+    },
+    {
+      "id": "current-owner_field-packages-clawjs-profile-tests-profile-test-ts",
+      "path": "packages/clawjs-profile/tests/profile.test.ts",
+      "pattern": "owner_field",
+      "classification": "domainProfile",
+      "rationale": "Profile package tests cover domain profile ACL fixtures where owner fields are profile-domain terminology, not framework authority.",
+      "canonicalDoc": "docs/governance/conceptual-vocabulary-classification-ledger.md",
+      "maxOccurrences": 8,
+      "steward": "clawjs-profile"
+    },
+    {
+      "id": "current-tenant-notify-tests-e2e-backend-e2e-test-ts",
+      "path": "notify/tests/e2e/backend.e2e.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Notify backend E2E tests use tenant as hosted service isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 43,
+      "steward": "clawjs-notify"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-src-cli-remote-sync-command-test-ts",
+      "path": "packages/clawjs/src/cli-remote-sync-command.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Gateway agent-service CLI tests use tenant-id for remote hosted technical isolation.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-tenant-packages-clawjs-node-src-secrets-index-test-ts",
+      "path": "packages/clawjs-node/src/secrets/index.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Secrets node tests use tenant as secrets service isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 10,
+      "steward": "clawjs-secrets"
+    },
+    {
+      "id": "current-tenant-relay-src-server-db-test-ts",
+      "path": "relay/src/server/db.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Relay database tests use tenant as Relay technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenant-relay-src-service-proxy-local-test-ts",
+      "path": "relay/src/service-proxy/local.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Relay service-proxy tests use tenant as Relay technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenant-secrets-src-server-leases-test-ts",
+      "path": "secrets/src/server/leases.test.ts",
+      "pattern": "tenant",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Secrets lease tests use tenant as hosted technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 5,
+      "steward": "clawjs-secrets"
+    },
+    {
+      "id": "current-tenantId-notify-src-server-app-ts",
+      "path": "notify/src/server/app.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Notify server routes use tenantId as hosted service isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 130,
+      "steward": "clawjs-notify"
+    },
+    {
+      "id": "current-tenantId-notify-src-server-db-ts",
+      "path": "notify/src/server/db.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Notify database uses tenantId as hosted service isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 94,
+      "steward": "clawjs-notify"
+    },
+    {
+      "id": "current-tenantId-notify-tests-e2e-backend-e2e-test-ts",
+      "path": "notify/tests/e2e/backend.e2e.test.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Notify backend E2E tests use tenantId as hosted service isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 36,
+      "steward": "clawjs-notify"
+    },
+    {
+      "id": "current-tenantId-relay-src-server-db-test-ts",
+      "path": "relay/src/server/db.test.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Relay database tests use tenantId as Relay technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenantId-relay-src-server-db-ts",
+      "path": "relay/src/server/db.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Relay database uses tenantId as Relay technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 167,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenantId-relay-src-service-proxy-local-test-ts",
+      "path": "relay/src/service-proxy/local.test.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Relay service-proxy tests use tenantId as Relay technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenantId-secrets-src-server-leases-test-ts",
+      "path": "secrets/src/server/leases.test.ts",
+      "pattern": "tenantId",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Secrets lease tests use tenantId as hosted technical isolation vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-secrets"
+    },
+    {
+      "id": "current-tenant_id-notify-src-server-db-ts",
+      "path": "notify/src/server/db.ts",
+      "pattern": "tenant_id",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Notify database uses tenant_id as hosted service isolation storage vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 83,
+      "steward": "clawjs-notify"
+    },
+    {
+      "id": "current-tenant_id-relay-src-server-db-ts",
+      "path": "relay/src/server/db.ts",
+      "pattern": "tenant_id",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Relay database uses tenant_id as Relay technical isolation storage vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 124,
+      "steward": "clawjs-relay"
+    },
+    {
+      "id": "current-tenant_id-secrets-src-server-leases-test-ts",
+      "path": "secrets/src/server/leases.test.ts",
+      "pattern": "tenant_id",
+      "classification": "technicalIsolationIdentifier",
+      "rationale": "Secrets lease tests use tenant_id as hosted technical isolation storage vocabulary.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-secrets"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-cli-runtime-portal-command-ts",
+      "path": "packages/clawjs/src/cli-runtime-portal-command.ts",
+      "pattern": "profile",
+      "classification": "providerProfile",
+      "rationale": "Runtime portal command names runtime auth/model/config profiles as provider/runtime profile projections, not governance identity.",
+      "canonicalDoc": "docs/runtime-ecosystem-integration-standard.md",
+      "maxOccurrences": 4,
+      "steward": "clawjs-runtime"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-index-workspace-runtime-test-ts",
+      "path": "packages/clawjs/src/index-workspace-runtime.test.ts",
+      "pattern": "profile",
+      "classification": "providerProfile",
+      "rationale": "Workspace runtime tests cover auth profile files and Hermes memory profile fixtures as runtime/provider profile terminology.",
+      "canonicalDoc": "docs/runtime-ecosystem-integration-standard.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-runtime"
+    },
+    {
+      "id": "current-profile-packages-clawjs-node-src-auth-openclaw-auth-ts",
+      "path": "packages/clawjs-node/src/auth/openclaw-auth.ts",
+      "pattern": "profile",
+      "classification": "providerProfile",
+      "rationale": "OpenClaw auth storage uses profile as provider credential profile vocabulary, not governance identity.",
+      "canonicalDoc": "docs/runtime-ecosystem-integration-standard.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-runtime"
+    },
+    {
+      "id": "current-profile-scripts-verify-runtime-ecosystem-integration-mjs",
+      "path": "scripts/verify-runtime-ecosystem-integration.mjs",
+      "pattern": "profile",
+      "classification": "providerProfile",
+      "rationale": "Runtime ecosystem verifier checks provider/runtime profile command coverage.",
+      "canonicalDoc": "docs/runtime-ecosystem-integration-standard.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-runtime"
+    },
+    {
+      "id": "current-profileId-packages-clawjs-node-src-auth-openclaw-auth-ts",
+      "path": "packages/clawjs-node/src/auth/openclaw-auth.ts",
+      "pattern": "profileId",
+      "classification": "providerProfile",
+      "rationale": "OpenClaw auth storage uses profileId as provider credential profile identifier, not governance identity.",
+      "canonicalDoc": "docs/runtime-ecosystem-integration-standard.md",
+      "maxOccurrences": 21,
+      "steward": "clawjs-runtime"
+    },
+    {
+      "id": "current-companyId-apps-board-src-app-api-approvals-approvalid-decide-route-test-ts",
+      "path": "apps/board/src/app/api/approvals/[approvalId]/decide/route.test.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "Board approval route tests use companyId as a business entity relation identifier, not authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-board"
+    },
+    {
+      "id": "current-companyId-packages-clawjs-src-index-test-ts",
+      "path": "packages/clawjs/src/index.test.ts",
+      "pattern": "companyId",
+      "classification": "businessEntityIdentifier",
+      "rationale": "CLI data tests use companyId as a business entity relation identifier, not authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 2,
       "steward": "clawjs-cli"
     }
   ]
