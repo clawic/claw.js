@@ -344,6 +344,70 @@ test("hermes adapter does not treat provider config as authentication", async ()
   assert.equal(auth.anthropic?.source, "missing");
 });
 
+test("hermes adapter redacts config and auth secrets from resource catalogs", async () => {
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-secret-catalogs-"));
+  const hermesHome = path.join(homeDir, ".hermes");
+  const authStorePath = path.join(hermesHome, "auth.json");
+  fs.mkdirSync(hermesHome, { recursive: true });
+  const secretValues = [
+    "hermes-provider-api-key-secret-123456",
+    "hermes-provider-token-secret-123456",
+    "hermes-auth-store-token-secret-123456",
+    "hermes-slack-bot-token-secret-123456",
+    "hermes-slack-signing-secret-123456",
+    "hermes-plugin-token-secret-123456",
+    "hermes-mcp-api-key-secret-123456",
+    "hermes-env-openrouter-secret-123456",
+    "sk-hermes-provider-secret-123456",
+  ];
+  fs.writeFileSync(path.join(hermesHome, "config.yaml"), [
+    "model: openai/project-model",
+    "provider: sk-hermes-provider-secret-123456",
+    "providers:",
+    "  local-agent:",
+    "    api_key: hermes-provider-api-key-secret-123456",
+    "    token: hermes-provider-token-secret-123456",
+    "channels:",
+    "  slack:",
+    "    enabled: true",
+    "    bot_token: hermes-slack-bot-token-secret-123456",
+    "    signing_secret: hermes-slack-signing-secret-123456",
+    "plugins:",
+    "  github:",
+    "    enabled: true",
+    "    token: hermes-plugin-token-secret-123456",
+    "mcp_servers:",
+    "  linear:",
+    "    api_key: hermes-mcp-api-key-secret-123456",
+  ].join("\n"));
+  fs.writeFileSync(authStorePath, JSON.stringify({
+    providers: {
+      openai: { access_token: "hermes-auth-store-token-secret-123456" },
+    },
+  }, null, 2));
+
+  const resources = await getRuntimeResourceCatalogs(hermesAdapter, new FakeRunner({}), {
+    adapter: "hermes",
+    homeDir,
+    env: {
+      OPENROUTER_API_KEY: "hermes-env-openrouter-secret-123456",
+    },
+  });
+  const serialized = JSON.stringify(resources);
+  for (const secret of secretValues) {
+    assert.equal(serialized.includes(secret), false, `resource catalogs leaked ${secret}`);
+  }
+
+  const providerIds = resources.providers.providers.map((provider) => provider.id);
+  assert.equal(providerIds.includes("local-agent"), true);
+  assert.equal(providerIds.some((id) => id.includes(".api_key") || id.includes(".token")), false);
+  assert.equal(providerIds.includes("sk-hermes-provider-secret-123456"), false);
+  assert.equal(resources.auth.providers["local-agent"]?.hasAuth, true);
+  assert.equal(resources.auth.providers.openai?.maskedCredential?.includes("hermes-auth-store-token-secret-123456"), false);
+  assert.equal(resources.channels.channels.find((channel) => channel.id === "slack")?.metadata?.configKeys?.includes("channels.slack.bot_token"), false);
+  assert.equal(resources.plugins.plugins.some((plugin) => plugin.id.includes("token") || plugin.id.includes("api-key")), false);
+});
+
 test("nanobot adapter exposes normalized channels, memory, and sandbox limitations", async () => {
   const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-nanobot-"));
   const runtimeHome = path.join(homeDir, ".nanobot");

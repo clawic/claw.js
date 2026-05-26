@@ -90,6 +90,20 @@ interface HermesConfigSnapshot {
   sections: Set<string>;
 }
 
+const HERMES_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
+const HERMES_SECRET_KEY_PATTERN = /(^|[._-])(api[_-]?key|key|token|access[_-]?token|refresh[_-]?token|id[_-]?token|bearer[_-]?token|auth[_-]?token|bot[_-]?token|secret|client[_-]?secret|signing[_-]?secret|password|credential|credentials|private[_-]?key)([._-]|$)/i;
+const HERMES_CAMEL_SECRET_KEY_PATTERN = /(apiKey|accessToken|refreshToken|idToken|bearerToken|authToken|botToken|clientSecret|signingSecret|privateKey)/;
+
+function isSecretConfigKey(key: string): boolean {
+  return HERMES_SECRET_KEY_PATTERN.test(key) || HERMES_CAMEL_SECRET_KEY_PATTERN.test(key);
+}
+
+function addHermesProviderId(ids: Set<string>, candidate: string | undefined): void {
+  const normalized = candidate?.trim();
+  if (!normalized || !HERMES_ID_PATTERN.test(normalized) || isSecretConfigKey(normalized)) return;
+  ids.add(normalized);
+}
+
 function readHermesDirectory(dirPath: string | undefined): fs.Dirent[] {
   if (!dirPath) return [];
   try {
@@ -211,17 +225,17 @@ function fileUpdatedAt(filePath: string | undefined): string | undefined {
 function collectConfiguredProviderIds(config: HermesConfigSnapshot, authStorePath: string | undefined, env: NodeJS.ProcessEnv): Set<string> {
   const ids = new Set<string>(HERMES_PROVIDER_IDS);
   for (const key of Object.keys(config.values)) {
-    const providerMatch = /^providers\.([A-Za-z0-9_.-]+)/.exec(key);
-    if (providerMatch?.[1]) ids.add(providerMatch[1]);
-    if (key === "provider" || key.endsWith(".provider")) ids.add(config.values[key]!);
+    const providerMatch = /^providers\.([A-Za-z0-9_-]+)(?:\.|$)/.exec(key);
+    if (providerMatch?.[1]) addHermesProviderId(ids, providerMatch[1]);
+    if (key === "provider" || key.endsWith(".provider")) addHermesProviderId(ids, config.values[key]);
   }
   const auth = readJsonObject(authStorePath);
   for (const key of Object.keys(auth.providers && typeof auth.providers === "object" ? auth.providers as Record<string, unknown> : auth)) {
-    ids.add(key);
+    addHermesProviderId(ids, key);
   }
   for (const key of Object.keys(env)) {
     if (!key.endsWith("_API_KEY") || !env[key]) continue;
-    ids.add(key.replace(/_API_KEY$/, "").toLowerCase().replace(/_/g, "-"));
+    addHermesProviderId(ids, key.replace(/_API_KEY$/, "").toLowerCase().replace(/_/g, "-"));
   }
   return ids;
 }
@@ -346,7 +360,7 @@ function listHermesModelsFromConfig(config: HermesConfigSnapshot): ModelDescript
   }
   for (const [key, value] of Object.entries(config.values)) {
     if (!/(^|\.)(model|default_model|fallback_model)$/i.test(key)) continue;
-    if (!value || value.includes("${") || /key|token|secret|password/i.test(key)) continue;
+    if (!value || value.includes("${") || isSecretConfigKey(key)) continue;
     const provider = value.includes("/") ? value.split("/")[0] : valueFor(config, ["provider", "default_provider"]) ?? "default";
     models.set(value, {
       id: value,
@@ -429,7 +443,7 @@ function listHermesChannels(config: HermesConfigSnapshot): ChannelDescriptor[] {
       status: enabled === false ? "disconnected" as const : "configured" as const,
       metadata: {
         source: "config",
-        configKeys: matchingKeys.filter((key) => !/key|token|secret|password/i.test(key)).slice(0, 8),
+        configKeys: matchingKeys.filter((key) => !isSecretConfigKey(key)).slice(0, 8),
       },
     }];
   });
@@ -466,6 +480,7 @@ function listHermesPlugins(homeDir: string | undefined, config: HermesConfigSnap
     }));
   const configEntries = Object.keys(config.values)
     .filter((key) => key.startsWith("mcp.") || key.startsWith("mcp_servers.") || key.startsWith("plugins."))
+    .filter((key) => !isSecretConfigKey(key))
     .map((key): RuntimePluginDescriptor => ({
       id: `config-${key.replace(/[^a-zA-Z0-9]+/g, "-")}`,
       label: titleize(key),
