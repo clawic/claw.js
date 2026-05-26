@@ -592,6 +592,8 @@ test("Hermes confirmed TUI gateway writes reject non-HTTP and credentialed loopb
   for (const gatewayUrl of [
     "ws://127.0.0.1:31337",
     "http://user:pass@127.0.0.1:31337",
+    "http://127.0.0.1:31337?token=fixture-secret",
+    "http://127.0.0.1:31337#api_key=fixture-secret",
   ]) {
     const { workspaceRoot, hermesHome } = hermesWorkspace(t);
     const { exitCode, payload } = await runHermesAction([

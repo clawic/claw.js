@@ -2183,10 +2183,36 @@ function isLoopbackGatewayUrl(rawUrl: string): boolean {
     const loopbackHost = ["127.0.0.1", "localhost", "::1"].includes(url.hostname);
     const allowedProtocol = url.protocol === "http:" || url.protocol === "https:";
     const hasCredentials = url.username.length > 0 || url.password.length > 0;
-    return loopbackHost && allowedProtocol && !hasCredentials;
+    const hasCredentialBearingUrlPart = hasCredentials || hasCredentialSearchParam(url) || hasCredentialFragment(url);
+    return loopbackHost && allowedProtocol && !hasCredentialBearingUrlPart;
   } catch {
     return false;
   }
+}
+
+function hasCredentialSearchParam(url: URL): boolean {
+  for (const key of url.searchParams.keys()) {
+    if (isCredentialUrlKey(key)) return true;
+  }
+  return false;
+}
+
+function hasCredentialFragment(url: URL): boolean {
+  const fragment = url.hash.replace(/^#/, "");
+  if (!fragment) return false;
+  try {
+    const params = new URLSearchParams(fragment);
+    for (const key of params.keys()) {
+      if (isCredentialUrlKey(key)) return true;
+    }
+  } catch {
+    // Fall through to the plain fragment scan below.
+  }
+  return /(?:^|[&;])(?:api[_-]?key|auth|authorization|bearer|credential|password|secret|token)=/i.test(fragment);
+}
+
+function isCredentialUrlKey(key: string): boolean {
+  return /^(?:api[_-]?key|auth|authorization|bearer|credential|password|secret|token)$/i.test(key.trim());
 }
 
 function hermesTuiGatewayRequest(action: string, sessionKey: string | null, message?: string, extra: Record<string, unknown> = {}) {
