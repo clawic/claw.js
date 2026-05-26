@@ -962,6 +962,68 @@ function hermesResourceSummary(domain: string, resource: Record<string, unknown>
   return undefined;
 }
 
+function hermesAuthResourcePath(status, source: string | undefined): string | undefined {
+  const locations = runtimeLocationDiagnostics(status);
+  if (source === "runtime") return locations.authStorePath;
+  if (source === "config") return locations.configPath;
+  return locations.authStorePath ?? locations.configPath;
+}
+
+function hermesSafeScalarAuthDisposition(value: unknown): string {
+  if (value === null) return "null_value";
+  if (typeof value === "boolean") return `boolean_${value}`;
+  if (typeof value === "number") return "numeric_value_redacted_by_portal";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "empty_string";
+    if (trimmed === "[REDACTED]" || /^[*]+$/.test(trimmed)) return "redacted_value";
+    return "scalar_value_redacted_by_portal";
+  }
+  return "unsupported_scalar_redacted_by_portal";
+}
+
+function hermesAuthStateResources(status, authState): Array<Record<string, unknown>> {
+  if (status.adapter !== "hermes" || !isObjectRecord(authState?.providers)) return [];
+  const policy = domainPolicy("hermes", "auth");
+  return Object.entries(authState.providers)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([providerId, state]) => {
+      const stateRecord = isObjectRecord(state) ? state : null;
+      const source = stringFrom(stateRecord?.source);
+      const resourcePath = hermesAuthResourcePath(status, source);
+      const attributes = stateRecord
+        ? [
+          source ? `source: ${source}` : undefined,
+          typeof stateRecord.hasSubscription === "boolean" ? `subscription: ${stateRecord.hasSubscription}` : undefined,
+          typeof stateRecord.hasApiKey === "boolean" ? `api key: ${stateRecord.hasApiKey}` : undefined,
+          typeof stateRecord.hasProfileApiKey === "boolean" ? `profile key: ${stateRecord.hasProfileApiKey}` : undefined,
+          typeof stateRecord.hasEnvKey === "boolean" ? `env key: ${stateRecord.hasEnvKey}` : undefined,
+        ].filter(Boolean)
+        : [`auth scalar: ${hermesSafeScalarAuthDisposition(state)}`];
+      return {
+        id: providerId,
+        label: stringFrom(stateRecord?.provider) ?? providerId,
+        status: stateRecord ? (stateRecord.hasAuth === true ? "configured" : "missing") : "redacted",
+        kind: stringFrom(stateRecord?.authType) ?? (stateRecord ? "auth" : "redacted_auth_state"),
+        path: resourcePath,
+        enabled: stateRecord && typeof stateRecord.hasAuth === "boolean" ? stateRecord.hasAuth : undefined,
+        summary: stringFrom(stateRecord?.maskedCredential),
+        nativeIdentifier: { name: "authProviderId" },
+        provenance: {
+          source: "hermes-runtime-adapter",
+          runtimeId: "hermes",
+          domain: "auth",
+          path: resourcePath,
+        },
+        limitations: [
+          `write back: ${policy.writeBackPolicy}`,
+          `validation: ${policy.validation}`,
+        ],
+        attributes,
+      };
+    });
+}
+
 function decorateHermesRuntimeResources(domain: string, status, resources: unknown[]) {
   if (status.adapter !== "hermes") return resources;
   const policy = domainPolicy("hermes", domain);
@@ -1216,7 +1278,10 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
         return {
           auth: authState.providers ?? {},
           authState,
-          authResources: buildHermesFallbackResources(domain, status),
+          authResources: [
+            ...buildHermesFallbackResources(domain, status),
+            ...hermesAuthStateResources(status, authState),
+          ],
         };
       }
       return { auth: await claw.auth.status(), authResources: buildHermesFallbackResources(domain, status) };

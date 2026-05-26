@@ -1680,6 +1680,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       domainData: {
         auth?: {
           auth?: Record<string, unknown>;
+          resources?: Array<{ id?: string; status?: string; kind?: string; summary?: string; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { source?: string; runtimeId?: string; domain?: string; path?: string }; limitations?: string[] }>;
         };
         sessions?: {
           actionContracts?: Array<{
@@ -1898,6 +1899,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesProviderResource?.nativeIdentifier?.name, "providerId");
   assert.equal(hermesProviderResource?.provenance?.source, "hermes-runtime-adapter");
   assert.equal(hermesProviderResource?.limitations?.includes("validation: fixture_and_external_pending_live"), true);
+  const hermesAuthResource = hermesPayload.data.domainData.auth?.resources?.find((entry) => entry.id === "openai");
+  assert.equal(hermesAuthResource?.status, "configured");
+  assert.equal(["api_key", "env"].includes(hermesAuthResource?.kind ?? ""), true);
+  assert.equal(hermesAuthResource?.summary?.startsWith("*"), true);
+  assert.equal(hermesAuthResource?.nativeIdentifier?.name, "authProviderId");
+  assert.equal(hermesAuthResource?.provenance?.source, "hermes-runtime-adapter");
+  assert.equal(hermesAuthResource?.provenance?.domain, "auth");
+  assert.equal(hermesAuthResource?.limitations?.includes("validation: secret_guard_and_external_pending_live_credentials"), true);
+  assert.equal(hermesAuthResource?.attributes?.some((entry) => entry === "source: config" || entry === "source: env"), true);
   assert.equal(hermesPayload.data.domainData.models?.defaultModel?.modelId, "openai/gpt-4.1");
   const hermesDefaultModelResource = hermesPayload.data.domainData.models?.models?.find((entry) => entry.id === "openai/gpt-4.1");
   assert.equal(hermesDefaultModelResource?.isDefault, true);
