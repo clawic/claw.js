@@ -1899,6 +1899,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesMemoryResource?.summary?.includes("not exposed by default"), true);
   assert.equal(hermesMemoryResource?.nativeIdentifier?.name, "memoryId");
   assert.equal(hermesMemoryResource?.provenance?.source, "hermes-runtime-adapter");
+  assert.equal(hermesPayload.data.status.capabilityMap?.memory?.status, "degraded");
+  assert.equal(hermesPayload.data.domains.find((entry) => entry.domain === "memory")?.status, "degraded");
   const hermesProviderResource = hermesPayload.data.domainData.providers?.providers?.find((entry) => entry.id === "openai");
   assert.equal(hermesProviderResource?.nativeIdentifier?.name, "providerId");
   assert.equal(hermesProviderResource?.provenance?.source, "hermes-runtime-adapter");
@@ -2361,7 +2363,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(checklistItem?.nextAction, "add_official_runtime_write_back_contract_fixture_and_round_trip_evidence");
     assert.equal(checklistItem?.projectionDisposition, "read_projection_available_write_back_blocked");
   }
-  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "memory")?.readProjectionStatus, "projected");
+  assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "memory")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "skills")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "models")?.readProjectionStatus, "degraded_projection");
   assert.equal(hermesSupportPayload.data.domains?.find((entry) => entry.domain === "scheduler")?.readProjectionStatus, "degraded_projection");
@@ -2382,12 +2384,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal((hermesSupportPayload.data.closureChecklistSummary?.product_blocked ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.projectionSummary?.projectedDomainCount, manifest.requiredDomains.length);
   assert.equal(hermesSupportPayload.data.projectionSummary?.unsupportedDomainCount, 0);
-  assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.projected, 3);
-  assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.degraded_projection, 10);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.projected, 2);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.byReadProjectionStatus?.degraded_projection, 11);
   assert.equal(hermesSupportPayload.data.projectionSummary?.productBlockedButProjectedDomainCount, 9);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.read_projection_contract, manifest.requiredDomains.length);
-  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.ready_runtime_projection, 2);
-  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.degraded_runtime_projection, 10);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.ready_runtime_projection, 1);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.degraded_runtime_projection, 11);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.session_list_action, 1);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.runtime_write_policy_allowed ?? 0, 0);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.native_action_contract, 1);

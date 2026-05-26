@@ -360,7 +360,7 @@ async function probeSimpleRuntime(
         session_gateway: { ...declared.session_gateway, supported: !!spec.gatewaySupport, status: spec.gatewaySupport ? "degraded" : "unsupported", strategy: spec.gatewaySupport ? "gateway" : "unsupported" },
         streaming: { ...declared.streaming, supported: true, status: "degraded", strategy: spec.gatewaySupport ? "gateway" : "cli" },
         scheduler: { ...declared.scheduler, supported: declared.scheduler.supported, status: declared.scheduler.supported ? "degraded" : "unsupported" },
-        memory: { ...declared.memory, supported: true, status: "ready", strategy: declared.memory.strategy },
+        memory: { ...declared.memory, supported: true, status: "degraded", strategy: declared.memory.strategy },
         skills: { ...declared.skills, supported: true, status: "degraded", strategy: declared.skills.strategy },
         channels: { ...declared.channels, supported: declared.channels.supported, status: declared.channels.supported ? "degraded" : "unsupported", strategy: declared.channels.strategy },
         doctor: { ...declared.doctor, supported: declared.doctor.supported, status: declared.doctor.supported ? "degraded" : "unsupported", strategy: declared.doctor.strategy },
