@@ -420,7 +420,11 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       requiredEvidence,
       transportPolicyId: transportPolicy?.id,
       transportPolicy,
+      officialTransportSurface: transportPolicy?.officialTransportSurface,
+      officialTransportClasses: transportPolicy?.officialTransportClasses,
+      officialTransportSource: transportPolicy?.officialTransportSource,
       productionTransportStatus: transportPolicy?.productionTransportStatus,
+      productionTransportBlocker: transportPolicy?.productionTransportBlocker,
       lifecycleStatus: transportPolicy?.lifecycleStatus,
       productionTransportCommandShape: transportPolicy
         ? "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval"
@@ -2244,7 +2248,11 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         officialContractSource: action.officialContractSource,
         transportPolicyId: action.transportPolicy?.id,
         transportPolicy: action.transportPolicy,
+        officialTransportSurface: action.transportPolicy?.officialTransportSurface,
+        officialTransportClasses: action.transportPolicy?.officialTransportClasses,
+        officialTransportSource: action.transportPolicy?.officialTransportSource,
         productionTransportStatus: action.productionTransportStatus ?? action.transportPolicy?.productionTransportStatus,
+        productionTransportBlocker: action.transportPolicy?.productionTransportBlocker,
         lifecycleStatus: action.lifecycleStatus ?? action.transportPolicy?.lifecycleStatus,
         productionTransportCommandShape: hasOfficialGatewayContract
           ? "blocked_until_approved_production_transport_lifecycle_policy_and_non_loopback_endpoint_approval"
@@ -2389,7 +2397,11 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       officialMethod: requirement.officialMethod,
       officialContractSource: requirement.officialContractSource,
       transportPolicyId: requirement.transportPolicyId,
+      officialTransportSurface: requirement.officialTransportSurface,
+      officialTransportClasses: requirement.officialTransportClasses,
+      officialTransportSource: requirement.officialTransportSource,
       productionTransportStatus: requirement.productionTransportStatus,
+      productionTransportBlocker: requirement.productionTransportBlocker,
       lifecycleStatus: requirement.lifecycleStatus,
       productionTransportCommandShape: requirement.productionTransportCommandShape,
       doNotRunWithoutApproval: requirement.doNotRunWithoutApproval ?? isExternalPending,

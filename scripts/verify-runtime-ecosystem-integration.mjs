@@ -376,6 +376,10 @@ function main() {
         "officialTransportClasses: [\"stdio_json_rpc\", \"websocket_json_rpc\"]",
         "officialTransportSource: \"https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration\"",
         "productionTransportBlocker: \"approval_required_for_non_loopback_endpoint_and_lifecycle_management\"",
+        "officialTransportSurface: requirement.officialTransportSurface",
+        "officialTransportClasses: requirement.officialTransportClasses",
+        "officialTransportSource: requirement.officialTransportSource",
+        "productionTransportBlocker: requirement.productionTransportBlocker",
       ]) {
         if (!runtimePortal.includes(snippet)) errors.push(`Hermes TUI Gateway transport policy missing current official transport guard: ${snippet}`);
       }
