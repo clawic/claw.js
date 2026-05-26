@@ -609,6 +609,7 @@ function runtimeOptionsFromInput(input, runtimeId: RuntimeAdapterId) {
     envKey: input.flags["env-key"],
     permissionMode: input.flags.sandbox,
     approvalGateFixturePath: input.flags["approval-gate-fixture"],
+    liveEvidenceFixturePath: input.flags["live-evidence-fixture"],
     gateway: {
       url: input.flags["gateway-url"],
       token: input.flags["gateway-token"],
@@ -625,6 +626,34 @@ function readApprovalGateFixture(runtimeOptions?) {
   try {
     const stat = fs.statSync(fixturePath);
     if (!stat.isFile() || stat.size > 64 * 1024) {
+      return {
+        status: "invalid",
+        path: fixturePath,
+        reason: stat.isFile() ? "fixture_too_large" : "not_a_file",
+      };
+    }
+    const parsed = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+    return {
+      status: "loaded",
+      path: fixturePath,
+      parsed,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      path: fixturePath,
+      reason: "unreadable_or_invalid_json",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function readLiveEvidenceFixture(runtimeOptions?) {
+  const fixturePath = runtimeOptions?.liveEvidenceFixturePath;
+  if (typeof fixturePath !== "string" || fixturePath.trim().length === 0) return null;
+  try {
+    const stat = fs.statSync(fixturePath);
+    if (!stat.isFile() || stat.size > 128 * 1024) {
       return {
         status: "invalid",
         path: fixturePath,
@@ -679,6 +708,44 @@ function approvalGateReceiptFor(runtimeId: RuntimeAdapterId, domain: string, run
     redacted: true,
     evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
     source: "approval-gate-fixture",
+  };
+}
+
+function liveEvidenceReceiptFor(runtimeId: RuntimeAdapterId, domain: string, runtimeOptions?) {
+  if (runtimeId !== "hermes") return null;
+  if (!["channels", "providers", "auth", "models"].includes(domain)) return null;
+  const fixture = readLiveEvidenceFixture(runtimeOptions);
+  if (!fixture || fixture.status !== "loaded") return null;
+  const parsed = fixture.parsed;
+  if (parsed?.runtimeId && parsed.runtimeId !== runtimeId) return null;
+  const receipts = Array.isArray(parsed?.receipts) ? parsed.receipts : [];
+  const receipt = receipts.find((entry) => entry?.domain === domain);
+  if (!receipt) return null;
+  const exactCommand = `claw runtime ${runtimeId} domain ${domain} --json`;
+  const approved = receipt.approved === true;
+  const redacted = receipt.redacted === true;
+  const readOnly = receipt.readOnly === true || receipt.mutationPerformed === false;
+  const plaintextSecretLeak = receipt.plaintextSecretLeak === true;
+  const mutationPerformed = receipt.mutationPerformed === true;
+  const supportContractMatchesManifest = receipt.supportContractMatchesManifest === true;
+  const fixtureReceipt = receipt.receiptType === "external_live_evidence_receipt"
+    || receipt.receiptId
+    || receipt.status === "approved_redacted_live_evidence";
+  if (!approved || !redacted || !readOnly || plaintextSecretLeak || mutationPerformed || !supportContractMatchesManifest || !fixtureReceipt) return null;
+  return {
+    domain,
+    receiptId: receipt.receiptId ?? `${runtimeId}.${domain}.live_evidence_receipt`,
+    receiptType: "external_live_evidence_receipt",
+    status: receipt.status ?? "approved_redacted_live_evidence",
+    command: receipt.command ?? exactCommand,
+    approved: true,
+    readOnly: true,
+    mutationPerformed: false,
+    plaintextSecretLeak: false,
+    redacted: true,
+    supportContractMatchesManifest: true,
+    evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
+    source: "live-evidence-fixture",
   };
 }
 
@@ -1601,7 +1668,8 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
   const approvalGatedWritePolicy = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
   const approvalGateReceipt = approvalGateReceiptFor(runtimeId, domain, runtimeOptions);
-  if (validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) {
+  const liveEvidenceReceipt = liveEvidenceReceiptFor(runtimeId, domain, runtimeOptions);
+  if ((validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) && !liveEvidenceReceipt) {
     const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
     const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
     requirements.push({
@@ -1749,6 +1817,7 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
   const writeBackApprovalGated = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
   const approvalGateFixtureReceipt = approvalGateReceiptFor(runtimeId, domain, runtimeOptions);
+  const liveEvidenceFixtureReceipt = liveEvidenceReceiptFor(runtimeId, domain, runtimeOptions);
   return {
     ...policy,
     authority: domainAuthority(domain),
@@ -1763,6 +1832,13 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
         : "missing"
       : "not_required",
     approvalGateFixtureReceipt,
+    liveEvidenceFixtureStatus: String(policy.validation ?? "").includes("external_pending")
+      || writeBackPolicy.includes("external_pending")
+      ? liveEvidenceFixtureReceipt
+        ? "attached"
+        : "missing"
+      : "not_required",
+    liveEvidenceFixtureReceipt,
     externalPending: String(policy.validation).includes("external_pending")
       || writeBackPolicy.includes("external_pending"),
     evidenceRequirements,
@@ -1850,6 +1926,7 @@ function runtimeDomainImplementedFacets(audit, sessionActions = []) {
   if (status === "degraded") facets.push("degraded_runtime_projection");
   if (audit.writeBackAllowed === true) facets.push("runtime_write_policy_allowed");
   if (audit.approvalGateFixtureStatus === "attached") facets.push("approval_gate_fixture_receipt");
+  if (audit.liveEvidenceFixtureStatus === "attached") facets.push("approved_live_evidence_receipt");
   if (audit.domain === "sessions") {
     const readActions = new Set(["list", "preview", "resolve", "history"]);
     const implementedReadActions = sessionActions
@@ -2316,6 +2393,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       writeBackApprovalGated: domain.writeBackApprovalGated,
       approvalGateFixtureStatus: domain.approvalGateFixtureStatus,
       approvalGateFixtureReceipt: domain.approvalGateFixtureReceipt,
+      liveEvidenceFixtureStatus: domain.liveEvidenceFixtureStatus,
+      liveEvidenceFixtureReceipt: domain.liveEvidenceFixtureReceipt,
       validation: domain.validation,
       externalPending: domain.externalPending,
       persistence: domain.persistence,
@@ -4981,6 +5060,8 @@ function domainRows(runtimeId: RuntimeAdapterId, status, domainData, runtimeOpti
       writeBackApprovalGated: supportContract.writeBackApprovalGated,
       approvalGateFixtureStatus: supportContract.approvalGateFixtureStatus,
       approvalGateFixtureReceipt: supportContract.approvalGateFixtureReceipt,
+      liveEvidenceFixtureStatus: supportContract.liveEvidenceFixtureStatus,
+      liveEvidenceFixtureReceipt: supportContract.liveEvidenceFixtureReceipt,
       validation: supportContract.validation,
       externalPending: supportContract.externalPending,
       evidenceRequirements: supportContract.evidenceRequirements,

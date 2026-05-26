@@ -269,6 +269,87 @@ test("Hermes approval-gate fixtures attach redacted receipts without runtime mut
   assert.equal(sandboxClosure?.blockingFacets?.includes("approval_gate_contract"), false);
 });
 
+test("Hermes live-evidence fixtures attach approved redacted receipts without external mutation", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-live-evidence-"));
+  const fixturePath = path.join(tempDir, "live-evidence-fixture.json");
+  fs.writeFileSync(fixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: ["channels", "providers", "auth", "models"].map((domain) => ({
+      domain,
+      receiptId: `fixture-${domain}-live-evidence`,
+      receiptType: "external_live_evidence_receipt",
+      status: "approved_redacted_live_evidence",
+      command: `claw runtime hermes domain ${domain} --json`,
+      approved: true,
+      readOnly: true,
+      redacted: true,
+      mutationPerformed: false,
+      plaintextSecretLeak: false,
+      supportContractMatchesManifest: true,
+    })),
+  }));
+
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "support",
+    "--live-evidence-fixture",
+    fixturePath,
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      evidenceRequirements?: Array<{ id?: string }>;
+      evidenceReadinessSummary?: {
+        approvalRequiredCount?: number;
+        externalPendingCount?: number;
+        externalPendingRequirementIds?: string[];
+        nextRequiredActions?: string[];
+      };
+      domains?: Array<{
+        domain?: string;
+        liveEvidenceFixtureStatus?: string;
+        liveEvidenceFixtureReceipt?: { receiptId?: string; plaintextSecretLeak?: boolean; mutationPerformed?: boolean };
+        implementedFacets?: string[];
+        blockingFacets?: string[];
+      }>;
+      closureChecklist?: Array<{ domain?: string; closureStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
+      finalPromotionReview?: { requiredForPromotion?: string[] };
+      finalSupportClaimDecision?: { blockedPromotionClaims?: string[]; externalPendingCount?: number };
+      blockingReasons?: string[];
+    };
+  };
+
+  assert.equal(result.code, 2);
+  for (const domain of ["channels", "providers", "auth", "models"]) {
+    assert.equal(payload.data?.evidenceRequirements?.some((requirement) => requirement.id === `hermes.${domain}.live_evidence`), false);
+    const auditDomain = payload.data?.domains?.find((entry) => entry.domain === domain);
+    assert.equal(auditDomain?.liveEvidenceFixtureStatus, "attached");
+    assert.equal(auditDomain?.liveEvidenceFixtureReceipt?.receiptId, `fixture-${domain}-live-evidence`);
+    assert.equal(auditDomain?.liveEvidenceFixtureReceipt?.plaintextSecretLeak, false);
+    assert.equal(auditDomain?.liveEvidenceFixtureReceipt?.mutationPerformed, false);
+    assert.equal(auditDomain?.implementedFacets?.includes("approved_live_evidence_receipt"), true);
+    assert.equal(auditDomain?.blockingFacets?.includes("approved_live_evidence"), false);
+  }
+  assert.equal(payload.data?.evidenceReadinessSummary?.approvalRequiredCount, 2);
+  assert.equal(payload.data?.evidenceReadinessSummary?.externalPendingCount, 0);
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.externalPendingRequirementIds, []);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), false);
+  assert.equal(payload.data?.finalPromotionReview?.requiredForPromotion?.includes("approved_redacted_live_evidence"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.externalPendingCount, 0);
+  assert.equal(payload.data?.blockingReasons?.includes("live_channel_evidence_pending"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("live_provider_evidence_pending"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("live_auth_evidence_pending"), false);
+  assert.equal(payload.data?.blockingReasons?.includes("live_model_evidence_pending"), false);
+
+  const channelClosure = payload.data?.closureChecklist?.find((item) => item.domain === "channels");
+  assert.equal(channelClosure?.closureStatus, "implemented_or_projected");
+  assert.equal(channelClosure?.implementedFacets?.includes("approved_live_evidence_receipt"), true);
+  assert.equal(channelClosure?.blockingFacets?.includes("approved_live_evidence"), false);
+});
+
 test("Hermes support audit discounts every locally verifiable fixture while preserving real blockers", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-local-parity-"));
   const hermesHome = path.join(tempDir, ".hermes");
@@ -404,4 +485,118 @@ test("Hermes support audit discounts every locally verifiable fixture while pres
   assert.equal(sessionClosure?.implementedFacets?.includes("session_history_action"), true);
   assert.equal(sessionClosure?.blockingFacets?.includes("native_write_back_contract"), true);
   assert.equal(sessionClosure?.blockingFacets?.includes("native_action_contract"), true);
+});
+
+test("Hermes support audit removes external live blockers when every approved receipt is attached", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-complete-local-evidence-"));
+  const approvalFixturePath = path.join(tempDir, "approval-gate-fixture.json");
+  const liveFixturePath = path.join(tempDir, "live-evidence-fixture.json");
+  fs.writeFileSync(approvalFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: [
+      {
+        domain: "doctorCompat",
+        receiptId: "fixture-doctor-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "denied_without_approval",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+      {
+        domain: "sandboxPermissions",
+        receiptId: "fixture-sandbox-denial",
+        receiptType: "approval_gate_fixture_receipt",
+        status: "dry_run_only",
+        approved: false,
+        redacted: true,
+        mutationPerformed: false,
+        mutationWithoutApproval: false,
+        plaintextSecretLeak: false,
+      },
+    ],
+  }));
+  fs.writeFileSync(liveFixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: ["channels", "providers", "auth", "models"].map((domain) => ({
+      domain,
+      receiptId: `fixture-${domain}-live-evidence`,
+      receiptType: "external_live_evidence_receipt",
+      status: "approved_redacted_live_evidence",
+      command: `claw runtime hermes domain ${domain} --json`,
+      approved: true,
+      readOnly: true,
+      redacted: true,
+      mutationPerformed: false,
+      plaintextSecretLeak: false,
+      supportContractMatchesManifest: true,
+    })),
+  }));
+
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "support",
+    "--gateway-url",
+    "http://127.0.0.1:9",
+    "--approval-gate-fixture",
+    approvalFixturePath,
+    "--live-evidence-fixture",
+    liveFixturePath,
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      evidenceReadinessSummary?: {
+        totalRequirementCount?: number;
+        approvalRequiredCount?: number;
+        externalPendingCount?: number;
+        upstreamContractBlockedCount?: number;
+        approvalGateBlockedCount?: number;
+        tuiGatewayWrapperBlockedCount?: number;
+        tuiGatewayFixtureBackedCount?: number;
+        productionTransportBlockedCount?: number;
+        writeBackContractBlockedCount?: number;
+        nextRequiredActions?: string[];
+      };
+      finalSupportClaimDecision?: {
+        blockedPromotionClaims?: string[];
+        promotionEvidenceRequired?: string[];
+        externalPendingCount?: number;
+      };
+      blockingReasons?: string[];
+    };
+  };
+
+  assert.equal(result.code, 2);
+  assert.equal(payload.data?.evidenceReadinessSummary?.totalRequirementCount, 16);
+  assert.equal(payload.data?.evidenceReadinessSummary?.approvalRequiredCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.externalPendingCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.upstreamContractBlockedCount, 12);
+  assert.equal(payload.data?.evidenceReadinessSummary?.approvalGateBlockedCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.tuiGatewayWrapperBlockedCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.tuiGatewayFixtureBackedCount, 4);
+  assert.equal(payload.data?.evidenceReadinessSummary?.productionTransportBlockedCount, 4);
+  assert.equal(payload.data?.evidenceReadinessSummary?.writeBackContractBlockedCount, 12);
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.nextRequiredActions, [
+    "production_transport_lifecycle_policy_and_native_round_trip_evidence",
+    "official_runtime_write_back_contract_fixture",
+    "official_runtime_native_contract_fixture",
+  ]);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("tui_gateway_wrapper_fixture"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired?.includes("approved_redacted_live_evidence"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.externalPendingCount, 0);
+  assert.deepEqual(payload.data?.blockingReasons, [
+    "dev_only_runtime_ecosystem",
+    "native_write_back_pending",
+    "production_transport_policy_pending",
+  ]);
 });
