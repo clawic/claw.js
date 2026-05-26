@@ -2616,6 +2616,47 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesUnpinPayload.data.writesLocalOverlay, true);
   assert.equal(hermesUnpinPayload.data.result?.pinned, false);
 
+  const hermesUnpinnedListStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "list", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesUnpinnedListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_DEGRADED);
+  const hermesUnpinnedListPayload = JSON.parse(hermesUnpinnedListStdout.getOutput()) as {
+    data: {
+      result?: {
+        sessions?: Array<{
+          id?: string;
+          pinned?: boolean;
+          pinAuthority?: string;
+          divergence?: string;
+          localOverlay?: { pinned?: boolean; authority?: string; writesRuntime?: boolean };
+        }>;
+      };
+    };
+  };
+  const hermesUnpinnedSession = hermesUnpinnedListPayload.data.result?.sessions?.find((entry) => entry.id === "2026/05/21/runtime-session");
+  assert.equal(hermesUnpinnedSession?.pinned, false);
+  assert.equal(hermesUnpinnedSession?.pinAuthority, "none");
+  assert.equal(hermesUnpinnedSession?.divergence, "none");
+  assert.equal(hermesUnpinnedSession?.localOverlay?.pinned, false);
+  assert.equal(hermesUnpinnedSession?.localOverlay?.authority, "clawix_local_overlay");
+  assert.equal(hermesUnpinnedSession?.localOverlay?.writesRuntime, false);
+
+  const hermesClearedConflictsStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "conflicts", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesClearedConflictsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_OK);
+  const hermesClearedConflictsPayload = JSON.parse(hermesClearedConflictsStdout.getOutput()) as { data: { action: string; authority: string; writesRuntime: boolean; result?: { totalOverlays?: number; totalConflicts?: number; overlays?: Array<{ id?: string }> } } };
+  assert.equal(hermesClearedConflictsPayload.data.action, "conflicts");
+  assert.equal(hermesClearedConflictsPayload.data.authority, "clawix_local_overlay");
+  assert.equal(hermesClearedConflictsPayload.data.writesRuntime, false);
+  assert.equal(hermesClearedConflictsPayload.data.result?.totalOverlays, 0);
+  assert.equal(hermesClearedConflictsPayload.data.result?.totalConflicts, 0);
+  assert.deepEqual(hermesClearedConflictsPayload.data.result?.overlays, []);
+
   const openclawSessionStdout = captureStream();
   assert.equal(await runCli(["runtime", "openclaw", "session", "--workspace", workspaceRoot, "--json"], {
     stdout: openclawSessionStdout.stream,
