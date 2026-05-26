@@ -312,6 +312,48 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       evidenceRequirementId: `${runtimeId}.sessions.${action}.native_write_back_contract`,
     },
   });
+  const blockedRuntimeSessionWriteContract = (action: "send" | "inject" | "abort" | "create") => {
+    const actionContract = sessionActionContracts(runtimeId).find((contract) => contract.action === action) ?? {};
+    const officialContract = officialSessionActionContract(runtimeId, actionContract);
+    const requiredEvidence = actionContract.requiredEvidence ?? runtimeWriteActionEvidence(action) ?? [
+      "official_runtime_cli_or_api",
+      "non_destructive_fixture",
+      "round_trip_native_visibility",
+    ];
+    const writeBackStatus = officialContract.known
+      ? (officialContract.integrationStatus ?? "blocked_until_tui_gateway_wrapper_fixture")
+      : `blocked_until_official_runtime_${action}_contract`;
+    const userVisibleContract = officialContract.known
+      ? "non_executable_until_tui_gateway_wrapper_fixture_exists"
+      : "non_executable_action_plan_only_until_runtime_contract_exists";
+    return {
+      blockerClass: "direct_blocker",
+      nativeWriteBackStatus: writeBackStatus,
+      nativeWriteBackBlockerClass: "direct_blocker",
+      officialRuntimeWriteBackContractRequired: !officialContract.known,
+      officialRuntimeWriteBackContractKnown: officialContract.known,
+      nativeWriteBackFixtureRequired: true,
+      nativeWriteBackSafeDefault: "keep_unpromoted_and_do_not_synthesize_runtime_state",
+      safeDefault: "keep_unpromoted_and_do_not_synthesize_runtime_state",
+      userVisibleContract,
+      claimEffect: "blocks_recommended_production_native_parity",
+      supportResolution: "explicitly_product_blocked_not_a_silent_gap",
+      evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
+      requiredEvidence,
+      nativeWriteBackContract: {
+        status: "blocked",
+        writesRuntime: false,
+        wouldWriteRuntime: true,
+        officialContractRequired: !officialContract.known,
+        officialContractKnown: officialContract.known,
+        fixtureRequired: true,
+        safeDefault: "keep_unpromoted_and_do_not_synthesize_runtime_state",
+        userVisibleContract,
+        claimEffect: "blocks_recommended_production_native_parity",
+        evidenceRequirementId: `${runtimeId}.sessions.${action}.action_contract`,
+      },
+    };
+  };
   return {
     runtimeId,
     runtimeName: adapter.runtimeName,
@@ -377,24 +419,28 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.send" : (runtimeId === "hermes" ? "tui_gateway.prompt.submit" : "blocked until native send contract"),
         writesRuntime: runtimeId === "openclaw",
         wouldWriteRuntime: runtimeId !== "openclaw",
+        ...(runtimeId === "openclaw" ? {} : blockedRuntimeSessionWriteContract("send")),
       },
       {
         command: `runtime ${runtimeId} sessions inject --session-key <id> --message <text> --confirm-runtime-write`,
         delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.inject" : (runtimeId === "hermes" ? "tui_gateway.session.steer" : "blocked until native inject contract"),
         writesRuntime: runtimeId === "openclaw",
         wouldWriteRuntime: runtimeId !== "openclaw",
+        ...(runtimeId === "openclaw" ? {} : blockedRuntimeSessionWriteContract("inject")),
       },
       {
         command: `runtime ${runtimeId} sessions abort --session-key <id> --confirm-runtime-write`,
         delegatesTo: runtimeId === "openclaw" ? "runtime.openclaw.chat.abort" : (runtimeId === "hermes" ? "tui_gateway.session.interrupt" : "blocked until native abort contract"),
         writesRuntime: runtimeId === "openclaw",
         wouldWriteRuntime: runtimeId !== "openclaw",
+        ...(runtimeId === "openclaw" ? {} : blockedRuntimeSessionWriteContract("abort")),
       },
       {
         command: `runtime ${runtimeId} sessions create --title <title> --confirm-runtime-write`,
         delegatesTo: runtimeId === "hermes" ? "tui_gateway.session.create" : "blocked until official runtime create contract and fixture",
         writesRuntime: false,
         wouldWriteRuntime: true,
+        ...blockedRuntimeSessionWriteContract("create"),
       },
       {
         command: `runtime ${runtimeId} sessions pin --session-key <id>`,
