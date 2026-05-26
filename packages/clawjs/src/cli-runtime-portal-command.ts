@@ -56,6 +56,46 @@ const DOMAIN_ALIASES = new Map([
   ["sandbox_permissions", "sandboxPermissions"],
 ]);
 
+const RUNTIME_PORTAL_SESSION_ACTIONS = [
+  "list",
+  "preview",
+  "resolve",
+  "history",
+  "send",
+  "inject",
+  "abort",
+  "create",
+  "pin",
+  "unpin",
+  "conflicts",
+];
+
+function buildJsonPortalCommandSet(runtimeId: RuntimeAdapterId, executableByClawCli) {
+  const topLevelCommandCount = 5;
+  const domainCommandCount = RUNTIME_PORTAL_DOMAIN_ORDER.length;
+  const resourceCommandCount = RUNTIME_PORTAL_DOMAIN_ORDER.length;
+  const scopedReadCommandCount = 2;
+  const sessionActionCommandCount = RUNTIME_PORTAL_SESSION_ACTIONS.length;
+  return {
+    status: "guarded",
+    totalCommandCount: topLevelCommandCount + domainCommandCount + resourceCommandCount + scopedReadCommandCount + sessionActionCommandCount,
+    topLevelCommandCount,
+    domainCommandCount,
+    resourceCommandCount,
+    scopedReadCommandCount,
+    sessionActionCommandCount,
+    manifestDomainCount: RUNTIME_PORTAL_DOMAIN_ORDER.length,
+    sessionActions: RUNTIME_PORTAL_SESSION_ACTIONS,
+    includesAllManifestDomains: true,
+    includesAllDocumentedSessionActions: true,
+    executableMatrixCommandCount: executableByClawCli.length,
+    promotionSignal: false,
+    supportClaim: RUNTIME_ECOSYSTEM_SUPPORT[runtimeId]?.uiParityClaim ?? "none",
+    supportStage: RUNTIME_ECOSYSTEM_SUPPORT[runtimeId]?.supportStage ?? "dev_only",
+    safeDefault: "guarded_command_coverage_does_not_promote_support",
+  };
+}
+
 const RUNTIME_PORTAL_DOMAIN_POLICIES = JSON.parse(`{
   "openclaw": {
     "sessions": {"claim":"projected","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_and_shadow","relation":"native_projection","lossPolicy":"preserve_transcript_when_safe","writeBackPolicy":"official_cli_or_gateway_only","validation":"hermetic_fixture_required","officialCommands":["openclaw sessions","openclaw sessions --json","openclaw sessions cleanup --dry-run","openclaw sessions cleanup --json","openclaw message","openclaw agent","openclaw agents list"]},
@@ -371,11 +411,7 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
       },
     };
   };
-  return {
-    runtimeId,
-    runtimeName: adapter.runtimeName,
-    authority: "runtime_adapter",
-    executableByClawCli: [
+  const executableByClawCli = [
       {
         command: `runtime ${runtimeId} status`,
         delegatesTo: "adapter.getStatus",
@@ -503,7 +539,13 @@ function buildCommandMatrix(adapter, runtimeId: RuntimeAdapterId) {
         args: adapter.buildUninstallCommand().args,
         writesRuntime: false,
       },
-    ],
+    ];
+  return {
+    runtimeId,
+    runtimeName: adapter.runtimeName,
+    authority: "runtime_adapter",
+    executableByClawCli,
+    jsonPortalCommandSet: buildJsonPortalCommandSet(runtimeId, executableByClawCli),
     resourceDomains: RUNTIME_PORTAL_DOMAIN_ORDER,
     mutationPolicy: runtimeId === "codex"
       ? "Codex-owned config remains read-only from ClawJS unless Codex exposes an explicit supported mutation path."

@@ -231,6 +231,8 @@ function main() {
   for (const snippet of [
     "requiredHermesJsonPortalCommands",
     "assert.equal(requiredHermesJsonPortalCommands.length, 44)",
+    "jsonPortalCommandSet",
+    "guarded_command_coverage_does_not_promote_support",
     "runtime hermes sessions conflicts",
     "payload.data?.runtimeId, \"hermes\", command.label",
     "stdout.getOutput().includes(\"TEST_SECRET_1234567890\"), false, command.label",
