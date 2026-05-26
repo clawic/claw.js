@@ -23,7 +23,7 @@ const CLI_EXIT_OK = 0;
 const CLI_EXIT_FAILURE = 1;
 const CLI_EXIT_USAGE = 64;
 const INSPECT_SUBCOMMANDS = [
-  "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "stable", "compat", "apis", "private-apis", "env", "packages", "native", "formats", "provider-mappings", "protocols", "events", "schemas", "ids", "cli", "surfaces", "surface-parity", "external", "render",
+  "tree", "list", "show", "neighbors", "routes", "route", "capabilities", "capability", "maturity", "canonicity", "agent", "edges", "why", "commands", "command-intents", "debt-ledger", "remote", "remote-sync", "version-governance", "evolution", "governance", "dense-data", "dense-gaps", "dense-intents", "dense-views", "dense-fixtures", "codebase", "connectors", "aliases", "database", "storage", "prefs", "custom-app-sdk", "contracts", "stable", "compat", "apis", "private-apis", "env", "packages", "native", "formats", "provider-mappings", "protocols", "events", "schemas", "ids", "cli", "surfaces", "surface-parity", "external", "render", "instructions",
 ] as const;
 function inspectUsage(binName: string): string {
   return `Usage: ${binName} inspect ${INSPECT_SUBCOMMANDS.join("|")}`;
@@ -1769,6 +1769,55 @@ async function runInspectCliUnsafe(input: InspectCliInput): Promise<number> {
       aliases,
     }, inspectJsonMeta(command));
     else input.context.stdout.write(`${aliases.map((alias) => `${alias.alias}\t${alias.canonicalName}\t${alias.source}`).join("\n")}\n`);
+    return CLI_EXIT_OK;
+  }
+  if (command === "instructions") {
+    const { listMaterializedSeedInstructions } = await import("@clawjs/core/catalogs");
+    const { openMainDataStore } = await import("./v1-data-core.ts");
+    const seeds = listMaterializedSeedInstructions();
+    let overrides: unknown[] = [];
+    let store: ReturnType<typeof openMainDataStore> | undefined;
+    try {
+      store = openMainDataStore();
+      const { items } = store.listRecords("main", "instructions", { limit: 10_000 });
+      overrides = items;
+    } catch {
+      overrides = [];
+    } finally {
+      store?.close();
+    }
+    const payload = {
+      seeds: seeds.map((seed) => ({
+        id: seed.id,
+        source: seed.source,
+        target: seed.target,
+        trigger: seed.trigger,
+        severity: seed.severity,
+        priority: seed.priority,
+        activation: seed.activation,
+        provenance: seed.provenance,
+        state: seed.state,
+        useWhen: seed.useWhen,
+        useNot: seed.useNot,
+        readPolicy: seed.readPolicy,
+        writePolicy: seed.writePolicy,
+        before: seed.before,
+        after: seed.after,
+        forbid: seed.forbid,
+        notes: seed.notes,
+      })),
+      overrides,
+    };
+    if (input.wantsJson) {
+      writeJsonOk(input.context.stdout, payload, inspectJsonMeta(command));
+    } else {
+      const lines = [
+        `seeds: ${payload.seeds.length}`,
+        `overrides: ${(payload.overrides as unknown[]).length}`,
+        ...payload.seeds.map((seed) => `  seed\t${seed.source}\t${seed.severity}/${seed.priority}\t${seed.trigger}`),
+      ];
+      input.context.stdout.write(`${lines.join("\n")}\n`);
+    }
     return CLI_EXIT_OK;
   }
   if (command === "why") {
