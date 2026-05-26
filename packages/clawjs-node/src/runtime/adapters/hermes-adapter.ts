@@ -93,6 +93,7 @@ interface HermesConfigSnapshot {
 const HERMES_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
 const HERMES_SECRET_KEY_PATTERN = /(^|[._-])(api[_-]?key|key|token|access[_-]?token|refresh[_-]?token|id[_-]?token|bearer[_-]?token|auth[_-]?token|bot[_-]?token|secret|client[_-]?secret|signing[_-]?secret|password|credential|credentials|private[_-]?key)([._-]|$)/i;
 const HERMES_CAMEL_SECRET_KEY_PATTERN = /(apiKey|accessToken|refreshToken|idToken|bearerToken|authToken|botToken|clientSecret|signingSecret|privateKey)/;
+const HERMES_SECRET_VALUE_PATTERN = /(^|[._/-])(api[_-]?key|key|token|access[_-]?token|refresh[_-]?token|id[_-]?token|bearer[_-]?token|auth[_-]?token|bot[_-]?token|secret|client[_-]?secret|signing[_-]?secret|password|credential|credentials|private[_-]?key)([._/-]|$)|^(sk|pk|ghp|gho|ghu|ghs|xoxb|xoxp|ya29|eyJ)[A-Za-z0-9._-]{8,}/i;
 
 function isSecretConfigKey(key: string): boolean {
   return HERMES_SECRET_KEY_PATTERN.test(key) || HERMES_CAMEL_SECRET_KEY_PATTERN.test(key);
@@ -115,6 +116,14 @@ function providerRefForModel(config: HermesConfigSnapshot, modelId: string): str
     ? modelId.split("/")[0]
     : valueFor(config, ["provider", "default_provider", "defaultProvider"]);
   return normalizeHermesProviderId(candidate) ?? undefined;
+}
+
+function normalizeHermesModelId(candidate: string | undefined): string | null {
+  const normalized = candidate?.trim();
+  if (!normalized || normalized.includes("${") || HERMES_SECRET_VALUE_PATTERN.test(normalized) || /[\r\n]/.test(normalized)) {
+    return null;
+  }
+  return normalized;
 }
 
 function readHermesDirectory(dirPath: string | undefined): fs.Dirent[] {
@@ -339,7 +348,7 @@ function buildHermesProviderAuth(providers: ProviderDescriptor[], config: Hermes
 }
 
 function defaultModelFromConfig(config: HermesConfigSnapshot): DefaultModelRef | null {
-  const modelId = valueFor(config, [
+  const modelId = normalizeHermesModelId(valueFor(config, [
     "model",
     "default_model",
     "defaultModel",
@@ -347,7 +356,7 @@ function defaultModelFromConfig(config: HermesConfigSnapshot): DefaultModelRef |
     "models.default",
     "providers.default.model",
     "auxiliary.compression.model",
-  ]);
+  ]));
   if (!modelId) return null;
   const provider = providerRefForModel(config, modelId);
   return {
@@ -374,16 +383,17 @@ function listHermesModelsFromConfig(config: HermesConfigSnapshot): ModelDescript
   }
   for (const [key, value] of Object.entries(config.values)) {
     if (!/(^|\.)(model|default_model|fallback_model)$/i.test(key)) continue;
-    if (!value || value.includes("${") || isSecretConfigKey(key)) continue;
-    const provider = providerRefForModel(config, value) ?? "default";
-    models.set(value, {
-      id: value,
-      modelId: value,
+    const modelId = normalizeHermesModelId(value);
+    if (!modelId || isSecretConfigKey(key)) continue;
+    const provider = providerRefForModel(config, modelId) ?? "default";
+    models.set(modelId, {
+      id: modelId,
+      modelId,
       provider,
-      label: value,
+      label: modelId,
       available: true,
-      isDefault: fallback?.modelId === value,
-      ref: { provider, modelId: value, label: value },
+      isDefault: fallback?.modelId === modelId,
+      ref: { provider, modelId, label: modelId },
       source: "config",
     });
   }

@@ -358,10 +358,12 @@ test("hermes adapter redacts config and auth secrets from resource catalogs", as
     "hermes-plugin-token-secret-123456",
     "hermes-mcp-api-key-secret-123456",
     "hermes-env-openrouter-secret-123456",
+    "sk-hermes-model-secret-123456",
     "sk-hermes-provider-secret-123456",
   ];
   fs.writeFileSync(path.join(hermesHome, "config.yaml"), [
     "model: project-model",
+    "fallback_model: sk-hermes-model-secret-123456",
     "provider: sk-hermes-provider-secret-123456",
     "providers:",
     "  local-agent:",
@@ -404,6 +406,7 @@ test("hermes adapter redacts config and auth secrets from resource catalogs", as
   assert.equal(providerIds.includes("sk-hermes-provider-secret-123456"), false);
   assert.equal(resources.models.defaultModel?.provider, undefined);
   assert.equal(resources.models.models.find((model) => model.id === "project-model")?.provider, "default");
+  assert.equal(resources.models.models.some((model) => model.id === "sk-hermes-model-secret-123456"), false);
   assert.equal(resources.auth.providers["local-agent"]?.hasAuth, true);
   assert.equal(resources.auth.providers.openai?.maskedCredential?.includes("hermes-auth-store-token-secret-123456"), false);
   assert.equal(resources.channels.channels.find((channel) => channel.id === "slack")?.metadata?.configKeys?.includes("channels.slack.bot_token"), false);
