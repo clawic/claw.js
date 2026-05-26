@@ -1674,6 +1674,18 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         unsupportedDomainCount?: number;
         productBlockedButProjectedDomainCount?: number;
       };
+      commandCoverageSummary?: {
+        status?: string;
+        totalCommandCount?: number;
+        sessionActionCommandCount?: number;
+        executableMatrixCommandCount?: number;
+        promotionSignal?: boolean;
+        supportClaim?: string;
+        supportStage?: string;
+        supportImpact?: string;
+        safeDefault?: string;
+        exactCommand?: string;
+      };
       evidenceReadinessSummary?: {
         statusCounts?: Record<string, number>;
         blockerClassCounts?: Record<string, number>;
@@ -2442,6 +2454,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       finalPromotionReview?: {
         status?: string;
         finalPromotionAllowed?: boolean;
+        commandCoverageSummary?: {
+          totalCommandCount?: number;
+          promotionSignal?: boolean;
+          supportImpact?: string;
+          safeDefault?: string;
+        };
         claimDisposition?: string;
         productBlockedByDecisionCount?: number;
         externalPendingCount?: number;
@@ -2460,6 +2478,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         recommended?: boolean;
         production?: boolean;
         uiParityDisposition?: string;
+        commandCoverageSummary?: {
+          totalCommandCount?: number;
+          promotionSignal?: boolean;
+          supportImpact?: string;
+          safeDefault?: string;
+        };
         blockedPromotionClaims?: string[];
         productBlockedByDecisionCount?: number;
         externalPendingCount?: number;
@@ -2585,6 +2609,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.runtime_write_policy_allowed ?? 0, 0);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.native_action_contract, 1);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.approval_gate_contract, 2);
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.status, "guarded");
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.totalCommandCount, 44);
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.sessionActionCommandCount, 11);
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.executableMatrixCommandCount, 22);
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.promotionSignal, false);
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportClaim, "partial_runtime_lens");
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportStage, "dev_only");
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.supportImpact, "guarded_command_coverage_does_not_promote_support");
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.safeDefault, "guarded_command_coverage_does_not_promote_support");
+  assert.equal(hermesSupportPayload.data.commandCoverageSummary?.exactCommand, "claw runtime hermes commands --json");
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.totalRequirementCount, hermesSupportPayload.data.blockerSummary.evidenceRequirementCount);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalRequiredCount, 6);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
@@ -2655,6 +2689,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.safeDefault, "project_runtime_state_do_not_sync_or_write_back_without_official_contract");
   assert.equal(hermesSupportPayload.data.promotionGate, "support_claim_remains_unpromoted_until_all_evidence_requirements_are_closed_or_explicitly_product_blocked");
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.status, "unpromoted");
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.commandCoverageSummary?.totalCommandCount, 44);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.commandCoverageSummary?.promotionSignal, false);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.commandCoverageSummary?.supportImpact, "guarded_command_coverage_does_not_promote_support");
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.productBlockedByDecisionCount, hermesSupportPayload.data.blockerSummary.productBlockedRequirementCount);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingCount, hermesSupportPayload.data.blockerSummary.byBlockerClass?.external_pending);
@@ -2673,6 +2710,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.effectiveSupportStage, "dev_only");
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.commandCoverageSummary?.totalCommandCount, 44);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.commandCoverageSummary?.promotionSignal, false);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.commandCoverageSummary?.safeDefault, "guarded_command_coverage_does_not_promote_support");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("native_parity"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);

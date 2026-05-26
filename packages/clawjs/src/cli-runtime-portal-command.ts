@@ -96,6 +96,41 @@ function buildJsonPortalCommandSet(runtimeId: RuntimeAdapterId, executableByClaw
   };
 }
 
+function runtimeSupportCommandCoverageSummary(runtimeId: RuntimeAdapterId, payload) {
+  const commandSet = payload.commands?.jsonPortalCommandSet;
+  if (!commandSet) {
+    return {
+      status: "missing",
+      runtimeId,
+      exactCommand: `claw runtime ${runtimeId} commands --json`,
+      promotionSignal: false,
+      supportImpact: "command_coverage_missing_so_support_claim_cannot_be_promoted",
+      safeDefault: "guarded_command_coverage_does_not_promote_support",
+    };
+  }
+  return {
+    status: commandSet.status,
+    runtimeId,
+    exactCommand: `claw runtime ${runtimeId} commands --json`,
+    totalCommandCount: commandSet.totalCommandCount,
+    topLevelCommandCount: commandSet.topLevelCommandCount,
+    domainCommandCount: commandSet.domainCommandCount,
+    resourceCommandCount: commandSet.resourceCommandCount,
+    scopedReadCommandCount: commandSet.scopedReadCommandCount,
+    sessionActionCommandCount: commandSet.sessionActionCommandCount,
+    manifestDomainCount: commandSet.manifestDomainCount,
+    sessionActions: commandSet.sessionActions,
+    includesAllManifestDomains: commandSet.includesAllManifestDomains,
+    includesAllDocumentedSessionActions: commandSet.includesAllDocumentedSessionActions,
+    executableMatrixCommandCount: commandSet.executableMatrixCommandCount,
+    promotionSignal: commandSet.promotionSignal === true,
+    supportClaim: commandSet.supportClaim,
+    supportStage: commandSet.supportStage,
+    supportImpact: "guarded_command_coverage_does_not_promote_support",
+    safeDefault: commandSet.safeDefault ?? "guarded_command_coverage_does_not_promote_support",
+  };
+}
+
 const RUNTIME_PORTAL_DOMAIN_POLICIES = JSON.parse(`{
   "openclaw": {
     "sessions": {"claim":"projected","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_and_shadow","relation":"native_projection","lossPolicy":"preserve_transcript_when_safe","writeBackPolicy":"official_cli_or_gateway_only","validation":"hermetic_fixture_required","officialCommands":["openclaw sessions","openclaw sessions --json","openclaw sessions cleanup --dry-run","openclaw sessions cleanup --json","openclaw message","openclaw agent","openclaw agents list"]},
@@ -2279,9 +2314,11 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
   const tuiGatewayRequirements = evidenceRequirements.filter((requirement) => isTuiGatewaySessionRequirement(requirement));
   const tuiGatewayWrapperRequirements = evidenceRequirements.filter((requirement) => isTuiGatewayWrapperBlockedRequirement(requirement));
   const productionTransportRequirements = evidenceRequirements.filter((requirement) => requiresProductionTransportLifecycle(requirement));
+  const commandCoverageSummary = runtimeSupportCommandCoverageSummary(runtimeId, payload);
   const finalPromotionReview = {
     status: supportComplete ? "promoted" : "unpromoted",
     finalPromotionAllowed: supportComplete,
+    commandCoverageSummary,
     claimDisposition: runtimeClaimDisposition(
       supportComplete,
       productBlockedRequirements.length,
@@ -2378,6 +2415,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     recommended: ecosystem.recommended === true && supportComplete,
     production: ecosystem.production === true && supportComplete,
     uiParityClaim: ecosystem.uiParityClaim,
+    commandCoverageSummary,
     uiParityDisposition: supportComplete
       ? "ui_parity_promoted"
       : runtimeId === "openclaw" || runtimeId === "hermes"
@@ -2521,6 +2559,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     },
     evidenceRequirements,
     domains: domainAudits,
+    commandCoverageSummary,
     promotionGate: supportComplete
       ? "all_runtime_ecosystem_claims_are_supported_by_current_evidence"
       : "support_claim_remains_unpromoted_until_all_evidence_requirements_are_closed_or_explicitly_product_blocked",
