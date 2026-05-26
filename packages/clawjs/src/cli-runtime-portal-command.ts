@@ -174,6 +174,7 @@ const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
 }`);
 
 const RUNTIME_PORTAL_PRIVATE_FIELD_NAMES = new Set(["env", "headers", "token"]);
+const HERMES_PORTAL_SECRET_CONFIG_KEY_PATTERN = /(^|[._-])(api[_-]?key|key|token|access[_-]?token|refresh[_-]?token|id[_-]?token|bearer[_-]?token|auth[_-]?token|bot[_-]?token|secret|client[_-]?secret|signing[_-]?secret|password|credential|credentials|private[_-]?key)([._-]|$)|(apiKey|accessToken|refreshToken|idToken|bearerToken|authToken|botToken|clientSecret|signingSecret|privateKey)/i;
 
 function normalizeDomain(value: string | undefined): string {
   const normalized = value?.trim().toLowerCase().replaceAll("_", "-") || "summary";
@@ -581,6 +582,113 @@ function buildSandboxOperationalResources(runtimeId: RuntimeAdapterId, status, r
 
 function existingPathStatus(filePath: string | undefined, fallback = "degraded") {
   return filePath && fs.existsSync(filePath) ? "projected" : fallback;
+}
+
+function parseConfigScalarKind(value) {
+  const trimmed = String(value ?? "").trim();
+  if (trimmed === "") return "empty";
+  if (/^(true|false)$/i.test(trimmed)) return "boolean";
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return "number";
+  if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("{") && trimmed.endsWith("}"))) return "structured";
+  return "string";
+}
+
+function readHermesConfigRedactedSnapshot(configPath: string | undefined) {
+  const base = {
+    path: configPath,
+    exists: Boolean(configPath && fs.existsSync(configPath)),
+    valuePolicy: "keys_and_value_kinds_only_no_plaintext_values",
+    secretPolicy: "secret_keys_are_presence_only",
+    entries: [],
+    totalEntryCount: 0,
+    secretEntryCount: 0,
+    parseMode: "none",
+    truncated: false,
+  };
+  if (!configPath || !fs.existsSync(configPath)) return base;
+  let text = "";
+  try {
+    const stat = fs.statSync(configPath);
+    if (!stat.isFile() || stat.size > 128 * 1024) {
+      return {
+        ...base,
+        parseMode: "skipped",
+        truncated: stat.size > 128 * 1024,
+      };
+    }
+    text = fs.readFileSync(configPath, "utf8");
+  } catch {
+    return {
+      ...base,
+      parseMode: "unreadable",
+    };
+  }
+
+  const entries = [];
+  function pushEntry(key: string, rawValue, source: string) {
+    const normalizedKey = key.trim();
+    if (!normalizedKey) return;
+    const secret = HERMES_PORTAL_SECRET_CONFIG_KEY_PATTERN.test(normalizedKey);
+    entries.push({
+      key: normalizedKey,
+      valueState: rawValue === undefined || rawValue === null || String(rawValue).trim() === "" ? "empty" : "present",
+      valueKind: parseConfigScalarKind(rawValue),
+      redaction: secret ? "secret_key_presence_only" : "value_redacted",
+      secret,
+      source,
+    });
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    function visit(value, prefix = "") {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        if (prefix) pushEntry(prefix, value, "json");
+        return;
+      }
+      for (const [key, child] of Object.entries(value)) {
+        visit(child, prefix ? `${prefix}.${key}` : key);
+      }
+    }
+    visit(parsed);
+    return {
+      ...base,
+      entries: entries.slice(0, 120),
+      totalEntryCount: entries.length,
+      secretEntryCount: entries.filter((entry) => entry.secret).length,
+      parseMode: "json",
+      truncated: entries.length > 120,
+    };
+  } catch {
+    // Hermes normally uses YAML; fall through to a conservative scalar-key scan.
+  }
+
+  const stack = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    const withoutComment = rawLine.replace(/\s+#.*$/, "");
+    if (!withoutComment.trim() || withoutComment.trimStart().startsWith("#")) continue;
+    const match = /^(\s*)([A-Za-z0-9_.-]+):(?:\s*(.*))?$/.exec(withoutComment);
+    if (!match) continue;
+    const indent = match[1]?.length ?? 0;
+    const key = match[2] ?? "";
+    const rawValue = match[3] ?? "";
+    while (stack.length > 0 && stack[stack.length - 1].indent >= indent) stack.pop();
+    const parts = [...stack.map((entry) => entry.key), key];
+    const pathKey = parts.join(".");
+    if (!rawValue.trim()) {
+      stack.push({ indent, key });
+      continue;
+    }
+    pushEntry(pathKey, rawValue, "yaml-scalar");
+  }
+  return {
+    ...base,
+    entries: entries.slice(0, 120),
+    totalEntryCount: entries.length,
+    secretEntryCount: entries.filter((entry) => entry.secret).length,
+    parseMode: "yaml-scalar",
+    truncated: entries.length > 120,
+  };
 }
 
 function hermesHomeLocation(status): string | undefined {
@@ -2002,6 +2110,9 @@ function buildDomainData(runtimeId: RuntimeAdapterId, status, resources, workspa
       managedFiles: workspace.managedFiles,
       diagnostics: status.diagnostics ?? {},
       runtimeLocations: runtimeLocationDiagnostics(status),
+      redactedConfigSnapshot: status.adapter === "hermes"
+        ? readHermesConfigRedactedSnapshot(runtimeLocationDiagnostics(status).configPath)
+        : null,
       resources: resources.configurationResources ?? [],
       redactionPolicy: "redacted_paths_and_presence_only",
       capability: domainCapability(status, "configuration") ?? null,

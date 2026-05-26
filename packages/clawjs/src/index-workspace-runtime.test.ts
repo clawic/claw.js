@@ -1119,9 +1119,13 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     "model: openai/gpt-4.1",
     "provider: openai",
     "fallback_model: anthropic/claude-3-5-sonnet",
+    "providers:",
+    "  openai:",
+    "    api_key: CONFIG_SECRET_1234567890",
     "channels:",
     "  slack:",
     "    enabled: true",
+    "    signing_secret: CONFIG_SIGNING_SECRET_1234567890",
   ].join("\n"));
   const hermesBinRoot = path.join(workspaceRoot, "bin");
   fs.mkdirSync(hermesBinRoot, { recursive: true });
@@ -1175,6 +1179,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     });
     assert.equal((command.exits ?? [CLI_EXIT_OK, CLI_EXIT_DEGRADED]).includes(exitCode), true, command.label);
     assert.equal(stdout.getOutput().includes("TEST_SECRET_1234567890"), false, command.label);
+    assert.equal(stdout.getOutput().includes("CONFIG_SECRET_1234567890"), false, command.label);
+    assert.equal(stdout.getOutput().includes("CONFIG_SIGNING_SECRET_1234567890"), false, command.label);
     const payload = JSON.parse(stdout.getOutput()) as { data?: { runtimeId?: string } };
     assert.equal(payload.data?.runtimeId, "hermes", command.label);
   }
@@ -1806,6 +1812,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.domainData.configuration?.redactionPolicy, "redacted_paths_and_presence_only");
   assert.equal(hermesPayload.data.domainData.configuration?.capability?.supported, true);
   assert.equal(hermesPayload.data.domainData.configuration?.capability?.strategy, "config");
+  assert.equal(hermesPayload.data.domainData.configuration?.redactedConfigSnapshot?.exists, true);
+  assert.equal(hermesPayload.data.domainData.configuration?.redactedConfigSnapshot?.parseMode, "yaml-scalar");
+  assert.equal(hermesPayload.data.domainData.configuration?.redactedConfigSnapshot?.valuePolicy, "keys_and_value_kinds_only_no_plaintext_values");
+  assert.equal(hermesPayload.data.domainData.configuration?.redactedConfigSnapshot?.secretEntryCount, 2);
+  assert.equal(hermesPayload.data.domainData.configuration?.redactedConfigSnapshot?.entries?.some((entry) => entry.key === "model" && entry.valueKind === "string" && entry.redaction === "value_redacted"), true);
+  assert.equal(hermesPayload.data.domainData.configuration?.redactedConfigSnapshot?.entries?.some((entry) => entry.key === "providers.openai.api_key" && entry.secret === true && entry.redaction === "secret_key_presence_only"), true);
   assert.deepEqual(hermesPayload.data.domainData.sessions?.actionContracts?.map((entry) => entry.action), manifest.sessionActionContracts.hermes.map((entry) => entry.action));
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.status, "blocked");
   assert.equal(hermesPayload.data.domainData.sessions?.actionContracts?.find((entry) => entry.action === "send")?.wouldWriteRuntime, true);
@@ -1864,6 +1876,11 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
           tuiGatewayTransportPolicy?: { id?: string; protocol?: string; mutationPolicy?: string };
           permissionMode?: string;
           runtimeLocations?: Record<string, string>;
+          redactedConfigSnapshot?: {
+            exists?: boolean;
+            secretEntryCount?: number;
+            entries?: Array<{ key?: string; secret?: boolean; redaction?: string; valueKind?: string }>;
+          };
           redactionPolicy?: string;
           capability?: { supported?: boolean; status?: string; strategy?: string };
         };
@@ -1896,6 +1913,11 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       assert.equal(resourcePayload.data.data.runtimeLocations?.homeDir, hermesHome);
       assert.equal(resourcePayload.data.data.redactionPolicy, "redacted_paths_and_presence_only");
       assert.equal(resourcePayload.data.data.capability?.strategy, "config");
+      assert.equal(resourcePayload.data.data.redactedConfigSnapshot?.exists, true);
+      assert.equal(resourcePayload.data.data.redactedConfigSnapshot?.secretEntryCount, 2);
+      assert.equal(resourcePayload.data.data.redactedConfigSnapshot?.entries?.some((entry) => entry.key === "channels.slack.signing_secret" && entry.secret === true), true);
+      assert.equal(JSON.stringify(resourcePayload.data.data.redactedConfigSnapshot).includes("CONFIG_SECRET_1234567890"), false);
+      assert.equal(JSON.stringify(resourcePayload.data.data.redactedConfigSnapshot).includes("CONFIG_SIGNING_SECRET_1234567890"), false);
     }
   }
 
