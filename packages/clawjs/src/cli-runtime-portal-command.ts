@@ -2508,8 +2508,18 @@ function hasLoopbackTuiGateway(runtimeOptions): boolean {
   return typeof rawUrl === "string" && rawUrl.trim().length > 0 && isLoopbackGatewayUrl(rawUrl.trim());
 }
 
+function sessionStoreAvailable(session): boolean {
+  for (const candidate of [session?.sessionDatabasePath, session?.sessionIndexPath, session?.sessionPath]) {
+    if (typeof candidate !== "string" || candidate.trim().length === 0) continue;
+    try {
+      if (fs.existsSync(candidate)) return true;
+    } catch {}
+  }
+  return false;
+}
+
 function materializeSessionActionContract(runtimeId: RuntimeAdapterId, contract, session, runtimeOptions?) {
-  const hasSessionPath = Boolean(session.sessionPath);
+  const hasSessionPath = sessionStoreAvailable(session);
   const materialized = {
     ...contract,
     status: hasSessionPath && contract.statusWhenSessionPath ? contract.statusWhenSessionPath : contract.status,
@@ -3983,17 +3993,25 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
+    const listPolicy = payload.domainData.sessions.actionPolicy?.find((entry) => entry.action === "list");
+    const listDegraded = String(listPolicy?.status ?? "") === "degraded";
     writePayload(input, {
       runtimeId,
       domain: "sessions",
       action,
-      status: "ok",
+      status: listDegraded ? "degraded" : "ok",
       authority: "runtime",
       writesRuntime: false,
       result: {
         sessions: payload.domainData.sessions.sessions,
         totalProjected: payload.domainData.sessions.totalProjected,
       },
+      ...(listDegraded ? {
+        degradedReason: "runtime_cli_unavailable_or_session_store_missing",
+        safeDefault: "metadata_only_projection_until_official_runtime_session_store_or_cli_is_available",
+        userVisibleContract: "session_list_is_degraded_until_native_store_or_cli_evidence_exists",
+        claimEffect: "does_not_satisfy_native_session_list_parity",
+      } : {}),
       supportContract,
     }, { runtimeId, operation: "sessions", action });
     return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
