@@ -141,32 +141,32 @@ const RUNTIME_ECOSYSTEM_SUPPORT = {
   },
 };
 
-const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = {
-  sourceSnapshotDate: "2026-05-25",
-  runtimes: {
-    openclaw: {
-      capturedAt: "2026-05-21",
-      sourceType: "official_docs",
-      sources: [
+const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = JSON.parse(`{
+  "sourceSnapshotDate": "2026-05-25",
+  "runtimes": {
+    "openclaw": {
+      "capturedAt": "2026-05-21",
+      "sourceType": "official_docs",
+      "sources": [
         "https://openclaw.cc/en/cli/",
-        "https://docs.openclaw.ai/agent",
+        "https://docs.openclaw.ai/agent"
       ],
-      driftPolicy: "degrade_affected_domains_until_matrix_and_tests_update",
+      "driftPolicy": "degrade_affected_domains_until_matrix_and_tests_update"
     },
-    codex: {
-      capturedAt: "2026-05-21",
-      sourceType: "official_docs",
-      sources: [
+    "codex": {
+      "capturedAt": "2026-05-21",
+      "sourceType": "official_docs",
+      "sources": [
         "https://github.com/openai/codex",
         "https://developers.openai.com/codex/skills",
-        "https://developers.openai.com/codex/mcp",
+        "https://developers.openai.com/codex/mcp"
       ],
-      driftPolicy: "codex_remains_dev_only_until_snapshot_total_and_write_policy_are_complete",
+      "driftPolicy": "codex_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
     },
-    hermes: {
-      capturedAt: "2026-05-25",
-      sourceType: "official_docs",
-      sources: [
+    "hermes": {
+      "capturedAt": "2026-05-25",
+      "sourceType": "official_docs",
+      "sources": [
         "https://hermes-agent.nousresearch.com/docs/user-guide/cli/",
         "https://hermes-agent.nousresearch.com/docs/user-guide/sessions",
         "https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md",
@@ -174,12 +174,12 @@ const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = {
         "https://hermes-agent.nousresearch.com/docs/ko/reference/cli-commands",
         "https://hermes-agent.nousresearch.com/docs/user-guide/configuration",
         "https://hermes-agent.nousresearch.com/docs/user-guide/security",
-        "https://github.com/NousResearch/hermes-agent",
+        "https://github.com/NousResearch/hermes-agent"
       ],
-      driftPolicy: "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete",
-    },
-  },
-};
+      "driftPolicy": "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete"
+    }
+  }
+}`);
 
 const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
   "openclaw": [

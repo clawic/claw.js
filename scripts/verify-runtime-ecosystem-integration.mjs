@@ -180,6 +180,32 @@ function main() {
   if (!portalPolicies) {
     errors.push("runtime portal missing RUNTIME_PORTAL_DOMAIN_POLICIES");
   }
+  const portalOfficialSnapshots = extractJsonParseConst(runtimePortal, "RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS");
+  if (!portalOfficialSnapshots) {
+    errors.push("runtime portal missing RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS");
+  } else {
+    if (portalOfficialSnapshots.sourceSnapshotDate !== manifest.sourceSnapshotDate) {
+      errors.push("runtime portal official snapshot sourceSnapshotDate must match manifest sourceSnapshotDate");
+    }
+    const manifestRuntimes = new Map((manifest.runtimes ?? []).map((runtime) => [runtime.id, runtime]));
+    for (const runtimeId of requiredRuntimeIds) {
+      const manifestSnapshot = manifestRuntimes.get(runtimeId)?.officialSnapshot;
+      const portalSnapshot = portalOfficialSnapshots.runtimes?.[runtimeId];
+      if (!manifestSnapshot || !portalSnapshot) {
+        errors.push(`${runtimeId} official snapshot must exist in manifest and runtime portal`);
+        continue;
+      }
+      const comparableManifestSnapshot = {
+        capturedAt: manifestSnapshot.capturedAt,
+        sourceType: manifestSnapshot.sourceType,
+        sources: manifestSnapshot.sources,
+        driftPolicy: manifestSnapshot.driftPolicy,
+      };
+      if (JSON.stringify(portalSnapshot) !== JSON.stringify(comparableManifestSnapshot)) {
+        errors.push(`${runtimeId} runtime portal official snapshot must match manifest officialSnapshot`);
+      }
+    }
+  }
   if (!runtimePortal.includes("function evidenceRequirementsFor")) {
     errors.push("runtime portal must expose structured evidence requirements for blocked/external-pending support claims");
   }
