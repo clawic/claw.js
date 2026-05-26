@@ -885,6 +885,113 @@ function hermesPolicyResource(domain: string, status, input: {
   };
 }
 
+function isObjectRecord(value): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringFrom(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function hermesResourcePath(domain: string, status, resource: Record<string, unknown>): string | undefined {
+  const metadata = isObjectRecord(resource.metadata) ? resource.metadata : {};
+  const existingPath = stringFrom(resource.path) ?? stringFrom(metadata.path);
+  if (existingPath) return existingPath;
+  const locations = runtimeLocationDiagnostics(status);
+  if (domain === "providers" || domain === "models" || domain === "channels") return locations.configPath;
+  if (domain === "scheduler") return hermesPath(status, "cron");
+  if (domain === "plugins") return hermesPath(status, "plugins");
+  return undefined;
+}
+
+function fileSizeIfPresent(filePath: string | undefined): number | undefined {
+  if (!filePath) return undefined;
+  try {
+    const stat = fs.statSync(filePath);
+    return stat.isFile() ? stat.size : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function hermesResourceNativeIdentifier(domain: string): { name: string } | undefined {
+  const name = {
+    providers: "providerId",
+    models: "modelId",
+    skills: "skillId",
+    memory: "memoryId",
+    scheduler: "schedulerId",
+    plugins: "pluginId",
+    channels: "channelId",
+  }[domain];
+  return name ? { name } : undefined;
+}
+
+function hermesResourceKind(domain: string, resource: Record<string, unknown>): string | undefined {
+  if (stringFrom(resource.kind)) return stringFrom(resource.kind);
+  const metadata = isObjectRecord(resource.metadata) ? resource.metadata : {};
+  const metadataKind = stringFrom(metadata.kind);
+  if (metadataKind) return metadataKind;
+  if (domain === "models") return resource.isDefault === true ? "default_model" : "model";
+  if (domain === "providers") return "provider";
+  if (domain === "skills") return "skill";
+  if (domain === "memory") return "memory";
+  if (domain === "scheduler") return "cron";
+  if (domain === "plugins") return "plugin";
+  if (domain === "channels") return "channel";
+  return undefined;
+}
+
+function hermesResourceStatus(domain: string, resource: Record<string, unknown>): string | undefined {
+  if (stringFrom(resource.status)) return stringFrom(resource.status);
+  if (domain === "models" && resource.isDefault === true) return "default";
+  if (domain === "skills" && resource.enabled === false) return "disabled";
+  if (domain === "channels") return "unknown";
+  return "projected";
+}
+
+function hermesResourceSummary(domain: string, resource: Record<string, unknown>): string | undefined {
+  if (stringFrom(resource.summary)) return stringFrom(resource.summary);
+  if (domain === "providers") return "Hermes provider catalog entry; credentials remain redacted.";
+  if (domain === "models") return "Hermes model catalog entry; default changes require official write-back.";
+  if (domain === "skills") return "Hermes skill inventory entry; install and enablement stay read-only.";
+  if (domain === "memory") return "Hermes memory inventory entry; content is not exposed by default.";
+  if (domain === "scheduler") return "Hermes scheduler inventory entry; enable and disable stay read-only.";
+  if (domain === "plugins") return "Hermes plugin, tool, or MCP inventory entry; no auto-enable is performed.";
+  if (domain === "channels") return "Hermes channel binding metadata; account secrets stay redacted.";
+  return undefined;
+}
+
+function decorateHermesRuntimeResources(domain: string, status, resources: unknown[]) {
+  if (status.adapter !== "hermes") return resources;
+  const policy = domainPolicy("hermes", domain);
+  return resources.map((resource) => {
+    if (!isObjectRecord(resource)) return resource;
+    if (isObjectRecord(resource.provenance) && resource.provenance.source === "runtime-ecosystem-manifest") return resource;
+    const resourcePath = hermesResourcePath(domain, status, resource);
+    return {
+      ...resource,
+      status: stringFrom(resource.status) ?? hermesResourceStatus(domain, resource),
+      kind: stringFrom(resource.kind) ?? hermesResourceKind(domain, resource),
+      path: stringFrom(resource.path) ?? resourcePath,
+      enabled: typeof resource.enabled === "boolean" ? resource.enabled : true,
+      summary: stringFrom(resource.summary) ?? hermesResourceSummary(domain, resource),
+      sizeBytes: typeof resource.sizeBytes === "number" ? resource.sizeBytes : fileSizeIfPresent(resourcePath),
+      nativeIdentifier: isObjectRecord(resource.nativeIdentifier) ? resource.nativeIdentifier : hermesResourceNativeIdentifier(domain),
+      provenance: isObjectRecord(resource.provenance) ? resource.provenance : {
+        source: "hermes-runtime-adapter",
+        runtimeId: "hermes",
+        domain,
+        path: resourcePath,
+      },
+      limitations: Array.isArray(resource.limitations) ? resource.limitations : [
+        `write back: ${policy.writeBackPolicy}`,
+        `validation: ${policy.validation}`,
+      ],
+    };
+  });
+}
+
 function buildHermesFallbackResources(domain: string, status) {
   if (status.adapter !== "hermes") return [];
   const locations = runtimeLocationDiagnostics(status);
@@ -1055,7 +1162,7 @@ function buildHermesFallbackResources(domain: string, status) {
 
 function withHermesFallbackResources(domain: string, status, resources: unknown[]) {
   if (status.adapter !== "hermes") return resources;
-  if (Array.isArray(resources) && resources.length > 0) return resources;
+  if (Array.isArray(resources) && resources.length > 0) return decorateHermesRuntimeResources(domain, status, resources);
   return buildHermesFallbackResources(domain, status);
 }
 
@@ -1086,7 +1193,12 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
     case "providers":
       if (status.adapter === "hermes" && adapter?.resources?.getProviderCatalog) {
         const providerCatalog = await adapter.resources.getProviderCatalog(runner, runtimeOptions);
-        return { providers: [...buildHermesFallbackResources(domain, status), ...(providerCatalog.providers ?? [])] };
+        return {
+          providers: [
+            ...buildHermesFallbackResources(domain, status),
+            ...decorateHermesRuntimeResources(domain, status, providerCatalog.providers ?? []),
+          ],
+        };
       }
       return { providers: [...buildHermesFallbackResources(domain, status), ...(await claw.providers.list())] };
     case "models":
@@ -1125,7 +1237,12 @@ async function readResources(claw, domain: string, status, adapter?, runtimeOpti
       return { skills: withHermesFallbackResources(domain, status, await claw.skills.list()) };
     case "channels":
       if (status.adapter === "hermes" && adapter?.resources?.listChannels) {
-        return { channels: [...buildHermesFallbackResources(domain, status), ...(await adapter.resources.listChannels(runner, runtimeOptions))] };
+        return {
+          channels: [
+            ...buildHermesFallbackResources(domain, status),
+            ...decorateHermesRuntimeResources(domain, status, await adapter.resources.listChannels(runner, runtimeOptions)),
+          ],
+        };
       }
       return { channels: [...buildHermesFallbackResources(domain, status), ...(await claw.channels.list())] };
     case "plugins": {
