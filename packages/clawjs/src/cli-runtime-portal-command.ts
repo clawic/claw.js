@@ -88,19 +88,19 @@ const RUNTIME_PORTAL_DOMAIN_POLICIES = JSON.parse(`{
     "configuration": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"read_only_projection","lossPolicy":"redacted_only","writeBackPolicy":"blocked_by_default","validation":"config_fixture_required","officialCommands":["codex config","codex features list","codex features enable","codex features disable","codex mcp"]}
   },
   "hermes": {
-    "sessions": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_and_shadow_when_safe","relation":"native_projection","lossPolicy":"preserve_when_safe","writeBackPolicy":"blocked_until_fixture_coverage","validation":"fixture_required","officialCommands":["hermes","hermes chat","hermes -z <prompt>","hermes --continue","hermes --resume <session_id>","hermes chat --continue <name>","hermes chat --resume <session>","hermes sessions list","hermes sessions browse","hermes sessions export <output> [--session-id ID]","hermes sessions delete <session-id>","hermes sessions prune","hermes sessions stats","hermes sessions rename <session-id> <title>","/new","/reset","/sessions","/title"]},
-    "skills": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"inventory_projection","lossPolicy":"no_auto_import","writeBackPolicy":"blocked_until_fixture_coverage","validation":"snapshot_required","officialCommands":["hermes skills browse","hermes skills search","hermes skills install","hermes skills inspect","hermes skills list","hermes skills check","hermes skills update","hermes skills audit","hermes skills uninstall","hermes skills reset","hermes skills publish","hermes skills snapshot","hermes skills tap","hermes skills config","hermes bundles list","hermes bundles show <name>","hermes curator status","hermes curator run --dry-run","/skills","/<skill-name>"]},
-    "memory": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"sensitive_index","relation":"sensitive_projection","lossPolicy":"metadata_default","writeBackPolicy":"blocked_until_policy","validation":"fixture_required","officialCommands":["hermes memory setup","hermes memory status","hermes memory off","hermes plugins list","hermes profile show <name>","hermes claw migrate --preset user-data --dry-run"]},
+    "sessions": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_and_shadow_when_safe","relation":"native_projection","lossPolicy":"preserve_when_safe","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_required","officialCommands":["hermes","hermes chat","hermes -z <prompt>","hermes --continue","hermes --resume <session_id>","hermes chat --continue <name>","hermes chat --resume <session>","hermes sessions list","hermes sessions browse","hermes sessions export <output> [--session-id ID]","hermes sessions delete <session-id>","hermes sessions prune","hermes sessions stats","hermes sessions rename <session-id> <title>","/new","/reset","/sessions","/title"]},
+    "skills": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"inventory_projection","lossPolicy":"no_auto_import","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"snapshot_required","officialCommands":["hermes skills browse","hermes skills search","hermes skills install","hermes skills inspect","hermes skills list","hermes skills check","hermes skills update","hermes skills audit","hermes skills uninstall","hermes skills reset","hermes skills publish","hermes skills snapshot","hermes skills tap","hermes skills config","hermes bundles list","hermes bundles show <name>","hermes curator status","hermes curator run --dry-run","/skills","/<skill-name>"]},
+    "memory": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"sensitive_index","relation":"sensitive_projection","lossPolicy":"metadata_default","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_required","officialCommands":["hermes memory setup","hermes memory status","hermes memory off","hermes plugins list","hermes profile show <name>","hermes claw migrate --preset user-data --dry-run"]},
     "channels": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"secret_refs_only","relation":"gateway_projection","lossPolicy":"secret_refs_only","writeBackPolicy":"external_pending_live_accounts","validation":"external_pending_for_live_accounts","officialCommands":["hermes gateway","hermes gateway setup","hermes gateway run","hermes gateway start","hermes gateway stop","hermes gateway restart","hermes gateway status","hermes gateway list","hermes whatsapp","hermes slack manifest","hermes pairing list","hermes pairing approve <platform> <code>","hermes webhook subscribe","hermes portal status"]},
-    "providers": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"provider_projection","lossPolicy":"redacted_only","writeBackPolicy":"blocked_until_fixture_coverage","validation":"fixture_and_external_pending_live","officialCommands":["hermes model","hermes chat --provider <provider>","hermes auth list","hermes auth status <provider>","hermes fallback list","hermes fallback add","hermes fallback remove","hermes portal status","hermes setup model"]},
-    "auth": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"secret_ref_projection","lossPolicy":"no_plaintext","writeBackPolicy":"blocked_until_fixture_coverage","validation":"secret_guard_and_external_pending_live_credentials","officialCommands":["hermes auth","hermes auth list","hermes auth add <provider>","hermes auth remove <provider> <index>","hermes auth reset <provider>","hermes auth status <provider>","hermes auth logout <provider>","hermes auth spotify","hermes model","hermes setup --portal","hermes portal status","hermes claw migrate --dry-run"]},
-    "models": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"model_projection","lossPolicy":"native_names_preserved","writeBackPolicy":"blocked_until_fixture_coverage","validation":"fixture_and_external_pending_provider_calls","officialCommands":["hermes model","hermes chat --model <model>","hermes chat --provider <provider>","hermes fallback list","hermes fallback add","hermes fallback clear","/model","/model <provider>:<model>","/model <model> --global"]},
-    "scheduler": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"scheduler_projection","lossPolicy":"index_only","writeBackPolicy":"blocked_until_fixture_coverage","validation":"fixture_required","officialCommands":["hermes cron list","hermes cron create","hermes cron add","hermes cron edit","hermes cron pause","hermes cron resume","hermes cron run","hermes cron remove","hermes cron status","hermes cron tick","hermes webhook subscribe","hermes kanban","/background <prompt>"]},
-    "plugins": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"inventory_projection","lossPolicy":"no_auto_enable","writeBackPolicy":"blocked_until_fixture_coverage","validation":"fixture_required","officialCommands":["hermes plugins","hermes plugins install <identifier>","hermes plugins update <name>","hermes plugins remove <name>","hermes plugins enable <name>","hermes plugins disable <name>","hermes plugins list","hermes tools","hermes tools --summary","hermes mcp serve","hermes mcp add <name>","hermes mcp list","hermes mcp test <name>","hermes mcp configure <name>","hermes mcp login <name>","hermes acp","hermes hooks list","hermes computer-use status"]},
-    "gateway": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"status_snapshot","relation":"status_projection","lossPolicy":"status_snapshot","writeBackPolicy":"blocked_until_fixture_coverage","validation":"fixture_required","officialCommands":["hermes gateway","hermes gateway run","hermes gateway start","hermes gateway stop","hermes gateway restart","hermes gateway status","hermes gateway list","hermes gateway install","hermes gateway uninstall","hermes gateway setup","hermes portal status","hermes portal tools","hermes logs gateway","hermes dashboard --status"]},
+    "providers": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"provider_projection","lossPolicy":"redacted_only","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_and_external_pending_live","officialCommands":["hermes model","hermes chat --provider <provider>","hermes auth list","hermes auth status <provider>","hermes fallback list","hermes fallback add","hermes fallback remove","hermes portal status","hermes setup model"]},
+    "auth": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"secret_ref_projection","lossPolicy":"no_plaintext","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"secret_guard_and_external_pending_live_credentials","officialCommands":["hermes auth","hermes auth list","hermes auth add <provider>","hermes auth remove <provider> <index>","hermes auth reset <provider>","hermes auth status <provider>","hermes auth logout <provider>","hermes auth spotify","hermes model","hermes setup --portal","hermes portal status","hermes claw migrate --dry-run"]},
+    "models": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"model_projection","lossPolicy":"native_names_preserved","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_and_external_pending_provider_calls","officialCommands":["hermes model","hermes chat --model <model>","hermes chat --provider <provider>","hermes fallback list","hermes fallback add","hermes fallback clear","/model","/model <provider>:<model>","/model <model> --global"]},
+    "scheduler": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"scheduler_projection","lossPolicy":"index_only","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_required","officialCommands":["hermes cron list","hermes cron create","hermes cron add","hermes cron edit","hermes cron pause","hermes cron resume","hermes cron run","hermes cron remove","hermes cron status","hermes cron tick","hermes webhook subscribe","hermes kanban","/background <prompt>"]},
+    "plugins": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"index_only","relation":"inventory_projection","lossPolicy":"no_auto_enable","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_required","officialCommands":["hermes plugins","hermes plugins install <identifier>","hermes plugins update <name>","hermes plugins remove <name>","hermes plugins enable <name>","hermes plugins disable <name>","hermes plugins list","hermes tools","hermes tools --summary","hermes mcp serve","hermes mcp add <name>","hermes mcp list","hermes mcp test <name>","hermes mcp configure <name>","hermes mcp login <name>","hermes acp","hermes hooks list","hermes computer-use status"]},
+    "gateway": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"status_snapshot","relation":"status_projection","lossPolicy":"status_snapshot","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"fixture_required","officialCommands":["hermes gateway","hermes gateway run","hermes gateway start","hermes gateway stop","hermes gateway restart","hermes gateway status","hermes gateway list","hermes gateway install","hermes gateway uninstall","hermes gateway setup","hermes portal status","hermes portal tools","hermes logs gateway","hermes dashboard --status"]},
     "doctorCompat": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"diagnostic_summary","relation":"diagnostic_projection","lossPolicy":"redacted_summary","writeBackPolicy":"safe_repair_only_after_approval","validation":"fixture_required","officialCommands":["hermes doctor","hermes doctor --fix","hermes status","hermes status --all","hermes status --deep","hermes dump","hermes dump --show-keys","hermes debug share --local","hermes logs","hermes update --check","hermes version","hermes --version","hermes --help"]},
     "sandboxPermissions": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"audit_summary","relation":"approval_projection","lossPolicy":"no_silent_permission_change","writeBackPolicy":"explicit_approval_only","validation":"permission_fixture_required","officialCommands":["hermes setup terminal","hermes config set terminal.backend <backend>","hermes chat --yolo","hermes checkpoints","hermes hooks list","hermes hooks doctor","hermes security audit","hermes tools --summary","security docs","tools docs"]},
-    "configuration": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"config_projection","lossPolicy":"redacted_only","writeBackPolicy":"blocked_until_fixture_coverage","validation":"config_fixture_required","officialCommands":["hermes config show","hermes config edit","hermes config set <key> <value>","hermes config path","hermes config env-path","hermes config check","hermes config migrate","hermes setup","hermes setup --non-interactive","hermes setup --quick","hermes setup --reset","hermes dashboard","hermes dashboard --status","hermes profile list","hermes profile show <name>"]}
+    "configuration": {"claim":"inventoried","nativeAuthority":"runtime","canonicalAuthority":"runtime","persistence":"redacted_snapshot","relation":"config_projection","lossPolicy":"redacted_only","writeBackPolicy":"blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence","validation":"config_fixture_required","officialCommands":["hermes config show","hermes config edit","hermes config set <key> <value>","hermes config path","hermes config env-path","hermes config check","hermes config migrate","hermes setup","hermes setup --non-interactive","hermes setup --quick","hermes setup --reset","hermes dashboard","hermes dashboard --status","hermes profile list","hermes profile show <name>"]}
   }
 }`);
 
@@ -894,7 +894,7 @@ function buildHermesFallbackResources(domain: string, status) {
         "content access: metadata_default_explicit_content_only",
         "sensitive policy: no_plaintext_secret_or_private_transcript_copy",
         "preservation: preserve_native_memory_until_explicit_promotion",
-        "search/index support: blocked_until_fixture_coverage",
+        "search/index support: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
       ],
     })];
   }
@@ -921,12 +921,12 @@ function buildHermesFallbackResources(domain: string, status) {
       status: status.cliAvailable ? "projected" : "degraded",
       kind: "provider_context_projection_policy",
       path: locations.configPath,
-      summary: "Hermes provider context is projected as redacted runtime metadata; credential write-back is blocked until fixture coverage.",
+      summary: "Hermes provider context is projected as redacted runtime metadata; credential write-back is blocked until an official runtime contract, fixture, and round-trip evidence exist.",
       attributes: [
         "provider authority: hermes_runtime_config",
         "credential handling: redacted_presence_only",
         "fallback chain: preserve_native_provider_names",
-        "write policy: blocked_until_fixture_coverage",
+        "write policy: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
       ],
     })];
   }
@@ -942,7 +942,7 @@ function buildHermesFallbackResources(domain: string, status) {
         "credential handling: no_plaintext_secret_output",
         "auth store: presence_only",
         "env handling: redacted_presence_only",
-        "write policy: blocked_until_fixture_coverage",
+        "write policy: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
       ],
     })];
   }
@@ -958,7 +958,7 @@ function buildHermesFallbackResources(domain: string, status) {
         "default model: projected_when_native_config_available",
         "provider mapping: preserved_from_native_names",
         "aliases/fallbacks: preserved_when_native_runtime_exposes_them",
-        "default model write-back: blocked_until_fixture_coverage",
+        "default model write-back: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
       ],
     })];
   }
@@ -969,11 +969,11 @@ function buildHermesFallbackResources(domain: string, status) {
       status: status.cliAvailable ? "projected" : "degraded",
       kind: "scheduler_projection",
       path: hermesPath(status, "cron"),
-      summary: "Hermes cron/background jobs are inventoried read-only; enable/disable/write-back requires fixture coverage.",
+      summary: "Hermes cron/background jobs are inventoried read-only; enable/disable/write-back requires an official runtime contract, fixture, and round-trip evidence.",
       attributes: [
         "task state: projected_when_native_inventory_available",
-        "enable policy: blocked_until_fixture_coverage",
-        "disable policy: blocked_until_fixture_coverage",
+        "enable policy: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
+        "disable policy: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
         "mutation policy: no_silent_scheduler_change",
       ],
     })];
@@ -989,7 +989,7 @@ function buildHermesFallbackResources(domain: string, status) {
       attributes: [
         "enabled state: projected_when_native_inventory_available",
         "capability status: degraded_until_fixture_coverage",
-        "install policy: blocked_until_fixture_coverage",
+        "install policy: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
         "enable policy: no_auto_enable",
       ],
     })];
@@ -1006,7 +1006,7 @@ function buildHermesFallbackResources(domain: string, status) {
         "config visibility: paths_and_presence_only",
         "secret handling: redact_values",
         "workspace override: preserve_runtime_workspace",
-        "write policy: blocked_until_fixture_coverage",
+        "write policy: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence",
       ],
     })];
   }

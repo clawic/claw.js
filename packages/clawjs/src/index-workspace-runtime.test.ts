@@ -2063,7 +2063,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     { domain: "channels", key: "channels", id: "hermes-channel-gateway-policy", attribute: "live account evidence: external_pending_until_approved", status: "degraded" },
     { domain: "providers", key: "providers", id: "hermes-provider-context-policy", attribute: "credential handling: redacted_presence_only", status: "degraded" },
     { domain: "auth", key: "resources", id: "hermes-auth-secret-ref-policy", attribute: "credential handling: no_plaintext_secret_output", status: "degraded" },
-    { domain: "models", key: "models", id: "hermes-model-catalog-policy", attribute: "default model write-back: blocked_until_fixture_coverage", status: "degraded" },
+    { domain: "models", key: "models", id: "hermes-model-catalog-policy", attribute: "default model write-back: blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", status: "degraded" },
     { domain: "scheduler", key: "schedulers", id: "hermes-scheduler-inventory-policy", attribute: "mutation policy: no_silent_scheduler_change", status: "degraded" },
     { domain: "plugins", key: "plugins", id: "hermes-plugins-tools-mcp-policy", attribute: "enable policy: no_auto_enable", status: "degraded" },
     { domain: "configuration", key: "resources", id: "hermes-configuration-redaction-policy", attribute: "secret handling: redact_values", status: "projected" },
@@ -2363,7 +2363,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayActions?.includes("pin"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayActions?.includes("unpin"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.readOnlyProjectionDomains?.includes("sessions"), true);
-  assert.equal((hermesSupportPayload.data.syncPolicySummary?.writeBackPolicyCounts?.blocked_until_fixture_coverage ?? 0) > 0, true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackPolicyCounts?.blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence, 10);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackPolicyCounts?.blocked_until_fixture_coverage, undefined);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackPolicyCounts?.blocked_until_policy, undefined);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.noSilentOverwrite, true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.safeDefault, "project_runtime_state_do_not_sync_or_write_back_without_official_contract");
   assert.equal(hermesSupportPayload.data.promotionGate, "support_claim_remains_unpromoted_until_all_evidence_requirements_are_closed_or_explicitly_product_blocked");

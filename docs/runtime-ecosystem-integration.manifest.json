@@ -277,19 +277,19 @@
           { "domain": "configuration", "clawSurface": "config projection", "canonicalAuthority": "runtime", "persistence": "redacted_snapshot" }
         ],
         "linkMatrix": [
-          { "domain": "sessions", "relation": "native_projection", "lossPolicy": "preserve_when_safe", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
-          { "domain": "skills", "relation": "inventory_projection", "lossPolicy": "no_auto_import", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "snapshot_required" },
-          { "domain": "memory", "relation": "sensitive_projection", "lossPolicy": "metadata_default", "writeBackPolicy": "blocked_until_policy", "validation": "fixture_required" },
+          { "domain": "sessions", "relation": "native_projection", "lossPolicy": "preserve_when_safe", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_required" },
+          { "domain": "skills", "relation": "inventory_projection", "lossPolicy": "no_auto_import", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "snapshot_required" },
+          { "domain": "memory", "relation": "sensitive_projection", "lossPolicy": "metadata_default", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_required" },
           { "domain": "channels", "relation": "gateway_projection", "lossPolicy": "secret_refs_only", "writeBackPolicy": "external_pending_live_accounts", "validation": "external_pending_for_live_accounts" },
-          { "domain": "providers", "relation": "provider_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_and_external_pending_live" },
-          { "domain": "auth", "relation": "secret_ref_projection", "lossPolicy": "no_plaintext", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "secret_guard_and_external_pending_live_credentials" },
-          { "domain": "models", "relation": "model_projection", "lossPolicy": "native_names_preserved", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_and_external_pending_provider_calls" },
-          { "domain": "scheduler", "relation": "scheduler_projection", "lossPolicy": "index_only", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
-          { "domain": "plugins", "relation": "inventory_projection", "lossPolicy": "no_auto_enable", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
-          { "domain": "gateway", "relation": "status_projection", "lossPolicy": "status_snapshot", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "fixture_required" },
+          { "domain": "providers", "relation": "provider_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_and_external_pending_live" },
+          { "domain": "auth", "relation": "secret_ref_projection", "lossPolicy": "no_plaintext", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "secret_guard_and_external_pending_live_credentials" },
+          { "domain": "models", "relation": "model_projection", "lossPolicy": "native_names_preserved", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_and_external_pending_provider_calls" },
+          { "domain": "scheduler", "relation": "scheduler_projection", "lossPolicy": "index_only", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_required" },
+          { "domain": "plugins", "relation": "inventory_projection", "lossPolicy": "no_auto_enable", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_required" },
+          { "domain": "gateway", "relation": "status_projection", "lossPolicy": "status_snapshot", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "fixture_required" },
           { "domain": "doctorCompat", "relation": "diagnostic_projection", "lossPolicy": "redacted_summary", "writeBackPolicy": "safe_repair_only_after_approval", "validation": "fixture_required" },
           { "domain": "sandboxPermissions", "relation": "approval_projection", "lossPolicy": "no_silent_permission_change", "writeBackPolicy": "explicit_approval_only", "validation": "permission_fixture_required" },
-          { "domain": "configuration", "relation": "config_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_until_fixture_coverage", "validation": "config_fixture_required" }
+          { "domain": "configuration", "relation": "config_projection", "lossPolicy": "redacted_only", "writeBackPolicy": "blocked_until_official_runtime_write_back_contract_fixture_and_round_trip_evidence", "validation": "config_fixture_required" }
         ]
       }
     }
