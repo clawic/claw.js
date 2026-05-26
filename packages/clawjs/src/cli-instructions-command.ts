@@ -915,6 +915,7 @@ export async function runInstructionsCli(input: InstructionsCliInput): Promise<n
       case "reconcile":
         return runReconcile(input, store);
     }
+    return CLI_EXIT_USAGE;
   } catch (error) {
     if (input.wantsJson) {
       writeCommandJsonError(input.context.stdout, CANONICAL_COMMAND, error, { canonicalCommand: CANONICAL_COMMAND, operation: action });
