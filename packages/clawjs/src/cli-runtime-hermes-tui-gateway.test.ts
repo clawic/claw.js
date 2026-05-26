@@ -262,6 +262,20 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
     assert.equal(sendRequirement?.transportPolicyId, "hermes.tui_gateway.transport_lifecycle_policy");
     assert.equal(sendRequirement?.productionTransportStatus, "blocked_until_production_transport_lifecycle_policy");
     assert.equal(sendRequirement?.lifecycleStatus, "external_user_managed_not_started_by_claw");
+    assert.equal(payload.data.supportAudit.evidenceReadinessSummary.statusCounts.blocked_until_production_transport_lifecycle, 4);
+    assert.equal(payload.data.supportAudit.evidenceReadinessSummary.tuiGatewayWrapperBlockedCount, 0);
+    assert.equal(payload.data.supportAudit.evidenceReadinessSummary.tuiGatewayFixtureBackedCount, 4);
+    assert.deepEqual(payload.data.supportAudit.evidenceReadinessSummary.tuiGatewayWrapperRequirementIds, []);
+    assert.deepEqual(payload.data.supportAudit.evidenceReadinessSummary.tuiGatewayFixtureBackedRequirementIds, [
+      "hermes.sessions.send.action_contract",
+      "hermes.sessions.inject.action_contract",
+      "hermes.sessions.abort.action_contract",
+      "hermes.sessions.create.action_contract",
+    ]);
+    assert.equal(payload.data.supportAudit.evidenceReadinessSummary.nextRequiredActions.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), false);
+    assert.equal(payload.data.supportAudit.evidenceReadinessSummary.nextRequiredActions.includes("production_transport_lifecycle_policy_and_native_round_trip_evidence"), true);
+    assert.equal(payload.data.supportAudit.finalSupportClaimDecision.blockedPromotionClaims.includes("tui_gateway_wrapper_fixture"), false);
+    assert.equal(payload.data.supportAudit.finalSupportClaimDecision.blockedPromotionClaims.includes("production_transport_lifecycle"), true);
 
     const gatewayResources = await runHermesAction([
       "runtime", "hermes", "resources", "gateway",
