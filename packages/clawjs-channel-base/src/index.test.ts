@@ -73,6 +73,27 @@ test("channel api client reports malformed success JSON with request context", a
   );
 });
 
+test("channel api client rejects oversized success JSON before parsing", async () => {
+  const client = new ChannelApiClient({
+    channel: "telegram",
+    baseUrl: "https://channel.example.invalid",
+    token: "secret",
+    fetchImpl: async () => new Response("x".repeat((4 * 1024 * 1024) + 1), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+  });
+
+  await assert.rejects(
+    () => client.listAccounts(),
+    (error) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /telegram api GET \/v1\/telegram\/accounts -> JSON response too large/);
+      return true;
+    },
+  );
+});
+
 function withPatchedEnv<TValue>(env: Record<string, string | undefined>, fn: () => TValue): TValue {
   const previous = new Map<string, string | undefined>();
   for (const [key, value] of Object.entries(env)) {

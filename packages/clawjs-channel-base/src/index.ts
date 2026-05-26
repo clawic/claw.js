@@ -359,8 +359,15 @@ function readQuery(request: FastifyRequest): Record<string, string> { return ((r
 function asString(value: unknown): string | undefined { return typeof value === "string" && value.length > 0 ? value : undefined; }
 function asNumber(value: unknown): number | undefined { if (value === undefined || value === null || value === "") return undefined; const n = Number(value); return Number.isFinite(n) ? n : undefined; }
 
+const CHANNEL_API_JSON_MAX_BYTES = 4 * 1024 * 1024;
+
 function parseChannelApiJson<T>(input: { channel: string; method: string; path: string; text: string }): T {
+  const byteLength = Buffer.byteLength(input.text, "utf8");
+  if (byteLength > CHANNEL_API_JSON_MAX_BYTES) {
+    throw new Error(`${input.channel} api ${input.method} ${input.path} -> JSON response too large: ${byteLength} bytes`);
+  }
   try {
+    // hot-path-ok maxBytes=4194304 reason=channel API client rejects oversized response bodies before JSON parse
     return JSON.parse(input.text) as T;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
