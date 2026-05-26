@@ -1743,7 +1743,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.closureChecklistSummary?.external_pending, 4);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.status, "unpromoted");
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.finalPromotionAllowed, false);
-  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.claimDisposition, "unpromoted_external_pending");
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.providers.live_evidence"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.auth.live_evidence"), true);
@@ -2228,7 +2228,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.safeDefault, "project_runtime_state_do_not_sync_or_write_back_without_official_contract");
   assert.equal(hermesSupportPayload.data.promotionGate, "support_claim_remains_unpromoted_until_all_evidence_requirements_are_closed_or_explicitly_product_blocked");
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.status, "unpromoted");
-  assert.equal(hermesSupportPayload.data.finalPromotionReview?.claimDisposition, "unpromoted_external_pending");
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.claimDisposition, "unpromoted_product_blocked_and_external_pending");
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.productBlockedByDecisionCount, hermesSupportPayload.data.blockerSummary.productBlockedRequirementCount);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingCount, hermesSupportPayload.data.blockerSummary.byBlockerClass?.external_pending);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.unresolvedNativeRequirementCount, 0);

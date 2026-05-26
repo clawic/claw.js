@@ -1362,6 +1362,14 @@ function runtimeDomainProjectionDisposition(closureStatus: string, readProjectio
   return "projection_blocked_until_direct_issue_resolved";
 }
 
+function runtimeClaimDisposition(supportComplete: boolean, productBlockedCount: number, externalPendingCount: number): string {
+  if (supportComplete) return "all_claims_supported_by_current_evidence";
+  if (productBlockedCount > 0 && externalPendingCount > 0) return "unpromoted_product_blocked_and_external_pending";
+  if (externalPendingCount > 0) return "unpromoted_external_pending";
+  if (productBlockedCount > 0) return "unpromoted_product_claim_lowered";
+  return "unpromoted_unresolved_requirements";
+}
+
 function countByValue(values) {
   return values.reduce((acc, value) => {
     const key = value ?? "unknown";
@@ -1711,13 +1719,11 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
   const finalPromotionReview = {
     status: supportComplete ? "promoted" : "unpromoted",
     finalPromotionAllowed: supportComplete,
-    claimDisposition: supportComplete
-      ? "all_claims_supported_by_current_evidence"
-      : externalPendingRequirements.length > 0
-        ? "unpromoted_external_pending"
-        : productBlockedRequirements.length > 0
-          ? "unpromoted_product_claim_lowered"
-          : "unpromoted_unresolved_requirements",
+    claimDisposition: runtimeClaimDisposition(
+      supportComplete,
+      productBlockedRequirements.length,
+      externalPendingRequirements.length,
+    ),
     productBlockedByDecisionCount: productBlockedRequirements.length,
     externalPendingCount: externalPendingRequirements.length,
     unresolvedNativeRequirementCount: unresolvedNativeRequirements.length,
