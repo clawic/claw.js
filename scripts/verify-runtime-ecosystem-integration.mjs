@@ -227,6 +227,16 @@ function main() {
   }
 
   const commandIntents = fs.readFileSync(commandIntentsPath, "utf8");
+  const workspaceRuntimeTest = read("packages/clawjs/src/index-workspace-runtime.test.ts");
+  for (const snippet of [
+    "requiredHermesJsonPortalCommands",
+    "assert.equal(requiredHermesJsonPortalCommands.length, 44)",
+    "runtime hermes sessions conflicts",
+    "payload.data?.runtimeId, \"hermes\", command.label",
+    "stdout.getOutput().includes(\"TEST_SECRET_1234567890\"), false, command.label",
+  ]) {
+    if (!workspaceRuntimeTest.includes(snippet)) errors.push(`workspace runtime test missing Hermes 44-command portal coverage: ${snippet}`);
+  }
   for (const [id, mappedCommand] of [
     ["cmd_intent_runtime_portal", "runtime <runtime-id>"],
     ["cmd_intent_runtime_summary", "runtime <runtime-id> summary"],

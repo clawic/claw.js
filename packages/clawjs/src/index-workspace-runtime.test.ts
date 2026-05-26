@@ -1183,6 +1183,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     { label: "runtime hermes sessions unpin", args: ["runtime", "hermes", "sessions", "unpin", "--session-key", "2026/05/21/runtime-session"], exits: [CLI_EXIT_OK] },
     { label: "runtime hermes sessions conflicts", args: ["runtime", "hermes", "sessions", "conflicts"], exits: [CLI_EXIT_OK] },
   ];
+  assert.equal(requiredHermesJsonPortalCommands.length, 44);
 
   for (const command of requiredHermesJsonPortalCommands) {
     const stdout = captureStream();
