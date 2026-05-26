@@ -1866,6 +1866,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     const hasProductBlocked = requirements.some((requirement) => requirement.supportResolution === "explicitly_product_blocked_not_a_silent_gap");
     const hasUnresolved = requirements.some((requirement) => requirement.blockerClass === "direct_blocker"
       && requirement.supportResolution !== "explicitly_product_blocked_not_a_silent_gap");
+    const hasApprovalGate = requirements.some((requirement) => isApprovalGateRequirement(requirement));
     const closureStatus = hasUnresolved
       ? "direct_blocker"
       : hasExternal
@@ -1878,14 +1879,18 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       : closureStatus === "external_pending"
         ? "keep_unpromoted_until_approved_redacted_evidence"
         : closureStatus === "product_blocked"
-          ? "keep_lowered_claim_until_upstream_native_contract_exists"
+          ? hasApprovalGate
+            ? "keep_unpromoted_until_approval_gate_fixture_and_redacted_receipt_exists"
+            : "keep_lowered_claim_until_upstream_native_contract_exists"
           : "keep_blocked_until_direct_issue_resolved";
     const nextAction = closureStatus === "implemented_or_projected"
       ? "keep_manifest_claim_and_monitor_drift"
       : closureStatus === "external_pending"
         ? "use_matching_evidenceReentryPacket_after_explicit_approval"
         : closureStatus === "product_blocked"
-          ? "wait_for_official_runtime_contract_then_add_fixture_and_round_trip_evidence"
+          ? hasApprovalGate
+            ? "attach_approval_gate_fixture_and_redacted_receipt_before_claim_promotion"
+            : "wait_for_official_runtime_contract_then_add_fixture_and_round_trip_evidence"
           : "resolve_direct_blocker_before_claiming_support";
     const readProjectionStatus = audit.readProjectionStatus;
     return {

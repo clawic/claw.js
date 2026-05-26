@@ -2178,6 +2178,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(domainAudit?.blockingFacets?.includes("approval_gate_contract"), true);
     assert.equal(checklistItem?.closureStatus, "product_blocked");
     assert.equal(checklistItem?.evidenceRequirementIds?.includes(`hermes.${approvalGatedDomain}.approval_gate_evidence`), true);
+    assert.equal(checklistItem?.safeDefault, "keep_unpromoted_until_approval_gate_fixture_and_redacted_receipt_exists");
+    assert.equal(checklistItem?.nextAction, "attach_approval_gate_fixture_and_redacted_receipt_before_claim_promotion");
   }
   for (const projectedDomain of ["skills", "memory", "scheduler"]) {
     const domainAudit = hermesSupportPayload.data.domains?.find((entry) => entry.domain === projectedDomain);
