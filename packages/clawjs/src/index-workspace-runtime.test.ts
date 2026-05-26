@@ -2560,6 +2560,33 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPinPayload.data.result?.pinned, true);
   assert.equal(hermesPinPayload.data.result?.overlayThreadId, "runtime:hermes:sessions:2026%2F05%2F21%2Fruntime-session");
 
+  const hermesPinnedListStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "list", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesPinnedListStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_DEGRADED);
+  const hermesPinnedListPayload = JSON.parse(hermesPinnedListStdout.getOutput()) as {
+    data: {
+      result?: {
+        sessions?: Array<{
+          id?: string;
+          pinned?: boolean;
+          pinAuthority?: string;
+          divergence?: string;
+          localOverlay?: { pinned?: boolean; authority?: string; writesRuntime?: boolean };
+        }>;
+      };
+    };
+  };
+  const hermesPinnedSession = hermesPinnedListPayload.data.result?.sessions?.find((entry) => entry.id === "2026/05/21/runtime-session");
+  assert.equal(hermesPinnedSession?.pinned, true);
+  assert.equal(hermesPinnedSession?.pinAuthority, "clawix_local_overlay");
+  assert.equal(hermesPinnedSession?.divergence, "local_overlay_not_written_to_runtime");
+  assert.equal(hermesPinnedSession?.localOverlay?.pinned, true);
+  assert.equal(hermesPinnedSession?.localOverlay?.authority, "clawix_local_overlay");
+  assert.equal(hermesPinnedSession?.localOverlay?.writesRuntime, false);
+
   const hermesConflictsStdout = captureStream();
   assert.equal(await runCli(["runtime", "hermes", "sessions", "conflicts", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesConflictsStdout.stream,
