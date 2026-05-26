@@ -96,3 +96,4 @@ export { SOCIAL_CULTURE_FAMILY } from "./social_culture/index.ts";
 export { IDENTITY_BODY_RELIGIOUS_FINE_FAMILY } from "./identity_body_religious_fine/index.ts";
 export { REPRODUCTIVE_INTIMATE_FAMILY } from "./reproductive_intimate/index.ts";
 export { PERSONAL_CARE_AESTHETICS_FAMILY } from "./personal_care_aesthetics/index.ts";
+export { META_FAMILY, INSTRUCTIONS } from "./meta/index.ts";

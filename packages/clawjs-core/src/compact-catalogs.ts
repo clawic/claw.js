@@ -7098,6 +7098,26 @@ export const compactBuiltinFamilies: readonly CompactBuiltinFamilySummary[] = [
         "fieldCount": 5
       }
     ]
+  },
+  {
+    "name": "meta",
+    "displayName": "CLI Self-Governance",
+    "description": "System-level collections that hold the CLI's own operational metadata: instruction overrides, agent-proposed rules, and self-governance state.",
+    "collectionCount": 1,
+    "collections": [
+      {
+        "name": "instructions",
+        "displayName": "CLI Instructions",
+        "family": "meta",
+        "aliases": [
+          "instruction",
+          "instructions",
+          "claw_instruction",
+          "claw_instructions"
+        ],
+        "fieldCount": 24
+      }
+    ]
   }
 ] as const;
 
@@ -8125,6 +8145,14 @@ export const compactBuiltinCollectionAliases: readonly CompactBuiltinCollectionA
   {
     "alias": "classes",
     "canonicalName": "classes"
+  },
+  {
+    "alias": "claw_instruction",
+    "canonicalName": "instructions"
+  },
+  {
+    "alias": "claw_instructions",
+    "canonicalName": "instructions"
   },
   {
     "alias": "clinic",
@@ -10125,6 +10153,14 @@ export const compactBuiltinCollectionAliases: readonly CompactBuiltinCollectionA
   {
     "alias": "insights",
     "canonicalName": "insight_definitions"
+  },
+  {
+    "alias": "instruction",
+    "canonicalName": "instructions"
+  },
+  {
+    "alias": "instructions",
+    "canonicalName": "instructions"
   },
   {
     "alias": "instrument",
