@@ -1070,6 +1070,13 @@ function runtimePortalEvidenceSafetyPolicy(): string {
   return "redacted_values_only_in_commands_outputs_and_evidence";
 }
 
+function isApprovalGatedWritePolicy(runtimeId: RuntimeAdapterId, writeBackPolicy: string): boolean {
+  return runtimeId === "hermes"
+    && !writeBackPolicy.startsWith("blocked")
+    && !writeBackPolicy.includes("external_pending")
+    && (writeBackPolicy.includes("approval") || writeBackPolicy.includes("repair"));
+}
+
 function externalDomainEvidenceArtifactTemplate(runtimeId: RuntimeAdapterId, domain: string, exactCommand: string) {
   return {
     runtimeId,
@@ -1085,10 +1092,7 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
   const requirements = [];
   const validation = String(policy.validation ?? "");
   const writeBackPolicy = String(policy.writeBackPolicy ?? "");
-  const approvalGatedWritePolicy = runtimeId === "hermes"
-    && !writeBackPolicy.startsWith("blocked")
-    && !writeBackPolicy.includes("external_pending")
-    && (writeBackPolicy.includes("approval") || writeBackPolicy.includes("repair"));
+  const approvalGatedWritePolicy = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
   if (validation.includes("external_pending") || writeBackPolicy.includes("external_pending")) {
     const commandShape = `runtime ${runtimeId} domain ${domain} --json`;
     const exactCommand = runtimePortalExactCommand(commandShape) ?? commandShape;
@@ -1231,14 +1235,18 @@ function evidenceRequirementsFor(runtimeId: RuntimeAdapterId, domain: string, po
 function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: string) {
   const policy = domainPolicy(runtimeId, domain);
   const evidenceRequirements = evidenceRequirementsFor(runtimeId, domain, policy);
+  const writeBackPolicy = String(policy.writeBackPolicy ?? "");
+  const writeBackApprovalGated = isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
   return {
     ...policy,
     authority: domainAuthority(domain),
     freshness: freshnessFor(status, domain),
-    writeBackAllowed: !String(policy.writeBackPolicy).startsWith("blocked")
-      && policy.writeBackPolicy !== "external_pending_live_accounts",
+    writeBackAllowed: !writeBackPolicy.startsWith("blocked")
+      && writeBackPolicy !== "external_pending_live_accounts"
+      && !writeBackApprovalGated,
+    writeBackApprovalGated,
     externalPending: String(policy.validation).includes("external_pending")
-      || String(policy.writeBackPolicy).includes("external_pending"),
+      || writeBackPolicy.includes("external_pending"),
     evidenceRequirements,
     provenance: {
       source: "runtime-ecosystem-manifest",
@@ -1259,7 +1267,14 @@ function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId) {
   };
   const policies = RUNTIME_PORTAL_DOMAIN_POLICIES[runtimeId] ?? {};
   const blockedWriteBackDomains = Object.entries(policies)
-    .filter(([, policy]) => String(policy?.writeBackPolicy ?? "").startsWith("blocked"))
+    .filter(([, policy]) => {
+      const writeBackPolicy = String(policy?.writeBackPolicy ?? "");
+      return writeBackPolicy.startsWith("blocked")
+        || isApprovalGatedWritePolicy(runtimeId, writeBackPolicy);
+    })
+    .map(([domain]) => domain);
+  const approvalGatedWriteBackDomains = Object.entries(policies)
+    .filter(([, policy]) => isApprovalGatedWritePolicy(runtimeId, String(policy?.writeBackPolicy ?? "")))
     .map(([domain]) => domain);
   const externalPendingDomains = Object.entries(policies)
     .filter(([, policy]) => String(policy?.validation ?? "").includes("external_pending")
@@ -1270,6 +1285,7 @@ function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId) {
     scope: "runtime_ecosystem",
     ...support,
     blockedWriteBackDomains,
+    approvalGatedWriteBackDomains,
     externalPendingDomains,
     evidenceRequirements,
     claimSource: "runtime-ecosystem-manifest",
@@ -1324,6 +1340,8 @@ function runtimeDomainBlockingFacets(requirements = [], audit) {
     const id = String(requirement.id ?? "");
     if (id.includes(".write_back_contract") || id.includes(".native_write_back_contract")) {
       facets.push("native_write_back_contract");
+    } else if (id.includes(".approval_gate_evidence")) {
+      facets.push("approval_gate_contract");
     } else if (id.includes(".action_contract")) {
       facets.push("native_action_contract");
     }
@@ -1428,7 +1446,11 @@ function runtimeSyncPolicySummary(domainAudits, payload) {
     .filter(Boolean);
   const localOverlayDomains = localOverlayActions.length > 0 ? ["sessions"] : [];
   const blockedWriteBackDomains = domainAudits
-    .filter((domain) => String(domain.writeBackPolicy ?? "").startsWith("blocked"))
+    .filter((domain) => String(domain.writeBackPolicy ?? "").startsWith("blocked")
+      || domain.writeBackApprovalGated === true)
+    .map((domain) => domain.domain);
+  const approvalGatedWriteBackDomains = domainAudits
+    .filter((domain) => domain.writeBackApprovalGated === true)
     .map((domain) => domain.domain);
   const externalPendingDomains = domainAudits
     .filter((domain) => domain.externalPending === true
@@ -1462,6 +1484,7 @@ function runtimeSyncPolicySummary(domainAudits, payload) {
     readOnlyProjectionDomains,
     writeBackAllowedDomains,
     blockedWriteBackDomains,
+    approvalGatedWriteBackDomains,
     externalPendingDomains,
     localOverlayDomains,
     localOverlayActions,
@@ -1651,6 +1674,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       nativeAuthority: domain.nativeAuthority,
       writeBackPolicy: domain.writeBackPolicy,
       writeBackAllowed: domain.writeBackAllowed,
+      writeBackApprovalGated: domain.writeBackApprovalGated,
       validation: domain.validation,
       externalPending: domain.externalPending,
       persistence: domain.persistence,
@@ -3851,6 +3875,7 @@ function domainRows(runtimeId: RuntimeAdapterId, status, domainData) {
       lossPolicy: supportContract.lossPolicy,
       writeBackPolicy: supportContract.writeBackPolicy,
       writeBackAllowed: supportContract.writeBackAllowed,
+      writeBackApprovalGated: supportContract.writeBackApprovalGated,
       validation: supportContract.validation,
       externalPending: supportContract.externalPending,
       evidenceRequirements: supportContract.evidenceRequirements,

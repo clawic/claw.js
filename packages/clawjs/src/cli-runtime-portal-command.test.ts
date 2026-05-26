@@ -122,6 +122,13 @@ test("Hermes support audit keeps repair and permission policies behind approval-
         closureStatus?: string;
         evidenceRequirementIds?: string[];
       }>;
+      domains?: Array<{
+        domain?: string;
+        writeBackAllowed?: boolean;
+        writeBackApprovalGated?: boolean;
+        implementedFacets?: string[];
+        blockingFacets?: string[];
+      }>;
     };
   };
 
@@ -148,6 +155,16 @@ test("Hermes support audit keeps repair and permission policies behind approval-
   assert.equal(sandboxPacket?.doNotRunWithoutApproval, true);
   assert.equal(doctorPacket?.claimBlockedUntil, "approval_gate_fixture_and_redacted_receipt_attached");
   assert.equal(sandboxPacket?.claimBlockedUntil, "approval_gate_fixture_and_redacted_receipt_attached");
+
+  const domains = payload.data?.domains ?? [];
+  const doctorDomain = domains.find((domain) => domain.domain === "doctorCompat");
+  const sandboxDomain = domains.find((domain) => domain.domain === "sandboxPermissions");
+  for (const domain of [doctorDomain, sandboxDomain]) {
+    assert.equal(domain?.writeBackAllowed, false);
+    assert.equal(domain?.writeBackApprovalGated, true);
+    assert.equal(domain?.implementedFacets?.includes("runtime_write_policy_allowed"), false);
+    assert.equal(domain?.blockingFacets?.includes("approval_gate_contract"), true);
+  }
 
   const closure = payload.data?.closureChecklist ?? [];
   assert.equal(closure.find((item) => item.domain === "doctorCompat")?.closureStatus, "product_blocked");

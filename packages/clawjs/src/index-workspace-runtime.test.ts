@@ -2021,7 +2021,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         productBlockedRequirementCount?: number;
       };
       evidenceRequirements?: Array<{ id: string; blockerClass: string; approvalRequired: boolean; commandShape: string; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
-      domains?: Array<{ domain: string; evidenceRequirementIds?: string[]; blockerClasses?: string[]; evidenceDispositions?: string[]; supportResolutions?: string[]; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
+      domains?: Array<{ domain: string; writeBackAllowed?: boolean; writeBackApprovalGated?: boolean; evidenceRequirementIds?: string[]; blockerClasses?: string[]; evidenceDispositions?: string[]; supportResolutions?: string[]; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
       closureChecklist?: Array<{ domain: string; closureStatus: string; evidenceRequirementIds?: string[]; safeDefault?: string; nextAction?: string; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[]; projectionDisposition?: string }>;
       closureChecklistSummary?: Record<string, number>;
       projectionSummary?: {
@@ -2063,6 +2063,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         readOnlyProjectionDomains?: string[];
         writeBackAllowedDomains?: string[];
         blockedWriteBackDomains?: string[];
+        approvalGatedWriteBackDomains?: string[];
         externalPendingDomains?: string[];
         localOverlayDomains?: string[];
         localOverlayActions?: string[];
@@ -2151,6 +2152,10 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     const checklistItem = hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === approvalGatedDomain);
     assert.equal(domainAudit?.evidenceRequirementIds?.includes(`hermes.${approvalGatedDomain}.approval_gate_evidence`), true);
     assert.equal(domainAudit?.supportResolutions?.includes("explicitly_product_blocked_not_a_silent_gap"), true);
+    assert.equal(domainAudit?.writeBackAllowed, false);
+    assert.equal(domainAudit?.writeBackApprovalGated, true);
+    assert.equal(domainAudit?.implementedFacets?.includes("runtime_write_policy_allowed"), false);
+    assert.equal(domainAudit?.blockingFacets?.includes("approval_gate_contract"), true);
     assert.equal(checklistItem?.closureStatus, "product_blocked");
     assert.equal(checklistItem?.evidenceRequirementIds?.includes(`hermes.${approvalGatedDomain}.approval_gate_evidence`), true);
   }
@@ -2187,7 +2192,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.ready_runtime_projection, 3);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.degraded_runtime_projection, 9);
   assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.session_list_action, 1);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.implementedFacetCounts?.runtime_write_policy_allowed ?? 0, 0);
   assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.native_action_contract, 1);
+  assert.equal(hermesSupportPayload.data.projectionSummary?.blockingFacetCounts?.approval_gate_contract, 2);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.totalRequirementCount, hermesSupportPayload.data.blockerSummary.evidenceRequirementCount);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalRequiredCount, 6);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.channels.live_evidence"), true);
@@ -2207,6 +2214,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(hermesSupportPayload.data.syncPolicySummary?.externalPendingDomains?.includes(externalDomain), true);
   }
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.blockedWriteBackDomains?.includes("sessions"), true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.blockedWriteBackDomains?.includes("doctorCompat"), true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.blockedWriteBackDomains?.includes("sandboxPermissions"), true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.approvalGatedWriteBackDomains?.includes("doctorCompat"), true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.approvalGatedWriteBackDomains?.includes("sandboxPermissions"), true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackAllowedDomains?.includes("doctorCompat"), false);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackAllowedDomains?.includes("sandboxPermissions"), false);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayDomains?.includes("sessions"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayActions?.includes("unpin"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.readOnlyProjectionDomains?.includes("sessions"), true);
@@ -2274,11 +2287,13 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     cwd: process.cwd(),
   });
   assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(hermesSandboxExit), true);
-  const hermesSandboxPayload = JSON.parse(hermesSandboxStdout.getOutput()) as { data: { domain: string; data: { capability?: { supported?: boolean }; supportContract?: { lossPolicy?: string; writeBackAllowed?: boolean } } } };
+  const hermesSandboxPayload = JSON.parse(hermesSandboxStdout.getOutput()) as { data: { domain: string; data: { capability?: { supported?: boolean }; supportContract?: { lossPolicy?: string; writeBackAllowed?: boolean; writeBackApprovalGated?: boolean; evidenceRequirements?: Array<{ id?: string; approvalRequired?: boolean; doNotRunWithoutApproval?: boolean }> } } } };
   assert.equal(hermesSandboxPayload.data.domain, "sandboxPermissions");
   assert.equal(typeof hermesSandboxPayload.data.data.capability?.supported, "boolean");
   assert.equal(hermesSandboxPayload.data.data.supportContract?.lossPolicy, "no_silent_permission_change");
-  assert.equal(hermesSandboxPayload.data.data.supportContract?.writeBackAllowed, true);
+  assert.equal(hermesSandboxPayload.data.data.supportContract?.writeBackAllowed, false);
+  assert.equal(hermesSandboxPayload.data.data.supportContract?.writeBackApprovalGated, true);
+  assert.equal(hermesSandboxPayload.data.data.supportContract?.evidenceRequirements?.some((entry) => entry.id === "hermes.sandboxPermissions.approval_gate_evidence" && entry.approvalRequired === true && entry.doNotRunWithoutApproval === true), true);
 
   const hermesPreviewStdout = captureStream();
   const hermesPreviewExit = await runCli(["runtime", "hermes", "sessions", "preview", "--session-key", "2026/05/21/runtime-session", "--include-content", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
