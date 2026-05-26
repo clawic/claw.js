@@ -412,6 +412,7 @@ The docs check script validates that every current export from
     OpenClawModelsStatusJson
     OpenClawProviderIntentConfig
     OpenClawProviderIntentMap
+    OpenClawRuntimeConfigReadOptions
     OpenClawRuntimeContext
     OpenClawRuntimeOperation
     OpenClawRuntimeProgressEvent
@@ -790,6 +791,7 @@ The docs check script validates that every current export from
     applyAppStateTransaction
     applyTemplatePack
     applyTextMutation
+    assertSafeSessionId
     attachWorkspace
     brokerSecretHttp
     buildAudioApp
