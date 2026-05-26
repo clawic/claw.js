@@ -2252,12 +2252,18 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.tuiGatewayBlockedCount, 4);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.productionTransportBlockedCount, 4);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.writeBackContractBlockedCount, 12);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.tuiGatewayRequirementIds?.includes("hermes.sessions.send.action_contract"), true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.tuiGatewayRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.productionTransportRequirementIds?.includes("hermes.sessions.abort.action_contract"), true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.productionTransportRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
+  for (const requirementId of [
+    "hermes.sessions.send.action_contract",
+    "hermes.sessions.inject.action_contract",
+    "hermes.sessions.abort.action_contract",
+    "hermes.sessions.create.action_contract",
+  ]) {
+    assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.tuiGatewayRequirementIds?.includes(requirementId), true);
+    assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.productionTransportRequirementIds?.includes(requirementId), true);
+  }
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.writeBackContractRequirementIds?.includes("hermes.skills.write_back_contract"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.writeBackContractRequirementIds?.includes("hermes.sessions.pin.native_write_back_contract"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.writeBackContractRequirementIds?.includes("hermes.sessions.unpin.native_write_back_contract"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.writeBackContractRequirementIds?.includes("hermes.configuration.write_back_contract"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 4);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_approval_gate_fixture, 2);
@@ -2281,6 +2287,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackAllowedDomains?.includes("doctorCompat"), false);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.writeBackAllowedDomains?.includes("sandboxPermissions"), false);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayDomains?.includes("sessions"), true);
+  assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayActions?.includes("pin"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.localOverlayActions?.includes("unpin"), true);
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.readOnlyProjectionDomains?.includes("sessions"), true);
   assert.equal((hermesSupportPayload.data.syncPolicySummary?.writeBackPolicyCounts?.blocked_until_fixture_coverage ?? 0) > 0, true);
