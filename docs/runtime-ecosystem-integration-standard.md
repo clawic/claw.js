@@ -92,6 +92,14 @@ claw runtime <runtime-id> domain <domain> --json
 claw runtime <runtime-id> resources <domain> --json
 ```
 
+For Hermes, the current dev-only partial runtime lens keeps the complete 44-command JSON portal set guarded while support claims remain lowered. That
+set includes summary/status/commands/domains/support, domain and resource reads
+for every manifest domain, session/workspace reads, and session list/preview/resolve/history/send/inject/abort/create/pin/unpin/conflicts
+envelopes. Guarded command coverage is not a promotion signal by itself:
+native write-back, production TUI Gateway transport, and approved live
+channel/provider/auth/model evidence still gate recommended, production, and
+native-parity claims.
+
 `support` returns the runtime ecosystem support audit: all manifest domains
 accounted for, current support stage, blocking reasons, blocker classes,
 evidence requirements, session-action blockers, the exact promotion gate, and

@@ -489,6 +489,13 @@ function main() {
   for (const snippet of ["Triple Matrix", "claw runtime <runtime-id>", "support --json", "finalPromotionReview", "evidenceReentryPackets", "finalSupportClaimDecision", "closureChecklist", "resources <domain>", "stable `ok:false` JSON error envelopes", "command-intent routes", "semantic native parity", "no silent overwrite"]) {
     if (!standard.includes(snippet)) errors.push(`standard doc missing snippet: ${snippet}`);
   }
+  for (const snippet of [
+    "complete 44-command JSON portal set guarded",
+    "session list/preview/resolve/history/send/inject/abort/create/pin/unpin/conflicts",
+    "Guarded command coverage is not a promotion signal by itself",
+  ]) {
+    if (!standard.includes(snippet)) errors.push(`runtime ecosystem standard missing Hermes 44-command portal claim guard: ${snippet}`);
+  }
 
   const adr = fs.readFileSync(adrPath, "utf8");
   for (const snippet of ["Status: Accepted", "Source Decision Audit", "Surface Parity", "Discovery Route"]) {
@@ -515,6 +522,7 @@ function main() {
     errors.push("support matrix must describe Hermes as a partial runtime lens, not a generic partial projection");
   }
   for (const snippet of [
+    "44-command JSON portal set is guarded",
     "SQLite session-store reads",
     "bounded preview/history/resolve",
     "local-overlay pin/unpin",
