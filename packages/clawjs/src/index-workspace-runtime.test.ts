@@ -2497,6 +2497,25 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesAbortPayload.data.evidenceReentryStatus, "blocked_until_tui_gateway_wrapper_fixture");
   assert.match(hermesAbortPayload.data.reason ?? "", /fixture-backed official abort contract/);
 
+  const hermesCreatePreviewStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "sessions", "create", "--title", "Native Draft", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
+    stdout: hermesCreatePreviewStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_DEGRADED);
+  const hermesCreatePreviewPayload = JSON.parse(hermesCreatePreviewStdout.getOutput()) as { data: { action: string; status: string; writesRuntime: boolean; wouldWriteRuntime: boolean; requiredFlag?: string; officialMethod?: string; createPlan?: { requested?: { title?: string }; writeBackStatus?: string; nextContract?: { commandShape?: string; confirmationFlag?: string; officialMethod?: string } } } };
+  assert.equal(hermesCreatePreviewPayload.data.action, "create");
+  assert.equal(hermesCreatePreviewPayload.data.status, "confirmation_required");
+  assert.equal(hermesCreatePreviewPayload.data.writesRuntime, false);
+  assert.equal(hermesCreatePreviewPayload.data.wouldWriteRuntime, true);
+  assert.equal(hermesCreatePreviewPayload.data.requiredFlag, "--confirm-runtime-write");
+  assert.equal(hermesCreatePreviewPayload.data.officialMethod, "session.create");
+  assert.equal(hermesCreatePreviewPayload.data.createPlan?.requested?.title, "Native Draft");
+  assert.equal(hermesCreatePreviewPayload.data.createPlan?.writeBackStatus, "blocked_until_tui_gateway_wrapper_fixture");
+  assert.equal(hermesCreatePreviewPayload.data.createPlan?.nextContract?.commandShape, "runtime hermes sessions create --title <title> --confirm-runtime-write --json");
+  assert.equal(hermesCreatePreviewPayload.data.createPlan?.nextContract?.confirmationFlag, "--confirm-runtime-write");
+  assert.equal(hermesCreatePreviewPayload.data.createPlan?.nextContract?.officialMethod, "session.create");
+
   const hermesCreateStdout = captureStream();
   assert.equal(await runCli(["runtime", "hermes", "sessions", "create", "--title", "Native Draft", "--confirm-runtime-write", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {
     stdout: hermesCreateStdout.stream,
