@@ -191,6 +191,7 @@ test("CLI command intent resolution covers runtime ecosystem portal actions", ()
   assert.equal(create.intent.mappedCommand, "runtime <runtime-id> sessions create");
   assert.equal(create.intent.risk.includes("local_write"), true);
   assert.equal(create.intent.evidence.some((entry) => entry.includes("non-mutating create plan")), true);
+  assert.equal(create.intent.nextSteps.some((entry) => entry.includes("--confirm-runtime-write")), true);
 
   const pin = resolveClawCliCommandIntent({ phrase: "runtime sessions pin" });
   assert.equal(pin.status, "covered");

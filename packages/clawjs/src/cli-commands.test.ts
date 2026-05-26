@@ -89,7 +89,7 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   const listed = await runCliCapture(["commands", "list", "--source", "registry", "--json"], process.cwd());
   assert.equal(listed.code, CLI_EXIT_OK);
   const listedPayload = JSON.parse(listed.stdout) as {
-    data: { intents: Array<{ id: string; phrase: string; mappedCommand?: string }> };
+    data: { intents: Array<{ id: string; phrase: string; mappedCommand?: string; nextSteps?: string[] }> };
   };
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_portal" && entry.mappedCommand === "runtime <runtime-id>"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_summary" && entry.mappedCommand === "runtime <runtime-id> summary"), true);
@@ -108,6 +108,7 @@ test("commands resolve and list expose the runtime ecosystem portal", async () =
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_inject" && entry.mappedCommand === "runtime <runtime-id> sessions inject"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_abort" && entry.mappedCommand === "runtime <runtime-id> sessions abort"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_create" && entry.mappedCommand === "runtime <runtime-id> sessions create"), true);
+  assert.equal(listedPayload.data.intents.find((entry) => entry.id === "cmd_intent_runtime_sessions_create")?.nextSteps?.some((entry) => entry.includes("--confirm-runtime-write")), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_pin" && entry.mappedCommand === "runtime <runtime-id> sessions pin"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_unpin" && entry.mappedCommand === "runtime <runtime-id> sessions unpin"), true);
   assert.equal(listedPayload.data.intents.some((entry) => entry.id === "cmd_intent_runtime_sessions_conflicts" && entry.mappedCommand === "runtime <runtime-id> sessions conflicts"), true);
