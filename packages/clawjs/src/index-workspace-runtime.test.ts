@@ -1522,10 +1522,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         approvalRequiredCount?: number;
         externalPendingCount?: number;
         upstreamContractBlockedCount?: number;
+        approvalGateBlockedCount?: number;
         productBlockedCount?: number;
         unresolvedNativeRequirementCount?: number;
         approvalRequiredRequirementIds?: string[];
         upstreamContractRequirementIds?: string[];
+        approvalGateRequirementIds?: string[];
         nextRequiredActions?: string[];
         reentryPolicy?: string;
         safeDefault?: string;
@@ -1755,6 +1757,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.productBlockedRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.unresolvedNativeRequirementCount, 0);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("approved_redacted_live_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("approval_gate_fixture_and_redacted_receipt"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.userVisibleStatus, "runtime_ecosystem_available_with_product_blocked_or_external_pending_claims");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
@@ -1766,6 +1769,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("recommended"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.productBlockedByDecisionCount, hermesPayload.data.supportAudit?.finalPromotionReview?.productBlockedByDecisionCount);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.externalPendingCount, hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingCount);
@@ -2050,11 +2054,13 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         approvalRequiredCount?: number;
         externalPendingCount?: number;
         upstreamContractBlockedCount?: number;
+        approvalGateBlockedCount?: number;
         productBlockedCount?: number;
         unresolvedNativeRequirementCount?: number;
         approvalRequiredRequirementIds?: string[];
         externalPendingRequirementIds?: string[];
         upstreamContractRequirementIds?: string[];
+        approvalGateRequirementIds?: string[];
         productBlockedRequirementIds?: string[];
         unresolvedNativeRequirementIds?: string[];
         nextRequiredActions?: string[];
@@ -2216,11 +2222,16 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.auth.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.externalPendingRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.doctorCompat.approval_gate_evidence"), true);
-  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.sandboxPermissions.approval_gate_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.doctorCompat.approval_gate_evidence"), false);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.upstreamContractRequirementIds?.includes("hermes.sandboxPermissions.approval_gate_evidence"), false);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalGateRequirementIds?.includes("hermes.doctorCompat.approval_gate_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalGateRequirementIds?.includes("hermes.sandboxPermissions.approval_gate_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.approvalGateBlockedCount, 2);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 4);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_approval_gate_fixture, 2);
   assert.equal((hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("official_runtime_native_contract_fixture"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.reentryPolicy, "use_evidence_reentry_packets_before_claim_promotion");
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.domainCount, manifest.requiredDomains.length);
@@ -2252,6 +2263,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.externalPendingRequirementIds?.includes("hermes.models.live_evidence"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.productBlockedRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.unresolvedNativeRequirementIds?.length, 0);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("approval_gate_fixture_and_redacted_receipt"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("keep_lowered_claim_until_upstream_native_contracts_exist"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
@@ -2260,6 +2272,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("native_parity"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.productBlockedByDecisionCount, hermesSupportPayload.data.finalPromotionReview?.productBlockedByDecisionCount);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.externalPendingCount, hermesSupportPayload.data.finalPromotionReview?.externalPendingCount);
@@ -2268,6 +2281,15 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.safeDefault, "keep_unpromoted_until_evidence_or_upstream_contract_changes");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.userVisibleStatus, "runtime_ecosystem_available_but_not_recommended_or_production");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.length, hermesSupportPayload.data.blockerSummary.evidenceRequirementCount);
+  const hermesDoctorApprovalGateReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.doctorCompat.approval_gate_evidence");
+  const hermesSandboxApprovalGateReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sandboxPermissions.approval_gate_evidence");
+  for (const approvalGateReentry of [hermesDoctorApprovalGateReentry, hermesSandboxApprovalGateReentry]) {
+    assert.equal(approvalGateReentry?.status, "blocked_until_approval_gate_fixture");
+    assert.equal(approvalGateReentry?.safeDefault, "do_not_run_without_approval_gate_fixture");
+    assert.equal(approvalGateReentry?.expectedRedactedEvidence?.includes("approval_gate_fixture_receipt"), true);
+    assert.equal(approvalGateReentry?.claimBlockedUntil, "approval_gate_fixture_and_redacted_receipt_attached");
+    assert.equal(approvalGateReentry?.doNotRunWithoutApproval, true);
+  }
   const hermesChannelReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.channels.live_evidence");
   assert.equal(hermesChannelReentry?.status, "approval_required");
   assert.equal(hermesChannelReentry?.safeDefault, "do_not_run_without_explicit_approval_and_redaction");

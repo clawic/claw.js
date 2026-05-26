@@ -149,8 +149,8 @@ test("Hermes support audit keeps repair and permission policies behind approval-
   const packets = payload.data?.evidenceReentryPackets ?? [];
   const doctorPacket = packets.find((packet) => packet.requirementId === "hermes.doctorCompat.approval_gate_evidence");
   const sandboxPacket = packets.find((packet) => packet.requirementId === "hermes.sandboxPermissions.approval_gate_evidence");
-  assert.equal(doctorPacket?.status, "blocked_until_upstream_contract");
-  assert.equal(sandboxPacket?.status, "blocked_until_upstream_contract");
+  assert.equal(doctorPacket?.status, "blocked_until_approval_gate_fixture");
+  assert.equal(sandboxPacket?.status, "blocked_until_approval_gate_fixture");
   assert.equal(doctorPacket?.doNotRunWithoutApproval, true);
   assert.equal(sandboxPacket?.doNotRunWithoutApproval, true);
   assert.equal(doctorPacket?.claimBlockedUntil, "approval_gate_fixture_and_redacted_receipt_attached");

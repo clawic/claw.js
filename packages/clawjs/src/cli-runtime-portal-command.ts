@@ -1370,6 +1370,11 @@ function runtimeClaimDisposition(supportComplete: boolean, productBlockedCount: 
   return "unpromoted_unresolved_requirements";
 }
 
+function isApprovalGateRequirement(requirement): boolean {
+  return String(requirement.id ?? "").includes(".approval_gate_evidence")
+    || requirement.evidenceDisposition === "blocked_until_approval_gate_fixture";
+}
+
 function countByValue(values) {
   return values.reduce((acc, value) => {
     const key = value ?? "unknown";
@@ -1412,10 +1417,15 @@ function runtimeEvidenceReadinessSummary({
   const safeDefaultCounts = countByValue(evidenceReentryPackets.map((packet) => packet.safeDefault));
   const upstreamContractPackets = evidenceReentryPackets
     .filter((packet) => packet.status === "blocked_until_upstream_contract");
+  const approvalGatePackets = evidenceReentryPackets
+    .filter((packet) => packet.status === "blocked_until_approval_gate_fixture");
+  const externalApprovalPackets = evidenceReentryPackets
+    .filter((packet) => packet.status === "approval_required");
   const approvalPackets = evidenceReentryPackets
     .filter((packet) => packet.status === "approval_required" || packet.approvalRequired === true);
   const nextRequiredActions = [
-    ...(approvalPackets.length > 0 ? ["approved_redacted_live_evidence"] : []),
+    ...(externalApprovalPackets.length > 0 ? ["approved_redacted_live_evidence"] : []),
+    ...(approvalGatePackets.length > 0 ? ["approval_gate_fixture_and_redacted_receipt"] : []),
     ...(upstreamContractPackets.length > 0 ? ["official_runtime_native_contract_fixture"] : []),
     ...(unresolvedNativeRequirements.length > 0 ? ["resolve_direct_blocker_before_promotion"] : []),
   ];
@@ -1427,11 +1437,13 @@ function runtimeEvidenceReadinessSummary({
     approvalRequiredCount: approvalPackets.length,
     externalPendingCount: externalPendingRequirements.length,
     upstreamContractBlockedCount: upstreamContractPackets.length,
+    approvalGateBlockedCount: approvalGatePackets.length,
     productBlockedCount: productBlockedRequirements.length,
     unresolvedNativeRequirementCount: unresolvedNativeRequirements.length,
     approvalRequiredRequirementIds: approvalPackets.map((packet) => packet.requirementId).filter(Boolean),
     externalPendingRequirementIds: externalPendingRequirements.map((requirement) => requirement.id),
     upstreamContractRequirementIds: upstreamContractPackets.map((packet) => packet.requirementId).filter(Boolean),
+    approvalGateRequirementIds: approvalGatePackets.map((packet) => packet.requirementId).filter(Boolean),
     productBlockedRequirementIds: productBlockedRequirements.map((requirement) => requirement.id),
     unresolvedNativeRequirementIds: unresolvedNativeRequirements.map((requirement) => requirement.id),
     nextRequiredActions,
@@ -1716,6 +1728,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
   const productBlockedRequirements = evidenceRequirements.filter((requirement) => requirement.supportResolution === "explicitly_product_blocked_not_a_silent_gap");
   const externalPendingRequirements = evidenceRequirements.filter((requirement) => requirement.supportResolution === "external_pending_not_product_blocked" || requirement.blockerClass === "external_pending");
   const unresolvedNativeRequirements = evidenceRequirements.filter((requirement) => requirement.blockerClass === "direct_blocker" && requirement.supportResolution !== "explicitly_product_blocked_not_a_silent_gap");
+  const approvalGateRequirements = evidenceRequirements.filter((requirement) => isApprovalGateRequirement(requirement));
   const finalPromotionReview = {
     status: supportComplete ? "promoted" : "unpromoted",
     finalPromotionAllowed: supportComplete,
@@ -1732,6 +1745,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     unresolvedNativeRequirementIds: unresolvedNativeRequirements.map((requirement) => requirement.id),
     requiredForPromotion: [
       ...(externalPendingRequirements.length > 0 ? ["approved_redacted_live_evidence"] : []),
+      ...(approvalGateRequirements.length > 0 ? ["approval_gate_fixture_and_redacted_receipt"] : []),
       ...(unresolvedNativeRequirements.length > 0 ? ["official_runtime_native_contracts"] : []),
       ...(productBlockedRequirements.length > 0 ? ["keep_lowered_claim_until_upstream_native_contracts_exist"] : []),
       ...(ecosystem.production !== true ? ["ecosystem_production_claim"] : []),
@@ -1745,12 +1759,15 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     const isExternalPending = requirement.blockerClass === "external_pending"
       || requirement.supportResolution === "external_pending_not_product_blocked";
     const isProductBlocked = requirement.supportResolution === "explicitly_product_blocked_not_a_silent_gap";
+    const isApprovalGate = isApprovalGateRequirement(requirement);
     return {
       id: `${requirement.id}.reentry`,
       requirementId: requirement.id,
       blockerClass: requirement.blockerClass,
       status: isExternalPending
         ? "approval_required"
+        : isApprovalGate
+          ? "blocked_until_approval_gate_fixture"
         : isProductBlocked
           ? "blocked_until_upstream_contract"
           : "blocked_until_resolution",
@@ -1780,6 +1797,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
       doNotRunWithoutApproval: requirement.doNotRunWithoutApproval ?? isExternalPending,
       safeDefault: isExternalPending
         ? "do_not_run_without_explicit_approval_and_redaction"
+        : isApprovalGate
+          ? "do_not_run_without_approval_gate_fixture"
         : "keep_unpromoted_and_do_not_synthesize_runtime_state",
     };
   });
@@ -1787,6 +1806,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     ...(supportComplete ? [] : ["recommended", "production", "native_parity"]),
     ...(productBlockedRequirements.length > 0 ? ["write_back"] : []),
     ...(externalPendingRequirements.length > 0 ? ["external_live_evidence"] : []),
+    ...(approvalGateRequirements.length > 0 ? ["approval_gate_fixture"] : []),
     ...(unresolvedNativeRequirements.length > 0 || productBlockedRequirements.length > 0 ? ["upstream_native_contracts"] : []),
   ];
   const finalSupportClaimDecision = {
