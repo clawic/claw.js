@@ -51,6 +51,7 @@ test("every seed is shape-valid and within caps", () => {
       after: catalogEntry.seed.after,
       forbid: catalogEntry.seed.forbid,
       notes: catalogEntry.seed.notes,
+      validations: catalogEntry.seed.validations,
     });
     assert.equal(
       validation.ok,

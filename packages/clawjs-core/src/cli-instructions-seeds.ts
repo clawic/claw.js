@@ -397,6 +397,7 @@ export function materializeSeedAsInstruction(catalogEntry: CatalogSeedEntry, now
     after: catalogEntry.seed.after,
     forbid: catalogEntry.seed.forbid,
     notes: catalogEntry.seed.notes,
+    validations: catalogEntry.seed.validations,
     provenance: "seed",
     state: "active",
     source: catalogEntry.source,

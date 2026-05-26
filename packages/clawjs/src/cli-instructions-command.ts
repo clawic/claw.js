@@ -88,6 +88,7 @@ interface InstructionsRow {
   confidence?: number;
   proposedFrom?: string;
   source?: string;
+  validations?: ClawInstruction["validations"];
   createdAt: string;
   updatedAt: string;
 }
@@ -183,6 +184,7 @@ function rowFromInstruction(instruction: ClawInstruction): Omit<InstructionsRow,
     confidence: instruction.confidence,
     proposedFrom: instruction.proposedFrom,
     source: instruction.source,
+    validations: instruction.validations,
   };
 }
 
@@ -288,6 +290,7 @@ function parseInstructionsManifest(content: string): ClawInstruction[] {
       provenance: "user",
       state: (entry.state as ClawInstruction["state"] | undefined) ?? "active",
       source: `manifest:${entry.id}`,
+      validations: Array.isArray(entry.validations) ? entry.validations as ClawInstruction["validations"] : undefined,
       createdAt: "",
       updatedAt: "",
     };
@@ -345,6 +348,7 @@ function instructionFromRow(row: Record<string, unknown>, fallbackId?: string): 
     confidence: typeof row.confidence === "number" ? row.confidence : undefined,
     proposedFrom: typeof row.proposedFrom === "string" ? row.proposedFrom : undefined,
     source: typeof row.source === "string" ? row.source : undefined,
+    validations: Array.isArray(row.validations) ? row.validations as ClawInstruction["validations"] : undefined,
     createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
     updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : "",
   };
@@ -372,6 +376,7 @@ function publicInstructionView(instruction: ClawInstruction): Record<string, unk
     confidence: instruction.confidence,
     proposedFrom: instruction.proposedFrom,
     source: instruction.source,
+    validations: instruction.validations,
     createdAt: instruction.createdAt,
     updatedAt: instruction.updatedAt,
   };

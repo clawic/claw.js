@@ -107,8 +107,33 @@ export interface ClawInstruction {
   confidence?: number;
   proposedFrom?: string;
   source?: string;
+  validations?: ReadonlyArray<RuleValidation>;
   createdAt: string;
   updatedAt: string;
+}
+
+export type RuleValidation =
+  | { kind: "regex"; field: string; pattern: string; flags?: string; message?: string }
+  | { kind: "max-length"; field: string; max: number; message?: string }
+  | { kind: "min-length"; field: string; min: number; message?: string }
+  | { kind: "required-field"; field: string; message?: string }
+  | { kind: "enum"; field: string; values: ReadonlyArray<string>; message?: string }
+  | { kind: "presence-of-other"; field: string; otherField: string; message?: string };
+
+export const RULE_VALIDATION_KINDS = [
+  "regex",
+  "max-length",
+  "min-length",
+  "required-field",
+  "enum",
+  "presence-of-other",
+] as const;
+
+export interface RuleValidationFailure {
+  kind: RuleValidation["kind"];
+  field: string;
+  message: string;
+  ruleId?: string;
 }
 
 export type InstructionBodyField =
@@ -160,6 +185,14 @@ export interface InstructionValidationIssue {
 export interface InstructionValidationResult {
   ok: boolean;
   issues: InstructionValidationIssue[];
+}
+
+function isPresent(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== "";
+}
+
+function payloadValue(payload: Record<string, unknown>, field: string): unknown {
+  return payload[field];
 }
 
 function isFiniteInteger(value: unknown): value is number {
@@ -254,8 +287,115 @@ export function validateInstructionShape(input: Partial<ClawInstruction>): Instr
       issues.push({ field: "confidence", message: "Confidence must be a number in [0, 1]." });
     }
   }
+  if (input.validations !== undefined) {
+    if (!Array.isArray(input.validations)) {
+      issues.push({ field: "validations", message: "Validations must be an array." });
+    } else {
+      for (const [index, validation] of input.validations.entries()) {
+        issues.push(...validateRuleValidationShape(validation, `validations.${index}`).issues);
+      }
+    }
+  }
   issues.push(...validateInstructionBody(input).issues);
   return { ok: issues.length === 0, issues };
+}
+
+export function validateRuleValidationShape(input: unknown, prefix = "validations"): InstructionValidationResult {
+  const issues: InstructionValidationIssue[] = [];
+  if (typeof input !== "object" || input === null) {
+    return { ok: false, issues: [{ field: prefix, message: "Validation must be an object." }] };
+  }
+  const validation = input as Record<string, unknown>;
+  if (!(RULE_VALIDATION_KINDS as readonly string[]).includes(String(validation.kind))) {
+    issues.push({ field: `${prefix}.kind`, message: `Unknown validation kind ${String(validation.kind)}.` });
+    return { ok: false, issues };
+  }
+  if (typeof validation.field !== "string" || validation.field.length === 0) {
+    issues.push({ field: `${prefix}.field`, message: "Validation field must be a non-empty string." });
+  }
+  switch (validation.kind) {
+    case "regex":
+      if (typeof validation.pattern !== "string" || validation.pattern.length === 0) {
+        issues.push({ field: `${prefix}.pattern`, message: "Regex validation requires a non-empty pattern." });
+      } else {
+        try {
+          new RegExp(validation.pattern, typeof validation.flags === "string" ? validation.flags : undefined);
+        } catch {
+          issues.push({ field: `${prefix}.pattern`, message: "Regex validation pattern is invalid." });
+        }
+      }
+      break;
+    case "max-length":
+      if (!isFiniteInteger(validation.max) || validation.max < 0) {
+        issues.push({ field: `${prefix}.max`, message: "Max-length validation requires a non-negative integer max." });
+      }
+      break;
+    case "min-length":
+      if (!isFiniteInteger(validation.min) || validation.min < 0) {
+        issues.push({ field: `${prefix}.min`, message: "Min-length validation requires a non-negative integer min." });
+      }
+      break;
+    case "required-field":
+      break;
+    case "enum":
+      if (!Array.isArray(validation.values) || validation.values.length === 0 || !validation.values.every((value) => typeof value === "string")) {
+        issues.push({ field: `${prefix}.values`, message: "Enum validation requires one or more string values." });
+      }
+      break;
+    case "presence-of-other":
+      if (typeof validation.otherField !== "string" || validation.otherField.length === 0) {
+        issues.push({ field: `${prefix}.otherField`, message: "Presence-of-other validation requires otherField." });
+      }
+      break;
+  }
+  return { ok: issues.length === 0, issues };
+}
+
+export function evaluateRuleValidations(
+  rule: Pick<ClawInstruction, "id" | "validations">,
+  payload: Record<string, unknown>,
+): RuleValidationFailure[] {
+  const failures: RuleValidationFailure[] = [];
+  for (const validation of rule.validations ?? []) {
+    const value = payloadValue(payload, validation.field);
+    const customMessage = validation.message;
+    const push = (message: string): void => {
+      failures.push({ kind: validation.kind, field: validation.field, message: customMessage ?? message, ruleId: rule.id });
+    };
+    switch (validation.kind) {
+      case "regex":
+        if (typeof value !== "string" || !new RegExp(validation.pattern, validation.flags).test(value)) {
+          push(`Field ${validation.field} must match /${validation.pattern}/.`);
+        }
+        break;
+      case "max-length":
+        if (typeof value === "string" && value.length > validation.max) {
+          push(`Field ${validation.field} must be at most ${validation.max} characters.`);
+        }
+        break;
+      case "min-length":
+        if (typeof value !== "string" || value.length < validation.min) {
+          push(`Field ${validation.field} must be at least ${validation.min} characters.`);
+        }
+        break;
+      case "required-field":
+        if (!isPresent(value)) {
+          push(`Field ${validation.field} is required.`);
+        }
+        break;
+      case "enum":
+        if (typeof value !== "string" || !(validation.values as readonly string[]).includes(value)) {
+          push(`Field ${validation.field} must be one of: ${validation.values.join(", ")}.`);
+        }
+        break;
+      case "presence-of-other":
+        if (isPresent(value) && !isPresent(payloadValue(payload, validation.otherField))) {
+          push(`Field ${validation.otherField} is required when ${validation.field} is present.`);
+        }
+        break;
+    }
+  }
+  return failures;
 }
 
 export function targetSpecificity(target: InstructionTarget): number {

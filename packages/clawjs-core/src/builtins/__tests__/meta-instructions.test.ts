@@ -68,6 +68,7 @@ test("instructions collection schema covers required ClawInstruction columns", (
     "confidence",
     "proposedFrom",
     "source",
+    "validations",
   ]) {
     assert.ok(fieldsByName.has(optional), `expected field ${optional}`);
   }

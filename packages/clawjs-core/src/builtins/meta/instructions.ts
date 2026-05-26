@@ -95,6 +95,7 @@ export const INSTRUCTIONS: BuiltinCollectionDefinition = {
     { name: "confidence", type: "number", min: 0, max: 1 },
     { name: "proposedFrom", type: "text", maxLength: 128 },
     { name: "source", type: "text", maxLength: 128 },
+    { name: "validations", type: "json" },
   ],
   indexes: [
     { name: "instructions_trigger_idx", fields: ["trigger"] },

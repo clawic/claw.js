@@ -10,9 +10,11 @@ import {
   clawInstructionsSchemaVersion,
   compareResolvedInstructions,
   describeInstructionTarget,
+  evaluateRuleValidations,
   isInstructionActive,
   isInstructionTrigger,
   mergeResolvedInstructions,
+  RULE_VALIDATION_KINDS,
   resolveInstructionsForEvent,
   targetMatchesEvent,
   targetSpecificity,
@@ -79,6 +81,64 @@ test("validateInstructionShape catches priority and confidence ranges", () => {
   assert.equal(validateInstructionShape({ ...base, priority: INSTRUCTION_PRIORITY_MAX }).ok, true);
   assert.equal(validateInstructionShape({ ...base, confidence: 0.5 }).ok, true);
   assert.equal(validateInstructionShape({ ...base, confidence: 1.4 }).ok, false);
+});
+
+test("rule validation rejects unknown kinds", () => {
+  assert.equal(RULE_VALIDATION_KINDS.length, 6);
+  const base = makeInstruction({
+    validations: [{ kind: "unknown", field: "title" } as never],
+  });
+  const validation = validateInstructionShape(base);
+  assert.equal(validation.ok, false);
+  assert.equal(validation.issues.some((issue) => issue.field === "validations.0.kind"), true);
+});
+
+test("regex rule validation evaluates string patterns", () => {
+  const rule = makeInstruction({
+    validations: [{ kind: "regex", field: "title", pattern: "^BUG-[0-9]+$" }],
+  });
+  assert.equal(evaluateRuleValidations(rule, { title: "BUG-123" }).length, 0);
+  assert.equal(evaluateRuleValidations(rule, { title: "TASK-123" })[0]?.kind, "regex");
+});
+
+test("max-length rule validation enforces upper bounds", () => {
+  const rule = makeInstruction({
+    validations: [{ kind: "max-length", field: "title", max: 5 }],
+  });
+  assert.equal(evaluateRuleValidations(rule, { title: "short" }).length, 0);
+  assert.equal(evaluateRuleValidations(rule, { title: "too long" })[0]?.kind, "max-length");
+});
+
+test("min-length rule validation enforces lower bounds", () => {
+  const rule = makeInstruction({
+    validations: [{ kind: "min-length", field: "title", min: 5 }],
+  });
+  assert.equal(evaluateRuleValidations(rule, { title: "enough" }).length, 0);
+  assert.equal(evaluateRuleValidations(rule, { title: "no" })[0]?.kind, "min-length");
+});
+
+test("required-field rule validation requires present values", () => {
+  const rule = makeInstruction({
+    validations: [{ kind: "required-field", field: "title" }],
+  });
+  assert.equal(evaluateRuleValidations(rule, { title: "present" }).length, 0);
+  assert.equal(evaluateRuleValidations(rule, {})[0]?.kind, "required-field");
+});
+
+test("enum rule validation restricts values", () => {
+  const rule = makeInstruction({
+    validations: [{ kind: "enum", field: "status", values: ["open", "closed"] }],
+  });
+  assert.equal(evaluateRuleValidations(rule, { status: "open" }).length, 0);
+  assert.equal(evaluateRuleValidations(rule, { status: "pending" })[0]?.kind, "enum");
+});
+
+test("presence-of-other rule validation requires companion fields", () => {
+  const rule = makeInstruction({
+    validations: [{ kind: "presence-of-other", field: "attachment", otherField: "attachmentConsent" }],
+  });
+  assert.equal(evaluateRuleValidations(rule, { attachment: "log.txt", attachmentConsent: "yes" }).length, 0);
+  assert.equal(evaluateRuleValidations(rule, { attachment: "log.txt" })[0]?.kind, "presence-of-other");
 });
 
 test("targetSpecificity counts declared axes", () => {

@@ -8,8 +8,10 @@ import { runInstructionsCli } from "./cli-instructions-command.ts";
 import {
   CLI_EXIT_INSTRUCTION_BLOCK,
   buildInstructionsPreamble,
+  instructionsJsonMeta,
   resolveInstructionsMode,
 } from "./cli-instructions-runtime.ts";
+import { openMainDataStore } from "./v1-data-core.ts";
 
 function withIsolatedStore<T>(run: () => Promise<T> | T): Promise<T> {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "claw-instr-runtime-"));
@@ -55,6 +57,33 @@ async function addStrictBlock(): Promise<void> {
     wantsJson: true,
     binName: "claw",
   });
+}
+
+function addValidatedStrictBlock(): void {
+  const store = openMainDataStore();
+  try {
+    store.putRecord({
+      namespaceId: "main",
+      collectionName: "instructions",
+      recordId: "validated_block",
+      payload: {
+        schemaVersion: 1,
+        targetCommand: "tasks",
+        targetAction: "write",
+        trigger: "surface-action",
+        activation: "on",
+        priority: 99,
+        severity: "block",
+        forbid: "Title is required.",
+        provenance: "user",
+        state: "active",
+        validations: [{ kind: "required-field", field: "title" }],
+        source: "test:validated-block",
+      },
+    });
+  } finally {
+    store.close();
+  }
 }
 
 test("resolveInstructionsMode defaults to preamble", () => {
@@ -113,5 +142,25 @@ test("strict mode with no block rule has no exitCode override", async () => {
       mode: "strict",
     });
     assert.equal(result.exitCode, undefined);
+  });
+});
+
+test("strict mode returns structured validation failures for block rules", async () => {
+  await withIsolatedStore(async () => {
+    addValidatedStrictBlock();
+    const result = buildInstructionsPreamble({
+      target: { command: "tasks", action: "write" },
+      binName: "claw",
+      mode: "strict",
+      payload: {},
+    });
+    assert.equal(result.exitCode, CLI_EXIT_INSTRUCTION_BLOCK);
+    assert.equal(result.validationFailures[0]?.ruleId, "validated_block");
+    assert.equal(result.validationFailures[0]?.kind, "required-field");
+    const meta = instructionsJsonMeta(result);
+    assert.deepEqual(
+      (meta.instructions as { validationFailures: unknown[] }).validationFailures,
+      result.validationFailures,
+    );
   });
 });

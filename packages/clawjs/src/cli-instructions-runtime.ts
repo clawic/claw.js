@@ -1,5 +1,6 @@
 import {
   INSTRUCTION_BODY_FIELDS,
+  evaluateRuleValidations,
   isInstructionTrigger,
   listMaterializedSeedInstructions,
   resolveInstructionsForEvent,
@@ -7,6 +8,7 @@ import {
   type InstructionEvent,
   type InstructionTarget,
   type InstructionTrigger,
+  type RuleValidationFailure,
 } from "@clawjs/core/catalogs";
 
 import { CLI_EXIT_FAILURE } from "./cli-errors.ts";
@@ -29,12 +31,14 @@ export interface PreambleContext {
   trigger?: InstructionTrigger;
   binName: string;
   mode?: InstructionsMode;
+  payload?: Record<string, unknown>;
 }
 
 export interface PreambleResult {
   mode: InstructionsMode;
   rules: ClawInstruction[];
   blocked: ClawInstruction[];
+  validationFailures: RuleValidationFailure[];
   preamble: string;
   exitCode?: number;
 }
@@ -74,6 +78,7 @@ function loadStoredInstructions(): ClawInstruction[] {
         confidence: typeof data.confidence === "number" ? data.confidence : undefined,
         proposedFrom: typeof data.proposedFrom === "string" ? data.proposedFrom : undefined,
         source: typeof data.source === "string" ? data.source : undefined,
+        validations: Array.isArray(data.validations) ? data.validations as ClawInstruction["validations"] : undefined,
         createdAt: typeof data.createdAt === "string" ? data.createdAt : "",
         updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : "",
       };
@@ -123,20 +128,29 @@ export function buildInstructionsPreamble(context: PreambleContext): PreambleRes
   const event: InstructionEvent = { target: context.target, trigger };
 
   if (mode === "off") {
-    return { mode, rules: [], blocked: [], preamble: "" };
+    return { mode, rules: [], blocked: [], validationFailures: [], preamble: "" };
   }
 
   const seeds = listMaterializedSeedInstructions();
   const overrides = loadStoredInstructions();
   const resolved = resolveInstructionsForEvent([...seeds, ...overrides], event);
   const renderable = resolved.filter((rule) => rule.severity !== "info");
-  const blocked = resolved.filter((rule) => rule.severity === "block");
+  const validationFailures = context.payload
+    ? resolved.flatMap((rule) => evaluateRuleValidations(rule, context.payload ?? {}))
+    : [];
+  const blocked = resolved.filter((rule) => {
+    if (rule.severity !== "block") return false;
+    if (!rule.validations || rule.validations.length === 0) return true;
+    if (!context.payload) return true;
+    return validationFailures.some((failure) => failure.ruleId === rule.id);
+  });
 
   if (mode === "strict" && blocked.length > 0) {
     return {
       mode,
       rules: renderable,
       blocked,
+      validationFailures,
       preamble: buildPreambleText(renderable, event, context.binName),
       exitCode: CLI_EXIT_INSTRUCTION_BLOCK,
     };
@@ -146,6 +160,7 @@ export function buildInstructionsPreamble(context: PreambleContext): PreambleRes
     mode,
     rules: renderable,
     blocked,
+    validationFailures,
     preamble: buildPreambleText(renderable, event, context.binName),
   };
 }
@@ -189,6 +204,7 @@ export function instructionsJsonMeta(result: PreambleResult): Record<string, unk
         notes: rule.notes,
       })),
       blocked: result.blocked.map((rule) => rule.id),
+      validationFailures: result.validationFailures,
     },
   };
 }
