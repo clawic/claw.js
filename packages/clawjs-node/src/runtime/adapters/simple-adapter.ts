@@ -363,6 +363,8 @@ async function probeSimpleRuntime(
         memory: { ...declared.memory, supported: true, status: "ready", strategy: declared.memory.strategy },
         skills: { ...declared.skills, supported: true, status: "degraded", strategy: declared.skills.strategy },
         channels: { ...declared.channels, supported: declared.channels.supported, status: declared.channels.supported ? "degraded" : "unsupported", strategy: declared.channels.strategy },
+        doctor: { ...declared.doctor, supported: declared.doctor.supported, status: declared.doctor.supported ? "degraded" : "unsupported", strategy: declared.doctor.strategy },
+        compat: { ...declared.compat, supported: declared.compat.supported, status: declared.compat.supported ? "degraded" : "unsupported", strategy: declared.compat.strategy },
       }),
       diagnostics: {
         lastError: `${binary} CLI not found`,
@@ -420,6 +422,8 @@ async function probeSimpleRuntime(
       skills: { ...declared.skills, supported: true, status: capabilities.skills ? "ready" : "degraded", strategy: declared.skills.strategy },
       channels: { ...declared.channels, supported: declared.channels.supported, status: declared.channels.supported ? (capabilities.channels ? "ready" : gatewayAvailable ? "ready" : "degraded") : "unsupported", strategy: declared.channels.strategy },
       sandbox: { ...declared.sandbox, supported: declared.sandbox.supported, status: declared.sandbox.supported ? declared.sandbox.status : "unsupported", strategy: declared.sandbox.strategy },
+      doctor: { ...declared.doctor, supported: declared.doctor.supported, status: declared.doctor.supported ? (capabilities.doctor ? "ready" : "degraded") : "unsupported", strategy: declared.doctor.strategy },
+      compat: { ...declared.compat, supported: declared.compat.supported, status: declared.compat.supported ? (capabilities.doctor ? "ready" : "degraded") : "unsupported", strategy: declared.compat.strategy },
     }),
     diagnostics: {
       locations,

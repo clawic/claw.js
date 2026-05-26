@@ -184,6 +184,8 @@ test("hermes adapter exposes structured capabilities, resources, and transport m
   assert.equal(status.capabilityMap.scheduler.supported, true);
   assert.equal(status.capabilityMap.sandbox.supported, true);
   assert.equal(status.capabilityMap.sandbox.status, "degraded");
+  assert.equal(status.capabilityMap.doctor.status, "ready");
+  assert.equal(status.capabilityMap.compat.status, "ready");
   assert.equal(status.capabilityMap.plugins.supported, true);
   assert.equal(status.capabilityMap.configuration.supported, true);
   assert.equal(status.capabilityMap.configuration.strategy, "config");
