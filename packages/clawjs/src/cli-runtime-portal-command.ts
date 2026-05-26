@@ -2208,11 +2208,11 @@ function hasCredentialFragment(url: URL): boolean {
   } catch {
     // Fall through to the plain fragment scan below.
   }
-  return /(?:^|[&;])(?:api[_-]?key|auth|authorization|bearer|credential|password|secret|token)=/i.test(fragment);
+  return /(?:^|[&;])(?:access[_-]?token|api[_-]?key|auth|authorization|bearer|client[_-]?secret|credential|id[_-]?token|jwt|password|refresh[_-]?token|secret|session[_-]?key|token)=/i.test(fragment);
 }
 
 function isCredentialUrlKey(key: string): boolean {
-  return /^(?:api[_-]?key|auth|authorization|bearer|credential|password|secret|token)$/i.test(key.trim());
+  return /^(?:access[_-]?token|api[_-]?key|auth|authorization|bearer|client[_-]?secret|credential|id[_-]?token|jwt|password|refresh[_-]?token|secret|session[_-]?key|token)$/i.test(key.trim());
 }
 
 function hermesTuiGatewayRequest(action: string, sessionKey: string | null, message?: string, extra: Record<string, unknown> = {}) {
