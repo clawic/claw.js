@@ -2658,6 +2658,28 @@ function materializeSessionActionContract(runtimeId: RuntimeAdapterId, contract,
     abort: "runtime_gateway_control",
     create: "runtime_gateway_write",
   }[contract.action];
+  const gatewayReadAction = {
+    list: "session.list",
+    preview: "session.history",
+    resolve: "session.status",
+    history: "session.history",
+  }[contract.action];
+  if (runtimeId === "hermes" && gatewayReadAction && hasLoopbackTuiGateway(runtimeOptions)) {
+    return {
+      ...materialized,
+      status: "implemented",
+      writesRuntime: false,
+      wouldWriteRuntime: false,
+      persistence: "runtime_gateway_snapshot",
+      delegatesTo: `tui_gateway.${gatewayReadAction}`,
+      guard: "loopback_tui_gateway_read_only",
+      materializedBy: "loopback_tui_gateway_fixture",
+      fixtureBacked: true,
+      officialProtocol: "tui_gateway_json_rpc",
+      officialMethod: gatewayReadAction,
+      officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+    };
+  }
   const transportPolicy = runtimeId === "hermes" && gatewayActionPersistence
     ? hermesTuiGatewayTransportPolicy(runtimeOptions)
     : null;
@@ -3272,6 +3294,42 @@ function isCredentialUrlKey(key: string): boolean {
 }
 
 function hermesTuiGatewayRequest(action: string, sessionKey: string | null, message?: string, extra: Record<string, unknown> = {}) {
+  if (action === "list") {
+    return {
+      method: "session.list",
+      params: {
+        limit: Number(extra.limit ?? 20),
+      },
+    };
+  }
+  if (action === "preview") {
+    return {
+      method: "session.history",
+      params: {
+        session_id: sessionKey,
+        limit: 1,
+        include_content: Boolean(extra.includeContent),
+      },
+    };
+  }
+  if (action === "resolve") {
+    return {
+      method: "session.status",
+      params: {
+        session_id: sessionKey,
+      },
+    };
+  }
+  if (action === "history") {
+    return {
+      method: "session.history",
+      params: {
+        session_id: sessionKey,
+        limit: Number(extra.limit ?? 20),
+        include_content: Boolean(extra.includeContent),
+      },
+    };
+  }
   if (action === "send") {
     return {
       method: "prompt.submit",
@@ -3316,6 +3374,133 @@ function hermesTuiGatewayRequest(action: string, sessionKey: string | null, mess
     };
   }
   return null;
+}
+
+function hermesGatewayReceipt(gateway) {
+  return {
+    protocol: gateway.protocol,
+    transport: gateway.transport,
+    method: gateway.method,
+    requestId: gateway.request.id,
+    endpoint: gateway.endpoint,
+  };
+}
+
+function hermesGatewayMessages(result) {
+  const messages = Array.isArray(result?.messages)
+    ? result.messages
+    : Array.isArray(result?.history)
+      ? result.history
+      : [];
+  return messages.map((entry, index) => ({
+    index,
+    role: entry?.role ? String(entry.role) : undefined,
+    contentIncluded: typeof entry?.content === "string" || typeof entry?.contentPreview === "string",
+    contentPreview: typeof entry?.content === "string"
+      ? redactRuntimeSessionText(entry.content)
+      : typeof entry?.contentPreview === "string"
+        ? redactRuntimeSessionText(entry.contentPreview)
+        : undefined,
+    timestamp: entry?.timestamp ?? entry?.createdAt ?? null,
+  }));
+}
+
+function hermesGatewaySessionListResult(gateway) {
+  const result = gateway.result ?? {};
+  const sessions = Array.isArray(result.sessions)
+    ? result.sessions
+    : Array.isArray(result.items)
+      ? result.items
+      : [];
+  return {
+    sessions: sessions.map((entry) => ({
+      id: String(entry?.id ?? entry?.session_id ?? entry?.sessionId ?? ""),
+      label: String(entry?.title ?? entry?.label ?? entry?.id ?? entry?.session_id ?? "Hermes session"),
+      title: entry?.title ?? null,
+      source: entry?.source ?? "tui_gateway",
+      updatedAt: entry?.updatedAt ?? entry?.last_active ?? entry?.lastActive ?? null,
+      status: "projected",
+      contentIncluded: false,
+      nativeIdentifier: { name: "session_id" },
+      provenance: {
+        source: "tui-gateway-json-rpc",
+        runtimeId: "hermes",
+        method: gateway.method,
+      },
+    })).filter((entry) => entry.id.length > 0),
+    totalProjected: Number(result.total ?? result.totalProjected ?? sessions.length),
+    gatewayReceipt: hermesGatewayReceipt(gateway),
+    gatewayResult: result,
+  };
+}
+
+function hermesGatewayPreviewResult(sessionKey: string, gateway, includeContent: boolean) {
+  const messages = hermesGatewayMessages(gateway.result);
+  const firstMessage = messages.find((entry) => typeof entry.contentPreview === "string");
+  return {
+    id: sessionKey,
+    found: true,
+    writesRuntime: false,
+    contentIncluded: includeContent,
+    contentPolicy: "metadata_default_include_content_required",
+    contentPreview: includeContent ? firstMessage?.contentPreview ?? null : null,
+    nativeIdentifier: { name: "session_id" },
+    gatewayReceipt: hermesGatewayReceipt(gateway),
+    gatewayResult: gateway.result,
+    provenance: {
+      source: "tui-gateway-json-rpc",
+      runtimeId: "hermes",
+      method: gateway.method,
+    },
+  };
+}
+
+function hermesGatewayResolveResult(sessionKey: string, gateway) {
+  const result = gateway.result ?? {};
+  return {
+    id: String(result.id ?? result.session_id ?? result.sessionId ?? sessionKey),
+    found: true,
+    writesRuntime: false,
+    contentIncluded: false,
+    title: result.title ?? null,
+    status: result.status ?? null,
+    nativeIdentifier: { name: "session_id" },
+    gatewayReceipt: hermesGatewayReceipt(gateway),
+    gatewayResult: result,
+    provenance: {
+      source: "tui-gateway-json-rpc",
+      runtimeId: "hermes",
+      method: gateway.method,
+    },
+  };
+}
+
+function hermesGatewayHistoryResult(sessionKey: string, gateway, includeContent: boolean, limit: number) {
+  const messages = hermesGatewayMessages(gateway.result).slice(0, limit);
+  return {
+    id: sessionKey,
+    found: true,
+    writesRuntime: false,
+    contentIncluded: includeContent,
+    contentPolicy: "metadata_default_include_content_required",
+    messages: includeContent
+      ? messages
+      : messages.map((entry) => ({
+        ...entry,
+        contentIncluded: false,
+        contentPreview: undefined,
+      })),
+    totalProjected: Number(gateway.result?.total ?? gateway.result?.totalProjected ?? messages.length),
+    contentTruncated: messages.length >= limit,
+    nativeIdentifier: { name: "session_id" },
+    gatewayReceipt: hermesGatewayReceipt(gateway),
+    gatewayResult: gateway.result,
+    provenance: {
+      source: "tui-gateway-json-rpc",
+      runtimeId: "hermes",
+      method: gateway.method,
+    },
+  };
 }
 
 async function callHermesTuiGatewayJsonRpc(input, action: string, sessionKey: string | null, message?: string, extra: Record<string, unknown> = {}) {
@@ -4154,6 +4339,26 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
+    if (runtimeId === "hermes" && !sessionStoreAvailable(payload.domainData.sessions.session) && hasLoopbackTuiGateway(runtimeOptionsFromInput(input, runtimeId))) {
+      const limit = Math.max(1, Number(input.flags.limit ?? 20));
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, null, undefined, { limit });
+      if (gateway.ok) {
+        writePayload(input, {
+          runtimeId,
+          domain: "sessions",
+          action,
+          status: "ok",
+          authority: "runtime",
+          writesRuntime: false,
+          officialProtocol: gateway.protocol,
+          officialMethod: gateway.method,
+          officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+          result: hermesGatewaySessionListResult(gateway),
+          supportContract,
+        }, { runtimeId, operation: "sessions", action });
+        return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+      }
+    }
     const listPolicy = payload.domainData.sessions.actionPolicy?.find((entry) => entry.action === "list");
     const listDegraded = String(listPolicy?.status ?? "") === "degraded";
     writePayload(input, {
@@ -4212,6 +4417,26 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
       }, { runtimeId, operation: "sessions", action });
       return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
     }
+    if (runtimeId === "hermes" && hasLoopbackTuiGateway(runtimeOptionsFromInput(input, runtimeId))) {
+      const includeContent = isTruthyFlag(input, "include-content");
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey, undefined, { includeContent });
+      if (gateway.ok) {
+        writePayload(input, {
+          runtimeId,
+          domain: "sessions",
+          action,
+          status: "ok",
+          authority: "runtime",
+          writesRuntime: false,
+          officialProtocol: gateway.protocol,
+          officialMethod: gateway.method,
+          officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+          result: hermesGatewayPreviewResult(sessionKey, gateway, includeContent),
+          supportContract,
+        }, { runtimeId, operation: "sessions", action });
+        return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+      }
+    }
     if (runtimeId === "hermes") {
       writePayload(input, { ...degradedMissingSessionStoreRead(action, sessionKey), supportContract }, { runtimeId, operation: "sessions", action });
       return CLI_EXIT_DEGRADED;
@@ -4253,6 +4478,25 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes" && hasLoopbackTuiGateway(runtimeOptionsFromInput(input, runtimeId))) {
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey);
+      if (gateway.ok) {
+        writePayload(input, {
+          runtimeId,
+          domain: "sessions",
+          action,
+          status: "ok",
+          authority: "runtime",
+          writesRuntime: false,
+          officialProtocol: gateway.protocol,
+          officialMethod: gateway.method,
+          officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+          result: hermesGatewayResolveResult(sessionKey, gateway),
+          supportContract,
+        }, { runtimeId, operation: "sessions", action });
+        return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+      }
     }
     if (runtimeId === "hermes") {
       writePayload(input, { ...degradedMissingSessionStoreRead(action, sessionKey), supportContract }, { runtimeId, operation: "sessions", action });
@@ -4297,6 +4541,27 @@ async function runSessionAction(input, runtimeId: RuntimeAdapterId, claw, payloa
         supportContract,
       }, { runtimeId, operation: "sessions", action });
       return result.found ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+    }
+    if (runtimeId === "hermes" && hasLoopbackTuiGateway(runtimeOptionsFromInput(input, runtimeId))) {
+      const limit = Math.max(1, Number(input.flags.limit ?? 20));
+      const includeContent = isTruthyFlag(input, "include-content");
+      const gateway = await callHermesTuiGatewayJsonRpc(input, action, sessionKey, undefined, { includeContent, limit });
+      if (gateway.ok) {
+        writePayload(input, {
+          runtimeId,
+          domain: "sessions",
+          action,
+          status: "ok",
+          authority: "runtime",
+          writesRuntime: false,
+          officialProtocol: gateway.protocol,
+          officialMethod: gateway.method,
+          officialContractSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+          result: hermesGatewayHistoryResult(sessionKey, gateway, includeContent, limit),
+          supportContract,
+        }, { runtimeId, operation: "sessions", action });
+        return status.cliAvailable ? CLI_EXIT_OK : CLI_EXIT_DEGRADED;
+      }
     }
     if (runtimeId === "hermes") {
       writePayload(input, { ...degradedMissingSessionStoreRead(action, sessionKey), supportContract }, { runtimeId, operation: "sessions", action });

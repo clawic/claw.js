@@ -49,15 +49,54 @@ async function createHermesTuiGatewayFixture(options: {
     if (payload.method === "session.interrupt" && options.stateDatabasePath && sessionId) {
       updateHermesStateSessionInterrupted(options.stateDatabasePath, String(sessionId));
     }
+    let result: Record<string, unknown> = {
+      accepted: true,
+      method: payload.method,
+      session_id: sessionId,
+    };
+    if (payload.method === "session.list") {
+      result = {
+        sessions: [
+          {
+            id: "gateway-read-session",
+            title: "Gateway Read Session",
+            source: "tui_gateway_fixture",
+            last_active: "2026-05-26T20:28:00.000Z",
+          },
+        ],
+        total: 1,
+      };
+    }
+    if (payload.method === "session.status") {
+      result = {
+        id: sessionId,
+        title: "Gateway Read Session",
+        status: "active",
+      };
+    }
+    if (payload.method === "session.history") {
+      result = {
+        session_id: sessionId,
+        messages: [
+          {
+            role: "user",
+            content: "gateway read hello with api_key=TEST_SECRET_1234567890",
+            timestamp: "2026-05-26T20:28:01.000Z",
+          },
+          {
+            role: "assistant",
+            content: "gateway read reply",
+            timestamp: "2026-05-26T20:28:02.000Z",
+          },
+        ],
+        total: 2,
+      };
+    }
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({
       jsonrpc: "2.0",
       id: payload.id,
-      result: {
-        accepted: true,
-        method: payload.method,
-        session_id: sessionId,
-      },
+      result,
     }));
   });
   server.listen(0, "127.0.0.1");
@@ -299,6 +338,106 @@ test("Hermes runtime portal materializes TUI gateway actions when a loopback fix
     assert.equal(gatewayResources.payload.data.data.tuiGatewayTransportPolicy.mutationPolicy, "no_production_gateway_mutation_without_explicit_approval_and_contract");
     assert.equal(gatewayResources.payload.data.data.resources.some((entry: { id?: string }) => entry.id === "tui-gateway-transport-policy"), true);
     assert.equal(gateway.requests.length, 0);
+  } finally {
+    await gateway.close();
+  }
+});
+
+test("Hermes TUI gateway supplies read-only session list preview resolve and history fixtures", async (t) => {
+  const gateway = await createHermesTuiGatewayFixture();
+  try {
+    const { workspaceRoot, hermesHome } = hermesWorkspace(t);
+    const common = [
+      "--gateway-url", gateway.url,
+      "--workspace", workspaceRoot,
+      "--home-dir", hermesHome,
+      "--json",
+    ];
+
+    const domains = await runHermesAction([
+      "runtime", "hermes", "domains",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(domains.exitCode), true);
+    const actions = new Map((domains.payload.data.domainData.sessions.actionPolicy ?? []).map((entry: { action?: string }) => [entry.action, entry]));
+    for (const [action, method] of [
+      ["list", "session.list"],
+      ["preview", "session.history"],
+      ["resolve", "session.status"],
+      ["history", "session.history"],
+    ]) {
+      const materialized = actions.get(action) as {
+        status?: string;
+        writesRuntime?: boolean;
+        guard?: string;
+        materializedBy?: string;
+        fixtureBacked?: boolean;
+        officialMethod?: string;
+      };
+      assert.equal(materialized?.status, "implemented");
+      assert.equal(materialized?.writesRuntime, false);
+      assert.equal(materialized?.guard, "loopback_tui_gateway_read_only");
+      assert.equal(materialized?.materializedBy, "loopback_tui_gateway_fixture");
+      assert.equal(materialized?.fixtureBacked, true);
+      assert.equal(materialized?.officialMethod, method);
+    }
+    for (const readAction of ["preview", "resolve", "history"]) {
+      assert.equal(domains.payload.data.supportAudit.evidenceReadinessSummary.upstreamContractRequirementIds.includes(`hermes.sessions.${readAction}.action_contract`), false);
+    }
+
+    const list = await runHermesAction([
+      "runtime", "hermes", "sessions", "list",
+      "--limit", "5",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(list.exitCode), true);
+    assert.equal(list.payload.data.status, "ok");
+    assert.equal(list.payload.data.writesRuntime, false);
+    assert.equal(list.payload.data.officialMethod, "session.list");
+    assert.equal(list.payload.data.result.sessions[0].id, "gateway-read-session");
+    assert.equal(list.payload.data.result.sessions[0].provenance.source, "tui-gateway-json-rpc");
+
+    const preview = await runHermesAction([
+      "runtime", "hermes", "sessions", "preview",
+      "--session-key", "gateway-read-session",
+      "--include-content",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(preview.exitCode), true);
+    assert.equal(preview.payload.data.status, "ok");
+    assert.equal(preview.payload.data.officialMethod, "session.history");
+    assert.equal(preview.payload.data.result.contentIncluded, true);
+    assert.equal(preview.payload.data.result.contentPreview.includes("TEST_SECRET_1234567890"), false);
+
+    const resolve = await runHermesAction([
+      "runtime", "hermes", "sessions", "resolve",
+      "--session-key", "gateway-read-session",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(resolve.exitCode), true);
+    assert.equal(resolve.payload.data.status, "ok");
+    assert.equal(resolve.payload.data.officialMethod, "session.status");
+    assert.equal(resolve.payload.data.result.id, "gateway-read-session");
+    assert.equal(resolve.payload.data.result.writesRuntime, false);
+
+    const history = await runHermesAction([
+      "runtime", "hermes", "sessions", "history",
+      "--session-key", "gateway-read-session",
+      "--include-content",
+      "--limit", "2",
+      ...common,
+    ]);
+    assert.equal([CLI_EXIT_OK, CLI_EXIT_DEGRADED].includes(history.exitCode), true);
+    assert.equal(history.payload.data.status, "ok");
+    assert.equal(history.payload.data.officialMethod, "session.history");
+    assert.equal(history.payload.data.result.messages.length, 2);
+    assert.equal(JSON.stringify(history.payload).includes("TEST_SECRET_1234567890"), false);
+    assert.deepEqual(gateway.requests.map((entry) => entry.method), [
+      "session.list",
+      "session.history",
+      "session.status",
+      "session.history",
+    ]);
   } finally {
     await gateway.close();
   }
