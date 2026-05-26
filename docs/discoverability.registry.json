@@ -4627,6 +4627,31 @@
       "reviewDate": "2026-08-18"
     },
     {
+      "id": "guard-scripts-verify-source-mode",
+      "kind": "guardrail",
+      "steward": "claw",
+      "canonicalSource": "scripts/verify-source-mode.mjs",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "verify-source-mode",
+        "Verify Source Mode"
+      ],
+      "searchQueries": [
+        {
+          "query": "verify-source-mode",
+          "expectPath": "scripts/verify-source-mode.mjs"
+        }
+      ],
+      "guard": "scripts/verify-source-mode.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-08-18"
+    },
+    {
       "id": "guard-scripts-verify-surface-route-graph-goal",
       "kind": "guardrail",
       "steward": "claw",
