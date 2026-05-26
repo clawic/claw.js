@@ -1745,7 +1745,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === externalDomain)?.closureStatus, "external_pending");
   }
   assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "sessions")?.closureStatus, "product_blocked");
-  assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_lowered_claim_until_upstream_native_contract_exists");
+  assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_unpromoted_until_tui_gateway_fixture_transport_and_native_pin_contracts_exist");
+  assert.equal(hermesPayload.data.supportAudit?.closureChecklist?.find((entry) => entry.domain === "sessions")?.nextAction, "attach_tui_gateway_wrapper_fixture_production_transport_policy_and_round_trip_evidence");
   assert.equal(hermesPayload.data.supportAudit?.closureChecklistSummary?.external_pending, 4);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.status, "unpromoted");
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.finalPromotionAllowed, false);
@@ -1758,6 +1759,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.unresolvedNativeRequirementCount, 0);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("approved_redacted_live_evidence"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("approval_gate_fixture_and_redacted_receipt"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.requiredForPromotion?.includes("production_transport_lifecycle_policy_and_native_round_trip_evidence"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalPromotionReview?.userVisibleStatus, "runtime_ecosystem_available_with_product_blocked_or_external_pending_claims");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
@@ -1770,6 +1773,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("tui_gateway_wrapper_fixture"), true);
+  assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.productBlockedByDecisionCount, hermesPayload.data.supportAudit?.finalPromotionReview?.productBlockedByDecisionCount);
   assert.equal(hermesPayload.data.supportAudit?.finalSupportClaimDecision?.externalPendingCount, hermesPayload.data.supportAudit?.finalPromotionReview?.externalPendingCount);
@@ -2202,7 +2207,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.closureStatus, "product_blocked");
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.readProjectionStatus, "projected");
   assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.evidenceRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
-  assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_lowered_claim_until_upstream_native_contract_exists");
+  assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.safeDefault, "keep_unpromoted_until_tui_gateway_fixture_transport_and_native_pin_contracts_exist");
+  assert.equal(hermesSupportPayload.data.closureChecklist?.find((entry) => entry.domain === "sessions")?.nextAction, "attach_tui_gateway_wrapper_fixture_production_transport_policy_and_round_trip_evidence");
   assert.equal(hermesSupportPayload.data.closureChecklistSummary?.external_pending, 4);
   assert.equal((hermesSupportPayload.data.closureChecklistSummary?.product_blocked ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.projectionSummary?.projectedDomainCount, manifest.requiredDomains.length);
@@ -2234,6 +2240,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal((hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract ?? 0) > 0, true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("production_transport_lifecycle_policy_and_native_round_trip_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("official_runtime_native_contract_fixture"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.reentryPolicy, "use_evidence_reentry_packets_before_claim_promotion");
   assert.equal(hermesSupportPayload.data.syncPolicySummary?.domainCount, manifest.requiredDomains.length);
@@ -2266,6 +2274,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.productBlockedRequirementIds?.includes("hermes.sessions.create.action_contract"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.unresolvedNativeRequirementIds?.length, 0);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("approval_gate_fixture_and_redacted_receipt"), true);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), true);
+  assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("production_transport_lifecycle_policy_and_native_round_trip_evidence"), true);
   assert.equal(hermesSupportPayload.data.finalPromotionReview?.requiredForPromotion?.includes("keep_lowered_claim_until_upstream_native_contracts_exist"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.status, "not_promoted");
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
@@ -2275,6 +2285,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("approval_gate_fixture"), true);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("tui_gateway_wrapper_fixture"), true);
+  assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.productBlockedByDecisionCount, hermesSupportPayload.data.finalPromotionReview?.productBlockedByDecisionCount);
   assert.equal(hermesSupportPayload.data.finalSupportClaimDecision?.externalPendingCount, hermesSupportPayload.data.finalPromotionReview?.externalPendingCount);

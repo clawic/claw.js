@@ -1375,6 +1375,17 @@ function isApprovalGateRequirement(requirement): boolean {
     || requirement.evidenceDisposition === "blocked_until_approval_gate_fixture";
 }
 
+function isTuiGatewaySessionRequirement(requirement): boolean {
+  return String(requirement.evidenceDisposition ?? "").includes("tui_gateway")
+    || String(requirement.productDecision ?? "").includes("tui_gateway")
+    || String(requirement.userVisibleContract ?? "").includes("tui_gateway")
+    || String(requirement.officialProtocol ?? "") === "tui_gateway_json_rpc";
+}
+
+function requiresProductionTransportLifecycle(requirement): boolean {
+  return String(requirement.productionTransportStatus ?? "") === "blocked_until_production_transport_lifecycle_policy";
+}
+
 function countByValue(values) {
   return values.reduce((acc, value) => {
     const key = value ?? "unknown";
@@ -1419,6 +1430,10 @@ function runtimeEvidenceReadinessSummary({
     .filter((packet) => packet.status === "blocked_until_upstream_contract");
   const approvalGatePackets = evidenceReentryPackets
     .filter((packet) => packet.status === "blocked_until_approval_gate_fixture");
+  const tuiGatewayPackets = evidenceReentryPackets
+    .filter((packet) => isTuiGatewaySessionRequirement(packet));
+  const productionTransportPackets = evidenceReentryPackets
+    .filter((packet) => requiresProductionTransportLifecycle(packet));
   const externalApprovalPackets = evidenceReentryPackets
     .filter((packet) => packet.status === "approval_required");
   const approvalPackets = evidenceReentryPackets
@@ -1426,6 +1441,8 @@ function runtimeEvidenceReadinessSummary({
   const nextRequiredActions = [
     ...(externalApprovalPackets.length > 0 ? ["approved_redacted_live_evidence"] : []),
     ...(approvalGatePackets.length > 0 ? ["approval_gate_fixture_and_redacted_receipt"] : []),
+    ...(tuiGatewayPackets.length > 0 ? ["tui_gateway_wrapper_fixture_and_round_trip_evidence"] : []),
+    ...(productionTransportPackets.length > 0 ? ["production_transport_lifecycle_policy_and_native_round_trip_evidence"] : []),
     ...(upstreamContractPackets.length > 0 ? ["official_runtime_native_contract_fixture"] : []),
     ...(unresolvedNativeRequirements.length > 0 ? ["resolve_direct_blocker_before_promotion"] : []),
   ];
@@ -1729,6 +1746,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
   const externalPendingRequirements = evidenceRequirements.filter((requirement) => requirement.supportResolution === "external_pending_not_product_blocked" || requirement.blockerClass === "external_pending");
   const unresolvedNativeRequirements = evidenceRequirements.filter((requirement) => requirement.blockerClass === "direct_blocker" && requirement.supportResolution !== "explicitly_product_blocked_not_a_silent_gap");
   const approvalGateRequirements = evidenceRequirements.filter((requirement) => isApprovalGateRequirement(requirement));
+  const tuiGatewayRequirements = evidenceRequirements.filter((requirement) => isTuiGatewaySessionRequirement(requirement));
+  const productionTransportRequirements = evidenceRequirements.filter((requirement) => requiresProductionTransportLifecycle(requirement));
   const finalPromotionReview = {
     status: supportComplete ? "promoted" : "unpromoted",
     finalPromotionAllowed: supportComplete,
@@ -1746,6 +1765,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     requiredForPromotion: [
       ...(externalPendingRequirements.length > 0 ? ["approved_redacted_live_evidence"] : []),
       ...(approvalGateRequirements.length > 0 ? ["approval_gate_fixture_and_redacted_receipt"] : []),
+      ...(tuiGatewayRequirements.length > 0 ? ["tui_gateway_wrapper_fixture_and_round_trip_evidence"] : []),
+      ...(productionTransportRequirements.length > 0 ? ["production_transport_lifecycle_policy_and_native_round_trip_evidence"] : []),
       ...(unresolvedNativeRequirements.length > 0 ? ["official_runtime_native_contracts"] : []),
       ...(productBlockedRequirements.length > 0 ? ["keep_lowered_claim_until_upstream_native_contracts_exist"] : []),
       ...(ecosystem.production !== true ? ["ecosystem_production_claim"] : []),
@@ -1807,6 +1828,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     ...(productBlockedRequirements.length > 0 ? ["write_back"] : []),
     ...(externalPendingRequirements.length > 0 ? ["external_live_evidence"] : []),
     ...(approvalGateRequirements.length > 0 ? ["approval_gate_fixture"] : []),
+    ...(tuiGatewayRequirements.length > 0 ? ["tui_gateway_wrapper_fixture"] : []),
+    ...(productionTransportRequirements.length > 0 ? ["production_transport_lifecycle"] : []),
     ...(unresolvedNativeRequirements.length > 0 || productBlockedRequirements.length > 0 ? ["upstream_native_contracts"] : []),
   ];
   const finalSupportClaimDecision = {
@@ -1867,6 +1890,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     const hasUnresolved = requirements.some((requirement) => requirement.blockerClass === "direct_blocker"
       && requirement.supportResolution !== "explicitly_product_blocked_not_a_silent_gap");
     const hasApprovalGate = requirements.some((requirement) => isApprovalGateRequirement(requirement));
+    const hasTuiGatewaySessionAction = requirements.some((requirement) => isTuiGatewaySessionRequirement(requirement));
+    const hasProductionTransportLifecycle = requirements.some((requirement) => requiresProductionTransportLifecycle(requirement));
     const closureStatus = hasUnresolved
       ? "direct_blocker"
       : hasExternal
@@ -1881,6 +1906,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         : closureStatus === "product_blocked"
           ? hasApprovalGate
             ? "keep_unpromoted_until_approval_gate_fixture_and_redacted_receipt_exists"
+            : hasTuiGatewaySessionAction
+              ? "keep_unpromoted_until_tui_gateway_fixture_transport_and_native_pin_contracts_exist"
             : "keep_lowered_claim_until_upstream_native_contract_exists"
           : "keep_blocked_until_direct_issue_resolved";
     const nextAction = closureStatus === "implemented_or_projected"
@@ -1890,6 +1917,10 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
         : closureStatus === "product_blocked"
           ? hasApprovalGate
             ? "attach_approval_gate_fixture_and_redacted_receipt_before_claim_promotion"
+            : hasTuiGatewaySessionAction
+              ? (hasProductionTransportLifecycle
+                ? "attach_tui_gateway_wrapper_fixture_production_transport_policy_and_round_trip_evidence"
+                : "attach_tui_gateway_wrapper_fixture_and_round_trip_evidence")
             : "wait_for_official_runtime_contract_then_add_fixture_and_round_trip_evidence"
           : "resolve_direct_blocker_before_claiming_support";
     const readProjectionStatus = audit.readProjectionStatus;
