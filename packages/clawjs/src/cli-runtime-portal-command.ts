@@ -586,12 +586,14 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
   const capability = domainCapability(status, "gateway");
   const locations = runtimeLocationDiagnostics(status);
   const gatewayOptions = runtimeOptions?.gateway ?? {};
+  const gatewayStatusPath = gatewayOptions.configPath ?? locations.gatewayConfigPath ?? locations.configPath ?? session?.sessionPath ?? locations.homeDir;
   const resources = [
     {
       id: "gateway-status",
       label: "Gateway status",
       status: status.gatewayAvailable ? "ready" : "degraded",
       kind: session?.transport?.kind ?? "gateway",
+      path: gatewayStatusPath,
       enabled: Boolean(session?.supportsGateway),
       summary: status.gatewayAvailable ? "Gateway endpoint configured." : "Gateway endpoint unavailable or not configured.",
       nativeIdentifier: { name: "gatewayStatusId" },
@@ -606,6 +608,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       provenance: {
         source: "runtime-session-descriptor",
         runtimeId,
+        path: gatewayStatusPath,
       },
     },
   ];
@@ -640,6 +643,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       label: "TUI Gateway transport policy",
       status: transportPolicy.loopbackConfigured ? "fixture_ready" : "blocked",
       kind: "transport_lifecycle_policy",
+      path: gatewayStatusPath,
       enabled: transportPolicy.loopbackConfigured,
       summary: transportPolicy.loopbackConfigured
         ? "Loopback fixture transport is configured; production transport remains blocked."
@@ -664,6 +668,7 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
       provenance: {
         source: "runtime-portal-hermes-tui-gateway-policy",
         runtimeId,
+        path: gatewayStatusPath,
       },
     });
   }
@@ -673,12 +678,15 @@ function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, r
 function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
   const capability = domainCapability(status, "doctorCompat");
   const lastError = status?.diagnostics?.lastError;
+  const locations = runtimeLocationDiagnostics(status);
+  const doctorPath = locations.binaryPath ?? locations.executablePath ?? locations.homeDir;
   return [
     {
       id: "doctor-status",
       label: "Doctor status",
       status: status.cliAvailable ? "ready" : "degraded",
       kind: capability?.strategy ?? "diagnostics",
+      path: doctorPath,
       enabled: Boolean(capability?.supported),
       summary: lastError ?? status.version ?? "Runtime diagnostics available.",
       nativeIdentifier: { name: "doctorStatusId" },
@@ -693,6 +701,7 @@ function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
       provenance: {
         source: "runtime-status",
         runtimeId,
+        path: doctorPath,
       },
     },
   ];
@@ -701,12 +710,15 @@ function buildDoctorOperationalResources(runtimeId: RuntimeAdapterId, status) {
 function buildSandboxOperationalResources(runtimeId: RuntimeAdapterId, status, runtimeOptions) {
   const capability = domainCapability(status, "sandboxPermissions");
   const permissionMode = runtimeOptions?.permissionMode ?? "read-only";
+  const locations = runtimeLocationDiagnostics(status);
+  const sandboxPath = locations.workspacePath ?? locations.homeDir;
   return [
     {
       id: "sandbox-policy",
       label: "Sandbox policy",
       status: capability?.status ?? "degraded",
       kind: capability?.strategy ?? "approval_policy",
+      path: sandboxPath,
       enabled: Boolean(capability?.supported),
       summary: "No runtime or host permission is changed by the runtime lens.",
       nativeIdentifier: { name: "sandboxPolicyId" },
@@ -720,6 +732,7 @@ function buildSandboxOperationalResources(runtimeId: RuntimeAdapterId, status, r
       provenance: {
         source: "runtime-options",
         runtimeId,
+        path: sandboxPath,
       },
     },
   ];
@@ -2645,6 +2658,7 @@ function listHermesSqliteSessions(runtimeId: RuntimeAdapterId, session, limit = 
       status: "projected",
       contentIncluded: false,
       path: session.sessionDatabasePath,
+      enabled: true,
       summary: "Hermes SQLite session metadata; transcript content is not included by default.",
       nativeIdentifier: { name: "sessionId" },
       sessionStorageContract: session.sessionStorageContract,
@@ -2712,6 +2726,7 @@ function listNativeSessions(runtimeId: RuntimeAdapterId, sessionOrPath, limit = 
         updatedAt: stat.mtime.toISOString(),
         sizeBytes: stat.size,
         status: "projected",
+        enabled: true,
         summary: "Hermes session path metadata; transcript content is not included by default.",
         nativeIdentifier: { name: "sessionPathId" },
         provenance: {
