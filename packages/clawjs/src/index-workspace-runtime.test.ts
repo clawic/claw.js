@@ -2273,6 +2273,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.approval_required, 4);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_approval_gate_fixture, 2);
   assert.equal((hermesSupportPayload.data.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract ?? 0) > 0, true);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.keep_unpromoted_and_do_not_synthesize_runtime_state, 14);
+  assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.safeDefaultCounts?.keep_local_overlay_and_do_not_write_runtime_pin_state, 2);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("approval_gate_fixture_and_redacted_receipt"), true);
   assert.equal(hermesSupportPayload.data.evidenceReadinessSummary?.nextRequiredActions?.includes("tui_gateway_wrapper_fixture_and_round_trip_evidence"), true);
