@@ -1759,6 +1759,14 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.support?.ecosystem?.supportStage, "dev_only");
   assert.equal(hermesPayload.data.support?.ecosystem?.recommended, false);
   assert.equal(hermesPayload.data.support?.ecosystem?.production, false);
+  assert.equal(hermesPayload.data.officialSnapshot?.capturedAt, "2026-05-25");
+  assert.equal(hermesPayload.data.officialSnapshot?.sourceSnapshotDate, "2026-05-25");
+  assert.equal(hermesPayload.data.officialSnapshot?.sourceType, "official_docs");
+  assert.equal(hermesPayload.data.officialSnapshot?.sources?.includes("https://hermes-agent.nousresearch.com/docs/user-guide/cli/"), true);
+  assert.equal(hermesPayload.data.officialSnapshot?.sources?.includes("https://github.com/NousResearch/hermes-agent"), true);
+  assert.equal(hermesPayload.data.officialSnapshot?.driftPolicy, "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete");
+  assert.equal(hermesPayload.data.support?.ecosystem?.officialSnapshot?.manifestSource, "docs/runtime-ecosystem-integration.manifest.json");
+  assert.deepEqual(hermesPayload.data.support?.ecosystem?.officialSnapshot?.sources, hermesPayload.data.officialSnapshot?.sources);
   assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("native write-back contracts"), true);
   assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("approval-gate receipts"), true);
   assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("TUI Gateway production transport policy"), true);
@@ -1785,6 +1793,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.support?.ecosystem?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.fallbackPolicy, "no_live_claim_promotion_without_explicit_approval");
   assert.equal(hermesPayload.data.support?.ecosystem?.evidenceRequirements?.find((entry) => entry.id === "hermes.channels.live_evidence")?.supportResolution, "external_pending_not_product_blocked");
   assert.equal(hermesPayload.data.supportAudit?.closureState, "blocked");
+  assert.equal(hermesPayload.data.supportAudit?.officialSnapshot?.capturedAt, "2026-05-25");
+  assert.equal(hermesPayload.data.supportAudit?.officialSnapshot?.sources?.length, 8);
   assert.equal(hermesPayload.data.supportAudit?.supportComplete, false);
   assert.equal(hermesPayload.data.supportAudit?.allDomainsAccountedFor, true);
   assert.equal(hermesPayload.data.supportAudit?.blockerSummary?.directBlockerDomains?.includes("sessions"), true);
@@ -2111,6 +2121,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
         evidenceRequirementCount?: number;
         productBlockedRequirementCount?: number;
       };
+      officialSnapshot?: { capturedAt?: string; sourceSnapshotDate?: string; sourceType?: string; sources?: string[]; driftPolicy?: string; manifestSource?: string };
       evidenceRequirements?: Array<{ id: string; blockerClass: string; approvalRequired: boolean; commandShape: string; evidenceDisposition?: string; currentBehavior?: string; fallbackPolicy?: string; safeDefault?: string; claimEffect?: string; reentryCondition?: string; productDecision?: string; supportResolution?: string; userVisibleContract?: string }>;
       domains?: Array<{ domain: string; writeBackAllowed?: boolean; writeBackApprovalGated?: boolean; evidenceRequirementIds?: string[]; blockerClasses?: string[]; evidenceDispositions?: string[]; supportResolutions?: string[]; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[] }>;
       closureChecklist?: Array<{ domain: string; closureStatus: string; evidenceRequirementIds?: string[]; safeDefault?: string; nextAction?: string; readProjectionStatus?: string; implementedFacets?: string[]; blockingFacets?: string[]; projectionDisposition?: string }>;
@@ -2219,6 +2230,9 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   };
   assert.equal(hermesSupportPayload.data.runtimeId, "hermes");
   assert.equal(hermesSupportPayload.data.scope, "runtime_ecosystem_support_audit");
+  assert.equal(hermesSupportPayload.data.officialSnapshot?.capturedAt, "2026-05-25");
+  assert.equal(hermesSupportPayload.data.officialSnapshot?.sources?.includes("https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration"), true);
+  assert.equal(hermesSupportPayload.data.officialSnapshot?.manifestSource, "docs/runtime-ecosystem-integration.manifest.json");
   assert.equal(hermesSupportPayload.data.closureState, "blocked");
   assert.equal(hermesSupportPayload.data.supportComplete, false);
   assert.equal(hermesSupportPayload.data.allDomainsAccountedFor, true);
@@ -2546,10 +2560,13 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     stderr: captureStream().stream,
     cwd: process.cwd(),
   })), true);
-  const hermesSummaryPayload = JSON.parse(hermesSummaryStdout.getOutput()) as { data: { runtimeId: string; domains?: unknown[]; supportAudit?: { allDomainsAccountedFor?: boolean } } };
+  const hermesSummaryPayload = JSON.parse(hermesSummaryStdout.getOutput()) as { data: { runtimeId: string; officialSnapshot?: { capturedAt?: string; sourceSnapshotDate?: string }; domains?: unknown[]; supportAudit?: { allDomainsAccountedFor?: boolean; officialSnapshot?: { capturedAt?: string } } } };
   assert.equal(hermesSummaryPayload.data.runtimeId, "hermes");
+  assert.equal(hermesSummaryPayload.data.officialSnapshot?.capturedAt, "2026-05-25");
+  assert.equal(hermesSummaryPayload.data.officialSnapshot?.sourceSnapshotDate, "2026-05-25");
   assert.equal(hermesSummaryPayload.data.domains?.length, manifest.requiredDomains.length);
   assert.equal(hermesSummaryPayload.data.supportAudit?.allDomainsAccountedFor, true);
+  assert.equal(hermesSummaryPayload.data.supportAudit?.officialSnapshot?.capturedAt, "2026-05-25");
 
   const hermesCommandsStdout = captureStream();
   assert.equal(await runCli(["runtime", "hermes", "commands", "--workspace", workspaceRoot, "--home-dir", hermesHome, "--json"], {

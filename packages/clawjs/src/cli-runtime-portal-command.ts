@@ -141,6 +141,46 @@ const RUNTIME_ECOSYSTEM_SUPPORT = {
   },
 };
 
+const RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS = {
+  sourceSnapshotDate: "2026-05-25",
+  runtimes: {
+    openclaw: {
+      capturedAt: "2026-05-21",
+      sourceType: "official_docs",
+      sources: [
+        "https://openclaw.cc/en/cli/",
+        "https://docs.openclaw.ai/agent",
+      ],
+      driftPolicy: "degrade_affected_domains_until_matrix_and_tests_update",
+    },
+    codex: {
+      capturedAt: "2026-05-21",
+      sourceType: "official_docs",
+      sources: [
+        "https://github.com/openai/codex",
+        "https://developers.openai.com/codex/skills",
+        "https://developers.openai.com/codex/mcp",
+      ],
+      driftPolicy: "codex_remains_dev_only_until_snapshot_total_and_write_policy_are_complete",
+    },
+    hermes: {
+      capturedAt: "2026-05-25",
+      sourceType: "official_docs",
+      sources: [
+        "https://hermes-agent.nousresearch.com/docs/user-guide/cli/",
+        "https://hermes-agent.nousresearch.com/docs/user-guide/sessions",
+        "https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/session-storage.md",
+        "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+        "https://hermes-agent.nousresearch.com/docs/ko/reference/cli-commands",
+        "https://hermes-agent.nousresearch.com/docs/user-guide/configuration",
+        "https://hermes-agent.nousresearch.com/docs/user-guide/security",
+        "https://github.com/NousResearch/hermes-agent",
+      ],
+      driftPolicy: "hermes_remains_dev_only_until_snapshot_total_and_write_policy_are_complete",
+    },
+  },
+};
+
 const RUNTIME_SESSION_ACTION_CONTRACTS = JSON.parse(`{
   "openclaw": [
     {"action":"list","status":"implemented","authority":"runtime","writesRuntime":false,"persistence":"runtime_gateway_snapshot","delegatesTo":"runtime.openclaw.sessions.list","guard":"official_gateway_read_only"},
@@ -1364,6 +1404,17 @@ function buildSupportContract(runtimeId: RuntimeAdapterId, status, domain: strin
   };
 }
 
+function runtimeOfficialSnapshot(runtimeId: RuntimeAdapterId) {
+  const snapshot = RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS.runtimes[runtimeId];
+  if (!snapshot) return undefined;
+  return {
+    ...snapshot,
+    sources: [...(snapshot.sources ?? [])],
+    sourceSnapshotDate: RUNTIME_ECOSYSTEM_OFFICIAL_SNAPSHOTS.sourceSnapshotDate,
+    manifestSource: "docs/runtime-ecosystem-integration.manifest.json",
+  };
+}
+
 function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId, runtimeOptions?) {
   const support = RUNTIME_ECOSYSTEM_SUPPORT[runtimeId] ?? {
     supportStage: "dev_only",
@@ -1392,6 +1443,7 @@ function buildRuntimeEcosystemSupport(runtimeId: RuntimeAdapterId, runtimeOption
   return {
     scope: "runtime_ecosystem",
     ...support,
+    officialSnapshot: runtimeOfficialSnapshot(runtimeId),
     blockedWriteBackDomains,
     approvalGatedWriteBackDomains,
     externalPendingDomains,
@@ -2103,6 +2155,7 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     recommended: ecosystem.recommended,
     production: ecosystem.production,
     uiParityClaim: ecosystem.uiParityClaim,
+    officialSnapshot: ecosystem.officialSnapshot ?? runtimeOfficialSnapshot(runtimeId),
     summary: ecosystem.summary,
     blockingReasons: ecosystem.blockingReasons ?? [],
     blockerSummary: {
@@ -2130,6 +2183,8 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload) {
     provenance: {
       source: "runtime-portal-support-audit",
       runtimeId,
+      officialSnapshotSource: ecosystem.officialSnapshot?.manifestSource,
+      sourceSnapshotDate: ecosystem.officialSnapshot?.sourceSnapshotDate,
     },
   };
 }
@@ -4276,6 +4331,7 @@ export async function runRuntimePortalCli(input): Promise<number | null> {
   const payload = {
     runtimeId,
     runtimeName: adapter.runtimeName,
+    officialSnapshot: runtimeOfficialSnapshot(runtimeId),
     support: buildPortalSupport(adapter, runtimeId, runtimeOptions),
     status,
     session,
