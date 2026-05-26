@@ -501,6 +501,23 @@ function main() {
   if (!support.includes("ecosystem-production remains blocked until live evidence and final promotion close")) {
     errors.push("support matrix must name OpenClaw's remaining ecosystem-production blockers");
   }
+  if (!support.includes("dev-only partial runtime lens")) {
+    errors.push("support matrix must describe Hermes as a partial runtime lens, not a generic partial projection");
+  }
+  for (const snippet of [
+    "SQLite session-store reads",
+    "bounded preview/history/resolve",
+    "local-overlay pin/unpin",
+    "support contracts",
+    "evidence reentry packets",
+    "production TUI Gateway transport",
+    "approved live channel/provider/auth/model evidence"
+  ]) {
+    if (!support.includes(snippet)) errors.push(`support matrix Hermes row missing ${snippet}`);
+  }
+  if (support.includes("| `hermes` | dev-only | dev-only | no | dev-only partial projection |")) {
+    errors.push("support matrix Hermes row must not regress to generic partial projection");
+  }
 
   const decisionMap = fs.readFileSync(decisionMapPath, "utf8");
   if (!decisionMap.includes("Runtime ecosystem integration")) {
