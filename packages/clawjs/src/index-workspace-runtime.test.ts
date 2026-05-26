@@ -1759,8 +1759,20 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesPayload.data.support?.ecosystem?.supportStage, "dev_only");
   assert.equal(hermesPayload.data.support?.ecosystem?.recommended, false);
   assert.equal(hermesPayload.data.support?.ecosystem?.production, false);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("native write-back contracts"), true);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("approval-gate receipts"), true);
+  assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("TUI Gateway production transport policy"), true);
   assert.equal(hermesPayload.data.support?.ecosystem?.summary?.includes("channel/provider/auth/model evidence"), true);
-  for (const reason of ["live_channel_evidence_pending", "live_provider_evidence_pending", "live_auth_evidence_pending", "live_model_evidence_pending"]) {
+  for (const reason of [
+    "native_write_back_pending",
+    "approval_gate_fixture_pending",
+    "tui_gateway_round_trip_evidence_pending",
+    "production_transport_policy_pending",
+    "live_channel_evidence_pending",
+    "live_provider_evidence_pending",
+    "live_auth_evidence_pending",
+    "live_model_evidence_pending",
+  ]) {
     assert.equal(hermesPayload.data.support?.ecosystem?.blockingReasons?.includes(reason), true);
   }
   assert.equal(hermesPayload.data.support?.ecosystem?.blockedWriteBackDomains?.includes("sessions"), true);
