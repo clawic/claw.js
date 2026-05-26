@@ -1680,7 +1680,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
       domainData: {
         auth?: {
           auth?: Record<string, unknown>;
-          resources?: Array<{ id?: string; status?: string; kind?: string; summary?: string; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { source?: string; runtimeId?: string; domain?: string; path?: string }; limitations?: string[] }>;
+          resources?: Array<{ id?: string; status?: string; kind?: string; enabled?: boolean; summary?: string; attributes?: string[]; nativeIdentifier?: { name?: string }; provenance?: { source?: string; runtimeId?: string; domain?: string; path?: string }; limitations?: string[] }>;
         };
         sessions?: {
           actionContracts?: Array<{
@@ -1916,6 +1916,7 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesAuthResource?.attributes?.some((entry) => entry === "source: config" || entry === "source: env"), true);
   assert.equal(hermesPayload.data.domainData.auth?.resources?.find((entry) => entry.id === "anthropic")?.summary?.includes("auth is missing"), true);
   assert.equal(typeof hermesPayload.data.domainData.auth?.resources?.find((entry) => entry.id === "tencent-tokenhub")?.summary, "string");
+  assert.equal(hermesPayload.data.domainData.auth?.resources?.find((entry) => entry.id === "tencent-tokenhub")?.enabled, false);
   assert.equal(hermesPayload.data.domainData.auth?.resources?.find((entry) => entry.id === "hermes-auth-secret-ref-policy")?.nativeIdentifier?.name, "policyId");
   assert.equal(hermesPayload.data.domainData.models?.defaultModel?.modelId, "openai/gpt-4.1");
   const hermesDefaultModelResource = hermesPayload.data.domainData.models?.models?.find((entry) => entry.id === "openai/gpt-4.1");

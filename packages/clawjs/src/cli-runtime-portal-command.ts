@@ -1033,7 +1033,7 @@ function hermesAuthStateResources(status, authState): Array<Record<string, unkno
         status: stateRecord ? (hasAuth ? "configured" : "missing") : "redacted",
         kind: stringFrom(stateRecord?.authType) ?? (stateRecord ? "auth" : "redacted_auth_state"),
         path: resourcePath,
-        enabled: stateRecord && typeof stateRecord.hasAuth === "boolean" ? stateRecord.hasAuth : undefined,
+        enabled: stateRecord && typeof stateRecord.hasAuth === "boolean" ? stateRecord.hasAuth : false,
         summary,
         nativeIdentifier: { name: "authProviderId" },
         provenance: {
