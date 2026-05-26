@@ -1247,6 +1247,43 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
     assert.equal(payload.data.safeDefault, "metadata_only_projection_until_official_runtime_session_store_or_cli_is_available", action);
     assert.equal(payload.data.claimEffect, `does_not_satisfy_native_session_${action}_parity`, action);
   }
+  const hermesMissingStoreDomainsStdout = captureStream();
+  assert.equal(await runCli(["runtime", "hermes", "domains", "--workspace", workspaceRoot, "--home-dir", missingHermesHome, "--json"], {
+    stdout: hermesMissingStoreDomainsStdout.stream,
+    stderr: captureStream().stream,
+    cwd: process.cwd(),
+  }), CLI_EXIT_DEGRADED);
+  const hermesMissingStoreDomainsPayload = JSON.parse(hermesMissingStoreDomainsStdout.getOutput()) as {
+    data: {
+      supportAudit?: {
+        evidenceReadinessSummary?: {
+          statusCounts?: Record<string, number>;
+          safeDefaultCounts?: Record<string, number>;
+        };
+        evidenceReentryPackets?: Array<{
+          requirementId?: string;
+          status?: string;
+          commandShape?: string;
+          safeDefault?: string;
+          userVisibleContract?: string;
+          doNotRunWithoutApproval?: boolean;
+        }>;
+      };
+    };
+  };
+  const hermesMissingStoreReentryPackets = hermesMissingStoreDomainsPayload.data.supportAudit?.evidenceReentryPackets ?? [];
+  const hermesMissingStoreReentryPacket = (id: string) => hermesMissingStoreReentryPackets.find((entry) => entry.requirementId === id);
+  assert.equal(hermesMissingStoreReentryPackets.length, 25);
+  assert.equal(hermesMissingStoreDomainsPayload.data.supportAudit?.evidenceReadinessSummary?.statusCounts?.blocked_until_upstream_contract, 15);
+  assert.equal(hermesMissingStoreDomainsPayload.data.supportAudit?.evidenceReadinessSummary?.safeDefaultCounts?.keep_unpromoted_and_do_not_synthesize_runtime_state, 7);
+  for (const action of ["preview", "resolve", "history"] as const) {
+    const reentry = hermesMissingStoreReentryPacket(`hermes.sessions.${action}.action_contract`);
+    assert.equal(reentry?.status, "blocked_until_upstream_contract", action);
+    assert.equal(reentry?.commandShape, `not_executable_until_official_runtime_${action}_contract_exists`, action);
+    assert.equal(reentry?.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state", action);
+    assert.equal(reentry?.userVisibleContract, "non_executable_action_plan_only_until_runtime_contract_exists", action);
+    assert.equal(reentry?.doNotRunWithoutApproval, false, action);
+  }
   const originalFetch = globalThis.fetch;
   const gatewayCalls: Array<{ method?: string; params?: Record<string, unknown> }> = [];
   globalThis.fetch = (async (_url, init) => {
@@ -2036,6 +2073,8 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesReentryStatusCounts.get("blocked_until_approval_gate_fixture"), 2);
   assert.equal(hermesReentryStatusCounts.get("blocked_until_tui_gateway_wrapper_fixture"), 4);
   assert.equal(hermesReentryStatusCounts.get("blocked_until_upstream_contract"), 12);
+  assert.equal(hermesReentryPacket("hermes.sessions.write_back_contract")?.commandShape, "not_executable_until_official_runtime_contract_exists");
+  assert.equal(hermesReentryPacket("hermes.sessions.write_back_contract")?.safeDefault, "keep_read_projection_only_until_official_runtime_write_back_contract_exists");
   assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.blockerClass, "external_pending");
   assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.approvalRequired, true);
   assert.equal(hermesReentryPacket("hermes.channels.live_evidence")?.doNotRunWithoutApproval, true);
@@ -2776,8 +2815,12 @@ test("runCli exposes targeted runtime portals for OpenClaw, Codex, and Hermes", 
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.models.live_evidence")?.commandShape, "runtime hermes domain models --json");
   assert.equal(hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.models.live_evidence")?.exactCommand, "claw runtime hermes domain models --json");
   const hermesCreateReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.create.action_contract");
+  const hermesSessionsWriteBackReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.write_back_contract");
   const hermesPinReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.pin.native_write_back_contract");
   const hermesUnpinReentry = hermesSupportPayload.data.evidenceReentryPackets?.find((entry) => entry.requirementId === "hermes.sessions.unpin.native_write_back_contract");
+  assert.equal(hermesSessionsWriteBackReentry?.status, "blocked_until_upstream_contract");
+  assert.equal(hermesSessionsWriteBackReentry?.commandShape, "not_executable_until_official_runtime_contract_exists");
+  assert.equal(hermesSessionsWriteBackReentry?.safeDefault, "keep_read_projection_only_until_official_runtime_write_back_contract_exists");
   assert.equal(hermesCreateReentry?.status, "blocked_until_tui_gateway_wrapper_fixture");
   assert.equal(hermesCreateReentry?.safeDefault, "keep_unpromoted_and_do_not_synthesize_runtime_state");
   assert.equal(hermesCreateReentry?.expectedEvidence?.includes("non_destructive_fixture"), true);
