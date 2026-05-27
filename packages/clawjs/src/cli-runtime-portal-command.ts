@@ -875,8 +875,8 @@ function writeBackContractReceiptFor(runtimeId: RuntimeAdapterId, domain: string
 }
 
 function nativeContractReceiptFor(runtimeId: RuntimeAdapterId, action: string, runtimeOptions?) {
-  if (runtimeId !== "hermes") return null;
-  if (action !== "pin" && action !== "unpin") return null;
+  if (runtimeId !== "hermes" || (action !== "pin" && action !== "unpin")) return null;
+  return null;
   const fixture = readNativeContractFixture(runtimeOptions);
   if (!fixture || fixture.status !== "loaded") return null;
   const parsed = fixture.parsed;

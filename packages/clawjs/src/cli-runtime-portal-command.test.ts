@@ -600,7 +600,7 @@ test("Hermes support audit removes external live blockers when every approved re
   ]);
 });
 
-test("Hermes support audit removes all reentry blockers when official contract receipts are attached", async () => {
+test("Hermes support audit keeps native pin blockers without an official pin contract", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-official-contract-evidence-"));
   const approvalFixturePath = path.join(tempDir, "approval-gate-fixture.json");
   const liveFixturePath = path.join(tempDir, "live-evidence-fixture.json");
@@ -772,11 +772,14 @@ test("Hermes support audit removes all reentry blockers when official contract r
   };
 
   assert.equal(result.code, 2);
-  assert.equal(payload.data?.evidenceReadinessSummary?.totalRequirementCount, 0);
+  assert.equal(payload.data?.evidenceReadinessSummary?.totalRequirementCount, 2);
   assert.equal(payload.data?.evidenceReadinessSummary?.productionTransportBlockedCount, 0);
-  assert.equal(payload.data?.evidenceReadinessSummary?.writeBackContractBlockedCount, 0);
-  assert.equal(payload.data?.evidenceReadinessSummary?.productBlockedCount, 0);
-  assert.deepEqual(payload.data?.evidenceReadinessSummary?.nextRequiredActions, []);
+  assert.equal(payload.data?.evidenceReadinessSummary?.writeBackContractBlockedCount, 2);
+  assert.equal(payload.data?.evidenceReadinessSummary?.productBlockedCount, 2);
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.nextRequiredActions, [
+    "official_runtime_write_back_contract_fixture",
+    "official_runtime_native_contract_fixture",
+  ]);
   const sessionsDomain = payload.data?.domains?.find((entry) => entry.domain === "sessions");
   assert.equal(sessionsDomain?.writeBackContractFixtureStatus, "attached");
   assert.equal(sessionsDomain?.writeBackContractFixtureReceipt?.receiptId, "fixture-sessions-write-back-contract");
@@ -791,14 +794,20 @@ test("Hermes support audit removes all reentry blockers when official contract r
   assert.equal(sendTransportReceipt?.stopEndpointVerified, true);
   assert.equal(sendTransportReceipt?.responsePersistenceVerified, true);
   assert.equal(sendTransportReceipt?.verifiedEndpoints?.includes("POST /v1/runs"), true);
-  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), true);
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), false);
-  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), false);
-  assert.equal(payload.data?.finalSupportClaimDecision?.productBlockedByDecisionCount, 0);
-  assert.equal(payload.data?.finalSupportClaimDecision?.status, "operable_non_default_complete");
-  assert.equal(payload.data?.finalSupportClaimDecision?.decision, "keep_operable_non_default_runtime_claim");
-  assert.equal(payload.data?.finalSupportClaimDecision?.claimDisposition, "operable_non_default_complete");
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.productBlockedByDecisionCount, 2);
+  assert.equal(payload.data?.finalSupportClaimDecision?.status, "not_promoted");
+  assert.equal(payload.data?.finalSupportClaimDecision?.decision, "keep_current_lowered_runtime_ecosystem_claim");
+  assert.equal(payload.data?.finalSupportClaimDecision?.claimDisposition, "unpromoted_product_claim_lowered");
   assert.equal(payload.data?.finalSupportClaimDecision?.supportCompletionMode, "operable_non_default");
-  assert.deepEqual(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired, []);
-  assert.deepEqual(payload.data?.blockingReasons, []);
+  assert.deepEqual(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired, [
+    "keep_lowered_claim_until_upstream_native_contracts_exist",
+    "ecosystem_production_claim",
+    "ecosystem_recommended_claim",
+  ]);
+  assert.deepEqual(payload.data?.blockingReasons, [
+    "native_write_back_pending",
+  ]);
 });
