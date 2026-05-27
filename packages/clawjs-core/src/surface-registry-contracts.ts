@@ -1336,6 +1336,54 @@ const coordinationEnvResourceContract: ClawResourceContract = {
   validation: "Covered by persistent surface guard and agent coordination/test lane checks.",
 };
 
+const runtimeInstructionEnvNarrative: ClawSurfaceNarrative = {
+  concept: "CLI instruction preamble mode override for framework-owned instruction resolution.",
+  authorizingDecision: {
+    ref: "Runtime ecosystem integration standard",
+    path: "docs/runtime-ecosystem-integration-standard.md",
+  },
+  completingSurface: {
+    human: "Operators can select off, preamble, or strict instruction behavior for local CLI runs.",
+    programmatic: "packages/clawjs/src/cli-instructions-runtime.ts reads CLAW_INSTRUCTIONS through resolveInstructionsMode().",
+  },
+  nonInference: "This variable does not create new instruction records, bypass validation, or authorize hidden prompt injection.",
+};
+
+const runtimeInstructionEnvResourceContract: ClawResourceContract = {
+  startup: "Read lazily while building a CLI instruction preamble and does not open stores by itself.",
+  idle: "No background work is started by the variable registration.",
+  memory: "The value is a bounded mode string normalized to off, preamble, or strict.",
+  streaming: "No stream is owned by the instruction mode variable.",
+  storage: "Instruction records remain in the main data store; this variable only selects render/enforcement mode.",
+  hotPath: "Read once per CLI preamble decision and does not scale with instruction count beyond the resolver call.",
+  scale: "One stable env var covers all instruction mode choices.",
+  validation: "Covered by persistent surface guard and CLI instruction runtime tests.",
+};
+
+const mockExternalImagesEnvNarrative: ClawSurfaceNarrative = {
+  concept: "Mock showcase fixture opt-in for external image downloads during synthetic data generation.",
+  authorizingDecision: {
+    ref: "ADR 0004: Stable surface registry and inspection",
+    path: "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+  },
+  completingSurface: {
+    human: "The mock seed generator exposes the opt-in only for local synthetic showcase data.",
+    programmatic: "examples/mock/seed.mjs reads CLAW_MOCK_ALLOW_EXTERNAL_IMAGES before attempting external image fetches.",
+  },
+  nonInference: "This variable does not authorize production network access, real user data import, or non-mock image fetching.",
+};
+
+const mockExternalImagesEnvResourceContract: ClawResourceContract = {
+  startup: "Read once by the mock seed generator and only affects optional fixture image download attempts.",
+  idle: "No background worker, watcher, or retry loop is owned by the variable.",
+  memory: "The value is a bounded boolean-like string check.",
+  streaming: "No streaming channel is associated with this mock fixture toggle.",
+  storage: "Any downloaded image bytes are written only by the synthetic mock seed workflow.",
+  hotPath: "Not on an application hot path; it is evaluated during explicit mock fixture generation.",
+  scale: "One stable env var covers all mock image download opt-in behavior.",
+  validation: "Covered by persistent surface guard and mock fixture generation review.",
+};
+
 const fixtureRecoverableCorruptionNarrative: ClawSurfaceNarrative = {
   concept: "Hermetic Sessions fixture topic that exercises recoverable corruption import behavior.",
   authorizingDecision: {
@@ -1419,11 +1467,19 @@ const coordinationEnvVarIds = new Set([
 ]);
 
 export const envVarSurfaceNarratives: Partial<Record<string, ClawSurfaceNarrative>> = Object.fromEntries(
-  [...coordinationEnvVarIds].map((id) => [id, coordinationEnvNarrative]),
+  [
+    ...[...coordinationEnvVarIds].map((id) => [id, coordinationEnvNarrative] as const),
+    ["claw.env.instructions", runtimeInstructionEnvNarrative],
+    ["claw.env.mockAllowExternalImages", mockExternalImagesEnvNarrative],
+  ],
 );
 
 export const envVarResourceContracts: Partial<Record<string, ClawResourceContract>> = Object.fromEntries(
-  [...coordinationEnvVarIds].map((id) => [id, coordinationEnvResourceContract]),
+  [
+    ...[...coordinationEnvVarIds].map((id) => [id, coordinationEnvResourceContract] as const),
+    ["claw.env.instructions", runtimeInstructionEnvResourceContract],
+    ["claw.env.mockAllowExternalImages", mockExternalImagesEnvResourceContract],
+  ],
 );
 
 export const eventTopicSurfaceNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
