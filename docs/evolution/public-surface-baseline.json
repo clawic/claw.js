@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-23T00:00:00.000Z",
+  "generatedAt": "2026-05-27T08:55:00.000Z",
   "sources": {
     "surfaces": "packages/clawjs-core/src/surface-registry.ts",
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1144,
-    "cliCommands": 169
+    "surfaces": 1149,
+    "cliCommands": 172
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:2f8c04a5",
-    "cliCommands": "fnv1a32:82daf03a",
-    "combined": "fnv1a32:a18f5e7d"
+    "surfaces": "fnv1a32:bbcaa1c6",
+    "cliCommands": "fnv1a32:9785ebf7",
+    "combined": "fnv1a32:62fa948d"
   },
   "surfaces": [
     {
@@ -1334,6 +1334,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.about",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "about",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.accessibility",
       "steward": "claw",
       "kind": "cliCommand",
@@ -2468,6 +2477,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.router",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "router",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.routines",
       "steward": "claw",
       "kind": "cliCommand",
@@ -2635,6 +2653,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "soul",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.source",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "source",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -4772,6 +4799,14 @@
       "surfaceClass": "config"
     },
     {
+      "id": "claw.env.instructions",
+      "steward": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_INSTRUCTIONS",
+      "surfaceClass": "config"
+    },
+    {
       "id": "claw.env.iotBaseUrl",
       "steward": "claw",
       "kind": "envVar",
@@ -4865,6 +4900,14 @@
       "kind": "envVar",
       "parentId": "claw.contracts.config",
       "value": "CLAW_MEMORY_WORKSPACE",
+      "surfaceClass": "config"
+    },
+    {
+      "id": "claw.env.mockAllowExternalImages",
+      "steward": "claw",
+      "kind": "envVar",
+      "parentId": "claw.contracts.config",
+      "value": "CLAW_MOCK_ALLOW_EXTERNAL_IMAGES",
       "surfaceClass": "config"
     },
     {
@@ -9520,6 +9563,14 @@
   ],
   "cliCommands": [
     {
+      "name": "about",
+      "kind": "canonical",
+      "usage": "about [--json]",
+      "family": "discovery",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.about.v1"
+    },
+    {
       "name": "accessibility",
       "kind": "canonical",
       "usage": "accessibility status|list|plan|coverage [--dry-run]",
@@ -10077,7 +10128,7 @@
     {
       "name": "inspect",
       "kind": "canonical",
-      "usage": "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|debt-ledger|governance|codebase|connectors|aliases|database|storage|prefs|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|external|render",
+      "usage": "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|surfaces|surface-parity|external|render",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.inspect.v1"
     },
@@ -10493,6 +10544,14 @@
       "jsonSchemaId": "claw.cli.review.v1"
     },
     {
+      "name": "router",
+      "kind": "canonical",
+      "usage": "router <keyword> [keyword ...] [--limit N] [--json]",
+      "family": "discovery",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.router.v1"
+    },
+    {
       "name": "routines",
       "kind": "canonical",
       "family": "time",
@@ -10636,6 +10695,14 @@
       "advanced": true,
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.soul.v1"
+    },
+    {
+      "name": "source",
+      "kind": "canonical",
+      "usage": "source status [--source-root PATH] [--json]",
+      "family": "diagnostics",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.source.v1"
     },
     {
       "name": "speech",
