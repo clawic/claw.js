@@ -329,7 +329,7 @@ export function buildMCPApp(options: BuildMCPAppOptions = {}) {
       return await reply.code(403).send({ error: error instanceof Error ? error.message : String(error) });
     }
     const protocol = new MCPProtocolClient({ server, fetchImpl: options.protocolFetch });
-    return await protocol.callTool(tool.toolName, args as Record<string, unknown>);
+    return await protocol.callTool(tool.toolName, body.args ?? {});
   });
 
   app.get(clawApiPath("mcp/expose/tools"), async (request, reply) => {
