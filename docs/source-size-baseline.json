@@ -1127,7 +1127,7 @@
       }
     },
     "packages/clawjs/src/cli-runtime-portal-command.ts": {
-      "lines": 5523,
+      "lines": 5598,
       "blockGrowth": true,
       "reason": "Runtime portal CLI expanded during Hermes runtime parity to cover gateway, harness, telemetry, approvals, and surface controls; split planning, rendering, and handler modules before expanding more portal commands.",
       "debtControl": {
@@ -1137,9 +1137,9 @@
         "budget": {
           "metric": "source_lines",
           "unit": "line",
-          "current": 5523,
-          "maxAllowed": 5523,
-          "nextMaxAllowed": 5522,
+          "current": 5598,
+          "maxAllowed": 5598,
+          "nextMaxAllowed": 5597,
           "target": 1200,
           "cadence": "next_touch_or_expiry"
         },

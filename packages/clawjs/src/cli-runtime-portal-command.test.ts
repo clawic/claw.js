@@ -661,6 +661,7 @@ test("Hermes support audit removes all reentry blockers when official contract r
       receiptId: `fixture-${action}-production-transport`,
       receiptType: "production_transport_lifecycle_receipt",
       status: "production_transport_lifecycle_verified",
+      officialTransportSurface: "api_server_http",
       approved: true,
       redacted: true,
       plaintextSecretLeak: false,
@@ -668,6 +669,12 @@ test("Hermes support audit removes all reentry blockers when official contract r
       productionTransportLifecycleManaged: true,
       nonLoopbackEndpointApproved: true,
       nativeRoundTripVerified: true,
+      capabilitiesEndpointVerified: true,
+      runLifecycleEndpointsVerified: true,
+      eventStreamVerified: true,
+      approvalEndpointVerified: true,
+      stopEndpointVerified: true,
+      responsePersistenceVerified: true,
     })),
   }));
   fs.writeFileSync(writeBackContractFixturePath, JSON.stringify({
@@ -738,6 +745,17 @@ test("Hermes support audit removes all reentry blockers when official contract r
         domain?: string;
         writeBackContractFixtureStatus?: string;
         writeBackContractFixtureReceipt?: { receiptId?: string; plaintextSecretLeak?: boolean };
+        productionTransportReceipts?: Array<{
+          action?: string;
+          officialTransportSurface?: string;
+          capabilitiesEndpointVerified?: boolean;
+          runLifecycleEndpointsVerified?: boolean;
+          eventStreamVerified?: boolean;
+          approvalEndpointVerified?: boolean;
+          stopEndpointVerified?: boolean;
+          responsePersistenceVerified?: boolean;
+          verifiedEndpoints?: string[];
+        }>;
         implementedFacets?: string[];
       }>;
       finalSupportClaimDecision?: {
@@ -764,6 +782,15 @@ test("Hermes support audit removes all reentry blockers when official contract r
   assert.equal(sessionsDomain?.writeBackContractFixtureReceipt?.receiptId, "fixture-sessions-write-back-contract");
   assert.equal(sessionsDomain?.writeBackContractFixtureReceipt?.plaintextSecretLeak, false);
   assert.equal(sessionsDomain?.implementedFacets?.includes("official_write_back_contract_receipt"), true);
+  const sendTransportReceipt = sessionsDomain?.productionTransportReceipts?.find((entry) => entry.action === "send");
+  assert.equal(sendTransportReceipt?.officialTransportSurface, "api_server_http");
+  assert.equal(sendTransportReceipt?.capabilitiesEndpointVerified, true);
+  assert.equal(sendTransportReceipt?.runLifecycleEndpointsVerified, true);
+  assert.equal(sendTransportReceipt?.eventStreamVerified, true);
+  assert.equal(sendTransportReceipt?.approvalEndpointVerified, true);
+  assert.equal(sendTransportReceipt?.stopEndpointVerified, true);
+  assert.equal(sendTransportReceipt?.responsePersistenceVerified, true);
+  assert.equal(sendTransportReceipt?.verifiedEndpoints?.includes("POST /v1/runs"), true);
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("write_back"), false);
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("production_transport_lifecycle"), false);
   assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("upstream_native_contracts"), false);

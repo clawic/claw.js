@@ -110,6 +110,18 @@ fixture, list/preview/resolve/history may instead materialize through
 `writesRuntime: false`, redact content before JSON output, and must not count
 as production transport evidence.
 
+Hermes production transport evidence is separate from that loopback fixture.
+The preferred managed surface is the official Hermes API server HTTP contract:
+`GET /v1/capabilities`, `POST /v1/runs`, `GET /v1/runs/{run_id}`,
+`GET /v1/runs/{run_id}/events`, `POST /v1/runs/{run_id}/approval`,
+`POST /v1/runs/{run_id}/stop`, `POST /v1/responses`, and
+`GET /v1/responses/{response_id}`. A production transport receipt must name
+that surface, prove the lifecycle/event/approval/stop/response-persistence
+endpoints with redacted evidence, and keep the API-key/network-binding policy
+explicit. The TUI Gateway WebSocket JSON-RPC surface remains a valid official
+transport candidate only when its gateway-ready, session-method, disconnect,
+and approval behavior are separately evidenced.
+
 `support` returns the runtime ecosystem support audit: all manifest domains
 accounted for, current support stage, blocking reasons, blocker classes,
 evidence requirements, session-action blockers, the exact promotion gate, and

@@ -930,10 +930,23 @@ function productionTransportReceiptFor(runtimeId: RuntimeAdapterId, action: stri
   const productionTransportLifecycleManaged = receipt.productionTransportLifecycleManaged === true;
   const nonLoopbackEndpointApproved = receipt.nonLoopbackEndpointApproved === true;
   const nativeRoundTripVerified = receipt.nativeRoundTripVerified === true;
+  const officialTransportSurface = String(receipt.officialTransportSurface ?? receipt.transportSurface ?? "");
+  const transportSurface = hermesProductionTransportSurface(officialTransportSurface);
+  const apiServerLifecycleVerified = transportSurface?.id === "api_server_http"
+    && receipt.capabilitiesEndpointVerified === true
+    && receipt.runLifecycleEndpointsVerified === true
+    && receipt.eventStreamVerified === true
+    && receipt.approvalEndpointVerified === true
+    && receipt.stopEndpointVerified === true
+    && receipt.responsePersistenceVerified === true;
+  const websocketLifecycleVerified = transportSurface?.id === "tui_gateway_websocket_json_rpc"
+    && receipt.websocketJsonRpcReadyVerified === true
+    && receipt.sessionMethodEnvelopeVerified === true
+    && receipt.transportDisconnectHandled === true;
   const fixtureReceipt = receipt.receiptType === "production_transport_lifecycle_receipt"
     || receipt.receiptId
     || receipt.status === "production_transport_lifecycle_verified";
-  if (!approved || !redacted || plaintextSecretLeak || !lifecyclePolicyApproved || !productionTransportLifecycleManaged || !nonLoopbackEndpointApproved || !nativeRoundTripVerified || !fixtureReceipt) return null;
+  if (!approved || !redacted || plaintextSecretLeak || !lifecyclePolicyApproved || !productionTransportLifecycleManaged || !nonLoopbackEndpointApproved || !nativeRoundTripVerified || !transportSurface || (!apiServerLifecycleVerified && !websocketLifecycleVerified) || !fixtureReceipt) return null;
   return {
     domain: "sessions",
     action,
@@ -947,6 +960,19 @@ function productionTransportReceiptFor(runtimeId: RuntimeAdapterId, action: stri
     productionTransportLifecycleManaged: true,
     nonLoopbackEndpointApproved: true,
     nativeRoundTripVerified: true,
+    officialTransportSurface: transportSurface.id,
+    officialTransportSurfaceLabel: transportSurface.label,
+    officialTransportSource: transportSurface.source,
+    verifiedEndpoints: transportSurface.endpoints,
+    capabilitiesEndpointVerified: receipt.capabilitiesEndpointVerified === true,
+    runLifecycleEndpointsVerified: receipt.runLifecycleEndpointsVerified === true,
+    eventStreamVerified: receipt.eventStreamVerified === true,
+    approvalEndpointVerified: receipt.approvalEndpointVerified === true,
+    stopEndpointVerified: receipt.stopEndpointVerified === true,
+    responsePersistenceVerified: receipt.responsePersistenceVerified === true,
+    websocketJsonRpcReadyVerified: receipt.websocketJsonRpcReadyVerified === true,
+    sessionMethodEnvelopeVerified: receipt.sessionMethodEnvelopeVerified === true,
+    transportDisconnectHandled: receipt.transportDisconnectHandled === true,
     evidenceSafetyPolicy: receipt.evidenceSafetyPolicy ?? runtimePortalEvidenceSafetyPolicy(),
     source: "production-transport-fixture",
   };
@@ -971,6 +997,7 @@ function hermesTuiGatewayTransportPolicy(runtimeOptions?) {
     officialTransportSurface: "stdio_or_websocket_json_rpc",
     officialTransportClasses: ["stdio_json_rpc", "websocket_json_rpc"],
     officialTransportSource: "https://hermes-agent.nousresearch.com/docs/developer-guide/programmatic-integration",
+    officialProductionTransportSurfaces: hermesProductionTransportSurfaces(),
     fixtureTransport: "loopback_http_json_rpc_fixture",
     productionTransportStatus: "blocked_until_production_transport_lifecycle_policy",
     productionTransportBlocker: "approval_required_for_non_loopback_endpoint_and_lifecycle_management",
@@ -998,6 +1025,49 @@ function hermesTuiGatewayTransportPolicy(runtimeOptions?) {
     ],
     reentryCondition: "attach_production_transport_lifecycle_policy_before_claim_promotion_or_non_loopback_gateway_use",
   };
+}
+
+function hermesProductionTransportSurfaces() {
+  return [
+    {
+      id: "api_server_http",
+      label: "Hermes API server HTTP",
+      protocol: "http_json_and_sse",
+      source: "https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/api_server.py",
+      endpoints: [
+        "GET /v1/capabilities",
+        "POST /v1/runs",
+        "GET /v1/runs/{run_id}",
+        "GET /v1/runs/{run_id}/events",
+        "POST /v1/runs/{run_id}/approval",
+        "POST /v1/runs/{run_id}/stop",
+        "POST /v1/responses",
+        "GET /v1/responses/{response_id}",
+      ],
+      authPolicy: "api_key_required_for_network_accessible_bindings",
+      lifecyclePolicy: "managed_http_server_with_explicit_start_stop_health_and_redacted_receipts",
+    },
+    {
+      id: "tui_gateway_websocket_json_rpc",
+      label: "Hermes TUI Gateway WebSocket JSON-RPC",
+      protocol: "websocket_json_rpc",
+      source: "https://github.com/NousResearch/hermes-agent/blob/main/tui_gateway/ws.py",
+      endpoints: [
+        "gateway.ready",
+        "session.create",
+        "session.list",
+        "session.history",
+        "session.interrupt",
+        "approval.respond",
+      ],
+      authPolicy: "approved_local_or_managed_endpoint_required",
+      lifecyclePolicy: "wire_compatible_with_stdio_gateway_without_claw_owned_runtime_mutation",
+    },
+  ];
+}
+
+function hermesProductionTransportSurface(id: string) {
+  return hermesProductionTransportSurfaces().find((surface) => surface.id === id) ?? null;
 }
 
 function buildGatewayOperationalResources(runtimeId: RuntimeAdapterId, status, runtimeOptions, session) {
@@ -2622,6 +2692,11 @@ function buildSupportAudit(runtimeId: RuntimeAdapterId, payload, runtimeOptions?
       liveEvidenceFixtureReceipt: domain.liveEvidenceFixtureReceipt,
       writeBackContractFixtureStatus: domain.writeBackContractFixtureStatus,
       writeBackContractFixtureReceipt: domain.writeBackContractFixtureReceipt,
+      productionTransportReceipts: domain.domain === "sessions"
+        ? sessionActions
+          .map((action) => productionTransportReceiptFor(runtimeId, String(action.action ?? ""), runtimeOptions))
+          .filter(Boolean)
+        : [],
       validation: domain.validation,
       externalPending: domain.externalPending,
       persistence: domain.persistence,
