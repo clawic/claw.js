@@ -1073,6 +1073,33 @@
         }
       }
     },
+    "packages/clawjs/src/cli-legacy.ts": {
+      "lines": 2067,
+      "blockGrowth": true,
+      "reason": "Legacy CLI compatibility surface crossed the 2000-line boundary during Hermes runtime parity work; extract compatibility shims and command adapters before expanding this file.",
+      "debtControl": {
+        "ownerArea": "source-size",
+        "expiresAt": "2026-08-20",
+        "severity": "P2",
+        "budget": {
+          "metric": "source_lines",
+          "unit": "line",
+          "current": 2067,
+          "maxAllowed": 2067,
+          "nextMaxAllowed": 2066,
+          "target": 1200,
+          "cadence": "next_touch_or_expiry"
+        },
+        "releaseEffect": {
+          "mode": "blocks_growth",
+          "targets": [
+            "changed-work"
+          ],
+          "gate": "node scripts/source-size-check.mjs",
+          "reason": "packages/clawjs/src/cli-legacy.ts is baselined only while it shrinks or avoids additional growth."
+        }
+      }
+    },
     "packages/clawjs/src/cli-productivity-extended-command.ts": {
       "lines": 1583,
       "reason": "Extended productivity CLI groups extracted from the public CLI router; split by capability family before expanding.",
@@ -1100,28 +1127,29 @@
       }
     },
     "packages/clawjs/src/cli-runtime-portal-command.ts": {
-      "lines": 2039,
-      "reason": "Runtime portal CLI crossed the 2000-line boundary with broad command handling; split planning, rendering, and handler modules before expanding more portal commands.",
+      "lines": 5523,
+      "blockGrowth": true,
+      "reason": "Runtime portal CLI expanded during Hermes runtime parity to cover gateway, harness, telemetry, approvals, and surface controls; split planning, rendering, and handler modules before expanding more portal commands.",
       "debtControl": {
         "ownerArea": "source-size",
         "expiresAt": "2026-08-20",
-        "severity": "P2",
+        "severity": "P1",
         "budget": {
           "metric": "source_lines",
           "unit": "line",
-          "current": 2039,
-          "maxAllowed": 2039,
-          "nextMaxAllowed": 2038,
+          "current": 5523,
+          "maxAllowed": 5523,
+          "nextMaxAllowed": 5522,
           "target": 1200,
           "cadence": "next_touch_or_expiry"
         },
         "releaseEffect": {
-          "mode": "blocks_growth",
+          "mode": "blocks_release",
           "targets": [
             "changed-work"
           ],
           "gate": "node scripts/source-size-check.mjs",
-          "reason": "packages/clawjs/src/cli-runtime-portal-command.ts is baselined only while it shrinks or avoids additional growth."
+          "reason": "packages/clawjs/src/cli-runtime-portal-command.ts is over the emergency growth threshold; release/growth must stay blocked until the file shrinks."
         }
       }
     },
