@@ -350,6 +350,127 @@ test("Hermes live-evidence fixtures attach approved redacted receipts without ex
   assert.equal(channelClosure?.blockingFacets?.includes("approved_live_evidence"), false);
 });
 
+test("Hermes live-evidence fixtures reject stale unsafe or mismatched receipts", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-live-evidence-invalid-"));
+  const fixturePath = path.join(tempDir, "live-evidence-fixture.json");
+  fs.writeFileSync(fixturePath, JSON.stringify({
+    schemaVersion: 1,
+    runtimeId: "hermes",
+    receipts: [
+      {
+        domain: "channels",
+        receiptId: "fixture-channels-stale-live-evidence",
+        receiptType: "external_live_evidence_receipt",
+        status: "approved_redacted_live_evidence",
+        approved: true,
+        readOnly: true,
+        redacted: true,
+        mutationPerformed: false,
+        plaintextSecretLeak: false,
+        supportContractMatchesManifest: true,
+        stale: true,
+      },
+      {
+        domain: "providers",
+        receiptId: "fixture-providers-secret-live-evidence",
+        receiptType: "external_live_evidence_receipt",
+        status: "approved_redacted_live_evidence",
+        approved: true,
+        readOnly: true,
+        redacted: true,
+        mutationPerformed: false,
+        plaintextSecretLeak: true,
+        supportContractMatchesManifest: true,
+      },
+      {
+        domain: "auth",
+        receiptId: "fixture-auth-mutating-live-evidence",
+        receiptType: "external_live_evidence_receipt",
+        status: "approved_redacted_live_evidence",
+        approved: true,
+        readOnly: false,
+        redacted: true,
+        mutationPerformed: true,
+        plaintextSecretLeak: false,
+        supportContractMatchesManifest: true,
+      },
+      {
+        domain: "models",
+        receiptId: "fixture-models-mismatched-live-evidence",
+        receiptType: "external_live_evidence_receipt",
+        status: "approved_redacted_live_evidence",
+        approved: true,
+        readOnly: true,
+        redacted: true,
+        mutationPerformed: false,
+        plaintextSecretLeak: false,
+        supportContractMatchesManifest: false,
+      },
+      {
+        domain: "unknown",
+        receiptId: "fixture-unknown-live-evidence",
+        receiptType: "external_live_evidence_receipt",
+        status: "approved_redacted_live_evidence",
+        approved: true,
+        readOnly: true,
+        redacted: true,
+        mutationPerformed: false,
+        plaintextSecretLeak: false,
+        supportContractMatchesManifest: true,
+      },
+    ],
+  }));
+
+  const result = await runCliCapture([
+    "runtime",
+    "hermes",
+    "support",
+    "--live-evidence-fixture",
+    fixturePath,
+    "--json",
+  ], process.cwd());
+  const payload = JSON.parse(result.stdout) as {
+    data?: {
+      evidenceReadinessSummary?: {
+        externalPendingCount?: number;
+        externalPendingRequirementIds?: string[];
+        nextRequiredActions?: string[];
+      };
+      domains?: Array<{
+        domain?: string;
+        liveEvidenceFixtureStatus?: string;
+        liveEvidenceFixtureReceipt?: { receiptId?: string };
+        blockingFacets?: string[];
+      }>;
+      finalSupportClaimDecision?: {
+        blockedPromotionClaims?: string[];
+        promotionEvidenceRequired?: string[];
+        externalPendingCount?: number;
+      };
+    };
+  };
+
+  assert.equal(result.code, 2);
+  assert.equal(payload.data?.evidenceReadinessSummary?.externalPendingCount, 4);
+  assert.deepEqual(payload.data?.evidenceReadinessSummary?.externalPendingRequirementIds, [
+    "hermes.channels.live_evidence",
+    "hermes.providers.live_evidence",
+    "hermes.auth.live_evidence",
+    "hermes.models.live_evidence",
+  ]);
+  assert.equal(payload.data?.evidenceReadinessSummary?.nextRequiredActions?.includes("approved_redacted_live_evidence"), true);
+  for (const domain of ["channels", "providers", "auth", "models"]) {
+    const auditDomain = payload.data?.domains?.find((entry) => entry.domain === domain);
+    assert.equal(auditDomain?.liveEvidenceFixtureStatus, "missing");
+    assert.equal(auditDomain?.liveEvidenceFixtureReceipt, null);
+    assert.equal(auditDomain?.blockingFacets?.includes("approved_live_evidence"), true);
+  }
+  assert.equal(payload.data?.domains?.some((entry) => entry.domain === "unknown"), false);
+  assert.equal(payload.data?.finalSupportClaimDecision?.blockedPromotionClaims?.includes("external_live_evidence"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.promotionEvidenceRequired?.includes("approved_redacted_live_evidence"), true);
+  assert.equal(payload.data?.finalSupportClaimDecision?.externalPendingCount, 4);
+});
+
 test("Hermes support audit discounts every locally verifiable fixture while preserving real blockers", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-hermes-local-parity-"));
   const hermesHome = path.join(tempDir, ".hermes");

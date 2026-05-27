@@ -813,7 +813,7 @@ function liveEvidenceReceiptFor(runtimeId: RuntimeAdapterId, domain: string, run
   const readOnly = receipt.readOnly === true || receipt.mutationPerformed === false;
   const plaintextSecretLeak = receipt.plaintextSecretLeak === true;
   const mutationPerformed = receipt.mutationPerformed === true;
-  const supportContractMatchesManifest = receipt.supportContractMatchesManifest === true;
+  const supportContractMatchesManifest = receipt.supportContractMatchesManifest === true && receipt.stale !== true;
   const fixtureReceipt = receipt.receiptType === "external_live_evidence_receipt"
     || receipt.receiptId
     || receipt.status === "approved_redacted_live_evidence";
