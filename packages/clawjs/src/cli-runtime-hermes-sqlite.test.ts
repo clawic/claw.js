@@ -11,6 +11,7 @@ import { captureStream, useIsolatedClawDataRoot } from "./index-test-utils.ts";
 function createHermesStateDatabase(databasePath: string) {
   const db = new BetterSqlite3(databasePath);
   try {
+    // @clawjs-persistent-surface-ddl-source
     db.exec(`
       CREATE TABLE sessions (
         id TEXT PRIMARY KEY,
