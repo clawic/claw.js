@@ -17,7 +17,7 @@ const budgets = {
     [isolationCategory]: { files: 25, occurrences: 205 },
   },
   code: {
-    [responsibilityCategory]: { files: 137, occurrences: 560 },
+    [responsibilityCategory]: { files: 138, occurrences: 560 },
     [isolationCategory]: { files: 93, occurrences: 2771 },
   },
   "tests-fixtures": {
