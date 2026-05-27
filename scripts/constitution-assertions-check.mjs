@@ -152,6 +152,13 @@ function testLaneText(base = rootDir) {
     if (!exists(relativePath, base)) continue;
     parts.push(read(relativePath, base));
   }
+  if (exists("package.json", base)) {
+    const packageJson = readJson("package.json", base);
+    const testDocs = String(packageJson.scripts?.["test:docs"] ?? "");
+    if (testDocs.includes("scripts/test-docs-runner.mjs") && exists("scripts/test-docs-runner.mjs", base)) {
+      parts.push(read("scripts/test-docs-runner.mjs", base));
+    }
+  }
   return parts.join("\n");
 }
 

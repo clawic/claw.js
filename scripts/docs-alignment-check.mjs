@@ -20,6 +20,21 @@ function requireSnippet(relativePath, snippet) {
   }
 }
 
+function readTestDocsRouteText() {
+  const packageJson = read("package.json");
+  if (!packageJson.includes("scripts/test-docs-runner.mjs")) return packageJson;
+  const runnerPath = "scripts/test-docs-runner.mjs";
+  return fs.existsSync(path.join(rootDir, runnerPath))
+    ? `${packageJson}\n${read(runnerPath)}`
+    : packageJson;
+}
+
+function requireTestDocsSnippet(snippet) {
+  if (!readTestDocsRouteText().includes(snippet)) {
+    fail(`test:docs route is missing required snippet: ${snippet}`);
+  }
+}
+
 function forbidSnippet(relativePath, snippet) {
   const text = read(relativePath);
   if (text.includes(snippet)) {
@@ -146,8 +161,8 @@ requireSnippet("docs/constitution-map.md", "docs/constitution.assertions.json");
 requireSnippet("docs/decision-map.md", "constitution.assertions.json");
 requireSnippet("docs/constitution.assertions.json", "\"contractDigest\"");
 requireSnippet("docs/constitution.assertions.schema.json", "Constitution Assertions");
-requireSnippet("package.json", "constitution-assertions-check.mjs");
-requireSnippet("package.json", "constitution-sync-check.mjs");
+requireTestDocsSnippet("constitution-assertions-check.mjs");
+requireTestDocsSnippet("constitution-sync-check.mjs");
 requireSnippet("docs/decision-map.md", "scripts/constitution-sync-check.mjs");
 requireSnippet("docs/constitution-map.md", "scripts/constitution-sync-check.mjs");
 requireSnippet("docs/adr/TEMPLATE.md", "## Surface Parity");

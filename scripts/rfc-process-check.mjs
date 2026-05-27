@@ -25,6 +25,14 @@ function read(relativePath) {
   return fs.readFileSync(absolute(relativePath), "utf8");
 }
 
+function readTestDocsRouteText() {
+  const packageJson = read("package.json");
+  if (!packageJson.includes("scripts/test-docs-runner.mjs")) return packageJson;
+  return exists("scripts/test-docs-runner.mjs")
+    ? `${packageJson}\n${read("scripts/test-docs-runner.mjs")}`
+    : packageJson;
+}
+
 function readJson(relativePath) {
   return JSON.parse(read(relativePath));
 }
@@ -166,7 +174,7 @@ function validateRouting(errors) {
     ["skills/canonical-catalog-expansion/SKILL.md", ["RFC process", processPath]],
     ["package.json", ["rfc-process-check.mjs"]],
   ]) {
-    const text = read(relativePath);
+    const text = relativePath === "package.json" ? readTestDocsRouteText() : read(relativePath);
     for (const snippet of snippets) {
       if (!text.includes(snippet)) errors.push(`${relativePath} must mention ${snippet}`);
     }

@@ -300,8 +300,13 @@ function checkReleaseScripts() {
     }
   }
   const testDocs = packageJson.scripts?.["test:docs"] ?? "";
-  if (!testDocs.includes("version-governance-check.mjs")) fail("test:docs must include version-governance-check.mjs");
-  if (!testDocs.includes("verify-regulated-domain-safety-goal.mjs")) {
+  const runner = testDocs.includes("scripts/test-docs-runner.mjs") && fs.existsSync(path.join(rootDir, "scripts", "test-docs-runner.mjs"))
+    ? read("scripts/test-docs-runner.mjs")
+    : "";
+  if (!testDocs.includes("version-governance-check.mjs") && !runner.includes("version-governance-check.mjs")) {
+    fail("test:docs must include version-governance-check.mjs");
+  }
+  if (!testDocs.includes("verify-regulated-domain-safety-goal.mjs") && !runner.includes("verify-regulated-domain-safety-goal.mjs")) {
     fail("test:docs must include verify-regulated-domain-safety-goal.mjs");
   }
 }

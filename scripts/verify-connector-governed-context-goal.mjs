@@ -256,7 +256,12 @@ const packageJson = readJson("package.json");
 if (packageJson.scripts?.["test:connector-governed-context-goal"] !== "node --import tsx ./scripts/verify-connector-governed-context-goal.mjs") {
   fail("package.json must expose test:connector-governed-context-goal");
 }
-if (!packageJson.scripts?.["test:docs"]?.includes("npm run test:connector-governed-context-goal")) {
+const testDocsScript = packageJson.scripts?.["test:docs"] ?? "";
+const testDocsRunnerSource = testDocsScript.includes("scripts/test-docs-runner.mjs") && fs.existsSync(path.join(rootDir, "scripts", "test-docs-runner.mjs"))
+  ? read("scripts/test-docs-runner.mjs")
+  : "";
+if (!testDocsScript.includes("npm run test:connector-governed-context-goal") &&
+  !testDocsRunnerSource.includes('"npm run test:connector-governed-context-goal"')) {
   fail("test:docs must include test:connector-governed-context-goal");
 }
 

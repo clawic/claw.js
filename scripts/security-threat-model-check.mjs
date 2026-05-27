@@ -286,7 +286,11 @@ function validateRouting(root, profile, errors) {
   if (!isClawix) {
     const packageJson = readJson(root, "package.json", errors);
     if (!packageJson) return;
-    if (!String(packageJson.scripts?.["test:docs"] ?? "").includes("security-threat-model-check.mjs")) {
+    const testDocs = String(packageJson.scripts?.["test:docs"] ?? "");
+    const runner = testDocs.includes("scripts/test-docs-runner.mjs") && exists(root, "scripts/test-docs-runner.mjs")
+      ? read(root, "scripts/test-docs-runner.mjs")
+      : "";
+    if (!testDocs.includes("security-threat-model-check.mjs") && !runner.includes("security-threat-model-check.mjs")) {
       errors.push("package.json test:docs must run scripts/security-threat-model-check.mjs");
     }
   } else {

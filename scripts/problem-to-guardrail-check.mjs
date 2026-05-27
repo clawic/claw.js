@@ -48,6 +48,15 @@ function read(relativePath, overrides = new Map()) {
   return overrides.get(relativePath) ?? fs.readFileSync(path.join(rootDir, relativePath), "utf8");
 }
 
+function readPackageRouteText(overrides = new Map()) {
+  const packageJson = read("package.json", overrides);
+  if (!packageJson.includes("scripts/test-docs-runner.mjs")) return packageJson;
+  const runnerPath = "scripts/test-docs-runner.mjs";
+  return fs.existsSync(path.join(rootDir, runnerPath))
+    ? `${packageJson}\n${read(runnerPath, overrides)}`
+    : packageJson;
+}
+
 function validate(overrides = new Map()) {
   const failures = [];
   for (const [relativePath, snippets] of required) {
@@ -56,7 +65,7 @@ function validate(overrides = new Map()) {
       failures.push(`missing ${relativePath}`);
       continue;
     }
-    const text = read(relativePath, overrides);
+    const text = relativePath === "package.json" ? readPackageRouteText(overrides) : read(relativePath, overrides);
     for (const snippet of snippets.flat()) {
       if (!text.includes(snippet)) failures.push(`${relativePath} must include ${JSON.stringify(snippet)}`);
     }

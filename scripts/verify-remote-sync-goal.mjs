@@ -1976,7 +1976,10 @@ if (packageJson.scripts?.["test:remote-sync-source-session"] !== "node ./scripts
   fail("package.json must expose test:remote-sync-source-session");
 }
 const testDocsScript = packageJson.scripts?.["test:docs"] ?? "";
-const testDocsRunnerSource = readRequired("scripts/test-docs-runner.mjs");
+const testDocsRunnerPath = path.join(rootDir, "scripts", "test-docs-runner.mjs");
+const testDocsRunnerSource = testDocsScript.includes("scripts/test-docs-runner.mjs") && fs.existsSync(testDocsRunnerPath)
+  ? readRequired("scripts/test-docs-runner.mjs")
+  : "";
 const testDocsIncludesRemoteSyncGoal =
   testDocsScript.includes("npm run test:remote-sync-goal") ||
   (testDocsScript.includes("scripts/test-docs-runner.mjs") &&

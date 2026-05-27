@@ -40,7 +40,11 @@ function verifyPackageScripts() {
       }));
     }
   }
-  if (!packageJson.scripts?.["test:docs"]?.includes("verify-source-mode.mjs")) {
+  const testDocs = packageJson.scripts?.["test:docs"] ?? "";
+  const runner = testDocs.includes("scripts/test-docs-runner.mjs") && fs.existsSync(path.join(rootDir, "scripts", "test-docs-runner.mjs"))
+    ? fs.readFileSync(path.join(rootDir, "scripts", "test-docs-runner.mjs"), "utf8")
+    : "";
+  if (!testDocs.includes("verify-source-mode.mjs") && !runner.includes("verify-source-mode.mjs")) {
     diagnostics.push(diagnostic("source_mode_docs_gate_missing", "npm run test:docs must run scripts/verify-source-mode.mjs", {
       location: "package.json",
     }));

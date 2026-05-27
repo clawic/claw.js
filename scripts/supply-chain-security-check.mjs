@@ -45,6 +45,14 @@ function exists(relativePath) {
   return fs.existsSync(path.join(rootDir, relativePath));
 }
 
+function testDocsIncludes(snippet) {
+  const scripts = readJson("package.json").scripts ?? {};
+  const testDocs = String(scripts["test:docs"] ?? "");
+  if (testDocs.includes(snippet)) return true;
+  if (!testDocs.includes("scripts/test-docs-runner.mjs") || !exists("scripts/test-docs-runner.mjs")) return false;
+  return read("scripts/test-docs-runner.mjs").includes(snippet);
+}
+
 function listFiles(relativeDir, predicate, output = []) {
   const absoluteDir = path.join(rootDir, relativeDir);
   if (!fs.existsSync(absoluteDir)) return output;
@@ -214,7 +222,10 @@ function validatePublicPackagePrepublish() {
 function validateReleaseScripts() {
   const scripts = readJson("package.json").scripts ?? {};
   for (const name of ["test:docs", "publish:dry-run", "release:publish", "publish:packages"]) {
-    if (!String(scripts[name] ?? "").includes("supply-chain-security-check.mjs")) {
+    const includesSupplyChain = name === "test:docs"
+      ? testDocsIncludes("supply-chain-security-check.mjs")
+      : String(scripts[name] ?? "").includes("supply-chain-security-check.mjs");
+    if (!includesSupplyChain) {
       fail(`package.json script ${name} must run scripts/supply-chain-security-check.mjs`);
     }
   }

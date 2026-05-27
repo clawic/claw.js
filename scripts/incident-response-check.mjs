@@ -25,7 +25,11 @@ function requireSnippet(relativePath, snippet) {
     fail(`${relativePath} is missing`);
     return;
   }
-  if (!read(relativePath).includes(snippet)) fail(`${relativePath} must mention ${snippet}`);
+  const text = read(relativePath);
+  const routeText = relativePath === "package.json" && text.includes("scripts/test-docs-runner.mjs") && exists("scripts/test-docs-runner.mjs")
+    ? `${text}\n${read("scripts/test-docs-runner.mjs")}`
+    : text;
+  if (!routeText.includes(snippet)) fail(`${relativePath} must mention ${snippet}`);
 }
 
 function validateIncidentDoc(text = read("docs/incident-response.md"), label = "docs/incident-response.md") {

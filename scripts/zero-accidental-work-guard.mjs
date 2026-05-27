@@ -249,8 +249,11 @@ for (const [relativePath, snippets] of requiredSnippets) {
     continue;
   }
   const text = fs.readFileSync(fullPath, "utf8");
+  const routeText = relativePath === "package.json" && text.includes("scripts/test-docs-runner.mjs") && fs.existsSync(path.join(rootDir, "scripts/test-docs-runner.mjs"))
+    ? `${text}\n${fs.readFileSync(path.join(rootDir, "scripts/test-docs-runner.mjs"), "utf8")}`
+    : text;
   for (const snippet of snippets) {
-    if (!text.includes(snippet)) fail(`${relativePath} must include ${JSON.stringify(snippet)}`);
+    if (!routeText.includes(snippet)) fail(`${relativePath} must include ${JSON.stringify(snippet)}`);
   }
 }
 

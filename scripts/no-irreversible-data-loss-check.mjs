@@ -308,7 +308,11 @@ function validateRoot(root, profile = "claw") {
 
   if (profile === "claw") {
     const pkg = exists("package.json") ? read("package.json") : "";
-    if (!pkg.includes("no-irreversible-data-loss-check.mjs")) {
+    const testDocsUsesRunner = pkg.includes("scripts/test-docs-runner.mjs");
+    const runner = testDocsUsesRunner && exists("scripts/test-docs-runner.mjs")
+      ? read("scripts/test-docs-runner.mjs")
+      : "";
+    if (!pkg.includes("no-irreversible-data-loss-check.mjs") && !runner.includes("no-irreversible-data-loss-check.mjs")) {
       errors.push("package.json test:docs must run no-irreversible-data-loss-check.mjs");
     }
   } else {

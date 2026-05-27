@@ -25,7 +25,10 @@ function readFrom(baseDir, relativePath) {
 }
 
 function requireSnippet(relativePath, snippet) {
-  const text = read(relativePath);
+  const fileText = read(relativePath);
+  const text = relativePath === "package.json" && fileText.includes("scripts/test-docs-runner.mjs") && fs.existsSync(path.join(rootDir, "scripts/test-docs-runner.mjs"))
+    ? `${fileText}\n${read("scripts/test-docs-runner.mjs")}`
+    : fileText;
   assert(text.includes(snippet), `${relativePath}: missing ${JSON.stringify(snippet)}`);
 }
 

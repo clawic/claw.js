@@ -264,7 +264,11 @@ function requireSnippet(rootDir, relativePath, snippet, failures) {
     failures.push(`missing ${relativePath}`);
     return;
   }
-  if (!fs.readFileSync(filePath, "utf8").includes(snippet)) failures.push(`${relativePath} must include ${JSON.stringify(snippet)}`);
+  const text = fs.readFileSync(filePath, "utf8");
+  const routeText = relativePath === "package.json" && text.includes("scripts/test-docs-runner.mjs")
+    ? `${text}\n${fs.existsSync(path.join(rootDir, "scripts/test-docs-runner.mjs")) ? fs.readFileSync(path.join(rootDir, "scripts/test-docs-runner.mjs"), "utf8") : ""}`
+    : text;
+  if (!routeText.includes(snippet)) failures.push(`${relativePath} must include ${JSON.stringify(snippet)}`);
 }
 
 function checkRoot(rootDir) {
