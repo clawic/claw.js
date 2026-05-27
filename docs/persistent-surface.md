@@ -1029,6 +1029,8 @@ flowchart TD
   claw_contracts_config --> claw_env_imageLibraryDir
   claw_env_inspectManifest["inspect manifest environment variable\nenvVar"]
   claw_contracts_config --> claw_env_inspectManifest
+  claw_env_instructions["instructions environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_instructions
   claw_env_iotBaseUrl["iot base url environment variable\nenvVar"]
   claw_contracts_config --> claw_env_iotBaseUrl
   claw_env_iotDir["iot dir environment variable\nenvVar"]
@@ -1053,6 +1055,8 @@ flowchart TD
   claw_contracts_config --> claw_env_memoryPort
   claw_env_memoryWorkspace["memory workspace environment variable\nenvVar"]
   claw_contracts_config --> claw_env_memoryWorkspace
+  claw_env_mockAllowExternalImages["mock allow external images environment variable\nenvVar"]
+  claw_contracts_config --> claw_env_mockAllowExternalImages
   claw_env_monitorCollectIntervalMs["monitor collect interval ms environment variable\nenvVar"]
   claw_contracts_config --> claw_env_monitorCollectIntervalMs
   claw_env_monitorCorsOrigins["monitor cors origins environment variable\nenvVar"]
@@ -1491,6 +1495,8 @@ flowchart TD
   claw_contracts_api --> claw_port_channels
   claw_port_clawixBridge["clawixBridge\nport"]
   claw_contracts_api --> claw_port_clawixBridge
+  claw_cli_command_source["source\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_source
   claw_cli_command_setup["setup\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_setup
   claw_cli_command_modules["modules\ncliCommand"]
@@ -1605,6 +1611,10 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_dense_fixture
   claw_cli_command_search["search\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_search
+  claw_cli_command_router["router\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_router
+  claw_cli_command_about["about\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_about
   claw_cli_command_signals["signals\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_signals
   claw_cli_command_life["life\ncliCommand"]
@@ -3279,6 +3289,7 @@ flowchart TD
 | `claw.env.imageAllowEnvCredentials` | envVar | config | claw |  |  |  |  |  | `CLAW_IMAGE_ALLOW_ENV_CREDENTIALS` |
 | `claw.env.imageLibraryDir` | envVar | config | claw |  |  |  |  |  | `CLAW_IMAGE_LIBRARY_DIR` |
 | `claw.env.inspectManifest` | envVar | config | claw |  |  |  |  |  | `CLAW_INSPECT_MANIFEST` |
+| `claw.env.instructions` | envVar | config | claw |  |  |  | CLI instruction preamble mode override for framework-owned instruction resolution. | Covered by persistent surface guard and CLI instruction runtime tests. | `CLAW_INSTRUCTIONS` |
 | `claw.env.iotBaseUrl` | envVar | config | claw |  |  |  |  |  | `CLAW_IOT_BASE_URL` |
 | `claw.env.iotDir` | envVar | config | claw |  |  |  |  |  | `CLAW_IOT_DIR` |
 | `claw.env.libraryDir` | envVar | config | claw |  |  |  |  |  | `CLAW_LIBRARY_DIR` |
@@ -3291,6 +3302,7 @@ flowchart TD
 | `claw.env.memoryHost` | envVar | config | claw |  |  |  |  |  | `CLAW_MEMORY_HOST` |
 | `claw.env.memoryPort` | envVar | config | claw |  |  |  |  |  | `CLAW_MEMORY_PORT` |
 | `claw.env.memoryWorkspace` | envVar | config | claw |  |  |  |  |  | `CLAW_MEMORY_WORKSPACE` |
+| `claw.env.mockAllowExternalImages` | envVar | config | claw |  |  |  | Mock showcase fixture opt-in for external image downloads during synthetic data generation. | Covered by persistent surface guard and mock fixture generation review. | `CLAW_MOCK_ALLOW_EXTERNAL_IMAGES` |
 | `claw.env.monitorCollectIntervalMs` | envVar | config | claw |  |  |  |  |  | `CLAW_MONITOR_COLLECT_INTERVAL_MS` |
 | `claw.env.monitorCorsOrigins` | envVar | config | claw |  |  |  |  |  | `CLAW_MONITOR_CORS_ORIGINS` |
 | `claw.env.monitorHost` | envVar | config | claw |  |  |  |  |  | `CLAW_MONITOR_HOST` |
@@ -3510,6 +3522,7 @@ flowchart TD
 | `claw.port.board` | port | config | claw |  |  |  |  |  | `24122` |
 | `claw.port.channels` | port | config | claw |  |  |  |  |  | `24123` |
 | `claw.port.clawixBridge` | port | config | claw |  |  |  |  |  | `24080` |
+| `claw.cli.command.source` | cliCommand | cli | claw |  |  |  | Source-mode inspection command that reports whether the CLI is operating from trusted local source or package mode. | scripts/verify-source-mode.mjs | `source` |
 | `claw.cli.command.setup` | cliCommand | cli | claw |  |  |  |  |  | `setup` |
 | `claw.cli.command.modules` | cliCommand | cli | claw |  |  |  |  |  | `modules` |
 | `claw.cli.command.host` | cliCommand | cli | claw |  |  |  |  |  | `host` |
@@ -3567,6 +3580,8 @@ flowchart TD
 | `claw.cli.command.dense-fixtures` | cliCommand | cli | claw |  |  |  |  |  | `dense-fixtures` |
 | `claw.cli.command.dense-fixture` | cliCommand | cli | claw |  |  |  |  |  | `dense-fixture` |
 | `claw.cli.command.search` | cliCommand | cli | claw |  |  |  |  |  | `search` |
+| `claw.cli.command.router` | cliCommand | cli | claw |  |  |  | Deterministic keyword router that maps free-form intent terms to registered dedicated CLI commands, examples, and anti-patterns. | packages/clawjs/src/cli-router-command.test.ts | `router` |
+| `claw.cli.command.about` | cliCommand | cli | claw |  |  |  | Human and agent orientation command that explains the Claw CLI purpose, capability map, and safe entry commands without invoking domain actions. | packages/clawjs/src/cli-about-command.test.ts | `about` |
 | `claw.cli.command.signals` | cliCommand | cli | claw |  |  |  |  |  | `signals` |
 | `claw.cli.command.life` | cliCommand | cli | claw |  |  |  |  |  | `life` |
 | `claw.cli.command.report` | cliCommand | cli | claw |  |  |  |  |  | `report` |
