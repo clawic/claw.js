@@ -1975,7 +1975,13 @@ if (packageJson.scripts?.["test:remote-sync-goal"] !== "node --import tsx ./scri
 if (packageJson.scripts?.["test:remote-sync-source-session"] !== "node ./scripts/verify-remote-sync-source-session.mjs") {
   fail("package.json must expose test:remote-sync-source-session");
 }
-if (!packageJson.scripts?.["test:docs"]?.includes("npm run test:remote-sync-goal")) {
+const testDocsScript = packageJson.scripts?.["test:docs"] ?? "";
+const testDocsRunnerSource = readRequired("scripts/test-docs-runner.mjs");
+const testDocsIncludesRemoteSyncGoal =
+  testDocsScript.includes("npm run test:remote-sync-goal") ||
+  (testDocsScript.includes("scripts/test-docs-runner.mjs") &&
+    testDocsRunnerSource.includes('"npm run test:remote-sync-goal"'));
+if (!testDocsIncludesRemoteSyncGoal) {
   fail("test:docs must include test:remote-sync-goal");
 }
 
