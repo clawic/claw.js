@@ -989,13 +989,19 @@ function nonEmpty(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-function parseRangeMs(value: string | undefined): number {
+function parseDurationMs(value: string | undefined, options: { flag: "--range" | "--retention"; allowZero: boolean }): number {
   if (!value) return 3_600_000;
   const match = value.match(/^(\d+)(m|h|d)$/);
-  if (!match) throw new CliHandledError("invalid_range", "Use --range with values like 15m, 1h or 24h.", CLI_EXIT_USAGE);
+  const usage = options.flag === "--range"
+    ? "Use --range with values like 15m, 1h or 24h."
+    : "Use retention with values like 0m, 15m, 1h or 24h.";
+  if (!match) throw new CliHandledError("invalid_range", usage, CLI_EXIT_USAGE);
   const amount = Number(match[1]);
-  if (!Number.isSafeInteger(amount) || amount <= 0) {
-    throw new CliHandledError("invalid_range", "Use --range with a positive duration like 15m, 1h or 24h.", CLI_EXIT_USAGE);
+  if (!Number.isSafeInteger(amount) || amount < 0 || (!options.allowZero && amount === 0)) {
+    const positiveUsage = options.flag === "--range"
+      ? "Use --range with a positive duration like 15m, 1h or 24h."
+      : "Use retention with a non-negative duration like 0m, 15m, 1h or 24h.";
+    throw new CliHandledError("invalid_range", positiveUsage, CLI_EXIT_USAGE);
   }
   const unit = match[2];
   if (unit === "m") return amount * 60_000;
@@ -1003,10 +1009,18 @@ function parseRangeMs(value: string | undefined): number {
   return amount * 86_400_000;
 }
 
+function parseRangeMs(value: string | undefined): number {
+  return parseDurationMs(value, { flag: "--range", allowZero: false });
+}
+
+function parseRetentionMs(value: string | undefined): number {
+  return parseDurationMs(value, { flag: "--retention", allowZero: true });
+}
+
 function purgeMonitorRetention(db: Database.Database, now: number, flags: Record<string, string>): { samples: number; rollups: number; incidents: number } {
-  const rawRetentionMs = parseRangeMs(flags["raw-retention"] ?? flags["sample-retention"] ?? "6h");
-  const rollupRetentionMs = parseRangeMs(flags["rollup-retention"] ?? "7d");
-  const incidentRetentionMs = parseRangeMs(flags["incident-retention"] ?? "7d");
+  const rawRetentionMs = parseRetentionMs(flags["raw-retention"] ?? flags["sample-retention"] ?? "6h");
+  const rollupRetentionMs = parseRetentionMs(flags["rollup-retention"] ?? "7d");
+  const incidentRetentionMs = parseRetentionMs(flags["incident-retention"] ?? "7d");
   const sampleResult = db.prepare("DELETE FROM metric_samples WHERE captured_at < ?").run(now - rawRetentionMs);
   const rollupResult = db.prepare("DELETE FROM metric_rollups WHERE bucket_start_at < ?").run(now - rollupRetentionMs);
   const incidentResult = db.prepare("DELETE FROM metric_incidents WHERE last_seen_at < ?").run(now - incidentRetentionMs);
