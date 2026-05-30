@@ -69,7 +69,11 @@ interface RecordIndexRow {
 
 const RECORD_INDEX_NAME_PREFIX = "claw_records_";
 
-function buildRecordListQuery(collection: CollectionDefinition, options: ListRecordsOptions): RecordListQuery {
+function buildRecordListQuery(
+  collection: CollectionDefinition,
+  options: ListRecordsOptions,
+  fieldSqlExpression: (field: string) => string = recordFieldSqlExpression,
+): RecordListQuery {
   const where: string[] = [];
   const params: Record<string, unknown> = {};
   const allowedFields = recordQueryFields(collection);
@@ -83,7 +87,7 @@ function buildRecordListQuery(collection: CollectionDefinition, options: ListRec
       if (!isSimpleRecordFilterValue(value)) {
         throw new Error(`Unsupported listRecords filter for ${field}; only string, number, boolean, or null values are supported.`);
       }
-      const expression = recordFieldSqlExpression(field);
+      const expression = fieldSqlExpression(field);
       const paramName = `filter_${index++}`;
       if (value === null) {
         where.push(`${expression} IS NULL`);
@@ -100,7 +104,7 @@ function buildRecordListQuery(collection: CollectionDefinition, options: ListRec
   const direction = desc || !sort ? "DESC" : "ASC";
   return {
     where: where.length ? ` AND ${where.join(" AND ")}` : "",
-    orderBy: `${recordFieldSqlExpression(sortField)} ${direction}, id ASC`,
+    orderBy: `${fieldSqlExpression(sortField)} ${direction}, id ASC`,
     params,
   };
 }
@@ -126,6 +130,14 @@ function recordFieldSqlExpression(field: string): string {
   if (field === "createdAt") return "created_at";
   if (field === "updatedAt") return "updated_at";
   return `json_extract(data_json, '$.${field}')`;
+}
+
+function workspaceRecordFieldSqlExpression(field: string): string {
+  if (field === "id") return "record_id";
+  if (field === "createdAt") return "COALESCE(json_extract(payload_json, '$.createdAt'), updated_at, archived_at)";
+  if (field === "updatedAt") return "COALESCE(updated_at, json_extract(payload_json, '$.updatedAt'), archived_at)";
+  if (field === "archivedAt") return "COALESCE(archived_at, json_extract(payload_json, '$.archivedAt'))";
+  return `json_extract(payload_json, '$.${field}')`;
 }
 
 function isSimpleRecordFilterValue(value: unknown): value is string | number | boolean | null {
@@ -925,6 +937,9 @@ export class DatabaseServiceStore {
   listRecords(namespaceId: string, collectionName: string, options: ListRecordsOptions = {}): { total: number; items: RecordEnvelope[] } {
     const collection = this.getCollection(namespaceId, collectionName);
     if (!collection) throw new Error(`Collection ${collectionName} does not exist.`);
+    if (namespaceId === "main" && this.hasWorkspaceRecords(collectionName)) {
+      return this.listWorkspaceRecords(collection, options);
+    }
     const query = buildRecordListQuery(collection, options);
     const params = {
       namespaceId,
@@ -942,6 +957,49 @@ export class DatabaseServiceStore {
       SELECT id, data_json, created_at, updated_at
       FROM records
       WHERE namespace_id = @namespaceId AND collection_name = @collectionName${query.where}
+      ORDER BY ${query.orderBy}
+      LIMIT @limit OFFSET @offset
+    `).all(params) as RecordRow[];
+    return { total, items: rows.map(serializeRecord) };
+  }
+
+  private hasWorkspaceRecords(collectionName: string): boolean {
+    const table = this.sqlite.prepare(`
+      SELECT 1
+      FROM sqlite_master
+      WHERE type = 'table' AND name = 'workspace_records'
+    `).get() as unknown;
+    if (!table) return false;
+    const row = this.sqlite.prepare(`
+      SELECT 1
+      FROM workspace_records
+      WHERE collection_name = ?
+      LIMIT 1
+    `).get(collectionName) as unknown;
+    return Boolean(row);
+  }
+
+  private listWorkspaceRecords(collection: CollectionDefinition, options: ListRecordsOptions): { total: number; items: RecordEnvelope[] } {
+    const query = buildRecordListQuery(collection, options, workspaceRecordFieldSqlExpression);
+    const params = {
+      collectionName: collection.name,
+      ...query.params,
+      limit: clampInt(options.limit, 1, options.maxLimit ?? 10_000, 50),
+      offset: clampInt(options.offset, 0, Number.MAX_SAFE_INTEGER, 0),
+    };
+    const total = (this.sqlite.prepare(`
+      SELECT COUNT(*) AS n
+      FROM workspace_records
+      WHERE collection_name = @collectionName${query.where}
+    `).get(params) as { n: number }).n;
+    const rows = this.sqlite.prepare(`
+      SELECT
+        record_id AS id,
+        payload_json AS data_json,
+        COALESCE(json_extract(payload_json, '$.createdAt'), updated_at, archived_at, '') AS created_at,
+        COALESCE(updated_at, json_extract(payload_json, '$.updatedAt'), archived_at, '') AS updated_at
+      FROM workspace_records
+      WHERE collection_name = @collectionName${query.where}
       ORDER BY ${query.orderBy}
       LIMIT @limit OFFSET @offset
     `).all(params) as RecordRow[];

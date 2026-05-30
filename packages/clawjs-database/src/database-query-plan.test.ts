@@ -145,6 +145,53 @@ test("database record hot path query contracts stay paged and index-backed", () 
   }
 });
 
+test("database service lists canonical local-first workspace records for productivity collections", () => {
+  const rootDir = tempRoot("clawjs-database-workspace-records-");
+  const store = new DatabaseServiceStore(path.join(rootDir, "core.sqlite"), path.join(rootDir, "files"));
+  try {
+    store.sqlite.exec(`
+      CREATE TABLE workspace_records (
+        collection_name TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        updated_at TEXT,
+        archived_at TEXT,
+        PRIMARY KEY (collection_name, record_id)
+      );
+      CREATE INDEX workspace_records_collection_updated_idx
+        ON workspace_records(collection_name, updated_at DESC, record_id ASC);
+    `);
+    store.sqlite.prepare(`
+      INSERT INTO workspace_records (collection_name, record_id, payload_json, updated_at, archived_at)
+      VALUES ('projects', @id, @payload, @updatedAt, NULL)
+    `).run({
+      id: "project-visible",
+      updatedAt: "2026-05-14T14:47:10.553Z",
+      payload: JSON.stringify({
+        id: "project-visible",
+        name: "Visible Project",
+        status: "in_progress",
+        createdAt: "2026-05-14T14:47:10.553Z",
+        updatedAt: "2026-05-14T14:47:10.553Z",
+      }),
+    });
+
+    const page = store.listRecords("main", "projects", {
+      filter: { status: "in_progress" },
+      sort: "-updatedAt",
+      limit: 100,
+    });
+
+    assert.equal(page.total, 1);
+    assert.equal(page.items.length, 1);
+    assert.equal(page.items[0]?.id, "project-visible");
+    assert.equal(page.items[0]?.name, "Visible Project");
+  } finally {
+    store.close();
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
 test("database HTTP records route clamps oversized pages at the API boundary", async () => {
   const rootDir = tempRoot("clawjs-database-http-query-contract-");
   const dbPath = path.join(rootDir, "core.sqlite");
