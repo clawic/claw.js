@@ -16,6 +16,14 @@ export const CUSTOM_APP_SDK_SCHEMA_REFS = {
   resourcesListResult: "claw.resources.listResult.v1",
   resourcesRead: "claw.resources.read.v1",
   resourcesPayload: "claw.resources.payload.v1",
+  nodesInventoryRequest: "claw.nodes.inventoryRequest.v1",
+  nodesInventory: "claw.nodes.inventory.v1",
+  resourcesLocationRequest: "claw.resources.locationRequest.v1",
+  resourcesLocation: "claw.resources.location.v1",
+  localForgeInventoryRequest: "claw.localForge.inventoryRequest.v1",
+  localForgeInventory: "claw.localForge.inventory.v1",
+  clusterControlPlaneInspectRequest: "claw.cluster.controlPlaneInspectRequest.v1",
+  clusterControlPlaneInspect: "claw.cluster.controlPlaneInspect.v1",
   systemTelemetrySnapshotRequest: "claw.system.telemetry.snapshot.request.v1",
   systemTelemetrySnapshot: "claw.system.telemetry.snapshot.v1",
   systemTelemetryHistoryRequest: "claw.system.telemetry.history.request.v1",
@@ -162,6 +170,99 @@ export const customAppSDKResourcesPayloadSchema = z.object({
   error: z.string().optional(),
   redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
   source: z.literal("resources.read"),
+}).strict();
+
+export const customAppSDKNodesInventoryRequestSchema = z.object({
+  nodeId: z.string().min(1).optional(),
+  includeLocators: z.boolean().default(true),
+  includeOperationalSummary: z.boolean().default(true),
+}).strict();
+
+export const customAppSDKNodesInventorySchema = z.object({
+  source: z.literal("nodes.inventory"),
+  nodes: z.array(z.object({
+    nodeId: z.string().min(1),
+    displayName: z.string().min(1).optional(),
+    nodeFingerprint: z.string().min(16).optional(),
+    state: z.string().min(1).optional(),
+    observedLocators: z.array(z.object({
+      kind: z.string().min(1),
+      value: z.string().min(1),
+      authority: z.literal(false),
+    }).passthrough()).default([]),
+    operationalSummary: z.object({
+      bounded: z.literal(true),
+      startsPolling: z.literal(false),
+      grantsAuthority: z.literal(false),
+    }).passthrough().optional(),
+  }).passthrough()),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+export const customAppSDKResourcesLocationRequestSchema = z.object({
+  resourceId: z.string().min(1).optional(),
+  projectId: z.string().min(1).optional(),
+  includeRisk: z.boolean().default(false),
+}).strict();
+
+export const customAppSDKResourcesLocationSchema = z.object({
+  source: z.literal("resources.location"),
+  resources: z.array(z.object({
+    id: z.string().min(1),
+    kind: z.string().min(1),
+    authority: z.string().min(1).optional(),
+    locators: z.array(z.object({
+      kind: z.string().min(1),
+      value: z.string().min(1),
+      authority: z.boolean(),
+    }).passthrough()).default([]),
+    risk: z.unknown().optional(),
+  }).passthrough()),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+export const customAppSDKLocalForgeInventoryRequestSchema = z.object({
+  projectId: z.string().min(1).optional(),
+  includeMergePlans: z.boolean().default(true),
+  includeRecoveries: z.boolean().default(true),
+}).strict();
+
+export const customAppSDKLocalForgeInventorySchema = z.object({
+  source: z.literal("localForge.inventory"),
+  worktrees: z.array(z.unknown()),
+  claims: z.array(z.unknown()),
+  snapshots: z.array(z.unknown()),
+  reviews: z.array(z.unknown()),
+  mergePlans: z.array(z.unknown()).default([]),
+  recoveries: z.array(z.unknown()),
+  staleEvaluation: z.unknown().optional(),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
+}).strict();
+
+export const customAppSDKClusterControlPlaneInspectRequestSchema = z.object({
+  coordinatorId: z.string().min(1).optional(),
+  includeStoragePolicies: z.boolean().default(true),
+  includePolicySnapshots: z.boolean().default(true),
+}).strict();
+
+export const customAppSDKClusterControlPlaneInspectSchema = z.object({
+  source: z.literal("cluster.controlPlane.inspect"),
+  coordinatorRecords: z.array(z.unknown()).default([]),
+  storagePolicies: z.array(z.object({
+    resourceClass: z.string().min(1),
+    replicationClass: z.string().min(1),
+    directCrossNodeFileRead: z.literal(false),
+    blindReplication: z.literal(false),
+  }).passthrough()).default([]),
+  logicalServiceAccess: z.array(z.object({
+    accessPath: z.literal("logical_framework_service"),
+    directDatabaseFileRead: z.literal(false),
+    bounded: z.literal(true),
+  }).passthrough()).default([]),
+  policySnapshots: z.array(z.unknown()).default([]),
+  authorityEvaluations: z.array(z.unknown()).default([]),
+  exportRestoreReceipts: z.array(z.unknown()).default([]),
+  redactionPolicy: z.literal(CUSTOM_APP_REDACTION_POLICY_ID),
 }).strict();
 
 const systemTelemetryMetricValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
@@ -610,6 +711,10 @@ export const customAppSDKRequestPartialSchema = z.object({
     "db.query",
     "resources.list",
     "resources.read",
+    "nodes.inventory",
+    "resources.location",
+    "localForge.inventory",
+    "cluster.controlPlane.inspect",
     "system.telemetry.snapshot",
     "system.telemetry.history",
     "system.telemetry.metrics",
@@ -639,6 +744,14 @@ export const customAppSDKSchemaRegistry = {
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesListResult]: customAppSDKResourcesListResultSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesRead]: customAppSDKResourcesReadSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesPayload]: customAppSDKResourcesPayloadSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.nodesInventoryRequest]: customAppSDKNodesInventoryRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.nodesInventory]: customAppSDKNodesInventorySchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesLocationRequest]: customAppSDKResourcesLocationRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.resourcesLocation]: customAppSDKResourcesLocationSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.localForgeInventoryRequest]: customAppSDKLocalForgeInventoryRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.localForgeInventory]: customAppSDKLocalForgeInventorySchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.clusterControlPlaneInspectRequest]: customAppSDKClusterControlPlaneInspectRequestSchema,
+  [CUSTOM_APP_SDK_SCHEMA_REFS.clusterControlPlaneInspect]: customAppSDKClusterControlPlaneInspectSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshotRequest]: customAppSDKSystemTelemetrySnapshotRequestSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetrySnapshot]: customAppSDKSystemTelemetrySnapshotSchema,
   [CUSTOM_APP_SDK_SCHEMA_REFS.systemTelemetryHistoryRequest]: customAppSDKSystemTelemetryHistoryRequestSchema,

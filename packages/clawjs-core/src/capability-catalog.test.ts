@@ -21,6 +21,7 @@ import { buildCustomAppSDKInspectionPayload } from "./custom-app-sdk-inspection.
 const CANONICAL_CAPABILITY_SURFACES = ["sdk", "cli", "serviceApi", "mcp", "relay", "hostBridge"];
 const EXPECTED_CUSTOM_APP_CAPABILITY_IDS = [
   "actions.invoke",
+  "cluster.controlPlane.inspect",
   "db.query",
   "iot.device.action.invoke",
   "jobs.cancel",
@@ -29,8 +30,11 @@ const EXPECTED_CUSTOM_APP_CAPABILITY_IDS = [
   "jobs.list",
   "jobs.start",
   "jobs.stream",
+  "localForge.inventory",
   "mac.action.plan",
+  "nodes.inventory",
   "resources.list",
+  "resources.location",
   "resources.read",
   "search.query",
   "secrets.broker",
@@ -42,12 +46,16 @@ const EXPECTED_CUSTOM_APP_CAPABILITY_IDS = [
   "system.telemetry.widgets",
 ];
 const EXPECTED_ORDINARY_ACCESS_CAPABILITY_IDS = [
+  "cluster.controlPlane.inspect",
   "db.query",
   "jobs.events",
   "jobs.get",
   "jobs.list",
   "jobs.stream",
+  "localForge.inventory",
+  "nodes.inventory",
   "resources.list",
+  "resources.location",
   "resources.read",
   "search.query",
   "system.telemetry.history",
@@ -75,6 +83,7 @@ const EXPECTED_CLI_BLOCKED_CAPABILITY_IDS = [
 ];
 const EXPECTED_MCP_METADATA_PROJECTION_CAPABILITY_IDS = [
   "actions.invoke",
+  "cluster.controlPlane.inspect",
   "db.query",
   "iot.device.action.invoke",
   "jobs.cancel",
@@ -83,6 +92,9 @@ const EXPECTED_MCP_METADATA_PROJECTION_CAPABILITY_IDS = [
   "jobs.list",
   "jobs.start",
   "jobs.stream",
+  "localForge.inventory",
+  "nodes.inventory",
+  "resources.location",
 ];
 const EXPECTED_MCP_BLOCKED_CAPABILITY_IDS = ["secrets.broker"];
 const EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS = [
@@ -94,8 +106,10 @@ const EXPECTED_RELAY_METADATA_PROJECTION_CAPABILITY_IDS = [
   "jobs.list",
   "jobs.start",
   "jobs.stream",
+  "localForge.inventory",
   "mac.action.plan",
   "resources.list",
+  "resources.location",
   "resources.read",
   "system.telemetry.control.plan",
   "system.telemetry.history",

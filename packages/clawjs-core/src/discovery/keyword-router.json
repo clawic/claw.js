@@ -344,6 +344,17 @@
       "family": "agent"
     },
     {
+      "id": "instructions",
+      "keywords": ["instructions", "agent-instructions", "instruction-docs", "governance-instructions", "agents.md", "claude.md", "instrucciones", "instrucciones-agente"],
+      "primaryCommand": "instructions",
+      "summary": "Unified resolver for applicable agent governance and instruction sources.",
+      "useWhen": "You need to discover what rules, guidance, compact instructions, managed Markdown docs, or AGENTS/CLAUDE files apply before acting.",
+      "exampleInvocation": "claw instructions search billing --json",
+      "relatedConcepts": ["rules", "guidance", "library", "router-discovery"],
+      "antiPattern": "Do not load every Markdown file into prompt context; search candidates first, then read only the summary, section, or full document needed.",
+      "family": "agent"
+    },
+    {
       "id": "context",
       "keywords": ["context", "context-pack", "briefing", "background", "primer", "loadout"],
       "primaryCommand": "context",

@@ -1662,6 +1662,34 @@ export const clawPortContractCatalog = defineStableCatalogFromEntries(Object.ent
   direction: "inbound",
 })]));
 
+function nclfInventoryNarrative(command: "get" | "describe" | "where" | "risk", programmatic: string): ClawSurfaceNarrative {
+  return {
+    concept: "Transversal node, resource, location, and risk inventory view over existing framework surfaces.",
+    authorizingDecision: {
+      ref: "ADR 0053: Nodes And Cluster Control Plane",
+      path: "docs/adr/0053-nodes-and-cluster-control-plane.md",
+    },
+    completingSurface: {
+      human: "docs/governance/nodes-cluster-local-forge/cluster-control-plane-checklist.md",
+      programmatic,
+    },
+    nonInference: `claw ${command} is a bounded read-only view and does not grant node trust, locator authority, sync execution, or failover promotion.`,
+  };
+}
+
+function nclfInventoryResourceContract(validation: string): ClawResourceContract {
+  return {
+    startup: "Runs only when invoked from the CLI; importing ClawJS does not start discovery, sync, transport, or failover workers.",
+    idle: "No daemon, watcher, poller, heartbeat loop, or background remote transport is started.",
+    memory: "Reads bounded CLI registry and surface registry metadata plus explicit local command inputs.",
+    streaming: "No stream is opened; output is a bounded text or JSON response.",
+    storage: "Does not read another node database file and does not write persistent storage.",
+    hotPath: "Agent/operator inspection path only; application runtime hot paths must not depend on it.",
+    scale: "Output is bounded by registered node/resource classes and requested subject identifiers.",
+    validation,
+  };
+}
+
 export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>> = {
   about: {
     concept: "Human and agent orientation command that explains the Claw CLI purpose, capability map, and safe entry commands without invoking domain actions.",
@@ -1686,6 +1714,18 @@ export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>>
       programmatic: "claw router <keyword> [keyword ...] --json",
     },
     nonInference: "Router matches are advisory command-selection evidence only; they do not execute matched commands or authorize unknown aliases.",
+  },
+  instructions: {
+    concept: "Unified advisory resolver for applicable agent governance across rules, guidance, compact CLI instructions, managed Markdown instruction documents, and read-only AGENTS/CLAUDE files.",
+    authorizingDecision: {
+      ref: "ADR 0017: Discoverability and meta-code routing",
+      path: "docs/adr/0017-discoverability-and-meta-code-routing.md",
+    },
+    completingSurface: {
+      human: "docs/cli.md Guidance And Resources section",
+      programmatic: "claw instructions search|read|docs|graph --json",
+    },
+    nonInference: "Search results are recommendations only; the command does not inject long documents, compile prompt context, edit AGENTS/CLAUDE files, or merge the internal rules and guidance models.",
   },
   source: {
     concept: "Source-mode inspection command that reports whether the CLI is operating from trusted local source or package mode.",
@@ -1747,6 +1787,10 @@ export const cliCommandNarratives: Partial<Record<string, ClawSurfaceNarrative>>
     },
     nonInference: "This command does not reveal plaintext secrets and does not perform restore mutation without explicit approval and signed-host proof when needed.",
   },
+  get: nclfInventoryNarrative("get", "claw get nodes|resources|worktrees --json"),
+  describe: nclfInventoryNarrative("describe", "claw describe node <node-id>|resource <resource-id> --json"),
+  where: nclfInventoryNarrative("where", "claw where node <node-id>|project <project-id> --json"),
+  risk: nclfInventoryNarrative("risk", "claw risk node <node-id> --json"),
 };
 
 export const cliCommandResourceContracts: Partial<Record<string, ClawResourceContract>> = {
@@ -1769,6 +1813,16 @@ export const cliCommandResourceContracts: Partial<Record<string, ClawResourceCon
     hotPath: "Base CLI discovery path only; keyword matching must remain deterministic and lightweight.",
     scale: "Search is bounded by the generated keyword concept list and requested limit.",
     validation: "packages/clawjs/src/cli-router-command.test.ts",
+  },
+  instructions: {
+    startup: "Runs only when invoked from the CLI; importing ClawJS does not scan instruction files or open the instruction store.",
+    idle: "No daemon, watcher, or background task is started.",
+    memory: "Search reads bounded compact rule, guidance, CLI instruction, managed document metadata, and ancestor agent-file candidates; read loads only the requested summary, section, or full document.",
+    streaming: "No stream is opened; output is a bounded text or JSON response.",
+    storage: "Writes only managed Markdown instruction docs and local snapshot versions under the Claw data root; AGENTS.md and CLAUDE.md are external read-only inputs.",
+    hotPath: "Agent governance discovery path only; it must not become an automatic prompt injection or broad filesystem indexing path.",
+    scale: "Search results are capped by --limit and rank title, tags, applicability, priority, and exact matches before lower-signal metadata.",
+    validation: "packages/clawjs/src/cli-instructions-command.test.ts",
   },
   source: {
     startup: "Runs only when invoked from the CLI; importing ClawJS does not inspect source mode.",
@@ -1800,6 +1854,10 @@ export const cliCommandResourceContracts: Partial<Record<string, ClawResourceCon
     scale: "Designed for repo-local manifests with targeted lanes and result fingerprint reuse.",
     validation: "packages/clawjs/src/cli-agent-resource-command.test.ts",
   },
+  get: nclfInventoryResourceContract("packages/clawjs/src/cli-remote-sync-command.test.ts"),
+  describe: nclfInventoryResourceContract("packages/clawjs/src/cli-remote-sync-command.test.ts"),
+  where: nclfInventoryResourceContract("packages/clawjs/src/cli-remote-sync-command.test.ts"),
+  risk: nclfInventoryResourceContract("packages/clawjs/src/cli-remote-sync-command.test.ts"),
 };
 
 export const clawCliCommandContractCatalog = defineStableCatalogFromEntries(cliCommands.map((command) => {

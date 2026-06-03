@@ -68,6 +68,12 @@ test("routeKeywords matches Spanish synonyms", () => {
   assert.equal(matches[0]?.concept.id, "task");
 });
 
+test("routeKeywords resolves unified instruction governance", () => {
+  const matches = routeKeywords(["instructions"], { limit: 1 });
+  assert.equal(matches[0]?.concept.id, "instructions");
+  assert.equal(matches[0]?.concept.primaryCommand, "instructions");
+});
+
 test("routeKeywords accepts multiple keywords and ranks intersecting concepts higher", () => {
   const matches = routeKeywords(["task", "deadline", "blocker"], { limit: 6 });
   const ids = matches.map((match) => match.concept.id);

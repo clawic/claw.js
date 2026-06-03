@@ -94,6 +94,15 @@ import {
   clawJsonSchemasV1,
   agentRecordSchema,
   createCodexReadOnlySourceDescriptor,
+  createClusterCoordinatorRecord,
+  createClusterExportRestoreReceipt,
+  createClusterLogicalServiceAccessReceipt,
+  createClusterPolicySnapshot,
+  createClusterStoragePolicyReceipt,
+  createGovernedBrowserCredentialFillReceipt,
+  createGovernedBrowserHumanHandoffReceipt,
+  createGovernedBrowserProfileHandoffReceipt,
+  createGovernedBrowserSessionResource,
   resolveCodexConfigPath,
   resolveCodexHomeDir,
   resolveCodexSessionsDir,
@@ -103,11 +112,16 @@ import {
   createMeshInvitationAcceptance,
   createMeshResourceShare,
   createMeshRevocation,
+  createNodeIdentity,
+  createNodeKeyRotationReceipt,
+  createNodeReconnectReceipt,
+  createNodeTrustDecision,
   createRemoteAgentServiceExecutionReceipt,
   createRemoteClientCacheSnapshot,
   createRemoteCompatibilityAdapterReceipt,
   createRemoteGatewayAuditReceipt,
   createRemoteSurfaceClassificationReceipt,
+  createTransportHandshakeReceipt,
   createSyncAuthorityHandoffReceipt,
   createSyncDriverApplicationReceipt,
   createSyncResourceManifest,
@@ -118,6 +132,8 @@ import {
   deadlineRecordSchema,
   eventRecordSchema,
   evaluateRemoteAgentServiceAccess,
+  evaluateClusterAuthority,
+  evaluateRemoteTransportIdentity,
   evaluateRemoteAccess,
   feedbackRecordSchema,
   findClawPersistentSurfaceNode,
@@ -140,7 +156,10 @@ import {
   meshResourceShareSchema,
   meshRevocationSchema,
   nodeIdentitySchema,
+  nodeKeyRotationReceiptSchema,
+  nodeReconnectReceiptSchema,
   noteRecordSchema,
+  observeNodeLocator,
   operationalCheckRecordSchema,
   personIdentitySchema,
   projectRecordSchema,
@@ -176,6 +195,7 @@ import {
   remoteRouteContractCatalogSchema,
   remoteSurfaceClassificationReceiptSchema,
   remoteGatewayAuditReceiptSchema,
+  selectGovernedBrowserHumanNode,
   remoteSecretLeaseSchema,
   remoteSyncRequiredDecisionIds,
   remoteSyncRequiredRouteIds,
@@ -279,6 +299,94 @@ test("remote gateway sync contracts register required layers, routes, and safe d
   assert.equal(manifest.cachePolicy.storesSecrets, false);
   assert.equal(manifest.secretPolicy.plaintextReplication, false);
 
+  const coreSqlitePolicy = createClusterStoragePolicyReceipt({
+    resourceClass: "core_sqlite",
+    createdAt: "2026-05-17T10:00:10.000Z",
+  });
+  assert.equal(coreSqlitePolicy.replicationClass, "snapshot_backup_standby");
+  assert.equal(coreSqlitePolicy.directCrossNodeFileRead, false);
+  assert.equal(coreSqlitePolicy.blindReplication, false);
+
+  const blobPolicy = createClusterStoragePolicyReceipt({
+    resourceClass: "blob_file",
+    createdAt: "2026-05-17T10:00:11.000Z",
+  });
+  assert.equal(blobPolicy.replicationClass, "manifest_demand_residency");
+  assert.equal(blobPolicy.plaintextSecretsIncluded, false);
+
+  const searchPolicy = createClusterStoragePolicyReceipt({
+    resourceClass: "search_index",
+    createdAt: "2026-05-17T10:00:12.000Z",
+  });
+  assert.equal(searchPolicy.replicationClass, "rebuildable_or_explicit_shard");
+
+  const metricsPolicy = createClusterStoragePolicyReceipt({
+    resourceClass: "metrics_logs",
+    createdAt: "2026-05-17T10:00:13.000Z",
+  });
+  assert.equal(metricsPolicy.replicationClass, "node_local_bounded_rollup");
+  assert.equal(metricsPolicy.physicalDriverRequired, false);
+
+  const logicalAccess = createClusterLogicalServiceAccessReceipt({
+    serviceId: "framework.records",
+    routeId: "sync.sqliteResources",
+    resourceClass: "core_sqlite",
+    requesterNodeId: "node.mac",
+    authorityNodeId: "node.server",
+    createdAt: "2026-05-17T10:00:14.000Z",
+  });
+  assert.equal(logicalAccess.accessPath, "logical_framework_service");
+  assert.equal(logicalAccess.directDatabaseFileRead, false);
+  assert.equal(logicalAccess.bounded, true);
+
+  const coordinator = createClusterCoordinatorRecord({
+    clusterRootRef: "root:local-test",
+    coordinatorNodeId: "node.mac",
+    standbyNodeIds: ["node.server"],
+    createdAt: "2026-05-17T10:00:15.000Z",
+  });
+  assert.equal(coordinator.epoch, 1);
+  assert.equal(coordinator.term, 1);
+  assert.deepEqual(coordinator.standbyNodeIds, ["node.server"]);
+
+  const policySnapshot = createClusterPolicySnapshot({
+    coordinator,
+    coordinatorAvailable: false,
+    authorizedLocalWorkNodeIds: ["node.mac"],
+    capturedAt: "2026-05-17T10:00:16.000Z",
+  });
+  assert.equal(policySnapshot.lastKnownGood, true);
+  assert.equal(policySnapshot.failClosedForNewAuthority, true);
+
+  const deniedAuthority = evaluateClusterAuthority({
+    policySnapshot,
+    requesterNodeId: "node.mac",
+    action: "new_authority_decision",
+    evaluatedAt: "2026-05-17T10:00:17.000Z",
+  });
+  assert.equal(deniedAuthority.decision, "deny");
+  assert.equal(deniedAuthority.failClosed, true);
+  assert.equal(deniedAuthority.reason, "coordinator_unavailable_new_authority_denied");
+
+  const allowedLocalWork = evaluateClusterAuthority({
+    policySnapshot,
+    requesterNodeId: "node.mac",
+    action: "authorized_local_work",
+    evaluatedAt: "2026-05-17T10:00:18.000Z",
+  });
+  assert.equal(allowedLocalWork.decision, "allow");
+  assert.equal(allowedLocalWork.reason, "last_known_good_authorized_local_work");
+
+  const exportPreview = createClusterExportRestoreReceipt({
+    coordinator,
+    mode: "export_preview",
+    createdAt: "2026-05-17T10:00:19.000Z",
+  });
+  assert.equal(exportPreview.includesCoreSqliteSnapshot, true);
+  assert.equal(exportPreview.includesPolicySnapshot, true);
+  assert.equal(exportPreview.destructive, false);
+  assert.deepEqual(exportPreview.externalPending, ["physical_authority_handoff"]);
+
   const cacheSnapshot = createRemoteClientCacheSnapshot({
     manifest,
     objectRef: "skill.review",
@@ -322,6 +430,171 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     publicKeyRef: "key:server",
   }).success, true);
 
+  const firstLocator = observeNodeLocator({
+    kind: "lan_ip",
+    value: "192.0.2.10",
+    observedAt: "2026-05-17T10:00:00.000Z",
+  });
+  const movedLocator = observeNodeLocator({
+    kind: "tailscale",
+    value: "example-node.ts.invalid",
+    observedAt: "2026-05-17T10:05:00.000Z",
+  });
+  const durableNode = createNodeIdentity({
+    nodeId: "node.server",
+    displayName: "Server",
+    hostKind: "headless_server",
+    publicKeyRef: "key:server",
+    publicKeyMaterial: "server-public-key",
+    keyAlgorithm: "ed25519",
+    trustLevel: "fully_owned",
+    trustModes: ["sovereign_e2e_tunnel", "governed_gateway"],
+    state: "online",
+    createdAt: "2026-05-17T10:00:00.000Z",
+    observedLocators: [firstLocator, movedLocator],
+  });
+  assert.equal(durableNode.nodeId, "node.server");
+  assert.match(durableNode.nodeFingerprint, /^sha256:/);
+  assert.equal(durableNode.observedLocators.every((locator) => locator.authority === false), true);
+  assert.deepEqual(durableNode.observedLocators.map((locator) => locator.value), ["192.0.2.10", "example-node.ts.invalid"]);
+
+  const verifiedHandshake = createTransportHandshakeReceipt({
+    initiatorNodeId: "node.local",
+    responderNodeId: durableNode.nodeId,
+    responderNodeFingerprint: durableNode.nodeFingerprint,
+    expectedResponderFingerprint: durableNode.nodeFingerprint,
+    coordinatorNodeId: "node.local",
+    challengeNonce: "challenge-nonce-local",
+    responseNonce: "response-nonce-server",
+    proofOfPossession: {
+      algorithm: "ed25519",
+      challengeSigned: true,
+      signatureRef: "sig:server:challenge",
+    },
+    createdAt: "2026-05-17T10:06:00.000Z",
+  });
+  assert.equal(verifiedHandshake.identityVerified, true);
+  assert.equal(verifiedHandshake.transportReachable, true);
+  assert.equal(verifiedHandshake.discoveryAuthority, false);
+  assert.equal(verifiedHandshake.keyMismatch, false);
+
+  const mismatchedHandshake = createTransportHandshakeReceipt({
+    initiatorNodeId: "node.local",
+    responderNodeId: durableNode.nodeId,
+    responderNodeFingerprint: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    expectedResponderFingerprint: durableNode.nodeFingerprint,
+    coordinatorNodeId: "node.local",
+    challengeNonce: "challenge-nonce-local",
+    responseNonce: "response-nonce-server",
+    proofOfPossession: {
+      algorithm: "ed25519",
+      challengeSigned: true,
+      signatureRef: "sig:server:challenge",
+    },
+    createdAt: "2026-05-17T10:07:00.000Z",
+  });
+  assert.equal(mismatchedHandshake.identityVerified, false);
+  assert.equal(mismatchedHandshake.keyMismatch, true);
+
+  const reconnectBeforeVerification = createNodeReconnectReceipt({
+    node: durableNode,
+    handshake: mismatchedHandshake,
+    previousState: "offline",
+    locator: movedLocator,
+    evaluatedAt: "2026-05-17T10:07:10.000Z",
+  });
+  assert.equal(nodeReconnectReceiptSchema.safeParse(reconnectBeforeVerification).success, true);
+  assert.equal(reconnectBeforeVerification.remoteWorkAvailable, false);
+  assert.equal(reconnectBeforeVerification.failClosed, true);
+  assert.equal(reconnectBeforeVerification.nextState, "quarantined");
+  assert.equal(reconnectBeforeVerification.reason, "fingerprint_mismatch");
+
+  const reconnectAfterVerification = createNodeReconnectReceipt({
+    node: durableNode,
+    handshake: verifiedHandshake,
+    previousState: "offline",
+    locator: movedLocator,
+    evaluatedAt: "2026-05-17T10:07:20.000Z",
+  });
+  assert.equal(reconnectAfterVerification.remoteWorkAvailable, true);
+  assert.equal(reconnectAfterVerification.failClosed, false);
+  assert.equal(reconnectAfterVerification.nextState, "online");
+  assert.equal(reconnectAfterVerification.identityVerified, true);
+  assert.equal(reconnectAfterVerification.reason, "identity_verified_after_reconnect");
+
+  assert.deepEqual(evaluateRemoteTransportIdentity({
+    expectedNodeId: durableNode.nodeId,
+    expectedFingerprint: durableNode.nodeFingerprint,
+    responderNodeId: durableNode.nodeId,
+    responderFingerprint: durableNode.nodeFingerprint,
+    proofOfPossession: true,
+  }), {
+    accepted: true,
+    identityVerified: true,
+    keyMismatch: false,
+    failClosed: false,
+    reason: "identity_verified",
+  });
+  assert.equal(evaluateRemoteTransportIdentity({
+    expectedNodeId: durableNode.nodeId,
+    expectedFingerprint: durableNode.nodeFingerprint,
+    responderNodeId: durableNode.nodeId,
+    responderFingerprint: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    proofOfPossession: true,
+  }).failClosed, true);
+
+  const unsignedRotation = createNodeKeyRotationReceipt({
+    nodeId: durableNode.nodeId,
+    previousNodeFingerprint: durableNode.nodeFingerprint,
+    proposedNodeFingerprint: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    rotationMethod: "signed_old_key",
+    createdAt: "2026-05-17T10:07:30.000Z",
+  });
+  assert.equal(nodeKeyRotationReceiptSchema.safeParse(unsignedRotation).success, true);
+  assert.equal(unsignedRotation.accepted, false);
+  assert.equal(unsignedRotation.failClosed, true);
+  assert.equal(unsignedRotation.reason, "missing_old_key_signature");
+
+  const signedRotation = createNodeKeyRotationReceipt({
+    nodeId: durableNode.nodeId,
+    previousNodeFingerprint: durableNode.nodeFingerprint,
+    proposedNodeFingerprint: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    rotationMethod: "signed_old_key",
+    oldKeySignatureRef: "sig:old-key:rotation",
+    createdAt: "2026-05-17T10:07:45.000Z",
+  });
+  assert.equal(signedRotation.accepted, true);
+  assert.equal(signedRotation.failClosed, false);
+  assert.equal(signedRotation.reason, "signed_old_key_verified");
+
+  const humanRepairRotation = createNodeKeyRotationReceipt({
+    nodeId: durableNode.nodeId,
+    previousNodeFingerprint: durableNode.nodeFingerprint,
+    proposedNodeFingerprint: "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    rotationMethod: "human_repair",
+    humanRepairingRef: "repair:human-reviewed",
+    createdAt: "2026-05-17T10:07:50.000Z",
+  });
+  assert.equal(humanRepairRotation.accepted, true);
+  assert.equal(humanRepairRotation.reason, "human_repair_verified");
+
+  const trustDecision = createNodeTrustDecision({
+    subjectNodeId: durableNode.nodeId,
+    subjectNodeFingerprint: durableNode.nodeFingerprint,
+    coordinatorNodeId: "node.local",
+    actor: {
+      actorKind: "human",
+      actorId: "user.local",
+      nodeId: "node.local",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    createdAt: "2026-05-17T10:08:00.000Z",
+  });
+  assert.equal(trustDecision.trustSubject, "node_identity_fingerprint");
+  assert.equal(trustDecision.subjectNodeFingerprint, durableNode.nodeFingerprint);
+  assert.equal(trustDecision.locatorAuthority, false);
+
   assert.equal(remoteSecretLeaseSchema.safeParse({
     leaseId: "lease.1",
     secretRef: "vault://agents/ops",
@@ -339,6 +612,149 @@ test("remote gateway sync contracts register required layers, routes, and safe d
     plaintextReturned: false,
     auditEventId: "audit.lease",
   }).success, true);
+
+  const browserSession = createGovernedBrowserSessionResource({
+    sessionId: "session.login",
+    profileId: "profile.login",
+    ownerNodeId: "node.browser",
+    assignedAgentId: "agent.browser",
+    allowedOrigins: ["https://example.com"],
+    createdAt: "2026-05-17T10:00:00.000Z",
+  });
+  assert.equal(browserSession.profileRoot, ".claw/browser");
+  assert.equal(browserSession.rawProfileAccessOwner, "signed_host_browser_broker");
+  assert.equal(browserSession.agentRawDomAccess, false);
+
+  const browserLease = remoteSecretLeaseSchema.parse({
+    leaseId: "lease.browser",
+    secretRef: "vault://logins/example",
+    actor: {
+      actorKind: "agent",
+      actorId: "agent.browser",
+      agentId: "agent.browser",
+      assignmentId: "assignment.login",
+      nodeId: "node.browser",
+      transport: "gateway",
+      trustMode: "governed_gateway",
+    },
+    action: "browser_credential_fill",
+    resourceId: "browser:session.login",
+    expiresAt: "2026-05-17T10:20:00.000Z",
+    plaintextReturned: false,
+    auditEventId: "audit.browser.lease",
+  });
+  const safeFill = createGovernedBrowserCredentialFillReceipt({
+    session: browserSession,
+    lease: browserLease,
+    fieldKind: "password",
+    fieldTarget: "css:input[type=password]",
+    allowedOrigin: "https://example.com",
+    observedOrigin: "https://example.com",
+    submitPolicy: "submit_after_fill",
+    brokerIsolationVerified: true,
+    hostAuditPersisted: true,
+    nodeTrusted: true,
+    physicalBrokerAvailable: true,
+    createdAt: "2026-05-17T10:05:00.000Z",
+  });
+  assert.equal(safeFill.fillStatus, "filled");
+  assert.equal(safeFill.submitted, true);
+  assert.equal(safeFill.plaintextReturned, false);
+  assert.equal(safeFill.totpSeedReturned, false);
+  assert.equal(safeFill.totpCodeReturned, false);
+  assert.equal(safeFill.cookieMaterialReturned, false);
+  assert.equal(safeFill.domFieldValueReturned, false);
+
+  const blockedTotpFill = createGovernedBrowserCredentialFillReceipt({
+    session: browserSession,
+    lease: browserLease,
+    fieldKind: "totp",
+    fieldTarget: "css:#otp",
+    allowedOrigin: "https://example.com",
+    observedOrigin: "https://evil.example",
+    brokerIsolationVerified: false,
+    hostAuditPersisted: true,
+    agentRawBrowserReadAvailable: true,
+    nodeTrusted: true,
+    physicalBrokerAvailable: true,
+    createdAt: "2026-05-17T10:05:00.000Z",
+  });
+  assert.equal(blockedTotpFill.fillStatus, "handoff_required");
+  assert.equal(blockedTotpFill.blockedReasons.includes("origin_mismatch"), true);
+  assert.equal(blockedTotpFill.blockedReasons.includes("unsafe_agent_browser_read"), true);
+  assert.equal(blockedTotpFill.blockedReasons.includes("missing_broker_isolation"), true);
+  assert.equal(blockedTotpFill.totpCodeReturned, false);
+
+  const preference = selectGovernedBrowserHumanNode({
+    actorId: "agent.browser",
+    defaultHumanNodeId: "node.human.default",
+    presenceCandidateNodeId: "node.human.active",
+    evaluatedAt: "2026-05-17T10:06:00.000Z",
+  });
+  assert.equal(preference.selectedNodeId, "node.human.default");
+  assert.equal(preference.selectionReason, "manual_default");
+  assert.equal(preference.configWinsOverPresence, true);
+  const explicitPreference = selectGovernedBrowserHumanNode({
+    actorId: "agent.browser",
+    defaultHumanNodeId: "node.human.default",
+    explicitTargetNodeId: "node.human.override",
+    presenceCandidateNodeId: "node.human.active",
+    evaluatedAt: "2026-05-17T10:06:00.000Z",
+  });
+  assert.equal(explicitPreference.selectedNodeId, "node.human.override");
+  assert.equal(explicitPreference.selectionReason, "explicit_override");
+  const handoff = createGovernedBrowserHumanHandoffReceipt({
+    session: browserSession,
+    preference,
+    handoffUrl: "claw://browser/session/session.login",
+    targetNodeTrusted: true,
+    createdAt: "2026-05-17T10:07:00.000Z",
+  });
+  assert.equal(handoff.status, "opened");
+  assert.equal(handoff.defaultHumanNodeUsed, true);
+  assert.equal(handoff.cookiesReturned, false);
+  assert.equal(handoff.secretsReturned, false);
+
+  const missingHumanPreference = selectGovernedBrowserHumanNode({
+    actorId: "agent.browser",
+    evaluatedAt: "2026-05-17T10:06:00.000Z",
+  });
+  const blockedHandoff = createGovernedBrowserHumanHandoffReceipt({
+    session: browserSession,
+    preference: missingHumanPreference,
+    createdAt: "2026-05-17T10:07:00.000Z",
+  });
+  assert.equal(blockedHandoff.status, "blocked");
+  assert.equal(blockedHandoff.blockedReasons.includes("missing_human_node"), true);
+
+  const blockedProfileHandoff = createGovernedBrowserProfileHandoffReceipt({
+    session: browserSession,
+    toNodeId: "node.target",
+    sourceSessionClosed: false,
+    sourceProfileLocked: false,
+    encryptedForTargetNode: true,
+    targetNodeTrusted: true,
+    liveCookieSyncRequested: true,
+    createdAt: "2026-05-17T10:08:00.000Z",
+  });
+  assert.equal(blockedProfileHandoff.status, "blocked");
+  assert.equal(blockedProfileHandoff.blockedReasons.includes("source_session_open"), true);
+  assert.equal(blockedProfileHandoff.blockedReasons.includes("live_sync_requested"), true);
+  assert.equal(blockedProfileHandoff.liveCookieSync, false);
+
+  const closedProfileHandoff = createGovernedBrowserProfileHandoffReceipt({
+    session: browserSession,
+    toNodeId: "node.target",
+    sourceSessionClosed: true,
+    sourceProfileLocked: true,
+    encryptedForTargetNode: true,
+    targetNodeTrusted: true,
+    createdAt: "2026-05-17T10:08:00.000Z",
+  });
+  assert.equal(closedProfileHandoff.status, "ready_for_import");
+  assert.equal(closedProfileHandoff.sourceProfileStatus, "transferred_stale");
+  assert.equal(closedProfileHandoff.plaintextCookiesIncluded, false);
+  assert.equal(closedProfileHandoff.plaintextSecretsIncluded, false);
 
   assert.equal(syncConflictSchema.safeParse({
     conflictId: "conflict.1",

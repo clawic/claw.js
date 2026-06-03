@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 import { evaluateRegulatedAction, type RegulatedDomain } from "./regulated-domain-safety.ts";
 
 export * from "./remote-sync-schemas.ts";
@@ -15,9 +17,18 @@ import {
   remoteSurfaceClassificationReceiptSchema,
   remoteExternalPendingRequirementSchema,
   remoteExternalPendingRegisterSchema,
+  observedNodeLocatorSchema,
   nodeIdentitySchema,
+  nodeKeyRotationReceiptSchema,
+  nodeReconnectReceiptSchema,
   remoteActorContextSchema,
   syncResourceManifestSchema,
+  clusterStoragePolicyReceiptSchema,
+  clusterLogicalServiceAccessReceiptSchema,
+  clusterCoordinatorRecordSchema,
+  clusterPolicySnapshotSchema,
+  clusterAuthorityEvaluationSchema,
+  clusterExportRestoreReceiptSchema,
   syncCursorSchema,
   syncChangeSchema,
   syncConflictSchema,
@@ -31,6 +42,11 @@ import {
   syncDriverApplicationReceiptSchema,
   remoteSecretLeaseSchema,
   remoteSecretProviderReceiptSchema,
+  governedBrowserSessionResourceSchema,
+  governedBrowserHumanNodePreferenceSchema,
+  governedBrowserCredentialFillReceiptSchema,
+  governedBrowserHumanHandoffReceiptSchema,
+  governedBrowserProfileHandoffReceiptSchema,
   remoteAccessGrantPlaneSchema,
   remoteAccessGrantSchema,
   remoteAccessRequestSchema,
@@ -64,8 +80,17 @@ import {
   type RemoteExternalPendingRequirement,
   type RemoteExternalPendingRegister,
   type NodeIdentity,
+  type NodeKeyRotationReceipt,
+  type NodeReconnectReceipt,
   type RemoteActorContext,
   type SyncResourceManifest,
+  type ClusterResourceClass,
+  type ClusterStoragePolicyReceipt,
+  type ClusterLogicalServiceAccessReceipt,
+  type ClusterCoordinatorRecord,
+  type ClusterPolicySnapshot,
+  type ClusterAuthorityEvaluation,
+  type ClusterExportRestoreReceipt,
   type SyncCursor,
   type SyncChange,
   type SyncConflict,
@@ -79,6 +104,13 @@ import {
   type SyncDriverApplicationReceipt,
   type RemoteSecretLease,
   type RemoteSecretProviderReceipt,
+  type GovernedBrowserSessionResource,
+  type GovernedBrowserHumanNodePreference,
+  type GovernedBrowserCredentialFillReceipt,
+  type GovernedBrowserHumanHandoffReceipt,
+  type GovernedBrowserProfileHandoffReceipt,
+  type GovernedBrowserCredentialFieldKind,
+  type GovernedBrowserSubmitPolicy,
   type RemoteAccessGrantPlane,
   type RemoteAccessGrant,
   type RemoteAccessRequest,
@@ -463,6 +495,172 @@ export function createSyncResourceManifest(input: {
   });
 }
 
+function replicationClassForClusterResource(resourceClass: ClusterResourceClass): ClusterStoragePolicyReceipt["replicationClass"] {
+  if (resourceClass === "core_sqlite") return "snapshot_backup_standby";
+  if (resourceClass === "blob_file") return "manifest_demand_residency";
+  if (resourceClass === "search_index") return "rebuildable_or_explicit_shard";
+  return "node_local_bounded_rollup";
+}
+
+export function createClusterStoragePolicyReceipt(input: {
+  resourceClass: ClusterResourceClass;
+  createdAt?: string;
+  policyRef?: string;
+  physicalDriverRequired?: boolean;
+}): ClusterStoragePolicyReceipt {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return clusterStoragePolicyReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: clusterControlPlaneId("cluster_storage_policy", [input.resourceClass, createdAt]),
+    resourceClass: input.resourceClass,
+    replicationClass: replicationClassForClusterResource(input.resourceClass),
+    directCrossNodeFileRead: false,
+    blindReplication: false,
+    plaintextSecretsIncluded: false,
+    physicalDriverRequired: input.physicalDriverRequired ?? input.resourceClass !== "metrics_logs",
+    policyRef: input.policyRef ?? "docs/adr/0053-nodes-and-cluster-control-plane.md",
+    createdAt,
+    auditEventId: clusterControlPlaneId("cluster_storage_policy_audit", [input.resourceClass, createdAt]),
+    writes: false,
+  });
+}
+
+export function createClusterLogicalServiceAccessReceipt(input: {
+  serviceId: string;
+  routeId: string;
+  resourceClass: ClusterResourceClass;
+  requesterNodeId: string;
+  authorityNodeId: string;
+  createdAt?: string;
+}): ClusterLogicalServiceAccessReceipt {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return clusterLogicalServiceAccessReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: clusterControlPlaneId("cluster_logical_service", [input.serviceId, input.requesterNodeId, input.authorityNodeId, createdAt]),
+    serviceId: input.serviceId,
+    routeId: input.routeId,
+    resourceClass: input.resourceClass,
+    requesterNodeId: input.requesterNodeId,
+    authorityNodeId: input.authorityNodeId,
+    accessPath: "logical_framework_service",
+    directDatabaseFileRead: false,
+    bounded: true,
+    createdAt,
+    auditEventId: clusterControlPlaneId("cluster_logical_service_audit", [input.serviceId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createClusterCoordinatorRecord(input: {
+  clusterRootRef: string;
+  coordinatorNodeId: string;
+  standbyNodeIds?: string[];
+  epoch?: number;
+  term?: number;
+  status?: ClusterCoordinatorRecord["status"];
+  createdAt?: string;
+}): ClusterCoordinatorRecord {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return clusterCoordinatorRecordSchema.parse({
+    schemaVersion: 1,
+    coordinatorId: clusterControlPlaneId("cluster_coordinator", [input.clusterRootRef, input.coordinatorNodeId]),
+    clusterRootRef: input.clusterRootRef,
+    coordinatorNodeId: input.coordinatorNodeId,
+    standbyNodeIds: input.standbyNodeIds ?? [],
+    epoch: input.epoch ?? 1,
+    term: input.term ?? 1,
+    status: input.status ?? "active",
+    auditEventId: clusterControlPlaneId("cluster_coordinator_audit", [input.clusterRootRef, input.coordinatorNodeId, createdAt]),
+    createdAt,
+    writes: false,
+  });
+}
+
+export function createClusterPolicySnapshot(input: {
+  coordinator: ClusterCoordinatorRecord;
+  coordinatorAvailable?: boolean;
+  authorizedLocalWorkNodeIds?: string[];
+  capturedAt?: string;
+  ttlSeconds?: number;
+}): ClusterPolicySnapshot {
+  const coordinator = clusterCoordinatorRecordSchema.parse(input.coordinator);
+  const capturedAt = input.capturedAt ?? new Date().toISOString();
+  const ttlSeconds = input.ttlSeconds ?? 3600;
+  const authorizedLocalWorkNodeIds = input.authorizedLocalWorkNodeIds ?? [coordinator.coordinatorNodeId];
+  return clusterPolicySnapshotSchema.parse({
+    schemaVersion: 1,
+    snapshotId: clusterControlPlaneId("cluster_policy_snapshot", [coordinator.coordinatorId, capturedAt]),
+    coordinatorId: coordinator.coordinatorId,
+    coordinatorAvailable: input.coordinatorAvailable ?? true,
+    lastKnownGood: true,
+    authorizedLocalWorkNodeIds,
+    permitsAuthorizedLocalWork: authorizedLocalWorkNodeIds.length > 0,
+    failClosedForNewAuthority: true,
+    capturedAt,
+    expiresAt: new Date(Date.parse(capturedAt) + ttlSeconds * 1000).toISOString(),
+    auditEventId: clusterControlPlaneId("cluster_policy_snapshot_audit", [coordinator.coordinatorId, capturedAt]),
+    writes: false,
+  });
+}
+
+export function evaluateClusterAuthority(input: {
+  policySnapshot: ClusterPolicySnapshot;
+  requesterNodeId: string;
+  action: ClusterAuthorityEvaluation["action"];
+  evaluatedAt?: string;
+}): ClusterAuthorityEvaluation {
+  const policySnapshot = clusterPolicySnapshotSchema.parse(input.policySnapshot);
+  const evaluatedAt = input.evaluatedAt ?? new Date().toISOString();
+  const authorizedLocalWork = policySnapshot.authorizedLocalWorkNodeIds.includes(input.requesterNodeId);
+  const allow = policySnapshot.coordinatorAvailable || (input.action === "authorized_local_work" && authorizedLocalWork);
+  const reason: ClusterAuthorityEvaluation["reason"] = policySnapshot.coordinatorAvailable
+    ? "coordinator_available"
+    : input.action === "new_authority_decision"
+      ? "coordinator_unavailable_new_authority_denied"
+      : authorizedLocalWork
+        ? "last_known_good_authorized_local_work"
+        : "last_known_good_missing_authorization";
+  return clusterAuthorityEvaluationSchema.parse({
+    schemaVersion: 1,
+    evaluationId: clusterControlPlaneId("cluster_authority_eval", [policySnapshot.coordinatorId, input.requesterNodeId, input.action, evaluatedAt]),
+    coordinatorId: policySnapshot.coordinatorId,
+    requesterNodeId: input.requesterNodeId,
+    action: input.action,
+    coordinatorAvailable: policySnapshot.coordinatorAvailable,
+    decision: allow ? "allow" : "deny",
+    failClosed: !allow,
+    reason,
+    evaluatedAt,
+    auditEventId: clusterControlPlaneId("cluster_authority_eval_audit", [policySnapshot.coordinatorId, input.requesterNodeId, evaluatedAt]),
+    writes: false,
+  });
+}
+
+export function createClusterExportRestoreReceipt(input: {
+  coordinator: ClusterCoordinatorRecord;
+  mode: ClusterExportRestoreReceipt["mode"];
+  createdAt?: string;
+  physicalRestoreApplied?: boolean;
+}): ClusterExportRestoreReceipt {
+  const coordinator = clusterCoordinatorRecordSchema.parse(input.coordinator);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const physicalRestoreApplied = input.physicalRestoreApplied ?? false;
+  return clusterExportRestoreReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: clusterControlPlaneId("cluster_export_restore", [coordinator.coordinatorId, input.mode, createdAt]),
+    coordinatorId: coordinator.coordinatorId,
+    mode: input.mode,
+    includesCoreSqliteSnapshot: true,
+    includesPolicySnapshot: true,
+    destructive: false,
+    physicalRestoreApplied,
+    externalPending: physicalRestoreApplied ? [] : ["physical_authority_handoff"],
+    createdAt,
+    auditEventId: clusterControlPlaneId("cluster_export_restore_audit", [coordinator.coordinatorId, input.mode, createdAt]),
+    writes: false,
+  });
+}
+
 export function createRemoteClientCacheSnapshot(input: {
   manifest: SyncResourceManifest;
   objectRef: string;
@@ -528,6 +726,22 @@ function nodeTrustDecisionId(parts: string[]): string {
   return `node_trust_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
+function nodeKeyRotationReceiptId(parts: string[]): string {
+  return `node_key_rotation_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function nodeReconnectReceiptId(parts: string[]): string {
+  return `node_reconnect_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function nodeIdentityId(fingerprint: string): string {
+  return `node_${fingerprint.replace(/^sha256:/, "").replace(/[^A-Za-z0-9]+/g, "").slice(0, 24).toLowerCase()}`;
+}
+
+function publicKeyFingerprint(publicKeyMaterial: string): string {
+  return `sha256:${crypto.createHash("sha256").update(publicKeyMaterial).digest("hex")}`;
+}
+
 function gatewayDeploymentId(parts: string[]): string {
   return `gateway_deployment_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
@@ -536,8 +750,16 @@ function secretProviderReceiptId(parts: string[]): string {
   return `secret_provider_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
+function governedBrowserReceiptId(prefix: string, parts: string[]): string {
+  return `browser_${prefix}_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
 function remoteClientCacheEntryId(parts: string[]): string {
   return `remote_cache_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
+}
+
+function clusterControlPlaneId(prefix: string, parts: string[]): string {
+  return `${prefix}_${parts.join("_").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase()}`;
 }
 
 function remoteCompatibilityAdapterId(parts: string[]): string {
@@ -833,15 +1055,227 @@ export function buildRemoteOfflineCommandResult(input: {
   });
 }
 
+export function createNodeIdentity(input: {
+  publicKeyRef: string;
+  publicKeyMaterial?: string;
+  nodeId?: string;
+  displayName: string;
+  hostKind: NodeIdentity["hostKind"];
+  platform?: string;
+  trustLevel?: NodeIdentity["trustLevel"];
+  trustModes?: RemoteTrustMode[];
+  state?: NodeIdentity["state"];
+  keyAlgorithm?: NodeIdentity["keyAlgorithm"];
+  createdAt?: string;
+  rotatedFrom?: string;
+  observedLocators?: NodeIdentity["observedLocators"];
+}): NodeIdentity {
+  const nodeFingerprint = publicKeyFingerprint(input.publicKeyMaterial ?? input.publicKeyRef);
+  return nodeIdentitySchema.parse({
+    nodeId: input.nodeId ?? nodeIdentityId(nodeFingerprint),
+    displayName: input.displayName,
+    hostKind: input.hostKind,
+    platform: input.platform ?? "unknown",
+    state: input.state ?? "offline",
+    trustLevel: input.trustLevel ?? "untrusted",
+    trustModes: input.trustModes ?? ["sovereign_e2e_tunnel"],
+    nodeFingerprint,
+    publicKeyRef: input.publicKeyRef,
+    keyAlgorithm: input.keyAlgorithm ?? "external_ref",
+    createdAt: input.createdAt ?? new Date().toISOString(),
+    ...(input.rotatedFrom ? { rotatedFrom: input.rotatedFrom } : {}),
+    observedLocators: input.observedLocators ?? [],
+  });
+}
+
+export function observeNodeLocator(input: {
+  kind: NodeIdentity["observedLocators"][number]["kind"];
+  value: string;
+  observedAt?: string;
+  expiresAt?: string;
+  source?: string;
+}): NodeIdentity["observedLocators"][number] {
+  return observedNodeLocatorSchema.parse({
+    kind: input.kind,
+    value: input.value,
+    observedAt: input.observedAt ?? new Date().toISOString(),
+    ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+    source: input.source ?? "local_observation",
+    authority: false,
+  });
+}
+
+export function evaluateRemoteTransportIdentity(input: {
+  expectedNodeId: string;
+  expectedFingerprint: string;
+  responderNodeId: string;
+  responderFingerprint: string;
+  proofOfPossession: boolean;
+}): {
+  accepted: boolean;
+  identityVerified: boolean;
+  keyMismatch: boolean;
+  failClosed: boolean;
+  reason: "identity_verified" | "node_id_mismatch" | "fingerprint_mismatch" | "missing_private_key_proof";
+} {
+  if (input.responderNodeId !== input.expectedNodeId) {
+    return {
+      accepted: false,
+      identityVerified: false,
+      keyMismatch: true,
+      failClosed: true,
+      reason: "node_id_mismatch",
+    };
+  }
+  if (input.responderFingerprint !== input.expectedFingerprint) {
+    return {
+      accepted: false,
+      identityVerified: false,
+      keyMismatch: true,
+      failClosed: true,
+      reason: "fingerprint_mismatch",
+    };
+  }
+  if (!input.proofOfPossession) {
+    return {
+      accepted: false,
+      identityVerified: false,
+      keyMismatch: false,
+      failClosed: true,
+      reason: "missing_private_key_proof",
+    };
+  }
+  return {
+    accepted: true,
+    identityVerified: true,
+    keyMismatch: false,
+    failClosed: false,
+    reason: "identity_verified",
+  };
+}
+
+export function createNodeKeyRotationReceipt(input: {
+  nodeId: string;
+  previousNodeFingerprint: string;
+  proposedNodeFingerprint: string;
+  rotationMethod?: NodeKeyRotationReceipt["rotationMethod"];
+  oldKeySignatureRef?: string;
+  humanRepairingRef?: string;
+  createdAt?: string;
+}): NodeKeyRotationReceipt {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const rotationMethod = input.rotationMethod ?? "signed_old_key";
+  const sameFingerprint = input.previousNodeFingerprint === input.proposedNodeFingerprint;
+  const signedOldKey = rotationMethod === "signed_old_key" && Boolean(input.oldKeySignatureRef);
+  const humanRepair = rotationMethod === "human_repair" && Boolean(input.humanRepairingRef);
+  const accepted = !sameFingerprint && (signedOldKey || humanRepair);
+  const reason: NodeKeyRotationReceipt["reason"] = sameFingerprint
+    ? "same_fingerprint"
+    : signedOldKey
+      ? "signed_old_key_verified"
+      : humanRepair
+        ? "human_repair_verified"
+        : rotationMethod === "signed_old_key"
+          ? "missing_old_key_signature"
+          : "missing_human_repair";
+  return nodeKeyRotationReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: nodeKeyRotationReceiptId([
+      input.nodeId,
+      input.previousNodeFingerprint,
+      input.proposedNodeFingerprint,
+      rotationMethod,
+      createdAt,
+    ]),
+    nodeId: input.nodeId,
+    previousNodeFingerprint: input.previousNodeFingerprint,
+    proposedNodeFingerprint: input.proposedNodeFingerprint,
+    rotationMethod,
+    ...(input.oldKeySignatureRef ? { oldKeySignatureRef: input.oldKeySignatureRef } : {}),
+    ...(input.humanRepairingRef ? { humanRepairingRef: input.humanRepairingRef } : {}),
+    accepted,
+    failClosed: !accepted,
+    status: accepted ? "accepted" : "rejected",
+    reason,
+    createdAt,
+    auditEventId: nodeKeyRotationReceiptId(["audit", input.nodeId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createNodeReconnectReceipt(input: {
+  node: NodeIdentity;
+  handshake: RemoteTransportHandshakeReceipt;
+  previousState?: NodeIdentity["state"];
+  locator?: NodeIdentity["observedLocators"][number];
+  evaluatedAt?: string;
+}): NodeReconnectReceipt {
+  const node = nodeIdentitySchema.parse(input.node);
+  const handshake = remoteTransportHandshakeReceiptSchema.parse(input.handshake);
+  const evaluatedAt = input.evaluatedAt ?? new Date().toISOString();
+  const proofOfPossessionVerified = handshake.proofOfPossession.challengeSigned === true;
+  const identity = evaluateRemoteTransportIdentity({
+    expectedNodeId: node.nodeId,
+    expectedFingerprint: node.nodeFingerprint,
+    responderNodeId: handshake.responderNodeId,
+    responderFingerprint: handshake.responderNodeFingerprint,
+    proofOfPossession: proofOfPossessionVerified,
+  });
+  const transportReachable = handshake.transportReachable;
+  const remoteWorkAvailable = identity.accepted && transportReachable;
+  const reason: NodeReconnectReceipt["reason"] = !transportReachable
+    ? "transport_unreachable"
+    : identity.reason === "identity_verified"
+      ? "identity_verified_after_reconnect"
+      : identity.reason;
+  return nodeReconnectReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: nodeReconnectReceiptId([
+      node.nodeId,
+      node.nodeFingerprint,
+      handshake.receiptId,
+      evaluatedAt,
+    ]),
+    nodeId: node.nodeId,
+    expectedNodeFingerprint: node.nodeFingerprint,
+    observedNodeFingerprint: handshake.responderNodeFingerprint,
+    previousState: input.previousState ?? node.state,
+    nextState: remoteWorkAvailable ? "online" : identity.keyMismatch ? "quarantined" : "offline",
+    ...(input.locator ? {
+      locatorKind: input.locator.kind,
+      locatorValue: input.locator.value,
+    } : {}),
+    handshakeReceiptId: handshake.receiptId,
+    identityVerified: identity.identityVerified,
+    proofOfPossessionVerified,
+    keyMismatch: identity.keyMismatch || handshake.keyMismatch,
+    transportReachable,
+    remoteWorkAvailable,
+    failClosed: !remoteWorkAvailable,
+    reason,
+    evaluatedAt,
+    auditEventId: nodeReconnectReceiptId(["audit", node.nodeId, handshake.receiptId, evaluatedAt]),
+    writes: false,
+  });
+}
+
 export function createTransportHandshakeReceipt(input: {
   transport?: string;
   adapter?: string;
   initiatorNodeId: string;
+  initiatorNodeFingerprint?: string;
   responderNodeId: string;
+  responderNodeFingerprint?: string;
+  expectedResponderFingerprint?: string;
   coordinatorNodeId: string;
   trustMode?: RemoteTrustMode;
   challengeNonce: string;
   responseNonce: string;
+  proofOfPossession?: {
+    algorithm: RemoteTransportHandshakeReceipt["proofOfPossession"]["algorithm"];
+    challengeSigned: true;
+    signatureRef: string;
+  };
   createdAt?: string;
   expiresAt?: string;
   physicalTransportVerified?: boolean;
@@ -862,12 +1296,24 @@ export function createTransportHandshakeReceipt(input: {
     transport,
     adapter: input.adapter ?? (transport === "iroh" ? "iroh_v1" : `${transport}_adapter`),
     initiatorNodeId: input.initiatorNodeId,
+    initiatorNodeFingerprint: input.initiatorNodeFingerprint ?? "fingerprint:unknown",
     responderNodeId: input.responderNodeId,
+    responderNodeFingerprint: input.responderNodeFingerprint ?? "fingerprint:unknown",
+    expectedResponderFingerprint: input.expectedResponderFingerprint ?? input.responderNodeFingerprint ?? "fingerprint:unknown",
     coordinatorNodeId: input.coordinatorNodeId,
     trustMode: input.trustMode ?? "sovereign_e2e_tunnel",
     challengeNonce: input.challengeNonce,
     responseNonce: input.responseNonce,
+    proofOfPossession: input.proofOfPossession ?? {
+      algorithm: "external_attestation",
+      challengeSigned: true,
+      signatureRef: "external:pending",
+    },
     contractVerified: true,
+    identityVerified: Boolean(input.expectedResponderFingerprint && input.responderNodeFingerprint && input.expectedResponderFingerprint === input.responderNodeFingerprint && input.proofOfPossession?.challengeSigned),
+    transportReachable: true,
+    keyMismatch: Boolean(input.expectedResponderFingerprint && input.responderNodeFingerprint && input.expectedResponderFingerprint !== input.responderNodeFingerprint),
+    discoveryAuthority: false,
     physicalTransportVerified,
     externalPending: physicalTransportVerified ? [] : ["physical_iroh_handshake", "device_trust_acceptance"],
     createdAt,
@@ -879,6 +1325,7 @@ export function createTransportHandshakeReceipt(input: {
 
 export function createNodeTrustDecision(input: {
   subjectNodeId: string;
+  subjectNodeFingerprint?: string;
   coordinatorNodeId: string;
   actor: RemoteActorContext;
   trustMode?: RemoteTrustMode;
@@ -908,10 +1355,13 @@ export function createNodeTrustDecision(input: {
       createdAt,
     ]),
     subjectNodeId: input.subjectNodeId,
+    subjectNodeFingerprint: input.subjectNodeFingerprint ?? "fingerprint:unknown",
     coordinatorNodeId: input.coordinatorNodeId,
     actor: remoteActorContextSchema.parse(input.actor),
     trustMode: input.trustMode ?? "sovereign_e2e_tunnel",
     transport: input.transport ?? "iroh",
+    trustSubject: "node_identity_fingerprint",
+    locatorAuthority: false,
     effect,
     status,
     grantedRouteIds: input.grantedRouteIds ?? remoteSyncRequiredRouteIds.slice(),
@@ -992,6 +1442,228 @@ export function createRemoteSecretProviderReceipt(input: {
     externalPending: providerAccessVerified ? [] : ["provider_secret_retrieval"],
     createdAt,
     auditEventId: secretProviderReceiptId(["audit", lease.leaseId, input.providerId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createGovernedBrowserSessionResource(input: {
+  sessionId?: string;
+  profileId: string;
+  ownerNodeId: string;
+  assignedAgentId: string;
+  allowedOrigins: string[];
+  state?: GovernedBrowserSessionResource["state"];
+  createdAt?: string;
+  lastActivityAt?: string;
+}): GovernedBrowserSessionResource {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return governedBrowserSessionResourceSchema.parse({
+    schemaVersion: 1,
+    sessionId: input.sessionId ?? governedBrowserReceiptId("session", [
+      input.ownerNodeId,
+      input.assignedAgentId,
+      input.profileId,
+      createdAt,
+    ]),
+    profileId: input.profileId,
+    ownerNodeId: input.ownerNodeId,
+    assignedAgentId: input.assignedAgentId,
+    allowedOrigins: input.allowedOrigins,
+    state: input.state ?? "login_required",
+    profileRoot: ".claw/browser",
+    rawProfileAccessOwner: "signed_host_browser_broker",
+    agentRawDomAccess: false,
+    createdAt,
+    lastActivityAt: input.lastActivityAt ?? createdAt,
+    writes: false,
+  });
+}
+
+export function selectGovernedBrowserHumanNode(input: {
+  actorId: string;
+  defaultHumanNodeId?: string;
+  explicitTargetNodeId?: string;
+  presenceCandidateNodeId?: string;
+  evaluatedAt?: string;
+}): GovernedBrowserHumanNodePreference {
+  const selectedNodeId = input.explicitTargetNodeId ?? input.defaultHumanNodeId ?? input.presenceCandidateNodeId;
+  const selectionReason: GovernedBrowserHumanNodePreference["selectionReason"] = input.explicitTargetNodeId
+    ? "explicit_override"
+    : input.defaultHumanNodeId
+      ? "manual_default"
+      : input.presenceCandidateNodeId
+        ? "presence_candidate"
+        : "missing_target";
+  return governedBrowserHumanNodePreferenceSchema.parse({
+    schemaVersion: 1,
+    actorId: input.actorId,
+    ...(input.defaultHumanNodeId ? { defaultHumanNodeId: input.defaultHumanNodeId } : {}),
+    ...(input.explicitTargetNodeId ? { explicitTargetNodeId: input.explicitTargetNodeId } : {}),
+    ...(input.presenceCandidateNodeId ? { presenceCandidateNodeId: input.presenceCandidateNodeId } : {}),
+    ...(selectedNodeId ? { selectedNodeId } : {}),
+    selectionReason,
+    configWinsOverPresence: true,
+    failClosed: !selectedNodeId,
+    evaluatedAt: input.evaluatedAt ?? new Date().toISOString(),
+    writes: false,
+  });
+}
+
+export function createGovernedBrowserCredentialFillReceipt(input: {
+  session: GovernedBrowserSessionResource;
+  lease: RemoteSecretLease;
+  fieldKind: GovernedBrowserCredentialFieldKind;
+  fieldTarget: string;
+  allowedOrigin: string;
+  observedOrigin: string;
+  submitPolicy?: GovernedBrowserSubmitPolicy;
+  brokerIsolationVerified?: boolean;
+  hostAuditPersisted?: boolean;
+  agentRawBrowserReadAvailable?: boolean;
+  fieldVisible?: boolean;
+  fieldAmbiguous?: boolean;
+  nodeTrusted?: boolean;
+  leaseActive?: boolean;
+  profileSupported?: boolean;
+  physicalBrokerAvailable?: boolean;
+  createdAt?: string;
+}): GovernedBrowserCredentialFillReceipt {
+  const session = governedBrowserSessionResourceSchema.parse(input.session);
+  const lease = remoteSecretLeaseSchema.parse(input.lease);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const submitPolicy = input.submitPolicy ?? "no_submit";
+  const blockedReasons = new Set<GovernedBrowserCredentialFillReceipt["blockedReasons"][number]>();
+  const leaseExpired = Date.parse(lease.expiresAt) <= Date.parse(createdAt);
+  if (input.allowedOrigin !== input.observedOrigin || !session.allowedOrigins.includes(input.allowedOrigin)) blockedReasons.add("origin_mismatch");
+  if (leaseExpired || input.leaseActive === false) blockedReasons.add("lease_expired");
+  if (input.fieldVisible === false) blockedReasons.add("field_hidden");
+  if (input.fieldAmbiguous === true) blockedReasons.add("field_ambiguous");
+  if (input.agentRawBrowserReadAvailable === true || session.agentRawDomAccess !== false) blockedReasons.add("unsafe_agent_browser_read");
+  if (input.brokerIsolationVerified !== true) blockedReasons.add("missing_broker_isolation");
+  if (input.hostAuditPersisted !== true) blockedReasons.add("host_audit_missing");
+  if (input.nodeTrusted !== true) blockedReasons.add("untrusted_node");
+  if (input.profileSupported === false || session.profileRoot !== ".claw/browser") blockedReasons.add("unsupported_profile");
+  if (input.physicalBrokerAvailable !== true) blockedReasons.add("physical_broker_unavailable");
+  const blocked = blockedReasons.size > 0;
+  const handoffRequired = blocked;
+  return governedBrowserCredentialFillReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: governedBrowserReceiptId("credential_fill", [
+      session.sessionId,
+      lease.leaseId,
+      input.fieldKind,
+      input.fieldTarget,
+      createdAt,
+    ]),
+    sessionId: session.sessionId,
+    profileId: session.profileId,
+    ownerNodeId: session.ownerNodeId,
+    assignedAgentId: session.assignedAgentId,
+    secretRef: lease.secretRef,
+    leaseId: lease.leaseId,
+    fieldKind: input.fieldKind,
+    fieldTarget: input.fieldTarget,
+    allowedOrigin: input.allowedOrigin,
+    observedOrigin: input.observedOrigin,
+    submitPolicy,
+    fillStatus: blocked ? "handoff_required" : "filled",
+    submitted: !blocked && submitPolicy === "submit_after_fill",
+    handoffRequired,
+    blockedReasons: [...blockedReasons],
+    brokerIsolationVerified: input.brokerIsolationVerified === true,
+    hostAuditPersisted: input.hostAuditPersisted === true,
+    plaintextReturned: false,
+    totpSeedReturned: false,
+    totpCodeReturned: false,
+    cookieMaterialReturned: false,
+    domFieldValueReturned: false,
+    createdAt,
+    auditEventId: governedBrowserReceiptId("audit_credential_fill", [session.sessionId, lease.leaseId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createGovernedBrowserHumanHandoffReceipt(input: {
+  session: GovernedBrowserSessionResource;
+  requestedByAgentId?: string;
+  preference: GovernedBrowserHumanNodePreference;
+  targetNodeTrusted?: boolean;
+  sessionAvailable?: boolean;
+  handoffUrl?: string;
+  completed?: boolean;
+  createdAt?: string;
+}): GovernedBrowserHumanHandoffReceipt {
+  const session = governedBrowserSessionResourceSchema.parse(input.session);
+  const preference = governedBrowserHumanNodePreferenceSchema.parse(input.preference);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const blockedReasons = new Set<GovernedBrowserHumanHandoffReceipt["blockedReasons"][number]>();
+  if (!preference.selectedNodeId) blockedReasons.add("missing_human_node");
+  if (input.targetNodeTrusted !== true) blockedReasons.add("untrusted_node");
+  if (input.sessionAvailable === false || session.state === "closed" || session.state === "blocked") blockedReasons.add("session_unavailable");
+  const blocked = blockedReasons.size > 0;
+  return governedBrowserHumanHandoffReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: governedBrowserReceiptId("human_handoff", [session.sessionId, preference.selectedNodeId ?? "missing", createdAt]),
+    sessionId: session.sessionId,
+    requestedByAgentId: input.requestedByAgentId ?? session.assignedAgentId,
+    ...(preference.selectedNodeId ? { targetNodeId: preference.selectedNodeId } : {}),
+    defaultHumanNodeUsed: preference.selectionReason === "manual_default",
+    presenceSignalUsed: preference.selectionReason === "presence_candidate",
+    status: blocked ? "blocked" : input.completed ? "completed" : "opened",
+    blockedReasons: [...blockedReasons],
+    ...(!blocked && input.handoffUrl ? { handoffUrl: input.handoffUrl } : {}),
+    cookiesReturned: false,
+    secretsReturned: false,
+    createdAt,
+    auditEventId: governedBrowserReceiptId("audit_human_handoff", [session.sessionId, createdAt]),
+    writes: false,
+  });
+}
+
+export function createGovernedBrowserProfileHandoffReceipt(input: {
+  session: GovernedBrowserSessionResource;
+  toNodeId: string;
+  sourceSessionClosed?: boolean;
+  sourceProfileLocked?: boolean;
+  encryptedForTargetNode?: boolean;
+  targetNodeTrusted?: boolean;
+  liveCookieSyncRequested?: boolean;
+  importVerified?: boolean;
+  retainSourceReadOnly?: boolean;
+  createdAt?: string;
+}): GovernedBrowserProfileHandoffReceipt {
+  const session = governedBrowserSessionResourceSchema.parse(input.session);
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const blockedReasons = new Set<GovernedBrowserProfileHandoffReceipt["blockedReasons"][number]>();
+  if (input.sourceSessionClosed !== true) blockedReasons.add("source_session_open");
+  if (input.sourceProfileLocked !== true) blockedReasons.add("source_profile_unlocked");
+  if (input.targetNodeTrusted !== true) blockedReasons.add("target_node_untrusted");
+  if (input.encryptedForTargetNode !== true) blockedReasons.add("missing_target_encryption");
+  if (input.liveCookieSyncRequested === true) blockedReasons.add("live_sync_requested");
+  const blocked = blockedReasons.size > 0;
+  const imported = !blocked && input.importVerified === true;
+  return governedBrowserProfileHandoffReceiptSchema.parse({
+    schemaVersion: 1,
+    receiptId: governedBrowserReceiptId("profile_handoff", [session.sessionId, session.ownerNodeId, input.toNodeId, createdAt]),
+    sessionId: session.sessionId,
+    profileId: session.profileId,
+    fromNodeId: session.ownerNodeId,
+    toNodeId: input.toNodeId,
+    mode: "closed_profile",
+    sourceSessionClosed: input.sourceSessionClosed === true,
+    sourceProfileLocked: input.sourceProfileLocked === true,
+    encryptedForTargetNode: input.encryptedForTargetNode === true,
+    targetNodeTrusted: input.targetNodeTrusted === true,
+    plaintextCookiesIncluded: false,
+    plaintextSecretsIncluded: false,
+    liveCookieSync: false,
+    sourceProfileStatus: blocked ? "blocked" : input.retainSourceReadOnly ? "retained_read_only" : "transferred_stale",
+    importStatus: blocked ? "blocked" : imported ? "imported" : "pending_import",
+    status: blocked ? "blocked" : imported ? "imported" : "ready_for_import",
+    blockedReasons: [...blockedReasons],
+    externalPending: blocked || imported ? [] : ["physical_profile_export", "physical_profile_import"],
+    createdAt,
+    auditEventId: governedBrowserReceiptId("audit_profile_handoff", [session.sessionId, input.toNodeId, createdAt]),
     writes: false,
   });
 }

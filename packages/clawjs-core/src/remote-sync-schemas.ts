@@ -150,13 +150,84 @@ export const remoteExternalPendingRegisterSchema = z.object({
   writes: z.literal(false),
 });
 
+export const nodeStateSchema = z.enum(["joining", "online", "offline", "stale", "degraded", "quarantined", "retired"]);
+
+export const observedNodeLocatorSchema = z.object({
+  kind: z.enum(["display_name", "hostname", "lan_ip", "public_ip", "tailscale", "relay", "iroh", "rendezvous", "other"]),
+  value: z.string().min(1),
+  observedAt: z.string().datetime(),
+  expiresAt: z.string().datetime().optional(),
+  source: z.string().min(1).default("local_observation"),
+  authority: z.literal(false).default(false),
+});
+
 export const nodeIdentitySchema = z.object({
   nodeId: z.string().min(1),
   displayName: z.string().min(1),
   hostKind: z.enum(["mac", "linux", "windows", "headless_server", "mobile_client", "browser_client", "participant"]),
+  platform: z.string().min(1).default("unknown"),
+  state: nodeStateSchema.default("offline"),
   trustLevel: z.enum(["fully_owned", "partially_trusted", "untrusted"]),
   trustModes: z.array(remoteTrustModeSchema).min(1),
+  nodeFingerprint: z.string().min(16).default("fingerprint:unknown"),
   publicKeyRef: z.string().min(1),
+  keyAlgorithm: z.enum(["ed25519", "p256", "rsa", "external_ref"]).default("external_ref"),
+  createdAt: z.string().datetime().default("1970-01-01T00:00:00.000Z"),
+  rotatedFrom: z.string().min(1).optional(),
+  observedLocators: z.array(observedNodeLocatorSchema).default([]),
+});
+
+export const nodeKeyRotationReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  nodeId: z.string().min(1),
+  previousNodeFingerprint: z.string().min(16),
+  proposedNodeFingerprint: z.string().min(16),
+  rotationMethod: z.enum(["signed_old_key", "human_repair"]),
+  oldKeySignatureRef: z.string().min(1).optional(),
+  humanRepairingRef: z.string().min(1).optional(),
+  accepted: z.boolean(),
+  failClosed: z.boolean(),
+  status: z.enum(["accepted", "rejected"]),
+  reason: z.enum([
+    "signed_old_key_verified",
+    "human_repair_verified",
+    "missing_old_key_signature",
+    "missing_human_repair",
+    "same_fingerprint",
+  ]),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const nodeReconnectReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  nodeId: z.string().min(1),
+  expectedNodeFingerprint: z.string().min(16),
+  observedNodeFingerprint: z.string().min(16),
+  previousState: nodeStateSchema,
+  nextState: nodeStateSchema,
+  locatorKind: observedNodeLocatorSchema.shape.kind.optional(),
+  locatorValue: z.string().min(1).optional(),
+  handshakeReceiptId: z.string().min(1),
+  identityVerified: z.boolean(),
+  proofOfPossessionVerified: z.boolean(),
+  keyMismatch: z.boolean(),
+  transportReachable: z.boolean(),
+  remoteWorkAvailable: z.boolean(),
+  failClosed: z.boolean(),
+  reason: z.enum([
+    "identity_verified_after_reconnect",
+    "node_id_mismatch",
+    "fingerprint_mismatch",
+    "missing_private_key_proof",
+    "transport_unreachable",
+  ]),
+  evaluatedAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
 });
 
 export const remoteActorContextSchema = z.object({
@@ -189,6 +260,113 @@ export const syncResourceManifestSchema = z.object({
     secretRefsOnly: z.literal(true),
     brokerLeaseRequired: z.literal(true),
   }),
+});
+
+export const clusterResourceClassSchema = z.enum([
+  "core_sqlite",
+  "blob_file",
+  "search_index",
+  "metrics_logs",
+]);
+
+export const clusterStoragePolicyReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  resourceClass: clusterResourceClassSchema,
+  replicationClass: z.enum([
+    "snapshot_backup_standby",
+    "manifest_demand_residency",
+    "rebuildable_or_explicit_shard",
+    "node_local_bounded_rollup",
+  ]),
+  directCrossNodeFileRead: z.literal(false),
+  blindReplication: z.literal(false),
+  plaintextSecretsIncluded: z.literal(false),
+  physicalDriverRequired: z.boolean(),
+  policyRef: z.string().min(1),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const clusterLogicalServiceAccessReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  serviceId: z.string().min(1),
+  routeId: z.string().min(1),
+  resourceClass: clusterResourceClassSchema,
+  requesterNodeId: z.string().min(1),
+  authorityNodeId: z.string().min(1),
+  accessPath: z.literal("logical_framework_service"),
+  directDatabaseFileRead: z.literal(false),
+  bounded: z.literal(true),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const clusterCoordinatorRecordSchema = z.object({
+  schemaVersion: z.literal(1),
+  coordinatorId: z.string().min(1),
+  clusterRootRef: z.string().min(1),
+  coordinatorNodeId: z.string().min(1),
+  standbyNodeIds: z.array(z.string().min(1)),
+  epoch: z.number().int().nonnegative(),
+  term: z.number().int().nonnegative(),
+  status: z.enum(["active", "standby_pending", "promotion_pending", "external_pending"]),
+  auditEventId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  writes: z.literal(false),
+});
+
+export const clusterPolicySnapshotSchema = z.object({
+  schemaVersion: z.literal(1),
+  snapshotId: z.string().min(1),
+  coordinatorId: z.string().min(1),
+  coordinatorAvailable: z.boolean(),
+  lastKnownGood: z.literal(true),
+  authorizedLocalWorkNodeIds: z.array(z.string().min(1)),
+  permitsAuthorizedLocalWork: z.boolean(),
+  failClosedForNewAuthority: z.literal(true),
+  capturedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const clusterAuthorityEvaluationSchema = z.object({
+  schemaVersion: z.literal(1),
+  evaluationId: z.string().min(1),
+  coordinatorId: z.string().min(1),
+  requesterNodeId: z.string().min(1),
+  action: z.enum(["new_authority_decision", "authorized_local_work"]),
+  coordinatorAvailable: z.boolean(),
+  decision: z.enum(["allow", "deny"]),
+  failClosed: z.boolean(),
+  reason: z.enum([
+    "coordinator_available",
+    "coordinator_unavailable_new_authority_denied",
+    "last_known_good_authorized_local_work",
+    "last_known_good_missing_authorization",
+  ]),
+  evaluatedAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const clusterExportRestoreReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  coordinatorId: z.string().min(1),
+  mode: z.enum(["export_preview", "restore_preview"]),
+  includesCoreSqliteSnapshot: z.literal(true),
+  includesPolicySnapshot: z.literal(true),
+  destructive: z.literal(false),
+  physicalRestoreApplied: z.boolean(),
+  externalPending: z.array(z.enum(["physical_authority_handoff"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
 });
 
 export const syncCursorSchema = z.object({
@@ -358,6 +536,146 @@ export const remoteSecretProviderReceiptSchema = z.object({
   writes: z.literal(false),
 });
 
+export const governedBrowserSessionStateSchema = z.enum([
+  "initializing",
+  "active",
+  "login_required",
+  "handoff_required",
+  "locked_for_handoff",
+  "transferred_stale",
+  "blocked",
+  "closed",
+]);
+
+export const governedBrowserSubmitPolicySchema = z.enum(["no_submit", "submit_after_fill"]);
+export const governedBrowserCredentialFieldKindSchema = z.enum(["password", "totp"]);
+export const governedBrowserProfileHandoffModeSchema = z.enum(["closed_profile"]);
+
+export const governedBrowserSessionResourceSchema = z.object({
+  schemaVersion: z.literal(1),
+  sessionId: z.string().min(1),
+  profileId: z.string().min(1),
+  ownerNodeId: z.string().min(1),
+  assignedAgentId: z.string().min(1),
+  allowedOrigins: z.array(z.string().url()).min(1),
+  state: governedBrowserSessionStateSchema,
+  profileRoot: z.literal(".claw/browser"),
+  rawProfileAccessOwner: z.literal("signed_host_browser_broker"),
+  agentRawDomAccess: z.literal(false),
+  createdAt: z.string().datetime(),
+  lastActivityAt: z.string().datetime(),
+  writes: z.literal(false),
+});
+
+export const governedBrowserHumanNodePreferenceSchema = z.object({
+  schemaVersion: z.literal(1),
+  actorId: z.string().min(1),
+  defaultHumanNodeId: z.string().min(1).optional(),
+  explicitTargetNodeId: z.string().min(1).optional(),
+  presenceCandidateNodeId: z.string().min(1).optional(),
+  selectedNodeId: z.string().min(1).optional(),
+  selectionReason: z.enum([
+    "explicit_override",
+    "manual_default",
+    "presence_candidate",
+    "missing_target",
+  ]),
+  configWinsOverPresence: z.literal(true),
+  failClosed: z.boolean(),
+  evaluatedAt: z.string().datetime(),
+  writes: z.literal(false),
+});
+
+export const governedBrowserCredentialFillReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  sessionId: z.string().min(1),
+  profileId: z.string().min(1),
+  ownerNodeId: z.string().min(1),
+  assignedAgentId: z.string().min(1),
+  secretRef: z.string().min(1),
+  leaseId: z.string().min(1),
+  fieldKind: governedBrowserCredentialFieldKindSchema,
+  fieldTarget: z.string().min(1),
+  allowedOrigin: z.string().url(),
+  observedOrigin: z.string().url(),
+  submitPolicy: governedBrowserSubmitPolicySchema,
+  fillStatus: z.enum(["filled", "blocked", "handoff_required"]),
+  submitted: z.boolean(),
+  handoffRequired: z.boolean(),
+  blockedReasons: z.array(z.enum([
+    "origin_mismatch",
+    "lease_expired",
+    "field_hidden",
+    "field_ambiguous",
+    "unsafe_agent_browser_read",
+    "missing_broker_isolation",
+    "host_audit_missing",
+    "untrusted_node",
+    "unsupported_profile",
+    "physical_broker_unavailable",
+  ])),
+  brokerIsolationVerified: z.boolean(),
+  hostAuditPersisted: z.boolean(),
+  plaintextReturned: z.literal(false),
+  totpSeedReturned: z.literal(false),
+  totpCodeReturned: z.literal(false),
+  cookieMaterialReturned: z.literal(false),
+  domFieldValueReturned: z.literal(false),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const governedBrowserHumanHandoffReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  sessionId: z.string().min(1),
+  requestedByAgentId: z.string().min(1),
+  targetNodeId: z.string().min(1).optional(),
+  defaultHumanNodeUsed: z.boolean(),
+  presenceSignalUsed: z.boolean(),
+  status: z.enum(["opened", "blocked", "completed"]),
+  blockedReasons: z.array(z.enum(["missing_human_node", "untrusted_node", "session_unavailable"])),
+  handoffUrl: z.string().min(1).optional(),
+  cookiesReturned: z.literal(false),
+  secretsReturned: z.literal(false),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
+export const governedBrowserProfileHandoffReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: z.string().min(1),
+  sessionId: z.string().min(1),
+  profileId: z.string().min(1),
+  fromNodeId: z.string().min(1),
+  toNodeId: z.string().min(1),
+  mode: governedBrowserProfileHandoffModeSchema,
+  sourceSessionClosed: z.boolean(),
+  sourceProfileLocked: z.boolean(),
+  encryptedForTargetNode: z.boolean(),
+  targetNodeTrusted: z.boolean(),
+  plaintextCookiesIncluded: z.literal(false),
+  plaintextSecretsIncluded: z.literal(false),
+  liveCookieSync: z.literal(false),
+  sourceProfileStatus: z.enum(["transferred_stale", "retained_read_only", "blocked"]),
+  importStatus: z.enum(["pending_import", "imported", "blocked"]),
+  status: z.enum(["ready_for_import", "imported", "blocked"]),
+  blockedReasons: z.array(z.enum([
+    "source_session_open",
+    "source_profile_unlocked",
+    "target_node_untrusted",
+    "missing_target_encryption",
+    "live_sync_requested",
+  ])),
+  externalPending: z.array(z.enum(["physical_profile_export", "physical_profile_import"])),
+  createdAt: z.string().datetime(),
+  auditEventId: z.string().min(1),
+  writes: z.literal(false),
+});
+
 export const remoteAccessGrantPlaneSchema = z.enum([
   "agent",
   "assignment",
@@ -453,12 +771,28 @@ export const remoteTransportHandshakeReceiptSchema = z.object({
   transport: z.string().min(1),
   adapter: z.string().min(1),
   initiatorNodeId: z.string().min(1),
+  initiatorNodeFingerprint: z.string().min(16).default("fingerprint:unknown"),
   responderNodeId: z.string().min(1),
+  responderNodeFingerprint: z.string().min(16).default("fingerprint:unknown"),
+  expectedResponderFingerprint: z.string().min(16).default("fingerprint:unknown"),
   coordinatorNodeId: z.string().min(1),
   trustMode: remoteTrustModeSchema,
   challengeNonce: z.string().min(16),
   responseNonce: z.string().min(16),
+  proofOfPossession: z.object({
+    algorithm: z.enum(["ed25519", "p256", "rsa", "external_attestation"]),
+    challengeSigned: z.literal(true),
+    signatureRef: z.string().min(1),
+  }).default({
+    algorithm: "external_attestation",
+    challengeSigned: true,
+    signatureRef: "external:pending",
+  }),
   contractVerified: z.literal(true),
+  identityVerified: z.boolean().default(false),
+  transportReachable: z.boolean().default(true),
+  keyMismatch: z.boolean().default(false),
+  discoveryAuthority: z.literal(false).default(false),
   physicalTransportVerified: z.boolean(),
   externalPending: z.array(z.enum(["physical_iroh_handshake", "device_trust_acceptance"])),
   createdAt: z.string().datetime(),
@@ -471,10 +805,13 @@ export const nodeTrustDecisionSchema = z.object({
   schemaVersion: z.literal(1),
   decisionId: z.string().min(1),
   subjectNodeId: z.string().min(1),
+  subjectNodeFingerprint: z.string().min(16).default("fingerprint:unknown"),
   coordinatorNodeId: z.string().min(1),
   actor: remoteActorContextSchema,
   trustMode: remoteTrustModeSchema,
   transport: z.string().min(1),
+  trustSubject: z.literal("node_identity_fingerprint").default("node_identity_fingerprint"),
+  locatorAuthority: z.literal(false).default(false),
   effect: z.enum(["allow", "deny", "revoke"]),
   status: z.enum(["signed_pending_physical_acceptance", "active", "denied", "revoked"]),
   grantedRouteIds: z.array(z.string().min(1)),
@@ -668,8 +1005,17 @@ export type RemoteSurfaceClassificationReceipt = z.infer<typeof remoteSurfaceCla
 export type RemoteExternalPendingRequirement = z.infer<typeof remoteExternalPendingRequirementSchema>;
 export type RemoteExternalPendingRegister = z.infer<typeof remoteExternalPendingRegisterSchema>;
 export type NodeIdentity = z.infer<typeof nodeIdentitySchema>;
+export type NodeKeyRotationReceipt = z.infer<typeof nodeKeyRotationReceiptSchema>;
+export type NodeReconnectReceipt = z.infer<typeof nodeReconnectReceiptSchema>;
 export type RemoteActorContext = z.infer<typeof remoteActorContextSchema>;
 export type SyncResourceManifest = z.infer<typeof syncResourceManifestSchema>;
+export type ClusterResourceClass = z.infer<typeof clusterResourceClassSchema>;
+export type ClusterStoragePolicyReceipt = z.infer<typeof clusterStoragePolicyReceiptSchema>;
+export type ClusterLogicalServiceAccessReceipt = z.infer<typeof clusterLogicalServiceAccessReceiptSchema>;
+export type ClusterCoordinatorRecord = z.infer<typeof clusterCoordinatorRecordSchema>;
+export type ClusterPolicySnapshot = z.infer<typeof clusterPolicySnapshotSchema>;
+export type ClusterAuthorityEvaluation = z.infer<typeof clusterAuthorityEvaluationSchema>;
+export type ClusterExportRestoreReceipt = z.infer<typeof clusterExportRestoreReceiptSchema>;
 export type SyncCursor = z.infer<typeof syncCursorSchema>;
 export type SyncChange = z.infer<typeof syncChangeSchema>;
 export type SyncConflict = z.infer<typeof syncConflictSchema>;
@@ -683,6 +1029,15 @@ export type SyncReconciliationResult = z.infer<typeof syncReconciliationResultSc
 export type SyncDriverApplicationReceipt = z.infer<typeof syncDriverApplicationReceiptSchema>;
 export type RemoteSecretLease = z.infer<typeof remoteSecretLeaseSchema>;
 export type RemoteSecretProviderReceipt = z.infer<typeof remoteSecretProviderReceiptSchema>;
+export type GovernedBrowserSessionState = z.infer<typeof governedBrowserSessionStateSchema>;
+export type GovernedBrowserSubmitPolicy = z.infer<typeof governedBrowserSubmitPolicySchema>;
+export type GovernedBrowserCredentialFieldKind = z.infer<typeof governedBrowserCredentialFieldKindSchema>;
+export type GovernedBrowserProfileHandoffMode = z.infer<typeof governedBrowserProfileHandoffModeSchema>;
+export type GovernedBrowserSessionResource = z.infer<typeof governedBrowserSessionResourceSchema>;
+export type GovernedBrowserHumanNodePreference = z.infer<typeof governedBrowserHumanNodePreferenceSchema>;
+export type GovernedBrowserCredentialFillReceipt = z.infer<typeof governedBrowserCredentialFillReceiptSchema>;
+export type GovernedBrowserHumanHandoffReceipt = z.infer<typeof governedBrowserHumanHandoffReceiptSchema>;
+export type GovernedBrowserProfileHandoffReceipt = z.infer<typeof governedBrowserProfileHandoffReceiptSchema>;
 export type RemoteAccessGrantPlane = z.infer<typeof remoteAccessGrantPlaneSchema>;
 export type RemoteAccessGrant = z.infer<typeof remoteAccessGrantSchema>;
 export type RemoteAccessRequest = z.infer<typeof remoteAccessRequestSchema>;
