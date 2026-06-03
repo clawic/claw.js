@@ -159,6 +159,34 @@
       ]
     },
     {
+      "id": "ddl-fixture-database-query-plan-workspace-records",
+      "path": "packages/clawjs-database/src/database-query-plan.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "table",
+      "objectName": "workspace_records",
+      "steward": "clawjs-database",
+      "reason": "Hermetic query-plan fixture table used to verify canonical workspace record listing without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/clawjs-database/src/database-query-plan.test.ts"
+      ]
+    },
+    {
+      "id": "ddl-fixture-database-query-plan-workspace-records-collection-updated",
+      "path": "packages/clawjs-database/src/database-query-plan.test.ts",
+      "rule": "ts.ddl-literal",
+      "objectKind": "index",
+      "objectName": "workspace_records_collection_updated_idx",
+      "steward": "clawjs-database",
+      "reason": "Hermetic query-plan fixture index used to verify canonical workspace record listing without adding a second durable schema source.",
+      "expiresOn": "2026-06-03",
+      "tests": [
+        "node scripts/persistent-surface-guard.mjs --self-test",
+        "npx vitest run packages/clawjs-database/src/database-query-plan.test.ts"
+      ]
+    },
+    {
       "id": "ddl-migration-temp-agent-incidents-v1-new",
       "path": "packages/clawjs/src/v1-data-core.ts",
       "rule": "ts.ddl-literal",

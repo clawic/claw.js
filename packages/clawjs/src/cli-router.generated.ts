@@ -1955,6 +1955,138 @@ export const GENERATED_CLI_COMMANDS = [
     routeGroup: "remote-sync"
   },
   {
+    name: "get",
+    kind: "canonical",
+    summary: "Transversal read-only inventory view over registered nodes, resources, and worktree classes.",
+    usage: "get nodes|resources|worktrees --json",
+    family: "runtime",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.get.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw get --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md",
+      "docs/governance/nodes-cluster-local-forge/cluster-control-plane-checklist.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0053-nodes-and-cluster-control-plane.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-remote-sync-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-remote-sync-command.ts",
+      symbol: "runInventoryCli"
+    },
+    routeGroup: "remote-sync"
+  },
+  {
+    name: "describe",
+    kind: "canonical",
+    summary: "Transversal read-only description view for nodes and registered resources.",
+    usage: "describe node <node-id>|resource <resource-id> --json",
+    family: "runtime",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.describe.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw describe --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md",
+      "docs/governance/nodes-cluster-local-forge/cluster-control-plane-checklist.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0053-nodes-and-cluster-control-plane.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-remote-sync-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-remote-sync-command.ts",
+      symbol: "runInventoryCli"
+    },
+    routeGroup: "remote-sync"
+  },
+  {
+    name: "where",
+    kind: "canonical",
+    summary: "Transversal read-only location and authority view for nodes, projects, and resources.",
+    usage: "where node <node-id>|project <project-id> --json",
+    family: "runtime",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.where.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw where --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md",
+      "docs/governance/nodes-cluster-local-forge/cluster-control-plane-checklist.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0053-nodes-and-cluster-control-plane.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-remote-sync-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-remote-sync-command.ts",
+      symbol: "runInventoryCli"
+    },
+    routeGroup: "remote-sync"
+  },
+  {
+    name: "risk",
+    kind: "canonical",
+    summary: "Transversal read-only risk view for node disappearance and conservative failover blockers.",
+    usage: "risk node <node-id> --json",
+    family: "runtime",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.risk.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw risk --help"
+    },
+    securityPolicy: "local_read",
+    docs: [
+      "docs/cli.md",
+      "docs/governance/nodes-cluster-local-forge/cluster-control-plane-checklist.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0053-nodes-and-cluster-control-plane.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-remote-sync-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-remote-sync-command.ts",
+      symbol: "runInventoryCli"
+    },
+    routeGroup: "remote-sync"
+  },
+  {
     name: "gateway",
     kind: "canonical",
     summary: "Gateway service projection, agent service receipts, secret leases, provider receipts, and hosted/self-hosted conformance for headless or remote hosts.",
@@ -2572,8 +2704,8 @@ export const GENERATED_CLI_COMMANDS = [
   {
     name: "project",
     kind: "canonical",
-    summary: "Project folder manifest, attach/detach, safe handoff, and path-mutable project identity.",
-    usage: "project inspect|attach|detach|export|import|sync-handoff",
+    summary: "Project folder manifest, attach/detach, safe handoff, path-mutable project identity, and local forge review/recovery records.",
+    usage: "project inspect|attach|detach|export|import|sync-handoff|preflight|worktree|claim|snapshot|review|recover|forge-status",
     family: "work",
     schemaVersion: 1,
     jsonSchemaId: "claw.cli.project.v1",
@@ -2592,7 +2724,8 @@ export const GENERATED_CLI_COMMANDS = [
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
       "docs/adr/0007-cli-agent-interface.md",
       "docs/adr/0027-governance-identity-scope-model.md",
-      "docs/adr/0028-workspace-project-folder-manifest.md"
+      "docs/adr/0028-workspace-project-folder-manifest.md",
+      "docs/adr/0054-local-forge-worktree-review.md"
     ],
     tests: [
       "packages/clawjs/src/cli-project-command.test.ts"
@@ -5319,6 +5452,47 @@ export const GENERATED_CLI_COMMANDS = [
     routeGroup: "legacy"
   },
   {
+    name: "instructions",
+    kind: "canonical",
+    summary: "Unified resolver for rules, guidance, compact CLI instructions, managed Markdown instruction docs, and AGENTS/CLAUDE files.",
+    usage: "instructions list|show|search|read|docs|graph|add|edit|rm|approve|propose|where|reconcile",
+    family: "agent",
+    schemaVersion: 1,
+    jsonSchemaId: "claw.cli.instructions.v1",
+    support: {
+      state: "supported",
+      reason: "Registered public CLI surface.",
+      scenario: "claw instructions --help"
+    },
+    securityPolicy: "local_write",
+    docs: [
+      "docs/cli.md",
+      "docs/decision-map.md"
+    ],
+    adrs: [
+      "docs/adr/0048-naming-and-stability-surfaces.md",
+      "docs/adr/0004-persistent-surface-registry-and-inspection.md",
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0010-cli-jit-guidance-actor-assertions-resource-registry.md",
+      "docs/adr/0017-discoverability-and-meta-code-routing.md"
+    ],
+    tests: [
+      "packages/clawjs/src/cli-instructions-command.test.ts"
+    ],
+    source: {
+      file: "packages/clawjs/src/cli-instructions-command.ts",
+      symbol: "runInstructionsCli"
+    },
+    relatedSurfaces: [
+      "claw rules",
+      "claw guidance",
+      "claw resources",
+      "AGENTS.md",
+      "CLAUDE.md"
+    ],
+    routeGroup: "legacy"
+  },
+  {
     name: "rules",
     kind: "canonical",
     summary: "Persistent agent rules.",
@@ -5722,35 +5896,37 @@ export const GENERATED_CLI_COMMANDS = [
   {
     name: "browser",
     kind: "canonical",
-    summary: "Relay-backed browser sessions.",
-    usage: "browser status|ensure|share",
+    summary: "Governed browser sessions, brokered credential/TOTP fill, human handoff, and closed encrypted profile handoff.",
+    usage: "browser status|ensure|share|session|credential-fill",
     advanced: true,
-    family: "diagnostics",
+    family: "runtime",
     schemaVersion: 1,
     jsonSchemaId: "claw.cli.browser.v1",
     support: {
-      state: "supported",
-      reason: "Registered public CLI surface.",
+      state: "host_required",
+      reason: "Sensitive permissions or host-owned capabilities require the active signed host broker.",
       scenario: "claw browser --help"
     },
-    securityPolicy: "local_write",
+    securityPolicy: "signed_host_broker",
     docs: [
-      "docs/cli.md"
+      "docs/cli.md",
+      "docs/relay.md"
     ],
     adrs: [
       "docs/adr/0048-naming-and-stability-surfaces.md",
       "docs/adr/0004-persistent-surface-registry-and-inspection.md",
-      "docs/adr/0007-cli-agent-interface.md"
+      "docs/adr/0007-cli-agent-interface.md",
+      "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "docs/adr/0053-nodes-and-cluster-control-plane.md"
     ],
     tests: [
-      "packages/clawjs/src/index.test.ts",
-      "packages/clawjs/src/inspect-cli.test.ts"
+      "packages/clawjs/src/cli-remote-sync-command.test.ts"
     ],
     source: {
-      file: "packages/clawjs/src/index.ts",
-      symbol: "runCli"
+      file: "packages/clawjs/src/cli-remote-sync-command.ts",
+      symbol: "runBrowserCli"
     },
-    routeGroup: "legacy"
+    routeGroup: "remote-sync"
   },
   {
     name: "compat",
@@ -6523,6 +6699,31 @@ export const GENERATED_KEYWORD_ROUTER_CONCEPTS = [
     family: "agent"
   },
   {
+    id: "instructions",
+    keywords: [
+      "instructions",
+      "agent-instructions",
+      "instruction-docs",
+      "governance-instructions",
+      "agents.md",
+      "claude.md",
+      "instrucciones",
+      "instrucciones-agente"
+    ],
+    primaryCommand: "instructions",
+    summary: "Unified resolver for applicable agent governance and instruction sources.",
+    useWhen: "You need to discover what rules, guidance, compact instructions, managed Markdown docs, or AGENTS/CLAUDE files apply before acting.",
+    exampleInvocation: "claw instructions search billing --json",
+    relatedConcepts: [
+      "rules",
+      "guidance",
+      "library",
+      "router-discovery"
+    ],
+    antiPattern: "Do not load every Markdown file into prompt context; search candidates first, then read only the summary, section, or full document needed.",
+    family: "agent"
+  },
+  {
     id: "context",
     keywords: [
       "context",
@@ -6758,6 +6959,10 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   remote: "remote-sync",
   sync: "remote-sync",
   nodes: "remote-sync",
+  get: "remote-sync",
+  describe: "remote-sync",
+  where: "remote-sync",
+  risk: "remote-sync",
   gateway: "remote-sync",
   "dense-fixtures": "domain-data",
   "dense-fixture": "domain-data",
@@ -6867,6 +7072,7 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   outcomes: "legacy",
   plan: "legacy",
   code: "legacy",
+  instructions: "legacy",
   rules: "legacy",
   guidance: "legacy",
   resources: "legacy",
@@ -6879,7 +7085,7 @@ export const GENERATED_CLI_ROUTE_GROUPS = {
   "voice-notes": "media-documents",
   inference: "legacy",
   preview: "legacy",
-  browser: "legacy",
+  browser: "remote-sync",
   compat: "legacy",
   chat: "runtime-workspace",
   provider: "runtime-workspace",
@@ -6924,6 +7130,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "debt",
   "decisions",
   "dense-fixtures",
+  "describe",
   "design",
   "desktop",
   "diagnostics",
@@ -6944,6 +7151,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "focus",
   "gateway",
   "generations",
+  "get",
   "goals",
   "governance",
   "guidance",
@@ -6955,6 +7163,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "inference",
   "input",
   "inspect",
+  "instructions",
   "iot",
   "judgment",
   "keyboard",
@@ -7005,6 +7214,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "report",
   "resources",
   "review",
+  "risk",
   "router",
   "routines",
   "rules",
@@ -7047,6 +7257,7 @@ export const GENERATED_STABLE_CLI_COMMANDS = [
   "voice-notes",
   "vpn",
   "watch",
+  "where",
   "wifi",
   "window",
   "work"
@@ -8768,6 +8979,7 @@ export const GENERATED_JSON_HELP_REQUIRED_COMMANDS = [
   "erp",
   "handoffs",
   "iot",
+  "instructions",
   "judgment",
   "knowledge",
   "learning",

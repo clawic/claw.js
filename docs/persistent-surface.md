@@ -1603,6 +1603,14 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_sync
   claw_cli_command_nodes["nodes\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_nodes
+  claw_cli_command_get["get\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_get
+  claw_cli_command_describe["describe\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_describe
+  claw_cli_command_where["where\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_where
+  claw_cli_command_risk["risk\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_risk
   claw_cli_command_gateway["gateway\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_gateway
   claw_cli_command_dense_fixtures["dense-fixtures\ncliCommand"]
@@ -1811,6 +1819,8 @@ flowchart TD
   claw_contracts_cli --> claw_cli_command_plan
   claw_cli_command_code["code\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_code
+  claw_cli_command_instructions["instructions\ncliCommand"]
+  claw_contracts_cli --> claw_cli_command_instructions
   claw_cli_command_rules["rules\ncliCommand"]
   claw_contracts_cli --> claw_cli_command_rules
   claw_cli_command_guidance["guidance\ncliCommand"]
@@ -3576,6 +3586,10 @@ flowchart TD
 | `claw.cli.command.remote` | cliCommand | cli | claw |  |  |  |  |  | `remote` |
 | `claw.cli.command.sync` | cliCommand | cli | claw |  |  |  |  |  | `sync` |
 | `claw.cli.command.nodes` | cliCommand | cli | claw |  |  |  |  |  | `nodes` |
+| `claw.cli.command.get` | cliCommand | cli | claw |  |  |  | Transversal node, resource, location, and risk inventory view over existing framework surfaces. | packages/clawjs/src/cli-remote-sync-command.test.ts | `get` |
+| `claw.cli.command.describe` | cliCommand | cli | claw |  |  |  | Transversal node, resource, location, and risk inventory view over existing framework surfaces. | packages/clawjs/src/cli-remote-sync-command.test.ts | `describe` |
+| `claw.cli.command.where` | cliCommand | cli | claw |  |  |  | Transversal node, resource, location, and risk inventory view over existing framework surfaces. | packages/clawjs/src/cli-remote-sync-command.test.ts | `where` |
+| `claw.cli.command.risk` | cliCommand | cli | claw |  |  |  | Transversal node, resource, location, and risk inventory view over existing framework surfaces. | packages/clawjs/src/cli-remote-sync-command.test.ts | `risk` |
 | `claw.cli.command.gateway` | cliCommand | cli | claw |  |  |  |  |  | `gateway` |
 | `claw.cli.command.dense-fixtures` | cliCommand | cli | claw |  |  |  |  |  | `dense-fixtures` |
 | `claw.cli.command.dense-fixture` | cliCommand | cli | claw |  |  |  |  |  | `dense-fixture` |
@@ -3680,6 +3694,7 @@ flowchart TD
 | `claw.cli.command.outcomes` | cliCommand | cli | claw |  |  |  |  |  | `outcomes` |
 | `claw.cli.command.plan` | cliCommand | cli | claw |  |  |  |  |  | `plan` |
 | `claw.cli.command.code` | cliCommand | cli | claw |  |  |  |  |  | `code` |
+| `claw.cli.command.instructions` | cliCommand | cli | claw |  |  |  | Unified advisory resolver for applicable agent governance across rules, guidance, compact CLI instructions, managed Markdown instruction documents, and read-only AGENTS/CLAUDE files. | packages/clawjs/src/cli-instructions-command.test.ts | `instructions` |
 | `claw.cli.command.rules` | cliCommand | cli | claw |  |  |  |  |  | `rules` |
 | `claw.cli.command.guidance` | cliCommand | cli | claw |  |  |  |  |  | `guidance` |
 | `claw.cli.command.resources` | cliCommand | cli | claw |  |  |  |  |  | `resources` |

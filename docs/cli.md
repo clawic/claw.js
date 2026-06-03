@@ -447,7 +447,17 @@ claw nodes invite --issuer-mesh mesh.home --recipient-mesh mesh.server --allowed
 claw nodes share --issuer-mesh mesh.home --to-mesh mesh.server --resource-id skills:default --driver skills --actions read,sync --state-dir .claw/remote-sync --record true --json
 claw nodes revoke --target-type share --target-id mesh_share_1 --state-dir .claw/remote-sync --record true --json
 claw nodes heartbeat --json
+claw nodes heartbeat --peer-node node.example --peer-fingerprint sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --expected-peer-fingerprint sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --signature-ref sig:example --json
 claw nodes heartbeat --transport iroh --node-id mac.home --peer-node vps.server --coordinator-node coord.home --state-dir .claw/remote-sync --record true --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
+
+claw get nodes --json
+claw get resources --json
+claw get worktrees --json
+claw describe node claw.gateway --json
+claw describe resource skills:default --json
+claw where node claw.gateway --json
+claw where project project.example --json
+claw risk node claw.gateway --json
 
 claw gateway serve --dry-run --json
 claw gateway serve --state-dir .claw/remote-sync --record true --gateway-node gateway.self --coordinator-node coord.home --bind-address 127.0.0.1:24102 --coordinator-private-key-file .claw/coordinator/private.pem --coordinator-public-key-file .claw/coordinator/public.pem --json
@@ -641,6 +651,9 @@ for changing a resource's authority or residency between nodes. It remains
 `signed_pending_authority_handoff`, marks `physical_authority_handoff` as
 `external_pending`, and keeps `writes: false` until the physical authority move
 is separately proven.
+Node inventory responses include `operationalSummary` with bounded health and
+capacity projections. These local-read views do not start background polling,
+collect host-private metrics, or grant node authority.
 `nodes heartbeat --record true` stores a signed transport-handshake receipt for
 the Iroh v1 adapter contract. It verifies the local Coordinator ledger shape
 and still marks real multi-device transport and device trust acceptance as
@@ -1146,6 +1159,14 @@ decision logic.
 ## Guidance And Resources
 
 ```bash
+claw instructions search billing --json
+claw instructions read doc:billing-refunds --summary --json
+claw instructions read doc:billing-refunds --section "Refund limits" --json
+claw instructions docs create --title "Billing refunds" --summary "When to read before refund work" --tags billing,refunds --applies-when "Handling billing refunds" --content "# Refund limits"
+claw instructions docs edit billing-refunds --summary "Read before billing refund or dispute work"
+claw instructions docs versions billing-refunds --json
+claw instructions graph doc:billing-refunds --json
+
 claw guidance list
 claw guidance show deployment-runbook
 claw guidance create --title "Deployment runbook" --capsule "Read the runbook before deploys" --command "host services" --resource res_abc123
@@ -1159,6 +1180,20 @@ claw resources resolve res_abc123
 claw resources read res_abc123
 claw resources status res_abc123
 ```
+
+`instructions` is the unified discovery surface for agent governance. Search
+returns typed candidates from persistent rules, just-in-time guidance, compact
+CLI instructions, managed Markdown instruction documents, and external
+`AGENTS.md`/`CLAUDE.md` files. The resolver recommends candidates only; it does
+not inject long documents or compile prompt context automatically.
+
+Managed instruction documents are Markdown files with normalized frontmatter
+stored under the Claw data root at `instructions/docs/<slug>-<hash>.md`. Their
+index is derived from metadata, tags, summaries, applicability fields,
+relations, routes, and section headings; the full body remains in the Markdown
+file. `instructions read` can return only a summary, one named section, or the
+full body. `AGENTS.md` and `CLAUDE.md` are V1 external read-only sources:
+Claw lists, searches, and reads them, but does not edit or version them.
 
 `guidance` is not `rules`: rules compile into prompt context, while guidance
 returns compact hints about instructions that may be expanded on demand.
@@ -1244,6 +1279,15 @@ claw project detach . --reason copied-to-new-workspace
 claw project export . --output project-handoff.clawexport --confirm --approval-id approval-from-human-review --legal-label "Project handoff - human reviewed"
 claw project import project-handoff.clawexport . --workspace-id ops-main --accept
 claw project sync-handoff .
+claw project preflight . --json
+claw project worktree . --accept --json
+claw project claim . --task "Review billing edits" --agent-id agent.local --accept --json
+claw project snapshot . --reason "before risky edit" --accept --json
+claw project review . --tests-run unit,privacy --risks "needs human review" --accept --json
+claw project merge-plan . --base-snapshot-id snapshot_1 --proposed-snapshot-id snapshot_2 --accept --json
+claw project recover . --action review --claim-id claim_123 --accept --json
+claw project forge-status --project-id project.example --json
+claw project forge-status --project-id project.example --stale-after-minutes 480 --mark-stale --accept --json
 
 claw projects list
 claw tasks list
@@ -1650,10 +1694,22 @@ claw compat --help
 claw browser status
 claw browser ensure
 claw browser share --url http://127.0.0.1:3000
+claw browser session ensure --url https://example.com --agent-id agent.browser --profile-id profile.login --json
+claw browser credential-fill --session-id session.login --secret-ref vault://logins/example --field-kind password --field-target 'css:input[type=password]' --allowed-origin https://example.com --observed-origin https://example.com --json
+claw browser session share --session-id session.login --default-human-node node.mac --json
+claw browser session handoff --session-id session.login --to-node node.server --mode closed-profile --json
 claw preview share --url http://127.0.0.1:3000
 claw open database
 claw open index
 ```
+
+`browser session` is the governed V1 path for Claw-controlled Chromium
+profiles. `browser credential-fill` returns only a redacted receipt; password
+material, TOTP seeds/codes, cookies, profile files, and DOM field values are
+never returned to the caller. If origin, trust, lease, broker isolation, host
+audit, or raw browser-read safety cannot be verified, the command fails closed
+and the session can move to human handoff. Profile movement is closed encrypted
+handoff between trusted nodes, not live cookie sync.
 
 ## Advanced
 
@@ -1664,6 +1720,7 @@ claw judgment --help
 claw outcomes --help
 claw plan create "Polish the home page"
 claw code --help
+claw instructions search billing --json
 claw rules --help
 claw library --help
 claw soul --help

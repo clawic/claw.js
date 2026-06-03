@@ -329,6 +329,68 @@
           "command": "claw search \"ADR number reservation governance\" --json"
         }
       ]
+    },
+    {
+      "adr": "docs/adr/0053-nodes-and-cluster-control-plane.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/adr-operational-coverage-check.mjs",
+        "scripts/discoverability-check.mjs",
+        "scripts/source-decision-audit-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/governance/nodes-cluster-local-forge/index.md",
+        "docs/governance/nodes-cluster-local-forge/cluster-control-plane-checklist.md"
+      ],
+      "programmaticSurface": [
+        "scripts/adr-operational-coverage-check.mjs",
+        "scripts/discoverability-check.mjs",
+        "scripts/source-decision-audit-check.mjs"
+      ],
+      "persistence": [
+        "docs/adr/reservations/0053.json",
+        "docs/discoverability.registry.json",
+        "docs/adr-operational-coverage.manifest.json",
+        "docs/governance/nodes-cluster-local-forge/source-audit.md"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect why adr:nodes-cluster-control-plane --json"
+        }
+      ]
+    },
+    {
+      "adr": "docs/adr/0054-local-forge-worktree-review.md",
+      "decisionMap": "docs/decision-map.md",
+      "guardrails": [
+        "scripts/adr-operational-coverage-check.mjs",
+        "scripts/discoverability-check.mjs",
+        "scripts/source-decision-audit-check.mjs"
+      ],
+      "humanSurface": [
+        "docs/decision-map.md",
+        "docs/governance/nodes-cluster-local-forge/index.md",
+        "docs/governance/nodes-cluster-local-forge/local-forge-checklist.md"
+      ],
+      "programmaticSurface": [
+        "scripts/adr-operational-coverage-check.mjs",
+        "scripts/discoverability-check.mjs",
+        "scripts/source-decision-audit-check.mjs"
+      ],
+      "persistence": [
+        "docs/adr/reservations/0054.json",
+        "docs/discoverability.registry.json",
+        "docs/adr-operational-coverage.manifest.json",
+        "docs/governance/nodes-cluster-local-forge/source-audit.md"
+      ],
+      "cliSearch": "docs/discoverability.registry.json searchQueries",
+      "cliInspect": [
+        {
+          "command": "claw inspect why adr:local-forge-worktree-review --json"
+        }
+      ]
     }
   ]
 }

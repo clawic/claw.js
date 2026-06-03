@@ -293,10 +293,30 @@
       "classification": "deterministicGeneratedArtifact",
       "rationale": "Generated CLI router reflects registered profile portal/domain commands from cli-command-registry.",
       "canonicalDoc": "docs/cli.md",
-      "maxOccurrences": 21,
+      "maxOccurrences": 22,
       "steward": "clawjs-cli",
       "generatedFrom": "scripts/generate-cli-router.mjs",
       "parityTest": "scripts/verify-cli-registry-router-parity.mjs"
+    },
+    {
+      "id": "cli-command-registry-governed-browser-profile",
+      "path": "packages/clawjs-core/src/cli-command-registry.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "The browser CLI command summary names closed encrypted browser profile handoff as a browser-state projection, not governance authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 14,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "cli-docs-governed-browser-profile",
+      "path": "docs/cli.md",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "CLI docs describe governed browser profile identifiers and closed encrypted profile handoff; profile values do not grant authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 14,
+      "steward": "clawjs-cli"
     },
     {
       "id": "inspect-cli-test-support-profile-fixture",
@@ -879,6 +899,26 @@
       "steward": "clawjs-core"
     },
     {
+      "id": "current-profileId-packages-clawjs-core-src-remote-sync-schemas",
+      "path": "packages/clawjs-core/src/remote-sync-schemas.ts",
+      "pattern": "profileId",
+      "classification": "profileProjection",
+      "rationale": "Governed browser handoff schemas use profileId as a browser profile projection identifier for import/export receipts; it does not grant governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 3,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profileId-packages-clawjs-core-src-remote-sync",
+      "path": "packages/clawjs-core/src/remote-sync.ts",
+      "pattern": "profileId",
+      "classification": "profileProjection",
+      "rationale": "Governed browser handoff implementation carries profileId as a browser profile projection identifier for import/export receipts; it does not grant governance authority.",
+      "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
+      "maxOccurrences": 8,
+      "steward": "clawjs-core"
+    },
+    {
       "id": "current-tenantId-relay-src-shared-protocol-test",
       "path": "relay/src/shared/protocol.test.ts",
       "pattern": "tenantId",
@@ -1124,6 +1164,16 @@
       "pattern": "profile",
       "classification": "domainProfile",
       "rationale": "This path uses profile as domain documentation or data vocabulary, not as a governance authority source.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 2,
+      "steward": "clawjs-core"
+    },
+    {
+      "id": "current-profileId-packages-clawjs-core-src-index-remote-contracts-test",
+      "path": "packages/clawjs-core/src/index-remote-contracts.test.ts",
+      "pattern": "profileId",
+      "classification": "profileProjection",
+      "rationale": "Remote contract tests cover governed browser profile identifiers as session projection data; they do not grant authority.",
       "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
       "maxOccurrences": 1,
       "steward": "clawjs-core"
@@ -1406,6 +1456,36 @@
       "rationale": "Gateway agent-service CLI tests use tenant-id for remote hosted technical isolation.",
       "canonicalDoc": "docs/adr/0027-governance-identity-scope-model.md",
       "maxOccurrences": 2,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-cli-remote-sync-command",
+      "path": "packages/clawjs/src/cli-remote-sync-command.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "Remote-sync CLI browser commands use profile vocabulary for governed browser session projection and closed encrypted handoff, not governance authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 6,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-profileId-packages-clawjs-src-cli-remote-sync-command",
+      "path": "packages/clawjs/src/cli-remote-sync-command.ts",
+      "pattern": "profileId",
+      "classification": "profileProjection",
+      "rationale": "Remote-sync CLI browser session construction carries profileId as governed browser session projection data, not authority.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 1,
+      "steward": "clawjs-cli"
+    },
+    {
+      "id": "current-profile-packages-clawjs-src-cli-remote-sync-command-test",
+      "path": "packages/clawjs/src/cli-remote-sync-command.test.ts",
+      "pattern": "profile",
+      "classification": "profileProjection",
+      "rationale": "Remote-sync CLI tests exercise governed browser profile flags and closed encrypted profile handoff; profile values are projection data only.",
+      "canonicalDoc": "docs/adr/0022-remote-gateway-sync-redesign.md",
+      "maxOccurrences": 13,
       "steward": "clawjs-cli"
     },
     {

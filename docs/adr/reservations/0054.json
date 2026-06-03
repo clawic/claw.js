@@ -1,0 +1,8 @@
+{
+  "number": "0054",
+  "slug": "local-forge-worktree-review",
+  "title": "Local Forge Worktree Review",
+  "status": "accepted",
+  "adr": "docs/adr/0054-local-forge-worktree-review.md",
+  "canonicalName": "adr:local-forge-worktree-review"
+}

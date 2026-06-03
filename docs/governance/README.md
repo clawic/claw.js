@@ -17,6 +17,7 @@ plans, and companion validation manifests here.
 - [Governance Workspace Project](governance-workspace-project/completion.md)
 - [Legal](legal/source-audit.md)
 - [Mac Control Plane](mac-control-plane/index.md)
+- [Nodes, Cluster, And Local Forge](nodes-cluster-local-forge/index.md)
 - [No Irreversible Data Loss](no-irreversible-data-loss/README.md)
 - [Performance Governance](performance-governance.md), including Boundedness
   Guard P0, Hot Path Guard P1, and Idle Quiescence Contract P1

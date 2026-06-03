@@ -3,7 +3,12 @@
   "canonicalDoc": "docs/governance/source-decision-audits.md",
   "forwardOnly": true,
   "selectiveHistoricalBackfill": true,
-  "statusVocabulary": ["implemented", "documented", "blocked", "superseded"],
+  "statusVocabulary": [
+    "implemented",
+    "documented",
+    "blocked",
+    "superseded"
+  ],
   "rowContract": {
     "requiredFields": [
       "decisionId",
@@ -15,8 +20,14 @@
       "reviewedAt"
     ],
     "publicSafeFieldsOnly": true,
-    "blockedRequires": ["blockerReason", "reentryCondition", "remaining"],
-    "supersededRequires": ["supersededBy"]
+    "blockedRequires": [
+      "blockerReason",
+      "reentryCondition",
+      "remaining"
+    ],
+    "supersededRequires": [
+      "supersededBy"
+    ]
   },
   "closureRule": "Do not complete a goal or durable architecture change while any conversation-made architecture decision is missing from a source decision audit, has an invalid state, lacks required evidence, or remains blocked without reentry details.",
   "seeds": [
@@ -29,7 +40,11 @@
       "artifactKind": "markdown-source-audit",
       "markdownRowPrefix": "DQ",
       "minimumDecisionRows": 18,
-      "normalizedStates": ["implemented", "documented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "documented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/dense-data/completion.md",
         "docs/governance/dense-data/decision-matrix.md"
@@ -94,7 +109,10 @@
       "sourceConversationId": "source:v1-surface-closure",
       "artifactKind": "json-decision-review",
       "minimumDecisionRows": 37,
-      "normalizedStates": ["implemented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/v1-surface-closure/completion.md"
       ],
@@ -116,7 +134,10 @@
       "backfillTier": "P0",
       "backfillReason": "Legal and regulated-domain release decisions are public-release blockers and must not depend on private session memory.",
       "backfillArtifactRef": "docs/governance/legal/source-audit.md",
-      "normalizedStates": ["implemented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/legal/external-pending.md"
       ],
@@ -134,15 +155,25 @@
       "sourcePlanId": "plan:connector-governed-context",
       "artifactKind": "markdown-source-audit",
       "markdownRowPrefixes": [
-        { "prefix": "QA", "minimumDecisionRows": 22 },
-        { "prefix": "CGC", "minimumDecisionRows": 66 }
+        {
+          "prefix": "QA",
+          "minimumDecisionRows": 22
+        },
+        {
+          "prefix": "CGC",
+          "minimumDecisionRows": 66
+        }
       ],
       "minimumDecisionRows": 88,
       "historicalBackfill": true,
       "backfillTier": "P1",
       "backfillReason": "Connector context decisions govern provider identity, secret refs, approvals, and fail-closed external operations.",
       "backfillArtifactRef": "docs/governance/connector-governed-context/source-audit.md",
-      "normalizedStates": ["implemented", "documented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "documented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/connector-governed-context/completion.md"
       ],
@@ -164,7 +195,11 @@
       "backfillTier": "P1",
       "backfillReason": "Governance, workspace, project, sharing, and handoff decisions define authority and storage boundaries.",
       "backfillArtifactRef": "docs/governance/governance-workspace-project/source-audit.md",
-      "normalizedStates": ["implemented", "documented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "documented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/governance-workspace-project/completion.md"
       ],
@@ -186,7 +221,10 @@
       "backfillTier": "P1",
       "backfillReason": "Mac control decisions govern native actions, permissions, rollback, host audit, and direct CLI activation.",
       "backfillArtifactRef": "docs/governance/mac-control-plane/source-audit.md",
-      "normalizedStates": ["implemented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/mac-control-plane/completion.md"
       ],
@@ -210,7 +248,10 @@
       "backfillTier": "P1",
       "backfillReason": "Evolution and rescue decisions define compatibility, migration, rollback, and launch survival policy.",
       "backfillArtifactRef": "docs/governance/evolution/source-audit.md",
-      "normalizedStates": ["implemented", "blocked"],
+      "normalizedStates": [
+        "implemented",
+        "blocked"
+      ],
       "blockedRefs": [
         "docs/governance/evolution/source-audit.md"
       ],
@@ -228,7 +269,9 @@
       "sourcePlanId": "p0-adoption-and-canonicity-governance",
       "artifactKind": "json-source-review",
       "minimumDecisionRows": 1,
-      "normalizedStates": ["implemented"],
+      "normalizedStates": [
+        "implemented"
+      ],
       "evidenceRefs": [
         "docs/governance/adoption-canonicity.md",
         "docs/governance/adoption-canonicity.manifest.json",
@@ -245,12 +288,42 @@
       "sourcePlanId": "p0-streaming-backpressure-contract",
       "artifactKind": "json-source-review",
       "minimumDecisionRows": 1,
-      "normalizedStates": ["implemented"],
+      "normalizedStates": [
+        "implemented"
+      ],
       "evidenceRefs": [
         "docs/adr/0042-streaming-backpressure-contract.md",
         "packages/clawjs-core/src/streaming-backpressure.ts",
         "packages/clawjs-core/src/surface-registry.ts",
         "scripts/streaming-backpressure-contract-check.mjs"
+      ]
+    },
+    {
+      "id": "nodes-cluster-local-forge-selective-backfill",
+      "repo": "clawjs",
+      "artifactPath": "docs/governance/nodes-cluster-local-forge/source-audit.md",
+      "sourceConversationId": "source:nodes-cluster-local-forge",
+      "sourcePlanId": "plan:nodes-cluster-local-forge",
+      "artifactKind": "markdown-source-audit",
+      "markdownRowPrefix": "NCLF",
+      "minimumDecisionRows": 36,
+      "historicalBackfill": true,
+      "backfillTier": "P1",
+      "backfillReason": "Nodes, cluster, worktree, and local forge decisions define framework authority, storage, sync, review, and recovery boundaries.",
+      "backfillArtifactRef": "docs/governance/nodes-cluster-local-forge/source-audit.md",
+      "normalizedStates": [
+        "documented",
+        "blocked"
+      ],
+      "blockedRefs": [
+        "docs/governance/nodes-cluster-local-forge/decision-matrix.md",
+        "docs/governance/nodes-cluster-local-forge/testing-and-closure-checklist.md"
+      ],
+      "evidenceRefs": [
+        "docs/governance/nodes-cluster-local-forge/source-audit.md",
+        "docs/governance/nodes-cluster-local-forge/decision-matrix.md",
+        "docs/adr/0053-nodes-and-cluster-control-plane.md",
+        "docs/adr/0054-local-forge-worktree-review.md"
       ]
     }
   ],

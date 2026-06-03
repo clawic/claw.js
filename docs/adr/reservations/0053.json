@@ -1,0 +1,8 @@
+{
+  "number": "0053",
+  "slug": "nodes-and-cluster-control-plane",
+  "title": "Nodes And Cluster Control Plane",
+  "status": "accepted",
+  "adr": "docs/adr/0053-nodes-and-cluster-control-plane.md",
+  "canonicalName": "adr:nodes-cluster-control-plane"
+}

@@ -62,6 +62,7 @@ const JSON_HELP_REQUIRED_COMMANDS = [
   "erp",
   "handoffs",
   "iot",
+  "instructions",
   "judgment",
   "knowledge",
   "learning",
@@ -104,7 +105,7 @@ function routeGroupForEntry(entry) {
   if (["inspect", "search", "router", "about", "source", "governance", "debt", "safety", "evolution", "commands", "needs", "agent-resource", "test"].includes(entry.name)) return "inspect-search-governance";
   if (["database", "db", "collections", "records", "work", "tasks", "notes", "people", "projects", "goals", "inbox", "approvals", "blockers", "decisions", "assignments", "handoffs", "artifacts", "commitments", "agenda", "review", "timeline", "my-work", "team-work"].includes(entry.name)) return "database-productivity";
   if (["host", "system", "network", "domains"].includes(entry.name) || entry.family === "mac-control" || entry.family === "mac-care") return "host-system-network";
-  if (["remote", "sync", "nodes", "gateway"].includes(entry.name)) return "remote-sync";
+  if (["remote", "sync", "nodes", "get", "describe", "where", "risk", "gateway", "browser"].includes(entry.name)) return "remote-sync";
   if (["chat", "provider", "providers", "runtime", "workspace", "auth", "models", "sessions", "knowledge"].includes(entry.name)) return "runtime-workspace";
   if (["slides", "styles", "style", "templates", "template", "references", "ref", "report"].includes(entry.name) || entry.family === "media") return "media-documents";
   if (["new", "generate", "add", "project", "setup", "modules"].includes(entry.name)) return "scaffold-setup";

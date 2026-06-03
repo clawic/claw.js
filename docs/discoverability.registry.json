@@ -1854,6 +1854,76 @@
       "canonicalName": "adr:adr-number-reservation-governance"
     },
     {
+      "id": "adr-docs-adr-0053-nodes-and-cluster-control-plane",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0053-nodes-and-cluster-control-plane.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/governance/nodes-cluster-local-forge/index.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0053: Nodes And Cluster Control Plane",
+        "0053-nodes-and-cluster-control-plane",
+        "ADR 0053",
+        "node cluster control plane",
+        "adr:nodes-cluster-control-plane"
+      ],
+      "searchQueries": [
+        {
+          "query": "node cluster control plane",
+          "expectPath": "docs/adr/0053-nodes-and-cluster-control-plane.md"
+        },
+        {
+          "query": "adr:nodes-cluster-control-plane",
+          "expectPath": "docs/adr/0053-nodes-and-cluster-control-plane.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-09-02",
+      "canonicalName": "adr:nodes-cluster-control-plane"
+    },
+    {
+      "id": "adr-docs-adr-0054-local-forge-worktree-review",
+      "kind": "adr",
+      "steward": "claw",
+      "canonicalSource": "docs/adr/0054-local-forge-worktree-review.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "CONSTITUTION.md",
+        "docs/decision-map.md",
+        "docs/governance/nodes-cluster-local-forge/index.md"
+      ],
+      "discoveryTerms": [
+        "ADR 0054: Local Forge Worktree Review",
+        "0054-local-forge-worktree-review",
+        "ADR 0054",
+        "local forge worktree review",
+        "adr:local-forge-worktree-review"
+      ],
+      "searchQueries": [
+        {
+          "query": "local forge worktree review",
+          "expectPath": "docs/adr/0054-local-forge-worktree-review.md"
+        },
+        {
+          "query": "adr:local-forge-worktree-review",
+          "expectPath": "docs/adr/0054-local-forge-worktree-review.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-09-02",
+      "canonicalName": "adr:local-forge-worktree-review"
+    },
+    {
       "id": "surface-route-graph",
       "kind": "surface-route",
       "steward": "claw",
@@ -5146,6 +5216,38 @@
       "steward": "claw"
     },
     {
+      "id": "cli-instructions-unified-resolver",
+      "kind": "docs-page",
+      "canonicalSource": "docs/cli.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/discoverability.md",
+        "docs/decision-map.md"
+      ],
+      "discoveryTerms": [
+        "claw instructions search",
+        "unified instruction resolver",
+        "agent governance instructions",
+        "managed Markdown instruction documents",
+        "AGENTS.md CLAUDE.md instruction discovery"
+      ],
+      "searchQueries": [
+        {
+          "query": "claw instructions search",
+          "expectPath": "docs/cli.md"
+        },
+        {
+          "query": "unified instruction resolver",
+          "expectPath": "docs/cli.md"
+        }
+      ],
+      "guard": "scripts/discoverability-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-06-02",
+      "steward": "claw"
+    },
+    {
       "id": "constitution-operational-map",
       "kind": "docs-page",
       "canonicalSource": "docs/constitution-map.md",
@@ -5328,6 +5430,37 @@
       "status": "enforced",
       "reviewDate": "2026-08-20",
       "steward": "claw"
+    },
+    {
+      "id": "nodes-cluster-local-forge-closure",
+      "kind": "docs-page",
+      "steward": "claw",
+      "canonicalSource": "docs/governance/nodes-cluster-local-forge/index.md",
+      "requiredEntrypoints": [
+        "AGENTS.md",
+        "docs/decision-map.md",
+        "docs/governance/README.md"
+      ],
+      "discoveryTerms": [
+        "nodes cluster local forge closure",
+        "nodes cluster local forge source audit",
+        "local forge checklist",
+        "node cluster checklist"
+      ],
+      "searchQueries": [
+        {
+          "query": "nodes cluster local forge closure",
+          "expectPath": "docs/governance/nodes-cluster-local-forge/index.md"
+        },
+        {
+          "query": "nodes cluster local forge source audit",
+          "expectPath": "docs/governance/nodes-cluster-local-forge/source-audit.md"
+        }
+      ],
+      "guard": "scripts/source-decision-audit-check.mjs",
+      "status": "enforced",
+      "reviewDate": "2026-09-02",
+      "canonicalName": "nodes-cluster-local-forge-closure"
     },
     {
       "id": "rfc-process-governance",
