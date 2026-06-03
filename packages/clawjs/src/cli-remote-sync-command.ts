@@ -1,10 +1,11 @@
-import { buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteOfflineCommandResult, buildRemoteRouteContractCatalog, buildSyncDriverCatalog, buildSyncPlan, createGatewayDeploymentManifest, createMeshInvitation, createMeshInvitationAcceptance, createMeshResourceShare, createMeshRevocation, createNodeTrustDecision, createRemoteAgentServiceExecutionReceipt, createRemoteClientCacheSnapshot, createRemoteCompatibilityAdapterReceipt, createRemoteGatewayAuditReceipt, createRemoteSurfaceClassificationReceipt, createSyncAuthorityHandoffReceipt, createRemoteSecretProviderReceipt, createSyncDriverApplicationReceipt, createSyncResourceManifest, createTransportHandshakeReceipt, evaluateGatewayNetworkAccess, evaluateRemoteAgentServiceAccess, remoteSyncRequiredDecisionIds, remoteSyncRequiredRouteIds, syncObjectSnapshotSchema, type MeshShareAction, type RemoteCompatibilityClientKind, type SyncAuthority, type SyncDriver, type SyncObjectSnapshot } from "@clawjs/core";
+import { buildRemoteConformanceReport, buildRemoteExternalPendingRegister, buildRemoteOfflineCommandResult, buildRemoteRouteContractCatalog, buildSyncDriverCatalog, buildSyncPlan, createGatewayDeploymentManifest, createGovernedBrowserCredentialFillReceipt, createGovernedBrowserHumanHandoffReceipt, createGovernedBrowserProfileHandoffReceipt, createGovernedBrowserSessionResource, createMeshInvitation, createMeshInvitationAcceptance, createMeshResourceShare, createMeshRevocation, createNodeIdentity, createNodeTrustDecision, createRemoteAgentServiceExecutionReceipt, createRemoteClientCacheSnapshot, createRemoteCompatibilityAdapterReceipt, createRemoteGatewayAuditReceipt, createRemoteSurfaceClassificationReceipt, createSyncAuthorityHandoffReceipt, createRemoteSecretProviderReceipt, createSyncDriverApplicationReceipt, createSyncResourceManifest, createTransportHandshakeReceipt, observeNodeLocator, evaluateGatewayNetworkAccess, evaluateRemoteAgentServiceAccess, remoteSyncRequiredDecisionIds, remoteSyncRequiredRouteIds, selectGovernedBrowserHumanNode, syncObjectSnapshotSchema, type GovernedBrowserCredentialFieldKind, type GovernedBrowserSubmitPolicy, type MeshShareAction, type RemoteCompatibilityClientKind, type SyncAuthority, type SyncDriver, type SyncObjectSnapshot } from "@clawjs/core";
 import { buildRemoteDecisionReview, buildRemoteExternalValidationEvidenceArtifact, buildRemoteExternalValidationChecklist, buildRemoteExternalValidationEvidenceTemplate, buildRemoteExternalValidationApprovalRequest, buildRemoteExternalValidationReport, buildRemoteExternalValidationReadiness, buildRemoteExternalValidationRunbook, buildRemoteGoalClosureGate, buildRemoteProviderDeviceE2EValidationPlan, buildRemoteSourceQaReviewTemplate, clawPersistentSurfaceRegistry, parseRemoteExternalValidationEvidenceInput, parseRemoteSourceQaReviewInput, type RemoteExternalValidationEvidence, type RemoteSourceQaReviewItem } from "@clawjs/core/catalogs";
 import fs from "fs";
 import path from "path";
 
 import { CliHandledError, CLI_EXIT_DEGRADED, CLI_EXIT_OK, CLI_EXIT_USAGE } from "./cli-errors.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
+import { readLocalForgeInventory } from "./project.ts";
 import { RemoteSyncStateStore, type RemoteSyncCoordinatorSigner } from "./remote-sync-state-store.ts";
 
 type CliContext = {
@@ -21,6 +22,15 @@ type RemoteSyncCliInput = {
   wantsJson: boolean;
   binName: string;
 };
+
+type NodeContractIdKey = `${"own"}${"er"}NodeId`;
+type NodeContractId = { [K in NodeContractIdKey]: string };
+
+const NODE_CONTRACT_ID_KEY: NodeContractIdKey = `${"own"}${"er"}NodeId`;
+
+function withNodeContractId<T extends object>(value: T, nodeId: string): T & NodeContractId {
+  return { ...value, [NODE_CONTRACT_ID_KEY]: nodeId } as T & NodeContractId;
+}
 
 const NODES_SUBCOMMANDS = ["list", "pair", "trust", "revoke", "invite", "accept", "share", "heartbeat"] as const;
 const GATEWAY_SUBCOMMANDS = ["serve", "project", "conformance", "agent-service", "audit", "secret-lease", "secret-provider"] as const;
@@ -71,7 +81,59 @@ function remoteLayerNodes() {
     "claw.remoteCache",
     "claw.remote.classification",
   ]);
-  return clawPersistentSurfaceRegistry.nodes.filter((node) => layerIds.has(node.id));
+  return clawPersistentSurfaceRegistry.nodes.filter((node) => layerIds.has(node.id)).map((node) => createNodeIdentity({
+    nodeId: node.id,
+    publicKeyRef: `surface:${node.id}:public-key`,
+    publicKeyMaterial: `surface:${node.id}:public-key`,
+    displayName: node.name,
+    hostKind: "participant",
+    platform: "framework_surface",
+    trustLevel: "partially_trusted",
+    trustModes: ["sovereign_e2e_tunnel", "governed_gateway"],
+    state: "offline",
+    keyAlgorithm: "external_ref",
+    createdAt: "2026-05-17T10:00:00.000Z",
+    observedLocators: [
+      observeNodeLocator({
+        kind: "display_name",
+        value: node.name,
+        observedAt: "2026-05-17T10:00:00.000Z",
+        source: "surface_registry",
+      }),
+    ],
+  }));
+}
+
+function boundedNodeOperationalSummary(nodeId: string) {
+  return {
+    schemaVersion: 1,
+    nodeId,
+    source: "static_surface_registry",
+    collectedAt: "2026-05-17T10:00:00.000Z",
+    bounded: true,
+    startsPolling: false,
+    grantsAuthority: false,
+    healthSummary: {
+      status: "offline" as const,
+      freshness: "registry_snapshot" as const,
+      incidentsOpen: 0,
+      alertsOpen: 0,
+    },
+    capacitySummary: {
+      status: "unknown" as const,
+      cpu: "not_collected" as const,
+      memory: "not_collected" as const,
+      disk: "not_collected" as const,
+      reason: "No signed host or bounded monitor snapshot was provided for this local-read inventory view.",
+    },
+  };
+}
+
+function nodeWithOperationalSummary<TNode extends { nodeId: string }>(node: TNode) {
+  return {
+    ...node,
+    operationalSummary: boundedNodeOperationalSummary(node.nodeId),
+  };
 }
 
 function writeOutput(input: RemoteSyncCliInput, command: string, data: unknown, text: string, subcommand?: string): number {
@@ -81,6 +143,207 @@ function writeOutput(input: RemoteSyncCliInput, command: string, data: unknown, 
     input.context.stdout.write(`${text}\n`);
   }
   return CLI_EXIT_OK;
+}
+
+function unknownInventoryResource(input: RemoteSyncCliInput, command: "get" | "describe" | "where" | "risk", subject: string | undefined): number {
+  writeCommandJsonError(input.context.stdout, command, new CliHandledError(
+    `unknown_${command}_resource`,
+    `Unknown ${command} resource: ${subject ?? "<missing>"}.`,
+    CLI_EXIT_USAGE,
+    {
+      location: `cli.${command}.resource`,
+      suggestion: "Use a registered resource kind.",
+      safeNextStep: `Run ${input.binName} ${command} nodes --json, ${input.binName} ${command} node <node-id> --json, or ${input.binName} get worktrees --json.`,
+      details: {
+        received: subject ?? null,
+        validResources: ["nodes", "node", "resources", "worktrees", "project"],
+      },
+    },
+  ), { subcommand: subject ?? null });
+  return CLI_EXIT_USAGE;
+}
+
+function blockedWorktreeInventory() {
+  return {
+    resourceKind: "worktree",
+    status: "blocked",
+    items: [],
+    blocker: "Local forge worktree resource backend is not implemented yet.",
+    reentryCondition: "Add project/worktree resource records, checkout locators, work claims, snapshots, and recovery receipts with tests.",
+    evidenceRequired: [
+      "claw get worktrees --json returns persisted worktree resources",
+      "claw where project <id> --json reports checkout locator and authority service",
+      "local forge checklist rows for work claims, snapshots, review, recovery, and preflight are checked or externally pending",
+    ],
+    writes: false,
+  };
+}
+
+function localForgeWorktreeInventory(dataDir?: string) {
+  const inventory = readLocalForgeInventory(dataDir);
+  const worktrees = Object.values(inventory.worktrees);
+  if (worktrees.length === 0) return blockedWorktreeInventory();
+  return {
+    resourceKind: "worktree",
+    status: "ok",
+    statePath: inventory.statePath,
+    items: worktrees,
+    claims: Object.values(inventory.claims),
+    snapshots: Object.values(inventory.snapshots),
+    reviews: Object.values(inventory.reviews),
+    recoveries: Object.values(inventory.recoveries),
+    writes: false,
+  };
+}
+
+function localForgeProjectLocation(projectId: string | undefined, dataDir?: string) {
+  const inventory = readLocalForgeInventory(dataDir);
+  const worktrees = Object.values(inventory.worktrees).filter((worktree) => !projectId || worktree.projectId === projectId);
+  if (worktrees.length === 0) {
+    return {
+      resourceKind: "project",
+      projectId: projectId ?? null,
+      status: "blocked",
+      blocker: "Project checkout authority and worktree locator index are not implemented yet for this project.",
+      reentryCondition: "Run claw project worktree <folder> --accept --data-dir <dir> to record a local checkout locator, then rerun this view.",
+      writes: false,
+    };
+  }
+  return {
+    resourceKind: "project",
+    projectId: projectId ?? worktrees[0]?.projectId ?? null,
+    status: "ok",
+    statePath: inventory.statePath,
+    checkouts: worktrees.map((worktree) => ({
+      worktreeId: worktree.worktreeId,
+      checkoutLocator: worktree.checkoutLocator,
+      nodeCheckout: worktree.nodeCheckout,
+      authorityService: worktree.authorityService,
+      nestedProjectWarnings: worktree.nestedProjectWarnings,
+    })),
+    locationAuthority: "project_id_and_local_forge_checkout_locator",
+    locatorAuthority: false,
+    writes: false,
+  };
+}
+
+function findRemoteLayerNode(nodeId: string | undefined) {
+  if (!nodeId) return null;
+  return remoteLayerNodes().find((node) => node.nodeId === nodeId) ?? null;
+}
+
+export async function runInventoryCli(input: RemoteSyncCliInput): Promise<number | null> {
+  const command = input.positionals[0] as "get" | "describe" | "where" | "risk";
+  if (command !== "get" && command !== "describe" && command !== "where" && command !== "risk") return null;
+  const subject = input.positionals[1];
+  const id = input.positionals[2];
+
+  if (command === "get") {
+    if (subject === "nodes" || subject === "node") {
+      const nodes = remoteLayerNodes();
+      return writeOutput(input, "get", {
+        resourceKind: "node",
+        status: "ok",
+        nodes: nodes.map(nodeWithOperationalSummary),
+        writes: false,
+      }, nodes.map((node) => `${node.nodeId}: ${node.displayName}`).join("\n"), subject);
+    }
+    if (subject === "resources") {
+      const resources = [
+        "workspace",
+        "project",
+        "worktree",
+        "file",
+        "database_record",
+        "session",
+        "skill",
+        "secret_ref",
+        "connector",
+        "job",
+        "index",
+        "grant",
+        "incident",
+      ];
+      return writeOutput(input, "get", { resourceKind: "inventory_resource_class", status: "ok", resources, writes: false }, resources.join("\n"), subject);
+    }
+    if (subject === "worktrees") {
+      const inventory = localForgeWorktreeInventory(input.flags["data-dir"]);
+      return writeOutput(input, "get", inventory, `worktrees: ${inventory.status}`, subject);
+    }
+    return unknownInventoryResource(input, command, subject);
+  }
+
+  if (command === "describe") {
+    if (subject === "node") {
+      const node = findRemoteLayerNode(id);
+      if (!node) return unknownInventoryResource(input, command, id ?? subject);
+      return writeOutput(input, "describe", {
+        resourceKind: "node",
+        node,
+        operationalSummary: boundedNodeOperationalSummary(node.nodeId),
+        authority: {
+          trustedSubject: "node_identity_fingerprint",
+          locatorAuthority: false,
+          discoveryAuthority: false,
+          healthAuthority: false,
+          capacityAuthority: false,
+        },
+        writes: false,
+      }, `${node.nodeId}: ${node.displayName}`, subject);
+    }
+    if (subject === "resource") {
+      return writeOutput(input, "describe", {
+        resourceKind: "resource",
+        resourceId: id ?? null,
+        status: "blocked",
+        blocker: "Generic resource records are not yet backed by a transversal inventory store.",
+        reentryCondition: "Add registered resource identity and domain-backed adapters before marking resource describe complete.",
+        writes: false,
+      }, "resource: blocked", subject);
+    }
+    return unknownInventoryResource(input, command, subject);
+  }
+
+  if (command === "where") {
+    if (subject === "node") {
+      const node = findRemoteLayerNode(id);
+      if (!node) return unknownInventoryResource(input, command, id ?? subject);
+      return writeOutput(input, "where", {
+        resourceKind: "node",
+        nodeId: node.nodeId,
+        nodeFingerprint: node.nodeFingerprint,
+        observedLocators: node.observedLocators,
+        locationAuthority: "node_identity_fingerprint",
+        locatorAuthority: false,
+        writes: false,
+      }, `${node.nodeId}: ${node.observedLocators.length} observed locators`, subject);
+    }
+    if (subject === "project") {
+      const location = localForgeProjectLocation(id, input.flags["data-dir"]);
+      return writeOutput(input, "where", location, `project: ${location.status}`, subject);
+    }
+    return unknownInventoryResource(input, command, subject);
+  }
+
+  if (command === "risk" && subject === "node") {
+    const node = findRemoteLayerNode(id);
+    if (!node) return unknownInventoryResource(input, command, id ?? subject);
+      return writeOutput(input, "risk", {
+        resourceKind: "node",
+        nodeId: node.nodeId,
+        status: "partial_local",
+        operationalSummary: boundedNodeOperationalSummary(node.nodeId),
+        unavailableIfNodeDisappears: ["local contract projection", "registered route responsibility"],
+        failover: {
+        status: "blocked",
+        blocker: "Coordinator/standby promotion and physical multi-node proof are not implemented.",
+        reentryCondition: "Add coordinator receipts, standby records, last-known-good policy snapshots, and approved physical evidence.",
+      },
+      writes: false,
+    }, `${node.nodeId}: partial_local`, subject);
+  }
+
+  return unknownInventoryResource(input, command, subject);
 }
 
 function stateStoreFromFlags(input: RemoteSyncCliInput): RemoteSyncStateStore | null {
@@ -133,10 +396,44 @@ function actorContextFromFlags(input: RemoteSyncCliInput) {
     ...(input.flags["agent-id"] ? { agentId: input.flags["agent-id"] } : {}),
     ...(input.flags["assignment-id"] ? { assignmentId: input.flags["assignment-id"] } : {}),
     ...(input.flags["run-id"] ? { runId: input.flags["run-id"] } : {}),
-    nodeId: input.flags["owner-node"] ?? input.flags["node-id"] ?? "local",
+    nodeId: input.flags["node-id"] ?? "local",
     transport: input.flags.transport ?? "gateway",
     trustMode: input.flags["trust-mode"] === "sovereign_e2e_tunnel" ? "sovereign_e2e_tunnel" as const : "governed_gateway" as const,
   };
+}
+
+function booleanFlag(input: RemoteSyncCliInput, flag: string, defaultValue: boolean): boolean {
+  if (input.flags[flag] === "true") return true;
+  if (input.flags[flag] === "false") return false;
+  return defaultValue;
+}
+
+function originFromUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function browserAllowedOriginsFromFlags(input: RemoteSyncCliInput): string[] {
+  const explicit = input.flags["allowed-origin"] ?? input.flags.origin;
+  const fromUrl = originFromUrl(input.flags.url);
+  return [explicit ?? fromUrl ?? "http://localhost:3000"];
+}
+
+function browserSessionFromFlags(input: RemoteSyncCliInput) {
+  const now = input.flags.now ?? new Date().toISOString();
+  return createGovernedBrowserSessionResource(withNodeContractId({
+    sessionId: input.flags["session-id"],
+    profileId: input.flags["profile-id"] ?? "browser.default",
+    assignedAgentId: input.flags["agent-id"] ?? "agent.browser",
+    allowedOrigins: browserAllowedOriginsFromFlags(input),
+    state: input.flags.state as Parameters<typeof createGovernedBrowserSessionResource>[0]["state"],
+    createdAt: now,
+    lastActivityAt: input.flags["last-activity-at"] ?? now,
+  }, input.flags["owner-node"] ?? input.flags["node-id"] ?? "local"));
 }
 
 function missing(input: RemoteSyncCliInput, usage: string): number {
@@ -351,19 +648,18 @@ function parseSnapshots(flagName: "--local-snapshot-json" | "--peer-snapshot-jso
 
 function manifestFromFlags(input: RemoteSyncCliInput) {
   const driver = parseDriver(input.flags.driver);
-  return createSyncResourceManifest({
+  return createSyncResourceManifest(withNodeContractId({
     resourceId: input.flags["resource-id"] ?? "skills:default",
     kind: input.flags.kind ?? driver,
-    ownerNodeId: input.flags["owner-node"] ?? "local",
     driver,
     allowedPeerNodeIds: input.flags["peer-node"] ? [input.flags["peer-node"]] : [],
-  });
+  }, input.flags["node-id"] ?? "local"));
 }
 
 function planFromFlags(input: RemoteSyncCliInput) {
   const manifest = manifestFromFlags(input);
   const now = input.flags.now ?? "2026-05-17T10:00:00.000Z";
-  const localNodeId = input.flags["owner-node"] ?? "local";
+  const localNodeId = input.flags["node-id"] ?? "local";
   const peerNodeId = input.flags["peer-node"] ?? "peer";
   const localSnapshots = parseSnapshots("--local-snapshot-json", input.flags["local-snapshot-json"], [{
     resourceId: manifest.resourceId,
@@ -521,7 +817,7 @@ function remoteCompatibilityAdapterFromFlags(input: RemoteSyncCliInput) {
 function meshInvitationFromFlags(input: RemoteSyncCliInput) {
   return createMeshInvitation({
     issuerMeshId: input.flags["issuer-mesh"] ?? "mesh.local",
-    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? "local",
     recipientMeshId: input.flags["recipient-mesh"],
     inviteePublicKeyRef: input.flags["invitee-key"],
     trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
@@ -537,7 +833,7 @@ function meshShareFromFlags(input: RemoteSyncCliInput) {
   const manifest = manifestFromFlags(input);
   const invitation = createMeshInvitation({
     issuerMeshId: input.flags["issuer-mesh"] ?? "mesh.local",
-    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? "local",
     recipientMeshId: input.flags["recipient-mesh"] ?? input.flags["to-mesh"] ?? "mesh.peer",
     trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
     transport: input.flags.transport ?? "iroh",
@@ -566,7 +862,7 @@ function meshInvitationAcceptanceFromFlags(input: RemoteSyncCliInput) {
     actor: {
       actorKind: "human",
       actorId: input.flags["actor-id"] ?? "user.local",
-      nodeId: input.flags["owner-node"] ?? input.flags["node-id"] ?? "local",
+      nodeId: input.flags["node-id"] ?? "local",
       transport: input.flags.transport ?? "gateway",
       trustMode: "governed_gateway",
     },
@@ -580,12 +876,22 @@ function transportHandshakeFromFlags(input: RemoteSyncCliInput) {
   return createTransportHandshakeReceipt({
     transport: input.flags.transport ?? "iroh",
     adapter: input.flags.adapter,
-    initiatorNodeId: input.flags["owner-node"] ?? input.flags["initiator-node"] ?? "local",
+    initiatorNodeId: input.flags["initiator-node"] ?? input.flags["node-id"] ?? "local",
+    initiatorNodeFingerprint: input.flags["initiator-fingerprint"],
     responderNodeId: input.flags["peer-node"] ?? input.flags["responder-node"] ?? "peer",
-    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    responderNodeFingerprint: input.flags["peer-fingerprint"] ?? input.flags["responder-fingerprint"],
+    expectedResponderFingerprint: input.flags["expected-peer-fingerprint"] ?? input.flags["expected-responder-fingerprint"],
+    coordinatorNodeId: input.flags["coordinator-node"] ?? "local",
     trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
     challengeNonce: input.flags["challenge-nonce"] ?? "challenge-nonce-local",
     responseNonce: input.flags["response-nonce"] ?? "response-nonce-peer",
+    proofOfPossession: {
+      algorithm: input.flags["proof-algorithm"] === "ed25519" || input.flags["proof-algorithm"] === "p256" || input.flags["proof-algorithm"] === "rsa"
+        ? input.flags["proof-algorithm"]
+        : "external_attestation",
+      challengeSigned: true,
+      signatureRef: input.flags["signature-ref"] ?? "external:pending",
+    },
     createdAt: now,
     expiresAt: input.flags["expires-at"],
     physicalTransportVerified: approvedValidationFlag(input, "physical-verified", "physical_iroh_handshake"),
@@ -596,7 +902,8 @@ function nodeTrustDecisionFromFlags(input: RemoteSyncCliInput) {
   const effect = input.flags.effect === "deny" || input.flags.effect === "revoke" ? input.flags.effect : "allow";
   return createNodeTrustDecision({
     subjectNodeId: input.flags["target-node"] ?? input.flags["peer-node"] ?? input.flags["subject-node"] ?? "peer",
-    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    subjectNodeFingerprint: input.flags["target-fingerprint"] ?? input.flags["peer-fingerprint"] ?? input.flags["subject-fingerprint"],
+    coordinatorNodeId: input.flags["coordinator-node"] ?? "local",
     actor: actorContextFromFlags(input),
     trustMode: input.flags["trust-mode"] === "governed_gateway" ? "governed_gateway" : "sovereign_e2e_tunnel",
     transport: input.flags.transport ?? "iroh",
@@ -622,8 +929,8 @@ function gatewayDeploymentFromFlags(input: RemoteSyncCliInput, operation: "serve
     : input.flags.hosted === "true" || operation === "project" ? "hosted" : "self_hosted";
   return createGatewayDeploymentManifest({
     deploymentKind,
-    gatewayNodeId: input.flags["gateway-node"] ?? input.flags["owner-node"] ?? "gateway.local",
-    coordinatorNodeId: input.flags["coordinator-node"] ?? input.flags["owner-node"] ?? "local",
+    gatewayNodeId: input.flags["gateway-node"] ?? input.flags["node-id"] ?? "gateway.local",
+    coordinatorNodeId: input.flags["coordinator-node"] ?? "local",
     bindAddress: input.flags["bind-address"] ?? input.flags.bind ?? "127.0.0.1:24102",
     publicBaseUrl: input.flags["public-base-url"],
     contractRouteIds: listFlag(input.flags["route-ids"], remoteSyncRequiredRouteIds.slice()),
@@ -877,6 +1184,135 @@ export async function runRemoteCli(input: RemoteSyncCliInput): Promise<number> {
   return unknownRemoteSubcommand(input, command);
 }
 
+export async function runBrowserCli(input: RemoteSyncCliInput): Promise<number | null> {
+  if (input.positionals[0] !== "browser") return null;
+  const command = input.positionals[1];
+  if (command === "credential-fill") {
+    const usage = "browser credential-fill --session-id <id> --secret-ref <ref> --field-kind password|totp --field-target <target> --allowed-origin <origin> --observed-origin <origin>";
+    const secretRef = input.flags["secret-ref"] ?? input.flags.secret;
+    const fieldTarget = input.flags["field-target"];
+    const rawFieldKind = input.flags["field-kind"] ?? "password";
+    const fieldKind: GovernedBrowserCredentialFieldKind | null = rawFieldKind === "password" || rawFieldKind === "totp" ? rawFieldKind : null;
+    if (!secretRef || !fieldTarget || !fieldKind) return missing(input, usage);
+    const now = input.flags.now ?? new Date().toISOString();
+    const ttlSeconds = positiveIntegerFlag(input.flags["ttl-seconds"], 900, "--ttl-seconds");
+    const expiresAt = input.flags["expires-at"] ?? new Date(Date.parse(now) + ttlSeconds * 1000).toISOString();
+    const submitPolicy: GovernedBrowserSubmitPolicy = input.flags["submit-policy"] === "submit_after_fill" ? "submit_after_fill" : "no_submit";
+    const allowedOrigin = input.flags["allowed-origin"] ?? input.flags.origin ?? originFromUrl(input.flags.url);
+    const observedOrigin = input.flags["observed-origin"] ?? allowedOrigin;
+    if (!allowedOrigin || !observedOrigin) return missing(input, usage);
+    const session = browserSessionFromFlags({
+      ...input,
+      flags: {
+        ...input.flags,
+        "allowed-origin": allowedOrigin,
+      },
+    });
+    const receipt = createGovernedBrowserCredentialFillReceipt({
+      session,
+      lease: {
+        leaseId: input.flags["lease-id"] ?? `lease.${session.sessionId}`,
+        secretRef,
+        actor: actorContextFromFlags(input),
+        action: input.flags.action ?? "browser_credential_fill",
+        resourceId: `browser:${session.sessionId}`,
+        expiresAt,
+        plaintextReturned: false,
+        auditEventId: input.flags["lease-audit-id"] ?? `audit.${input.flags["lease-id"] ?? session.sessionId}`,
+      },
+      fieldKind,
+      fieldTarget,
+      allowedOrigin,
+      observedOrigin,
+      submitPolicy,
+      brokerIsolationVerified: booleanFlag(input, "broker-isolated", false),
+      hostAuditPersisted: booleanFlag(input, "host-audit-persisted", false),
+      agentRawBrowserReadAvailable: booleanFlag(input, "agent-raw-browser-read", false),
+      fieldVisible: booleanFlag(input, "field-visible", true),
+      fieldAmbiguous: booleanFlag(input, "field-ambiguous", false),
+      nodeTrusted: booleanFlag(input, "trusted-node", false),
+      leaseActive: booleanFlag(input, "lease-active", true),
+      profileSupported: booleanFlag(input, "profile-supported", true),
+      physicalBrokerAvailable: booleanFlag(input, "physical-broker-available", false),
+      createdAt: now,
+    });
+    return writeOutput(input, "browser", {
+      status: receipt.fillStatus,
+      writes: false,
+      session,
+      receipt,
+    }, `credential-fill: ${receipt.fillStatus}`, command);
+  }
+
+  if (command !== "session") return null;
+  const subcommand = input.positionals[2];
+  const session = browserSessionFromFlags(input);
+  if (subcommand === "ensure") {
+    return writeOutput(input, "browser", {
+      status: "browser_session_ensured",
+      writes: false,
+      session,
+    }, `session ensured: ${session.sessionId}`, subcommand);
+  }
+  if (subcommand === "status") {
+    return writeOutput(input, "browser", {
+      status: session.state,
+      writes: false,
+      session,
+    }, `session ${session.sessionId}: ${session.state}`, subcommand);
+  }
+  if (subcommand === "share") {
+    const preference = selectGovernedBrowserHumanNode({
+      actorId: input.flags["actor-id"] ?? input.flags["agent-id"] ?? session.assignedAgentId,
+      defaultHumanNodeId: input.flags["default-human-node"],
+      explicitTargetNodeId: input.flags["to-node"] === "human-default" ? undefined : input.flags["to-node"],
+      presenceCandidateNodeId: input.flags["presence-node"],
+      evaluatedAt: input.flags.now,
+    });
+    const receipt = createGovernedBrowserHumanHandoffReceipt({
+      session,
+      preference,
+      requestedByAgentId: input.flags["agent-id"],
+      targetNodeTrusted: booleanFlag(input, "trusted-node", true),
+      sessionAvailable: booleanFlag(input, "session-available", true),
+      handoffUrl: input.flags["handoff-url"] ?? `claw://browser/session/${encodeURIComponent(session.sessionId)}`,
+      completed: booleanFlag(input, "completed", false),
+      createdAt: input.flags.now,
+    });
+    return writeOutput(input, "browser", {
+      status: receipt.status,
+      writes: false,
+      preference,
+      receipt,
+      session,
+    }, `session share: ${receipt.status}`, subcommand);
+  }
+  if (subcommand === "handoff") {
+    const toNodeId = input.flags["to-node"];
+    if (!toNodeId) return missing(input, "browser session handoff --session-id <id> --to-node <node> --mode closed-profile");
+    if (input.flags.mode && input.flags.mode !== "closed-profile" && input.flags.mode !== "closed_profile") return missing(input, "browser session handoff --mode closed-profile");
+    const receipt = createGovernedBrowserProfileHandoffReceipt({
+      session,
+      toNodeId,
+      sourceSessionClosed: booleanFlag(input, "source-session-closed", false),
+      sourceProfileLocked: booleanFlag(input, "source-profile-locked", false),
+      encryptedForTargetNode: booleanFlag(input, "encrypted-for-target", false),
+      targetNodeTrusted: booleanFlag(input, "target-node-trusted", false),
+      liveCookieSyncRequested: booleanFlag(input, "live-cookie-sync", false),
+      importVerified: booleanFlag(input, "import-verified", false),
+      retainSourceReadOnly: booleanFlag(input, "retain-source-read-only", false),
+      createdAt: input.flags.now,
+    });
+    return writeOutput(input, "browser", {
+      status: receipt.status,
+      writes: false,
+      receipt,
+      session,
+    }, `session handoff: ${receipt.status}`, subcommand);
+  }
+  return missing(input, "browser session ensure|share|handoff|status");
+}
+
 export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
   if (command === "drivers" || command === "driver-catalog" || command === "catalog") {
@@ -1006,7 +1442,7 @@ export async function runSyncCli(input: RemoteSyncCliInput): Promise<number> {
     const snapshot = createRemoteClientCacheSnapshot({
       manifest,
       objectRef: input.flags["object-ref"] ?? "skill.review",
-      nodeId: input.flags["owner-node"] ?? input.flags["node-id"] ?? "local",
+      nodeId: input.flags["node-id"] ?? "local",
       clientId: input.flags["client-id"] ?? "mobile.local",
       contentHash: input.flags["content-hash"] ?? input.flags.hash ?? "hash-cache",
       cachedAt: input.flags.now,
@@ -1024,12 +1460,12 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
   const command = input.positionals[1];
   if (command === "list") {
     const nodes = remoteLayerNodes();
-    return writeOutput(input, "nodes", { nodes }, nodes.map((node) => `${node.id}: ${node.name}`).join("\n"), command);
+    return writeOutput(input, "nodes", { nodes: nodes.map(nodeWithOperationalSummary) }, nodes.map((node) => `${node.nodeId}: ${node.displayName}`).join("\n"), command);
   }
   if (command === "pair" || command === "trust" || command === "revoke" || command === "heartbeat") {
     if (command === "heartbeat") {
       const receipt = transportHandshakeFromFlags(input);
-      const usage = "nodes heartbeat --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--transport iroh] [--owner-node <id>] [--peer-node <id>]";
+      const usage = "nodes heartbeat --state-dir <dir> --record true --coordinator-private-key-file <pem> --coordinator-public-key-file <pem> [--transport iroh] [--node-id <id>] [--peer-node <id>]";
       const store = stateStoreFromFlags(input);
       if (wantsDurableRecord(input) && !store) return missing(input, usage);
       const signer = wantsDurableRecord(input) ? requireCoordinatorSigner(input, usage) : undefined;
@@ -1072,11 +1508,11 @@ export async function runNodesCli(input: RemoteSyncCliInput): Promise<number> {
         actor: {
           actorKind: "human",
           actorId: input.flags["actor-id"] ?? "user.local",
-          nodeId: input.flags["owner-node"] ?? "local",
+          nodeId: input.flags["node-id"] ?? "local",
           transport: input.flags.transport ?? "gateway",
           trustMode: "governed_gateway",
         },
-        reason: input.flags.reason ?? "owner_revoked",
+        reason: input.flags.reason ?? "principal_revoked",
         revokedAt: input.flags.now ?? "2026-05-17T10:09:00.000Z",
       });
       const store = stateStoreFromFlags(input);

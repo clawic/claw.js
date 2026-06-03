@@ -89,7 +89,7 @@ import { runSafetyCli } from "./cli-safety-command.ts";
 import { enabledModuleIdsForConfig, hasModuleConfigForCli, readEffectiveModuleConfigForCli, requiredModuleForCliGroup, runModulesCli, runSetupCli } from "./cli-modules-command.ts";
 import { runConnectorContextCli } from "./cli-connector-context-command.ts";
 import { runProjectManifestCli } from "./cli-project-command.ts";
-import { runGatewayCli, runNodesCli, runRemoteCli, runSyncCli } from "./cli-remote-sync-command.ts";
+import { runBrowserCli, runGatewayCli, runInventoryCli, runNodesCli, runRemoteCli, runSyncCli } from "./cli-remote-sync-command.ts";
 import { isMacControlCliRoot, runMacControlCli } from "./cli-mac-control-command.ts";
 import { runPublicPortalShortcut, writeMissingSubcommandJsonHelp, writePublicPortalHelpOnly } from "./cli-public-portal-routes.ts";
 import { handleUnknownCliCommand } from "./cli-unknown-command.ts";
@@ -566,6 +566,9 @@ async function runCliUnsafe(argv: string[], context: CliContext): Promise<number
   if (group === "sync") return await runSyncCli({ positionals, flags, context, wantsJson, binName });
   if (group === "nodes") return await runNodesCli({ positionals, flags, context, wantsJson, binName });
   if (group === "gateway") return await runGatewayCli({ positionals, flags, context, wantsJson, binName });
+  const browserExit = await runBrowserCli({ positionals, flags, context, wantsJson, binName });
+  if (browserExit !== null) return browserExit;
+  if (group === "get" || group === "describe" || group === "where" || group === "risk") return await runInventoryCli({ positionals, flags, context, wantsJson, binName });
   const shouldUseMacControl = isMacControlCliRoot(group)
     && !(group === "media" && command && MEDIA_GENERATION_COMMANDS.has(command))
     && !(group === "media" && command && !MEDIA_MAC_CONTROL_COMMANDS.has(command));
