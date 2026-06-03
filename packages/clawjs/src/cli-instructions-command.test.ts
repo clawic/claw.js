@@ -205,7 +205,190 @@ test("instructions add rejects body fields exceeding caps", async () => {
 test("instructions without subcommand prints usage on stderr", async () => {
   const result = await callCli(["instructions"], {}, false);
   assert.equal(result.status, 64);
-  assert.match(result.stderr, /Usage: claw instructions <list\|show\|add\|edit\|rm\|approve\|propose\|where\|reconcile>/);
+  assert.match(result.stderr, /Usage: claw instructions <list\|show\|search\|read\|docs\|graph\|add\|edit\|rm\|approve\|propose\|where\|reconcile>/);
+});
+
+test("instructions search returns unified candidates across rules, guidance, docs, cli instructions, and agent files", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  const prevData = process.env.CLAW_DATA_DIR;
+  const prevRules = process.env.CLAW_RULES_DIR;
+  const prevGuidance = process.env.CLAW_GUIDANCE_DIR;
+  makeIsolatedEnv(root);
+  process.env.CLAW_DATA_DIR = root;
+  process.env.CLAW_RULES_DIR = path.join(root, "rules");
+  process.env.CLAW_GUIDANCE_DIR = path.join(root, "guidance");
+  try {
+    fs.mkdirSync(process.env.CLAW_RULES_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.CLAW_RULES_DIR, "rules.json"), `${JSON.stringify({
+      schemaVersion: 1,
+      scopes: [{ id: "global", kind: "user", name: "Global", aliases: [], createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }],
+      rules: [{
+        id: "billing-no-vpn",
+        title: "Never use VPN for billing portal",
+        kind: "directive",
+        status: "active",
+        scopeId: "global",
+        content: "Never use VPN for billing portal access.",
+        applyWhen: { services: ["billing"] },
+        aliases: [],
+        priority: 95,
+        references: [{ kind: "asset", ref: "instruction:billing-refunds", label: "Billing refunds" }],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }],
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    }, null, 2)}\n`);
+    fs.mkdirSync(process.env.CLAW_GUIDANCE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.CLAW_GUIDANCE_DIR, "guidance.json"), `${JSON.stringify({
+      schemaVersion: 1,
+      records: [{
+        schemaVersion: 1,
+        id: "billing-runbook",
+        status: "active",
+        title: "Billing runbook",
+        capsule: "Read billing instructions before refunds.",
+        severity: "warning",
+        priority: 90,
+        applyWhen: { services: ["billing"] },
+        resourceIds: [],
+        commands: ["claw instructions read doc:billing-refunds --summary --json"],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }],
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    }, null, 2)}\n`);
+    fs.writeFileSync(path.join(root, "AGENTS.md"), "# Billing project\n\nRead billing rules before refund work.\n");
+
+    const add = await callCli(["instructions", "add"], {
+      "target.command": "billing",
+      "target.action": "write",
+      "use-when": "Billing refund work.",
+      notes: "Billing compact CLI instruction.",
+    }, true, root);
+    assert.equal(add.status, 0, add.stderr);
+
+    const create = await callCli(["instructions", "docs", "create"], {
+      id: "billing-refunds",
+      title: "Billing refunds",
+      summary: "Refund workflow for billing.",
+      tags: "billing,refunds",
+      "applies-when": "Before issuing billing refunds.",
+      content: "# Refunds\n\nUse the dashboard carefully.",
+      "related-rules": "billing-no-vpn",
+      "related-guidance": "billing-runbook",
+      "requires-read": "doc:billing-risk",
+    }, true, root);
+    assert.equal(create.status, 0, create.stderr);
+
+    const search = await callCli(["instructions", "search", "billing"], { limit: "20" }, true, root);
+    assert.equal(search.status, 0, search.stderr);
+    const payload = JSON.parse(search.stdout);
+    const kinds = new Set(payload.data.items.map((item: { kind: string }) => item.kind));
+    assert.equal(kinds.has("rule"), true);
+    assert.equal(kinds.has("guidance"), true);
+    assert.equal(kinds.has("instruction_document"), true);
+    assert.equal(kinds.has("cli_instruction"), true);
+    assert.equal(kinds.has("agent_file"), true);
+    assert.equal(payload.data.insertion, "recommend_only");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+    if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+    if (prevRules === undefined) delete process.env.CLAW_RULES_DIR; else process.env.CLAW_RULES_DIR = prevRules;
+    if (prevGuidance === undefined) delete process.env.CLAW_GUIDANCE_DIR; else process.env.CLAW_GUIDANCE_DIR = prevGuidance;
+  }
+});
+
+test("instructions docs create edit versions and read summary section full", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  const prevData = process.env.CLAW_DATA_DIR;
+  makeIsolatedEnv(root);
+  process.env.CLAW_DATA_DIR = root;
+  try {
+    const create = await callCli(["instructions", "docs", "create"], {
+      id: "namecheap-dns",
+      title: "Namecheap DNS",
+      summary: "Namecheap DNS update checklist.",
+      tags: "namecheap,dns",
+      "applies-when": "Before editing Namecheap DNS records.",
+      content: "# Checklist\n\nConfirm the target zone.\n\n# Rollback\n\nKeep previous values.",
+    }, true, root);
+    assert.equal(create.status, 0, create.stderr);
+    const created = JSON.parse(create.stdout);
+    assert.equal(created.data.document.id, "namecheap-dns");
+    assert.equal(fs.existsSync(created.data.document.path), true);
+    assert.equal(fs.existsSync(created.data.versionPath), true);
+
+    const summary = await callCli(["instructions", "read", "doc:namecheap-dns"], { summary: "true" }, true, root);
+    assert.equal(summary.status, 0, summary.stderr);
+    const summaryPayload = JSON.parse(summary.stdout);
+    assert.equal(summaryPayload.data.summary, "Namecheap DNS update checklist.");
+    assert.equal(Object.prototype.hasOwnProperty.call(summaryPayload.data, "body"), false);
+    assert.deepEqual(summaryPayload.data.availableSections, ["Checklist", "Rollback"]);
+
+    const section = await callCli(["instructions", "read", "doc:namecheap-dns"], { section: "Rollback" }, true, root);
+    assert.equal(section.status, 0, section.stderr);
+    assert.match(JSON.parse(section.stdout).data.content, /Keep previous values/);
+
+    const full = await callCli(["instructions", "read", "doc:namecheap-dns"], { full: "true" }, true, root);
+    assert.equal(full.status, 0, full.stderr);
+    assert.match(JSON.parse(full.stdout).data.body, /Confirm the target zone/);
+
+    const edit = await callCli(["instructions", "docs", "edit", "namecheap-dns"], {
+      summary: "Updated Namecheap DNS checklist.",
+      content: "# Checklist\n\nConfirm principal approval.",
+    }, true, root);
+    assert.equal(edit.status, 0, edit.stderr);
+
+    const versions = await callCli(["instructions", "docs", "versions", "namecheap-dns"], {}, true, root);
+    assert.equal(versions.status, 0, versions.stderr);
+    assert.equal(JSON.parse(versions.stdout).data.versions.length >= 2, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+    if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+  }
+});
+
+test("instructions graph exposes related rule and guidance density for managed docs", async () => {
+  const root = tmpRoot();
+  const prevDb = process.env.CLAW_DB_PATH;
+  const prevFiles = process.env.CLAW_FILES_DIR;
+  const prevData = process.env.CLAW_DATA_DIR;
+  makeIsolatedEnv(root);
+  process.env.CLAW_DATA_DIR = root;
+  try {
+    const create = await callCli(["instructions", "docs", "create"], {
+      id: "hetzner-secure",
+      title: "Hetzner secure server",
+      summary: "Server hardening router.",
+      tags: "hetzner,server",
+      "related-rules": "hetzner-root-login",
+      "related-guidance": "hetzner-runbook",
+      "requires-read": "doc:ssh-hardening,doc:firewall",
+      content: "# Router\n\nRead the hardening docs.",
+    }, true, root);
+    assert.equal(create.status, 0, create.stderr);
+
+    const graph = await callCli(["instructions", "graph", "doc:hetzner-secure"], {}, true, root);
+    assert.equal(graph.status, 0, graph.stderr);
+    const payload = JSON.parse(graph.stdout);
+    assert.deepEqual(payload.data.relatedRules, ["hetzner-root-login"]);
+    assert.deepEqual(payload.data.relatedGuidance, ["hetzner-runbook"]);
+    assert.deepEqual(payload.data.requiresRead, ["doc:ssh-hardening", "doc:firewall"]);
+    assert.equal(payload.data.density.relationCount, 4);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    if (prevDb === undefined) delete process.env.CLAW_DB_PATH; else process.env.CLAW_DB_PATH = prevDb;
+    if (prevFiles === undefined) delete process.env.CLAW_FILES_DIR; else process.env.CLAW_FILES_DIR = prevFiles;
+    if (prevData === undefined) delete process.env.CLAW_DATA_DIR; else process.env.CLAW_DATA_DIR = prevData;
+  }
 });
 
 function writeManifest(root: string, body: string): void {
