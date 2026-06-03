@@ -1,5 +1,7 @@
 import fs from "fs";
 import fsp from "fs/promises";
+import crypto from "crypto";
+import os from "os";
 import path from "path";
 
 import {
@@ -8,6 +10,7 @@ import {
   evaluateRegulatedAction,
   findClawProjectManifestPortabilityViolations,
   normalizeClawProjectManifest,
+  resolveClawGlobalDataStorageDir,
   resolveClawPersistentSurfacePath,
   type ClawProjectManifest,
 } from "@clawjs/core";
@@ -15,10 +18,188 @@ import {
 import { createPackageName, createPascalCase, createTitle, type SupportedPackageManager } from "./scaffold.ts";
 
 const PROJECT_CONFIG_FILE = "claw.project.json";
+const LOCAL_FORGE_STATE_FILE = "local-forge-state.json";
+const LOCAL_FORGE_LARGE_FILE_BYTES = 10 * 1024 * 1024;
+const LOCAL_FORGE_SCAN_FILE_LIMIT = 5_000;
+const LOCAL_FORGE_DEFAULT_STALE_AFTER_MINUTES = 8 * 60;
 
 export type ClawProjectType = "app" | "agent" | "server" | "workspace" | "skill" | "plugin" | "project";
 export type ClawResourceType = "skill" | "plugin" | "provider" | "channel" | "command";
 export type ClawIntegrationType = "provider" | "channel" | "telegram" | "scheduler" | "memory" | "workspace";
+
+export type LocalForgeFindingKind = "dependency" | "generated" | "build_output" | "cache" | "host_private" | "secret_like" | "large_file" | "special_file" | "scan_limit";
+export type LocalForgeFindingAction = "exclude" | "block";
+
+export interface LocalForgePreflightFinding {
+  path: string;
+  kind: LocalForgeFindingKind;
+  action: LocalForgeFindingAction;
+  reason: string;
+  sizeBytes?: number;
+}
+
+export interface LocalForgeFileEntry {
+  path: string;
+  sizeBytes: number;
+  sha256: string;
+}
+
+export interface LocalForgePreflightReport {
+  projectRoot: string;
+  projectId: string;
+  scannedAt: string;
+  fileLimit: number;
+  largeFileThresholdBytes: number;
+  includedFiles: LocalForgeFileEntry[];
+  findings: LocalForgePreflightFinding[];
+  blockedCount: number;
+  excludedCount: number;
+  status: "ok" | "attention_required";
+}
+
+export interface LocalForgeWorktreeRecord {
+  schemaVersion: 1;
+  worktreeId: string;
+  projectId: string;
+  projectRoot: string;
+  createdAt: string;
+  updatedAt: string;
+  checkoutLocator: {
+    locatorId: string;
+    kind: "local_path";
+    path: string;
+    mutable: true;
+    authority: false;
+  };
+  nodeCheckout: {
+    nodeId: string;
+    status: "local";
+  };
+  authorityService: {
+    serviceId: string;
+    ownsChangeHistory: true;
+    externalProviderAuthority: false;
+  };
+  versionHistory: ClawProjectFolderInspection["versionHistory"];
+  nestedProjectWarnings: string[];
+}
+
+export interface LocalForgeWorkClaimRecord {
+  schemaVersion: 1;
+  claimId: string;
+  projectId: string;
+  worktreeId: string;
+  actorId: string;
+  agentId?: string;
+  nodeId: string;
+  task: string;
+  intent: string;
+  subpath: string;
+  branch?: string;
+  expectedOutput?: string;
+  exclusive: boolean;
+  status: "active" | "stale" | "review" | "recovered" | "abandoned";
+  recoveryPolicy: "resume_review_recover_or_abandon";
+  startedAt: string;
+  heartbeatAt: string;
+}
+
+export interface LocalForgeSnapshotRecord {
+  schemaVersion: 1;
+  snapshotId: string;
+  projectId: string;
+  worktreeId: string;
+  createdAt: string;
+  reason: string;
+  checkpointKind: "snapshot";
+  status: "ok" | "attention_required";
+  files: LocalForgeFileEntry[];
+  excludedPaths: string[];
+  blockedPaths: string[];
+  preflight: {
+    largeFileThresholdBytes: number;
+    blockedCount: number;
+    excludedCount: number;
+  };
+}
+
+export interface LocalForgeReviewRecord {
+  schemaVersion: 1;
+  reviewId: string;
+  projectId: string;
+  worktreeId: string;
+  claimId?: string;
+  snapshotId?: string;
+  createdAt: string;
+  explanation: string;
+  testsRun: string[];
+  risks: string[];
+  mergeStatus: "not_ready" | "needs_human_review" | "ready_for_merge";
+  diffSummary: {
+    includedPaths: string[];
+    excludedPaths: string[];
+    blockedPaths: string[];
+  };
+}
+
+export interface LocalForgeMergePlanRecord {
+  schemaVersion: 1;
+  mergePlanId: string;
+  projectId: string;
+  worktreeId: string;
+  baseSnapshotId: string;
+  proposedSnapshotId: string;
+  createdAt: string;
+  conflictPolicy: "detect_and_elevate";
+  status: "ready_for_review" | "blocked_conflicts";
+  conflicts: Array<{
+    path: string;
+    baseSha256: string;
+    proposedSha256: string;
+    resolution: "human_review_required";
+  }>;
+  changes: Array<{
+    path: string;
+    action: "add" | "modify" | "delete";
+  }>;
+  noProjectMutation: true;
+}
+
+export interface LocalForgeRecoveryReceipt {
+  schemaVersion: 1;
+  recoveryId: string;
+  projectId: string;
+  worktreeId: string;
+  claimId?: string;
+  createdAt: string;
+  action: "resume" | "review" | "merge" | "recover" | "abandon";
+  status: "preview" | "recorded";
+  noIrreversibleDataLoss: true;
+  mutationPolicy: "metadata_only";
+  evidence: string[];
+}
+
+export interface LocalForgeState {
+  schemaVersion: 1;
+  updatedAt: string | null;
+  worktrees: Record<string, LocalForgeWorktreeRecord>;
+  claims: Record<string, LocalForgeWorkClaimRecord>;
+  snapshots: Record<string, LocalForgeSnapshotRecord>;
+  reviews: Record<string, LocalForgeReviewRecord>;
+  mergePlans: Record<string, LocalForgeMergePlanRecord>;
+  recoveries: Record<string, LocalForgeRecoveryReceipt>;
+  audit: Array<{ eventId: string; eventType: string; targetId: string; createdAt: string }>;
+}
+
+export interface LocalForgeStaleClaimEvaluation {
+  schemaVersion: 1;
+  evaluatedAt: string;
+  staleAfterMinutes: number;
+  staleBefore: string;
+  accepted: boolean;
+  staleClaims: LocalForgeWorkClaimRecord[];
+  writes: boolean;
+}
 
 interface ClawProjectResourceEntry {
   id: string;
@@ -123,6 +304,87 @@ function safeReadJson<TValue>(filePath: string): TValue | null {
   } catch {
     return null;
   }
+}
+
+function expandHome(value: string): string {
+  if (value === "~") return os.homedir();
+  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
+  return value;
+}
+
+export function resolveLocalForgeStateDir(env: NodeJS.ProcessEnv = process.env, dataDir?: string): string {
+  const explicitData = dataDir ?? env.CLAW_DATA_DIR;
+  const clawHome = env.CLAW_HOME;
+  return path.join(resolveClawGlobalDataStorageDir({
+    homeDir: os.homedir(),
+    ...(explicitData ? { dataDir: path.resolve(expandHome(explicitData)) } : {}),
+    ...(clawHome ? { clawHome: path.resolve(expandHome(clawHome)) } : {}),
+  }), "local-forge");
+}
+
+function emptyLocalForgeState(): LocalForgeState {
+  return {
+    schemaVersion: 1,
+    updatedAt: null,
+    worktrees: {},
+    claims: {},
+    snapshots: {},
+    reviews: {},
+    mergePlans: {},
+    recoveries: {},
+    audit: [],
+  };
+}
+
+function localForgeStatePath(dataDir?: string): string {
+  return path.join(resolveLocalForgeStateDir(process.env, dataDir), LOCAL_FORGE_STATE_FILE);
+}
+
+function readLocalForgeState(dataDir?: string): LocalForgeState {
+  const statePath = localForgeStatePath(dataDir);
+  const raw = safeReadJson<Partial<LocalForgeState>>(statePath);
+  if (!raw || raw.schemaVersion !== 1) return emptyLocalForgeState();
+  return {
+    schemaVersion: 1,
+    updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : null,
+    worktrees: raw.worktrees && typeof raw.worktrees === "object" ? raw.worktrees as Record<string, LocalForgeWorktreeRecord> : {},
+    claims: raw.claims && typeof raw.claims === "object" ? raw.claims as Record<string, LocalForgeWorkClaimRecord> : {},
+    snapshots: raw.snapshots && typeof raw.snapshots === "object" ? raw.snapshots as Record<string, LocalForgeSnapshotRecord> : {},
+    reviews: raw.reviews && typeof raw.reviews === "object" ? raw.reviews as Record<string, LocalForgeReviewRecord> : {},
+    mergePlans: raw.mergePlans && typeof raw.mergePlans === "object" ? raw.mergePlans as Record<string, LocalForgeMergePlanRecord> : {},
+    recoveries: raw.recoveries && typeof raw.recoveries === "object" ? raw.recoveries as Record<string, LocalForgeRecoveryReceipt> : {},
+    audit: Array.isArray(raw.audit) ? raw.audit as LocalForgeState["audit"] : [],
+  };
+}
+
+function writeLocalForgeState(state: LocalForgeState, dataDir?: string): string {
+  const statePath = localForgeStatePath(dataDir);
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
+  const tmpPath = `${statePath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpPath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  fs.renameSync(tmpPath, statePath);
+  return statePath;
+}
+
+function localForgeAuditId(eventType: string, targetId: string, createdAt: string): string {
+  return `local_forge_${eventType}_${targetId}_${createdAt}`.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
+}
+
+function appendLocalForgeAudit(state: LocalForgeState, eventType: string, targetId: string, createdAt: string): void {
+  state.audit.push({
+    eventId: localForgeAuditId(eventType, targetId, createdAt),
+    eventType,
+    targetId,
+    createdAt,
+  });
+}
+
+function stableHash(input: string): string {
+  return crypto.createHash("sha256").update(input).digest("hex").slice(0, 24);
+}
+
+function fileHash(filePath: string): string {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
 function loadPackageJson(projectRoot: string): Record<string, unknown> | null {
@@ -548,6 +810,12 @@ export interface ClawProjectFolderInspection {
   claudePath: string;
   agentsManaged: boolean;
   claudeShim: boolean;
+  versionHistory: {
+    existingGitDetected: boolean;
+    enabledByDefault: false;
+    willEnableOnAttach: false;
+    mode: "existing_git_detected" | "off_until_explicit_opt_in";
+  };
   state: "missing" | "unattached" | "attached" | "detached" | "duplicate";
   warnings: string[];
 }
@@ -558,6 +826,7 @@ export interface ClawProjectAttachPreview {
   projectId: string;
   workspaceId: string;
   writes: Array<{ path: string; action: "create" | "update" | "unchanged" }>;
+  versionHistory: ClawProjectFolderInspection["versionHistory"];
   warnings: string[];
   accepted: boolean;
   manifest: ClawProjectManifest;
@@ -574,6 +843,533 @@ function readTextSafe(filePath: string): string | null {
   } catch {
     return null;
   }
+}
+
+function hasExistingGitRepository(projectRoot: string): boolean {
+  const dotGitPath = path.join(projectRoot, ".git");
+  if (!fs.existsSync(dotGitPath)) return false;
+  const stat = fs.statSync(dotGitPath);
+  return stat.isDirectory() || stat.isFile();
+}
+
+function versionHistoryPreview(projectRoot: string): ClawProjectFolderInspection["versionHistory"] {
+  const existingGitDetected = hasExistingGitRepository(projectRoot);
+  return {
+    existingGitDetected,
+    enabledByDefault: false,
+    willEnableOnAttach: false,
+    mode: existingGitDetected ? "existing_git_detected" : "off_until_explicit_opt_in",
+  };
+}
+
+function localProjectId(projectRoot: string): string {
+  return readProjectConfig(projectRoot)?.projectId ?? createClawProjectId(path.basename(projectRoot));
+}
+
+function localForgeWorktreeId(projectId: string, projectRoot: string): string {
+  return `worktree_${stableHash(`${projectId}:${path.resolve(projectRoot)}`)}`;
+}
+
+function localForgeLocatorId(projectRoot: string): string {
+  return `locator_${stableHash(path.resolve(projectRoot))}`;
+}
+
+function relativeProjectPath(projectRoot: string, absolutePath: string): string {
+  return path.relative(projectRoot, absolutePath).split(path.sep).join("/");
+}
+
+function nestedProjectWarnings(projectRoot: string): string[] {
+  const warnings: string[] = [];
+  const stack = [projectRoot];
+  while (stack.length > 0 && warnings.length < 20) {
+    const current = stack.pop();
+    if (!current) continue;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === ".git" || entry.name === "node_modules" || entry.name === ".claw") continue;
+      const child = path.join(current, entry.name);
+      if (fs.existsSync(path.join(child, PROJECT_CONFIG_FILE))) warnings.push(`nested_project:${relativeProjectPath(projectRoot, child)}`);
+      stack.push(child);
+    }
+  }
+  return warnings;
+}
+
+function classifyForgePath(relativePath: string, sizeBytes: number): LocalForgePreflightFinding | null {
+  const parts = relativePath.split("/");
+  const basename = parts[parts.length - 1] ?? relativePath;
+  const lower = relativePath.toLowerCase();
+  const directoryKinds: Array<{ names: string[]; kind: LocalForgeFindingKind; reason: string }> = [
+    { names: ["node_modules", "vendor", "Pods", ".venv", "venv", ".gradle"], kind: "dependency", reason: "Dependency and vendor folders are excluded from local forge history by default." },
+    { names: ["dist", "build", "out", ".next", "DerivedData", ".dart_tool", ".flutter-plugins-dependencies"], kind: "build_output", reason: "Build output is excluded from local forge history by default." },
+    { names: ["coverage", ".cache", "__pycache__", ".turbo"], kind: "cache", reason: "Cache folders are excluded from local forge history by default." },
+    { names: [".git", ".claw", ".idea", ".vscode"], kind: "host_private", reason: "Host-private and framework-private state is excluded from local forge history by default." },
+  ];
+  for (const directoryKind of directoryKinds) {
+    if (parts.some((part) => directoryKind.names.includes(part))) {
+      return { path: relativePath, kind: directoryKind.kind, action: "exclude", reason: directoryKind.reason, sizeBytes };
+    }
+  }
+  if (
+    basename === ".env"
+    || basename.startsWith(".env.")
+    || /(^|[._-])(secret|secrets|credential|credentials|token|password|private[-_]?key)([._-]|$)/i.test(basename)
+    || lower.endsWith("/id_rsa")
+    || lower.endsWith("/id_ed25519")
+    || lower.endsWith(".pem")
+    || lower.endsWith(".key")
+  ) {
+    return {
+      path: relativePath,
+      kind: "secret_like",
+      action: "block",
+      reason: "Secret-looking files are blocked from snapshots, review diffs, and history.",
+      sizeBytes,
+    };
+  }
+  if (sizeBytes > LOCAL_FORGE_LARGE_FILE_BYTES) {
+    return {
+      path: relativePath,
+      kind: "large_file",
+      action: "block",
+      reason: "Large files require an explicit blob or LFS policy before history capture.",
+      sizeBytes,
+    };
+  }
+  return null;
+}
+
+function scanForgeFiles(projectRoot: string, fileLimit = LOCAL_FORGE_SCAN_FILE_LIMIT): { files: LocalForgeFileEntry[]; findings: LocalForgePreflightFinding[] } {
+  const files: LocalForgeFileEntry[] = [];
+  const findings: LocalForgePreflightFinding[] = [];
+  const stack = [projectRoot];
+  let visited = 0;
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (visited >= fileLimit) {
+        findings.push({
+          path: ".",
+          kind: "scan_limit",
+          action: "block",
+          reason: `Preflight stopped after ${fileLimit} files; narrow the path or raise the reviewed limit.`,
+        });
+        return { files, findings };
+      }
+      const absolutePath = path.join(current, entry.name);
+      const relativePath = relativeProjectPath(projectRoot, absolutePath);
+      if (entry.isDirectory()) {
+        const directoryFinding = classifyForgePath(`${relativePath}/`, 0);
+        if (directoryFinding) {
+          findings.push(directoryFinding);
+          continue;
+        }
+        stack.push(absolutePath);
+        continue;
+      }
+      visited += 1;
+      let stat: fs.Stats;
+      try {
+        stat = fs.lstatSync(absolutePath);
+      } catch {
+        continue;
+      }
+      if (!stat.isFile()) {
+        findings.push({
+          path: relativePath,
+          kind: "special_file",
+          action: "exclude",
+          reason: "Special files are excluded from local forge history by default.",
+          sizeBytes: stat.size,
+        });
+        continue;
+      }
+      const finding = classifyForgePath(relativePath, stat.size);
+      if (finding) {
+        findings.push(finding);
+        continue;
+      }
+      files.push({
+        path: relativePath,
+        sizeBytes: stat.size,
+        sha256: fileHash(absolutePath),
+      });
+    }
+  }
+  return { files: files.sort((left, right) => left.path.localeCompare(right.path)), findings: findings.sort((left, right) => left.path.localeCompare(right.path)) };
+}
+
+export function runLocalForgePreflight(projectRoot: string, options: { now?: string; fileLimit?: number } = {}): LocalForgePreflightReport {
+  const resolved = path.resolve(projectRoot);
+  const now = options.now ?? new Date().toISOString();
+  const projectId = localProjectId(resolved);
+  const { files, findings } = scanForgeFiles(resolved, options.fileLimit ?? LOCAL_FORGE_SCAN_FILE_LIMIT);
+  const blockedCount = findings.filter((finding) => finding.action === "block").length;
+  const excludedCount = findings.filter((finding) => finding.action === "exclude").length;
+  return {
+    projectRoot: resolved,
+    projectId,
+    scannedAt: now,
+    fileLimit: options.fileLimit ?? LOCAL_FORGE_SCAN_FILE_LIMIT,
+    largeFileThresholdBytes: LOCAL_FORGE_LARGE_FILE_BYTES,
+    includedFiles: files,
+    findings,
+    blockedCount,
+    excludedCount,
+    status: blockedCount > 0 ? "attention_required" : "ok",
+  };
+}
+
+function buildLocalForgeWorktree(projectRoot: string, input: { nodeId?: string; authorityServiceId?: string; now?: string } = {}): LocalForgeWorktreeRecord {
+  const resolved = path.resolve(projectRoot);
+  const now = input.now ?? new Date().toISOString();
+  const projectId = localProjectId(resolved);
+  return {
+    schemaVersion: 1,
+    worktreeId: localForgeWorktreeId(projectId, resolved),
+    projectId,
+    projectRoot: resolved,
+    createdAt: now,
+    updatedAt: now,
+    checkoutLocator: {
+      locatorId: localForgeLocatorId(resolved),
+      kind: "local_path",
+      path: resolved,
+      mutable: true,
+      authority: false,
+    },
+    nodeCheckout: {
+      nodeId: input.nodeId ?? "local",
+      status: "local",
+    },
+    authorityService: {
+      serviceId: input.authorityServiceId ?? "local.forge",
+      ownsChangeHistory: true,
+      externalProviderAuthority: false,
+    },
+    versionHistory: versionHistoryPreview(resolved),
+    nestedProjectWarnings: nestedProjectWarnings(resolved),
+  };
+}
+
+export function readLocalForgeInventory(dataDir?: string): LocalForgeState & { statePath: string } {
+  return {
+    ...readLocalForgeState(dataDir),
+    statePath: localForgeStatePath(dataDir),
+  };
+}
+
+export function evaluateLocalForgeStaleClaims(input: {
+  dataDir?: string;
+  accept?: boolean;
+  projectId?: string;
+  now?: string;
+  staleAfterMinutes?: number;
+}): LocalForgeStaleClaimEvaluation & { statePath: string } {
+  const now = input.now ?? new Date().toISOString();
+  const requestedMinutes = input.staleAfterMinutes;
+  const staleAfterMinutes = Number.isFinite(requestedMinutes) && requestedMinutes && requestedMinutes > 0
+    ? Math.floor(requestedMinutes)
+    : LOCAL_FORGE_DEFAULT_STALE_AFTER_MINUTES;
+  const staleBefore = new Date(Date.parse(now) - staleAfterMinutes * 60 * 1000).toISOString();
+  const state = readLocalForgeState(input.dataDir);
+  const staleClaims = Object.values(state.claims)
+    .filter((claim) => claim.status === "active")
+    .filter((claim) => !input.projectId || claim.projectId === input.projectId)
+    .filter((claim) => Date.parse(claim.heartbeatAt) <= Date.parse(staleBefore))
+    .sort((left, right) => left.claimId.localeCompare(right.claimId));
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept || staleClaims.length === 0) {
+    return {
+      schemaVersion: 1,
+      evaluatedAt: now,
+      staleAfterMinutes,
+      staleBefore,
+      accepted: false,
+      staleClaims,
+      writes: false,
+      statePath,
+    };
+  }
+  for (const claim of staleClaims) {
+    state.claims[claim.claimId] = {
+      ...claim,
+      status: "stale",
+    };
+    appendLocalForgeAudit(state, "claim.marked_stale", claim.claimId, now);
+  }
+  state.updatedAt = now;
+  writeLocalForgeState(state, input.dataDir);
+  return {
+    schemaVersion: 1,
+    evaluatedAt: now,
+    staleAfterMinutes,
+    staleBefore,
+    accepted: true,
+    staleClaims: staleClaims.map((claim) => ({ ...claim, status: "stale" })),
+    writes: true,
+    statePath,
+  };
+}
+
+export function recordLocalForgeWorktree(input: { projectRoot: string; dataDir?: string; accept?: boolean; nodeId?: string; authorityServiceId?: string; now?: string }): { accepted: boolean; statePath: string; worktree: LocalForgeWorktreeRecord } {
+  const worktree = buildLocalForgeWorktree(input.projectRoot, input);
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept) return { accepted: false, statePath, worktree };
+  const state = readLocalForgeState(input.dataDir);
+  const previous = state.worktrees[worktree.worktreeId];
+  state.worktrees[worktree.worktreeId] = {
+    ...worktree,
+    createdAt: previous?.createdAt ?? worktree.createdAt,
+  };
+  state.updatedAt = input.now ?? new Date().toISOString();
+  appendLocalForgeAudit(state, "worktree.recorded", worktree.worktreeId, state.updatedAt);
+  writeLocalForgeState(state, input.dataDir);
+  return { accepted: true, statePath, worktree: state.worktrees[worktree.worktreeId] };
+}
+
+export function createLocalForgeClaim(input: {
+  projectRoot: string;
+  dataDir?: string;
+  accept?: boolean;
+  exclusive?: boolean;
+  actorId?: string;
+  agentId?: string;
+  nodeId?: string;
+  task?: string;
+  intent?: string;
+  subpath?: string;
+  branch?: string;
+  expectedOutput?: string;
+  now?: string;
+}): { accepted: boolean; statePath: string; claim: LocalForgeWorkClaimRecord; conflicts: LocalForgeWorkClaimRecord[] } {
+  const now = input.now ?? new Date().toISOString();
+  const worktree = buildLocalForgeWorktree(input.projectRoot, { nodeId: input.nodeId, now });
+  const state = readLocalForgeState(input.dataDir);
+  const subpath = input.subpath ?? ".";
+  const conflicts = Object.values(state.claims).filter((claim) => claim.worktreeId === worktree.worktreeId && claim.status === "active" && (claim.exclusive || input.exclusive));
+  const claim: LocalForgeWorkClaimRecord = {
+    schemaVersion: 1,
+    claimId: `claim_${stableHash(`${worktree.worktreeId}:${input.actorId ?? input.agentId ?? "agent"}:${input.task ?? "work"}:${subpath}:${now}`)}`,
+    projectId: worktree.projectId,
+    worktreeId: worktree.worktreeId,
+    actorId: input.actorId ?? input.agentId ?? "agent.local",
+    ...(input.agentId ? { agentId: input.agentId } : {}),
+    nodeId: input.nodeId ?? "local",
+    task: input.task ?? "unspecified",
+    intent: input.intent ?? "reviewable_local_work",
+    subpath,
+    ...(input.branch ? { branch: input.branch } : {}),
+    ...(input.expectedOutput ? { expectedOutput: input.expectedOutput } : {}),
+    exclusive: Boolean(input.exclusive),
+    status: "active",
+    recoveryPolicy: "resume_review_recover_or_abandon",
+    startedAt: now,
+    heartbeatAt: now,
+  };
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept || conflicts.length > 0) return { accepted: false, statePath, claim, conflicts };
+  state.worktrees[worktree.worktreeId] = state.worktrees[worktree.worktreeId] ?? worktree;
+  state.claims[claim.claimId] = claim;
+  state.updatedAt = now;
+  appendLocalForgeAudit(state, "claim.recorded", claim.claimId, now);
+  writeLocalForgeState(state, input.dataDir);
+  return { accepted: true, statePath, claim, conflicts: [] };
+}
+
+export function createLocalForgeSnapshot(input: { projectRoot: string; dataDir?: string; accept?: boolean; reason?: string; nodeId?: string; now?: string }): { accepted: boolean; statePath: string; snapshot: LocalForgeSnapshotRecord; preflight: LocalForgePreflightReport } {
+  const now = input.now ?? new Date().toISOString();
+  const worktree = buildLocalForgeWorktree(input.projectRoot, { nodeId: input.nodeId, now });
+  const preflight = runLocalForgePreflight(input.projectRoot, { now });
+  const snapshot: LocalForgeSnapshotRecord = {
+    schemaVersion: 1,
+    snapshotId: `snapshot_${stableHash(`${worktree.worktreeId}:${now}:${input.reason ?? "checkpoint"}`)}`,
+    projectId: worktree.projectId,
+    worktreeId: worktree.worktreeId,
+    createdAt: now,
+    reason: input.reason ?? "checkpoint",
+    checkpointKind: "snapshot",
+    status: preflight.status,
+    files: preflight.includedFiles,
+    excludedPaths: preflight.findings.filter((finding) => finding.action === "exclude").map((finding) => finding.path),
+    blockedPaths: preflight.findings.filter((finding) => finding.action === "block").map((finding) => finding.path),
+    preflight: {
+      largeFileThresholdBytes: preflight.largeFileThresholdBytes,
+      blockedCount: preflight.blockedCount,
+      excludedCount: preflight.excludedCount,
+    },
+  };
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept) return { accepted: false, statePath, snapshot, preflight };
+  const state = readLocalForgeState(input.dataDir);
+  state.worktrees[worktree.worktreeId] = state.worktrees[worktree.worktreeId] ?? worktree;
+  state.snapshots[snapshot.snapshotId] = snapshot;
+  state.updatedAt = now;
+  appendLocalForgeAudit(state, "snapshot.recorded", snapshot.snapshotId, now);
+  writeLocalForgeState(state, input.dataDir);
+  return { accepted: true, statePath, snapshot, preflight };
+}
+
+export function createLocalForgeReview(input: {
+  projectRoot: string;
+  dataDir?: string;
+  accept?: boolean;
+  claimId?: string;
+  snapshotId?: string;
+  explanation?: string;
+  testsRun?: string[];
+  risks?: string[];
+  mergeStatus?: LocalForgeReviewRecord["mergeStatus"];
+  now?: string;
+}): { accepted: boolean; statePath: string; review: LocalForgeReviewRecord; preflight: LocalForgePreflightReport } {
+  const now = input.now ?? new Date().toISOString();
+  const worktree = buildLocalForgeWorktree(input.projectRoot, { now });
+  const preflight = runLocalForgePreflight(input.projectRoot, { now });
+  const review: LocalForgeReviewRecord = {
+    schemaVersion: 1,
+    reviewId: `review_${stableHash(`${worktree.worktreeId}:${input.claimId ?? ""}:${input.snapshotId ?? ""}:${now}`)}`,
+    projectId: worktree.projectId,
+    worktreeId: worktree.worktreeId,
+    ...(input.claimId ? { claimId: input.claimId } : {}),
+    ...(input.snapshotId ? { snapshotId: input.snapshotId } : {}),
+    createdAt: now,
+    explanation: input.explanation ?? "Local forge review record.",
+    testsRun: input.testsRun ?? [],
+    risks: input.risks ?? [],
+    mergeStatus: input.mergeStatus ?? "needs_human_review",
+    diffSummary: {
+      includedPaths: preflight.includedFiles.map((file) => file.path),
+      excludedPaths: preflight.findings.filter((finding) => finding.action === "exclude").map((finding) => finding.path),
+      blockedPaths: preflight.findings.filter((finding) => finding.action === "block").map((finding) => finding.path),
+    },
+  };
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept) return { accepted: false, statePath, review, preflight };
+  const state = readLocalForgeState(input.dataDir);
+  state.worktrees[worktree.worktreeId] = state.worktrees[worktree.worktreeId] ?? worktree;
+  state.reviews[review.reviewId] = review;
+  state.updatedAt = now;
+  appendLocalForgeAudit(state, "review.recorded", review.reviewId, now);
+  writeLocalForgeState(state, input.dataDir);
+  return { accepted: true, statePath, review, preflight };
+}
+
+export function createLocalForgeMergePlan(input: {
+  projectRoot: string;
+  dataDir?: string;
+  accept?: boolean;
+  baseSnapshotId: string;
+  proposedSnapshotId: string;
+  now?: string;
+}): { accepted: boolean; statePath: string; mergePlan: LocalForgeMergePlanRecord } {
+  const now = input.now ?? new Date().toISOString();
+  const worktree = buildLocalForgeWorktree(input.projectRoot, { now });
+  const state = readLocalForgeState(input.dataDir);
+  const baseSnapshot = state.snapshots[input.baseSnapshotId];
+  const proposedSnapshot = state.snapshots[input.proposedSnapshotId];
+  if (!baseSnapshot || !proposedSnapshot) {
+    throw new Error("Local forge merge plan requires two recorded snapshots.");
+  }
+  const baseByPath = new Map(baseSnapshot.files.map((file) => [file.path, file]));
+  const proposedByPath = new Map(proposedSnapshot.files.map((file) => [file.path, file]));
+  const paths = [...new Set([...baseByPath.keys(), ...proposedByPath.keys()])].sort();
+  const conflicts: LocalForgeMergePlanRecord["conflicts"] = [];
+  const changes: LocalForgeMergePlanRecord["changes"] = [];
+  for (const filePath of paths) {
+    const base = baseByPath.get(filePath);
+    const proposed = proposedByPath.get(filePath);
+    if (base && proposed && base.sha256 === proposed.sha256) continue;
+    if (base && proposed) {
+      conflicts.push({
+        path: filePath,
+        baseSha256: base.sha256,
+        proposedSha256: proposed.sha256,
+        resolution: "human_review_required",
+      });
+      changes.push({ path: filePath, action: "modify" });
+      continue;
+    }
+    changes.push({ path: filePath, action: base ? "delete" : "add" });
+  }
+  const mergePlan: LocalForgeMergePlanRecord = {
+    schemaVersion: 1,
+    mergePlanId: `merge_plan_${stableHash(`${worktree.worktreeId}:${input.baseSnapshotId}:${input.proposedSnapshotId}:${now}`)}`,
+    projectId: worktree.projectId,
+    worktreeId: worktree.worktreeId,
+    baseSnapshotId: input.baseSnapshotId,
+    proposedSnapshotId: input.proposedSnapshotId,
+    createdAt: now,
+    conflictPolicy: "detect_and_elevate",
+    status: conflicts.length > 0 ? "blocked_conflicts" : "ready_for_review",
+    conflicts,
+    changes,
+    noProjectMutation: true,
+  };
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept) return { accepted: false, statePath, mergePlan };
+  state.worktrees[worktree.worktreeId] = state.worktrees[worktree.worktreeId] ?? worktree;
+  state.mergePlans[mergePlan.mergePlanId] = mergePlan;
+  state.updatedAt = now;
+  appendLocalForgeAudit(state, "merge_plan.recorded", mergePlan.mergePlanId, now);
+  writeLocalForgeState(state, input.dataDir);
+  return { accepted: true, statePath, mergePlan };
+}
+
+export function createLocalForgeRecoveryReceipt(input: {
+  projectRoot: string;
+  dataDir?: string;
+  accept?: boolean;
+  claimId?: string;
+  action: LocalForgeRecoveryReceipt["action"];
+  now?: string;
+}): { accepted: boolean; statePath: string; recovery: LocalForgeRecoveryReceipt } {
+  const now = input.now ?? new Date().toISOString();
+  const worktree = buildLocalForgeWorktree(input.projectRoot, { now });
+  const recovery: LocalForgeRecoveryReceipt = {
+    schemaVersion: 1,
+    recoveryId: `recovery_${stableHash(`${worktree.worktreeId}:${input.claimId ?? ""}:${input.action}:${now}`)}`,
+    projectId: worktree.projectId,
+    worktreeId: worktree.worktreeId,
+    ...(input.claimId ? { claimId: input.claimId } : {}),
+    createdAt: now,
+    action: input.action,
+    status: input.accept ? "recorded" : "preview",
+    noIrreversibleDataLoss: true,
+    mutationPolicy: "metadata_only",
+    evidence: [
+      "Recovery receipt records intent only.",
+      "No project files are deleted, overwritten, merged, pushed, or published by this operation.",
+    ],
+  };
+  const statePath = localForgeStatePath(input.dataDir);
+  if (!input.accept) return { accepted: false, statePath, recovery };
+  const state = readLocalForgeState(input.dataDir);
+  state.worktrees[worktree.worktreeId] = state.worktrees[worktree.worktreeId] ?? worktree;
+  state.recoveries[recovery.recoveryId] = recovery;
+  if (input.claimId && state.claims[input.claimId]) {
+    state.claims[input.claimId] = {
+      ...state.claims[input.claimId],
+      status: input.action === "abandon" ? "abandoned" : input.action === "recover" ? "recovered" : input.action === "review" ? "review" : state.claims[input.claimId].status,
+      heartbeatAt: now,
+    };
+  }
+  state.updatedAt = now;
+  appendLocalForgeAudit(state, "recovery.recorded", recovery.recoveryId, now);
+  writeLocalForgeState(state, input.dataDir);
+  return { accepted: true, statePath, recovery };
 }
 
 function managedAgentsContent(manifest: ClawProjectManifest): string {
@@ -629,6 +1425,7 @@ export function inspectProjectFolder(projectRoot: string, options: { workspaceId
     claudePath,
     agentsManaged: Boolean(agentsText?.includes("This folder is a Claw Project primary folder.")),
     claudeShim: Boolean(claudeText?.includes("Read `AGENTS.md` first")),
+    versionHistory: versionHistoryPreview(resolved),
     state: !exists ? "missing" : !manifest ? "unattached" : isDuplicate ? "duplicate" : manifest.attachment.state,
     warnings,
   };
@@ -714,6 +1511,7 @@ export async function attachProjectFolder(input: {
     projectId: manifest.projectId,
     workspaceId: input.workspaceId,
     writes,
+    versionHistory: versionHistoryPreview(projectRoot),
     warnings,
     accepted: Boolean(input.accept),
     manifest,
