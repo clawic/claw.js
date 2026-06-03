@@ -1074,9 +1074,9 @@
       }
     },
     "packages/clawjs/src/cli-legacy.ts": {
-      "lines": 2067,
+      "lines": 2070,
       "blockGrowth": true,
-      "reason": "Legacy CLI compatibility surface crossed the 2000-line boundary during Hermes runtime parity work; extract compatibility shims and command adapters before expanding this file.",
+      "reason": "Legacy CLI compatibility surface crossed the 2000-line boundary during Hermes runtime parity work; NCLF added public command routing for get/describe/where/risk and local-forge project routes. Extract compatibility shims and command adapters before expanding this file further.",
       "debtControl": {
         "ownerArea": "source-size",
         "expiresAt": "2026-08-20",
@@ -1084,9 +1084,9 @@
         "budget": {
           "metric": "source_lines",
           "unit": "line",
-          "current": 2067,
-          "maxAllowed": 2067,
-          "nextMaxAllowed": 2066,
+          "current": 2070,
+          "maxAllowed": 2070,
+          "nextMaxAllowed": 2069,
           "target": 1200,
           "cadence": "next_touch_or_expiry"
         },

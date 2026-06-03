@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-27T08:55:00.000Z",
+  "generatedAt": "2026-06-02T00:00:00.000Z",
   "sources": {
     "surfaces": "packages/clawjs-core/src/surface-registry.ts",
     "cliCommands": "packages/clawjs-core/src/cli-command-registry.ts"
   },
   "counts": {
-    "surfaces": 1149,
-    "cliCommands": 172
+    "surfaces": 1154,
+    "cliCommands": 177
   },
   "fingerprints": {
-    "surfaces": "fnv1a32:bbcaa1c6",
-    "cliCommands": "fnv1a32:9785ebf7",
-    "combined": "fnv1a32:62fa948d"
+    "surfaces": "fnv1a32:b2f5fd82",
+    "cliCommands": "fnv1a32:15471993",
+    "combined": "fnv1a32:ae0a4cd9"
   },
   "surfaces": [
     {
@@ -1721,6 +1721,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.describe",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "describe",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.design",
       "steward": "claw",
       "kind": "cliCommand",
@@ -1901,6 +1910,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.get",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "get",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.goals",
       "steward": "claw",
       "kind": "cliCommand",
@@ -1996,6 +2014,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "inspect",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.instructions",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "instructions",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -2477,6 +2504,15 @@
       "stability": "v1"
     },
     {
+      "id": "claw.cli.command.risk",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "risk",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
       "id": "claw.cli.command.router",
       "steward": "claw",
       "kind": "cliCommand",
@@ -2851,6 +2887,15 @@
       "kind": "cliCommand",
       "parentId": "claw.contracts.cli",
       "value": "watch",
+      "surfaceClass": "cli",
+      "stability": "v1"
+    },
+    {
+      "id": "claw.cli.command.where",
+      "steward": "claw",
+      "kind": "cliCommand",
+      "parentId": "claw.contracts.cli",
+      "value": "where",
       "surfaceClass": "cli",
       "stability": "v1"
     },
@@ -9712,8 +9757,8 @@
     {
       "name": "browser",
       "kind": "canonical",
-      "usage": "browser status|ensure|share",
-      "family": "diagnostics",
+      "usage": "browser status|ensure|share|session|credential-fill",
+      "family": "runtime",
       "advanced": true,
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.browser.v1"
@@ -9898,6 +9943,14 @@
       "jsonSchemaId": "claw.cli.dense-fixtures.v1"
     },
     {
+      "name": "describe",
+      "kind": "canonical",
+      "usage": "describe node <node-id>|resource <resource-id> --json",
+      "family": "runtime",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.describe.v1"
+    },
+    {
       "name": "design",
       "kind": "canonical",
       "usage": "design list|upsert|delete",
@@ -10051,6 +10104,14 @@
       "jsonSchemaId": "claw.cli.generations.v1"
     },
     {
+      "name": "get",
+      "kind": "canonical",
+      "usage": "get nodes|resources|worktrees --json",
+      "family": "runtime",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.get.v1"
+    },
+    {
       "name": "goals",
       "kind": "canonical",
       "family": "work",
@@ -10131,6 +10192,14 @@
       "usage": "inspect tree|list|show|neighbors|routes|route|capabilities|capability|maturity|canonicity|agent|edges|why|commands|command-intents|debt-ledger|remote|remote-sync|version-governance|evolution|governance|dense-data|dense-gaps|dense-intents|dense-views|dense-fixtures|codebase|connectors|aliases|database|storage|prefs|custom-app-sdk|contracts|apis|private-apis|protocols|events|schemas|ids|cli|env|packages|native|formats|provider-mappings|surfaces|surface-parity|external|render",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.inspect.v1"
+    },
+    {
+      "name": "instructions",
+      "kind": "canonical",
+      "usage": "instructions list|show|search|read|docs|graph|add|edit|rm|approve|propose|where|reconcile",
+      "family": "agent",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.instructions.v1"
     },
     {
       "name": "integrations",
@@ -10461,7 +10530,7 @@
     {
       "name": "project",
       "kind": "canonical",
-      "usage": "project inspect|attach|detach|export|import|sync-handoff",
+      "usage": "project inspect|attach|detach|export|import|sync-handoff|preflight|worktree|claim|snapshot|review|recover|forge-status",
       "family": "work",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.project.v1"
@@ -10542,6 +10611,14 @@
       "family": "time",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.review.v1"
+    },
+    {
+      "name": "risk",
+      "kind": "canonical",
+      "usage": "risk node <node-id> --json",
+      "family": "runtime",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.risk.v1"
     },
     {
       "name": "router",
@@ -10861,6 +10938,14 @@
       "family": "time",
       "schemaVersion": 1,
       "jsonSchemaId": "claw.cli.watch.v1"
+    },
+    {
+      "name": "where",
+      "kind": "canonical",
+      "usage": "where node <node-id>|project <project-id> --json",
+      "family": "runtime",
+      "schemaVersion": 1,
+      "jsonSchemaId": "claw.cli.where.v1"
     },
     {
       "name": "wifi",

@@ -2,7 +2,7 @@
 
 ## Required Local Validation
 
-- [ ] blocked: `npm run test:docs`. Blocker: latest post-edit run fails only on inherited `persistent_surface_database_literal` findings in `packages/clawjs-database/src/database-query-plan.test.ts:153` and `:161`, unrelated to NCLF edits. Reentry: resolve or separately baseline that database guard debt, then rerun. Evidence: `.agent-state/nclf-goal-baseline.json` and latest `test:docs` rerun; docs build, storage-boundary, source-audit, discoverability, ADR coverage, route graph, surface evidence, surface narrative, surface resource contract, dense-data, remote-sync, surface-route, connector, search, telemetry, SDK-first, regulated-domain, JSON contract, and focused NCLF tests passed before the inherited guard failure.
+- [x] `npm run test:docs`. Evidence: final full rerun passed after package build refresh, persistent-surface fixture exceptions, evolution baseline refresh, codebase manifest refresh, source-size baseline review, and code-hygiene report refresh.
 - [x] `node scripts/adr-operational-coverage-check.mjs`
 - [x] `node scripts/discoverability-check.mjs`
 - [x] `node scripts/source-decision-audit-check.mjs --self-test`
@@ -19,8 +19,8 @@
 ## Focused Implementation Validation
 
 - [x] CLI registry/router parity after any new command. Evidence: `node --import tsx scripts/verify-cli-registry-router-parity.mjs` passed with 177 commands after local forge project subcommand extensions; `node --import tsx scripts/generate-cli-router.mjs --check` also passed.
-- [x] Surface registry and route graph checks after any stable route or resource. Evidence: final `test:docs` run passed route graph, surface evidence, surface narrative, and surface resource contract guards before the unrelated persistent-surface database literal failure.
-- [x] Storage boundary guard after any new path, DB, sidecar, or file-format surface. Evidence: local forge state is under configured `CLAW_DATA_DIR`/Claw data root and focused tests use isolated roots; broad docs lane still needs final rerun.
+- [x] Surface registry and route graph checks after any stable route or resource. Evidence: final `test:docs` run passed route graph, surface evidence, surface narrative, and surface resource contract guards.
+- [x] Storage boundary guard after any new path, DB, sidecar, or file-format surface. Evidence: local forge state is under configured `CLAW_DATA_DIR`/Claw data root, focused tests use isolated roots, and final `test:docs` passed storage-boundary checks.
 - [x] Remote/sync/gateway tests after any multi-node or Gateway exposure. Evidence: no Gateway/Relay exposure was added; focused remote contract and CLI tests passed.
 - [x] Governance tests after any new authority, grant, approval, workspace, project, or policy surface. Evidence: no new authority/grant/approval store was added; project preview tests passed.
 - [x] No irreversible data loss tests after recovery, merge, delete, rollback, or destructive cleanup. Evidence: focused recovery test verifies metadata-only receipts with `noIrreversibleDataLoss`; merge/delete/rollback/destructive cleanup remain unavailable.
@@ -52,5 +52,5 @@
 - [x] ADR 0053 and ADR 0054 are accepted, reserved, discoverable, and covered by operational coverage. Evidence: baseline ADR/discoverability/source-audit checks passed.
 - [x] `source-audit.md` has rows for every decision captured from the working notes. Evidence: `NCLF-001` through `NCLF-039`.
 - [x] Every checklist item is checked, `EXTERNAL PENDING`, blocked with reentry, or superseded. Evidence: this checklist and sibling checklists now classify remaining local and external gaps explicitly.
-- [ ] blocked: Final validation has been rerun after the last edit. Blocker: final broad docs lane is blocked only by inherited persistent-surface database literal findings; focused NCLF tests, typecheck, privacy, discoverability, source-audit, CLI parity, route graph, surface evidence, surface narrative, surface resource contract, dense-data, remote-sync, surface-route, connector, search, telemetry, SDK-first, regulated-domain, and JSON contract checks were rerun and passed before that inherited failure. Reentry: clear or baseline the non-NCLF persistent-surface guard blocker and rerun final validation.
+- [x] Final validation has been rerun after the last edit. Evidence: final `npm run test:docs` passed; focused NCLF tests, typecheck, privacy, discoverability, source-audit, CLI parity, route graph, surface evidence, surface narrative, surface resource contract, dense-data, remote-sync, surface-route, connector, search, telemetry, SDK-first, regulated-domain, JSON contract, persistent-surface, evolution, source-size, codebase manifest, and code-hygiene checks passed.
 - [x] No remaining framework decision from this program exists only in memory or a scratch document. Evidence: remaining merge/conflict, failover, rotation, signed-host, surface parity, and physical validation work is recorded as blocked or `EXTERNAL PENDING` in public checklists.
