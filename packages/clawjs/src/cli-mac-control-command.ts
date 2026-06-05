@@ -17,7 +17,7 @@ import { promisify } from "node:util";
 
 import { CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable, readBooleanFlag } from "./cli-flag-parsers.ts";
-import { writeCommandJsonOk } from "./cli-json.ts";
+import { parseCliJsonEnvelope, writeCommandJsonOk } from "./cli-json.ts";
 import type { CliContext } from "./index.ts";
 
 const execFileAsync = promisify(execFile);
@@ -205,6 +205,20 @@ async function runMacFamily(input: {
 
   if (capability.coverageState === "executable" || capability.coverageState === "host_validated") {
     const request = buildMacRequest(capability, input.flags, targetPositionals, false);
+    const plan = buildMacActionPlan({ request, capability });
+    if (plan.blockedReasons.length > 0) {
+      throw new CliHandledError("mac_action_plan_blocked", `Mac action plan is blocked: ${plan.blockedReasons.join(", ")}`, {
+        status: "BLOCKED",
+        location: `mac:${capability.id}`,
+        suggestion: "Inspect the dry-run plan and resolve blocked reasons before handing the action to the signed host.",
+        safeNextStep: "Rerun the command with --dry-run --json; replace plaintext secrets with --secret-ref and satisfy required arguments or permissions.",
+        details: {
+          capabilityId: capability.id,
+          blockedReasons: plan.blockedReasons,
+          relatedSurfaces: plan.relatedSurfaces,
+        },
+      });
+    }
     const hostArgs = ["system", "mac", "execute", "--request-json", JSON.stringify(request), "--json"];
     const live = await runSignedHostIfConfigured(input, group, hostArgs);
     if (live !== null) return live;
@@ -395,17 +409,25 @@ async function runSignedHostCommand(executable: string, args: string[]): Promise
 }
 
 function parseSignedHostJSON(stdout: string): unknown {
-  try {
-    return JSON.parse(stdout);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new CliHandledError("signed_host_bridge_invalid_json", `Mac signed host bridge returned invalid JSON: ${message}`, {
+  const parsed = parseCliJsonEnvelope(stdout);
+  if (!parsed.ok) {
+    const isMalformed = parsed.error.code === "cli_json_envelope_malformed" || parsed.error.code === "cli_json_envelope_truncated";
+    if (isMalformed) {
+      throw new CliHandledError("signed_host_bridge_invalid_json", `Mac signed host bridge returned invalid JSON: ${parsed.error.message}`, {
+        status: "BLOCKED",
+        location: "signed host stdout",
+        suggestion: "Return a valid Claw JSON envelope with ok/data or ok/error from the signed host broker.",
+        safeNextStep: "Run the configured broker command directly with a fixture request, then retry the CLI command.",
+      });
+    }
+    throw new CliHandledError("signed_host_bridge_invalid_envelope", `Mac signed host bridge returned an invalid Claw JSON envelope: ${parsed.error.message}`, {
       status: "BLOCKED",
       location: "signed host stdout",
       suggestion: "Return a valid Claw JSON envelope with ok/data or ok/error from the signed host broker.",
       safeNextStep: "Run the configured broker command directly with a fixture request, then retry the CLI command.",
     });
   }
+  return parsed.envelope;
 }
 
 function isTruthy(value: string | undefined): boolean {

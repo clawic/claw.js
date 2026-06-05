@@ -3,6 +3,7 @@ import path from "path";
 import { activeHost, readHostRegistry, registerHost, resolveHostRegistryFile, useHost } from "./host-registry.ts";
 import { CLI_EXIT_DEGRADED, CLI_EXIT_FAILURE, CLI_EXIT_OK, CLI_EXIT_USAGE, CliHandledError } from "./cli-errors.ts";
 import { formatCliTable } from "./cli-flag-parsers.ts";
+import { HostClientError, validateHostHttpEndpoint } from "./host-client.ts";
 import { writeCommandJsonError, writeCommandJsonOk } from "./cli-json.ts";
 import { runDomainsCli } from "./cli-domains-command.ts";
 import { applyAppStateTransaction, appStateRequestFromOperations, readAppStateProjection } from "./app-state-service.ts";
@@ -90,6 +91,20 @@ export async function runHostCli(input: {
     }
     if (transport && transport !== "xpc" && transport !== "unix_socket" && transport !== "http" && transport !== "stdio") {
       throw new CliHandledError("usage_error", "Host transport must be xpc, unix_socket, http, or stdio.", CLI_EXIT_USAGE);
+    }
+    if (transport === "http" && address) {
+      try {
+        validateHostHttpEndpoint(address);
+      } catch (error) {
+        if (error instanceof HostClientError) {
+          throw new CliHandledError(error.code, error.message, CLI_EXIT_USAGE, {
+            location: "cli.host.register.address",
+            suggestion: "Register HTTP host endpoints only for local loopback hosts.",
+            safeNextStep: "Use http://127.0.0.1:<port>, http://localhost:<port>, a unix_socket endpoint, or the native xpc host transport.",
+          });
+        }
+        throw error;
+      }
     }
     const endpoint = transport && address
       ? { transport: transport as "xpc" | "unix_socket" | "http" | "stdio", address }

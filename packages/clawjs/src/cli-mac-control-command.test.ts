@@ -167,6 +167,25 @@ test("Mac signed host actions do not treat explicit false confirmation flags as 
   });
 });
 
+test("Mac signed host actions fail closed before handoff when the plan is blocked", async () => {
+  const recordPath = path.join(os.tmpdir(), `claw-mac-host-secret-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
+  const hostCommand = createRecordingMacSignedHostCommand(recordPath);
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: hostCommand }, async () => {
+    const execute = await runCliCapture(["wifi", "connect", "Office", "--password", "not-allowed", "--json"], process.cwd());
+    assert.equal(execute.code, CLI_EXIT_FAILURE);
+    const payload = JSON.parse(execute.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; details?: { blockedReasons?: string[] } };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "mac_action_plan_blocked");
+    assert.equal(payload.error.status, "BLOCKED");
+    assert.deepEqual(payload.error.details?.blockedReasons, ["secret_blocked:plaintext_wifi_password"]);
+    assert.doesNotMatch(execute.stdout, /not-allowed/);
+    assert.equal(fs.existsSync(recordPath), false);
+  });
+});
+
 test("Mac signed host bridge failures return actionable JSON errors", async () => {
   const failingHostCommand = createFailingMacSignedHostCommand();
   await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: failingHostCommand }, async () => {
@@ -201,6 +220,25 @@ test("Mac signed host bridge invalid JSON returns parse location and safe next s
     assert.equal(payload.error.location, "signed host stdout");
     assert.match(payload.error.suggestion, /valid Claw JSON envelope/);
     assert.match(payload.error.safeNextStep, /fixture request/);
+  });
+});
+
+test("Mac signed host bridge rejects JSON that is not a Claw envelope", async () => {
+  const invalidEnvelopeHostCommand = createInvalidEnvelopeMacSignedHostCommand();
+  await withPatchedEnv({ CLAW_LIVE_BROKER_COMMAND: invalidEnvelopeHostCommand }, async () => {
+    const execute = await runCliCapture(["permissions", "request", "microphone", "--json"], process.cwd());
+    assert.equal(execute.code, CLI_EXIT_FAILURE);
+    const payload = JSON.parse(execute.stdout) as {
+      ok: boolean;
+      error: { code: string; status: string; location: string; suggestion: string; safeNextStep: string };
+    };
+    assert.equal(payload.ok, false);
+    assert.equal(payload.error.code, "signed_host_bridge_invalid_envelope");
+    assert.equal(payload.error.status, "BLOCKED");
+    assert.equal(payload.error.location, "signed host stdout");
+    assert.match(payload.error.suggestion, /valid Claw JSON envelope/);
+    assert.match(payload.error.safeNextStep, /fixture request/);
+    assert.doesNotMatch(execute.stdout, /sk-test-secret-123456/);
   });
 });
 
@@ -300,11 +338,38 @@ process.exit(1);
   return script;
 }
 
+function createRecordingMacSignedHostCommand(recordPath: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-mac-host-recording-"));
+  const script = path.join(dir, "recording-mac-host.mjs");
+  fs.writeFileSync(script, `#!/usr/bin/env node
+import fs from "node:fs";
+const args = process.argv.slice(2);
+function value(flag) {
+  const index = args.indexOf(flag);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+fs.writeFileSync(${JSON.stringify(recordPath)}, value("--request-json") ?? args.join(" "));
+console.log(JSON.stringify({ ok: true, data: { status: "unexpected_handoff" } }));
+`);
+  fs.chmodSync(script, 0o755);
+  return script;
+}
+
 function createInvalidJsonMacSignedHostCommand(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-mac-host-invalid-json-"));
   const script = path.join(dir, "invalid-json-mac-host.mjs");
   fs.writeFileSync(script, `#!/usr/bin/env node
 console.log("{");
+`);
+  fs.chmodSync(script, 0o755);
+  return script;
+}
+
+function createInvalidEnvelopeMacSignedHostCommand(): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "claw-mac-host-invalid-envelope-"));
+  const script = path.join(dir, "invalid-envelope-mac-host.mjs");
+  fs.writeFileSync(script, `#!/usr/bin/env node
+console.log(JSON.stringify({ token: "sk-test-secret-123456", status: "not_an_envelope" }));
 `);
   fs.chmodSync(script, 0o755);
   return script;

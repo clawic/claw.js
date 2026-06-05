@@ -82,3 +82,15 @@ test("sendHostCommand rejects http host endpoints with credentials before connec
     },
   );
 });
+
+test("sendHostCommand rejects non-loopback http host endpoints before connecting", async () => {
+  await assert.rejects(
+    () => sendHostCommand(httpHost("http://example.com"), request),
+    (error) => {
+      assert.equal(error instanceof HostClientError, true);
+      assert.equal((error as HostClientError).code, "host_endpoint_not_loopback");
+      assert.match((error as Error).message, /loopback/);
+      return true;
+    },
+  );
+});

@@ -80,6 +80,9 @@ async function sendHttpCommand(address: string, request: ClawCommandRequest): Pr
   if (url.username || url.password) {
     throw new HostClientError("host_endpoint_invalid", "Host HTTP endpoints must not include credentials.");
   }
+  if (!isLoopbackHttpHostname(url.hostname)) {
+    throw new HostClientError("host_endpoint_not_loopback", "Host HTTP endpoints must be loopback addresses: localhost, 127.0.0.1/8, or ::1.");
+  }
   if (url.pathname === "/" || url.pathname === "") {
     url.pathname = clawHostApiRoutes.commands;
   }
@@ -147,6 +150,34 @@ async function sendStdioCommand(executablePath: string | undefined, request: Cla
       }
     });
     child.stdin.end(`${JSON.stringify(request)}\n`);
+  });
+}
+
+export function validateHostHttpEndpoint(address: string): void {
+  let url: URL;
+  try {
+    url = new URL(address);
+  } catch {
+    throw new HostClientError("host_endpoint_invalid", `Host HTTP endpoint ${address} is not a valid URL.`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new HostClientError("host_endpoint_invalid", `Host HTTP endpoint ${address} must use http or https.`);
+  }
+  if (url.username || url.password) {
+    throw new HostClientError("host_endpoint_invalid", "Host HTTP endpoints must not include credentials.");
+  }
+  if (!isLoopbackHttpHostname(url.hostname)) {
+    throw new HostClientError("host_endpoint_not_loopback", "Host HTTP endpoints must be loopback addresses: localhost, 127.0.0.1/8, or ::1.");
+  }
+}
+
+function isLoopbackHttpHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[(.*)\]$/, "$1");
+  if (normalized === "localhost" || normalized === "::1") return true;
+  if (!/^127(?:\.\d{1,3}){3}$/.test(normalized)) return false;
+  return normalized.split(".").every((part) => {
+    const value = Number(part);
+    return Number.isInteger(value) && value >= 0 && value <= 255;
   });
 }
 

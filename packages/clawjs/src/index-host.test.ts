@@ -117,6 +117,42 @@ test("host registry CLI reports missing active host ids without internal errors"
   assert.equal(payload.meta.subcommand, "use");
 });
 
+test("host registry CLI rejects remote http endpoints", async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-remote-http-"));
+  const clawHome = path.join(workspaceRoot, "claw-home");
+
+  const result = await runCliCapture([
+    "host",
+    "register",
+    "remote-host",
+    "--name",
+    "Remote Host",
+    "--kind",
+    "third_party",
+    "--transport",
+    "http",
+    "--address",
+    "http://example.com",
+    "--claw-home",
+    clawHome,
+    "--use",
+    "--json",
+  ], workspaceRoot);
+
+  assert.equal(result.code, CLI_EXIT_USAGE);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "host_endpoint_not_loopback");
+  assert.equal(payload.error.status, "USAGE");
+  assert.equal(payload.error.location, "cli.host.register.address");
+  assert.match(payload.error.safeNextStep, /127\.0\.0\.1/);
+
+  const listed = await runCliCapture(["host", "list", "--claw-home", clawHome, "--json"], workspaceRoot);
+  assert.equal(listed.code, CLI_EXIT_OK);
+  const listPayload = JSON.parse(listed.stdout);
+  assert.equal(listPayload.data.hosts.length, 0);
+});
+
 test("direct domain CLI returns actionable host transport errors", async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawjs-host-xpc-"));
   const clawHome = path.join(workspaceRoot, "claw-home");
